@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/models/project.dart';
 import '../providers/projects_provider.dart';
 import '../providers/timer_provider.dart';
-import '../../data/models/project.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/error_view.dart';
 import 'timer_screen.dart';
 
 class ProjectsScreen extends ConsumerStatefulWidget {
@@ -63,21 +65,17 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
             child: projectsState.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : projectsState.error != null
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text('Error: ${projectsState.error}'),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: () => ref.read(projectsProvider.notifier).loadProjects(),
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
+                    ? ErrorView(
+                        title: 'Error loading projects',
+                        message: projectsState.error,
+                        onRetry: () => ref.read(projectsProvider.notifier).loadProjects(),
                       )
                     : filteredProjects.isEmpty
-                        ? const Center(child: Text('No projects found'))
+                        ? const EmptyState(
+                            icon: Icons.folder_off,
+                            title: 'No projects found',
+                            subtitle: 'No projects match your search.',
+                          )
                         : ListView.builder(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             itemCount: filteredProjects.length,

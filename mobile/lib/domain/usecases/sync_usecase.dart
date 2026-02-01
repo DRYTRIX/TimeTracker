@@ -6,20 +6,19 @@ import '../../utils/auth/auth_service.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 class SyncUseCase {
-  final SyncService _syncService;
   final Connectivity _connectivity = Connectivity();
   Timer? _syncTimer;
 
-  SyncUseCase(this._syncService);
+  SyncUseCase();
 
   // Start periodic sync if auto-sync is enabled
-  void startPeriodicSync() {
-    if (!AppConfig.autoSync) return;
+  Future<void> startPeriodicSync() async {
+    final autoSync = await AppConfig.getAutoSync();
+    if (!autoSync) return;
 
     _syncTimer?.cancel();
-    final interval = Duration(seconds: AppConfig.syncInterval);
-    
-    _syncTimer = Timer.periodic(interval, (timer) async {
+    final intervalSeconds = await AppConfig.getSyncInterval();
+    _syncTimer = Timer.periodic(Duration(seconds: intervalSeconds), (timer) async {
       if (await _isOnline()) {
         await sync();
       }
@@ -41,11 +40,10 @@ class SyncUseCase {
   // Full sync: process queue and sync from server
   Future<bool> sync() async {
     try {
-      // Ensure we have API client
-      final serverUrl = AppConfig.serverUrl;
+      final serverUrl = await AppConfig.getServerUrl();
       final token = await AuthService.getToken();
 
-      if (serverUrl == null || token == null) {
+      if (serverUrl == null || serverUrl.isEmpty || token == null || token.isEmpty) {
         return false;
       }
 
@@ -54,15 +52,11 @@ class SyncUseCase {
 
       final syncService = SyncService(apiClient);
 
-      // Process sync queue (offline operations)
       await syncService.processQueue();
-
-      // Sync from server (get latest data)
       await syncService.syncFromServer();
 
       return true;
-    } catch (e) {
-      print('Sync error: $e');
+    } catch (_) {
       return false;
     }
   }

@@ -1,9 +1,9 @@
-import '../../../core/constants/app_constants.dart';
+import 'dart:convert';
+
 import '../database/hive_service.dart';
 import '../../api/api_client.dart';
 import '../../models/time_entry.dart';
 import '../../models/project.dart';
-import '../../models/task.dart';
 
 class SyncQueueItem {
   final String id;
@@ -96,15 +96,33 @@ class SyncService {
   }
 
   Future<void> _syncTimeEntry(SyncQueueItem item) async {
+    final d = item.data;
     switch (item.action) {
       case 'create':
-        await apiClient.createTimeEntry(item.data);
+        await apiClient.createTimeEntry(
+          projectId: d['project_id'] as int,
+          startTime: d['start_time'] as String,
+          taskId: d['task_id'] as int?,
+          endTime: d['end_time'] as String?,
+          notes: d['notes'] as String?,
+          tags: d['tags'] as String?,
+          billable: d['billable'] as bool?,
+        );
         break;
       case 'update':
-        await apiClient.updateTimeEntry(item.data['id'], item.data);
+        await apiClient.updateTimeEntry(
+          d['id'] as int,
+          projectId: d['project_id'] as int?,
+          taskId: d['task_id'] as int?,
+          startTime: d['start_time'] as String?,
+          endTime: d['end_time'] as String?,
+          notes: d['notes'] as String?,
+          tags: d['tags'] as String?,
+          billable: d['billable'] as bool?,
+        );
         break;
       case 'delete':
-        await apiClient.deleteTimeEntry(item.data['id']);
+        await apiClient.deleteTimeEntry(d['id'] as int);
         break;
     }
   }
@@ -123,13 +141,11 @@ class SyncService {
   Future<void> syncFromServer() async {
     try {
       // Sync projects
-      final projectsResponse = await apiClient.getProjects(status: 'active');
-      if (projectsResponse.statusCode == 200) {
-        final projects = (projectsResponse.data['projects'] as List)
-            .map((json) => Project.fromJson(json))
-            .toList();
-        
-        for (final project in projects) {
+      final projectsData = await apiClient.getProjects(status: 'active');
+      final projectsList = projectsData['projects'] as List?;
+      if (projectsList != null) {
+        for (final json in projectsList) {
+          final project = Project.fromJson(Map<String, dynamic>.from(json as Map));
           await HiveService.projectsBox.put(project.id, project.toJson());
         }
       }
@@ -137,17 +153,14 @@ class SyncService {
       // Sync time entries (recent ones)
       final now = DateTime.now();
       final startDate = now.subtract(const Duration(days: 30));
-      final entriesResponse = await apiClient.getTimeEntries(
+      final entriesData = await apiClient.getTimeEntries(
         startDate: startDate.toIso8601String().split('T')[0],
         endDate: now.toIso8601String().split('T')[0],
       );
-      
-      if (entriesResponse.statusCode == 200) {
-        final entries = (entriesResponse.data['time_entries'] as List)
-            .map((json) => TimeEntry.fromJson(json))
-            .toList();
-        
-        for (final entry in entries) {
+      final entriesList = entriesData['time_entries'] as List?;
+      if (entriesList != null) {
+        for (final json in entriesList) {
+          final entry = TimeEntry.fromJson(Map<String, dynamic>.from(json as Map));
           await HiveService.timeEntriesBox.put(entry.id, entry.toJson());
         }
       }
@@ -166,8 +179,8 @@ class SyncService {
             if (value is Map) {
               return Project.fromJson(Map<String, dynamic>.from(value));
             } else if (value is String) {
-              // If stored as string, parse it (though Hive usually stores as Map)
-              return Project.fromJson(Map<String, dynamic>.from(value));
+              return Project.fromJson(
+                  Map<String, dynamic>.from(jsonDecode(value) as Map));
             }
             throw Exception('Invalid project data format');
           })
@@ -189,22 +202,33 @@ class SyncService {
             if (value is Map) {
               return TimeEntry.fromJson(Map<String, dynamic>.from(value));
             } else if (value is String) {
-              return TimeEntry.fromJson(Map<String, dynamic>.from(value));
+              return TimeEntry.fromJson(
+                  Map<String, dynamic>.from(jsonDecode(value) as Map));
             }
             throw Exception('Invalid time entry data format');
           })
           .toList();
 
-    if (startDate != null) {
-      entries = entries.where((e) => e.startTime.isAfter(startDate)).toList();
-    }
-    if (endDate != null) {
-      entries = entries.where((e) => e.startTime.isBefore(endDate)).toList();
-    }
-    if (projectId != null) {
-      entries = entries.where((e) => e.projectId == projectId).toList();
-    }
+      if (startDate != null) {
+        entries = entries
+            .where((e) =>
+                e.startTime != null && e.startTime!.isAfter(startDate))
+            .toList();
+      }
+      if (endDate != null) {
+        entries = entries
+            .where((e) =>
+                e.startTime != null && e.startTime!.isBefore(endDate))
+            .toList();
+      }
+      if (projectId != null) {
+        entries =
+            entries.where((e) => e.projectId == projectId).toList();
+      }
 
-    return entries;
+      return entries;
+    } catch (e) {
+      return [];
+    }
   }
 }

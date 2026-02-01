@@ -86,7 +86,7 @@ npm run dev
 Before connecting the desktop app, you need to create an API token:
 
 1. **Log in to TimeTracker Web App** as an administrator
-2. Navigate to **Admin > API Tokens** (`/admin/api-tokens`)
+2. Navigate to **Admin > Security & Access > Api-tokens** (`/admin/api-tokens`)
 3. Click **"Create Token"**
 4. Fill in the required information:
    - **Name**: A descriptive name (e.g., "Desktop App - Windows")

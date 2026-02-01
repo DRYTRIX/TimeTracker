@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:timetracker_mobile/data/models/time_entry.dart';
 import 'package:timetracker_mobile/presentation/providers/projects_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/tasks_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/time_entries_provider.dart';
@@ -196,7 +195,10 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
                   labelText: 'Project *',
                   prefixIcon: Icon(Icons.folder),
                 ),
-                value: _selectedProjectId,
+                initialValue: _selectedProjectId != null &&
+                        projectsState.projects.any((p) => p.id == _selectedProjectId)
+                    ? _selectedProjectId
+                    : null,
                 items: projectsState.projects
                     .map((p) => DropdownMenuItem(
                           value: p.id,
@@ -227,7 +229,10 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
                     labelText: 'Task (Optional)',
                     prefixIcon: Icon(Icons.task),
                   ),
-                  value: _selectedTaskId,
+                  initialValue: _selectedTaskId != null &&
+                          tasksState.tasks.any((t) => t.id == _selectedTaskId)
+                      ? _selectedTaskId
+                      : null,
                   items: [
                     const DropdownMenuItem<int>(
                       value: null,

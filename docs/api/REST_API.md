@@ -17,7 +17,7 @@ All API endpoints require authentication using API tokens. API tokens are manage
 ### Creating API Tokens
 
 1. Log in as an administrator
-2. Navigate to **Admin > API Tokens** (`/admin/api-tokens`)
+2. Navigate to **Admin > Security & Access > Api-tokens** (`/admin/api-tokens`)
 3. Click **Create Token**
 4. Fill in the required information:
    - **Name**: A descriptive name for the token

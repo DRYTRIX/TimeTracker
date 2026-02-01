@@ -41,6 +41,18 @@ if errorlevel 1 (
 )
 echo.
 
+REM Generate app icons (source PNG then launcher sizes)
+cd /d "%PROJECT_ROOT%"
+call "%SCRIPT_DIR%generate-mobile-icon.bat"
+cd /d "%MOBILE_DIR%"
+echo Generating launcher icons...
+call dart run flutter_launcher_icons
+if errorlevel 1 (
+    echo ERROR: Failed to generate launcher icons
+    exit /b 1
+)
+echo.
+
 REM Analyze
 echo Analyzing code...
 call flutter analyze

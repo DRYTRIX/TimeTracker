@@ -175,16 +175,27 @@ class TimeEntry(db.Model):
         duration = now_local - self.start_time
         return int(duration.total_seconds())
 
+    def _naive_dt(self, dt):
+        """Return datetime as naive local for duration math (handles DB returning aware in some backends)."""
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            return dt
+        from app.utils.timezone import get_timezone_obj
+        tz = get_timezone_obj()
+        return dt.astimezone(tz).replace(tzinfo=None)
+
     def calculate_duration(self):
         """Calculate and set duration in seconds with rounding"""
         if not self.end_time:
             return
 
-        # Since we store everything in local timezone, we can work with naive datetimes
-        # as long as we treat them as local time
-
-        # Calculate raw duration (both times are treated as local time)
-        duration = self.end_time - self.start_time
+        # Normalize to naive for subtraction (storage is local time; some DB drivers return aware)
+        start = self._naive_dt(self.start_time)
+        end = self._naive_dt(self.end_time)
+        if start is None or end is None:
+            return
+        duration = end - start
         raw_seconds = int(duration.total_seconds())
 
         # Apply per-user rounding if user preferences are set

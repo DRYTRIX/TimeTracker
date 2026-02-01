@@ -27,7 +27,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.16.0'
+          flutter-version: '3.35.4'
           channel: 'stable'
       
       - name: Disable Flutter analytics
@@ -36,6 +36,14 @@ jobs:
       - name: Install dependencies
         working-directory: mobile
         run: flutter pub get
+      
+      - name: Generate app icons
+        run: |
+          pip install Pillow
+          python scripts/generate-mobile-icon.py
+      - name: Generate launcher icons
+        working-directory: mobile
+        run: dart run flutter_launcher_icons
       
       # Skip tests for now - mobile app is incomplete (tests exist but lib/ source code is missing)
       # - name: Run tests
@@ -60,7 +68,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.16.0'
+          flutter-version: '3.35.4'
           channel: 'stable'
       
       - name: Disable Flutter analytics
@@ -73,6 +81,16 @@ jobs:
       - name: Generate iOS platform files
         working-directory: mobile
         run: flutter create --platforms=ios .
+      
+      - name: Generate app icons
+        run: |
+          pip install Pillow
+          python scripts/generate-mobile-icon.py
+      - name: Generate launcher icons
+        working-directory: mobile
+        run: |
+          dart run flutter_launcher_icons
+          dart run flutter_launcher_icons -f flutter_launcher_icons_ios.yaml
       
       - name: Configure iOS project for device build without code signing
         working-directory: mobile

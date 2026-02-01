@@ -9,7 +9,8 @@ from app import db
 from app.repositories import TimeEntryRepository, ProjectRepository
 from app.models import TimeEntry, Project, Task
 from app.constants import TimeEntrySource, TimeEntryStatus
-from app.utils.timezone import local_now, parse_local_datetime
+from app.utils.timezone import parse_local_datetime
+from app.models.time_entry import local_now
 from app.utils.db import safe_commit
 from app.utils.event_bus import emit_event
 from app.constants import WebhookEvent

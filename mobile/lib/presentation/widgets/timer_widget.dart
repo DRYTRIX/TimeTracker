@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timetracker_mobile/data/models/project.dart';
 import 'package:timetracker_mobile/data/models/task.dart';
+import 'package:timetracker_mobile/presentation/providers/api_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/timer_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/projects_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/tasks_provider.dart';
@@ -112,8 +113,8 @@ class _TimerWidgetState extends ConsumerState<TimerWidget> {
                     icon: const Icon(Icons.stop),
                     label: const Text('Stop Timer'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                      foregroundColor: Theme.of(context).colorScheme.onError,
                     ),
                   ),
                 ],
@@ -124,7 +125,7 @@ class _TimerWidgetState extends ConsumerState<TimerWidget> {
                   Text(
                     '00:00:00',
                     style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          color: Colors.grey,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                   ),
                   const SizedBox(height: 8),
@@ -147,12 +148,12 @@ class _TimerWidgetState extends ConsumerState<TimerWidget> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
+                  color: Theme.of(context).colorScheme.errorContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   timerState.error!,
-                  style: TextStyle(color: Colors.red.shade700),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
                 ),
               ),
             ],
@@ -217,15 +218,29 @@ class _StartTimerDialogState extends ConsumerState<StartTimerDialog> {
               : _notesController.text.trim(),
         );
 
-    if (mounted) {
-      Navigator.of(context).pop();
+    if (!mounted) return;
+    final timerState = ref.read(timerProvider);
+    if (timerState.error != null) {
+      // Keep dialog open and show error; do not pop
+      setState(() {});
+      return;
     }
+    Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
+    final apiClientAsync = ref.watch(apiClientProvider);
     final projectsState = ref.watch(projectsProvider);
     final tasksState = ref.watch(tasksProvider);
+    final timerState = ref.watch(timerProvider);
+
+    final isApiReady = apiClientAsync.when(
+      data: (client) => client != null,
+      loading: () => false,
+      error: (_, __) => false,
+    );
+    final isApiLoading = apiClientAsync.isLoading;
 
     return AlertDialog(
       title: const Text('Start Timer'),
@@ -234,13 +249,39 @@ class _StartTimerDialogState extends ConsumerState<StartTimerDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (isApiLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24.0),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (!isApiReady) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Not connected to server. Check settings and try again.',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ] else ...[
             // Project selection
             DropdownButtonFormField<int>(
+              key: ValueKey('project_$_selectedProjectId'),
               decoration: const InputDecoration(
                 labelText: 'Project',
                 prefixIcon: Icon(Icons.folder),
               ),
-              value: _selectedProjectId,
+              initialValue: _selectedProjectId != null &&
+                      projectsState.projects.any((p) => p.id == _selectedProjectId)
+                  ? _selectedProjectId
+                  : null,
               items: projectsState.projects
                   .map((p) => DropdownMenuItem(
                         value: p.id,
@@ -261,11 +302,15 @@ class _StartTimerDialogState extends ConsumerState<StartTimerDialog> {
             // Task selection (optional)
             if (_selectedProjectId != null)
               DropdownButtonFormField<int>(
+                key: ValueKey('task_$_selectedTaskId'),
                 decoration: const InputDecoration(
                   labelText: 'Task (Optional)',
                   prefixIcon: Icon(Icons.task),
                 ),
-                value: _selectedTaskId,
+                initialValue: _selectedTaskId != null &&
+                        tasksState.tasks.any((t) => t.id == _selectedTaskId)
+                    ? _selectedTaskId
+                    : null,
                 items: [
                   const DropdownMenuItem<int>(
                     value: null,
@@ -294,17 +339,44 @@ class _StartTimerDialogState extends ConsumerState<StartTimerDialog> {
               ),
               maxLines: 3,
             ),
+            if (timerState.error != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  timerState.error!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
+                ),
+              ),
+            ],
+            ],
           ],
         ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: timerState.isLoading || isApiLoading
+              ? null
+              : () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: _handleStart,
-          child: const Text('Start'),
+          onPressed: (timerState.isLoading || isApiLoading || !isApiReady)
+              ? null
+              : _handleStart,
+          child: timerState.isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Start'),
         ),
       ],
     );

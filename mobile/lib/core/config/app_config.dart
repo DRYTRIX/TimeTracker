@@ -8,6 +8,7 @@ class AppConfig {
   static const String syncIntervalKey = 'sync_interval';
   static const String autoSyncKey = 'auto_sync';
   static const String themeModeKey = 'theme_mode';
+  static const String trustedInsecureHostsKey = 'trusted_insecure_hosts';
   static const _storage = FlutterSecureStorage();
 
   /// Get server URL from storage (synchronous getter for splash screen)
@@ -63,10 +64,49 @@ class AppConfig {
     await prefs.remove(serverUrlKey);
   }
 
+  /// Get auto sync setting
+  static Future<bool> getAutoSync() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(autoSyncKey) ?? true;
+  }
+
   /// Set auto sync setting
   static Future<void> setAutoSync(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(autoSyncKey, value);
+  }
+
+  /// Get sync interval (seconds)
+  static Future<int> getSyncInterval() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(syncIntervalKey) ?? 60;
+  }
+
+  /// Get theme mode
+  static Future<String> getThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(themeModeKey) ?? 'system';
+  }
+
+  /// Set theme mode ('system', 'light', 'dark')
+  static Future<void> setThemeMode(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(themeModeKey, value);
+  }
+
+  /// Get set of host names the user has chosen to trust (self-signed/invalid certs)
+  static Future<Set<String>> getTrustedInsecureHosts() async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(trustedInsecureHostsKey);
+    return list != null ? list.toSet() : <String>{};
+  }
+
+  /// Add a host to the trusted insecure hosts set (user accepted the cert)
+  static Future<void> addTrustedInsecureHost(String host) async {
+    final prefs = await SharedPreferences.getInstance();
+    final set = await getTrustedInsecureHosts();
+    set.add(host);
+    await prefs.setStringList(trustedInsecureHostsKey, set.toList());
   }
 
   /// Clear all stored configuration
@@ -76,6 +116,7 @@ class AppConfig {
     await prefs.remove(syncIntervalKey);
     await prefs.remove(autoSyncKey);
     await prefs.remove(themeModeKey);
+    await prefs.remove(trustedInsecureHostsKey);
     await _storage.delete(key: apiTokenKey);
   }
 

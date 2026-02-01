@@ -1,7 +1,7 @@
 """REST API v1 - Comprehensive API endpoints with token authentication"""
 
 from flask import Blueprint, jsonify, request, current_app, g
-from app import db
+from app import db, limiter
 from app.models import (
     User,
     Project,
@@ -43,11 +43,12 @@ from app.models import (
     StockReservation,
     Supplier,
     PurchaseOrder,
+    ApiToken,
 )
 from app.utils.api_auth import require_api_token
 from datetime import datetime, timedelta
 from sqlalchemy import func, or_
-from app.utils.timezone import parse_local_datetime, utc_to_local
+from app.utils.timezone import get_app_timezone, parse_local_datetime, utc_to_local
 from app.models.time_entry import local_now
 
 api_v1_bp = Blueprint("api_v1", __name__, url_prefix="/api/v1")
@@ -107,6 +108,18 @@ def _parse_date(dstr):
         return _date.fromisoformat(str(dstr))
     except Exception:
         return None
+
+
+def _parse_date_range(start_date_str, end_date_str):
+    """Parse start/end date params. Date-only end_date becomes end-of-day."""
+    start_dt = parse_datetime(start_date_str) if start_date_str else None
+    end_dt = parse_datetime(end_date_str) if end_date_str else None
+
+    # If end_date is date-only (YYYY-MM-DD), treat as end of that day
+    if end_date_str and end_dt and "T" not in end_date_str.strip() and " " not in end_date_str.strip():
+        end_dt = end_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    return start_dt, end_dt
 
 
 # ==================== API Info & Health ====================
@@ -188,6 +201,7 @@ def api_info():
                     "purchase_orders": "/api/v1/inventory/purchase-orders",
                 },
             },
+            "timezone": get_app_timezone(),
         }
     )
 
@@ -203,6 +217,47 @@ def health_check():
         description: API is healthy
     """
     return jsonify({"status": "healthy", "timestamp": local_now().isoformat()})
+
+
+# ==================== Auth (unauthenticated) ====================
+
+
+@api_v1_bp.route("/auth/login", methods=["POST"])
+@limiter.limit("5 per minute", methods=["POST"])
+def auth_login():
+    """Login with username and password; returns an API token for mobile/app use.
+
+    Accepts JSON: { "username": "...", "password": "..." }.
+    Returns 200 with { "token": "tt_..." } or 401 with { "error": "..." }.
+    The token has scopes for basics: read:projects, read:tasks, read:time_entries, write:time_entries.
+    """
+    current_app.logger.info(
+        "POST /api/v1/auth/login from %s",
+        request.remote_addr or request.headers.get("X-Forwarded-For", "unknown"),
+    )
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip().lower()
+    password = data.get("password") or ""
+
+    if not username or not password:
+        return jsonify({"error": "Invalid username or password"}), 401
+
+    user = User.query.filter_by(username=username).first()
+    if not user or not user.check_password(password):
+        return jsonify({"error": "Invalid username or password"}), 401
+
+    scopes = "read:projects,read:tasks,read:time_entries,write:time_entries"
+    api_token, plain_token = ApiToken.create_token(
+        user_id=user.id,
+        name=f"Mobile app - {user.username}",
+        description="Token issued via mobile/app login",
+        scopes=scopes,
+        expires_days=None,
+    )
+    db.session.add(api_token)
+    db.session.commit()
+
+    return jsonify({"token": plain_token})
 
 
 # ==================== Projects ====================
@@ -250,8 +305,18 @@ def list_projects():
         page=page,
         per_page=per_page,
     )
-
-    return jsonify({"projects": [p.to_dict() for p in result["projects"]], "pagination": result["pagination"]})
+    pag = result["pagination"]
+    pagination_dict = {
+        "page": pag.page,
+        "per_page": pag.per_page,
+        "total": pag.total,
+        "pages": pag.pages,
+        "has_next": pag.has_next,
+        "has_prev": pag.has_prev,
+        "next_page": pag.page + 1 if pag.has_next else None,
+        "prev_page": pag.page - 1 if pag.has_prev else None,
+    }
+    return jsonify({"projects": [p.to_dict() for p in result["projects"]], "pagination": pagination_dict})
 
 
 @api_v1_bp.route("/projects/<int:project_id>", methods=["GET"])
@@ -501,8 +566,7 @@ def list_time_entries():
     # Filter by date range
     start_date = request.args.get("start_date")
     end_date = request.args.get("end_date")
-    start_dt = parse_datetime(start_date) if start_date else None
-    end_dt = parse_datetime(end_date) if end_date else None
+    start_dt, end_dt = _parse_date_range(start_date, end_date)
 
     # Filter by billable
     billable = request.args.get("billable")
@@ -924,11 +988,22 @@ def stop_timer():
     """
     from app.services import TimeTrackingService
 
+    # Use same active_timer lookup as timer/status so stop always sees the same state
+    active_timer = g.api_user.active_timer
+    if not active_timer:
+        return jsonify({
+            "error": "No active timer to stop",
+            "error_code": "no_active_timer",
+        }), 400
+
     time_tracking_service = TimeTrackingService()
-    result = time_tracking_service.stop_timer(user_id=g.api_user.id)
+    result = time_tracking_service.stop_timer(user_id=g.api_user.id, entry_id=active_timer.id)
 
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not stop timer")}), 400
+        return jsonify({
+            "error": result.get("message", "Could not stop timer"),
+            "error_code": result.get("error", "stop_failed"),
+        }), 400
 
     return jsonify({"message": "Timer stopped successfully", "time_entry": result["entry"].to_dict()})
 

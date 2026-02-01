@@ -87,6 +87,7 @@ scripts\build-all.bat --windows-only
 - Flutter SDK 3.0+
 - Android SDK (for Android)
 - Xcode (for iOS, macOS only)
+- **App icon:** Launcher icons are generated at the start of each mobile build from `mobile/assets/icon/app_icon.png`. That PNG can be exported once from `app/static/images/timetracker-logo-icon.svg` (1024×1024), or created by running `scripts/generate-mobile-icon.bat` / `scripts/generate-mobile-icon.sh` (requires ImageMagick, Inkscape, or Python with Pillow).
 
 ### Desktop App
 - Node.js 18+
@@ -106,6 +107,9 @@ scripts\build-all.bat --windows-only
 - **Linux**: `desktop/dist/*.AppImage` and `desktop/dist/*.deb`
 
 ## Troubleshooting
+
+- **Mobile launcher icon shows Android default:** Run icon generation and do a full clean build: from `mobile/` run `flutter clean`, `flutter pub get`, `dart run flutter_launcher_icons`, then build again. The build scripts run icon generation automatically; if you built without them, run the above once.
+- **Icon should match the web app:** Export `app/static/images/timetracker-logo-icon.svg` to 1024×1024 PNG at `mobile/assets/icon/app_icon.png` (see `mobile/assets/icon/README.md`), then run `dart run flutter_launcher_icons` and rebuild.
 
 See `scripts/README-BUILD.md` for detailed troubleshooting guide.
 

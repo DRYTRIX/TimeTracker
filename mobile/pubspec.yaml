@@ -1,7 +1,7 @@
 name: timetracker_mobile
 description: TimeTracker mobile app for Android and iOS
 publish_to: 'none'
-version: 4.15.0+1
+version: 4.15.1+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -25,10 +25,10 @@ dependencies:
   flutter_secure_storage: ^9.0.0
   
   # Background Tasks
-  workmanager: ^0.5.2
+  workmanager: ^0.9.0+3
   
   # Notifications
-  flutter_local_notifications: ^16.3.0
+  flutter_local_notifications: ^17.2.1
   permission_handler: ^11.1.0
   
   # UI Components
@@ -39,6 +39,7 @@ dependencies:
   shared_preferences: ^2.2.2
   connectivity_plus: ^5.0.2
   timeago: ^3.6.1
+  package_info_plus: ^8.0.0
 
 dev_dependencies:
   flutter_test:
@@ -46,11 +47,17 @@ dev_dependencies:
   flutter_lints: ^3.0.0
   hive_generator: ^2.0.1
   build_runner: ^2.4.7
+  flutter_launcher_icons: ^0.14.0
 
 flutter:
   uses-material-design: true
-  
-  # Assets commented out until images/icons directories are created
-  # assets:
-  #   - assets/images/
-  #   - assets/icons/
+
+  assets:
+    - assets/icon/
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#4A90E2"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"

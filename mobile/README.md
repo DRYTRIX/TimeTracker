@@ -8,7 +8,7 @@ Flutter mobile application for Android and iOS that integrates with the TimeTrac
 - 📊 **Projects & Tasks** - View and select projects and tasks
 - 📝 **Time Entries** - View and manage time entries with calendar
 - 🔄 **Offline Support** - Work offline with automatic sync
-- 🔐 **Secure Authentication** - Token-based authentication with secure storage
+- 🔐 **Secure Authentication** - Sign in with your web username and password; the app obtains an API token in the background for the same basics access as the web app
 
 ## Setup
 
@@ -36,45 +36,30 @@ flutter run
 
 ## Configuration
 
-### Getting an API Token
+### Signing in
 
-Before connecting the mobile app, you need to create an API token:
-
-1. **Log in to TimeTracker Web App** as an administrator
-2. Navigate to **Admin > API Tokens** (`/admin/api-tokens`)
-3. Click **"Create Token"**
-4. Fill in the required information:
-   - **Name**: A descriptive name (e.g., "Mobile App - John")
-   - **User**: Select the user this token will authenticate as
-   - **Scopes**: Select the following permissions:
-     - `read:projects` - View projects
-     - `read:tasks` - View tasks
-     - `read:time_entries` - View time entries
-     - `write:time_entries` - Create and update time entries
-   - **Expires In**: Optional expiration period (leave empty for no expiration)
-5. Click **"Create Token"**
-6. **Important**: Copy the generated token immediately - you won't be able to see it again!
-   - Token format: `tt_<32_random_characters>`
-   - Example: `tt_abc123def456ghi789jkl012mno345pq`
-
-### Connecting the App
+Use the same **username and password** you use to log in to the TimeTracker web app. The mobile app signs you in via the API and obtains an API token in the background, giving you the same basics access (timer, time entries, projects, tasks) as on the web.
 
 1. **Launch the app** on your device
 2. On the login screen, enter:
-   - **Server URL**: Your TimeTracker server URL (e.g., `https://your-server.com`)
-     - Do not include a trailing slash
-     - Use `http://` for local development or `https://` for production
-   - **API Token**: Paste the token you copied from the web app
+   - **Server URL**: The base URL of your TimeTracker server (e.g., `https://your-server.com`). Use HTTPS if your server uses SSL.
+   - **Username**: Your web login username
+   - **Password**: Your web login password
 3. Tap **"Login"**
-4. The app will validate your connection and navigate to the timer screen if successful
+4. The app will validate your credentials and navigate to the home screen if successful
+
+### Server URL and HTTPS
+
+The default TimeTracker deployment uses **docker-compose** with **NGINX** on ports 80 and 443 (HTTPS). Use your server’s HTTPS URL (e.g. `https://your-server.com`) with no port unless you use a custom one.
+
+- **Production:** Use a valid certificate (e.g. Let’s Encrypt) so the app can connect without certificate errors.
+- **Local / testing:** Use a trusted CA (e.g. [mkcert](https://github.com/FiloSottile/mkcert)) for HTTPS, or HTTP only if your setup serves the API over HTTP (e.g. dev without NGINX).
 
 ### Troubleshooting
 
-**"Invalid API token" error:**
-- Verify the token starts with `tt_`
-- Check that the token hasn't expired
-- Ensure the token has the required scopes
-- Try creating a new token in the web app
+**"Invalid username or password" error:**
+- Use the same username and password you use on the web app
+- Ensure the server URL is correct and the server is reachable
 
 **"Connection failed" error:**
 - Verify the server URL is correct and accessible

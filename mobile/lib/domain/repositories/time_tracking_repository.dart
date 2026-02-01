@@ -1,4 +1,5 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:dio/dio.dart';
 import 'package:timetracker_mobile/data/api/api_client.dart';
 import 'package:timetracker_mobile/data/models/timer.dart';
 import 'package:timetracker_mobile/data/models/time_entry.dart';
@@ -6,6 +7,14 @@ import 'package:timetracker_mobile/data/models/project.dart';
 import 'package:timetracker_mobile/data/models/task.dart';
 import 'package:timetracker_mobile/data/storage/local_storage.dart';
 import 'package:timetracker_mobile/data/storage/sync_service.dart';
+
+/// Thrown when stop timer returns 400 because the timer was already stopped
+class TimerAlreadyStoppedException implements Exception {
+  final String message;
+  TimerAlreadyStoppedException(this.message);
+  @override
+  String toString() => message;
+}
 
 /// Repository for time tracking operations
 class TimeTrackingRepository {
@@ -106,7 +115,23 @@ class TimeTrackingRepository {
     }
     try {
       final response = await apiClient!.stopTimer();
-      return TimeEntry.fromJson(response['time_entry'] as Map<String, dynamic>);
+      final entry = TimeEntry.fromJson(response['time_entry'] as Map<String, dynamic>);
+      await LocalStorage.clearTimer();
+      return entry;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 400) {
+        final data = e.response?.data;
+        final errorCode = data is Map ? data['error_code'] as String? : null;
+        final errorMsg = data is Map ? data['error'] as String? : null;
+        await LocalStorage.clearTimer();
+        if (errorCode == 'no_active_timer' || errorCode == 'timer_already_stopped') {
+          throw TimerAlreadyStoppedException(
+            errorMsg ?? 'Timer was already stopped',
+          );
+        }
+        throw Exception(errorMsg ?? 'Failed to stop timer');
+      }
+      rethrow;
     } catch (e) {
       throw Exception('Failed to stop timer: $e');
     }

@@ -84,6 +84,16 @@ build_mobile() {
     # Get dependencies
     print_header "Installing Flutter dependencies"
     flutter pub get
+
+    # Generate app icons (source PNG then launcher sizes)
+    cd "$PROJECT_ROOT"
+    "$SCRIPT_DIR/generate-mobile-icon.sh" || true
+    cd "$PROJECT_ROOT/mobile"
+    dart run flutter_launcher_icons
+    if [ $? -ne 0 ]; then
+        print_error "Failed to generate launcher icons"
+        exit 1
+    fi
     
     # Analyze code
     print_header "Analyzing Flutter code"
