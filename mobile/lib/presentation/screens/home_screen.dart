@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/constants/app_constants.dart';
+import 'package:timetracker_mobile/data/models/project.dart';
 import '../providers/timer_provider.dart';
 import '../providers/time_entries_provider.dart';
+import '../providers/projects_provider.dart';
+import '../widgets/empty_state.dart';
 import 'timer_screen.dart';
 import 'projects_screen.dart';
 import 'time_entries_screen.dart';
@@ -100,6 +102,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
     // Load data on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(timerProvider.notifier).checkTimerStatus();
+      ref.read(projectsProvider.notifier).loadProjects();
       final now = DateTime.now();
       ref.read(timeEntriesProvider.notifier).loadTimeEntries(
         startDate: now.toIso8601String().split('T')[0],
@@ -114,10 +117,22 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
     super.dispose();
   }
 
+  String _projectName(int? projectId, List<Project> projects) {
+    if (projectId == null) return 'Unknown project';
+    try {
+      final p = projects.firstWhere((p) => p.id == projectId);
+      return p.name;
+    } catch (_) {
+      return 'Unknown project';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final timerState = ref.watch(timerProvider);
     final entriesState = ref.watch(timeEntriesProvider);
+    final projectsState = ref.watch(projectsProvider);
+    final theme = Theme.of(context);
 
     // Calculate today's total
     final todayTotal = entriesState.entries.fold<int>(
@@ -173,7 +188,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                             Text(
                               'Tap to view details',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.grey,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                                   ),
                             ),
                           ],
@@ -182,7 +197,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                         Text(
                           'No active timer',
                           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: Colors.grey,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                         ),
                     ],
@@ -207,8 +222,11 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                       entriesState.isLoading
                           ? 'Loading...'
                           : '${hours}h ${minutes}m',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      style: theme.textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
+                            color: entriesState.isLoading
+                                ? theme.colorScheme.onSurfaceVariant
+                                : null,
                           ),
                     ),
                   ],
@@ -224,24 +242,33 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
             if (entriesState.isLoading)
               const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
             else if (entriesState.entries.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Text('No recent entries'),
-                ),
+              const EmptyState(
+                icon: Icons.history,
+                title: 'No recent entries',
+                subtitle: 'Start a timer or add a time entry to see them here.',
               )
             else
-              ...entriesState.entries.take(5).map((entry) => Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        child: Icon(Icons.timer),
-                      ),
-                      title: Text(entry.projectId?.toString() ?? 'Unknown Project'),
-                      subtitle: Text(entry.notes ?? ''),
-                      trailing: Text(entry.formattedDuration),
+              ...entriesState.entries.take(5).map((entry) {
+                final projectName = _projectName(entry.projectId, projectsState.projects);
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      child: Icon(Icons.timer),
                     ),
-                  )),
+                    title: Text(
+                      projectName,
+                      style: projectName == 'Unknown project'
+                          ? theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            )
+                          : null,
+                    ),
+                    subtitle: Text(entry.notes ?? ''),
+                    trailing: Text(entry.formattedDuration),
+                  ),
+                );
+              }),
           ],
         ),
       ),

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:timetracker_mobile/presentation/providers/time_entries_provider.dart';
 import 'package:timetracker_mobile/presentation/screens/time_entry_form_screen.dart';
+import 'package:timetracker_mobile/presentation/widgets/empty_state.dart';
+import 'package:timetracker_mobile/presentation/widgets/error_view.dart';
 import 'package:timetracker_mobile/presentation/widgets/time_entry_card.dart';
 
 class TimeEntriesScreen extends ConsumerStatefulWidget {
@@ -58,58 +60,18 @@ class _TimeEntriesScreenState extends ConsumerState<TimeEntriesScreen> {
     }
 
     if (state.error != null && state.entries.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red.shade300,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Error loading entries',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              state.error!,
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => ref.read(timeEntriesProvider.notifier).refresh(),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
+      return ErrorView(
+        title: 'Error loading entries',
+        message: state.error,
+        onRetry: () => ref.read(timeEntriesProvider.notifier).refresh(),
       );
     }
 
     if (state.entries.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.history,
-              size: 64,
-              color: Colors.grey.shade300,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No time entries',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Start tracking time or add a manual entry',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
-        ),
+      return const EmptyState(
+        icon: Icons.history,
+        title: 'No time entries',
+        subtitle: 'Start tracking time or add a manual entry',
       );
     }
 
@@ -160,8 +122,8 @@ class _TimeEntriesScreenState extends ConsumerState<TimeEntriesScreen> {
               Navigator.of(context).pop();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
             ),
             child: const Text('Delete'),
           ),

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:timetracker_mobile/core/config/app_config.dart';
+import 'package:timetracker_mobile/presentation/providers/projects_provider.dart';
 import 'package:timetracker_mobile/presentation/screens/login_screen.dart';
+import 'package:timetracker_mobile/utils/auth/auth_service.dart';
 import 'package:timetracker_mobile/presentation/screens/time_entries_screen.dart';
 import 'package:timetracker_mobile/presentation/widgets/timer_widget.dart';
 
@@ -18,6 +19,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('TimeTracker'),
@@ -26,6 +28,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
             icon: const Icon(Icons.logout),
             onPressed: _handleLogout,
             tooltip: 'Logout',
+            style: IconButton.styleFrom(foregroundColor: colorScheme.error),
           ),
         ],
       ),
@@ -60,6 +63,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
   }
 
   Future<void> _handleLogout() async {
+    final colorScheme = Theme.of(context).colorScheme;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -70,33 +74,46 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Logout'),
+            child: Text('Logout', style: TextStyle(color: colorScheme.error)),
           ),
         ],
       ),
     );
 
     if (confirmed == true) {
-      const storage = FlutterSecureStorage();
-      await storage.delete(key: 'api_token');
-      await AppConfig.clearServerUrl();
+      await AuthService.deleteToken();
+      await AppConfig.clear();
 
       if (mounted) {
-        Navigator.of(context).pushReplacement(
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
         );
       }
     }
   }
 }
 
-class _TimerTab extends ConsumerWidget {
+class _TimerTab extends ConsumerStatefulWidget {
   const _TimerTab();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_TimerTab> createState() => _TimerTabState();
+}
+
+class _TimerTabState extends ConsumerState<_TimerTab> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(projectsProvider.notifier).loadProjects();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return const SingleChildScrollView(
       padding: EdgeInsets.all(16.0),
       child: Column(

@@ -101,13 +101,13 @@ class TimeEntryCard extends ConsumerWidget {
                   Icon(
                     Icons.access_time,
                     size: 16,
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     entry.formattedDateRange,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                   ),
                   if (entry.billable) ...[
@@ -118,14 +118,14 @@ class TimeEntryCard extends ConsumerWidget {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.green.shade100,
+                        color: Theme.of(context).colorScheme.tertiaryContainer,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         'Billable',
                         style: TextStyle(
                           fontSize: 10,
-                          color: Colors.green.shade700,
+                          color: Theme.of(context).colorScheme.onTertiaryContainer,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -159,7 +159,7 @@ class TimeEntryCard extends ConsumerWidget {
                         icon: const Icon(Icons.delete, size: 18),
                         label: const Text('Delete'),
                         style: TextButton.styleFrom(
-                          foregroundColor: Colors.red,
+                          foregroundColor: Theme.of(context).colorScheme.error,
                         ),
                       ),
                   ],

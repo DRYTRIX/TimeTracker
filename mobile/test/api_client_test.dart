@@ -6,7 +6,7 @@ void main() {
     test('initializes with base URL', () {
       const baseUrl = 'https://example.com';
       final client = ApiClient(baseUrl: baseUrl);
-      expect(client.baseUrl, baseUrl);
+      expect(client.baseUrl, 'https://example.com/');
     });
 
     test('validates token format', () {

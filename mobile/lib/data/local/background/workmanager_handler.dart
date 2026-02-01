@@ -1,9 +1,7 @@
 import 'package:workmanager/workmanager.dart';
 import '../../api/api_client.dart';
-import '../../models/time_entry.dart';
 import '../../../core/config/app_config.dart';
 import '../../../utils/auth/auth_service.dart';
-import 'dart:convert';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -35,8 +33,8 @@ Future<bool> _updateTimerStatus() async {
     final apiClient = ApiClient(baseUrl: serverUrl);
     await apiClient.setAuthToken(token);
 
-    final response = await apiClient.getTimerStatus();
-    if (response.statusCode == 200 && response.data['active'] == true) {
+    final data = await apiClient.getTimerStatus();
+    if (data['active'] == true) {
       // Timer is still running, could update local notification
       return true;
     }
@@ -74,7 +72,7 @@ Future<bool> _syncData() async {
 
 class WorkManagerService {
   static Future<void> initialize() async {
-    await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+    await Workmanager().initialize(callbackDispatcher);
   }
 
   static Future<void> startTimerStatusUpdates() async {

@@ -29,11 +29,13 @@ class TimerState {
     Timer? timer,
     bool? isLoading,
     String? error,
+    bool clearTimer = false,
+    bool clearError = false,
   }) {
     return TimerState(
-      timer: timer ?? this.timer,
+      timer: clearTimer ? null : (timer ?? this.timer),
       isLoading: isLoading ?? this.isLoading,
-      error: error,
+      error: clearError ? null : (error ?? this.error),
     );
   }
 
@@ -67,7 +69,7 @@ class TimerNotifier extends StateNotifier<TimerState> {
     if (repository == null) return;
 
     try {
-      state = state.copyWith(isLoading: true, error: null);
+      state = state.copyWith(isLoading: true, clearError: true);
       final timer = await repository!.getTimerStatus();
       state = state.copyWith(timer: timer, isLoading: false);
     } catch (e) {
@@ -86,7 +88,7 @@ class TimerNotifier extends StateNotifier<TimerState> {
     }
 
     try {
-      state = state.copyWith(isLoading: true, error: null);
+      state = state.copyWith(isLoading: true, clearError: true);
       final timer = await repository!.startTimer(
         projectId: projectId,
         taskId: taskId,
@@ -107,9 +109,11 @@ class TimerNotifier extends StateNotifier<TimerState> {
     }
 
     try {
-      state = state.copyWith(isLoading: true, error: null);
+      state = state.copyWith(isLoading: true, clearError: true);
       await repository!.stopTimer();
-      state = state.copyWith(timer: null, isLoading: false);
+      state = state.copyWith(clearTimer: true, isLoading: false, clearError: true);
+    } on TimerAlreadyStoppedException catch (e) {
+      state = state.copyWith(clearTimer: true, isLoading: false, error: e.message);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
@@ -121,7 +125,7 @@ class TimerNotifier extends StateNotifier<TimerState> {
 
   /// Get elapsed time for active timer
   Duration getElapsedTime() {
-    if (state.timer == null || state.timer!.startTime == null) {
+    if (state.timer == null) {
       return Duration.zero;
     }
     return DateTime.now().difference(state.timer!.startTime);

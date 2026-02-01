@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/config/app_config.dart';
 import '../../core/constants/app_constants.dart';
-import 'login_screen.dart';
-import 'home_screen.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -20,34 +18,55 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     _checkAuthStatus();
   }
 
-  Future<void> _checkAuthStatus() async {
-    await Future.delayed(const Duration(seconds: 2));
-    
-    if (!mounted) return;
-    
+  void _checkAuthStatus() {
+    _continueAuthCheck();
+  }
+
+  Future<void> _continueAuthCheck() async {
+    final start = DateTime.now();
     final serverUrl = await AppConfig.getServerUrl();
     const storage = FlutterSecureStorage();
     final token = await storage.read(key: AppConfig.apiTokenKey);
     final hasToken = token != null && token.isNotEmpty;
-    
-    if (serverUrl != null && serverUrl.isNotEmpty && hasToken) {
-      Navigator.of(context).pushReplacementNamed(AppConstants.routeHome);
-    } else {
-      Navigator.of(context).pushReplacementNamed(AppConstants.routeLogin);
+    final route = (serverUrl != null && serverUrl.isNotEmpty && hasToken)
+        ? AppConstants.routeHome
+        : AppConstants.routeLogin;
+    final elapsed = DateTime.now().difference(start).inMilliseconds;
+    const minDisplayMs = 800;
+    if (elapsed < minDisplayMs) {
+      await Future.delayed(Duration(milliseconds: minDisplayMs - elapsed));
     }
+    if (!mounted) return;
+    Navigator.of(context).pushReplacementNamed(route);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
+      body: SafeArea(
+        child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.timer,
-              size: 80,
-              color: Theme.of(context).colorScheme.primary,
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.timer,
+                size: 48,
+                color: Theme.of(context).colorScheme.onPrimary,
+              ),
             ),
             const SizedBox(height: 24),
             Text(
@@ -59,6 +78,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             const SizedBox(height: 48),
             const CircularProgressIndicator(),
           ],
+        ),
         ),
       ),
     );

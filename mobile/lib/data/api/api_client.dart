@@ -1,22 +1,26 @@
 import 'package:dio/dio.dart';
 
+import 'package:timetracker_mobile/utils/ssl/ssl_utils.dart';
+
 class ApiClient {
   final String baseUrl;
   late final Dio _dio;
-  String? _authToken;
 
-  ApiClient({required this.baseUrl}) {
+  ApiClient({
+    required String baseUrl,
+    Set<String> trustedInsecureHosts = const {},
+  }) : baseUrl = baseUrl.endsWith('/') ? baseUrl : '$baseUrl/' {
     _dio = Dio(BaseOptions(
-      baseUrl: baseUrl,
+      baseUrl: this.baseUrl,
       headers: {
         'Content-Type': 'application/json',
       },
     ));
+    configureDioTrustedHosts(_dio, trustedInsecureHosts);
   }
 
   /// Set authentication token
   Future<void> setAuthToken(String token) async {
-    _authToken = token;
     _dio.options.headers['Authorization'] = 'Bearer $token';
   }
 
