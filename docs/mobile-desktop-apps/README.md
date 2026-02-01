@@ -57,10 +57,9 @@ Both apps use the TimeTracker REST API v1 (`/api/v1/`). See [API Documentation](
 
 ### Authentication
 
-1. Generate an API token from the web admin panel: Admin > API Tokens
-2. Enter the server URL in the app
-3. Enter the API token
-4. The app will validate the token and store it securely
+1. **Mobile app**: Sign in with your web username and password; the app obtains an API token in the background for the same basics access as the web app.
+2. **Desktop app**: Enter the server URL and either sign in with username/password (if supported) or use an API token from Admin > Security & Access > Api-tokens.
+3. The app will validate credentials and store the token securely.
 
 ### Required API Scopes
 
