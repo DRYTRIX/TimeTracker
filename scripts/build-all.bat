@@ -123,6 +123,18 @@ if "%BUILD_MOBILE%"=="1" (
     echo [OK] Dependencies installed
     echo.
     
+    echo [1b/6] Generating app icons...
+    cd /d "%PROJECT_ROOT%"
+    call "%SCRIPT_DIR%generate-mobile-icon.bat"
+    cd /d "%PROJECT_ROOT%\mobile"
+    call dart run flutter_launcher_icons
+    if errorlevel 1 (
+        echo [ERROR] Failed to generate launcher icons
+        exit /b 1
+    )
+    echo [OK] Launcher icons generated
+    echo.
+    
     echo [2/6] Analyzing Flutter code...
     call flutter analyze
     if errorlevel 1 (

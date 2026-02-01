@@ -38,6 +38,18 @@ echo "Installing dependencies..."
 flutter pub get
 echo ""
 
+# Generate app icons (source PNG then launcher sizes)
+cd "$PROJECT_ROOT"
+"$SCRIPT_DIR/generate-mobile-icon.sh" || true
+cd "$MOBILE_DIR"
+echo "Generating launcher icons..."
+dart run flutter_launcher_icons
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to generate launcher icons"
+    exit 1
+fi
+echo ""
+
 # Analyze
 echo "Analyzing code..."
 flutter analyze || true
