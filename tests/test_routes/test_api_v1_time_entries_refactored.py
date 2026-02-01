@@ -119,3 +119,38 @@ class TestAPITimeEntriesRefactored:
         assert data["pagination"]["page"] == 1
         assert data["pagination"]["per_page"] == 2
         assert len(data["time_entries"]) <= 2
+
+    def test_list_time_entries_same_day_date_filter_includes_midday_entries(
+        self, app, client_with_token, user, project
+    ):
+        """Test that date-only start_date=end_date includes entries throughout the day (not just midnight)."""
+        from app import db
+        from app.utils.timezone import get_timezone_obj
+
+        tz = get_timezone_obj()
+        now = datetime.now(tz).replace(tzinfo=None)
+        today_str = now.strftime("%Y-%m-%d")
+
+        # Create entry at 14:00 today (not midnight)
+        start = now.replace(hour=14, minute=0, second=0, microsecond=0)
+        end = now.replace(hour=15, minute=0, second=0, microsecond=0)
+        entry = TimeEntry(
+            user_id=user.id,
+            project_id=project.id,
+            start_time=start,
+            end_time=end,
+            notes="Midday entry for same-day filter test",
+        )
+        db.session.add(entry)
+        db.session.commit()
+
+        response = client_with_token.get(
+            f"/api/v1/time-entries?start_date={today_str}&end_date={today_str}"
+        )
+
+        assert response.status_code == 200
+        data = response.get_json()
+        assert "time_entries" in data
+        # Same-day filter should include the midday entry (fix for date-only end_date)
+        entries = [e for e in data["time_entries"] if "Midday entry" in (e.get("notes") or "")]
+        assert len(entries) >= 1, "Same-day date filter should include entries throughout the day"
