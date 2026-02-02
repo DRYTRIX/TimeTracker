@@ -1,7 +1,7 @@
 name: timetracker_mobile
 description: TimeTracker mobile app for Android and iOS
 publish_to: 'none'
-version: 4.15.1+1
+version: 4.16.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -40,6 +40,7 @@ dependencies:
   connectivity_plus: ^5.0.2
   timeago: ^3.6.1
   package_info_plus: ^8.0.0
+  google_fonts: ^8.0.0
 
 dev_dependencies:
   flutter_test:
@@ -57,6 +58,8 @@ flutter:
 
 flutter_launcher_icons:
   android: true
+  # iOS icons are generated in CI / on macOS using `flutter_launcher_icons_ios.yaml`
+  # because the iOS project files (Runner.xcodeproj) may not exist on Windows.
   ios: false
   image_path: "assets/icon/app_icon.png"
   adaptive_icon_background: "#4A90E2"

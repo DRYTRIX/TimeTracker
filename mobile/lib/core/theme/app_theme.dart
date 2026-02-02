@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import 'app_tokens.dart';
 
 /// TimeTracker brand colors aligned with the webapp (brand-colors.css / tailwind.config.js).
 class AppColors {
@@ -32,6 +35,24 @@ class AppColors {
 }
 
 class AppTheme {
+  static TextTheme _textTheme({
+    required Brightness brightness,
+    required ColorScheme colorScheme,
+  }) {
+    final base = ThemeData(brightness: brightness, useMaterial3: true).textTheme;
+    final themed = GoogleFonts.interTextTheme(base).apply(
+      bodyColor: colorScheme.onSurface,
+      displayColor: colorScheme.onSurface,
+    );
+    // Nudge key sizes/weights to feel more modern/consistent.
+    return themed.copyWith(
+      titleLarge: themed.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+      titleMedium: themed.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+      titleSmall: themed.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+      labelLarge: themed.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+    );
+  }
+
   /// Light color scheme matching the webapp (brand-colors.css, tailwind).
   static ColorScheme get _lightColorScheme => ColorScheme.light(
         primary: AppColors.primary,
@@ -87,9 +108,12 @@ class AppTheme {
       );
 
   static ThemeData get lightTheme {
+    final colorScheme = _lightColorScheme;
     return ThemeData(
       useMaterial3: true,
-      colorScheme: _lightColorScheme,
+      colorScheme: colorScheme,
+      textTheme: _textTheme(brightness: Brightness.light, colorScheme: colorScheme),
+      scaffoldBackgroundColor: colorScheme.surface,
       appBarTheme: const AppBarTheme(
         centerTitle: true,
         elevation: 0,
@@ -98,43 +122,70 @@ class AppTheme {
         elevation: 2,
         color: AppColors.bgLightSecondary,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadii.md),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppRadii.sm),
           ),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: _lightColorScheme.primary,
-        foregroundColor: _lightColorScheme.onPrimary,
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
         elevation: 2,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: AppColors.bgLightSecondary,
+        indicatorColor: colorScheme.primaryContainer,
+        labelTextStyle: WidgetStateProperty.all(
+          const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+        height: 72,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
+        fillColor: AppColors.bgLightSecondary,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadii.md),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+      dividerTheme: DividerThemeData(
+        thickness: 1,
+        space: 1,
+        color: colorScheme.outlineVariant,
+      ),
+      chipTheme: ChipThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.lg)),
+        side: BorderSide(color: colorScheme.outlineVariant),
+        labelStyle: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.w600),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadii.sm),
         ),
         contentTextStyle: const TextStyle(fontSize: 14),
       ),
       dialogTheme: DialogThemeData(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadii.lg),
         ),
         titleTextStyle: const TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w600,
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        showDragHandle: true,
+        backgroundColor: AppColors.bgLightSecondary,
+        modalBackgroundColor: AppColors.bgLightSecondary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
         ),
       ),
       listTileTheme: const ListTileThemeData(
@@ -145,9 +196,12 @@ class AppTheme {
   }
 
   static ThemeData get darkTheme {
+    final colorScheme = _darkColorScheme;
     return ThemeData(
       useMaterial3: true,
-      colorScheme: _darkColorScheme,
+      colorScheme: colorScheme,
+      textTheme: _textTheme(brightness: Brightness.dark, colorScheme: colorScheme),
+      scaffoldBackgroundColor: colorScheme.surface,
       appBarTheme: const AppBarTheme(
         centerTitle: true,
         elevation: 0,
@@ -156,41 +210,68 @@ class AppTheme {
         elevation: 2,
         color: AppColors.bgDarkSecondary,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadii.md),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppRadii.sm),
           ),
         ),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         elevation: 2,
       ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: AppColors.bgDarkSecondary,
+        indicatorColor: colorScheme.primaryContainer,
+        labelTextStyle: WidgetStateProperty.all(
+          const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+        height: 72,
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
+        fillColor: AppColors.bgDarkSecondary,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadii.md),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+      dividerTheme: DividerThemeData(
+        thickness: 1,
+        space: 1,
+        color: colorScheme.outlineVariant,
+      ),
+      chipTheme: ChipThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.lg)),
+        side: BorderSide(color: colorScheme.outlineVariant),
+        labelStyle: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.w600),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadii.sm),
         ),
         contentTextStyle: const TextStyle(fontSize: 14),
       ),
       dialogTheme: DialogThemeData(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadii.lg),
         ),
         titleTextStyle: const TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w600,
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        showDragHandle: true,
+        backgroundColor: AppColors.bgDarkSecondary,
+        modalBackgroundColor: AppColors.bgDarkSecondary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
         ),
       ),
       listTileTheme: const ListTileThemeData(

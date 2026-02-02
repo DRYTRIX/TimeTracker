@@ -139,8 +139,8 @@ document.addEventListener('DOMContentLoaded', async function(){
     const projectSelect = document.getElementById('project_id');
     const clientSelect = document.getElementById('client_id');
     const taskSelect = document.getElementById('task_id');
-    const noTaskText = '{{ _('No task') }}';
-    const failedToLoadTasksText = '{{ _('Failed to load tasks') }}';
+    const noTaskText = {{ _('No task')|tojson }};
+    const failedToLoadTasksText = {{ _('Failed to load tasks')|tojson }};
     
     // Single-client mode: when project cleared, restore client (Issue #467)
     const onlyOneClient = {{ 'true' if only_one_client else 'false' }};
@@ -176,10 +176,10 @@ document.addEventListener('DOMContentLoaded', async function(){
             return;
         }
         try{
-            const resp = await fetch(`/api/tasks?project_id=${projectId}`);
+            const resp = await fetch(`/api/projects/${projectId}/tasks`, { credentials: 'same-origin' });
             if (!resp.ok) throw new Error(failedToLoadTasksText);
             const data = await resp.json();
-            const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+            const tasks = Array.isArray(data?.tasks) ? data.tasks : [];
             taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
             tasks.forEach(t => {
                 const opt = document.createElement('option');

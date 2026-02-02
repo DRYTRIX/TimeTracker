@@ -241,20 +241,25 @@
 const projectSelectEl = document.getElementById('project_id');
 const clientSelectEl = document.getElementById('client_id');
 const taskSelectEl = document.getElementById('task_id');
+const noTaskText = {{ _('No task')|tojson }};
+const failedToLoadTasksText = {{ _('Failed to load tasks')|tojson }};
 
 async function loadTasksForProject(projectId) {
     if (!taskSelectEl) return;
     if (!projectId) {
-        taskSelectEl.innerHTML = '<option value=\"\">{{ _('No task') }}</option>';
+        taskSelectEl.innerHTML = `<option value="">${noTaskText}</option>`;
         taskSelectEl.disabled = false;
         return;
     }
 
     try {
-        const response = await fetch(`/api/tasks?project_id=${projectId}`);
+        const response = await fetch(`/api/projects/${projectId}/tasks`, { credentials: 'same-origin' });
+        if (!response.ok) throw new Error(failedToLoadTasksText);
         const data = await response.json();
-        taskSelectEl.innerHTML = '<option value=\"\">{{ _('No task') }}</option>';
-        (data.tasks || []).forEach(task => {
+        const tasks = Array.isArray(data?.tasks) ? data.tasks : [];
+
+        taskSelectEl.innerHTML = `<option value="">${noTaskText}</option>`;
+        tasks.forEach(task => {
             const option = document.createElement('option');
             option.value = task.id;
             option.textContent = task.name;
@@ -263,7 +268,7 @@ async function loadTasksForProject(projectId) {
         taskSelectEl.disabled = false;
     } catch (error) {
         console.error('Error loading tasks:', error);
-        taskSelectEl.innerHTML = '<option value=\"\">{{ _('No task') }}</option>';
+        taskSelectEl.innerHTML = `<option value="">${noTaskText}</option>`;
         taskSelectEl.disabled = true;
     }
 }
@@ -289,7 +294,7 @@ if (projectSelectEl && clientSelectEl) {
                 projectSelectEl.value = '';
             }
             if (taskSelectEl) {
-                taskSelectEl.innerHTML = '<option value=\"\">{{ _('No task') }}</option>';
+                taskSelectEl.innerHTML = `<option value="">${noTaskText}</option>`;
                 taskSelectEl.disabled = true;
             }
         } else if (taskSelectEl) {

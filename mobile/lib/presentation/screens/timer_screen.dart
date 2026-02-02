@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:timetracker_mobile/core/theme/app_tokens.dart';
 import 'package:timetracker_mobile/core/config/app_config.dart';
 import 'package:timetracker_mobile/presentation/providers/projects_provider.dart';
 import 'package:timetracker_mobile/presentation/screens/login_screen.dart';
 import 'package:timetracker_mobile/utils/auth/auth_service.dart';
-import 'package:timetracker_mobile/presentation/screens/time_entries_screen.dart';
 import 'package:timetracker_mobile/presentation/widgets/timer_widget.dart';
 
 class TimerScreen extends ConsumerStatefulWidget {
@@ -15,14 +15,20 @@ class TimerScreen extends ConsumerStatefulWidget {
 }
 
 class _TimerScreenState extends ConsumerState<TimerScreen> {
-  int _selectedIndex = 0;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(projectsProvider.notifier).loadProjects();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('TimeTracker'),
+        title: const Text('Timer'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -32,32 +38,13 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: const [
-          _TimerTab(),
-          TimeEntriesScreen(),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.timer_outlined),
-            selectedIcon: Icon(Icons.timer),
-            label: 'Timer',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.history_outlined),
-            selectedIcon: Icon(Icons.history),
-            label: 'Entries',
-          ),
-        ],
+      body: const SingleChildScrollView(
+        padding: EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          children: [
+            TimerWidget(),
+          ],
+        ),
       ),
     );
   }
@@ -93,34 +80,5 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
         );
       }
     }
-  }
-}
-
-class _TimerTab extends ConsumerStatefulWidget {
-  const _TimerTab();
-
-  @override
-  ConsumerState<_TimerTab> createState() => _TimerTabState();
-}
-
-class _TimerTabState extends ConsumerState<_TimerTab> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(projectsProvider.notifier).loadProjects();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return const SingleChildScrollView(
-      padding: EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          TimerWidget(),
-        ],
-      ),
-    );
   }
 }
