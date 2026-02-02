@@ -11,12 +11,70 @@ from app.utils.timezone import convert_app_datetime_to_user
 logger = logging.getLogger(__name__)
 
 
-def create_time_entries_excel(entries, filename_prefix="timetracker_export"):
+def _safe_user_dt_iso(dt):
+    """Convert app datetime to user datetime and return ISO string."""
+    if not dt:
+        return ""
+    try:
+        return convert_app_datetime_to_user(dt).isoformat()
+    except Exception:
+        # Fallback: keep export working even if timezone conversion fails
+        try:
+            return dt.isoformat()
+        except Exception:
+            return ""
+
+
+def _safe_user_date_iso(dt):
+    """Convert app datetime to user date and return YYYY-MM-DD."""
+    if not dt:
+        return ""
+    try:
+        return convert_app_datetime_to_user(dt).date().isoformat()
+    except Exception:
+        try:
+            return dt.date().isoformat()
+        except Exception:
+            return ""
+
+
+# Allowed columns for detailed time-entry export (used by reports/user/export/entries/excel)
+# Each key maps to: (header label, extractor(entry) -> cell value)
+ALLOWED_TIME_ENTRY_EXPORT_COLUMNS = {
+    "id": ("ID", lambda e: e.id),
+    "date": ("Date", lambda e: _safe_user_date_iso(getattr(e, "start_time", None))),
+    "user": ("User", lambda e: e.user.display_name if getattr(e, "user", None) else "Unknown"),
+    "project": ("Project", lambda e: e.project.name if getattr(e, "project", None) else "N/A"),
+    "client": (
+        "Client",
+        lambda e: (e.project.client if (getattr(e, "project", None) and getattr(e.project, "client", None)) else "N/A"),
+    ),
+    "task": ("Task", lambda e: e.task.name if getattr(e, "task", None) else "N/A"),
+    "start_time": ("Start Time", lambda e: _safe_user_dt_iso(getattr(e, "start_time", None))),
+    "end_time": ("End Time", lambda e: _safe_user_dt_iso(getattr(e, "end_time", None))),
+    # Aliases: "duration" defaults to numeric hours (good for finance)
+    "duration": ("Duration (hours)", lambda e: e.duration_hours if getattr(e, "end_time", None) else 0),
+    "duration_hours": ("Duration (hours)", lambda e: e.duration_hours if getattr(e, "end_time", None) else 0),
+    "duration_formatted": (
+        "Duration (formatted)",
+        lambda e: (e.duration_formatted if getattr(e, "end_time", None) else "In Progress"),
+    ),
+    "notes": ("Notes", lambda e: getattr(e, "notes", None) or ""),
+    "tags": ("Tags", lambda e: getattr(e, "tags", None) or ""),
+    "source": ("Source", lambda e: getattr(e, "source", None) or "manual"),
+    "billable": ("Billable", lambda e: "Yes" if getattr(e, "billable", False) else "No"),
+    "created_at": ("Created At", lambda e: _safe_user_dt_iso(getattr(e, "created_at", None))),
+}
+
+
+def create_time_entries_excel(entries, filename_prefix="timetracker_export", columns=None):
     """Create Excel file from time entries
 
     Args:
         entries: List of TimeEntry objects
         filename_prefix: Prefix for the filename
+        columns: Optional list of column keys to export (see ALLOWED_TIME_ENTRY_EXPORT_COLUMNS).
+                 If omitted/None, uses the legacy fixed export format.
 
     Returns:
         tuple: (BytesIO object with Excel file, filename)
@@ -34,23 +92,32 @@ def create_time_entries_excel(entries, filename_prefix="timetracker_export"):
         left=Side(style="thin"), right=Side(style="thin"), top=Side(style="thin"), bottom=Side(style="thin")
     )
 
-    # Headers
-    headers = [
-        "ID",
-        "User",
-        "Project",
-        "Client",
-        "Task",
-        "Start Time",
-        "End Time",
-        "Duration (hours)",
-        "Duration (formatted)",
-        "Notes",
-        "Tags",
-        "Source",
-        "Billable",
-        "Created At",
-    ]
+    # Determine columns/headers
+    if columns is None:
+        # Legacy fixed format (kept for backward compatibility)
+        column_keys = [
+            "id",
+            "user",
+            "project",
+            "client",
+            "task",
+            "start_time",
+            "end_time",
+            "duration_hours",
+            "duration_formatted",
+            "notes",
+            "tags",
+            "source",
+            "billable",
+            "created_at",
+        ]
+    else:
+        # Custom format: accept only known columns; preserve requested order
+        column_keys = [c for c in columns if c in ALLOWED_TIME_ENTRY_EXPORT_COLUMNS]
+        if not column_keys:
+            column_keys = ["date", "user", "project", "task", "duration_hours", "notes"]
+
+    headers = [ALLOWED_TIME_ENTRY_EXPORT_COLUMNS[k][0] for k in column_keys]
 
     # Write headers with styling
     for col_num, header in enumerate(headers, 1):
@@ -62,29 +129,21 @@ def create_time_entries_excel(entries, filename_prefix="timetracker_export"):
 
     # Write data
     for row_num, entry in enumerate(entries, 2):
-        data = [
-            entry.id,
-            entry.user.display_name if entry.user else "Unknown",
-            entry.project.name if entry.project else "N/A",
-            entry.project.client if (entry.project and entry.project.client) else "N/A",
-            entry.task.name if entry.task else "N/A",
-            entry.start_time.isoformat() if entry.start_time else "",
-            entry.end_time.isoformat() if entry.end_time else "",
-            entry.duration_hours if entry.end_time else 0,
-            entry.duration_formatted if entry.end_time else "In Progress",
-            entry.notes or "",
-            entry.tags or "",
-            entry.source or "manual",
-            "Yes" if entry.billable else "No",
-            entry.created_at.isoformat() if entry.created_at else "",
-        ]
+        data = []
+        for key in column_keys:
+            try:
+                extractor = ALLOWED_TIME_ENTRY_EXPORT_COLUMNS[key][1]
+                data.append(extractor(entry))
+            except Exception as e:
+                logger.debug(f"Error exporting column {key}: {e}")
+                data.append("")
 
         for col_num, value in enumerate(data, 1):
             cell = ws.cell(row=row_num, column=col_num, value=value)
             cell.border = border
 
-            # Format duration column as number
-            if col_num == 8 and isinstance(value, (int, float)):
+            # Format duration columns as numbers
+            if column_keys[col_num - 1] in {"duration", "duration_hours"} and isinstance(value, (int, float)):
                 cell.number_format = "0.00"
 
     # Auto-adjust column widths
@@ -103,20 +162,21 @@ def create_time_entries_excel(entries, filename_prefix="timetracker_export"):
         adjusted_width = min(max_length + 2, 50)  # Cap at 50
         ws.column_dimensions[column].width = adjusted_width
 
-    # Add summary at the bottom
-    last_row = len(entries) + 2
-    ws.cell(row=last_row + 1, column=1, value="Summary")
-    ws.cell(row=last_row + 1, column=1).font = Font(bold=True)
+    # Add summary at the bottom only for legacy exports
+    if columns is None:
+        last_row = len(entries) + 2
+        ws.cell(row=last_row + 1, column=1, value="Summary")
+        ws.cell(row=last_row + 1, column=1).font = Font(bold=True)
 
-    total_hours = sum(e.duration_hours for e in entries if e.end_time)
-    billable_hours = sum(e.duration_hours for e in entries if e.end_time and e.billable)
+        total_hours = sum(e.duration_hours for e in entries if getattr(e, "end_time", None))
+        billable_hours = sum(e.duration_hours for e in entries if getattr(e, "end_time", None) and getattr(e, "billable", False))
 
-    ws.cell(row=last_row + 2, column=1, value="Total Hours:")
-    ws.cell(row=last_row + 2, column=2, value=total_hours).number_format = "0.00"
-    ws.cell(row=last_row + 3, column=1, value="Billable Hours:")
-    ws.cell(row=last_row + 3, column=2, value=billable_hours).number_format = "0.00"
-    ws.cell(row=last_row + 4, column=1, value="Total Entries:")
-    ws.cell(row=last_row + 4, column=2, value=len(entries))
+        ws.cell(row=last_row + 2, column=1, value="Total Hours:")
+        ws.cell(row=last_row + 2, column=2, value=total_hours).number_format = "0.00"
+        ws.cell(row=last_row + 3, column=1, value="Billable Hours:")
+        ws.cell(row=last_row + 3, column=2, value=billable_hours).number_format = "0.00"
+        ws.cell(row=last_row + 4, column=1, value="Total Entries:")
+        ws.cell(row=last_row + 4, column=2, value=len(entries))
 
     # Save to BytesIO
     output = io.BytesIO()
