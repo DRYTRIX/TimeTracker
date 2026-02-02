@@ -8,9 +8,38 @@ from app.models import Permission, Role, User
 from app.routes.admin import admin_required
 from app.utils.db import safe_commit
 from app.utils.permissions_seed import sync_permissions_and_roles
+from app.utils.module_registry import ModuleRegistry, ModuleCategory
 from sqlalchemy.exc import IntegrityError
 
 permissions_bp = Blueprint("permissions", __name__)
+
+
+def _get_modules_by_category_for_roles():
+    """
+    Return a stable, ordered list of (category, modules[]) for role module-visibility UI.
+
+    Notes:
+    - Core modules are excluded (always enabled).
+    - Registry init is idempotent.
+    """
+    ModuleRegistry.initialize_defaults()
+    categories = [c for c in ModuleCategory if c != ModuleCategory.CORE]
+    return [(category, ModuleRegistry.get_by_category(category)) for category in categories]
+
+
+def _sanitize_hidden_module_ids(module_ids):
+    """Filter/normalize hidden module IDs coming from forms."""
+    ModuleRegistry.initialize_defaults()
+    hidden = []
+    for module_id in module_ids or []:
+        module = ModuleRegistry.get(module_id)
+        if not module:
+            continue
+        if module.category == ModuleCategory.CORE:
+            continue
+        if module_id not in hidden:
+            hidden.append(module_id)
+    return hidden
 
 
 @permissions_bp.route("/admin/roles")
@@ -40,18 +69,30 @@ def create_role():
         flash(_("You do not have permission to access this page"), "error")
         return redirect(url_for("main.dashboard"))
 
+    modules_by_category = _get_modules_by_category_for_roles()
+
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         description = request.form.get("description", "").strip()
 
         if not name:
             flash(_("Role name is required"), "error")
-            return render_template("admin/roles/form.html", role=None, all_permissions=Permission.query.all())
+            return render_template(
+                "admin/roles/form.html",
+                role=None,
+                all_permissions=Permission.query.all(),
+                modules_by_category=modules_by_category,
+            )
 
         # Check if role already exists
         if Role.query.filter_by(name=name).first():
             flash(_("A role with this name already exists"), "error")
-            return render_template("admin/roles/form.html", role=None, all_permissions=Permission.query.all())
+            return render_template(
+                "admin/roles/form.html",
+                role=None,
+                all_permissions=Permission.query.all(),
+                modules_by_category=modules_by_category,
+            )
 
         # Create role
         role = Role(name=name, description=description, is_system_role=False)
@@ -64,16 +105,29 @@ def create_role():
             if permission:
                 role.add_permission(permission)
 
+        # Assign hidden modules (denylist)
+        role.hidden_module_ids = _sanitize_hidden_module_ids(request.form.getlist("hidden_modules"))
+
         if not safe_commit("create_role", {"name": name}):
             flash(_("Could not create role due to a database error"), "error")
-            return render_template("admin/roles/form.html", role=None, all_permissions=Permission.query.all())
+            return render_template(
+                "admin/roles/form.html",
+                role=None,
+                all_permissions=Permission.query.all(),
+                modules_by_category=modules_by_category,
+            )
 
         flash(_("Role created successfully"), "success")
         return redirect(url_for("permissions.list_roles"))
 
     # GET request
     all_permissions = Permission.query.order_by(Permission.category, Permission.name).all()
-    return render_template("admin/roles/form.html", role=None, all_permissions=all_permissions)
+    return render_template(
+        "admin/roles/form.html",
+        role=None,
+        all_permissions=all_permissions,
+        modules_by_category=modules_by_category,
+    )
 
 
 @permissions_bp.route("/admin/roles/<int:role_id>/edit", methods=["GET", "POST"])
@@ -88,24 +142,41 @@ def edit_role(role_id):
 
     role = Role.query.get_or_404(role_id)
 
+    modules_by_category = _get_modules_by_category_for_roles()
+
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         description = request.form.get("description", "").strip()
 
         if not name:
             flash(_("Role name is required"), "error")
-            return render_template("admin/roles/form.html", role=role, all_permissions=Permission.query.all())
+            return render_template(
+                "admin/roles/form.html",
+                role=role,
+                all_permissions=Permission.query.all(),
+                modules_by_category=modules_by_category,
+            )
 
         # For system roles, don't allow name changes (name is the identifier)
         if role.is_system_role and name != role.name:
             flash(_("System role names cannot be changed"), "error")
-            return render_template("admin/roles/form.html", role=role, all_permissions=Permission.query.all())
+            return render_template(
+                "admin/roles/form.html",
+                role=role,
+                all_permissions=Permission.query.all(),
+                modules_by_category=modules_by_category,
+            )
 
         # Check if name is taken by another role
         existing = Role.query.filter_by(name=name).first()
         if existing and existing.id != role.id:
             flash(_("A role with this name already exists"), "error")
-            return render_template("admin/roles/form.html", role=role, all_permissions=Permission.query.all())
+            return render_template(
+                "admin/roles/form.html",
+                role=role,
+                all_permissions=Permission.query.all(),
+                modules_by_category=modules_by_category,
+            )
 
         # Update role
         if not role.is_system_role:
@@ -122,9 +193,17 @@ def edit_role(role_id):
             if permission:
                 role.add_permission(permission)
 
+        # Update hidden modules (denylist)
+        role.hidden_module_ids = _sanitize_hidden_module_ids(request.form.getlist("hidden_modules"))
+
         if not safe_commit("edit_role", {"role_id": role.id}):
             flash(_("Could not update role due to a database error"), "error")
-            return render_template("admin/roles/form.html", role=role, all_permissions=Permission.query.all())
+            return render_template(
+                "admin/roles/form.html",
+                role=role,
+                all_permissions=Permission.query.all(),
+                modules_by_category=modules_by_category,
+            )
 
         flash(_("Role updated successfully"), "success")
         return redirect(url_for("permissions.view_role", role_id=role.id))
@@ -132,7 +211,12 @@ def edit_role(role_id):
     # GET request - auto-sync before showing form
     sync_permissions_and_roles()
     all_permissions = Permission.query.order_by(Permission.category, Permission.name).all()
-    return render_template("admin/roles/form.html", role=role, all_permissions=all_permissions)
+    return render_template(
+        "admin/roles/form.html",
+        role=role,
+        all_permissions=all_permissions,
+        modules_by_category=modules_by_category,
+    )
 
 
 @permissions_bp.route("/admin/roles/<int:role_id>")

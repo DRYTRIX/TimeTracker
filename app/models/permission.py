@@ -54,6 +54,9 @@ class Role(db.Model):
     name = db.Column(db.String(50), unique=True, nullable=False, index=True)
     description = db.Column(db.String(255), nullable=True)
     is_system_role = db.Column(db.Boolean, default=False, nullable=False)  # System roles cannot be deleted
+    # Role-based module visibility: module IDs hidden for this role (denylist).
+    # Empty/None means no modules are hidden.
+    hidden_module_ids = db.Column(db.JSON, default=list, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -62,10 +65,12 @@ class Role(db.Model):
         "Permission", secondary=role_permissions, lazy="joined", backref=db.backref("roles", lazy="dynamic")
     )
 
-    def __init__(self, name, description=None, is_system_role=False):
+    def __init__(self, name, description=None, is_system_role=False, hidden_module_ids=None):
         self.name = name
         self.description = description
         self.is_system_role = is_system_role
+        if hidden_module_ids is not None:
+            self.hidden_module_ids = hidden_module_ids
 
     def __repr__(self):
         return f"<Role {self.name}>"
@@ -95,6 +100,7 @@ class Role(db.Model):
             "name": self.name,
             "description": self.description,
             "is_system_role": self.is_system_role,
+            "hidden_module_ids": (self.hidden_module_ids if self.hidden_module_ids is not None else []),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
