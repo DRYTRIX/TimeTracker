@@ -418,6 +418,7 @@
                             {% endif %}
                         </ul>
                     </li>
+                    {% if has_enabled_modules(ModuleCategory.FINANCE) %}
                     <li class="mt-2">
                         <button onclick="toggleDropdown('financeDropdown')" data-dropdown="financeDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if finance_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-dollar-sign w-6 text-center"></i>
@@ -536,6 +537,7 @@
                             {% endif %}
                         </ul>
                     </li>
+                    {% endif %}
                     {% if is_module_enabled('inventory') and (current_user.is_admin or has_permission('view_inventory')) %}
                     <li class="mt-2">
                         <button onclick="toggleDropdown('inventoryDropdown')" data-dropdown="inventoryDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if inventory_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">

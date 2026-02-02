@@ -104,6 +104,19 @@ def get_enabled_modules(category=None):
         return []
 
 
+def has_enabled_modules(category=None) -> bool:
+    """
+    Check whether a category has any enabled modules for the current user.
+
+    Args:
+        category: Optional ModuleCategory (or its value as string). If omitted/invalid, returns False.
+
+    Returns:
+        True if at least one module in the category is enabled for the current user.
+    """
+    return bool(get_enabled_modules(category))
+
+
 def init_module_helpers(app):
     """
     Initialize module helper functions for use in templates and routes.
@@ -120,6 +133,7 @@ def init_module_helpers(app):
         return {
             "is_module_enabled": is_module_enabled,
             "get_enabled_modules": get_enabled_modules,
+            "has_enabled_modules": has_enabled_modules,
             "get_modules_by_category": lambda cat: ModuleRegistry.get_by_category(cat),
             "ModuleCategory": ModuleCategory,
         }
@@ -127,4 +141,5 @@ def init_module_helpers(app):
     # Also make it available as a global function
     app.jinja_env.globals['is_module_enabled'] = is_module_enabled
     app.jinja_env.globals['get_enabled_modules'] = get_enabled_modules
+    app.jinja_env.globals['has_enabled_modules'] = has_enabled_modules
 
