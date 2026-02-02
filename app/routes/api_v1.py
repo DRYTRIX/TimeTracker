@@ -122,6 +122,30 @@ def _parse_date_range(start_date_str, end_date_str):
     return start_dt, end_dt
 
 
+def _require_module_enabled_for_api(module_id: str):
+    """Return a Flask response tuple if module is disabled for this API user; otherwise None."""
+    try:
+        from app.models import Settings
+        from app.utils.module_registry import ModuleRegistry
+
+        settings = Settings.get_settings()
+        user = getattr(g, "api_user", None)
+        if not ModuleRegistry.is_enabled(module_id, settings, user):
+            return (
+                jsonify(
+                    {
+                        "error": "module_disabled",
+                        "message": f"{module_id} module is disabled by the administrator.",
+                    }
+                ),
+                403,
+            )
+    except Exception:
+        # If we can't check, default to allow (avoid breaking API during migrations/startup)
+        return None
+    return None
+
+
 # ==================== API Info & Health ====================
 
 
@@ -1283,6 +1307,9 @@ def list_clients():
       200:
         description: List of clients
     """
+    blocked = _require_module_enabled_for_api("clients")
+    if blocked:
+        return blocked
     from app.services import ClientService
 
     page = request.args.get("page", 1, type=int)
@@ -1330,6 +1357,9 @@ def get_client(client_id):
       404:
         description: Client not found
     """
+    blocked = _require_module_enabled_for_api("clients")
+    if blocked:
+        return blocked
     from sqlalchemy.orm import joinedload
 
     client = Client.query.options(joinedload(Client.projects)).filter_by(id=client_id).first_or_404()
@@ -1369,6 +1399,9 @@ def create_client():
       400:
         description: Invalid input
     """
+    blocked = _require_module_enabled_for_api("clients")
+    if blocked:
+        return blocked
     data = request.get_json() or {}
 
     # Validate required fields
@@ -3614,6 +3647,9 @@ def delete_comment(comment_id):
 @require_api_token("read:clients")
 def list_client_notes(client_id):
     """List client notes (paginated, important first)"""
+    blocked = _require_module_enabled_for_api("clients")
+    if blocked:
+        return blocked
     from sqlalchemy.orm import joinedload
 
     page = request.args.get("page", 1, type=int)
@@ -3642,6 +3678,9 @@ def list_client_notes(client_id):
 @require_api_token("write:clients")
 def create_client_note(client_id):
     """Create client note"""
+    blocked = _require_module_enabled_for_api("clients")
+    if blocked:
+        return blocked
     data = request.get_json() or {}
     content = (data.get("content") or "").strip()
     if not content:
@@ -3657,6 +3696,9 @@ def create_client_note(client_id):
 @api_v1_bp.route("/client-notes/<int:note_id>", methods=["GET"])
 @require_api_token("read:clients")
 def get_client_note(note_id):
+    blocked = _require_module_enabled_for_api("clients")
+    if blocked:
+        return blocked
     from sqlalchemy.orm import joinedload
 
     note = (
@@ -3671,6 +3713,9 @@ def get_client_note(note_id):
 @api_v1_bp.route("/client-notes/<int:note_id>", methods=["PUT", "PATCH"])
 @require_api_token("write:clients")
 def update_client_note(note_id):
+    blocked = _require_module_enabled_for_api("clients")
+    if blocked:
+        return blocked
     from sqlalchemy.orm import joinedload
 
     note = (
@@ -3695,6 +3740,9 @@ def update_client_note(note_id):
 @api_v1_bp.route("/client-notes/<int:note_id>", methods=["DELETE"])
 @require_api_token("write:clients")
 def delete_client_note(note_id):
+    blocked = _require_module_enabled_for_api("clients")
+    if blocked:
+        return blocked
     from sqlalchemy.orm import joinedload
 
     note = (

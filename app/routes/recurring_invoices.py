@@ -45,10 +45,12 @@ def list_recurring_invoices():
 def create_recurring_invoice():
     """Create a new recurring invoice"""
     if request.method == "POST":
+        from app.utils.client_lock import enforce_locked_client_id, get_locked_client_id
+
         # Get form data
         name = request.form.get("name", "").strip()
         project_id = request.form.get("project_id", type=int)
-        client_id = request.form.get("client_id", type=int)
+        client_id = enforce_locked_client_id(request.form.get("client_id", type=int))
         frequency = request.form.get("frequency", "").strip()
         interval = request.form.get("interval", type=int, default=1)
         next_run_date_str = request.form.get("next_run_date", "").strip()
@@ -93,6 +95,11 @@ def create_recurring_invoice():
         client = Client.query.get(client_id)
         if not project or not client:
             flash(_("Selected project or client not found"), "error")
+            return render_template("recurring_invoices/create.html")
+
+        locked_id = get_locked_client_id()
+        if locked_id and getattr(project, "client_id", None) and int(project.client_id) != int(locked_id):
+            flash(_("Selected project does not match the locked client."), "error")
             return render_template("recurring_invoices/create.html")
 
         # Get currency from settings

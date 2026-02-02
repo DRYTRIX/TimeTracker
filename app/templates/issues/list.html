@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import page_header, stat_card %}
+{% from "components/client_select.html" import client_select %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -54,12 +55,7 @@
         </div>
         <div>
             <label for="client_id" class="block text-sm font-medium mb-1">{{ _('Client') }}</label>
-            <select name="client_id" id="client_id" class="form-input">
-                <option value="">{{ _('All') }}</option>
-                {% for client in clients %}
-                <option value="{{ client.id }}" {% if client_id == client.id %}selected{% endif %}>{{ client.name }}</option>
-                {% endfor %}
-            </select>
+            {{ client_select('client_id', clients, selected_id=client_id, required=False, only_one_client=only_one_client|default(false), single_client=single_client) }}
         </div>
         <div>
             <label for="project_id" class="block text-sm font-medium mb-1">{{ _('Project') }}</label>

@@ -22,12 +22,14 @@ issues_bp = Blueprint("issues", __name__)
 @module_enabled("issues")
 def list_issues():
     """List all issues with filtering options"""
+    from app.utils.client_lock import enforce_locked_client_id
     page, per_page = get_pagination_params()
     
     # Get filter parameters
     status = request.args.get("status", "")
     priority = request.args.get("priority", "")
     client_id = request.args.get("client_id", type=int)
+    client_id = enforce_locked_client_id(client_id)
     project_id = request.args.get("project_id", type=int)
     assigned_to = request.args.get("assigned_to", type=int)
     search = request.args.get("search", "").strip()
@@ -104,6 +106,9 @@ def list_issues():
     clients = Client.query.filter_by(status="active").order_by(Client.name).limit(500).all()
     projects = Project.query.filter_by(status="active").order_by(Project.name).limit(500).all()
     users = User.query.filter_by(is_active=True).order_by(User.username).limit(200).all()
+
+    only_one_client = len(clients) == 1
+    single_client = clients[0] if only_one_client else None
     
     # Calculate statistics (respecting permissions)
     stats_query = Issue.query
@@ -146,6 +151,8 @@ def list_issues():
         assigned_to=assigned_to,
         search=search,
         clients=clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
         projects=projects,
         users=users,
         total_issues=total_issues,
@@ -166,12 +173,21 @@ def new_issue():
         return redirect(url_for("issues.list_issues"))
     
     if request.method == "POST":
+        from app.utils.client_lock import enforce_locked_client_id, get_locked_client_id
+
         title = request.form.get("title", "").strip()
         description = request.form.get("description", "").strip()
-        client_id = request.form.get("client_id", type=int)
+        client_id = enforce_locked_client_id(request.form.get("client_id", type=int))
         project_id = request.form.get("project_id", type=int)
         priority = request.form.get("priority", "medium")
         assigned_to = request.form.get("assigned_to", type=int) or None
+
+        locked_id = get_locked_client_id()
+        if locked_id and project_id:
+            project = Project.query.get(project_id)
+            if project and getattr(project, "client_id", None) and int(project.client_id) != int(locked_id):
+                flash(_("Selected project does not match the locked client."), "error")
+                return redirect(url_for("issues.new_issue"))
         
         # Validate
         if not title:

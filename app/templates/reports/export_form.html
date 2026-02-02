@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/client_select.html" import client_select %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
@@ -94,14 +95,7 @@
                         <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             <i class="fas fa-building mr-1"></i> Client
                         </label>
-                        <select name="client_id" 
-                                id="client_id" 
-                                class="form-input">
-                            <option value="">All Clients</option>
-                            {% for client in clients %}
-                            <option value="{{ client.id }}">{{ client.name }}</option>
-                            {% endfor %}
-                        </select>
+                        {{ client_select('client_id', clients, selected_id=request.args.get('client_id')|int, required=False, only_one_client=only_one_client|default(false), single_client=single_client) }}
                     </div>
 
                     <!-- Project Filter -->

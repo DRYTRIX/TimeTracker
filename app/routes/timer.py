@@ -28,8 +28,10 @@ def _parse_optional_int(value):
 @login_required
 def start_timer():
     """Start a new timer for the current user"""
+    from app.utils.client_lock import enforce_locked_client_id, get_locked_client_id
     project_id = _parse_optional_int(request.form.get("project_id"))
     client_id = _parse_optional_int(request.form.get("client_id"))
+    client_id = enforce_locked_client_id(client_id)
     task_id = _parse_optional_int(request.form.get("task_id"))
     notes = request.form.get("notes", "").strip()
     template_id = _parse_optional_int(request.form.get("template_id"))
@@ -73,6 +75,11 @@ def start_timer():
         if not project:
             flash(_("Invalid project selected"), "error")
             current_app.logger.warning("Start timer failed: invalid project_id=%s", project_id)
+            return redirect(url_for("main.dashboard"))
+
+        locked_id = get_locked_client_id()
+        if locked_id and getattr(project, "client_id", None) and int(project.client_id) != int(locked_id):
+            flash(_("Selected project does not match the locked client."), "error")
             return redirect(url_for("main.dashboard"))
 
         # Check if project is active (not archived or inactive)
@@ -985,6 +992,7 @@ def manual_entry():
     """Create a manual time entry"""
     from app.models import Client
     from app.services import TimeTrackingService
+    from app.utils.client_lock import enforce_locked_client_id, get_locked_client_id
 
     # Get active projects and clients for dropdown (used for both GET and error re-renders on POST)
     active_projects = Project.query.filter_by(status="active").order_by(Project.name).all()
@@ -995,6 +1003,7 @@ def manual_entry():
     # Get project_id, client_id, and task_id from query parameters for pre-filling
     project_id = request.args.get("project_id", type=int)
     client_id = request.args.get("client_id", type=int)
+    client_id = enforce_locked_client_id(client_id)
     task_id = request.args.get("task_id", type=int)
     template_id = request.args.get("template", type=int)
 
@@ -1021,6 +1030,7 @@ def manual_entry():
     if request.method == "POST":
         project_id = request.form.get("project_id", type=int) or None
         client_id = request.form.get("client_id", type=int) or None
+        client_id = enforce_locked_client_id(client_id)
         task_id = request.form.get("task_id", type=int) or None
         start_date = request.form.get("start_date")
         start_time = request.form.get("start_time")
@@ -1073,6 +1083,14 @@ def manual_entry():
                 prefill_end_date=end_date,
                 prefill_end_time=end_time,
             )
+
+        # If a locked client is configured, ensure selected project matches it.
+        locked_id = get_locked_client_id()
+        if locked_id and project_id:
+            project = Project.query.get(project_id)
+            if project and getattr(project, "client_id", None) and int(project.client_id) != int(locked_id):
+                flash(_("Selected project does not match the locked client."), "error")
+                return redirect(url_for("timer.manual_entry"))
 
         # Parse datetime: treat form input as user's local time, store in app timezone
         try:
@@ -1864,11 +1882,13 @@ def time_entries_overview():
     from sqlalchemy import or_, func, desc
     from sqlalchemy.orm import joinedload
     from app.repositories import TimeEntryRepository, ProjectRepository, UserRepository
+    from app.utils.client_lock import enforce_locked_client_id
     
     # Get filter parameters
     user_id = request.args.get("user_id", type=int)
     project_id = request.args.get("project_id", type=int)
     client_id = request.args.get("client_id", type=int)
+    client_id = enforce_locked_client_id(client_id)
     start_date = request.args.get("start_date", "")
     end_date = request.args.get("end_date", "")
     paid_filter = request.args.get("paid", "")  # "true", "false", or ""
@@ -2078,6 +2098,9 @@ def time_entries_overview():
             if client_ids:
                 clients = Client.query.filter(Client.id.in_(client_ids), Client.status == "active").order_by(Client.name).all()
         users = [current_user]
+
+    only_one_client = len(clients) == 1
+    single_client = clients[0] if only_one_client else None
     
     # Calculate totals
     total_hours = sum(entry.duration_hours for entry in time_entries)
@@ -2166,6 +2189,8 @@ def time_entries_overview():
         pagination=pagination,
         projects=projects,
         clients=clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
         users=users,
         can_view_all=can_view_all,
         filters=filters_dict,

@@ -300,7 +300,9 @@ def create_project_from_template(template_id):
         return redirect(url_for("project_templates.list_templates"))
 
     if request.method == "POST":
-        client_id = request.form.get("client_id", type=int)
+        from app.utils.client_lock import enforce_locked_client_id
+
+        client_id = enforce_locked_client_id(request.form.get("client_id", type=int))
         name = request.form.get("name", "").strip()
 
         if not client_id:

@@ -10,6 +10,7 @@ from flask_login import current_user
 from flask_babel import gettext as _
 from app.models import Settings
 from app.utils.module_registry import ModuleRegistry
+from app.utils.client_lock import get_locked_client, get_locked_client_id
 
 
 def module_enabled(module_id: str, redirect_to: str = None):
@@ -136,10 +137,14 @@ def init_module_helpers(app):
             "has_enabled_modules": has_enabled_modules,
             "get_modules_by_category": lambda cat: ModuleRegistry.get_by_category(cat),
             "ModuleCategory": ModuleCategory,
+            "get_locked_client": get_locked_client,
+            "get_locked_client_id": get_locked_client_id,
         }
     
     # Also make it available as a global function
     app.jinja_env.globals['is_module_enabled'] = is_module_enabled
     app.jinja_env.globals['get_enabled_modules'] = get_enabled_modules
     app.jinja_env.globals['has_enabled_modules'] = has_enabled_modules
+    app.jinja_env.globals['get_locked_client'] = get_locked_client
+    app.jinja_env.globals['get_locked_client_id'] = get_locked_client_id
 

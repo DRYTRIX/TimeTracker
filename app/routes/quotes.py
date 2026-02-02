@@ -63,12 +63,16 @@ def list_quotes():
 @admin_or_permission_required("create_quotes")
 def create_quote():
     """Create a new quote"""
+    from app.utils.client_lock import get_locked_client_id
     clients = Client.get_active_clients()
     only_one_client = len(clients) == 1
     single_client = clients[0] if only_one_client else None
 
     if request.method == "POST":
         client_id = request.form.get("client_id", "").strip()
+        locked_id = get_locked_client_id()
+        if locked_id:
+            client_id = str(locked_id)
         title = request.form.get("title", "").strip()
         description = request.form.get("description", "").strip()
         total_amount = request.form.get("total_amount", "").strip()

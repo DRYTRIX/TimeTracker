@@ -24,7 +24,7 @@
 {{ page_header(
     icon_class='fas fa-puzzle-piece',
     title_text='Module Management',
-    subtitle_text='Enable or disable modules system-wide. Disabled modules will not appear in the navigation for any users.',
+    subtitle_text='Enable or disable modules system-wide. Disabled modules will not appear in the navigation for non-admin users.',
     breadcrumbs=breadcrumbs,
     actions_html=None
 ) }}
@@ -34,6 +34,25 @@
     {% if modules_by_category is defined and modules_by_category %}
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Locked Client (optional) -->
+        <div class="mb-6 p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <h2 class="text-sm font-semibold mb-1">{{ _('Client Lock (optional)') }}</h2>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mb-3">
+                {{ _('If set, all client selectors across the app will auto-select this client and prevent changes.') }}
+            </p>
+            <div class="max-w-md">
+                <label for="locked_client_id" class="block text-xs font-medium mb-1">{{ _('Locked Client') }}</label>
+                <select id="locked_client_id" name="locked_client_id" class="form-input text-sm">
+                    <option value="">{{ _('None (no lock)') }}</option>
+                    {% for c in (clients or []) %}
+                        <option value="{{ c.id }}" {% if settings.locked_client_id == c.id %}selected{% endif %}>
+                            {{ c.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
         
         <div class="flex items-center justify-between mb-4">
             <div>

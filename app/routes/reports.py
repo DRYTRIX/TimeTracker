@@ -388,6 +388,8 @@ def export_form():
 
     # Get all active clients
     clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+    only_one_client = len(clients) == 1
+    single_client = clients[0] if only_one_client else None
 
     # Set default date range (last 30 days)
     default_end_date = datetime.utcnow().strftime("%Y-%m-%d")
@@ -398,6 +400,8 @@ def export_form():
         users=users,
         projects=projects,
         clients=clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
         default_start_date=default_start_date,
         default_end_date=default_end_date,
     )
@@ -408,6 +412,7 @@ def export_form():
 @module_enabled("reports")
 def export_csv():
     """Export time entries as CSV with enhanced filters"""
+    from app.utils.client_lock import enforce_locked_client_id
     start_time = time.time()  # Start performance tracking
 
     # Get all filter parameters
@@ -417,6 +422,7 @@ def export_csv():
     project_id = request.args.get("project_id", type=int)
     task_id = request.args.get("task_id", type=int)
     client_id = request.args.get("client_id", type=int)
+    client_id = enforce_locked_client_id(client_id)
     billable = request.args.get("billable")  # 'yes', 'no', or 'all'
     source = request.args.get("source")  # 'manual', 'auto', or 'all'
     tags = request.args.get("tags", "").strip()
@@ -1260,12 +1266,16 @@ def export_task_excel():
 @module_enabled("reports")
 def unpaid_hours_report():
     """Report showing unpaid hours per client"""
+    from app.utils.client_lock import enforce_locked_client_id
     start_date = request.args.get("start_date")
     end_date = request.args.get("end_date")
     client_id = request.args.get("client_id", type=int)
+    client_id = enforce_locked_client_id(client_id)
 
     # Get clients for filter
     clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+    only_one_client = len(clients) == 1
+    single_client = clients[0] if only_one_client else None
 
     # Parse dates
     if not start_date:
@@ -1278,7 +1288,12 @@ def unpaid_hours_report():
         end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1) - timedelta(seconds=1)
     except ValueError:
         flash(_("Invalid date format"), "error")
-        return render_template("reports/unpaid_hours_report.html", clients=clients)
+        return render_template(
+            "reports/unpaid_hours_report.html",
+            clients=clients,
+            only_one_client=only_one_client,
+            single_client=single_client,
+        )
 
     # Get all billable time entries in the date range
     can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
@@ -1443,6 +1458,8 @@ def unpaid_hours_report():
     return render_template(
         "reports/unpaid_hours_report.html",
         clients=clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
         client_data=client_data,
         summary=summary,
         start_date=start_date,
@@ -1456,9 +1473,11 @@ def unpaid_hours_report():
 @module_enabled("reports")
 def export_unpaid_hours_excel():
     """Export unpaid hours report as Excel file, organized by project"""
+    from app.utils.client_lock import enforce_locked_client_id
     start_date = request.args.get("start_date")
     end_date = request.args.get("end_date")
     client_id = request.args.get("client_id", type=int)
+    client_id = enforce_locked_client_id(client_id)
 
     # Parse dates
     if not start_date:

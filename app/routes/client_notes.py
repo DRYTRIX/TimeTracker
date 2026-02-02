@@ -2,10 +2,25 @@ from flask import Blueprint, request, redirect, url_for, flash, jsonify, render_
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
-from app.models import ClientNote, Client
+from app.models import ClientNote, Client, Settings
 from app.utils.db import safe_commit
+from app.utils.module_registry import ModuleRegistry
 
 client_notes_bp = Blueprint("client_notes", __name__)
+
+
+@client_notes_bp.before_request
+def _enforce_clients_module():
+    """Client notes are part of Clients; allow admins only when disabled."""
+    if not current_user or not getattr(current_user, "is_authenticated", False):
+        return None
+
+    settings = Settings.get_settings()
+    if ModuleRegistry.is_enabled("clients", settings, current_user):
+        return None
+
+    flash(_("Clients module is disabled by the administrator."), "warning")
+    return redirect(url_for("main.dashboard"))
 
 
 @client_notes_bp.route("/clients/<int:client_id>/notes/create", methods=["POST"])

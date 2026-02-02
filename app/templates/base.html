@@ -370,6 +370,7 @@
                             {% endif %}
                         </ul>
                     </li>
+                    {% if has_enabled_modules(ModuleCategory.CRM) %}
                     <li class="mt-2">
                         <button onclick="toggleDropdown('crmDropdown')" data-dropdown="crmDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if crm_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-handshake w-6 text-center"></i>
@@ -382,11 +383,13 @@
                             {% set nav_active_contacts = ep.startswith('contacts.') %}
                             {% set nav_active_deals = ep.startswith('deals.') %}
                             {% set nav_active_leads = ep.startswith('leads.') %}
+                            {% if is_module_enabled('clients') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_clients %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('clients.list_clients') }}">
                                     <i class="fas fa-users w-4 mr-2"></i>{{ _('Clients') }}
                                 </a>
                             </li>
+                            {% endif %}
                             {% if is_module_enabled('contacts') %}
                             <li>
                                 <span class="block px-2 py-1 text-text-muted-light dark:text-text-muted-dark text-sm">
@@ -418,6 +421,7 @@
                             {% endif %}
                         </ul>
                     </li>
+                    {% endif %}
                     {% if has_enabled_modules(ModuleCategory.FINANCE) %}
                     <li class="mt-2">
                         <button onclick="toggleDropdown('financeDropdown')" data-dropdown="financeDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if finance_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">

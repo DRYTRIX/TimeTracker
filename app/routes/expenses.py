@@ -70,6 +70,7 @@ def get_receipt_upload_folder():
 @module_enabled("expenses")
 def list_expenses():
     """List all expenses with filters"""
+    from app.utils.client_lock import enforce_locked_client_id
     # Track page view
     from app import track_page_view
 
@@ -83,6 +84,7 @@ def list_expenses():
     category = request.args.get("category", "").strip()
     project_id = request.args.get("project_id", type=int)
     client_id = request.args.get("client_id", type=int)
+    client_id = enforce_locked_client_id(client_id)
     user_id = request.args.get("user_id", type=int)
     start_date = request.args.get("start_date", "").strip()
     end_date = request.args.get("end_date", "").strip()
@@ -156,6 +158,8 @@ def list_expenses():
     # Get filter options
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()
     clients = Client.get_active_clients()
+    only_one_client = len(clients) == 1
+    single_client = clients[0] if only_one_client else None
     categories = Expense.get_expense_categories()
 
     # Get users for admin filter
@@ -208,6 +212,8 @@ def list_expenses():
         pagination=expenses_pagination,
         projects=projects,
         clients=clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
         categories=categories,
         users=users,
         total_amount=float(total_amount),
@@ -251,6 +257,8 @@ def create_expense():
         )
 
     try:
+        from app.utils.client_lock import enforce_locked_client_id, get_locked_client_id
+
         # Get form data
         title = request.form.get("title", "").strip()
         description = request.form.get("description", "").strip()
@@ -294,7 +302,7 @@ def create_expense():
 
         # Optional fields
         project_id = request.form.get("project_id", type=int)
-        client_id = request.form.get("client_id", type=int)
+        client_id = enforce_locked_client_id(request.form.get("client_id", type=int))
         payment_method = request.form.get("payment_method", "").strip()
         payment_date = request.form.get("payment_date", "").strip()
         vendor = request.form.get("vendor", "").strip()
@@ -303,6 +311,14 @@ def create_expense():
         tags = request.form.get("tags", "").strip()
         billable = request.form.get("billable") == "on"
         reimbursable = request.form.get("reimbursable") == "on"
+
+        # If a locked client is configured, ensure selected project matches it.
+        locked_id = get_locked_client_id()
+        if locked_id and project_id:
+            project = Project.query.get(project_id)
+            if project and getattr(project, "client_id", None) and int(project.client_id) != int(locked_id):
+                flash(_("Selected project does not match the locked client."), "error")
+                return redirect(url_for("expenses.create_expense"))
 
         # Parse payment date if provided
         payment_date_obj = None
@@ -499,6 +515,7 @@ def edit_expense(expense_id):
         )
 
     try:
+        from app.utils.client_lock import enforce_locked_client_id
         # Get form data
         title = request.form.get("title", "").strip()
         description = request.form.get("description", "").strip()
@@ -539,7 +556,7 @@ def edit_expense(expense_id):
 
         # Optional fields
         expense.project_id = request.form.get("project_id", type=int)
-        expense.client_id = request.form.get("client_id", type=int)
+        expense.client_id = enforce_locked_client_id(request.form.get("client_id", type=int))
         expense.payment_method = request.form.get("payment_method", "").strip()
         expense.vendor = request.form.get("vendor", "").strip()
         expense.receipt_number = request.form.get("receipt_number", "").strip()
@@ -1370,6 +1387,7 @@ def create_expense_from_scan():
             return redirect(url_for("expenses.create_expense_from_scan"))
 
         # Create expense with OCR data
+        from app.utils.client_lock import enforce_locked_client_id
         expense = Expense(
             user_id=current_user.id,
             title=title,
@@ -1380,7 +1398,7 @@ def create_expense_from_scan():
             currency_code=currency_code,
             tax_amount=tax_amount_decimal,
             project_id=request.form.get("project_id", type=int),
-            client_id=request.form.get("client_id", type=int),
+            client_id=enforce_locked_client_id(request.form.get("client_id", type=int)),
             payment_method=request.form.get("payment_method", "").strip(),
             vendor=request.form.get("vendor", "").strip(),
             receipt_number=request.form.get("receipt_number", "").strip(),
