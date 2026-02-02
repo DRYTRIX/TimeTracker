@@ -1,10 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:timetracker_mobile/core/config/app_config.dart';
 import 'package:timetracker_mobile/core/constants/app_constants.dart';
 import 'package:timetracker_mobile/data/api/api_client.dart';
+import 'package:timetracker_mobile/utils/network/connection_diagnostics.dart';
 import 'package:timetracker_mobile/utils/ssl/certificate_error.dart';
 import 'package:timetracker_mobile/utils/ssl/ssl_utils.dart';
 
@@ -23,6 +25,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _storage = const FlutterSecureStorage();
   bool _isLoading = false;
   String? _error;
+  ConnectionDiagnostics? _connectionDiag;
 
   @override
   void initState() {
@@ -72,6 +75,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() {
       _isLoading = true;
       _error = null;
+      _connectionDiag = null;
     });
 
     try {
@@ -104,21 +108,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         return;
       }
 
-      await AppConfig.setServerUrl(serverUrl);
-      await _storage.write(key: 'api_token', value: token);
-
       final apiClient = ApiClient(baseUrl: serverUrl, trustedInsecureHosts: trustedHosts);
       await apiClient.setAuthToken(token);
-      final isValid = await apiClient.validateToken();
-
-      if (!isValid) {
+      final validationResponse = await apiClient.validateTokenRaw();
+      final status = validationResponse.statusCode;
+      if (status != 200) {
         setState(() {
-          _error = 'Invalid username or password';
+          if (status == 401) {
+            _error =
+                'Login succeeded, but the server rejected the session (401 Unauthorized). Check that the Server URL points to the correct TimeTracker instance.';
+          } else {
+            _error =
+                'Login succeeded, but the server returned HTTP ${status ?? '—'} while validating the connection.';
+          }
           _isLoading = false;
         });
-        await _storage.delete(key: 'api_token');
         return;
       }
+
+      // Only persist configuration after we know the connection works.
+      await AppConfig.setServerUrl(serverUrl);
+      await _storage.write(key: 'api_token', value: token);
 
       if (mounted) {
         Navigator.of(context).pushReplacementNamed(AppConstants.routeHome);
@@ -128,23 +138,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final isConnectionFailure = e.type == DioExceptionType.connectionError ||
           e.type == DioExceptionType.unknown;
       final isCertError = isCertificateError(e);
-      final showTrustOption = host.isNotEmpty &&
-          (isCertError || (isConnectionFailure && _isLikelyLocalOrEmulator(host)));
+      final phase = e.requestOptions.path.contains('/api/v1/auth/login')
+          ? 'login'
+          : (e.requestOptions.path.contains('/api/v1/timer/status') ? 'token validation' : 'request');
+      final diag = diagnoseDioFailure(
+        e,
+        attemptedBaseUrl: _normalizeServerUrl(_serverUrlController.text.trim()),
+        phase: phase,
+      );
+      final showTrustOption = (diag.host?.isNotEmpty == true) &&
+          (diag.isCertificateIssue || isCertError || (isConnectionFailure && _isLikelyLocalOrEmulator(host)));
 
       if (showTrustOption && mounted) {
         final trust = await showDialog<bool>(
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            title: Text(isCertError ? 'Certificate not trusted' : 'Connection failed'),
+            title: Text(diag.isCertificateIssue || isCertError ? 'Certificate not trusted' : 'Connection failed'),
             content: Text(
-              isCertError
-                  ? 'The server\'s certificate could not be verified for "$host". '
-                    'This often happens with self-signed certificates (e.g. local or emulator). '
-                    'Trust it and try again?'
-                  : 'Cannot reach "$host". '
-                    'If the server uses a self-signed certificate (common at 10.0.2.2 or local IPs), '
-                    'tap "Trust and retry". Otherwise check the URL and port (e.g. https://10.0.2.2:443 or :8443).',
+              (diag.isCertificateIssue || isCertError)
+                  ? 'Android could not verify the TLS certificate for "$host". '
+                    'If you trust this server, you can allow it for this host and retry.\n\n'
+                    'Recommended: Use a valid certificate (e.g. Let’s Encrypt) for production.'
+                  : 'Cannot reach "$host".\n\n'
+                    'If the server uses a self-signed certificate (common on local IPs), tap "Trust and retry". '
+                    'Otherwise check the URL and port (e.g. https://your-server.com or https://10.0.2.2:8443).',
             ),
             actions: [
               TextButton(
@@ -153,7 +171,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: Text(isCertError ? 'Yes, trust' : 'Trust and retry'),
+                child: Text((diag.isCertificateIssue || isCertError) ? 'Yes, trust' : 'Trust and retry'),
               ),
             ],
           ),
@@ -170,27 +188,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         });
         return;
       }
+
       final statusCode = e.response?.statusCode;
-      final message = e.response?.data is Map
-          ? (e.response!.data as Map)['error'] as String?
-          : null;
-      String errMsg;
-      if (statusCode == 401) {
-        errMsg = message ?? 'Invalid username or password';
-      } else if (statusCode != null && statusCode >= 400) {
-        errMsg = message ?? 'Server returned error ($statusCode). Check the URL.';
-      } else if (e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.sendTimeout ||
-          e.type == DioExceptionType.receiveTimeout) {
-        errMsg = 'Connection timed out. Check your network and that the server is reachable.';
-      } else if (e.type == DioExceptionType.connectionError) {
-        errMsg = 'Cannot reach server. Check the URL, your network, and that the server is running.';
-      } else {
-        errMsg = message ?? 'Connection failed. Check the URL and try again.';
-      }
+      final message = e.response?.data is Map ? (e.response!.data as Map)['error'] as String? : null;
+      final errMsg = (statusCode == 401)
+          ? (message ?? 'Invalid username or password')
+          : (message ?? diag.summary);
+
       if (mounted) {
         setState(() {
           _error = errMsg;
+          _connectionDiag = diag;
           _isLoading = false;
         });
       }
@@ -198,10 +206,96 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         setState(() {
           _error = 'Connection failed. Check the URL and your network, then try again.';
+          _connectionDiag = null;
           _isLoading = false;
         });
       }
     }
+  }
+
+  Future<void> _showDiagnostics(ConnectionDiagnostics diag) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final maxHeight = MediaQuery.of(context).size.height * 0.9;
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(diag.title, style: theme.textTheme.titleLarge),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                      tooltip: 'Close',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(diag.summary),
+                if (diag.checks.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text('What to check', style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  ...diag.checks.map(
+                    (c) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('• '),
+                          Expanded(child: Text(c)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Text('Technical details', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: SingleChildScrollView(
+                      child: SelectableText(
+                        diag.technicalReport,
+                        style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: diag.technicalReport));
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Diagnostics copied to clipboard')),
+                    );
+                  },
+                  icon: const Icon(Icons.copy),
+                  label: const Text('Copy diagnostics'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -326,9 +420,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Theme.of(context).colorScheme.error),
                       ),
-                      child: Text(
-                        _error!,
-                        style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            _error!,
+                            style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
+                          ),
+                          if (_connectionDiag != null) ...[
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              alignment: WrapAlignment.end,
+                              children: [
+                                TextButton.icon(
+                                  onPressed: () => _showDiagnostics(_connectionDiag!),
+                                  icon: const Icon(Icons.info_outline),
+                                  label: const Text('Details'),
+                                ),
+                                TextButton.icon(
+                                  onPressed: () async {
+                                    final diag = _connectionDiag!;
+                                    await Clipboard.setData(ClipboardData(text: diag.technicalReport));
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Diagnostics copied to clipboard')),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.copy),
+                                  label: const Text('Copy'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ],
