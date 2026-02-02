@@ -195,6 +195,14 @@ services:
   - Not all IdPs support RP-Initiated Logout (end-session). If your provider doesn't support it (e.g., Authelia), **do not set** `OIDC_POST_LOGOUT_REDIRECT_URI`. TimeTracker will then perform local logout only and redirect to the login page.
   - If your provider supports end-session and you want to log out from the IdP too, set `OIDC_POST_LOGOUT_REDIRECT_URI` to your desired post-logout landing page.
 
+- **Redirect loop / callback returns to login**
+  - The same session cookie must be sent on the callback request (when the IdP redirects the user back to TimeTracker). If the session is missing or different, token exchange fails and the user is sent back to login in a loop.
+  - **Cookie size**: Flask uses cookie-based session by default. If the session cookie is too large (e.g. over ~4KB), the browser may drop or truncate it. Consider reducing session data or using server-side session storage (e.g. Flask-Session with Redis) if you already use Redis for cache. TimeTracker does not set `SESSION_TYPE` by default (sessions are cookie-based).
+  - **Cookie attributes**: Ensure `SESSION_COOKIE_SECURE`, `SESSION_COOKIE_SAMESITE`, and domain match how users access the app (e.g. HTTPS, same domain).
+  - **Proxy headers**: Behind a reverse proxy, ensure `X-Forwarded-Proto` and `X-Forwarded-Host` are set correctly so redirect URLs and cookies use the same host/scheme the user sees.
+  - **Callback URL**: The callback URL must match exactly (no trailing slash, same scheme and host) between TimeTracker (`OIDC_REDIRECT_URI`) and the IdP client configuration.
+  - **Logs**: TimeTracker logs a line like `OIDC callback redirect to login: reason=...` before each redirect to login. Use this to see the exact cause (e.g. `reason=token_exchange_failed` for session/state issues, `reason=missing_issuer_sub` for claim issues).
+
 ### 9) Routes Reference
 
 - Local login page: `GET /login` (POST for username form when enabled)

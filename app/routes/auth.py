@@ -788,13 +788,27 @@ def oidc_callback():
     """Handle OIDC callback: exchange code, map claims, upsert user, log them in."""
     client = oauth.create_client("oidc")
     if not client:
+        current_app.logger.info("OIDC callback redirect to login: reason=no_oidc_client")
         flash(_("Single Sign-On is not configured."), "error")
         return redirect(url_for("auth.login"))
 
     try:
         # Exchange authorization code for tokens
         current_app.logger.info("OIDC callback: Starting token exchange")
-        token = client.authorize_access_token()
+        try:
+            token = client.authorize_access_token()
+        except Exception as token_err:
+            current_app.logger.warning(
+                "OIDC token exchange failed (state/code_verifier mismatch or invalid code). "
+                "Session may have been lost between redirect and callback – check cookie size, domain, Secure, SameSite and proxy headers: %s",
+                token_err,
+            )
+            current_app.logger.info("OIDC callback redirect to login: reason=token_exchange_failed")
+            flash(
+                _("SSO failed. If this repeats, check session cookie and proxy configuration."), "error"
+            )
+            return redirect(url_for("auth.login"))
+
         current_app.logger.info(
             "OIDC callback: Token exchange successful, token keys: %s",
             list(token.keys()) if isinstance(token, dict) else "not-a-dict",
@@ -875,6 +889,19 @@ def oidc_callback():
         issuer = (claims.get("iss") or userinfo.get("iss") or "").strip()
         sub = (claims.get("sub") or userinfo.get("sub") or "").strip()
 
+        # Fallback: OIDC UserInfo often has sub but not iss (e.g. Authelia). Use configured issuer.
+        if sub and not issuer:
+            issuer = (getattr(Config, "OIDC_ISSUER", None) or "").strip()
+        # Second fallback: get iss from id_token without verification when parsing failed
+        if not issuer and isinstance(token, dict) and token.get("id_token"):
+            try:
+                import jwt
+                unverified = jwt.decode(token["id_token"], options={"verify_signature": False})
+                if unverified.get("iss"):
+                    issuer = (unverified.get("iss") or "").strip()
+            except Exception:
+                pass
+
         username_claim = getattr(Config, "OIDC_USERNAME_CLAIM", "preferred_username")
         full_name_claim = getattr(Config, "OIDC_FULL_NAME_CLAIM", "name")
         email_claim = getattr(Config, "OIDC_EMAIL_CLAIM", "email")
@@ -910,6 +937,7 @@ def oidc_callback():
         )
 
         if not issuer or not sub:
+            current_app.logger.info("OIDC callback redirect to login: reason=missing_issuer_sub")
             current_app.logger.error(
                 "OIDC callback missing issuer/sub - issuer:'%s' sub:'%s' - ID token parsed:%s, userinfo fetched:%s, claims keys:%s, userinfo keys:%s",
                 issuer,
@@ -946,6 +974,7 @@ def oidc_callback():
             # Create if allowed (use ConfigManager to respect database settings)
             allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
             if not allow_self_register:
+                current_app.logger.info("OIDC callback redirect to login: reason=self_registration_disabled")
                 flash(_("User account does not exist and self-registration is disabled."), "error")
                 return redirect(url_for("auth.login"))
             role_name = "user"
@@ -980,6 +1009,7 @@ def oidc_callback():
                 flash(_("Welcome! Your account has been created."), "success")
             except Exception as e:
                 current_app.logger.exception("Failed to create user from OIDC claims: %s", e)
+                current_app.logger.info("OIDC callback redirect to login: reason=db_create_user_failed")
                 flash(_("Could not create your account due to a database error."), "error")
                 return redirect(url_for("auth.login"))
         else:
@@ -1019,6 +1049,7 @@ def oidc_callback():
 
         # Check if user is active
         if not user.is_active:
+            current_app.logger.info("OIDC callback redirect to login: reason=user_inactive")
             flash(_("Account is disabled. Please contact an administrator."), "error")
             return redirect(url_for("auth.login"))
 
@@ -1084,5 +1115,6 @@ def oidc_callback():
 
     except Exception as e:
         current_app.logger.exception("OIDC callback error: %s", e)
+        current_app.logger.info("OIDC callback redirect to login: reason=exception")
         flash(_("Unexpected error during SSO login. Please try again or contact support."), "error")
         return redirect(url_for("auth.login"))
