@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:timetracker_mobile/core/theme/app_tokens.dart';
 import 'package:timetracker_mobile/data/models/project.dart';
 import 'package:timetracker_mobile/data/models/task.dart';
-import 'package:timetracker_mobile/presentation/providers/api_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/timer_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/projects_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/tasks_provider.dart';
+
+import 'start_timer_sheet.dart';
 
 class TimerWidget extends ConsumerStatefulWidget {
   const TimerWidget({super.key});
@@ -15,25 +19,23 @@ class TimerWidget extends ConsumerStatefulWidget {
 }
 
 class _TimerWidgetState extends ConsumerState<TimerWidget> {
+  Timer? _ticker;
+
   @override
   void initState() {
     super.initState();
-    // Refresh timer every second when active
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _startTimerUpdate();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      if (ref.read(timerProvider).isActive) {
+        setState(() {});
+      }
     });
   }
 
-  void _startTimerUpdate() {
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        final timerState = ref.read(timerProvider);
-        if (timerState.isActive) {
-          setState(() {});
-          _startTimerUpdate();
-        }
-      }
-    });
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
   }
 
   @override
@@ -64,321 +66,131 @@ class _TimerWidgetState extends ConsumerState<TimerWidget> {
       }
     }
 
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    final isActive = timerState.isActive && timerState.timer != null;
+    final elapsedText = isActive ? timerState.timer!.formattedElapsed : '00:00:00';
+    final projectName = project?.name ?? 'Unknown project';
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
-          children: [
-            Text(
-              'Active Timer',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 24),
-            if (timerState.isActive && timerState.timer != null)
-              Column(
-                children: [
-                  Text(
-                    timerState.timer!.formattedElapsed,
-                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    project?.name ?? 'Unknown Project',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  if (task != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      task.name,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                  if (timerState.timer!.notes != null &&
-                      timerState.timer!.notes!.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      timerState.timer!.notes!,
-                      style: Theme.of(context).textTheme.bodySmall,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: timerState.isLoading
-                        ? null
-                        : () => ref.read(timerProvider.notifier).stopTimer(),
-                    icon: const Icon(Icons.stop),
-                    label: const Text('Stop Timer'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                      foregroundColor: Theme.of(context).colorScheme.onError,
-                    ),
-                  ),
-                ],
-              )
-            else
-              Column(
-                children: [
-                  Text(
-                    '00:00:00',
-                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'No active timer',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: timerState.isLoading
-                        ? null
-                        : () => _showStartTimerDialog(context),
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Start Timer'),
-                  ),
-                ],
-              ),
-            if (timerState.error != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  timerState.error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showStartTimerDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => const StartTimerDialog(),
-    );
-  }
-}
-
-class StartTimerDialog extends ConsumerStatefulWidget {
-  const StartTimerDialog({super.key});
-
-  @override
-  ConsumerState<StartTimerDialog> createState() => _StartTimerDialogState();
-}
-
-class _StartTimerDialogState extends ConsumerState<StartTimerDialog> {
-  int? _selectedProjectId;
-  int? _selectedTaskId;
-  final _notesController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    // Load projects if not loaded
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(projectsProvider.notifier).loadProjects();
-    });
-  }
-
-  @override
-  void dispose() {
-    _notesController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadTasks(int projectId) async {
-    await ref.read(tasksProvider.notifier).loadTasks(projectId: projectId);
-  }
-
-  Future<void> _handleStart() async {
-    if (_selectedProjectId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a project')),
-      );
-      return;
-    }
-
-    await ref.read(timerProvider.notifier).startTimer(
-          projectId: _selectedProjectId!,
-          taskId: _selectedTaskId,
-          notes: _notesController.text.trim().isEmpty
-              ? null
-              : _notesController.text.trim(),
-        );
-
-    if (!mounted) return;
-    final timerState = ref.read(timerProvider);
-    if (timerState.error != null) {
-      // Keep dialog open and show error; do not pop
-      setState(() {});
-      return;
-    }
-    Navigator.of(context).pop();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final apiClientAsync = ref.watch(apiClientProvider);
-    final projectsState = ref.watch(projectsProvider);
-    final tasksState = ref.watch(tasksProvider);
-    final timerState = ref.watch(timerProvider);
-
-    final isApiReady = apiClientAsync.when(
-      data: (client) => client != null,
-      loading: () => false,
-      error: (_, __) => false,
-    );
-    final isApiLoading = apiClientAsync.isLoading;
-
-    return AlertDialog(
-      title: const Text('Start Timer'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (isApiLoading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24.0),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (!isApiReady) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(8),
+            Row(
+              children: [
+                Icon(isActive ? Icons.timer : Icons.timer_outlined, color: cs.primary),
+                const SizedBox(width: AppSpacing.sm),
+                Text('Timer', style: theme.textTheme.titleLarge),
+                const Spacer(),
+                IconButton(
+                  onPressed: timerState.isLoading ? null : () => ref.read(timerProvider.notifier).refresh(),
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'Refresh',
                 ),
-                child: Text(
-                  'Not connected to server. Check settings and try again.',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onErrorContainer,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ] else ...[
-            // Project selection
-            DropdownButtonFormField<int>(
-              key: ValueKey('project_$_selectedProjectId'),
-              decoration: const InputDecoration(
-                labelText: 'Project',
-                prefixIcon: Icon(Icons.folder),
-              ),
-              initialValue: _selectedProjectId != null &&
-                      projectsState.projects.any((p) => p.id == _selectedProjectId)
-                  ? _selectedProjectId
-                  : null,
-              items: projectsState.projects
-                  .map((p) => DropdownMenuItem(
-                        value: p.id,
-                        child: Text(p.name),
-                      ))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedProjectId = value;
-                  _selectedTaskId = null; // Reset task when project changes
-                });
-                if (value != null) {
-                  _loadTasks(value);
-                }
-              },
+              ],
             ),
-            const SizedBox(height: 16),
-            // Task selection (optional)
-            if (_selectedProjectId != null)
-              DropdownButtonFormField<int>(
-                key: ValueKey('task_$_selectedTaskId'),
-                decoration: const InputDecoration(
-                  labelText: 'Task (Optional)',
-                  prefixIcon: Icon(Icons.task),
-                ),
-                initialValue: _selectedTaskId != null &&
-                        tasksState.tasks.any((t) => t.id == _selectedTaskId)
-                    ? _selectedTaskId
-                    : null,
-                items: [
-                  const DropdownMenuItem<int>(
-                    value: null,
-                    child: Text('No task'),
-                  ),
-                  ...tasksState.tasks
-                      .map((t) => DropdownMenuItem(
-                            value: t.id,
-                            child: Text(t.name),
-                          ))
-                      .toList(),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _selectedTaskId = value;
-                  });
-                },
-              ),
-            const SizedBox(height: 16),
-            // Notes
-            TextField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Notes (Optional)',
-                prefixIcon: Icon(Icons.note),
-              ),
-              maxLines: 3,
+            const SizedBox(height: AppSpacing.md),
+            AnimatedSwitcher(
+              duration: AppDurations.normal,
+              child: isActive
+                  ? Column(
+                      key: const ValueKey('active'),
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          elapsedText,
+                          style: theme.textTheme.displayMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: cs.primary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: AppSpacing.sm,
+                          runSpacing: AppSpacing.xs,
+                          children: [
+                            Chip(
+                              avatar: const Icon(Icons.folder_outlined, size: 18),
+                              label: Text(projectName),
+                            ),
+                            if (task != null)
+                              Chip(
+                                avatar: const Icon(Icons.task_outlined, size: 18),
+                                label: Text(task.name),
+                              ),
+                          ],
+                        ),
+                        if (timerState.timer!.notes != null && timerState.timer!.notes!.isNotEmpty) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            timerState.timer!.notes!,
+                            style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                        const SizedBox(height: AppSpacing.lg),
+                        FilledButton.icon(
+                          onPressed: timerState.isLoading ? null : () => ref.read(timerProvider.notifier).stopTimer(),
+                          icon: const Icon(Icons.stop),
+                          label: const Text('Stop'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: cs.error,
+                            foregroundColor: cs.onError,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      key: const ValueKey('inactive'),
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          elapsedText,
+                          style: theme.textTheme.displayMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: cs.onSurfaceVariant,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'Ready to track time?',
+                          style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                        FilledButton.icon(
+                          onPressed: timerState.isLoading
+                              ? null
+                              : () => showStartTimerSheet(context),
+                          icon: const Icon(Icons.play_arrow),
+                          label: const Text('Start'),
+                        ),
+                      ],
+                    ),
             ),
             if (timerState.error != null) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(8),
+                  color: cs.errorContainer,
+                  borderRadius: AppRadii.brMd,
                 ),
                 child: Text(
                   timerState.error!,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onErrorContainer,
-                  ),
+                  style: TextStyle(color: cs.onErrorContainer),
                 ),
               ),
-            ],
             ],
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: timerState.isLoading || isApiLoading
-              ? null
-              : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: (timerState.isLoading || isApiLoading || !isApiReady)
-              ? null
-              : _handleStart,
-          child: timerState.isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Start'),
-        ),
-      ],
     );
   }
 }

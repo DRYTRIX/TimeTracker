@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:timetracker_mobile/core/theme/app_tokens.dart';
 import '../../data/models/project.dart';
 import '../providers/projects_provider.dart';
 import '../providers/timer_provider.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_view.dart';
-import 'timer_screen.dart';
+import '../widgets/start_timer_sheet.dart';
 
 class ProjectsScreen extends ConsumerStatefulWidget {
   const ProjectsScreen({super.key});
@@ -16,7 +17,7 @@ class ProjectsScreen extends ConsumerStatefulWidget {
 
 class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
   final _searchController = TextEditingController();
-  
+
   @override
   void initState() {
     super.initState();
@@ -24,7 +25,7 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
       ref.read(projectsProvider.notifier).loadProjects();
     });
   }
-  
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -38,7 +39,20 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
           (project.client ?? '').toLowerCase().contains(query.toLowerCase());
     }).toList();
   }
-  
+
+  Future<void> _startTimerForProject(Project project) async {
+    final timerState = ref.read(timerProvider);
+    if (timerState.isRunning) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please stop the current timer first'),
+        ),
+      );
+      return;
+    }
+    await showStartTimerSheet(context, initialProjectId: project.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     final projectsState = ref.watch(projectsProvider);
@@ -51,70 +65,102 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: SearchBar(
               controller: _searchController,
-              decoration: const InputDecoration(
-                hintText: 'Search projects...',
-                prefixIcon: Icon(Icons.search),
-              ),
+              leading: const Icon(Icons.search),
+              hintText: 'Search projects',
+              trailing: [
+                if (_searchController.text.isNotEmpty)
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _searchController.clear();
+                      });
+                    },
+                    icon: const Icon(Icons.clear),
+                    tooltip: 'Clear search',
+                  ),
+              ],
               onChanged: (_) => setState(() {}),
             ),
           ),
           Expanded(
-            child: projectsState.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : projectsState.error != null
-                    ? ErrorView(
-                        title: 'Error loading projects',
-                        message: projectsState.error,
-                        onRetry: () => ref.read(projectsProvider.notifier).loadProjects(),
-                      )
-                    : filteredProjects.isEmpty
-                        ? const EmptyState(
-                            icon: Icons.folder_off,
-                            title: 'No projects found',
-                            subtitle: 'No projects match your search.',
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: filteredProjects.length,
-                            itemBuilder: (context, index) {
-                              final project = filteredProjects[index];
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                child: ListTile(
-                                  leading: const CircleAvatar(
-                                    child: Icon(Icons.folder),
-                                  ),
-                                  title: Text(project.name),
-                                  subtitle: Text(project.client ?? 'No client'),
-                                  trailing: const Icon(Icons.chevron_right),
-                                  onTap: () async {
-                                    // Start timer with this project
-                                    final timerState = ref.read(timerProvider);
-                                    if (timerState.isRunning) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Please stop the current timer first'),
-                                        ),
-                                      );
-                                      return;
-                                    }
-
-                                    // Navigate to timer screen with project pre-selected
-                                    // For now, just navigate to timer screen
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const TimerScreen(),
+            child: RefreshIndicator(
+              onRefresh: () => ref.read(projectsProvider.notifier).refresh(),
+              child: projectsState.isLoading && projectsState.projects.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : projectsState.error != null && projectsState.projects.isEmpty
+                      ? ErrorView(
+                          title: 'Error loading projects',
+                          message: projectsState.error,
+                          onRetry: () => ref.read(projectsProvider.notifier).loadProjects(),
+                        )
+                      : filteredProjects.isEmpty
+                          ? EmptyState(
+                              icon: Icons.folder_off,
+                              title: 'No projects found',
+                              subtitle: _searchController.text.isEmpty
+                                  ? 'No active projects are available.'
+                                  : 'No projects match your search.',
+                              action: _searchController.text.isEmpty
+                                  ? null
+                                  : TextButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _searchController.clear();
+                                        });
+                                      },
+                                      child: const Text('Clear search'),
+                                    ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.md,
+                                0,
+                                AppSpacing.md,
+                                AppSpacing.md,
+                              ),
+                              itemCount: filteredProjects.length,
+                              itemBuilder: (context, index) {
+                                final project = filteredProjects[index];
+                                final client = (project.client ?? '').trim();
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      child: Text(
+                                        (project.name.isNotEmpty ? project.name[0] : '?').toUpperCase(),
+                                        style: const TextStyle(fontWeight: FontWeight.w700),
                                       ),
-                                    );
-                                  },
-                                ),
-                              );
-                            },
-                          ),
+                                    ),
+                                    title: Text(project.name),
+                                    subtitle: client.isEmpty
+                                        ? null
+                                        : Padding(
+                                            padding: const EdgeInsets.only(top: AppSpacing.xs),
+                                            child: Wrap(
+                                              spacing: AppSpacing.xs,
+                                              runSpacing: AppSpacing.xxs,
+                                              children: [
+                                                Chip(
+                                                  visualDensity: VisualDensity.compact,
+                                                  label: Text(client),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                    trailing: IconButton.filledTonal(
+                                      onPressed: () => _startTimerForProject(project),
+                                      icon: const Icon(Icons.play_arrow),
+                                      tooltip: 'Start timer',
+                                    ),
+                                    onTap: () => _startTimerForProject(project),
+                                  ),
+                                );
+                              },
+                            ),
+            ),
           ),
         ],
       ),

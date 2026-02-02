@@ -231,10 +231,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ],
                     ),
-                    child: Icon(
-                      Icons.timer,
-                      size: 48,
-                      color: Theme.of(context).colorScheme.onPrimary,
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Image.asset(
+                        'assets/icon/app_icon.png',
+                        fit: BoxFit.contain,
+                        semanticLabel: 'TimeTracker logo',
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
