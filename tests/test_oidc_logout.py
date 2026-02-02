@@ -30,6 +30,7 @@ def oidc_authenticated_client(client, oidc_user):
     with client:
         with client.session_transaction() as sess:
             sess["_user_id"] = str(oidc_user.id)
+            # Legacy compatibility: older versions stored the full token in-session.
             sess["oidc_id_token"] = "mock_id_token_12345"
         yield client
 
@@ -155,6 +156,7 @@ def test_logout_clears_oidc_id_token_from_session(oidc_authenticated_client, app
             # Verify ID token is in session before logout
             with oidc_authenticated_client.session_transaction() as sess:
                 assert "oidc_id_token" in sess
+                assert "oidc_id_token_key" not in sess
 
             # Perform logout
             oidc_authenticated_client.get("/logout", follow_redirects=True)
@@ -162,6 +164,45 @@ def test_logout_clears_oidc_id_token_from_session(oidc_authenticated_client, app
             # Verify ID token is removed from session
             with oidc_authenticated_client.session_transaction() as sess:
                 assert "oidc_id_token" not in sess
+                assert "oidc_id_token_key" not in sess
+
+
+@pytest.mark.unit
+@pytest.mark.security
+def test_logout_uses_cached_oidc_id_token_hint_when_present(oidc_authenticated_client, app):
+    """If oidc_id_token_key is present, logout should use cached token as id_token_hint."""
+    with app.app_context():
+        app.config["AUTH_METHOD"] = "oidc"
+
+        # Put a small key in session (new behavior)
+        with oidc_authenticated_client.session_transaction() as sess:
+            sess["oidc_id_token_key"] = "k_test_1"
+
+        fake_cache_store = {"oidc:id_token:k_test_1": "cached_id_token_67890"}
+
+        class FakeCache:
+            def get(self, key):
+                return fake_cache_store.get(key)
+
+            def delete(self, key):
+                fake_cache_store.pop(key, None)
+
+        with patch("app.routes.auth.get_cache", return_value=FakeCache()), patch("app.routes.auth.oauth") as mock_oauth, patch(
+            "app.routes.auth.Config"
+        ) as mock_config:
+            mock_config.AUTH_METHOD = "oidc"
+            mock_config.OIDC_POST_LOGOUT_REDIRECT_URI = "https://app.example.com/"
+            mock_client = MagicMock()
+            mock_client.load_server_metadata.return_value = {"end_session_endpoint": "https://idp.example.com/logout"}
+            mock_oauth.create_client.return_value = mock_client
+
+            response = oidc_authenticated_client.get("/logout", follow_redirects=False)
+
+            assert response.status_code == 302
+            assert "idp.example.com/logout" in response.location
+            assert "id_token_hint=cached_id_token_67890" in response.location
+            # Ensure cache entry was cleaned up
+            assert "oidc:id_token:k_test_1" not in fake_cache_store
 
 
 @pytest.mark.unit

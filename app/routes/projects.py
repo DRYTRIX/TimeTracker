@@ -63,6 +63,17 @@ def list_projects():
     status_param = None if (status == "all" or not status) else status
     client_name = request.args.get("client", "").strip()
     client_id = request.args.get("client_id", type=int)
+    
+    # Enforce locked client (if configured)
+    try:
+        from app.utils.client_lock import get_locked_client
+
+        locked_client = get_locked_client()
+        if locked_client:
+            client_name = locked_client.name
+            client_id = locked_client.id
+    except Exception:
+        pass
     search = request.args.get("search", "").strip()
     favorites_only = request.args.get("favorites", "").lower() == "true"
     
@@ -99,6 +110,8 @@ def list_projects():
 
     # Get clients for filter dropdown
     clients = Client.get_active_clients()
+    only_one_client = len(clients) == 1
+    single_client = clients[0] if only_one_client else None
     client_list = [c.name for c in clients]
     
     # Get custom field definitions for filter UI
@@ -127,6 +140,8 @@ def list_projects():
         status=status or "all",  # Ensure status is always set
         search=search,
         clients=client_list,
+        only_one_client=only_one_client,
+        single_client=single_client,
         favorite_project_ids=favorite_project_ids,
         favorites_only=favorites_only,
         custom_field_definitions=custom_field_definitions,
@@ -141,6 +156,16 @@ def export_projects():
     client_name = request.args.get("client", "").strip()
     search = request.args.get("search", "").strip()
     favorites_only = request.args.get("favorites", "").lower() == "true"
+    
+    # Enforce locked client (if configured)
+    try:
+        from app.utils.client_lock import get_locked_client
+
+        locked_client = get_locked_client()
+        if locked_client:
+            client_name = locked_client.name
+    except Exception:
+        pass
 
     query = Project.query
 
@@ -238,6 +263,7 @@ def export_projects():
 @admin_or_permission_required("create_projects")
 def create_project():
     """Create a new project"""
+    from app.utils.client_lock import get_locked_client_id
     clients = Client.get_active_clients()
     only_one_client = len(clients) == 1
     single_client = clients[0] if only_one_client else None
@@ -249,6 +275,9 @@ def create_project():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         client_id = request.form.get("client_id", "").strip()
+        locked_id = get_locked_client_id()
+        if locked_id:
+            client_id = str(locked_id)
         description = request.form.get("description", "").strip()
         billable = request.form.get("billable") == "on"
         hourly_rate = request.form.get("hourly_rate", "").strip()
@@ -784,6 +813,7 @@ def project_time_entries_overview(project_id):
 @admin_or_permission_required("edit_projects")
 def edit_project(project_id):
     """Edit project details"""
+    from app.utils.client_lock import get_locked_client_id
     project = Project.query.get_or_404(project_id)
     clients = Client.get_active_clients()
     only_one_client = len(clients) == 1
@@ -792,6 +822,9 @@ def edit_project(project_id):
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         client_id = request.form.get("client_id", "").strip()
+        locked_id = get_locked_client_id()
+        if locked_id:
+            client_id = str(locked_id)
         description = request.form.get("description", "").strip()
         billable = request.form.get("billable") == "on"
         hourly_rate = request.form.get("hourly_rate", "").strip()

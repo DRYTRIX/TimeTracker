@@ -983,12 +983,16 @@ def clear_cache():
 def manage_modules():
     """Manage module visibility - enable/disable modules system-wide"""
     from app.utils.module_registry import ModuleRegistry, ModuleCategory
+    from app.models.client import Client
     
     # Initialize registry
     ModuleRegistry.initialize_defaults()
     
     # Get settings to access disabled_module_ids
     settings_obj = Settings.get_settings()
+
+    # For locked client selection UI
+    clients = Client.query.filter_by(status="active").order_by(Client.name).all()
     
     # Module visibility: non-CORE modules for admin toggles
     modules_by_category = {}
@@ -998,6 +1002,35 @@ def manage_modules():
             modules_by_category[cat] = mods
     
     if request.method == "POST":
+        # Locked client: allow admin to lock the instance to a single client
+        locked_client_id_raw = (request.form.get("locked_client_id") or "").strip()
+        if locked_client_id_raw:
+            try:
+                locked_client_id = int(locked_client_id_raw)
+            except (TypeError, ValueError):
+                flash(_("Invalid locked client selection."), "error")
+                return render_template(
+                    "admin/modules.html",
+                    modules_by_category=modules_by_category,
+                    ModuleCategory=ModuleCategory,
+                    settings=settings_obj,
+                    clients=clients,
+                )
+
+            locked_client = Client.query.get(locked_client_id)
+            if not locked_client or getattr(locked_client, "status", None) != "active":
+                flash(_("Selected locked client does not exist or is not active."), "error")
+                return render_template(
+                    "admin/modules.html",
+                    modules_by_category=modules_by_category,
+                    ModuleCategory=ModuleCategory,
+                    settings=settings_obj,
+                    clients=clients,
+                )
+            settings_obj.locked_client_id = locked_client_id
+        else:
+            settings_obj.locked_client_id = None
+
         # Module visibility: build disabled_module_ids from unchecked module_enabled_* checkboxes
         if hasattr(settings_obj, "disabled_module_ids"):
             disabled = []
@@ -1027,6 +1060,7 @@ def manage_modules():
                     modules_by_category=modules_by_category,
                     ModuleCategory=ModuleCategory,
                     settings=settings_obj,
+                    clients=clients,
                 )
             
             settings_obj.disabled_module_ids = disabled
@@ -1042,6 +1076,7 @@ def manage_modules():
                     modules_by_category=modules_by_category,
                     ModuleCategory=ModuleCategory,
                     settings=settings_obj,
+                    clients=clients,
                 )
             
             flash(_("Module visibility updated successfully"), "success")
@@ -1052,6 +1087,7 @@ def manage_modules():
         modules_by_category=modules_by_category,
         ModuleCategory=ModuleCategory,
         settings=settings_obj,
+        clients=clients,
     )
 
 

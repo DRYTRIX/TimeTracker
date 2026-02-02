@@ -32,6 +32,9 @@ class ModuleDefinition:
     blueprint_name: str
     default_enabled: bool = True
     requires_admin: bool = False
+    # If the module is disabled in settings.disabled_module_ids, allow admins to still use it.
+    # This supports "admin-only" behavior for modules like Clients.
+    admin_only_when_disabled: bool = False
     dependencies: List[str] = field(default_factory=list)  # Module IDs this depends on
     routes: List[str] = field(default_factory=list)  # Route endpoints
     icon: Optional[str] = None  # FontAwesome icon class
@@ -88,6 +91,15 @@ class ModuleRegistry:
         module = cls.get(module_id)
         if not module:
             return False
+
+        # Resolve user lazily (avoid importing flask_login unless needed)
+        if user is None:
+            try:
+                from flask_login import current_user
+
+                user = current_user
+            except Exception:
+                user = None
         
         # Core modules are always enabled
         if module.category == ModuleCategory.CORE:
@@ -95,13 +107,28 @@ class ModuleRegistry:
         
         # Admin-only modules require admin access
         if module.requires_admin:
-            if user is None:
-                from flask_login import current_user
-                user = current_user
             if not user or not getattr(user, 'is_authenticated', False):
                 return False
             if not getattr(user, 'is_admin', False):
                 return False
+
+        # Role-based module visibility (denylist): if ALL assigned roles hide the module, disable it.
+        # - No roles (legacy edge) => do not hide anything by default.
+        # - Super admins bypass role-based hiding to avoid lockouts.
+        if user and getattr(user, "is_authenticated", False):
+            if getattr(user, "is_super_admin", False):
+                pass
+            else:
+                roles = getattr(user, "roles", None) or []
+                if roles:
+                    hidden_by_all_roles = True
+                    for role in roles:
+                        role_hidden = module_id in (getattr(role, "hidden_module_ids", None) or [])
+                        if not role_hidden:
+                            hidden_by_all_roles = False
+                            break
+                    if hidden_by_all_roles:
+                        return False
         
         # Check dependencies recursively
         for dep_id in module.dependencies:
@@ -112,6 +139,13 @@ class ModuleRegistry:
         if settings:
             disabled = getattr(settings, "disabled_module_ids", None) or []
             if isinstance(disabled, list) and module_id in disabled:
+                # Some modules can be disabled for non-admin users only.
+                if module.admin_only_when_disabled:
+                    if user is None:
+                        from flask_login import current_user
+                        user = current_user
+                    if user and getattr(user, "is_authenticated", False) and getattr(user, "is_admin", False):
+                        return True
                 return False
 
         return True
@@ -249,9 +283,10 @@ class ModuleRegistry:
             id="clients",
             name="Clients",
             description="Client management",
-            category=ModuleCategory.CORE,
+            category=ModuleCategory.CRM,
             blueprint_name="clients",
             default_enabled=True,
+            admin_only_when_disabled=True,
             icon="fa-users",
             order=5
         ))

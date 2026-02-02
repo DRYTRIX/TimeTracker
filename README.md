@@ -78,11 +78,13 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 > **📋 For complete release history, see [CHANGELOG.md](CHANGELOG.md)**
 
-**Latest Release: v4.14.0** (January 2025)
+**Latest Release: v4.17.0** (February 2025)
+- 📱 **Native Mobile & Desktop Apps** — Flutter mobile app (iOS/Android) and Electron desktop app with time tracking, offline support, and API integration ([Build Guide](BUILD.md), [Docs](docs/mobile-desktop-apps/README.md))
 - 📋 **Project Analysis & Documentation** — Comprehensive project analysis and documentation updates
 - 🔧 **Version Consistency** — Fixed version inconsistencies across documentation files
 
 **Previous Releases:**
+- **v4.14.0** (January 2025) — Documentation and technology stack updates
 - **v4.6.0** (December 2025) — Comprehensive Issue/Bug Tracking System
 
 **Recent Releases:**
@@ -199,6 +201,7 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 - **Task Board** — Visual task management with priorities and assignments
 - **Kanban Board** — Drag-and-drop task management with customizable columns
 - **Task Management** — Complete task tracking system ([Guide](docs/TASK_MANAGEMENT_README.md))
+- **Issue & Bug Tracking** — Full lifecycle issue and bug tracking system
 - **Status Tracking** — Monitor progress from to-do to completion
 - **Budget Tracking** — Monitor project budgets with alerts and forecasting ([Guide](docs/BUDGET_ALERTS_AND_FORECASTING.md))
 - **Project Costs** — Track direct project expenses
@@ -282,6 +285,7 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 - **Docker Ready** — Deploy in minutes with Docker Compose
 - **Database Flexibility** — PostgreSQL for production, SQLite for testing
 - **Responsive Design** — Mobile-first design works perfectly on desktop, tablet, and mobile
+- **Native Mobile & Desktop Apps** — Flutter mobile app (iOS/Android) and Electron desktop app with time tracking, offline support, and API integration ([Build Guide](BUILD.md), [Docs](docs/mobile-desktop-apps/README.md))
 - **Real-time Sync** — WebSocket support for live updates across devices
 - **Automatic Backups** — Scheduled database backups (configurable)
 - **Progressive Web App (PWA)** — Install as mobile app with offline support and background sync
@@ -614,7 +618,9 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory. See 
 - **[Command Palette](docs/COMMAND_PALETTE_USAGE.md)** — Keyboard shortcuts
 - **[Role-Based Permissions](docs/ADVANCED_PERMISSIONS.md)** — Access control
 
-**Integrations:**
+**Integrations & Apps:**
+- **[Mobile & Desktop Apps](docs/mobile-desktop-apps/README.md)** — Flutter mobile and Electron desktop apps
+- **[Build Guide (Mobile & Desktop)](BUILD.md)** — Build scripts for Android, iOS, Windows, macOS, Linux
 - **[Peppol e-Invoicing](docs/admin/configuration/PEPPOL_EINVOICING.md)** — Electronic invoicing
 - **[API Documentation](docs/api/REST_API.md)** — REST API reference
 - **[API Token Scopes](docs/api/API_TOKEN_SCOPES.md)** — Token permissions
@@ -788,7 +794,7 @@ TimeTracker includes **optional** analytics and monitoring features to help impr
   - **Group Analytics**: Segment by version, platform, deployment
   - **Rich Context**: Browser, device, environment on every event
 - **Opt-in:** Set `POSTHOG_API_KEY` environment variable
-- See [POSTHOG_ADVANCED_FEATURES.md](POSTHOG_ADVANCED_FEATURES.md) for complete guide
+- See [POSTHOG_ADVANCED_FEATURES.md](docs/admin/monitoring/POSTHOG_ADVANCED_FEATURES.md) for complete guide
 
 #### 5. **Installation Telemetry** (Optional, Anonymous)
 - Sends anonymous installation data via PostHog with:
@@ -860,7 +866,7 @@ This starts:
 - 📊 **Advanced Analytics** — More charts, insights, and reporting options
 - 🔌 **API Extensions** — Additional RESTful API endpoints for integrations
 - 🔔 **Push Notifications** — Real-time browser notifications
-- 📱 **Mobile App** — Native iOS and Android apps
+- 📱 **Mobile & Desktop App Enhancements** — Additional features for the native Flutter mobile and Electron desktop apps
 - 🤖 **Automation Rules** — Automated workflows and task assignments
 - 📈 **Advanced Forecasting** — AI-powered project timeline predictions
 
@@ -909,6 +915,11 @@ This starts:
 - ✅ **Markdown Support** — Rich text formatting in descriptions
 - ✅ **Toast Notifications** — Beautiful in-app notification system
 - ✅ **Enhanced UI Components** — Modern, accessible interface elements
+
+#### 📱 Native Mobile & Desktop Apps
+- ✅ **Flutter Mobile App** — Native iOS and Android apps with time tracking, calendar view, offline sync, and API token authentication
+- ✅ **Electron Desktop App** — Windows, macOS, and Linux desktop app with system tray, time tracking, and offline support
+- ✅ **Build Scripts** — Cross-platform build scripts for mobile and desktop ([BUILD.md](BUILD.md))
 
 #### 🏗️ Architecture & Performance
 - ✅ **Service Layer Migration** — Routes migrated to service layer pattern

@@ -38,12 +38,23 @@
         </div>
         <div>
             <label for="client" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client</label>
-            <select name="client" id="client" class="form-input">
-                <option value="">All</option>
-                {% for client_name in clients %}
-                <option value="{{ client_name }}" {% if request.args.get('client') == client_name %}selected{% endif %}>{{ client_name }}</option>
-                {% endfor %}
-            </select>
+            {% set locked_client = get_locked_client() %}
+            {% if locked_client %}
+                <input type="hidden" name="client" id="client" value="{{ locked_client.name }}">
+                <input type="text" class="form-input bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-75"
+                       value="{{ locked_client.name }}" disabled readonly>
+            {% elif only_one_client|default(false) and single_client %}
+                <input type="hidden" name="client" id="client" value="{{ single_client.name }}">
+                <input type="text" class="form-input bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-75"
+                       value="{{ single_client.name }}" disabled readonly>
+            {% else %}
+                <select name="client" id="client" class="form-input">
+                    <option value="">All</option>
+                    {% for client_name in clients %}
+                    <option value="{{ client_name }}" {% if request.args.get('client') == client_name %}selected{% endif %}>{{ client_name }}</option>
+                    {% endfor %}
+                </select>
+            {% endif %}
         </div>
         <div>
             <label for="favorites" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Show</label>

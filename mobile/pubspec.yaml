@@ -1,7 +1,7 @@
 name: timetracker_mobile
 description: TimeTracker mobile app for Android and iOS
 publish_to: 'none'
-version: 4.16.0+1
+version: 4.16.1+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

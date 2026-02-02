@@ -94,6 +94,49 @@
                 </div>
             </div>
 
+            {% if modules_by_category is defined %}
+            <div>
+                <h3 class="text-lg font-semibold mb-4 text-text-light dark:text-text-dark">{{ _('Module visibility') }}</h3>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+                    {{ _('Select which modules should be hidden for this role. Hidden modules will not appear in the navigation and cannot be accessed directly.') }}
+                </p>
+
+                <div class="space-y-6">
+                    {% for category, modules in modules_by_category %}
+                    {% if modules and modules|length > 0 %}
+                    <div class="border border-border-light dark:border-border-dark rounded-lg p-4 bg-bg-light dark:bg-bg-dark">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-text-light dark:text-text-dark capitalize">
+                                {{ category.value.replace('_', ' ') }}
+                            </h4>
+                            <button type="button" class="text-xs text-primary hover:underline" onclick="toggleCategoryModules(this)">{{ _("Toggle All") }}</button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {% for module in modules %}
+                            <label class="flex items-start gap-2 cursor-pointer p-2 rounded hover:bg-bg-hover-light dark:hover:bg-bg-hover-dark transition">
+                                <input type="checkbox"
+                                       name="hidden_modules"
+                                       value="{{ module.id }}"
+                                       {% if role and (module.id in (role.hidden_module_ids or [])) %}checked{% endif %}
+                                       class="mt-1 h-4 w-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary bg-input-light dark:bg-input-dark">
+                                <div class="flex-1">
+                                    <div class="text-sm font-medium text-text-light dark:text-text-dark">
+                                        {{ _('Hide') }} {{ module.name }}
+                                    </div>
+                                    {% if module.description %}
+                                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ module.description }}</div>
+                                    {% endif %}
+                                </div>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <div class="flex gap-4">
                 <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-opacity-90 transition">
                     {% if role %}
@@ -115,6 +158,14 @@
 function toggleCategory(button) {
     const category = button.closest('.border');
     const checkboxes = category.querySelectorAll('input[type="checkbox"]');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    checkboxes.forEach(cb => cb.checked = !allChecked);
+}
+
+// Toggle all module checkboxes in a category
+function toggleCategoryModules(button) {
+    const category = button.closest('.border');
+    const checkboxes = category.querySelectorAll('input[name="hidden_modules"]');
     const allChecked = Array.from(checkboxes).every(cb => cb.checked);
     checkboxes.forEach(cb => cb.checked = !allChecked);
 }

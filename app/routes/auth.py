@@ -18,6 +18,7 @@ from app.utils.config_manager import ConfigManager
 from flask_babel import gettext as _
 from app import oauth, limiter
 from app.utils.posthog_funnels import track_onboarding_started
+from app.utils.cache import get_cache
 
 
 auth_bp = Blueprint("auth", __name__)
@@ -363,7 +364,25 @@ def logout():
     except Exception:
         auth_method = "local"
 
+    # Backwards compatibility: older versions stored the full id_token in the cookie session.
+    # Keep it for RP-initiated logout if present, but don't continue storing it.
     id_token = session.pop("oidc_id_token", None)
+
+    # New approach: store only a small reference key in the cookie session and keep the
+    # full id_token server-side (Redis/in-memory cache) to avoid oversized session cookies.
+    id_token_key = session.pop("oidc_id_token_key", None)
+    if id_token_key:
+        try:
+            cache = get_cache()
+            cache_key = f"oidc:id_token:{id_token_key}"
+            cached = cache.get(cache_key)
+            # Prefer cached token when available; otherwise fall back to legacy value.
+            if cached:
+                id_token = cached
+            # Best-effort cleanup: token should not linger after logout.
+            cache.delete(cache_key)
+        except Exception:
+            pass
     logout_user()
     # Ensure both possible session keys are cleared for compatibility
     try:
@@ -1006,7 +1025,24 @@ def oidc_callback():
         # Persist id_token for possible end-session
         try:
             if isinstance(token, dict) and token.get("id_token"):
-                session["oidc_id_token"] = token.get("id_token")
+                # IMPORTANT: Don't store the full id_token in the cookie session.
+                # It can be large (e.g., groups claim), which can overflow cookie limits
+                # and cause login loops (session dropped/truncated by the browser).
+                import secrets
+
+                id_token = token.get("id_token")
+                key = secrets.token_urlsafe(24)
+                cache_key = f"oidc:id_token:{key}"
+                try:
+                    ttl = int(getattr(current_app.config.get("PERMANENT_SESSION_LIFETIME"), "total_seconds", lambda: 86400)())
+                except Exception:
+                    ttl = 86400
+
+                cache = get_cache()
+                cache.set(cache_key, id_token, ttl=ttl)
+                session["oidc_id_token_key"] = key
+                # Backwards compatibility cleanup
+                session.pop("oidc_id_token", None)
         except Exception:
             pass
 

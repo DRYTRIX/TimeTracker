@@ -24,14 +24,15 @@ class ApiClient {
     _dio.options.headers['Authorization'] = 'Bearer $token';
   }
 
-  /// Validate token by making a test API call
-  Future<bool> validateToken() async {
-    try {
-      final response = await _dio.get('/api/v1/timer/status');
-      return response.statusCode == 200;
-    } catch (e) {
-      return false;
-    }
+  /// Validate token by making a test API call.
+  ///
+  /// This returns the raw response (with status codes preserved) so callers can
+  /// distinguish "unauthorized" from network failures.
+  Future<Response<dynamic>> validateTokenRaw() async {
+    return _dio.get(
+      '/api/v1/timer/status',
+      options: Options(validateStatus: (_) => true),
+    );
   }
 
   // ==================== Timer Operations ====================

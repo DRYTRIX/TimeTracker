@@ -49,11 +49,53 @@
     </form>
     
     <!-- Export Buttons -->
-    <div class="mt-4 flex gap-2">
+    <div class="mt-4 flex flex-col gap-3">
+        <div class="flex gap-2">
         <a href="{{ url_for('reports.export_user_excel', user_id=selected_user or '', project_id=selected_project or '', start_date=start_date, end_date=end_date) }}" 
            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 inline-flex items-center">
             <i class="fas fa-file-excel mr-2"></i>{{ _('Export to Excel') }}
         </a>
+        </div>
+
+        <!-- Detailed export: one row per time entry (Issue #483) -->
+        <form method="GET" action="{{ url_for('reports.export_user_entries_excel') }}" class="p-4 rounded-lg border border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/30">
+            <input type="hidden" name="user_id" value="{{ selected_user or '' }}">
+            <input type="hidden" name="project_id" value="{{ selected_project or '' }}">
+            <input type="hidden" name="start_date" value="{{ start_date }}">
+            <input type="hidden" name="end_date" value="{{ end_date }}">
+
+            <div class="flex flex-col gap-3">
+                <div class="text-sm font-medium text-text-light dark:text-text-dark">
+                    {{ _('Export entries (Excel)') }}
+                    <span class="text-xs text-text-muted-light dark:text-text-muted-dark ml-2">{{ _('Select columns:') }}</span>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                    <label class="inline-flex items-center gap-2"><input type="checkbox" class="form-checkbox" name="columns" value="date" checked> {{ _('Date') }}</label>
+                    <label class="inline-flex items-center gap-2"><input type="checkbox" class="form-checkbox" name="columns" value="user" checked> {{ _('User') }}</label>
+                    <label class="inline-flex items-center gap-2"><input type="checkbox" class="form-checkbox" name="columns" value="project" checked> {{ _('Project') }}</label>
+                    <label class="inline-flex items-center gap-2"><input type="checkbox" class="form-checkbox" name="columns" value="task" checked> {{ _('Task') }}</label>
+                    <label class="inline-flex items-center gap-2"><input type="checkbox" class="form-checkbox" name="columns" value="duration_hours" checked> {{ _('Duration (hours)') }}</label>
+                    <label class="inline-flex items-center gap-2"><input type="checkbox" class="form-checkbox" name="columns" value="notes" checked> {{ _('Notes') }}</label>
+
+                    <label class="inline-flex items-center gap-2"><input type="checkbox" class="form-checkbox" name="columns" value="client"> {{ _('Client') }}</label>
+                    <label class="inline-flex items-center gap-2"><input type="checkbox" class="form-checkbox" name="columns" value="tags"> {{ _('Tags') }}</label>
+                    <label class="inline-flex items-center gap-2"><input type="checkbox" class="form-checkbox" name="columns" value="billable"> {{ _('Billable') }}</label>
+                    <label class="inline-flex items-center gap-2"><input type="checkbox" class="form-checkbox" name="columns" value="source"> {{ _('Source') }}</label>
+
+                    <label class="inline-flex items-center gap-2"><input type="checkbox" class="form-checkbox" name="columns" value="start_time"> {{ _('Start Time') }}</label>
+                    <label class="inline-flex items-center gap-2"><input type="checkbox" class="form-checkbox" name="columns" value="end_time"> {{ _('End Time') }}</label>
+                    <label class="inline-flex items-center gap-2"><input type="checkbox" class="form-checkbox" name="columns" value="duration_formatted"> {{ _('Duration (formatted)') }}</label>
+                    <label class="inline-flex items-center gap-2"><input type="checkbox" class="form-checkbox" name="columns" value="created_at"> {{ _('Created At') }}</label>
+                </div>
+
+                <div>
+                    <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 inline-flex items-center">
+                        <i class="fas fa-file-excel mr-2"></i>{{ _('Export entries (Excel)') }}
+                    </button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 

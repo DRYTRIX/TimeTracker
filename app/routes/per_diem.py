@@ -117,6 +117,7 @@ def create_per_diem():
         )
 
     try:
+        from app.utils.client_lock import enforce_locked_client_id, get_locked_client_id
         # Get form data
         trip_purpose = request.form.get("trip_purpose", "").strip()
         start_date_str = request.form.get("start_date", "").strip()
@@ -182,6 +183,17 @@ def create_per_diem():
         lunch_provided = int(request.form.get("lunch_provided", 0))
         dinner_provided = int(request.form.get("dinner_provided", 0))
 
+        project_id = request.form.get("project_id", type=int)
+        client_id = enforce_locked_client_id(request.form.get("client_id", type=int))
+
+        # If a locked client is configured, ensure selected project matches it.
+        locked_id = get_locked_client_id()
+        if locked_id and project_id:
+            project = Project.query.get(project_id)
+            if project and getattr(project, "client_id", None) and int(project.client_id) != int(locked_id):
+                flash(_("Selected project does not match the locked client."), "error")
+                return redirect(url_for("per_diem.create_per_diem"))
+
         # Create per diem claim
         per_diem = PerDiem(
             user_id=current_user.id,
@@ -193,8 +205,8 @@ def create_per_diem():
             full_day_rate=rate.full_day_rate,
             half_day_rate=rate.half_day_rate,
             description=request.form.get("description"),
-            project_id=request.form.get("project_id", type=int),
-            client_id=request.form.get("client_id", type=int),
+            project_id=project_id,
+            client_id=client_id,
             per_diem_rate_id=rate.id,
             departure_time=departure_time,
             return_time=return_time,
@@ -289,6 +301,7 @@ def edit_per_diem(per_diem_id):
         )
 
     try:
+        from app.utils.client_lock import enforce_locked_client_id
         # Update fields
         per_diem.trip_purpose = request.form.get("trip_purpose", "").strip()
         per_diem.description = request.form.get("description", "").strip()
@@ -297,7 +310,7 @@ def edit_per_diem(per_diem_id):
         per_diem.country = request.form.get("country", "").strip()
         per_diem.city = request.form.get("city", "").strip()
         per_diem.project_id = request.form.get("project_id", type=int)
-        per_diem.client_id = request.form.get("client_id", type=int)
+        per_diem.client_id = enforce_locked_client_id(request.form.get("client_id", type=int))
         per_diem.full_days = int(request.form.get("full_days", 0))
         per_diem.half_days = int(request.form.get("half_days", 0))
         per_diem.breakfast_provided = int(request.form.get("breakfast_provided", 0))

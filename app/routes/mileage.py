@@ -18,6 +18,7 @@ mileage_bp = Blueprint("mileage", __name__)
 @module_enabled("mileage")
 def list_mileage():
     """List all mileage entries with filters"""
+    from app.utils.client_lock import enforce_locked_client_id
     from app import track_page_view
 
     track_page_view("mileage_list")
@@ -29,6 +30,7 @@ def list_mileage():
     status = request.args.get("status", "").strip()
     project_id = request.args.get("project_id", type=int)
     client_id = request.args.get("client_id", type=int)
+    client_id = enforce_locked_client_id(client_id)
     start_date = request.args.get("start_date", "").strip()
     end_date = request.args.get("end_date", "").strip()
     search = request.args.get("search", "").strip()
@@ -83,6 +85,8 @@ def list_mileage():
     # Get filter options
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()
     clients = Client.get_active_clients()
+    only_one_client = len(clients) == 1
+    single_client = clients[0] if only_one_client else None
 
     # Calculate totals
     start_date_obj = None
@@ -119,6 +123,8 @@ def list_mileage():
         pagination=mileage_pagination,
         projects=projects,
         clients=clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
         total_distance=total_distance,
         total_amount=float(total_amount),
         # Pass back filter values
@@ -154,6 +160,8 @@ def create_mileage():
         )
 
     try:
+        from app.utils.client_lock import enforce_locked_client_id, get_locked_client_id
+
         # Get form data
         trip_date = request.form.get("trip_date", "").strip()
         purpose = request.form.get("purpose", "").strip()
@@ -175,6 +183,17 @@ def create_mileage():
             flash(_("Invalid date format"), "error")
             return redirect(url_for("mileage.create_mileage"))
 
+        project_id = request.form.get("project_id", type=int)
+        client_id = enforce_locked_client_id(request.form.get("client_id", type=int))
+
+        # If a locked client is configured, ensure selected project matches it.
+        locked_id = get_locked_client_id()
+        if locked_id and project_id:
+            project = Project.query.get(project_id)
+            if project and getattr(project, "client_id", None) and int(project.client_id) != int(locked_id):
+                flash(_("Selected project does not match the locked client."), "error")
+                return redirect(url_for("mileage.create_mileage"))
+
         # Create mileage entry
         mileage = Mileage(
             user_id=current_user.id,
@@ -185,8 +204,8 @@ def create_mileage():
             distance_km=Decimal(distance_km),
             rate_per_km=Decimal(rate_per_km),
             description=description,
-            project_id=request.form.get("project_id", type=int),
-            client_id=request.form.get("client_id", type=int),
+            project_id=project_id,
+            client_id=client_id,
             start_odometer=request.form.get("start_odometer"),
             end_odometer=request.form.get("end_odometer"),
             vehicle_type=request.form.get("vehicle_type"),
@@ -278,6 +297,7 @@ def edit_mileage(mileage_id):
         )
 
     try:
+        from app.utils.client_lock import enforce_locked_client_id
         # Update fields
         trip_date = request.form.get("trip_date", "").strip()
         mileage.trip_date = datetime.strptime(trip_date, "%Y-%m-%d").date()
@@ -289,7 +309,7 @@ def edit_mileage(mileage_id):
         mileage.rate_per_km = Decimal(request.form.get("rate_per_km", "0"))
         mileage.calculated_amount = mileage.distance_km * mileage.rate_per_km
         mileage.project_id = request.form.get("project_id", type=int)
-        mileage.client_id = request.form.get("client_id", type=int)
+        mileage.client_id = enforce_locked_client_id(request.form.get("client_id", type=int))
         mileage.vehicle_type = request.form.get("vehicle_type")
         mileage.vehicle_description = request.form.get("vehicle_description")
         mileage.license_plate = request.form.get("license_plate")

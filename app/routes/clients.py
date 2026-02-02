@@ -3,13 +3,14 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 import app as app_module
 from app import db, log_event, track_event
-from app.models import Client, Project, Contact, TimeEntry, CustomFieldDefinition, ClientAttachment
+from app.models import Client, Project, Contact, TimeEntry, CustomFieldDefinition, ClientAttachment, Settings
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required
 from app.utils.timezone import convert_app_datetime_to_user
 from app.utils.email import send_client_portal_password_setup_email
+from app.utils.module_registry import ModuleRegistry
 from sqlalchemy.orm import joinedload
 from sqlalchemy import or_
 import csv
@@ -17,6 +18,38 @@ import io
 import json
 
 clients_bp = Blueprint("clients", __name__)
+
+
+def _wants_json_response() -> bool:
+    try:
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return True
+        if request.is_json:
+            return True
+        return request.accept_mimetypes["application/json"] > request.accept_mimetypes["text/html"]
+    except Exception:
+        return False
+
+
+@clients_bp.before_request
+def _enforce_clients_module():
+    """When Clients is disabled, allow admins only; block non-admin access."""
+    if not current_user or not getattr(current_user, "is_authenticated", False):
+        # Let @login_required handle unauthenticated access.
+        return None
+
+    settings = Settings.get_settings()
+    if ModuleRegistry.is_enabled("clients", settings, current_user):
+        return None
+
+    # Non-admin users: block access. For AJAX/JSON requests, return JSON; otherwise redirect.
+    if _wants_json_response():
+        return jsonify(
+            {"error": "module_disabled", "message": _("Clients module is disabled by the administrator.")}
+        ), 403
+
+    flash(_("Clients module is disabled by the administrator."), "warning")
+    return redirect(url_for("main.dashboard"))
 
 
 @clients_bp.route("/clients")

@@ -80,6 +80,10 @@ class Settings(db.Model):
     # Module visibility: admin-disabled module IDs (e.g. ["gantt", "leads"]). Empty/None = all enabled.
     disabled_module_ids = db.Column(db.JSON, default=list, nullable=True)
 
+    # Optional: lock the app to a single client (company-only usage).
+    # When set, the UI should auto-select this client and prevent changes.
+    locked_client_id = db.Column(db.Integer, nullable=True)
+
     # Kiosk mode settings
     kiosk_mode_enabled = db.Column(db.Boolean, default=False, nullable=False)
     kiosk_auto_logout_minutes = db.Column(db.Integer, default=15, nullable=False)
@@ -402,6 +406,7 @@ class Settings(db.Model):
             "invoice_pdf_design_json": self.invoice_pdf_design_json,
             "allow_analytics": self.allow_analytics,
             "disabled_module_ids": (self.disabled_module_ids if self.disabled_module_ids is not None else []),
+            "locked_client_id": getattr(self, "locked_client_id", None),
             "mail_enabled": self.mail_enabled,
             "mail_server": self.mail_server,
             "mail_port": self.mail_port,
