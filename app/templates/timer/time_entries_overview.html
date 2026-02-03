@@ -29,9 +29,19 @@
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold">{{ _('Filters') }}</h2>
-        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()">
-            <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
-        </button>
+        <div class="flex items-center gap-2">
+            <a
+                id="exportCsvBtn"
+                data-export-base="{{ url_for('timer.export_time_entries_csv') }}"
+                href="{{ url_for('timer.export_time_entries_csv') }}"
+                class="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            >
+                <i class="fas fa-file-csv mr-2"></i>{{ _('Export CSV') }}
+            </a>
+            <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()">
+                <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
+            </button>
+        </div>
     </div>
     <div id="filterBody">
         <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="timeEntriesFilterForm" data-filter-form>
@@ -59,13 +69,17 @@
                 <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Client') }}</label>
                 {{ client_select('client_id', clients, selected_id=filters.client_id, required=False, only_one_client=only_one_client|default(false), single_client=single_client) }}
             </div>
-            <div>
-                <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Start Date') }}</label>
-                <input type="date" name="start_date" id="start_date" value="{{ filters.start_date or '' }}" class="form-input">
-            </div>
-            <div>
-                <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('End Date') }}</label>
-                <input type="date" name="end_date" id="end_date" value="{{ filters.end_date or '' }}" class="form-input">
+            <div class="lg:col-span-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Start Date') }}</label>
+                        <input type="date" name="start_date" id="start_date" value="{{ filters.start_date or '' }}" class="form-input">
+                    </div>
+                    <div>
+                        <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('End Date') }}</label>
+                        <input type="date" name="end_date" id="end_date" value="{{ filters.end_date or '' }}" class="form-input">
+                    </div>
+                </div>
             </div>
             <div>
                 <label for="paid" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Paid Status') }}</label>
@@ -362,6 +376,18 @@ function confirmBulkDelete() {
     
     let filterTimeout = null;
     let searchTimeout = null;
+    let activeController = null;
+    let latestRequestId = 0;
+    let lastUrl = null;
+
+    function updateExportLink(filterUrl) {
+        const btn = document.getElementById('exportCsvBtn');
+        if (!btn) return;
+        const base = btn.getAttribute('data-export-base') || '/time-entries/export/csv';
+        const qsIndex = String(filterUrl || '').indexOf('?');
+        const qs = qsIndex >= 0 ? String(filterUrl).slice(qsIndex + 1) : '';
+        btn.href = qs ? `${base}?${qs}` : base;
+    }
     
     function getFilterParams() {
         const form = document.getElementById('timeEntriesFilterForm');
@@ -408,6 +434,12 @@ function confirmBulkDelete() {
             console.error('timeEntriesListContainer not found');
             return;
         }
+
+        // Avoid duplicate requests
+        if (lastUrl === url) {
+            return;
+        }
+        lastUrl = url;
         
         // Show loading state
         container.style.opacity = '0.5';
@@ -417,6 +449,16 @@ function confirmBulkDelete() {
         if (window.history && window.history.pushState) {
             window.history.pushState({}, '', url);
         }
+        updateExportLink(url);
+
+        // Cancel in-flight request (prevents stale updates)
+        try {
+            if (activeController) {
+                activeController.abort();
+            }
+        } catch (_) {}
+        activeController = new AbortController();
+        const requestId = ++latestRequestId;
         
         // Fetch filtered results
         fetch(url, {
@@ -425,7 +467,8 @@ function confirmBulkDelete() {
                 'X-Requested-With': 'XMLHttpRequest',
                 'Accept': 'text/html'
             },
-            credentials: 'same-origin'
+            credentials: 'same-origin',
+            signal: activeController.signal
         })
         .then(response => {
             if (!response.ok) {
@@ -434,6 +477,9 @@ function confirmBulkDelete() {
             return response.text();
         })
         .then(html => {
+            // Ignore stale responses
+            if (requestId !== latestRequestId) return;
+
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = html.trim();
             
@@ -455,6 +501,9 @@ function confirmBulkDelete() {
             updateBulkActions();
         })
         .catch(error => {
+            if (error && error.name === 'AbortError') {
+                return; // Expected when rapidly changing filters
+            }
             console.error('Filter error:', error);
             container.style.opacity = '';
             container.style.pointerEvents = '';
@@ -465,6 +514,8 @@ function confirmBulkDelete() {
             }
         })
         .finally(() => {
+            // Only clear loading state for the latest request
+            if (requestId !== latestRequestId) return;
             container.style.opacity = '';
             container.style.pointerEvents = '';
         });
@@ -484,46 +535,43 @@ function confirmBulkDelete() {
         searchTimeout = setTimeout(applyFilters, delay);
     }
     
-    // Initialize when DOM is ready
-    document.addEventListener('DOMContentLoaded', function() {
+    function initTimeEntriesFilters() {
         const form = document.getElementById('timeEntriesFilterForm');
         if (!form) {
             console.error('Time entries filter form not found');
             return;
         }
-        
-        // Auto-submit on dropdown changes
-        form.querySelectorAll('select').forEach(select => {
-            select.addEventListener('change', () => {
+
+        // Initialize export link based on current URL
+        try { updateExportLink(window.location.pathname + window.location.search); } catch (_) {}
+
+        // Event delegation so filters keep working even if inputs are re-rendered/replaced.
+        form.addEventListener('change', (e) => {
+            const t = e.target;
+            if (!t || !(t instanceof Element)) return;
+            if (t.matches('select') || t.matches('input[type="date"]')) {
                 debouncedApplyFilters(100);
-            });
+            }
         });
-        
-        // Auto-submit on date input changes
-        form.querySelectorAll('input[type="date"]').forEach(input => {
-            input.addEventListener('change', () => {
-                debouncedApplyFilters(100);
-            });
-        });
-        
-        // Auto-submit on search input (debounced)
-        const searchInput = form.querySelector('input[name="search"], input#search');
-        if (searchInput) {
-            searchInput.addEventListener('input', () => {
+
+        form.addEventListener('input', (e) => {
+            const t = e.target;
+            if (!t || !(t instanceof Element)) return;
+            if (t.matches('input[name="search"], input#search')) {
                 debouncedSearch(500);
-            });
-            
-            // Submit on Enter
-            searchInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (searchTimeout) {
-                        clearTimeout(searchTimeout);
-                    }
-                    applyFilters();
-                }
-            });
-        }
+            }
+        });
+
+        // Submit search on Enter
+        form.addEventListener('keydown', (e) => {
+            const t = e.target;
+            if (!t || !(t instanceof Element)) return;
+            if (e.key === 'Enter' && t.matches('input[name="search"], input#search')) {
+                e.preventDefault();
+                if (searchTimeout) clearTimeout(searchTimeout);
+                applyFilters();
+            }
+        });
         
         // Prevent form submission (use AJAX instead)
         form.addEventListener('submit', (e) => {
@@ -535,9 +583,18 @@ function confirmBulkDelete() {
             if (filterTimeout) {
                 clearTimeout(filterTimeout);
             }
+            // Ensure we run even if URL did not change due to lastUrl caching
+            lastUrl = null;
             applyFilters();
         });
-    });
+    }
+
+    // Initialize immediately if DOM is already parsed, otherwise on DOMContentLoaded.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initTimeEntriesFilters);
+    } else {
+        initTimeEntriesFilters();
+    }
 })();
 </script>
 {% endblock %}

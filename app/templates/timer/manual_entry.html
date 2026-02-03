@@ -73,19 +73,27 @@
                     <input type="date" name="start_date" id="start_date" required class="form-input" value="{{ prefill_start_date or '' }}">
                 </div>
                 <div>
-                    <label for="start_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Start Time') }}</label>
-                    <input type="time" name="start_time" id="start_time" required class="form-input" value="{{ prefill_start_time or '' }}">
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
                     <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('End Date') }}</label>
                     <input type="date" name="end_date" id="end_date" required class="form-input" value="{{ prefill_end_date or '' }}">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="start_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Start Time') }}</label>
+                    <input type="time" name="start_time" id="start_time" required class="form-input" value="{{ prefill_start_time or '' }}">
                 </div>
                 <div>
                     <label for="end_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('End Time') }}</label>
                     <input type="time" name="end_time" id="end_time" required class="form-input" value="{{ prefill_end_time or '' }}">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="worked_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Worked Time') }}</label>
+                    <input type="text" name="worked_time" id="worked_time" class="form-input" inputmode="numeric" placeholder="HH:MM" autocomplete="off">
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: edit to auto-calculate end time') }}</p>
                 </div>
             </div>
 
@@ -134,6 +142,80 @@ document.addEventListener('DOMContentLoaded', async function(){
     if (endDate && !endDate.value) endDate.value = today;
     if (startTime && !startTime.value) startTime.value = `${hh}:${mm}`;
     if (endTime && !endTime.value) endTime.value = `${hh}:${mm}`;
+
+    // Worked time helper (duration) - convenience input (start/end still required on submit)
+    const workedTime = document.getElementById('worked_time');
+    let suppressTimeSync = false;
+
+    function parseWorkedMinutes(raw) {
+        const s = String(raw || '').trim();
+        if (!s) return null;
+        const m = s.match(/^(\d{1,3}):([0-5]\d)$/);
+        if (!m) return null;
+        const hours = parseInt(m[1], 10);
+        const minutes = parseInt(m[2], 10);
+        if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+        return hours * 60 + minutes;
+    }
+
+    function formatWorkedMinutes(totalMinutes) {
+        const mins = Math.max(0, Math.floor(totalMinutes || 0));
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+
+    function getStartEnd() {
+        if (!startDate || !startTime || !endDate || !endTime) return { start: null, end: null };
+        if (!startDate.value || !startTime.value || !endDate.value || !endTime.value) return { start: null, end: null };
+        const start = new Date(`${startDate.value}T${startTime.value}:00`);
+        const end = new Date(`${endDate.value}T${endTime.value}:00`);
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) return { start: null, end: null };
+        return { start, end };
+    }
+
+    function setEndFromDate(end) {
+        const yyyy = end.getFullYear();
+        const mm2 = String(end.getMonth() + 1).padStart(2,'0');
+        const dd = String(end.getDate()).padStart(2,'0');
+        const hh2 = String(end.getHours()).padStart(2,'0');
+        const mi2 = String(end.getMinutes()).padStart(2,'0');
+        if (endDate) endDate.value = `${yyyy}-${mm2}-${dd}`;
+        if (endTime) endTime.value = `${hh2}:${mi2}`;
+    }
+
+    function updateWorkedFromStartEnd() {
+        if (!workedTime || suppressTimeSync) return;
+        const { start, end } = getStartEnd();
+        if (!start || !end) return;
+        const diffMinutes = Math.round((end.getTime() - start.getTime()) / 60000);
+        if (diffMinutes <= 0) return;
+        suppressTimeSync = true;
+        workedTime.value = formatWorkedMinutes(diffMinutes);
+        suppressTimeSync = false;
+    }
+
+    function updateEndFromStartWorked() {
+        if (!workedTime || suppressTimeSync) return;
+        if (!startDate || !startTime) return;
+        if (!startDate.value || !startTime.value) return;
+        const minutes = parseWorkedMinutes(workedTime.value);
+        if (minutes == null) return;
+        const start = new Date(`${startDate.value}T${startTime.value}:00`);
+        if (isNaN(start.getTime())) return;
+        const end = new Date(start.getTime() + minutes * 60000);
+        suppressTimeSync = true;
+        setEndFromDate(end);
+        suppressTimeSync = false;
+    }
+
+    function onStartChange() {
+        if (suppressTimeSync) return;
+        // If worked time is valid, keep duration constant and move end; otherwise just recompute worked time.
+        const minutes = workedTime ? parseWorkedMinutes(workedTime.value) : null;
+        if (minutes != null) updateEndFromStartWorked();
+        else updateWorkedFromStartEnd();
+    }
 
     // Dynamic task loading when a project is chosen
     const projectSelect = document.getElementById('project_id');
@@ -197,6 +279,18 @@ document.addEventListener('DOMContentLoaded', async function(){
         }catch(e){
             taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
             taskSelect.disabled = true;
+            try {
+                // Provide user feedback (previously silent failure)
+                const msg = failedToLoadTasksText || 'Failed to load tasks';
+                if (window.toastManager && typeof window.toastManager.error === 'function') {
+                    window.toastManager.error(msg, '{{ _("Error") }}', 5000);
+                } else if (window.toastManager && typeof window.toastManager.show === 'function') {
+                    window.toastManager.show(msg, 'error');
+                } else {
+                    alert(msg);
+                }
+            } catch (_) {}
+            try { console.error('Failed to load tasks for project', projectId, e); } catch (_) {}
         }
     }
     
@@ -204,6 +298,25 @@ document.addEventListener('DOMContentLoaded', async function(){
     if (projectSelect){
         if (projectSelect.value){ loadTasks(projectSelect.value); }
     }
+
+    // Keep worked time in sync with start/end inputs
+    if (workedTime) {
+        // Initial value based on current start/end if any
+        updateWorkedFromStartEnd();
+
+        workedTime.addEventListener('change', function() {
+            updateEndFromStartWorked();
+        });
+        workedTime.addEventListener('blur', function() {
+            // Normalize formatting if valid
+            const mins = parseWorkedMinutes(workedTime.value);
+            if (mins != null) workedTime.value = formatWorkedMinutes(mins);
+        });
+    }
+    if (startDate) startDate.addEventListener('change', onStartChange);
+    if (startTime) startTime.addEventListener('change', onStartChange);
+    if (endDate) endDate.addEventListener('change', updateWorkedFromStartEnd);
+    if (endTime) endTime.addEventListener('change', updateWorkedFromStartEnd);
     
     // Form validation: ensure either project or client is selected and validate time range
     // Use capture phase to run before other handlers
@@ -356,6 +469,8 @@ document.addEventListener('DOMContentLoaded', async function(){
                     }
                 }
             }
+            // Update worked time field after applying duration, if present
+            try { updateWorkedFromStartEnd(); } catch (_) {}
 
                 // Clear after applying so it does not persist
                 try { sessionStorage.removeItem('activeTemplate'); } catch(_) {}

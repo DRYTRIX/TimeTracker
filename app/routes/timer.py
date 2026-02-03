@@ -2206,6 +2206,204 @@ def time_entries_overview():
     )
 
 
+@timer_bp.route("/time-entries/export/csv")
+@login_required
+def export_time_entries_csv():
+    """Export (filtered) time entries as CSV. Mirrors the /time-entries filters."""
+    from sqlalchemy import or_, desc
+    from sqlalchemy.orm import joinedload
+    from app.utils.client_lock import enforce_locked_client_id
+    from flask import abort, send_file
+    import csv
+    import io
+
+    # Get filter parameters (same as time_entries_overview)
+    user_id = request.args.get("user_id", type=int)
+    project_id = request.args.get("project_id", type=int)
+    client_id = request.args.get("client_id", type=int)
+    client_id = enforce_locked_client_id(client_id)
+    start_date = request.args.get("start_date", "")
+    end_date = request.args.get("end_date", "")
+    paid_filter = request.args.get("paid", "")  # "true", "false", or ""
+    billable_filter = request.args.get("billable", "")  # "true", "false", or ""
+    search = request.args.get("search", "").strip()
+
+    # Custom client-field filters
+    client_custom_field = {}
+    from app.models import CustomFieldDefinition
+    active_definitions = CustomFieldDefinition.get_active_definitions()
+    for definition in active_definitions:
+        field_value = request.args.get(f"custom_field_{definition.field_key}", "").strip()
+        if field_value:
+            client_custom_field[definition.field_key] = field_value
+
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
+
+    query = TimeEntry.query.options(
+        joinedload(TimeEntry.user),
+        joinedload(TimeEntry.project),
+        joinedload(TimeEntry.client),
+        joinedload(TimeEntry.task),
+    ).filter(TimeEntry.end_time.isnot(None))
+
+    # Permission / user scoping
+    if user_id:
+        if can_view_all:
+            query = query.filter(TimeEntry.user_id == user_id)
+        elif user_id == current_user.id:
+            query = query.filter(TimeEntry.user_id == current_user.id)
+        else:
+            abort(403)
+    elif not can_view_all:
+        query = query.filter(TimeEntry.user_id == current_user.id)
+
+    if project_id:
+        query = query.filter(TimeEntry.project_id == project_id)
+    if client_id:
+        query = query.filter(TimeEntry.client_id == client_id)
+
+    # Client custom field filtering (mirrors overview behavior)
+    is_postgres = False
+    if client_custom_field:
+        query = query.join(Client, TimeEntry.client_id == Client.id)
+        try:
+            engine = db.engine
+            is_postgres = "postgresql" in str(engine.url).lower()
+        except Exception as e:
+            current_app.logger.debug("Failed to detect database type: %s", e)
+
+        if is_postgres:
+            custom_field_conditions = []
+            for field_key, field_value in client_custom_field.items():
+                if not field_key or not field_value:
+                    continue
+                try:
+                    from sqlalchemy import cast, String
+                    custom_field_conditions.append(
+                        db.cast(Client.custom_fields[field_key].astext, String) == str(field_value)
+                    )
+                except Exception as e:
+                    current_app.logger.debug(
+                        "JSONB filtering failed for field %s, will use Python filtering: %s", field_key, e
+                    )
+            if custom_field_conditions:
+                query = query.filter(db.or_(*custom_field_conditions))
+
+    # Date range
+    if start_date:
+        try:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(TimeEntry.start_time >= start_dt)
+        except ValueError:
+            pass
+    if end_date:
+        try:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            query = query.filter(TimeEntry.start_time <= end_dt)
+        except ValueError:
+            pass
+
+    # Paid/billable
+    if paid_filter == "true":
+        query = query.filter(TimeEntry.paid == True)
+    elif paid_filter == "false":
+        query = query.filter(TimeEntry.paid == False)
+
+    if billable_filter == "true":
+        query = query.filter(TimeEntry.billable == True)
+    elif billable_filter == "false":
+        query = query.filter(TimeEntry.billable == False)
+
+    # Search in notes/tags
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(or_(TimeEntry.notes.ilike(search_pattern), TimeEntry.tags.ilike(search_pattern)))
+
+    query = query.order_by(desc(TimeEntry.start_time))
+    entries = query.all()
+
+    # SQLite (or non-JSONB) custom-field filtering fallback (same semantics as overview)
+    if client_custom_field and not is_postgres:
+        filtered = []
+        for entry in entries:
+            if not entry.client:
+                continue
+            matches = True
+            for field_key, field_value in client_custom_field.items():
+                if not field_key or not field_value:
+                    continue
+                client_value = entry.client.custom_fields.get(field_key) if entry.client.custom_fields else None
+                if str(client_value) != str(field_value):
+                    matches = False
+                    break
+            if matches:
+                filtered.append(entry)
+        entries = filtered
+
+    # CSV output
+    settings = Settings.get_settings()
+    delimiter = getattr(settings, "export_delimiter", ",") or ","
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=delimiter)
+
+    writer.writerow(
+        [
+            "ID",
+            "User",
+            "Project",
+            "Client",
+            "Task",
+            "Start Time",
+            "End Time",
+            "Duration (hours)",
+            "Duration (formatted)",
+            "Notes",
+            "Tags",
+            "Source",
+            "Billable",
+            "Paid",
+            "Created At",
+            "Updated At",
+        ]
+    )
+
+    for entry in entries:
+        writer.writerow(
+            [
+                entry.id,
+                entry.user.display_name if entry.user else "",
+                entry.project.name if entry.project else "",
+                entry.client.name if entry.client else (entry.project.client if entry.project else ""),
+                entry.task.name if entry.task else "",
+                entry.start_time.isoformat() if entry.start_time else "",
+                entry.end_time.isoformat() if entry.end_time else "",
+                getattr(entry, "duration_hours", ""),
+                getattr(entry, "duration_formatted", ""),
+                entry.notes or "",
+                entry.tags or "",
+                entry.source or "",
+                "Yes" if entry.billable else "No",
+                "Yes" if entry.paid else "No",
+                entry.created_at.isoformat() if entry.created_at else "",
+                entry.updated_at.isoformat() if entry.updated_at else "",
+            ]
+        )
+
+    csv_bytes = output.getvalue().encode("utf-8")
+
+    # Filename includes optional date range
+    start_part = start_date or "all"
+    end_part = end_date or "all"
+    filename = f"time_entries_{start_part}_to_{end_part}.csv"
+
+    return send_file(
+        io.BytesIO(csv_bytes),
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
 @timer_bp.route("/time-entries/bulk-paid", methods=["POST"])
 @login_required
 def bulk_mark_paid():

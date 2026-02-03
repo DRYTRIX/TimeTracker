@@ -1368,7 +1368,8 @@ document.addEventListener('DOMContentLoaded', () => {
             form.id === 'tasksFilterForm' || 
             form.id === 'clientsFilterForm' || 
             form.id === 'invoicesFilterForm' ||
-            form.id === 'quotesFilterForm') {
+            form.id === 'quotesFilterForm' ||
+            form.id === 'timeEntriesFilterForm') {
             return;
         }
         new FilterManager(form);
