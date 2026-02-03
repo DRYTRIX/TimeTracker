@@ -1364,7 +1364,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize filter managers (skip forms that have custom handlers)
     document.querySelectorAll('form[data-filter-form]').forEach(form => {
         // Skip forms that have custom AJAX handlers
-        if (form.id === 'projectsFilterForm' || 
+        if (form.dataset.filterHandler === 'custom' ||
+            form.id === 'projectsFilterForm' || 
             form.id === 'tasksFilterForm' || 
             form.id === 'clientsFilterForm' || 
             form.id === 'invoicesFilterForm' ||

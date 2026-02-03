@@ -38,13 +38,21 @@
             >
                 <i class="fas fa-file-csv mr-2"></i>{{ _('Export CSV') }}
             </a>
+            <a
+                id="exportPdfBtn"
+                data-export-base="{{ url_for('timer.export_time_entries_pdf') }}"
+                href="{{ url_for('timer.export_time_entries_pdf') }}"
+                class="px-3 py-1.5 text-sm bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors"
+            >
+                <i class="fas fa-file-pdf mr-2"></i>{{ _('Export PDF') }}
+            </a>
             <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()">
                 <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
             </button>
         </div>
     </div>
     <div id="filterBody">
-        <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="timeEntriesFilterForm" data-filter-form>
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="timeEntriesFilterForm" data-filter-form data-filter-handler="custom">
             {% if can_view_all %}
             <div>
                 <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('User') }}</label>
@@ -378,15 +386,19 @@ function confirmBulkDelete() {
     let searchTimeout = null;
     let activeController = null;
     let latestRequestId = 0;
-    let lastUrl = null;
+    let lastUrl = null;       // last successful URL
+    let inFlightUrl = null;   // URL currently being fetched
 
     function updateExportLink(filterUrl) {
         const btn = document.getElementById('exportCsvBtn');
-        if (!btn) return;
-        const base = btn.getAttribute('data-export-base') || '/time-entries/export/csv';
+        const pdfBtn = document.getElementById('exportPdfBtn');
+        if (!btn && !pdfBtn) return;
+        const base = btn ? (btn.getAttribute('data-export-base') || '/time-entries/export/csv') : '/time-entries/export/csv';
+        const pdfBase = pdfBtn ? (pdfBtn.getAttribute('data-export-base') || '/time-entries/export/pdf') : '/time-entries/export/pdf';
         const qsIndex = String(filterUrl || '').indexOf('?');
         const qs = qsIndex >= 0 ? String(filterUrl).slice(qsIndex + 1) : '';
-        btn.href = qs ? `${base}?${qs}` : base;
+        if (btn) btn.href = qs ? `${base}?${qs}` : base;
+        if (pdfBtn) pdfBtn.href = qs ? `${pdfBase}?${qs}` : pdfBase;
     }
     
     function getFilterParams() {
@@ -435,11 +447,12 @@ function confirmBulkDelete() {
             return;
         }
 
-        // Avoid duplicate requests
-        if (lastUrl === url) {
+        // Avoid duplicate requests: prevent re-fetching the same URL while it's already in flight,
+        // and also skip if we already successfully loaded this URL.
+        if (inFlightUrl === url || lastUrl === url) {
             return;
         }
-        lastUrl = url;
+        inFlightUrl = url;
         
         // Show loading state
         container.style.opacity = '0.5';
@@ -499,6 +512,9 @@ function confirmBulkDelete() {
             
             // Re-initialize bulk actions after content update
             updateBulkActions();
+
+            // Mark as last successful URL so we can skip duplicate loads.
+            lastUrl = url;
         })
         .catch(error => {
             if (error && error.name === 'AbortError') {
@@ -507,6 +523,8 @@ function confirmBulkDelete() {
             console.error('Filter error:', error);
             container.style.opacity = '';
             container.style.pointerEvents = '';
+            // Allow retrying the same URL after failures.
+            if (inFlightUrl === url) inFlightUrl = null;
             if (window.toastManager) {
                 window.toastManager.show('Failed to filter time entries. Please refresh the page.', 'error');
             } else if (window.showToast) {
@@ -518,6 +536,7 @@ function confirmBulkDelete() {
             if (requestId !== latestRequestId) return;
             container.style.opacity = '';
             container.style.pointerEvents = '';
+            if (inFlightUrl === url) inFlightUrl = null;
         });
     }
     
