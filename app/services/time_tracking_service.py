@@ -172,6 +172,7 @@ class TimeTrackingService:
         client_id: Optional[int] = None,
         start_time: datetime = None,
         end_time: datetime = None,
+        duration_seconds: Optional[int] = None,
         task_id: Optional[int] = None,
         notes: Optional[str] = None,
         tags: Optional[str] = None,
@@ -225,6 +226,13 @@ class TimeTrackingService:
         # Validate time range
         if end_time <= start_time:
             return {"success": False, "message": "End time must be after start time", "error": "invalid_time_range"}
+        if duration_seconds is not None:
+            try:
+                duration_seconds = int(duration_seconds)
+            except Exception:
+                return {"success": False, "message": "Invalid duration", "error": "invalid_duration"}
+            if duration_seconds <= 0:
+                return {"success": False, "message": "Duration must be positive", "error": "invalid_duration"}
 
         # Create entry
         entry = self.time_entry_repo.create_manual_entry(
@@ -233,6 +241,7 @@ class TimeTrackingService:
             client_id=client_id,
             start_time=start_time,
             end_time=end_time,
+            duration_seconds=duration_seconds,
             task_id=task_id,
             notes=notes,
             tags=tags,

@@ -163,6 +163,7 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
         client_id: Optional[int] = None,
         start_time: datetime = None,
         end_time: datetime = None,
+        duration_seconds: Optional[int] = None,
         task_id: Optional[int] = None,
         notes: Optional[str] = None,
         tags: Optional[str] = None,
@@ -178,6 +179,7 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
             task_id=task_id,
             start_time=start_time,
             end_time=end_time,
+            duration_seconds=duration_seconds,
             notes=notes,
             tags=tags,
             billable=billable,
@@ -185,7 +187,10 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
             invoice_number=invoice_number,
             source=TimeEntrySource.MANUAL.value,
         )
-        entry.calculate_duration()
+        # If duration_seconds is explicitly provided, `TimeEntry.__init__` will keep it.
+        # Still run calculate_duration() to apply rounding behavior when duration was not provided.
+        if duration_seconds is None:
+            entry.calculate_duration()
         db.session.add(entry)
         return entry
 

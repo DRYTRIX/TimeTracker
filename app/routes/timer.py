@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, socketio, log_event, track_event
+from app.constants import TimeEntrySource
 from app.models import User, Project, TimeEntry, Task, Settings, Activity, Client
 from app.utils.timezone import parse_local_datetime, parse_user_local_datetime, utc_to_local
 from datetime import datetime, timedelta
@@ -1036,13 +1037,33 @@ def manual_entry():
         start_time = request.form.get("start_time")
         end_date = request.form.get("end_date")
         end_time = request.form.get("end_time")
+        worked_time = (request.form.get("worked_time") or "").strip()
+        worked_time_mode = (request.form.get("worked_time_mode") or "").strip()  # 'explicit' when user typed duration
         notes = request.form.get("notes", "").strip()
         tags = request.form.get("tags", "").strip()
         billable = request.form.get("billable") == "on"
 
-        # Validate required fields
-        if not all([start_date, start_time, end_date, end_time]):
-            flash(_("Date and time fields are required"), "error")
+        def _parse_worked_time_minutes(raw: str):
+            s = (raw or "").strip()
+            if not s:
+                return None
+            import re
+            m = re.match(r"^(\d{1,3}):([0-5]\d)$", s)
+            if not m:
+                return None
+            hours = int(m.group(1))
+            minutes = int(m.group(2))
+            total = hours * 60 + minutes
+            return total if total > 0 else None
+
+        worked_minutes = _parse_worked_time_minutes(worked_time)
+
+        has_all_times = bool(start_date and start_time and end_date and end_time)
+        has_duration = worked_minutes is not None
+
+        # Validate time input: either full start/end, or duration-only.
+        if not has_all_times and not has_duration:
+            flash(_("Please provide either start/end date+time or a worked time duration (HH:MM)."), "error")
             return render_template(
                 "timer/manual_entry.html",
                 projects=active_projects,
@@ -1060,6 +1081,8 @@ def manual_entry():
                 prefill_start_time=start_time,
                 prefill_end_date=end_date,
                 prefill_end_time=end_time,
+                prefill_worked_time=worked_time,
+                prefill_worked_time_mode=worked_time_mode,
             )
 
         # Validate that either project or client is selected
@@ -1092,10 +1115,24 @@ def manual_entry():
                 flash(_("Selected project does not match the locked client."), "error")
                 return redirect(url_for("timer.manual_entry"))
 
-        # Parse datetime: treat form input as user's local time, store in app timezone
+        duration_seconds_override = None
+
+        # Parse datetime: treat form input as user's local time, store in app timezone.
+        # Duration-only flow: use start if provided; otherwise end=now, start=end-duration.
+        from datetime import timedelta
         try:
-            start_time_parsed = parse_user_local_datetime(start_date, start_time, current_user)
-            end_time_parsed = parse_user_local_datetime(end_date, end_time, current_user)
+            if has_all_times:
+                start_time_parsed = parse_user_local_datetime(start_date, start_time, current_user)
+                end_time_parsed = parse_user_local_datetime(end_date, end_time, current_user)
+                # Only treat worked_time as an explicit duration override if user typed it.
+                if worked_time_mode == "explicit" and has_duration:
+                    duration_seconds_override = worked_minutes * 60
+            else:
+                # duration-only
+                from app.models.time_entry import local_now as _local_now_db
+                end_time_parsed = _local_now_db()
+                start_time_parsed = end_time_parsed - timedelta(minutes=worked_minutes)
+                duration_seconds_override = worked_minutes * 60
         except ValueError:
             flash(_("Invalid date/time format"), "error")
             return render_template(
@@ -1115,6 +1152,8 @@ def manual_entry():
                 prefill_start_time=start_time,
                 prefill_end_date=end_date,
                 prefill_end_time=end_time,
+                prefill_worked_time=worked_time,
+                prefill_worked_time_mode=worked_time_mode,
             )
 
         # Validate time range
@@ -1147,6 +1186,7 @@ def manual_entry():
             client_id=client_id,
             start_time=start_time_parsed,
             end_time=end_time_parsed,
+            duration_seconds=duration_seconds_override,
             task_id=task_id,
             notes=notes if notes else None,
             tags=tags if tags else None,
@@ -1172,6 +1212,8 @@ def manual_entry():
                 prefill_start_time=start_time,
                 prefill_end_date=end_date,
                 prefill_end_time=end_time,
+                prefill_worked_time=worked_time,
+                prefill_worked_time_mode=worked_time_mode,
             )
 
         entry = result.get("entry")
@@ -1916,7 +1958,14 @@ def time_entries_overview():
         joinedload(TimeEntry.project),
         joinedload(TimeEntry.client),
         joinedload(TimeEntry.task)
-    ).filter(TimeEntry.end_time.isnot(None))  # Only completed entries
+    ).filter(
+        # Completed entries OR duration-only entries (duration_seconds set but end_time missing).
+        # This keeps duration-only manual logs visible even if end_time is absent for any reason.
+        or_(
+            TimeEntry.end_time.isnot(None),
+            db.and_(TimeEntry.duration_seconds.isnot(None), TimeEntry.source == TimeEntrySource.MANUAL.value),
+        )
+    )
     
     # Filter by user
     if user_id:
@@ -2244,7 +2293,12 @@ def export_time_entries_csv():
         joinedload(TimeEntry.project),
         joinedload(TimeEntry.client),
         joinedload(TimeEntry.task),
-    ).filter(TimeEntry.end_time.isnot(None))
+    ).filter(
+        or_(
+            TimeEntry.end_time.isnot(None),
+            db.and_(TimeEntry.duration_seconds.isnot(None), TimeEntry.source == TimeEntrySource.MANUAL.value),
+        )
+    )
 
     # Permission / user scoping
     if user_id:
@@ -2399,6 +2453,171 @@ def export_time_entries_csv():
     return send_file(
         io.BytesIO(csv_bytes),
         mimetype="text/csv",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+@timer_bp.route("/time-entries/export/pdf")
+@login_required
+def export_time_entries_pdf():
+    """Export (filtered) time entries as PDF. Mirrors the /time-entries filters."""
+    from sqlalchemy import or_, desc
+    from sqlalchemy.orm import joinedload
+    from app.utils.client_lock import enforce_locked_client_id
+    from flask import abort, send_file
+    from datetime import datetime as _dt
+    import io
+
+    # Get filter parameters (same as time_entries_overview)
+    user_id = request.args.get("user_id", type=int)
+    project_id = request.args.get("project_id", type=int)
+    client_id = request.args.get("client_id", type=int)
+    client_id = enforce_locked_client_id(client_id)
+    start_date = request.args.get("start_date", "")
+    end_date = request.args.get("end_date", "")
+    paid_filter = request.args.get("paid", "")  # "true", "false", or ""
+    billable_filter = request.args.get("billable", "")  # "true", "false", or ""
+    search = request.args.get("search", "").strip()
+
+    # Custom client-field filters
+    client_custom_field = {}
+    from app.models import CustomFieldDefinition
+    active_definitions = CustomFieldDefinition.get_active_definitions()
+    for definition in active_definitions:
+        field_value = request.args.get(f"custom_field_{definition.field_key}", "").strip()
+        if field_value:
+            client_custom_field[definition.field_key] = field_value
+
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
+
+    query = TimeEntry.query.options(
+        joinedload(TimeEntry.user),
+        joinedload(TimeEntry.project),
+        joinedload(TimeEntry.client),
+        joinedload(TimeEntry.task),
+    ).filter(
+        or_(
+            TimeEntry.end_time.isnot(None),
+            db.and_(TimeEntry.duration_seconds.isnot(None), TimeEntry.source == TimeEntrySource.MANUAL.value),
+        )
+    )
+
+    # Permission / user scoping
+    if user_id:
+        if can_view_all:
+            query = query.filter(TimeEntry.user_id == user_id)
+        elif user_id == current_user.id:
+            query = query.filter(TimeEntry.user_id == current_user.id)
+        else:
+            abort(403)
+    elif not can_view_all:
+        query = query.filter(TimeEntry.user_id == current_user.id)
+
+    if project_id:
+        query = query.filter(TimeEntry.project_id == project_id)
+    if client_id:
+        query = query.filter(TimeEntry.client_id == client_id)
+
+    # Client custom field filtering (same as CSV export)
+    is_postgres = False
+    if client_custom_field:
+        query = query.join(Client, TimeEntry.client_id == Client.id)
+        try:
+            engine = db.engine
+            is_postgres = "postgresql" in str(engine.url).lower()
+        except Exception as e:
+            current_app.logger.debug("Failed to detect database type: %s", e)
+
+        if is_postgres:
+            custom_field_conditions = []
+            for field_key, field_value in client_custom_field.items():
+                if not field_key or not field_value:
+                    continue
+                try:
+                    from sqlalchemy import cast, String
+                    custom_field_conditions.append(
+                        db.cast(Client.custom_fields[field_key].astext, String) == str(field_value)
+                    )
+                except Exception as e:
+                    current_app.logger.debug(
+                        "JSONB filtering failed for field %s, will use Python filtering: %s", field_key, e
+                    )
+            if custom_field_conditions:
+                query = query.filter(db.or_(*custom_field_conditions))
+
+    # Date range
+    if start_date:
+        try:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(TimeEntry.start_time >= start_dt)
+        except ValueError:
+            pass
+    if end_date:
+        try:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            query = query.filter(TimeEntry.start_time <= end_dt)
+        except ValueError:
+            pass
+
+    # Paid/billable
+    if paid_filter == "true":
+        query = query.filter(TimeEntry.paid == True)
+    elif paid_filter == "false":
+        query = query.filter(TimeEntry.paid == False)
+
+    if billable_filter == "true":
+        query = query.filter(TimeEntry.billable == True)
+    elif billable_filter == "false":
+        query = query.filter(TimeEntry.billable == False)
+
+    # Search in notes/tags
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(or_(TimeEntry.notes.ilike(search_pattern), TimeEntry.tags.ilike(search_pattern)))
+
+    query = query.order_by(desc(TimeEntry.start_time))
+    entries = query.all()
+
+    # SQLite (or non-JSONB) custom-field filtering fallback
+    if client_custom_field and not is_postgres:
+        filtered = []
+        for entry in entries:
+            if not entry.client:
+                continue
+            matches = True
+            for field_key, field_value in client_custom_field.items():
+                if not field_key or not field_value:
+                    continue
+                client_value = entry.client.custom_fields.get(field_key) if entry.client.custom_fields else None
+                if str(client_value) != str(field_value):
+                    matches = False
+                    break
+            if matches:
+                filtered.append(entry)
+        entries = filtered
+
+    # Render HTML and convert to PDF
+    generated_at = _dt.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    html = render_template("timer/time_entries_export_pdf.html", entries=entries, generated_at=generated_at)
+
+    # Prefer WeasyPrint if available (already used elsewhere in the project).
+    try:
+        from weasyprint import HTML  # type: ignore
+        pdf_bytes = HTML(string=html).write_pdf()
+    except Exception as e:
+        current_app.logger.warning("PDF export failed (WeasyPrint unavailable?): %s", e)
+        flash(_("PDF export is not available on this system."), "error")
+        return redirect(url_for("timer.time_entries_overview"))
+
+    # Filename includes optional date range
+    start_part = start_date or "all"
+    end_part = end_date or "all"
+    filename = f"time_entries_{start_part}_to_{end_part}.pdf"
+
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype="application/pdf",
         as_attachment=True,
         download_name=filename,
     )
