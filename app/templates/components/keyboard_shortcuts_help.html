@@ -242,10 +242,11 @@ function closeKeyboardShortcutsModal() {
     document.getElementById('keyboardShortcutsModal').classList.add('hidden');
 }
 
-// Listen for Shift+? to open shortcuts modal
+// Listen for Shift+? to open shortcuts modal when the advanced manager is not present.
 document.addEventListener('keydown', function(e) {
+    const hasShortcutManager = typeof window.shortcutManager !== 'undefined';
     // Shift+? (which is Shift+/)
-    if (e.shiftKey && e.key === '?') {
+    if (!hasShortcutManager && e.shiftKey && e.key === '?') {
         // Don't trigger if user is typing in an input
         if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
             return;

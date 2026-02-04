@@ -82,6 +82,12 @@ class AppConfig {
     return prefs.getInt(syncIntervalKey) ?? 60;
   }
 
+  /// Set sync interval (seconds)
+  static Future<void> setSyncInterval(int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(syncIntervalKey, value);
+  }
+
   /// Get theme mode
   static Future<String> getThemeMode() async {
     final prefs = await SharedPreferences.getInstance();

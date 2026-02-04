@@ -5,7 +5,7 @@ Provides decorators and helper functions for checking module availability
 and protecting routes based on module flags.
 """
 from functools import wraps
-from flask import abort, redirect, url_for, flash, current_app
+from flask import abort, redirect, url_for, flash, current_app, request, jsonify
 from flask_login import current_user
 from flask_babel import gettext as _
 from app.models import Settings
@@ -29,13 +29,36 @@ def module_enabled(module_id: str, redirect_to: str = None):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
+            def _wants_json_response() -> bool:
+                try:
+                    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                        return True
+                    if request.is_json:
+                        return True
+                    return request.accept_mimetypes["application/json"] > request.accept_mimetypes["text/html"]
+                except Exception:
+                    return False
+
             if not current_user.is_authenticated:
+                if _wants_json_response():
+                    return jsonify(
+                        {"error": "authentication_required", "message": _("Authentication required.")}
+                    ), 401
                 if redirect_to:
                     return redirect(url_for(redirect_to))
                 abort(403)
             
             settings = Settings.get_settings()
             if not ModuleRegistry.is_enabled(module_id, settings, current_user):
+                if _wants_json_response():
+                    module = ModuleRegistry.get(module_id)
+                    module_name = module.name if module else module_id
+                    return jsonify(
+                        {
+                            "error": "module_disabled",
+                            "message": _("Module '%(module)s' is disabled.", module=module_name),
+                        }
+                    ), 403
                 if current_user.is_admin:
                     module = ModuleRegistry.get(module_id)
                     module_name = module.name if module else module_id

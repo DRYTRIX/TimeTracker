@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:timetracker_mobile/core/theme/app_tokens.dart';
 import 'package:timetracker_mobile/presentation/providers/projects_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/tasks_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/time_entries_provider.dart';
@@ -40,9 +41,56 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
   }
 
   Future<void> _loadEntry() async {
-    // Load entry details and populate form
-    // This would require a getTimeEntry method in the provider
-    // For now, we'll just handle creation
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      var entries = ref.read(timeEntriesProvider).entries;
+      if (entries.isEmpty) {
+        await ref.read(timeEntriesProvider.notifier).loadEntries();
+        entries = ref.read(timeEntriesProvider).entries;
+      }
+
+      final entry = entries.firstWhere(
+        (e) => e.id == widget.entryId,
+        orElse: () => throw StateError('Entry not found'),
+      );
+
+      final startTime = entry.startTime ?? DateTime.now();
+      final endTime = entry.endTime;
+
+      _selectedProjectId = entry.projectId;
+      _selectedTaskId = entry.taskId;
+      _startDate = DateTime(startTime.year, startTime.month, startTime.day);
+      _startTime = TimeOfDay(hour: startTime.hour, minute: startTime.minute);
+      if (endTime != null) {
+        _endDate = DateTime(endTime.year, endTime.month, endTime.day);
+        _endTime = TimeOfDay(hour: endTime.hour, minute: endTime.minute);
+      } else {
+        _endDate = null;
+        _endTime = null;
+      }
+      _notesController.text = entry.notes ?? '';
+      _tagsController.text = entry.tags ?? '';
+      _billable = entry.billable;
+
+      if (_selectedProjectId != null) {
+        await _loadTasks(_selectedProjectId!);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to load time entry')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -183,7 +231,7 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
         title: Text(widget.entryId != null ? 'Edit Entry' : 'New Entry'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Form(
           key: _formKey,
           child: Column(
@@ -221,7 +269,7 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               // Task selection
               if (_selectedProjectId != null)
                 DropdownButtonFormField<int>(
@@ -251,7 +299,7 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
                     });
                   },
                 ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               // Start date/time
               ListTile(
                 title: const Text('Start Date & Time *'),
@@ -269,7 +317,7 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
                 trailing: const Icon(Icons.calendar_today),
                 onTap: () => _selectDateTime(context, isStart: true),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               // End date/time
               ListTile(
                 title: const Text('End Date & Time (Optional)'),
@@ -289,7 +337,7 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
                 trailing: const Icon(Icons.calendar_today),
                 onTap: () => _selectDateTime(context, isStart: false),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               // Notes
               TextFormField(
                 controller: _notesController,
@@ -299,7 +347,7 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
                 ),
                 maxLines: 3,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               // Tags
               TextFormField(
                 controller: _tagsController,
@@ -308,7 +356,7 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
                   prefixIcon: Icon(Icons.tag),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               // Billable checkbox
               CheckboxListTile(
                 title: const Text('Billable'),
@@ -319,7 +367,7 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
                   });
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.lg),
               // Submit button
               ElevatedButton(
                 onPressed: _isLoading ? null : _handleSubmit,

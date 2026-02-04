@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timetracker_mobile/data/models/time_entry.dart';
 import 'package:timetracker_mobile/data/models/project.dart';
 import 'package:timetracker_mobile/data/models/task.dart';
+import 'package:timetracker_mobile/core/theme/app_tokens.dart';
 import 'package:timetracker_mobile/presentation/providers/projects_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/tasks_provider.dart';
 
@@ -48,11 +49,11 @@ class TimeEntryCard extends ConsumerWidget {
     }
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      margin: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -67,7 +68,7 @@ class TimeEntryCard extends ConsumerWidget {
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         if (task != null) ...[
-                          const SizedBox(height: 4),
+                          const SizedBox(height: AppSpacing.xs),
                           Text(
                             task.name,
                             style: Theme.of(context).textTheme.bodySmall,
@@ -78,8 +79,8 @@ class TimeEntryCard extends ConsumerWidget {
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.xs,
                     ),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.primaryContainer,
@@ -95,7 +96,7 @@ class TimeEntryCard extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
                   Icon(
@@ -103,7 +104,7 @@ class TimeEntryCard extends ConsumerWidget {
                     size: 16,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: AppSpacing.xs),
                   Text(
                     entry.formattedDateRange,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -111,11 +112,11 @@ class TimeEntryCard extends ConsumerWidget {
                         ),
                   ),
                   if (entry.billable) ...[
-                    const SizedBox(width: 16),
+                    const SizedBox(width: AppSpacing.md),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xxs,
                       ),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.tertiaryContainer,
@@ -134,7 +135,7 @@ class TimeEntryCard extends ConsumerWidget {
                 ],
               ),
               if (entry.notes != null && entry.notes!.isNotEmpty) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Text(
                   entry.notes!,
                   style: Theme.of(context).textTheme.bodyMedium,
@@ -143,7 +144,7 @@ class TimeEntryCard extends ConsumerWidget {
                 ),
               ],
               if (onEdit != null || onDelete != null) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [

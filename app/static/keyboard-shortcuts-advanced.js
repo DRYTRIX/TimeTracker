@@ -417,6 +417,10 @@ class KeyboardShortcutManager {
      * Show shortcuts panel
      */
     showShortcutsPanel() {
+        if (typeof window.openKeyboardShortcutsModal === 'function') {
+            window.openKeyboardShortcutsModal();
+            return;
+        }
         const panel = document.createElement('div');
         panel.className = 'fixed inset-0 z-50 overflow-y-auto';
         panel.innerHTML = `

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:timetracker_mobile/core/theme/app_tokens.dart';
 
 /// Reusable empty state: icon + title + optional subtitle + optional action.
 class EmptyState extends StatelessWidget {
@@ -20,7 +21,7 @@ class EmptyState extends StatelessWidget {
     final theme = Theme.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -29,14 +30,14 @@ class EmptyState extends StatelessWidget {
               size: 64,
               color: theme.colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             Text(
               title,
               style: theme.textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
             if (subtitle != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 subtitle!,
                 style: theme.textTheme.bodyMedium,
@@ -44,7 +45,7 @@ class EmptyState extends StatelessWidget {
               ),
             ],
             if (action != null) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               action!,
             ],
           ],

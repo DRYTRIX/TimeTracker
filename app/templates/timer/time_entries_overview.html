@@ -407,7 +407,7 @@ function confirmBulkDelete() {
         
         const params = {};
         
-        // Get search input value directly (more reliable than FormData for text inputs)
+        // Get search input value directly (more reliable than FormData for text inputs) (Issue #489)
         const searchInput = form.querySelector('input[name="search"], input#search');
         if (searchInput) {
             const searchValue = searchInput.value.trim();
@@ -416,26 +416,33 @@ function confirmBulkDelete() {
             }
         }
         
-        // Get other form fields from FormData
+        // Collect from FormData; also explicitly read select/input values as fallback for edge cases
         const formData = new FormData(form);
         for (const [key, value] of formData.entries()) {
-            // Skip search as we already handled it above
-            if (key === 'search') {
-                continue;
-            }
+            if (key === 'search') continue;
             const trimmed = String(value || '').trim();
             if (trimmed && trimmed !== '') {
                 params[key] = trimmed;
             }
         }
+        // Fallback: ensure selects and hidden inputs are captured (client_select, etc.)
+        form.querySelectorAll('select, input[type="hidden"]').forEach(function(el) {
+            const name = el.name;
+            if (!name || params[name] !== undefined) return;
+            const val = (el.value || '').trim();
+            if (val) params[name] = val;
+        });
         
+        if (typeof console !== 'undefined' && console.debug) {
+            console.debug('[Time Entries] Filter params:', params);
+        }
         return params;
     }
     
     function buildFilterUrl() {
         const params = getFilterParams();
         const queryString = new URLSearchParams(params).toString();
-        return `/time-entries?${queryString}`;
+        return queryString ? `/time-entries?${queryString}` : '/time-entries';
     }
     
     function applyFilters() {
@@ -443,8 +450,11 @@ function confirmBulkDelete() {
         const container = document.getElementById('timeEntriesListContainer');
         
         if (!container) {
-            console.error('timeEntriesListContainer not found');
+            console.error('[Time Entries] timeEntriesListContainer not found');
             return;
+        }
+        if (typeof console !== 'undefined' && console.debug) {
+            console.debug('[Time Entries] Applying filters, URL:', url);
         }
 
         // Avoid duplicate requests: prevent re-fetching the same URL while it's already in flight,
@@ -498,23 +508,37 @@ function confirmBulkDelete() {
             
             const newContainer = tempDiv.querySelector('#timeEntriesListContainer');
             
+            let parsed = false;
             if (newContainer) {
                 container.innerHTML = newContainer.innerHTML;
+                parsed = true;
             } else {
-                // Fallback: try to extract content using regex
-                const match = html.trim().match(/<div[^>]*id=["']timeEntriesListContainer["'][^>]*>([\s\S]*?)<\/div>\s*$/);
-                if (match && match[1]) {
-                    container.innerHTML = match[1];
-                } else {
-                    container.innerHTML = html;
+                // Fallback: try DOMParser for full HTML documents (Issue #489)
+                try {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const fallbackContainer = doc.getElementById('timeEntriesListContainer');
+                    if (fallbackContainer) {
+                        container.innerHTML = fallbackContainer.innerHTML;
+                        parsed = true;
+                    } else {
+                        if (typeof console !== 'undefined' && console.warn) {
+                            console.warn('[Time Entries] Filter response missing #timeEntriesListContainer');
+                        }
+                        if (inFlightUrl === url) inFlightUrl = null;
+                    }
+                } catch (parseErr) {
+                    if (typeof console !== 'undefined' && console.warn) {
+                        console.warn('[Time Entries] Failed to parse filter response:', parseErr);
+                    }
+                    if (inFlightUrl === url) inFlightUrl = null;
                 }
             }
             
             // Re-initialize bulk actions after content update
             updateBulkActions();
 
-            // Mark as last successful URL so we can skip duplicate loads.
-            lastUrl = url;
+            if (parsed) lastUrl = url;
         })
         .catch(error => {
             if (error && error.name === 'AbortError') {
@@ -564,11 +588,11 @@ function confirmBulkDelete() {
         // Initialize export link based on current URL
         try { updateExportLink(window.location.pathname + window.location.search); } catch (_) {}
 
-        // Event delegation so filters keep working even if inputs are re-rendered/replaced.
+        // Event delegation so filters keep working (Issue #489: include text inputs for custom fields)
         form.addEventListener('change', (e) => {
             const t = e.target;
             if (!t || !(t instanceof Element)) return;
-            if (t.matches('select') || t.matches('input[type="date"]')) {
+            if (t.matches('select') || t.matches('input[type="date"]') || t.matches('input[type="text"]')) {
                 debouncedApplyFilters(100);
             }
         });

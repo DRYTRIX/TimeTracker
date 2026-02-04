@@ -135,8 +135,12 @@ function setupEventListeners() {
   // Settings
   const saveSettingsBtn = document.getElementById('save-settings-btn');
   const testConnectionBtn = document.getElementById('test-connection-btn');
+  const autoSyncInput = document.getElementById('auto-sync');
   if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', handleSaveSettings);
   if (testConnectionBtn) testConnectionBtn.addEventListener('click', handleTestConnection);
+  if (autoSyncInput) {
+    autoSyncInput.addEventListener('change', () => updateSyncIntervalState());
+  }
   
   // Time entries
   const addEntryBtn = document.getElementById('add-entry-btn');
@@ -314,6 +318,14 @@ async function loadProjects() {
   } catch (error) {
     console.error('Error loading projects:', error);
   }
+}
+
+function selectProject(projectId) {
+  currentFilters = {
+    ...currentFilters,
+    projectId: projectId || null,
+  };
+  switchView('entries');
 }
 
 let currentFilters = {
@@ -609,9 +621,13 @@ async function loadSettings() {
   // Load current settings
   const serverUrl = await storeGet('server_url') || '';
   const apiToken = await storeGet('api_token') || '';
+  const autoSync = await storeGet('auto_sync');
+  const syncInterval = await storeGet('sync_interval');
   
   const serverUrlInput = document.getElementById('settings-server-url');
   const apiTokenInput = document.getElementById('settings-api-token');
+  const autoSyncInput = document.getElementById('auto-sync');
+  const syncIntervalInput = document.getElementById('sync-interval');
   
   if (serverUrlInput) {
     serverUrlInput.value = serverUrl;
@@ -621,17 +637,35 @@ async function loadSettings() {
     apiTokenInput.value = apiToken ? '••••••••' : '';
     apiTokenInput.dataset.hasToken = apiToken ? 'true' : 'false';
   }
+  if (autoSyncInput) {
+    autoSyncInput.checked = autoSync !== null ? Boolean(autoSync) : true;
+  }
+  if (syncIntervalInput) {
+    syncIntervalInput.value = (syncInterval || 60).toString();
+  }
+  updateSyncIntervalState();
+}
+
+function updateSyncIntervalState() {
+  const autoSyncInput = document.getElementById('auto-sync');
+  const syncIntervalInput = document.getElementById('sync-interval');
+  if (!autoSyncInput || !syncIntervalInput) return;
+  syncIntervalInput.disabled = !autoSyncInput.checked;
 }
 
 async function handleSaveSettings() {
   const serverUrlInput = document.getElementById('settings-server-url');
   const apiTokenInput = document.getElementById('settings-api-token');
+  const autoSyncInput = document.getElementById('auto-sync');
+  const syncIntervalInput = document.getElementById('sync-interval');
   const messageDiv = document.getElementById('settings-message');
   
-  if (!serverUrlInput || !apiTokenInput) return;
+  if (!serverUrlInput || !apiTokenInput || !autoSyncInput || !syncIntervalInput) return;
   
   const serverUrl = serverUrlInput.value.trim();
   const apiToken = apiTokenInput.value.trim();
+  const autoSync = autoSyncInput.checked;
+  const syncInterval = parseInt(syncIntervalInput.value, 10);
   
   // Validate server URL
   if (!serverUrl || !isValidUrl(serverUrl)) {
@@ -650,11 +684,18 @@ async function handleSaveSettings() {
     showSettingsMessage('Please enter a valid API token (must start with tt_)', 'error');
     return;
   }
+
+  if (Number.isNaN(syncInterval) || syncInterval < 10) {
+    showSettingsMessage('Sync interval must be at least 10 seconds', 'error');
+    return;
+  }
   
   // Save settings
   try {
     await storeSet('server_url', serverUrl);
     await storeSet('api_token', finalApiToken);
+    await storeSet('auto_sync', autoSync);
+    await storeSet('sync_interval', syncInterval);
     
     // Reinitialize API client with new settings
     apiClient = new ApiClient(serverUrl);
@@ -799,6 +840,9 @@ async function loadProjectsForFilter() {
     if (select) {
       select.innerHTML = '<option value="">All Projects</option>' +
         projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+      if (currentFilters.projectId) {
+        select.value = String(currentFilters.projectId);
+      }
     }
   } catch (error) {
     console.error('Error loading projects for filter:', error);

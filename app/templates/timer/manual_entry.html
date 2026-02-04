@@ -258,20 +258,23 @@ document.addEventListener('DOMContentLoaded', async function(){
     const onlyOneClient = {{ 'true' if only_one_client else 'false' }};
     const singleClientId = {{ ('"' ~ single_client.id ~ '"') if single_client else 'null' }};
 
-    // Function to ensure only one of project or client is selected
-    function syncProjectClientSelection() {
-        if (!projectSelect || !clientSelect) return;
+    // Task loading: attach when project and task exist (independent of client)
+    if (projectSelect && taskSelect) {
         projectSelect.addEventListener('change', function() {
-            if (this.value) {
+            if (this.value && clientSelect) {
                 clientSelect.value = '';
             } else if (onlyOneClient && singleClientId) {
                 clientSelect.value = singleClientId;
             }
             loadTasks(this.value);
         });
+    }
+
+    // Client/project mutual exclusivity (when client select exists)
+    if (clientSelect) {
         clientSelect.addEventListener('change', function() {
             if (this.value) {
-                projectSelect.value = '';
+                if (projectSelect) projectSelect.value = '';
                 if (taskSelect) {
                     taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
                     taskSelect.disabled = true;
@@ -295,18 +298,29 @@ document.addEventListener('DOMContentLoaded', async function(){
             taskSelect.disabled = true;
             return;
         }
+        const url = buildTasksUrl(projectId);
         try{
-            const resp = await fetch(buildTasksUrl(projectId), {
+            const resp = await fetch(url, {
                 credentials: 'same-origin',
                 headers: { 'Accept': 'application/json' },
                 cache: 'no-store'
             });
-            if (!resp.ok) throw new Error(failedToLoadTasksText);
             const ct = (resp.headers.get('content-type') || '').toLowerCase();
-            if (!ct.includes('application/json')) {
-                // Common failure mode: session expired -> redirected to HTML login page.
-                throw new Error(failedToLoadTasksText);
+            const isJson = ct.includes('application/json');
+
+            // Detect auth redirect: got HTML instead of JSON (session expired -> login page) (Issue #489)
+            if (!isJson) {
+                const sessionExpiredMsg = '{{ _("Session may have expired. Please refresh the page and try again.") }}';
+                if (window.toastManager && typeof window.toastManager.error === 'function') {
+                    window.toastManager.error(sessionExpiredMsg, '{{ _("Error") }}', 6000);
+                } else {
+                    alert(sessionExpiredMsg);
+                }
+                taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+                taskSelect.disabled = true;
+                return;
             }
+            if (!resp.ok) throw new Error(failedToLoadTasksText + ' (HTTP ' + resp.status + ')');
             const data = await resp.json();
             const tasks = Array.isArray(data?.tasks) ? data.tasks : [];
             taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
@@ -327,8 +341,7 @@ document.addEventListener('DOMContentLoaded', async function(){
             taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
             taskSelect.disabled = true;
             try {
-                // Provide user feedback (previously silent failure)
-                const msg = failedToLoadTasksText || 'Failed to load tasks';
+                const msg = e && e.message ? e.message : (failedToLoadTasksText || 'Failed to load tasks');
                 if (window.toastManager && typeof window.toastManager.error === 'function') {
                     window.toastManager.error(msg, '{{ _("Error") }}', 5000);
                 } else if (window.toastManager && typeof window.toastManager.show === 'function') {
@@ -337,13 +350,14 @@ document.addEventListener('DOMContentLoaded', async function(){
                     alert(msg);
                 }
             } catch (_) {}
-            try { console.error('Failed to load tasks for project', projectId, e); } catch (_) {}
+            if (typeof console !== 'undefined' && console.error) {
+                console.error('[Log Time] Task dropdown failed. Project:', projectId, 'URL:', url, 'Error:', e);
+            }
         }
     }
     
-    syncProjectClientSelection();
-    if (projectSelect){
-        if (projectSelect.value){ loadTasks(projectSelect.value); }
+    if (projectSelect && projectSelect.value) {
+        loadTasks(projectSelect.value);
     }
 
     // Keep worked time in sync with start/end inputs

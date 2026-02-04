@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timetracker_mobile/data/models/project.dart';
+import 'package:timetracker_mobile/core/theme/app_tokens.dart';
 import '../providers/timer_provider.dart';
 import '../providers/time_entries_provider.dart';
 import '../providers/projects_provider.dart';
@@ -148,7 +149,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
         title: const Text('Dashboard'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -164,7 +165,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                         )
                     : null,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -172,7 +173,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                         'Active Timer',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       if (timerState.isRunning && timerState.activeTimer != null)
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,7 +185,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                                     color: Theme.of(context).colorScheme.primary,
                                   ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: AppSpacing.xs),
                             Text(
                               'Tap to view details',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -205,11 +206,11 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             // Today's Summary Card
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -217,7 +218,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                       'Today\'s Summary',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     Text(
                       entriesState.isLoading
                           ? 'Loading...'
@@ -233,14 +234,19 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             Text(
               'Recent Entries',
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             if (entriesState.isLoading)
-              const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSpacing.xl),
+                  child: CircularProgressIndicator(),
+                ),
+              )
             else if (entriesState.entries.isEmpty)
               const EmptyState(
                 icon: Icons.history,
@@ -250,11 +256,14 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
             else
               ...entriesState.entries.take(5).map((entry) {
                 final projectName = _projectName(entry.projectId, projectsState.projects);
+                final subtitle = (entry.notes != null && entry.notes!.trim().isNotEmpty)
+                    ? entry.notes!.trim()
+                    : entry.formattedDateRange;
                 return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
+                  margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: ListTile(
                     leading: CircleAvatar(
-                      child: Icon(Icons.timer),
+                      child: const Icon(Icons.timer),
                     ),
                     title: Text(
                       projectName,
@@ -264,8 +273,14 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                             )
                           : null,
                     ),
-                    subtitle: Text(entry.notes ?? ''),
-                    trailing: Text(entry.formattedDuration),
+                    subtitle: Text(subtitle),
+                    trailing: Text(
+                      entry.formattedDuration,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 );
               }),

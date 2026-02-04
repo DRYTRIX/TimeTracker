@@ -237,12 +237,20 @@
 
 {% block scripts_extra %}
 <script>
+document.addEventListener('DOMContentLoaded', function() {
 // Load tasks when project is selected and sync with client selection
 const projectSelectEl = document.getElementById('project_id');
 const clientSelectEl = document.getElementById('client_id');
 const taskSelectEl = document.getElementById('task_id');
 const noTaskText = {{ _('No task')|tojson }};
 const failedToLoadTasksText = {{ _('Failed to load tasks')|tojson }};
+const tasksApiUrlTemplate = {{ url_for('api.get_project_tasks', project_id=0)|tojson }};
+
+function buildTasksUrl(projectId) {
+    const pid = String(projectId || '').trim();
+    if (!pid) return tasksApiUrlTemplate;
+    return String(tasksApiUrlTemplate).replace(/\/0\/tasks$/, '/' + encodeURIComponent(pid) + '/tasks');
+}
 
 async function loadTasksForProject(projectId) {
     if (!taskSelectEl) return;
@@ -253,7 +261,7 @@ async function loadTasksForProject(projectId) {
     }
 
     try {
-        const response = await fetch(`/api/projects/${projectId}/tasks`, { credentials: 'same-origin' });
+        const response = await fetch(buildTasksUrl(projectId), { credentials: 'same-origin' });
         if (!response.ok) throw new Error(failedToLoadTasksText);
         const data = await response.json();
         const tasks = Array.isArray(data?.tasks) ? data.tasks : [];
@@ -276,7 +284,8 @@ async function loadTasksForProject(projectId) {
 const onlyOneClient = {{ 'true' if only_one_client|default(false) else 'false' }};
 const singleClientId = {{ ('"' ~ single_client.id ~ '"') if single_client else 'null' }};
 
-if (projectSelectEl && clientSelectEl) {
+// Task loading: attach when project and task selects exist (independent of client)
+if (projectSelectEl && taskSelectEl) {
     projectSelectEl.addEventListener('change', () => {
         const pid = projectSelectEl.value;
         if (pid && clientSelectEl) {
@@ -286,7 +295,14 @@ if (projectSelectEl && clientSelectEl) {
         }
         loadTasksForProject(pid);
     });
+    // Initial load when project is pre-selected
+    if (projectSelectEl.value) {
+        loadTasksForProject(projectSelectEl.value);
+    }
+}
 
+// Client/project mutual exclusivity (when client select exists)
+if (clientSelectEl) {
     clientSelectEl.addEventListener('change', () => {
         const cid = clientSelectEl.value;
         if (cid) {
@@ -341,14 +357,16 @@ if (timerStartForm) {
     }, true); // Use capture phase to run before other handlers
 }
 
-// Select recent project
-function selectRecentProject(projectId, projectName) {
+// Select recent project (exposed for onclick handlers)
+window.selectRecentProject = function(projectId, projectName) {
     const projectSelect = document.getElementById('project_id');
     if (projectSelect) {
         projectSelect.value = projectId;
         projectSelect.dispatchEvent(new Event('change'));
     }
-}
+};
+
+}); // end DOMContentLoaded
 
 // Update timer display every second
 {% if active_timer %}
