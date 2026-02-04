@@ -145,6 +145,12 @@
 </div>
 
 <script>
+const tasksApiUrlTemplate = {{ url_for('api.get_project_tasks', project_id=0)|tojson }};
+function buildTasksUrl(projectId) {
+    const pid = String(projectId || '').trim();
+    if (!pid) return tasksApiUrlTemplate;
+    return String(tasksApiUrlTemplate).replace(/\/0\/tasks$/, '/' + encodeURIComponent(pid) + '/tasks');
+}
 function loadProjectTasks(projectId) {
     const taskSelect = document.getElementById('task_id');
     const selectedTaskId = taskSelect.dataset.selected;
@@ -157,7 +163,7 @@ function loadProjectTasks(projectId) {
     }
     
     // Fetch tasks for the selected project
-    fetch(`/api/projects/${projectId}/tasks`)
+    fetch(buildTasksUrl(projectId))
         .then(response => response.json())
         .then(data => {
             data.tasks.forEach(task => {

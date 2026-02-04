@@ -399,6 +399,12 @@ document.addEventListener('DOMContentLoaded', function() {
         entriesFor: i18nTimerBulk.entries_for || 'Entries will be created for'
     };
 
+    const tasksApiUrlTemplate = {{ url_for('api.list_tasks_for_project', project_id=0)|tojson }};
+    function buildTasksUrl(projectId) {
+        const pid = String(projectId || '').trim();
+        if (!pid) return tasksApiUrlTemplate;
+        return String(tasksApiUrlTemplate).replace(/project_id=0/, 'project_id=' + encodeURIComponent(pid));
+    }
     async function loadTasksForProject(projectId) {
         if (!projectId) {
             taskSelect.innerHTML = '<option value="">' + L.noTask + '</option>';
@@ -406,7 +412,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         try {
-            const resp = await fetch(`/api/tasks?project_id=${projectId}`);
+            const resp = await fetch(buildTasksUrl(projectId));
             if (!resp.ok) throw new Error(L.failedLoad);
             const data = await resp.json();
             const tasks = Array.isArray(data.tasks) ? data.tasks : [];
