@@ -730,6 +730,7 @@ def archive_client(client_id):
         flash(_("Client is already inactive"), "info")
     else:
         client.archive()
+        db.session.commit()
         app_module.log_event("client.archived", user_id=current_user.id, client_id=client.id)
         app_module.track_event(current_user.id, "client.archived", {"client_id": client.id})
         flash(f'Client "{client.name}" archived successfully', "success")
@@ -759,6 +760,7 @@ def activate_client(client_id):
         flash(_("Client is already active"), "info")
     else:
         client.activate()
+        db.session.commit()
         flash(f'Client "{client.name}" activated successfully', "success")
         try:
             from app.utils.cache import get_cache

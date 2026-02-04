@@ -12,12 +12,12 @@
         {% if current_user.is_admin or has_permission('edit_clients') %}
         <a href="{{ url_for('clients.edit_client', client_id=client.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Edit Client') }}</a>
         {% if client.status == 'active' %}
-        <form method="POST" action="{{ url_for('clients.archive_client', client_id=client.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Mark client as Inactive?') }}', { title: '{{ _('Change Client Status') }}', confirmText: '{{ _('Change') }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
+        <form method="POST" action="{{ url_for('clients.archive_client', client_id=client.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Mark client as Inactive?')|e }}', { title: '{{ _('Change Client Status')|e }}', confirmText: '{{ _('Change')|e }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="px-4 py-2 rounded-lg bg-amber-500 text-white mt-4 md:mt-0">{{ _('Mark Inactive') }}</button>
         </form>
         {% else %}
-        <form method="POST" action="{{ url_for('clients.activate_client', client_id=client.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Activate client?') }}', { title: '{{ _('Activate Client') }}', confirmText: '{{ _('Activate') }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
+        <form method="POST" action="{{ url_for('clients.activate_client', client_id=client.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Activate client?')|e }}', { title: '{{ _('Activate Client')|e }}', confirmText: '{{ _('Activate')|e }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 text-white mt-4 md:mt-0">{{ _('Activate') }}</button>
         </form>
