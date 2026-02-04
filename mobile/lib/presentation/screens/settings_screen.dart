@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/config/app_config.dart';
+import '../providers/api_provider.dart';
 import '../../utils/auth/auth_service.dart';
 import '../providers/theme_mode_provider.dart';
 import 'login_screen.dart';
@@ -18,6 +19,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String? _serverUrl;
   int _syncInterval = 60;
   bool _autoSync = true;
+  bool _hasToken = false;
   String _version = '—';
 
   @override
@@ -30,6 +32,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final serverUrl = await AppConfig.getServerUrl();
     final syncInterval = await AppConfig.getSyncInterval();
     final autoSync = await AppConfig.getAutoSync();
+    final token = await AuthService.getToken();
     String version = '—';
     try {
       final info = await PackageInfo.fromPlatform();
@@ -41,6 +44,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _serverUrl = serverUrl;
         _syncInterval = syncInterval;
         _autoSync = autoSync;
+        _hasToken = token != null && token.isNotEmpty;
         _version = version;
         _isLoading = false;
       });
@@ -84,6 +88,153 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ref.read(themeModeProvider.notifier).setMode(value);
   }
 
+  Future<void> _showEditServerUrlDialog() async {
+    final controller = TextEditingController(text: _serverUrl ?? '');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Server URL'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.url,
+          textInputAction: TextInputAction.done,
+          decoration: const InputDecoration(
+            labelText: 'Server URL',
+            hintText: 'https://example.com',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null) return;
+    if (result.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Server URL cannot be empty')),
+      );
+      return;
+    }
+
+    await AppConfig.setServerUrl(result);
+    ref.invalidate(apiClientProvider);
+    if (mounted) {
+      setState(() => _serverUrl = result);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Server URL updated')),
+      );
+    }
+  }
+
+  Future<void> _showEditApiTokenDialog() async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('API Token'),
+        content: TextField(
+          controller: controller,
+          obscureText: true,
+          textInputAction: TextInputAction.done,
+          decoration: const InputDecoration(
+            labelText: 'API Token',
+            hintText: 'Paste token here',
+            helperText: 'Leave blank to clear',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null) return;
+    if (result.isEmpty) {
+      await AuthService.deleteToken();
+      ref.invalidate(apiClientProvider);
+      if (mounted) {
+        setState(() => _hasToken = false);
+      }
+      return;
+    }
+
+    await AuthService.storeToken(result);
+    ref.invalidate(apiClientProvider);
+    if (mounted) {
+      setState(() => _hasToken = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('API token updated')),
+      );
+    }
+  }
+
+  Future<void> _showSyncIntervalDialog() async {
+    final controller = TextEditingController(text: _syncInterval.toString());
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sync Interval'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.done,
+          decoration: const InputDecoration(
+            labelText: 'Seconds',
+            helperText: 'How often to sync when enabled',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null) return;
+    final parsed = int.tryParse(result);
+    if (parsed == null || parsed <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid number of seconds')),
+      );
+      return;
+    }
+
+    await AppConfig.setSyncInterval(parsed);
+    if (mounted) {
+      setState(() => _syncInterval = parsed);
+    }
+  }
+
+  void _showAboutDialog() {
+    showAboutDialog(
+      context: context,
+      applicationName: 'TimeTracker',
+      applicationVersion: _version,
+      applicationIcon: const Icon(Icons.timer),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
@@ -108,18 +259,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: const Text('Server URL'),
             subtitle: Text(_serverUrl?.isNotEmpty == true ? _serverUrl! : 'Not configured'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Edit server URL
-            },
+            onTap: _showEditServerUrlDialog,
           ),
           ListTile(
             leading: const Icon(Icons.key),
             title: const Text('API Token'),
-            subtitle: const Text('••••••••'),
+            subtitle: Text(_hasToken ? 'Configured' : 'Not set'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Edit API token
-            },
+            onTap: _showEditApiTokenDialog,
           ),
           _sectionHeader('Sync'),
           SwitchListTile(
@@ -137,9 +284,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: const Text('Sync Interval'),
             subtitle: Text('$_syncInterval seconds'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Edit sync interval
-            },
+            onTap: _showSyncIntervalDialog,
           ),
           _sectionHeader('Appearance'),
           ListTile(
@@ -155,11 +300,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: const Text('About'),
             subtitle: Text('Version $_version'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Show about dialog
-            },
+            onTap: _showAboutDialog,
           ),
-          _sectionHeader('Account'),
           ListTile(
             leading: Icon(Icons.logout, color: colorScheme.error),
             title: Text('Logout', style: TextStyle(color: colorScheme.error, fontWeight: FontWeight.w500)),

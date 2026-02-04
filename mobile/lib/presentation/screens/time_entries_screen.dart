@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:timetracker_mobile/core/theme/app_tokens.dart';
 import 'package:timetracker_mobile/presentation/providers/time_entries_provider.dart';
 import 'package:timetracker_mobile/presentation/screens/time_entry_form_screen.dart';
 import 'package:timetracker_mobile/presentation/widgets/empty_state.dart';
@@ -76,7 +77,7 @@ class _TimeEntriesScreenState extends ConsumerState<TimeEntriesScreen> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(AppSpacing.md),
       itemCount: state.entries.length,
       itemBuilder: (context, index) {
         final entry = state.entries[index];
