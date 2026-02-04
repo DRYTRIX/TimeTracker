@@ -505,6 +505,12 @@ button, input, select, textarea {
   border-color: var(--primary);
 }
 
+.settings-section .form-group input:disabled {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
 .settings-section .form-group small {
   display: block;
   margin-top: 4px;
