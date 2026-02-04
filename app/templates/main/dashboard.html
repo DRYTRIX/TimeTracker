@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "components/cards.html" import info_card, stat_card %}
-{% from "components/ui.html" import confirm_dialog %}
+{% from "components/ui.html" import confirm_dialog, modal %}
 {% from "components/client_select.html" import client_select %}
 
 {% block extra_css %}
@@ -85,7 +85,7 @@
                     <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Timer') }}</h2>
                 </div>
                 {% if not active_timer %}
-                <button type="button" id="openStartTimer" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5" onclick="var m=document.getElementById('startTimerModal'); if(m){ m.classList.remove('hidden'); m.setAttribute('aria-hidden','false'); } return false;">
+                <button type="button" id="openStartTimer" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
                     <i class="fas fa-play mr-2"></i>{{ _('Start Timer') }}
                 </button>
                 {% endif %}
@@ -472,7 +472,22 @@
     {% endfor %}
 
     <!-- Start Timer Modal -->
-    <div id="startTimerModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+    <div id="startTimerModal"
+         class="fixed inset-0 z-50 hidden"
+         aria-hidden="true"
+         data-tasks-api-url="{{ url_for('api.get_project_tasks', project_id=0) }}"
+         data-create-task-url="{{ url_for('api.create_task_inline') }}"
+         data-no-task="{{ _('No task')|e }}"
+         data-create-new-task="{{ _('Create new task...')|e }}"
+         data-loading-tasks="{{ _('Loading tasks...')|e }}"
+         data-new-task-prompt="{{ _('Enter new task name:')|e }}"
+         data-task-create-failed="{{ _('Failed to create task: ')|e }}"
+         data-select-project-client="{{ _('Please select either a project or a client')|e }}"
+         data-complete-task-create="{{ _('Please complete creating the task or select an existing task')|e }}"
+         data-error-title="{{ _('Error')|e }}"
+         data-notes-placeholder="{{ _('What are you working on?')|e }}"
+         data-only-one-client="{{ 'true' if only_one_client|default(false) else 'false' }}"
+         data-single-client-id="{{ single_client.id if single_client else '' }}">
         <div class="absolute inset-0 bg-black/50" data-overlay></div>
         <div class="relative max-w-lg mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-lg" data-modal-content>
             <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
@@ -502,23 +517,12 @@
                     </div>
                     <div>
                         <label for="startTimerTask" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Task (optional)') }}</label>
-                        <div class="relative">
-                            <input 
-                                type="text" 
-                                id="startTimerTask" 
-                                name="task_name" 
-                                list="startTimerTaskList" 
-                                autocomplete="off"
-                                class="form-input w-full"
-                                placeholder="{{ _('Select existing task or type new task name') }}"
-                            />
-                            <input type="hidden" id="startTimerTaskId" name="task_id" value="" />
-                            <datalist id="startTimerTaskList">
-                                <!-- Options will be populated dynamically via JavaScript -->
-                            </datalist>
-                        </div>
+                        <select id="startTimerTask" name="task_id" class="form-input w-full">
+                            <option value="">{{ _('No task') }}</option>
+                            <!-- Options populated dynamically when project is selected -->
+                        </select>
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
-                            {{ _('Select an existing task or type a new task name to create it') }}
+                            {{ _('Select a project first to load tasks, or choose "Create new task..." to add one') }}
                         </p>
                     </div>
                     <div>
@@ -564,6 +568,19 @@
             </form>
         </div>
     </div>
+
+    {% set create_task_modal_content %}
+    <div class="space-y-3">
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Enter a name for the new task.') }}</p>
+        <input type="text" id="createTaskNameInput" class="form-input w-full" placeholder="{{ _('Task name') }}">
+        <p id="createTaskError" class="text-sm text-red-600 hidden"></p>
+    </div>
+    {% endset %}
+    {% set create_task_modal_footer %}
+        <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" data-create-task-cancel>{{ _('Cancel') }}</button>
+        <button type="button" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors" data-create-task-confirm>{{ _('Create') }}</button>
+    {% endset %}
+    {{ modal('createTaskModal', _('Create task'), create_task_modal_content, create_task_modal_footer, 'sm') }}
 {% endblock %}
 
 
@@ -590,130 +607,266 @@
             if (modal) {
                 modal.classList.remove('hidden');
                 modal.setAttribute('aria-hidden', 'false');
+                try {
+                    const projectSelect = document.getElementById('startTimerProject');
+                    if (projectSelect && projectSelect.value) {
+                        loadTasksForProject(projectSelect.value);
+                    }
+                } catch (_) {}
             }
         }
         const openBtn = document.getElementById('openStartTimer');
         if (openBtn && modal) {
             openBtn.addEventListener('click', openStartTimerModal);
         }
-        document.addEventListener('click', (e) => {
-            const btn = e.target.closest('#openStartTimer');
-            if (btn && modal) {
-                e.preventDefault();
-                openStartTimerModal(e);
-            }
-        });
         if (modal) {
-            modal.querySelector('[data-close]')?.addEventListener('click', () => { modal.classList.add('hidden'); modal.setAttribute('aria-hidden', 'true'); });
-            modal.addEventListener('click', (e) => { if (e.target === modal || e.target.hasAttribute('data-overlay')) { modal.classList.add('hidden'); modal.setAttribute('aria-hidden', 'true'); } });
-            // Prevent clicks inside modal content from closing the modal
+            const closeBtn = modal.querySelector('[data-close]');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    modal.classList.add('hidden');
+                    modal.setAttribute('aria-hidden', 'true');
+                });
+            }
+            // Close on overlay click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal || e.target.hasAttribute('data-overlay')) {
+                    modal.classList.add('hidden');
+                    modal.setAttribute('aria-hidden', 'true');
+                }
+            });
             const modalContent = modal.querySelector('[data-modal-content]');
-            if (modalContent) modalContent.addEventListener('click', (e) => e.stopPropagation());
+            if (modalContent) {
+                modalContent.addEventListener('click', (e) => {
+                    // Close button: handle here since stopPropagation would block modal handler
+                    if (e.target.closest('[data-close]')) {
+                        modal.classList.add('hidden');
+                        modal.setAttribute('aria-hidden', 'true');
+                        e.preventDefault();
+                        return;
+                    }
+                    e.stopPropagation(); // Prevent overlay-close when clicking card
+                });
+            }
 
             const projectSelect = document.getElementById('startTimerProject');
             const clientSelect = document.getElementById('startTimerClient');
-            const taskInput = document.getElementById('startTimerTask');
-            const taskInputId = document.getElementById('startTimerTaskId');
-            const taskDatalist = document.getElementById('startTimerTaskList');
-            let availableTasks = []; // Store tasks for matching
+            const taskSelect = document.getElementById('startTimerTask');
+            const createNewTaskValue = '__new__';
+            const tasksApiUrlTemplate = modal?.dataset?.tasksApiUrl || '';
+            const createTaskUrl = modal?.dataset?.createTaskUrl || '';
+            const noTaskText = modal?.dataset?.noTask || 'No task';
+            const createNewTaskText = modal?.dataset?.createNewTask || 'Create new task...';
+            const loadingTasksText = modal?.dataset?.loadingTasks || 'Loading tasks...';
+            const newTaskPromptText = modal?.dataset?.newTaskPrompt || 'Enter new task name:';
+            const taskCreateFailedText = modal?.dataset?.taskCreateFailed || 'Failed to create task: ';
+            const selectProjectOrClientText = modal?.dataset?.selectProjectClient || 'Please select either a project or a client';
+            const completeTaskCreationText = modal?.dataset?.completeTaskCreate || 'Please complete creating the task or select an existing task';
+            const errorTitleText = modal?.dataset?.errorTitle || 'Error';
+            const taskNameRequiredText = '{{ _("Task name is required.") }}';
 
-            async function loadTasksForProject(pid, preserveTaskId = false) {
-                if (!taskInput || !taskDatalist) return;
-                
-                // Preserve current task_id if requested
-                const preservedTaskId = preserveTaskId && taskInputId ? taskInputId.value : null;
-                const preservedTaskName = preserveTaskId && taskInput ? taskInput.value : null;
-                
-                // Clear datalist and task input
-                taskDatalist.innerHTML = '';
-                taskInput.value = '';
-                taskInputId.value = '';
-                availableTasks = [];
+            const createTaskModal = document.getElementById('createTaskModal');
+            const createTaskNameInput = document.getElementById('createTaskNameInput');
+            const createTaskError = document.getElementById('createTaskError');
+            const createTaskConfirmBtn = createTaskModal ? createTaskModal.querySelector('[data-create-task-confirm]') : null;
+            const createTaskCancelBtn = createTaskModal ? createTaskModal.querySelector('[data-create-task-cancel]') : null;
+            let createTaskModalResolver = null;
+
+            function closeCreateTaskModal(result) {
+                if (!createTaskModal) return;
+                createTaskModal.classList.add('hidden');
+                createTaskModal.setAttribute('aria-hidden', 'true');
+                if (createTaskModalResolver) {
+                    createTaskModalResolver(result);
+                    createTaskModalResolver = null;
+                }
+            }
+
+            function openCreateTaskModal() {
+                if (!createTaskModal || !createTaskNameInput) {
+                    return Promise.resolve(null);
+                }
+                if (createTaskError) {
+                    createTaskError.textContent = '';
+                    createTaskError.classList.add('hidden');
+                }
+                createTaskNameInput.value = '';
+                createTaskModal.classList.remove('hidden');
+                createTaskModal.setAttribute('aria-hidden', 'false');
+                setTimeout(() => createTaskNameInput.focus(), 0);
+                return new Promise((resolve) => {
+                    createTaskModalResolver = resolve;
+                });
+            }
+
+            if (createTaskConfirmBtn && createTaskNameInput) {
+                createTaskConfirmBtn.addEventListener('click', () => {
+                    const name = createTaskNameInput.value.trim();
+                    if (!name) {
+                        if (createTaskError) {
+                            createTaskError.textContent = taskNameRequiredText;
+                            createTaskError.classList.remove('hidden');
+                        }
+                        return;
+                    }
+                    closeCreateTaskModal(name);
+                });
+            }
+
+            if (createTaskCancelBtn) {
+                createTaskCancelBtn.addEventListener('click', () => closeCreateTaskModal(null));
+            }
+
+            if (createTaskModal) {
+                createTaskModal.addEventListener('click', (e) => {
+                    if (e.target === createTaskModal) {
+                        closeCreateTaskModal(null);
+                    }
+                });
+            }
+
+            if (createTaskNameInput) {
+                createTaskNameInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (createTaskConfirmBtn) createTaskConfirmBtn.click();
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        closeCreateTaskModal(null);
+                    }
+                });
+            }
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && createTaskModal && !createTaskModal.classList.contains('hidden')) {
+                    closeCreateTaskModal(null);
+                }
+            });
+
+            function buildTasksUrl(projectId) {
+                const pid = String(projectId || '').trim();
+                if (!pid) return tasksApiUrlTemplate;
+                return String(tasksApiUrlTemplate).replace(/\/0\/tasks$/, '/' + encodeURIComponent(pid) + '/tasks');
+            }
+
+            async function loadTasksForProject(pid, preserveTaskId = null) {
+                if (!taskSelect) return;
                 
                 if (!pid) {
-                    taskInput.disabled = false;
+                    taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+                    taskSelect.disabled = false;
                     return;
                 }
                 
+                taskSelect.innerHTML = '<option value="">' + loadingTasksText + '</option>';
+                taskSelect.disabled = true;
                 try {
-                    const res = await fetch(`/api/projects/${pid}/tasks`, { credentials: 'same-origin' });
+                    const res = await fetch(buildTasksUrl(pid), { credentials: 'same-origin' });
                     const data = await res.json();
+                    var opts = [];
+                    var o0 = document.createElement('option');
+                    o0.value = '';
+                    o0.textContent = noTaskText;
+                    opts.push(o0);
                     if (data && data.tasks) {
-                        availableTasks = data.tasks;
-                        data.tasks.forEach(t => {
-                            const opt = document.createElement('option');
-                            opt.value = t.name;
-                            opt.dataset.taskId = t.id;
-                            taskDatalist.appendChild(opt);
+                        data.tasks.forEach(function(t) {
+                            var o = document.createElement('option');
+                            o.value = t.id;
+                            o.textContent = t.name || '';
+                            opts.push(o);
                         });
                     }
-                    
-                    // Restore preserved values if requested
-                    if (preserveTaskId && preservedTaskId) {
-                        taskInputId.value = preservedTaskId;
-                        if (preservedTaskName) {
-                            taskInput.value = preservedTaskName;
-                        }
+                    var oNew = document.createElement('option');
+                    oNew.value = createNewTaskValue;
+                    oNew.textContent = createNewTaskText;
+                    opts.push(oNew);
+                    var frag = document.createDocumentFragment();
+                    opts.forEach(function(o) { frag.appendChild(o); });
+                    taskSelect.innerHTML = '';
+                    taskSelect.appendChild(frag);
+                    if (preserveTaskId) {
+                        var found = Array.from(taskSelect.options).some(function(o) { return o.value === String(preserveTaskId); });
+                        if (found) taskSelect.value = String(preserveTaskId);
                     }
-                    
-                    taskInput.disabled = false;
+                    taskSelect.disabled = false;
                 } catch (err) {
                     console.error('Failed to load tasks', err);
-                    taskInput.disabled = true;
+                    taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+                    taskSelect.disabled = false;
                 }
             }
 
-            // Handle task input change to detect selection vs typing
-            if (taskInput) {
-                taskInput.addEventListener('input', () => {
-                    const inputValue = taskInput.value.trim();
-                    // Try to find matching task
-                    const matchedTask = availableTasks.find(t => t.name === inputValue);
-                    if (matchedTask) {
-                        taskInputId.value = matchedTask.id;
-                    } else {
-                        // Clear task_id if no match (new task name)
-                        taskInputId.value = '';
+            // Handle "Create new task..." selection
+            if (taskSelect) {
+                taskSelect.addEventListener('change', async function() {
+                    if (this.value !== createNewTaskValue) return;
+                    const pid = projectSelect ? projectSelect.value : '';
+                    if (!pid) {
+                        this.value = '';
+                        return;
                     }
-                });
-                
-                // Also handle selection from datalist
-                taskInput.addEventListener('change', () => {
-                    const inputValue = taskInput.value.trim();
-                    const matchedTask = availableTasks.find(t => t.name === inputValue);
-                    if (matchedTask) {
-                        taskInputId.value = matchedTask.id;
-                    } else {
-                        taskInputId.value = '';
+                    let taskName = await openCreateTaskModal();
+                    if (taskName === null && !createTaskModal) {
+                        taskName = prompt(newTaskPromptText);
+                    }
+                    if (!taskName || !taskName.trim()) {
+                        this.value = '';
+                        return;
+                    }
+                    try {
+                        const csrfToken = modal ? modal.querySelector('input[name="csrf_token"]')?.value : '';
+                        const res = await fetch(createTaskUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken || '' },
+                            credentials: 'same-origin',
+                            body: JSON.stringify({ name: taskName.trim(), project_id: parseInt(pid) })
+                        });
+                        if (!res.ok) {
+                            const errData = await res.json().catch(() => ({}));
+                            throw new Error(errData.error || 'Failed to create task');
+                        }
+                        const taskData = await res.json();
+                        if (taskData && taskData.id) {
+                            await loadTasksForProject(pid, taskData.id);
+                        } else {
+                            this.value = '';
+                        }
+                    } catch (err) {
+                        console.error('Failed to create task:', err);
+                        alert(taskCreateFailedText + (err.message || err));
+                        this.value = '';
                     }
                 });
             }
 
-            const onlyOneClient = {{ 'true' if only_one_client|default(false) else 'false' }};
-            const singleClientId = {{ ('"' ~ single_client.id ~ '"') if single_client else 'null' }};
+            const onlyOneClient = (modal?.dataset?.onlyOneClient || 'false') === 'true';
+            const singleClientId = (modal?.dataset?.singleClientId || '') || null;
 
-            if (projectSelect && clientSelect && taskInput) {
+            // Task loading: attach when project and task elements exist (independent of client)
+            if (projectSelect && taskSelect) {
                 projectSelect.addEventListener('change', () => {
                     const pid = projectSelect.value;
-                    if (pid) {
+                    if (pid && clientSelect) {
                         clientSelect.value = '';
                     } else if (onlyOneClient && singleClientId) {
                         clientSelect.value = singleClientId;
                     }
                     loadTasksForProject(pid);
                 });
+            }
 
-                clientSelect.addEventListener('change', () => {
-                    const cid = clientSelect.value;
+            // Client/project mutual exclusivity (when client select exists)
+            if (clientSelect && taskSelect) {
+                clientSelect.addEventListener('change', function() {
+                    var cid = clientSelect.value;
                     if (cid) {
-                        projectSelect.value = '';
-                        taskInput.value = '';
-                        taskInputId.value = '';
-                        taskDatalist.innerHTML = '';
-                        availableTasks = [];
-                        taskInput.disabled = true;
+                        if (projectSelect) projectSelect.value = '';
+                        taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+                        taskSelect.disabled = true;
                     } else {
-                        taskInput.disabled = false;
+                        // Only enable task select if no project selected (otherwise loadTasksForProject will handle it)
+                        if (!projectSelect || !projectSelect.value) taskSelect.disabled = false;
                     }
                 });
             }
@@ -732,98 +885,24 @@
                     const projectVal = projectSelect ? projectSelect.value : '';
                     const clientVal = clientSelect ? clientSelect.value : '';
                     if (!projectVal && !clientVal) {
-                        const errorMsg = '{{ _("Please select either a project or a client") }}';
+                        const errorMsg = selectProjectOrClientText;
                         if (window.toastManager && typeof window.toastManager.error === 'function') {
-                            window.toastManager.error(errorMsg, '{{ _("Error") }}', 5000);
+                            window.toastManager.error(errorMsg, errorTitleText, 5000);
                         } else {
                             alert(errorMsg);
                         }
                         return false;
                     }
                     
-                    // Handle new task creation if needed
-                    const taskName = taskInput ? taskInput.value.trim() : '';
-                    const taskId = taskInputId ? taskInputId.value : '';
-                    
-                    // If task name is provided but no task_id, create the task first
-                    if (taskName && !taskId && projectVal) {
-                        try {
-                            // Disable submit button
-                            if (submitBtn) {
-                                submitBtn.disabled = true;
-                                if (originalButtonHTML) {
-                                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>{{ _("Creating task...") }}';
-                                }
-                            }
-                            
-                            // Create task via AJAX
-                            const csrfToken = startTimerForm.querySelector('input[name="csrf_token"]')?.value;
-                            const createTaskRes = await fetch('/api/tasks/create', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-Requested-With': 'XMLHttpRequest',
-                                    'X-CSRFToken': csrfToken || ''
-                                },
-                                credentials: 'same-origin',
-                                body: JSON.stringify({
-                                    name: taskName,
-                                    project_id: parseInt(projectVal)
-                                })
-                            });
-                            
-                            if (!createTaskRes.ok) {
-                                const errorData = await createTaskRes.json().catch(() => ({}));
-                                throw new Error(errorData.error || 'Failed to create task');
-                            }
-                            
-                            const taskData = await createTaskRes.json();
-                            // Set the task_id in the hidden field BEFORE reloading
-                            if (taskInputId && taskData.id) {
-                                taskInputId.value = taskData.id;
-                                // Also update the input to show the created task name
-                                if (taskInput) {
-                                    taskInput.value = taskData.name;
-                                }
-                            }
-                            
-                            // Reload tasks list to include the new task, preserving the task_id
-                            await loadTasksForProject(projectVal, preserveTaskId=true);
-                            
-                        } catch (error) {
-                            console.error('Failed to create task:', error);
-                            const errorMsg = '{{ _("Failed to create task: ") }}' + (error.message || error);
-                            if (window.toastManager && typeof window.toastManager.error === 'function') {
-                                window.toastManager.error(errorMsg, '{{ _("Error") }}', 5000);
-                            } else {
-                                alert(errorMsg);
-                            }
-                            // Restore button state
-                            if (submitBtn && originalButtonHTML) {
-                                submitBtn.innerHTML = originalButtonHTML;
-                                submitBtn.disabled = false;
-                            }
-                            return false;
+                    // Prevent submit if "Create new task..." is still selected (incomplete flow)
+                    const taskVal = taskSelect ? taskSelect.value : '';
+                    if (taskVal === createNewTaskValue) {
+                        if (window.toastManager && typeof window.toastManager.error === 'function') {
+                            window.toastManager.error(completeTaskCreationText, errorTitleText, 5000);
+                        } else {
+                            alert(completeTaskCreationText);
                         }
-                    }
-                    
-                    // Ensure task_id is set if we have a task name that matches an existing task
-                    if (taskName && !taskInputId.value) {
-                        const matchedTask = availableTasks.find(t => t.name === taskName);
-                        if (matchedTask && taskInputId) {
-                            taskInputId.value = matchedTask.id;
-                        }
-                    }
-                    
-                    // Restore button state
-                    if (submitBtn && originalButtonHTML) {
-                        submitBtn.innerHTML = originalButtonHTML;
-                        submitBtn.disabled = false;
-                    }
-                    
-                    // Debug: Log form data before submission
-                    if (taskInputId && taskInputId.value) {
-                        console.log('Submitting form with task_id:', taskInputId.value);
+                        return false;
                     }
                     
                     // Sync Toast UI Editor notes into hidden textarea (programmatic submit does not fire submit event)
@@ -853,11 +932,10 @@
                 
                 // Get form elements (re-select to avoid scope issues)
                 const projectSelect = document.getElementById('startTimerProject');
-                const taskInput = document.getElementById('startTimerTask');
-                const taskInputId = document.getElementById('startTimerTaskId');
+                const taskSelect = document.getElementById('startTimerTask');
                 const notesField = document.getElementById('startTimerNotes');
                 
-                if (!projectSelect || !taskInput || !notesField) {
+                if (!projectSelect || !taskSelect || !notesField) {
                     throw new Error('Form elements not found');
                 }
                 
@@ -867,22 +945,13 @@
                     // Trigger change event to load tasks
                     projectSelect.dispatchEvent(new Event('change'));
                     
-                    // Wait a bit for tasks to load, then select task
+                    // Wait for tasks to load, then select task
                     setTimeout(() => {
-                        if (template.task_id && taskInputId) {
-                            taskInputId.value = template.task_id;
-                            // Find task name from loaded tasks
-                            const taskDatalist = document.getElementById('startTimerTaskList');
-                            if (taskDatalist) {
-                                const matchingOption = Array.from(taskDatalist.options).find(
-                                    opt => opt.dataset.taskId === String(template.task_id)
-                                );
-                                if (matchingOption) {
-                                    taskInput.value = matchingOption.value;
-                                }
-                            }
+                        if (template.task_id) {
+                            const found = Array.from(taskSelect.options).some(o => o.value === String(template.task_id));
+                            if (found) taskSelect.value = String(template.task_id);
                         }
-                    }, 300);
+                    }, 350);
                 }
                 if (template.default_notes) {
                     notesField.value = template.default_notes;
@@ -895,11 +964,12 @@
                 }
                 
                 // Mark template as used
+                const csrfToken = modal ? modal.querySelector('input[name="csrf_token"]')?.value : '';
                 fetch(`/api/templates/${templateId}/use`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token() }}'
+                        'X-CSRFToken': csrfToken || ''
                     }
                 }).catch(() => {});  // Silently fail if marking fails
                 
@@ -908,10 +978,10 @@
                 alert('Failed to apply template. Please try again.');
             }
         };
-    });
 
-    // Initialize Toast UI Editor for timer notes
+        // Initialize Toast UI Editor for timer notes
     const notesInput = document.getElementById('startTimerNotes');
+    const notesPlaceholderText = document.getElementById('startTimerModal')?.dataset?.notesPlaceholder || 'What are you working on?';
     if (notesInput && window.toastui && window.toastui.Editor) {
         const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
         window.dashboardNotesEditor = new toastui.Editor({
@@ -921,7 +991,7 @@
             previewStyle: 'vertical',
             usageStatistics: false,
             hideModeSwitch: false,
-            placeholder: '{{ _("What are you working on?") }}',
+            placeholder: notesPlaceholderText,
             theme: theme,
             toolbarItems: [
                 ['heading', 'bold', 'italic', 'strike'],
@@ -1224,19 +1294,6 @@
             dashboardFileInput.value = '';
         });
 
-        // Sync editor content to hidden textarea on form submit
-        const startTimerForm = document.getElementById('startTimerForm');
-        if (startTimerForm) {
-            startTimerForm.addEventListener('submit', function(e) {
-                if (window.dashboardNotesEditor && notesInput) {
-                    try {
-                        notesInput.value = window.dashboardNotesEditor.getMarkdown();
-                    } catch (err) {
-                        console.error('Failed to sync markdown editor:', err);
-                    }
-                }
-            });
-        }
     }
 });
 </script>
