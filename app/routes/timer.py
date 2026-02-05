@@ -1118,17 +1118,22 @@ def manual_entry():
         duration_seconds_override = None
 
         # Parse datetime: treat form input as user's local time, store in app timezone.
-        # Duration-only flow: use start if provided; otherwise end=now, start=end-duration.
+        # If duration + start date/time are provided: end = start + duration.
+        # If duration only (no start): end=now, start=end-duration.
         from datetime import timedelta
         try:
             if has_all_times:
                 start_time_parsed = parse_user_local_datetime(start_date, start_time, current_user)
                 end_time_parsed = parse_user_local_datetime(end_date, end_time, current_user)
-                # Only treat worked_time as an explicit duration override if user typed it.
                 if worked_time_mode == "explicit" and has_duration:
                     duration_seconds_override = worked_minutes * 60
+            elif has_duration and start_date and start_time:
+                # Combined: worked time + start date/time (user can set date and duration)
+                start_time_parsed = parse_user_local_datetime(start_date, start_time, current_user)
+                end_time_parsed = start_time_parsed + timedelta(minutes=worked_minutes)
+                duration_seconds_override = worked_minutes * 60
             else:
-                # duration-only
+                # Duration-only: no start given → end=now, start=end-duration
                 from app.models.time_entry import local_now as _local_now_db
                 end_time_parsed = _local_now_db()
                 start_time_parsed = end_time_parsed - timedelta(minutes=worked_minutes)
@@ -2479,7 +2484,6 @@ def export_time_entries_pdf():
     from sqlalchemy.orm import joinedload
     from app.utils.client_lock import enforce_locked_client_id
     from flask import abort, send_file
-    from datetime import datetime as _dt
     import io
 
     # Get filter parameters (same as time_entries_overview)
@@ -2610,17 +2614,13 @@ def export_time_entries_pdf():
                 filtered.append(entry)
         entries = filtered
 
-    # Render HTML and convert to PDF
-    generated_at = _dt.utcnow().strftime("%Y-%m-%d %H:%M UTC")
-    html = render_template("timer/time_entries_export_pdf.html", entries=entries, generated_at=generated_at)
-
-    # Prefer WeasyPrint if available (already used elsewhere in the project).
+    # Generate data-only PDF with ReportLab (table only, no page chrome).
     try:
-        from weasyprint import HTML  # type: ignore
-        pdf_bytes = HTML(string=html).write_pdf()
+        from app.utils.time_entries_pdf import build_time_entries_pdf
+        pdf_bytes = build_time_entries_pdf(entries)
     except Exception as e:
-        current_app.logger.warning("PDF export failed (WeasyPrint unavailable?): %s", e)
-        flash(_("PDF export is not available on this system."), "error")
+        current_app.logger.warning("Time entries PDF export failed: %s", e, exc_info=True)
+        flash(_("PDF export failed: %(error)s", error=str(e)), "error")
         return redirect(url_for("timer.time_entries_overview"))
 
     # Filename includes optional date range

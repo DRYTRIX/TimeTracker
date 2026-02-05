@@ -60,7 +60,7 @@
                 <select name="user_id" id="user_id" class="form-input">
                     <option value="">{{ _('All Users') }}</option>
                     {% for user in users %}
-                    <option value="{{ user.id }}" {% if filters.user_id == user.id %}selected{% endif %}>{{ user.display_name }}</option>
+                    <option value="{{ user.id }}" {% if filters.user_id is not none and (filters.user_id|string) == (user.id|string) %}selected{% endif %}>{{ user.display_name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -420,10 +420,11 @@ function confirmBulkDelete() {
         // Explicitly read filter fields that may be hidden (e.g. client_select uses hidden input when locked)
         ['user_id', 'project_id', 'client_id', 'start_date', 'end_date', 'paid', 'billable'].forEach(function(name) {
             const el = form.querySelector('[name="' + name + '"]');
-            if (el && (el.tagName === 'SELECT' || el.type === 'hidden' || el.type === 'date' || el.type === 'text')) {
-                const val = (el.value || '').trim();
-                if (val) params[name] = val;
-            }
+            if (!el || !(el.tagName === 'SELECT' || el.type === 'hidden' || el.type === 'date' || el.type === 'text')) return;
+            // Skip client_id when auto-selected (single/locked client) - user didn't explicitly choose it
+            if (name === 'client_id' && el.getAttribute('data-auto-client') === 'true') return;
+            const val = (el.value || '').trim();
+            if (val) params[name] = val;
         });
         
         // Collect remaining from FormData (custom_field_*, etc.)
@@ -438,9 +439,15 @@ function confirmBulkDelete() {
         form.querySelectorAll('select, input[type="hidden"], input[type="date"], input[type="text"]').forEach(function(el) {
             const name = el.name;
             if (!name || params[name] !== undefined) return;
+            if (name === 'client_id' && el.getAttribute('data-auto-client') === 'true') return;
             const val = (el.value || '').trim();
             if (val) params[name] = val;
         });
+        // Remove client_id when it was auto-selected (single/locked client) - user didn't explicitly choose it
+        const clientEl = form.querySelector('[name="client_id"]');
+        if (clientEl && clientEl.getAttribute('data-auto-client') === 'true' && 'client_id' in params) {
+            delete params.client_id;
+        }
         
         if (typeof console !== 'undefined' && console.debug) {
             console.debug('[Time Entries] Filter params:', params);
