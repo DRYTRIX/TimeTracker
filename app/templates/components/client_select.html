@@ -3,16 +3,16 @@
 {% set input_id = id or name %}
 {% set locked_client = get_locked_client() %}
 {% if locked_client %}
-    <input type="hidden" name="{{ name }}" id="{{ input_id }}" value="{{ locked_client.id }}">
+    <input type="hidden" name="{{ name }}" id="{{ input_id }}" value="{{ locked_client.id }}" data-auto-client="true">
     <input type="text" class="form-input bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-75"
            value="{{ locked_client.name }}" disabled readonly aria-label="{{ _('Client (auto-selected)') }}">
 {% elif (not only_one_client) and (single_client is none) and clients and (clients|length == 1) %}
     {# Fallback: if route didn't pass only_one_client/single_client, infer it from the list #}
-    <input type="hidden" name="{{ name }}" id="{{ input_id }}" value="{{ clients[0].id }}">
+    <input type="hidden" name="{{ name }}" id="{{ input_id }}" value="{{ clients[0].id }}" data-auto-client="true">
     <input type="text" class="form-input bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-75"
            value="{{ clients[0].name }}" disabled readonly aria-label="{{ _('Client (auto-selected)') }}">
 {% elif only_one_client and single_client %}
-    <input type="hidden" name="{{ name }}" id="{{ input_id }}" value="{{ single_client.id }}">
+    <input type="hidden" name="{{ name }}" id="{{ input_id }}" value="{{ single_client.id }}" data-auto-client="true">
     <input type="text" class="form-input bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-75" 
            value="{{ single_client.name }}" disabled readonly aria-label="{{ _('Client (auto-selected)') }}">
 {% else %}
