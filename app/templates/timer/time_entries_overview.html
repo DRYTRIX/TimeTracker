@@ -29,7 +29,8 @@
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold">{{ _('Filters') }}</h2>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs text-text-muted-light dark:text-text-muted-dark self-center mr-1">{{ _('Exports use current filters') }}</span>
             <a
                 id="exportCsvBtn"
                 data-export-base="{{ url_for('timer.export_time_entries_csv') }}"
@@ -64,6 +65,18 @@
                 </select>
             </div>
             {% endif %}
+            <div class="lg:col-span-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Start Date') }}</label>
+                        <input type="date" name="start_date" id="start_date" value="{{ filters.start_date or '' }}" class="form-input">
+                    </div>
+                    <div>
+                        <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('End Date') }}</label>
+                        <input type="date" name="end_date" id="end_date" value="{{ filters.end_date or '' }}" class="form-input">
+                    </div>
+                </div>
+            </div>
             <div>
                 <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Project') }}</label>
                 <select name="project_id" id="project_id" class="form-input">
@@ -76,18 +89,6 @@
             <div>
                 <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Client') }}</label>
                 {{ client_select('client_id', clients, selected_id=filters.client_id, required=False, only_one_client=only_one_client|default(false), single_client=single_client) }}
-            </div>
-            <div class="lg:col-span-2">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Start Date') }}</label>
-                        <input type="date" name="start_date" id="start_date" value="{{ filters.start_date or '' }}" class="form-input">
-                    </div>
-                    <div>
-                        <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('End Date') }}</label>
-                        <input type="date" name="end_date" id="end_date" value="{{ filters.end_date or '' }}" class="form-input">
-                    </div>
-                </div>
             </div>
             <div>
                 <label for="paid" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Paid Status') }}</label>
@@ -416,17 +417,25 @@ function confirmBulkDelete() {
             }
         }
         
-        // Collect from FormData; also explicitly read select/input values as fallback for edge cases
+        // Explicitly read filter fields that may be hidden (e.g. client_select uses hidden input when locked)
+        ['user_id', 'project_id', 'client_id', 'start_date', 'end_date', 'paid', 'billable'].forEach(function(name) {
+            const el = form.querySelector('[name="' + name + '"]');
+            if (el && (el.tagName === 'SELECT' || el.type === 'hidden' || el.type === 'date' || el.type === 'text')) {
+                const val = (el.value || '').trim();
+                if (val) params[name] = val;
+            }
+        });
+        
+        // Collect remaining from FormData (custom_field_*, etc.)
         const formData = new FormData(form);
         for (const [key, value] of formData.entries()) {
-            if (key === 'search') continue;
             const trimmed = String(value || '').trim();
             if (trimmed && trimmed !== '') {
                 params[key] = trimmed;
             }
         }
-        // Fallback: ensure selects and hidden inputs are captured (client_select, etc.)
-        form.querySelectorAll('select, input[type="hidden"]').forEach(function(el) {
+        // Fallback: ensure any select or hidden input not yet in params is included
+        form.querySelectorAll('select, input[type="hidden"], input[type="date"], input[type="text"]').forEach(function(el) {
             const name = el.name;
             if (!name || params[name] !== undefined) return;
             const val = (el.value || '').trim();
