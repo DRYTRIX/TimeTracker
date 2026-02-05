@@ -5631,7 +5631,24 @@ table tr:last-child td {
         // Serialize the stage
         const stageJson = stage.toJSON();
         
-        // CRITICAL FIX: Manually inject imageUrl into serialized JSON for decorative images
+        // CRITICAL FIX: Explicitly inject name and imageUrl into serialized JSON for decorative images
+        // by matching live layer children to JSON by index (Konva may not serialize custom attrs)
+        const layerJson = stageJson.children && stageJson.children[0];
+        if (layer && layerJson && layerJson.children && layer.children) {
+            for (let i = 0; i < layer.children.length; i++) {
+                const layerChild = layer.children[i];
+                const jsonChild = layerJson.children[i];
+                if (!jsonChild) continue;
+                const name = layerChild.getAttr ? layerChild.getAttr('name') : (layerChild.attrs && layerChild.attrs.name);
+                if (name && (name === 'decorative-image' || (typeof name === 'string' && name.includes('decorative-image')))) {
+                    if (!jsonChild.attrs) jsonChild.attrs = {};
+                    jsonChild.attrs.name = 'decorative-image';
+                    jsonChild.attrs.imageUrl = (layerChild.getAttr ? layerChild.getAttr('imageUrl') : (layerChild.attrs && layerChild.attrs.imageUrl)) || '';
+                }
+            }
+        }
+        
+        // Manually inject imageUrl into serialized JSON for decorative images (backup pass)
         // Konva's toJSON() might not include custom attributes, so we need to add them manually
         let decorativeImageIndex = 0;
         function ensureImageUrlInJson(node, parentKey = '') {

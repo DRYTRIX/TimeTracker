@@ -1271,6 +1271,11 @@ def manual_entry():
 
         return redirect(url_for("main.dashboard"))
 
+    # Pre-fill start/end date with today in user's timezone (Issue #489)
+    from app.utils.timezone import now_in_user_timezone
+    today_local = now_in_user_timezone(current_user)
+    today_str = today_local.strftime("%Y-%m-%d")
+
     return render_template(
         "timer/manual_entry.html",
         projects=active_projects,
@@ -1281,6 +1286,8 @@ def manual_entry():
         selected_client_id=client_id,
         selected_task_id=task_id,
         template_data=template_data,
+        prefill_start_date=today_str,
+        prefill_end_date=today_str,
     )
 
 
@@ -1304,6 +1311,10 @@ def manual_entry_for_project(project_id):
     only_one_client = len(active_clients) == 1
     single_client = active_clients[0] if only_one_client else None
 
+    from app.utils.timezone import now_in_user_timezone
+    today_local = now_in_user_timezone(current_user)
+    today_str = today_local.strftime("%Y-%m-%d")
+
     return render_template(
         "timer/manual_entry.html",
         projects=active_projects,
@@ -1312,6 +1323,8 @@ def manual_entry_for_project(project_id):
         single_client=single_client,
         selected_project_id=project_id,
         selected_task_id=task_id,
+        prefill_start_date=today_str,
+        prefill_end_date=today_str,
     )
 
 

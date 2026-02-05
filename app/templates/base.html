@@ -175,48 +175,48 @@
         {% endif %}
     </script>
     
-    <!-- i18n translations for JavaScript -->
+    <!-- i18n translations for JavaScript (use tojson to avoid syntax errors from quotes/ampersands in translations) -->
     <script>
         window.i18n = {
             toast: {
-                success: '{{ _("Success") }}',
-                error: '{{ _("Error") }}',
-                warning: '{{ _("Warning") }}',
-                info: '{{ _("Information") }}'
+                success: {{ _("Success")|tojson }},
+                error: {{ _("Error")|tojson }},
+                warning: {{ _("Warning")|tojson }},
+                info: {{ _("Information")|tojson }}
             },
             common: {
-                loading: '{{ _("Loading...") }}',
-                saving: '{{ _("Saving...") }}',
-                deleting: '{{ _("Deleting...") }}',
-                cancel: '{{ _("Cancel") }}',
-                confirm: '{{ _("Confirm") }}',
-                close: '{{ _("Close") }}',
-                save: '{{ _("Save") }}',
-                delete: '{{ _("Delete") }}',
-                edit: '{{ _("Edit") }}',
-                add: '{{ _("Add") }}',
-                remove: '{{ _("Remove") }}',
-                yes: '{{ _("Yes") }}',
-                no: '{{ _("No") }}',
-                ok: '{{ _("OK") }}'
+                loading: {{ _("Loading...")|tojson }},
+                saving: {{ _("Saving...")|tojson }},
+                deleting: {{ _("Deleting...")|tojson }},
+                cancel: {{ _("Cancel")|tojson }},
+                confirm: {{ _("Confirm")|tojson }},
+                close: {{ _("Close")|tojson }},
+                save: {{ _("Save")|tojson }},
+                delete: {{ _("Delete")|tojson }},
+                edit: {{ _("Edit")|tojson }},
+                add: {{ _("Add")|tojson }},
+                remove: {{ _("Remove")|tojson }},
+                yes: {{ _("Yes")|tojson }},
+                no: {{ _("No")|tojson }},
+                ok: {{ _("OK")|tojson }}
             },
             messages: {
-                confirmDelete: '{{ _("Are you sure you want to delete this?") }}',
-                unsavedChanges: '{{ _("You have unsaved changes. Are you sure you want to leave?") }}',
-                operationFailed: '{{ _("Operation failed") }}',
-                operationSuccess: '{{ _("Operation completed successfully") }}',
-                noItemsSelected: '{{ _("No items selected") }}',
-                invalidInput: '{{ _("Invalid input") }}',
-                requiredField: '{{ _("This field is required") }}',
-                noActiveTimer: '{{ _("No active timer") }}',
-                timerStopped: '{{ _("Timer stopped") }}',
-                timerStopFailed: '{{ _("Failed to stop timer") }}',
-                errorStoppingTimer: '{{ _("Error stopping timer") }}',
-                noFormToSave: '{{ _("No form to save") }}',
-                noTimerFound: '{{ _("No timer found") }}',
-                timerStoppedInactivity: '{{ _("Timer stopped due to inactivity") }}',
-                selectProjectOrClient: '{{ _("Please select either a project or a client") }}',
-                endTimeAfterStartTime: '{{ _("End time must be after start time") }}'
+                confirmDelete: {{ _("Are you sure you want to delete this?")|tojson }},
+                unsavedChanges: {{ _("You have unsaved changes. Are you sure you want to leave?")|tojson }},
+                operationFailed: {{ _("Operation failed")|tojson }},
+                operationSuccess: {{ _("Operation completed successfully")|tojson }},
+                noItemsSelected: {{ _("No items selected")|tojson }},
+                invalidInput: {{ _("Invalid input")|tojson }},
+                requiredField: {{ _("This field is required")|tojson }},
+                noActiveTimer: {{ _("No active timer")|tojson }},
+                timerStopped: {{ _("Timer stopped")|tojson }},
+                timerStopFailed: {{ _("Failed to stop timer")|tojson }},
+                errorStoppingTimer: {{ _("Error stopping timer")|tojson }},
+                noFormToSave: {{ _("No form to save")|tojson }},
+                noTimerFound: {{ _("No timer found")|tojson }},
+                timerStoppedInactivity: {{ _("Timer stopped due to inactivity")|tojson }},
+                selectProjectOrClient: {{ _("Please select either a project or a client")|tojson }},
+                endTimeAfterStartTime: {{ _("End time must be after start time")|tojson }}
             }
         };
     </script>

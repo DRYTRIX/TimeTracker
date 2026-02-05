@@ -54,7 +54,8 @@
                 </div>
                 <div>
                     <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client') }}</label>
-                    {{ client_select('client_id', clients, selected_id=selected_client_id, required=False, only_one_client=only_one_client|default(false), single_client=single_client) }}
+                    {# Single client: show as normal dropdown, pre-select only when client_id is in URL (parameter) #}
+                    {{ client_select('client_id', clients, selected_id=selected_client_id, required=False, only_one_client=false, single_client=none) }}
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select either a project or a client') }}</p>
                 </div>
             </div>
@@ -252,21 +253,14 @@ document.addEventListener('DOMContentLoaded', async function(){
     const taskSelect = document.getElementById('task_id');
     const noTaskText = {{ _('No task')|tojson }};
     const failedToLoadTasksText = {{ _('Failed to load tasks')|tojson }};
-    const tasksUrlTemplate = {{ url_for('api.get_project_tasks', project_id=0)|tojson }};
-    
-    // Single-client mode: when project cleared, restore client (Issue #467)
-    const onlyOneClient = {{ 'true' if only_one_client else 'false' }};
-    const singleClientId = {{ ('"' ~ single_client.id ~ '"') if single_client else 'null' }};
+    const scriptRoot = {{ request.script_root|default('')|tojson }};
 
-    // Task loading: attach when project and task exist (independent of client)
+    // Task loading: when project is selected, clear client (mutual exclusivity) and load tasks
     if (projectSelect && taskSelect) {
         projectSelect.addEventListener('change', function() {
-            if (this.value && clientSelect) {
-                clientSelect.value = '';
-            } else if (onlyOneClient && singleClientId) {
-                clientSelect.value = singleClientId;
-            }
-            loadTasks(this.value);
+            const projectId = this.value;
+            if (clientSelect) clientSelect.value = '';
+            loadTasks(projectId);
         });
     }
 
@@ -284,11 +278,9 @@ document.addEventListener('DOMContentLoaded', async function(){
     }
     
     function buildTasksUrl(projectId) {
-        // url_for provides correct SCRIPT_NAME / reverse-proxy prefix handling.
-        // We generate a template with project_id=0 and replace the tail segment.
         const pid = String(projectId || '').trim();
-        if (!pid) return tasksUrlTemplate;
-        return String(tasksUrlTemplate).replace(/\/0\/tasks$/, `/${encodeURIComponent(pid)}/tasks`);
+        if (!pid) return '';
+        return (scriptRoot || '') + '/api/projects/' + encodeURIComponent(pid) + '/tasks';
     }
 
     async function loadTasks(projectId){
@@ -310,9 +302,9 @@ document.addEventListener('DOMContentLoaded', async function(){
 
             // Detect auth redirect: got HTML instead of JSON (session expired -> login page) (Issue #489)
             if (!isJson) {
-                const sessionExpiredMsg = '{{ _("Session may have expired. Please refresh the page and try again.") }}';
+                const sessionExpiredMsg = {{ _("Session may have expired. Please refresh the page and try again.")|tojson }};
                 if (window.toastManager && typeof window.toastManager.error === 'function') {
-                    window.toastManager.error(sessionExpiredMsg, '{{ _("Error") }}', 6000);
+                    window.toastManager.error(sessionExpiredMsg, {{ _("Error")|tojson }}, 6000);
                 } else {
                     alert(sessionExpiredMsg);
                 }
@@ -320,7 +312,20 @@ document.addEventListener('DOMContentLoaded', async function(){
                 taskSelect.disabled = true;
                 return;
             }
-            if (!resp.ok) throw new Error(failedToLoadTasksText + ' (HTTP ' + resp.status + ')');
+            if (!resp.ok) {
+                if (resp.status === 404) {
+                    const projectNotFoundText = {{ _('Project not found or inactive')|tojson }};
+                    if (window.toastManager && typeof window.toastManager.error === 'function') {
+                        window.toastManager.error(projectNotFoundText, {{ _("Error")|tojson }}, 5000);
+                    } else {
+                        alert(projectNotFoundText);
+                    }
+                    taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+                    taskSelect.disabled = true;
+                    return;
+                }
+                throw new Error(failedToLoadTasksText + ' (HTTP ' + resp.status + ')');
+            }
             const data = await resp.json();
             const tasks = Array.isArray(data?.tasks) ? data.tasks : [];
             taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
@@ -343,7 +348,7 @@ document.addEventListener('DOMContentLoaded', async function(){
             try {
                 const msg = e && e.message ? e.message : (failedToLoadTasksText || 'Failed to load tasks');
                 if (window.toastManager && typeof window.toastManager.error === 'function') {
-                    window.toastManager.error(msg, '{{ _("Error") }}', 5000);
+                    window.toastManager.error(msg, {{ _("Error")|tojson }}, 5000);
                 } else if (window.toastManager && typeof window.toastManager.show === 'function') {
                     window.toastManager.show(msg, 'error');
                 } else {
@@ -435,9 +440,9 @@ document.addEventListener('DOMContentLoaded', async function(){
                 }
                 
                         // Show error message using toast notification
-                        const errorMsg = '{{ _("Please select either a project or a client") }}';
+                        const errorMsg = {{ _("Please select either a project or a client")|tojson }};
                         if (window.toastManager && typeof window.toastManager.error === 'function') {
-                            window.toastManager.error(errorMsg, '{{ _("Error") }}', 5000);
+                            window.toastManager.error(errorMsg, {{ _("Error")|tojson }}, 5000);
                         } else {
                             alert(errorMsg);
                         }
@@ -465,9 +470,9 @@ document.addEventListener('DOMContentLoaded', async function(){
                     submitBtn.innerHTML = originalButtonHTML;
                     submitBtn.disabled = false;
                 }
-                const errorMsg = '{{ _("Please provide either start/end date+time or a worked time duration (HH:MM).") }}';
+                const errorMsg = {{ _("Please provide either start/end date+time or a worked time duration (HH:MM).")|tojson }};
                 if (window.toastManager && typeof window.toastManager.error === 'function') {
-                    window.toastManager.error(errorMsg, '{{ _("Error") }}', 5000);
+                    window.toastManager.error(errorMsg, {{ _("Error")|tojson }}, 5000);
                 } else {
                     alert(errorMsg);
                 }
@@ -491,9 +496,9 @@ document.addEventListener('DOMContentLoaded', async function(){
                         }
                         
                         // Show error message using toast notification
-                        const errorMsg = '{{ _("End time must be after start time") }}';
+                        const errorMsg = {{ _("End time must be after start time")|tojson }};
                         if (window.toastManager && typeof window.toastManager.error === 'function') {
-                            window.toastManager.error(errorMsg, '{{ _("Error") }}', 5000);
+                            window.toastManager.error(errorMsg, {{ _("Error")|tojson }}, 5000);
                         } else {
                             alert(errorMsg);
                         }
@@ -613,7 +618,7 @@ document.addEventListener('DOMContentLoaded', function() {
             previewStyle: 'vertical',
             usageStatistics: false,
             hideModeSwitch: false,
-            placeholder: '{{ _("What did you work on?") }}',
+            placeholder: {{ _("What did you work on?")|tojson }},
             theme: theme,
             toolbarItems: [
                 ['heading', 'bold', 'italic', 'strike'],
@@ -818,7 +823,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             if (validFiles.length === 0) {
-                alert('{{ _("No valid image files selected. Please select PNG, JPG, GIF, or WebP images.") }}');
+                alert({{ _("No valid image files selected. Please select PNG, JPG, GIF, or WebP images.")|tojson }});
                 fileInput.value = '';
                 return;
             }
@@ -830,8 +835,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Show loading feedback
             const fileCount = validFiles.length;
             const loadingMsg = fileCount > 1 ? 
-                `{{ _("Uploading") }} ${fileCount} {{ _("images") }}...` : 
-                '{{ _("Uploading image") }}...';
+                        ({{ _("Uploading")|tojson }} + ' ' + fileCount + ' ' + {{ _("images")|tojson }} + '...') :
+                {{ _("Uploading image")|tojson }} + '...';
             
             // Try to show a temporary loading indicator (if toast/notification system exists)
             let loadingIndicator = null;
@@ -877,8 +882,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Show success message
                     const successMsg = data.urls.length > 1 ? 
-                        `{{ _("Successfully uploaded") }} ${data.urls.length} {{ _("images") }}` : 
-                        '{{ _("Image uploaded successfully") }}';
+                        ({{ _("Successfully uploaded")|tojson }} + ' ' + data.urls.length + ' ' + {{ _("images")|tojson }}) :
+                        {{ _("Image uploaded successfully")|tojson }};
                     
                     if (loadingIndicator && typeof loadingIndicator.update === 'function') {
                         loadingIndicator.update(successMsg, 'success');
@@ -888,7 +893,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Show warnings if any
                     if (data.warnings && data.warnings.length > 0) {
                         console.warn('Some images failed to upload:', data.warnings);
-                        const warningMsg = `{{ _("Warning") }}: ${data.warnings.length} {{ _("image(s) failed to upload") }}`;
+                        const warningMsg = {{ _("Warning")|tojson }} + ': ' + data.warnings.length + ' ' + {{ _("image(s) failed to upload")|tojson }};
                         if (window.showToast || window.showNotification) {
                             const showToast = window.showToast || window.showNotification;
                             showToast(warningMsg, 'warning');
@@ -897,7 +902,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 } else {
-                    const errorMsg = data.error || '{{ _("Failed to upload images. Please try again.") }}';
+                    const errorMsg = data.error || {{ _("Failed to upload images. Please try again.")|tojson }};
                     console.error('Upload failed', data);
                     if (loadingIndicator && typeof loadingIndicator.remove === 'function') {
                         loadingIndicator.remove();
@@ -909,7 +914,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (loadingIndicator && typeof loadingIndicator.remove === 'function') {
                     loadingIndicator.remove();
                 }
-                alert('{{ _("Failed to upload images. Please check your connection and try again.") }}');
+                alert({{ _("Failed to upload images. Please check your connection and try again.")|tojson }});
             }
             
             // Reset file input

@@ -244,12 +244,12 @@ const clientSelectEl = document.getElementById('client_id');
 const taskSelectEl = document.getElementById('task_id');
 const noTaskText = {{ _('No task')|tojson }};
 const failedToLoadTasksText = {{ _('Failed to load tasks')|tojson }};
-const tasksApiUrlTemplate = {{ url_for('api.get_project_tasks', project_id=0)|tojson }};
+const scriptRoot = {{ request.script_root|default('')|tojson }};
 
 function buildTasksUrl(projectId) {
     const pid = String(projectId || '').trim();
-    if (!pid) return tasksApiUrlTemplate;
-    return String(tasksApiUrlTemplate).replace(/\/0\/tasks$/, '/' + encodeURIComponent(pid) + '/tasks');
+    if (!pid) return '';
+    return (scriptRoot || '') + '/api/projects/' + encodeURIComponent(pid) + '/tasks';
 }
 
 async function loadTasksForProject(projectId) {

@@ -14,12 +14,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const projectSelect = document.getElementById('project_id');
     const taskSelect = document.getElementById('task_id');
     const form = document.querySelector('form');
-    const tasksApiUrlTemplate = {{ url_for('api.get_project_tasks', project_id=0)|tojson }};
+    const scriptRoot = {{ request.script_root|default('')|tojson }};
 
     function buildTasksUrl(projectId) {
         const pid = String(projectId || '').trim();
-        if (!pid) return tasksApiUrlTemplate;
-        return String(tasksApiUrlTemplate).replace(/\/0\/tasks$/, '/' + encodeURIComponent(pid) + '/tasks');
+        if (!pid) return '';
+        return (scriptRoot || '') + '/api/projects/' + encodeURIComponent(pid) + '/tasks';
     }
     
     if (projectSelect && taskSelect) {
