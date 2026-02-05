@@ -95,7 +95,7 @@
                 <div>
                     <label for="worked_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Worked Time') }}</label>
                     <input type="text" name="worked_time" id="worked_time" class="form-input" inputmode="numeric" placeholder="HH:MM" autocomplete="off" value="{{ prefill_worked_time or '' }}">
-                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: enter HH:MM to log duration-only, or edit to auto-calculate end time') }}</p>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: enter HH:MM for duration. You can combine with Start Date/Time to log time on a specific day.') }}</p>
                 </div>
             </div>
 
@@ -157,13 +157,8 @@ document.addEventListener('DOMContentLoaded', async function(){
     let timeFieldsUserEdited = false;
 
     function setDurationOnlyMode(on) {
-        // Duration-only: clear and disable date/time inputs to avoid confusing auto-fill.
-        const enableTimes = !on;
-        [startDate, endDate, startTime, endTime].forEach(el => {
-            if (!el) return;
-            el.disabled = !enableTimes;
-            if (!enableTimes) el.value = '';
-        });
+        // No longer disable date/time when duration is entered: allow combined use
+        // (e.g. "2:30" + "yesterday" = 2.5h on that date). Only track mode for backend.
         if (workedTimeMode) workedTimeMode.value = on ? 'explicit' : (workedTimeMode.value || '');
     }
 
@@ -365,34 +360,25 @@ document.addEventListener('DOMContentLoaded', async function(){
         loadTasks(projectSelect.value);
     }
 
-    // Keep worked time in sync with start/end inputs
+    // Keep worked time in sync with start/end inputs (date/time stay editable so user can combine duration + date)
     if (workedTime) {
-        // If the page loads with a duration already entered, treat it as duration-only by default.
         if (String(workedTime.value || '').trim()) {
             workedTimeUserEdited = true;
             setDurationOnlyMode(true);
         }
 
-        // Initial value based on current start/end if any
         updateWorkedFromStartEnd();
 
         workedTime.addEventListener('change', function() {
             workedTimeUserEdited = true;
-            // If user is entering duration directly (or cleared times), switch to duration-only.
             const mins = parseWorkedMinutes(workedTime.value);
-            if (mins != null) {
-                setDurationOnlyMode(true);
-            }
+            if (mins != null) setDurationOnlyMode(true);
             updateEndFromStartWorked();
         });
         workedTime.addEventListener('input', function() {
-            // Mark as edited as soon as user types (still needs valid HH:MM to take effect)
             if (!suppressTimeSync) workedTimeUserEdited = true;
-            // If user starts typing duration and hasn't touched time fields, assume duration-only intent.
-            if (!suppressTimeSync && !timeFieldsUserEdited) {
-                const raw = String(workedTime.value || '').trim();
-                if (raw) setDurationOnlyMode(true);
-            }
+            const raw = String(workedTime.value || '').trim();
+            if (raw && workedTimeMode) workedTimeMode.value = 'explicit';
         });
         workedTime.addEventListener('blur', function() {
             // Normalize formatting if valid

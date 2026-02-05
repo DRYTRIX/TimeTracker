@@ -1118,17 +1118,22 @@ def manual_entry():
         duration_seconds_override = None
 
         # Parse datetime: treat form input as user's local time, store in app timezone.
-        # Duration-only flow: use start if provided; otherwise end=now, start=end-duration.
+        # If duration + start date/time are provided: end = start + duration.
+        # If duration only (no start): end=now, start=end-duration.
         from datetime import timedelta
         try:
             if has_all_times:
                 start_time_parsed = parse_user_local_datetime(start_date, start_time, current_user)
                 end_time_parsed = parse_user_local_datetime(end_date, end_time, current_user)
-                # Only treat worked_time as an explicit duration override if user typed it.
                 if worked_time_mode == "explicit" and has_duration:
                     duration_seconds_override = worked_minutes * 60
+            elif has_duration and start_date and start_time:
+                # Combined: worked time + start date/time (user can set date and duration)
+                start_time_parsed = parse_user_local_datetime(start_date, start_time, current_user)
+                end_time_parsed = start_time_parsed + timedelta(minutes=worked_minutes)
+                duration_seconds_override = worked_minutes * 60
             else:
-                # duration-only
+                # Duration-only: no start given → end=now, start=end-duration
                 from app.models.time_entry import local_now as _local_now_db
                 end_time_parsed = _local_now_db()
                 start_time_parsed = end_time_parsed - timedelta(minutes=worked_minutes)
