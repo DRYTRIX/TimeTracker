@@ -2614,10 +2614,34 @@ def export_time_entries_pdf():
                 filtered.append(entry)
         entries = filtered
 
-    # Generate data-only PDF with ReportLab (table only, no page chrome).
+    # Build filter context for the PDF report header
+    pdf_filters = {}
+    if user_id:
+        _pdf_user = User.query.get(user_id)
+        if _pdf_user:
+            pdf_filters["User"] = _pdf_user.username
+    if project_id:
+        _pdf_project = Project.query.get(project_id)
+        if _pdf_project:
+            pdf_filters["Project"] = _pdf_project.name
+    if client_id:
+        _pdf_client = Client.query.get(client_id)
+        if _pdf_client:
+            pdf_filters["Client"] = _pdf_client.name
+    if billable_filter:
+        pdf_filters["Billable"] = billable_filter
+    if paid_filter:
+        pdf_filters["Paid"] = paid_filter
+
+    # Generate professional PDF report with ReportLab.
     try:
         from app.utils.time_entries_pdf import build_time_entries_pdf
-        pdf_bytes = build_time_entries_pdf(entries)
+        pdf_bytes = build_time_entries_pdf(
+            entries,
+            start_date=start_date or None,
+            end_date=end_date or None,
+            filters=pdf_filters if pdf_filters else None,
+        )
     except Exception as e:
         current_app.logger.warning("Time entries PDF export failed: %s", e, exc_info=True)
         flash(_("PDF export failed: %(error)s", error=str(e)), "error")
