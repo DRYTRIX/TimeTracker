@@ -340,12 +340,10 @@
     }
 
     /**
-     * Check if user is typing
+     * Check if user is typing (delegates to shared utility from typing-utils.js)
      */
     function isTyping(e) {
-        const tag = (e.target && e.target.tagName || '').toLowerCase();
-        return tag === 'input' || tag === 'textarea' || tag === 'select' || 
-               (e.target && e.target.isContentEditable);
+        return window.TimeTracker && window.TimeTracker.isTyping ? window.TimeTracker.isTyping(e) : false;
     }
 
     /**

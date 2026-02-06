@@ -40,7 +40,6 @@ class SmartNotificationManager {
                 this.permissionGranted = permission === 'granted';
                 
                 if (this.permissionGranted) {
-                    console.log('Notification permission granted');
                     this.showNotification({
                         title: 'Notifications Enabled',
                         body: 'You will now receive notifications for important events',
@@ -837,5 +836,4 @@ class NotificationCenter {
 window.smartNotifications = new SmartNotificationManager();
 window.notificationCenter = new NotificationCenter(window.smartNotifications);
 
-console.log('Smart notifications initialized');
 

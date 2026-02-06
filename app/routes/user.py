@@ -8,7 +8,7 @@ from app import db
 from app.models import User, Activity
 from app.utils.db import safe_commit
 from flask_babel import gettext as _
-import pytz
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from app.utils.timezone import get_available_timezones
 
 HEX_COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
@@ -74,9 +74,9 @@ def settings():
                 else:
                     try:
                         # Validate timezone
-                        pytz.timezone(timezone)
+                        ZoneInfo(timezone)
                         current_user.timezone = timezone
-                    except pytz.exceptions.UnknownTimeZoneError:
+                    except (ZoneInfoNotFoundError, KeyError):
                         flash(_("Invalid timezone selected"), "error")
                         return redirect(url_for("user.settings"))
 
@@ -197,9 +197,9 @@ def update_preferences():
                 current_user.timezone = None
             else:
                 try:
-                    pytz.timezone(tz_value)
+                    ZoneInfo(tz_value)
                     current_user.timezone = tz_value
-                except pytz.exceptions.UnknownTimeZoneError:
+                except (ZoneInfoNotFoundError, KeyError):
                     return jsonify({"error": "Invalid timezone"}), 400
 
         for key, attr in (

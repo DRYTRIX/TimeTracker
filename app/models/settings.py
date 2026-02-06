@@ -460,7 +460,8 @@ class Settings(db.Model):
                 log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".cursor", "debug.log")
                 with open(log_path, "a", encoding="utf-8") as f:
                     f.write(json.dumps(log_data) + "\n")
-            except: pass
+            except (OSError, IOError, TypeError, ValueError):
+                pass
             # #endregion
             if settings:
                 return settings
@@ -545,7 +546,8 @@ class Settings(db.Model):
             log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".cursor", "debug.log")
             with open(log_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(log_data) + "\n")
-        except: pass
+        except (OSError, IOError, TypeError, ValueError):
+            pass
         # #endregion
         return cls()
 

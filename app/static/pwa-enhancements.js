@@ -36,8 +36,6 @@ class PWAEnhancements {
             const registration = await navigator.serviceWorker.register('/static/service-worker.js');
             this.serviceWorkerRegistration = registration;
             
-            console.log('Service Worker registered:', registration);
-
             // Listen for updates
             registration.addEventListener('updatefound', () => {
                 const newWorker = registration.installing;
@@ -134,7 +132,6 @@ class PWAEnhancements {
 
         // Listen for app installed
         window.addEventListener('appinstalled', () => {
-            console.log('PWA installed');
             this.hideInstallButton();
             deferredPrompt = null;
         });
@@ -154,7 +151,6 @@ class PWAEnhancements {
         button.addEventListener('click', async () => {
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
-            console.log(`User response to install prompt: ${outcome}`);
             this.hideInstallButton();
             deferredPrompt = null;
         });
@@ -180,7 +176,6 @@ class PWAEnhancements {
                     
                     // Only subscribe if VAPID key is available and valid
                     if (!vapidKey || vapidKey.trim() === '') {
-                        console.log('Push notifications: VAPID public key not configured, skipping subscription');
                         return;
                     }
                     

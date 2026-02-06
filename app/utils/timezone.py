@@ -1,6 +1,6 @@
 import os
-import pytz
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo, available_timezones, ZoneInfoNotFoundError
 from functools import lru_cache
 from flask import current_app
 
@@ -8,7 +8,7 @@ from flask import current_app
 @lru_cache()
 def get_available_timezones():
     """Return a cached, alphabetically sorted list of common timezones."""
-    return tuple(sorted(pytz.common_timezones))
+    return tuple(sorted(available_timezones()))
 
 
 def _get_authenticated_user(user=None):
@@ -68,10 +68,10 @@ def get_timezone_obj():
     """Get timezone object for the configured application timezone."""
     tz_name = get_app_timezone()
     try:
-        return pytz.timezone(tz_name)
-    except pytz.exceptions.UnknownTimeZoneError:
+        return ZoneInfo(tz_name)
+    except (ZoneInfoNotFoundError, KeyError):
         # Fallback to UTC if timezone is invalid
-        return pytz.UTC
+        return ZoneInfo("UTC")
 
 
 def get_user_timezone_name(user=None):
@@ -83,9 +83,9 @@ def get_user_timezone_name(user=None):
     timezone_name = getattr(resolved_user, "timezone", None)
     if timezone_name:
         try:
-            pytz.timezone(timezone_name)
+            ZoneInfo(timezone_name)
             return timezone_name
-        except pytz.exceptions.UnknownTimeZoneError:
+        except (ZoneInfoNotFoundError, KeyError):
             try:
                 current_app.logger.warning(
                     "User %s has invalid timezone '%s'. Falling back to app timezone.",
@@ -99,12 +99,12 @@ def get_user_timezone_name(user=None):
 
 
 def get_timezone_for_user(user=None):
-    """Get pytz timezone object respecting the user's preference when available."""
+    """Get timezone object respecting the user's preference when available."""
     timezone_name = get_user_timezone_name(user)
     if timezone_name:
         try:
-            return pytz.timezone(timezone_name)
-        except pytz.exceptions.UnknownTimeZoneError:
+            return ZoneInfo(timezone_name)
+        except (ZoneInfoNotFoundError, KeyError):
             pass
     return get_timezone_obj()
 
@@ -129,21 +129,16 @@ def local_now():
 
 
 def _localize_with_timezone(dt, tz):
-    """Localize a naive datetime with the given pytz timezone, handling edge cases."""
+    """Localize a naive datetime with the given zoneinfo timezone, handling edge cases.
+
+    For ambiguous times (e.g. fall-back), fold=0 selects the first (DST) occurrence
+    and fold=1 selects the second (standard-time) occurrence.  We prefer standard time.
+    """
     if dt.tzinfo is not None:
         return dt.astimezone(tz)
 
-    try:
-        return tz.localize(dt)
-    except pytz.AmbiguousTimeError:
-        # Prefer standard time when ambiguous
-        return tz.localize(dt, is_dst=False)
-    except pytz.NonExistentTimeError:
-        # Fallback to DST when the time does not exist (typically spring forward)
-        return tz.localize(dt, is_dst=True)
-    except Exception:
-        # Fallback: attach tzinfo directly (may be inaccurate around DST boundaries)
-        return dt.replace(tzinfo=tz)
+    # Use fold=1 to prefer standard time for ambiguous datetimes
+    return dt.replace(tzinfo=tz, fold=1)
 
 
 def convert_app_datetime_to_user(dt, user=None):
@@ -212,9 +207,9 @@ def parse_local_datetime(date_str, time_str):
         # Parse as naive datetime (assumed to be in local timezone)
         naive_dt = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M")
 
-        # Localize to application timezone
+        # Localize to application timezone using zoneinfo
         tz = get_timezone_obj()
-        local_dt = tz.localize(naive_dt)
+        local_dt = _localize_with_timezone(naive_dt, tz)
 
         # Convert to UTC for storage
         return local_dt.astimezone(timezone.utc)
@@ -277,10 +272,10 @@ def get_timezone_offset():
 def get_timezone_offset_for_timezone(tz_name):
     """Get timezone offset for a specific timezone name."""
     try:
-        tz = pytz.timezone(tz_name)
+        tz = ZoneInfo(tz_name)
         now = datetime.now(timezone.utc)
         local_now = now.astimezone(tz)
         offset = local_now.utcoffset()
         return offset.total_seconds() / 3600 if offset else 0
-    except pytz.exceptions.UnknownTimeZoneError:
+    except (ZoneInfoNotFoundError, KeyError):
         return 0

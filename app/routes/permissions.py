@@ -5,7 +5,7 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, limiter
 from app.models import Permission, Role, User
-from app.routes.admin import admin_required
+from app.utils.permissions import admin_or_permission_required
 from app.utils.db import safe_commit
 from app.utils.permissions_seed import sync_permissions_and_roles
 from app.utils.module_registry import ModuleRegistry, ModuleCategory
@@ -44,13 +44,9 @@ def _sanitize_hidden_module_ids(module_ids):
 
 @permissions_bp.route("/admin/roles")
 @login_required
-@admin_required
+@admin_or_permission_required("manage_roles")
 def list_roles():
     """List all roles"""
-    # Check if user has permission to view roles
-    if not current_user.is_admin and not current_user.has_permission("view_permissions"):
-        flash(_("You do not have permission to access this page"), "error")
-        return redirect(url_for("main.dashboard"))
 
     # Auto-sync permissions and roles to ensure they're up to date
     sync_permissions_and_roles()
@@ -61,7 +57,7 @@ def list_roles():
 
 @permissions_bp.route("/admin/roles/create", methods=["GET", "POST"])
 @login_required
-@admin_required
+@admin_or_permission_required("manage_roles")
 def create_role():
     """Create a new role"""
     # Check if user has permission to manage roles
@@ -132,7 +128,7 @@ def create_role():
 
 @permissions_bp.route("/admin/roles/<int:role_id>/edit", methods=["GET", "POST"])
 @login_required
-@admin_required
+@admin_or_permission_required("manage_roles")
 def edit_role(role_id):
     """Edit an existing role"""
     # Check if user has permission to manage roles
@@ -221,7 +217,7 @@ def edit_role(role_id):
 
 @permissions_bp.route("/admin/roles/<int:role_id>")
 @login_required
-@admin_required
+@admin_or_permission_required("manage_roles")
 def view_role(role_id):
     """View role details"""
     # Check if user has permission to view roles
@@ -236,7 +232,7 @@ def view_role(role_id):
 
 @permissions_bp.route("/admin/roles/<int:role_id>/delete", methods=["POST"])
 @login_required
-@admin_required
+@admin_or_permission_required("manage_roles")
 @limiter.limit("10 per minute")
 def delete_role(role_id):
     """Delete a role"""
@@ -270,7 +266,7 @@ def delete_role(role_id):
 
 @permissions_bp.route("/admin/permissions")
 @login_required
-@admin_required
+@admin_or_permission_required("manage_roles")
 def list_permissions():
     """List all permissions"""
     # Check if user has permission to view permissions
@@ -297,7 +293,7 @@ def list_permissions():
 
 @permissions_bp.route("/admin/users/<int:user_id>/roles", methods=["GET", "POST"])
 @login_required
-@admin_required
+@admin_or_permission_required("manage_roles")
 def manage_user_roles(user_id):
     """Manage roles for a specific user"""
     # Check if user has permission to manage user roles
@@ -389,7 +385,7 @@ def get_user_permissions(user_id):
 
 @permissions_bp.route("/api/roles/<int:role_id>/permissions")
 @login_required
-@admin_required
+@admin_or_permission_required("manage_roles")
 def get_role_permissions(role_id):
     """API endpoint to get role's permissions"""
     role = Role.query.get_or_404(role_id)

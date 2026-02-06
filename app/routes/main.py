@@ -2,7 +2,6 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from app.models import User, Project, TimeEntry, Settings, WeeklyTimeGoal, TimeEntryTemplate, Activity
 from datetime import datetime, timedelta
-import pytz
 from app import db, track_page_view
 from sqlalchemy import text
 from app.models.time_entry import local_now

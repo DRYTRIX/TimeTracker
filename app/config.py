@@ -6,7 +6,9 @@ class Config:
     """Base configuration class"""
 
     # Flask settings
+    # In production, SECRET_KEY MUST be set via the SECRET_KEY environment variable.
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+    _SECRET_KEY_IS_DEFAULT = SECRET_KEY == "dev-secret-key-change-in-production"
     FLASK_ENV = os.getenv("FLASK_ENV", "production")
     FLASK_DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
 
@@ -206,6 +208,25 @@ class ProductionConfig(Config):
     REMEMBER_COOKIE_SECURE = os.getenv("REMEMBER_COOKIE_SECURE", "true").lower() == "true"
     WTF_CSRF_ENABLED = os.getenv("WTF_CSRF_ENABLED", "true").lower() == "true"
     WTF_CSRF_SSL_STRICT = os.getenv("WTF_CSRF_SSL_STRICT", "true").lower() == "true"
+
+    def __init__(self):
+        # Enforce that SECRET_KEY is set via environment in production
+        if self._SECRET_KEY_IS_DEFAULT:
+            import warnings
+            warnings.warn(
+                "SECURITY WARNING: SECRET_KEY is using the default development value. "
+                "Set the SECRET_KEY environment variable to a secure random value in production.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+        if len(self.SECRET_KEY) < 32:
+            import warnings
+            warnings.warn(
+                "SECURITY WARNING: SECRET_KEY is too short. "
+                "Use a key of at least 32 characters for production.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
 
 
 # Configuration mapping

@@ -16,6 +16,24 @@ class ClientService:
     def __init__(self):
         self.client_repo = ClientRepository()
 
+    def get_by_id(self, client_id: int) -> Optional[Client]:
+        """
+        Get a client by its ID.
+
+        Returns:
+            Client instance or None if not found
+        """
+        return self.client_repo.get_by_id(client_id)
+
+    def get_by_name(self, name: str) -> Optional[Client]:
+        """
+        Get a client by name.
+
+        Returns:
+            Client instance or None if not found
+        """
+        return self.client_repo.get_by_name(name)
+
     def create_client(
         self,
         name: str,

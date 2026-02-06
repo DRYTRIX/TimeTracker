@@ -47,7 +47,7 @@
             >
                 <i class="fas fa-file-pdf mr-2"></i>{{ _('Export PDF') }}
             </a>
-            <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()">
+            <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" aria-label="{{ _('Toggle filters') }}">
                 <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
             </button>
         </div>
@@ -164,10 +164,10 @@
                 <textarea id="bulkDeleteReasonInput" class="form-input w-full" rows="3" placeholder="{{ _('e.g., Duplicate entry, incorrect time, etc.') }}"></textarea>
             </div>
             <div class="flex justify-end gap-3 mt-6">
-                <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" onclick="closeBulkDeleteDialog()">
+                <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" id="closeBulkDeleteBtn">
                     {{ _('Cancel') }}
                 </button>
-                <button type="button" class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors" onclick="confirmBulkDelete()">
+                <button type="button" class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors" id="confirmBulkDeleteBtn">
                     <i class="fas fa-trash mr-2"></i>{{ _('Delete') }}
                 </button>
             </div>
@@ -181,7 +181,7 @@
         <div class="p-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Mark Selected Entries as Paid/Unpaid') }}</h3>
             <label for="bulkPaidSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Status') }}</label>
-            <select id="bulkPaidSelect" class="form-input w-full mb-4" onchange="toggleInvoiceReferenceField()">
+            <select id="bulkPaidSelect" class="form-input w-full mb-4">
                 <option value="true">{{ _('Paid') }}</option>
                 <option value="false">{{ _('Unpaid') }}</option>
             </select>
@@ -190,10 +190,10 @@
                 <input type="text" id="bulkInvoiceReference" class="form-input w-full" placeholder="{{ _('e.g., Invoice number or payment reference') }}">
             </div>
             <div class="flex justify-end gap-3 mt-6">
-                <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" onclick="closeBulkPaidDialog()">
+                <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" id="closeBulkPaidBtn">
                     {{ _('Cancel') }}
                 </button>
-                <button type="button" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors" onclick="submitBulkPaid()">
+                <button type="button" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors" id="submitBulkPaidBtn">
                     {{ _('Update') }}
                 </button>
             </div>
@@ -202,6 +202,27 @@
 </div>
 
 <script>
+// Bind event listeners (replaces inline onclick/onchange handlers)
+document.addEventListener('DOMContentLoaded', function() {
+    var toggleFiltersBtn = document.getElementById('toggleFilters');
+    if (toggleFiltersBtn) toggleFiltersBtn.addEventListener('click', toggleFilterVisibility);
+
+    var closeBulkDeleteBtn = document.getElementById('closeBulkDeleteBtn');
+    if (closeBulkDeleteBtn) closeBulkDeleteBtn.addEventListener('click', closeBulkDeleteDialog);
+
+    var confirmBulkDeleteBtn = document.getElementById('confirmBulkDeleteBtn');
+    if (confirmBulkDeleteBtn) confirmBulkDeleteBtn.addEventListener('click', confirmBulkDelete);
+
+    var bulkPaidSelect = document.getElementById('bulkPaidSelect');
+    if (bulkPaidSelect) bulkPaidSelect.addEventListener('change', toggleInvoiceReferenceField);
+
+    var closeBulkPaidBtn = document.getElementById('closeBulkPaidBtn');
+    if (closeBulkPaidBtn) closeBulkPaidBtn.addEventListener('click', closeBulkPaidDialog);
+
+    var submitBulkPaidBtn = document.getElementById('submitBulkPaidBtn');
+    if (submitBulkPaidBtn) submitBulkPaidBtn.addEventListener('click', submitBulkPaid);
+});
+
 function toggleFilterVisibility() {
     const filterBody = document.getElementById('filterBody');
     const icon = document.getElementById('filterToggleIcon');

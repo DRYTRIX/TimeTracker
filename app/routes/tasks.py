@@ -448,8 +448,9 @@ def edit_task(task_id):
             task.project_id = project_id
             # Keep related time entries consistent with the task's project
             try:
-                for entry in task.time_entries.all():
-                    entry.project_id = project_id
+                TimeEntry.query.filter_by(task_id=task.id).update(
+                    {"project_id": project_id}, synchronize_session="fetch"
+                )
                 db.session.add(
                     TaskActivity(
                         task_id=task.id,
@@ -1101,9 +1102,10 @@ def bulk_move_project():
             old_project_id = task.project_id
             task.project_id = new_project_id
 
-            # Update related time entries to match the new project
-            for entry in task.time_entries.all():
-                entry.project_id = new_project_id
+            # Batch-update related time entries to match the new project
+            TimeEntry.query.filter_by(task_id=task.id).update(
+                {"project_id": new_project_id}, synchronize_session="fetch"
+            )
 
             # Log activity
             db.session.add(

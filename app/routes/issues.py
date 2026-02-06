@@ -175,8 +175,10 @@ def new_issue():
     if request.method == "POST":
         from app.utils.client_lock import enforce_locked_client_id, get_locked_client_id
 
-        title = request.form.get("title", "").strip()
-        description = request.form.get("description", "").strip()
+        from app.utils.validation import sanitize_input
+
+        title = sanitize_input(request.form.get("title", "").strip(), max_length=300)
+        description = sanitize_input(request.form.get("description", "").strip(), max_length=5000)
         client_id = enforce_locked_client_id(request.form.get("client_id", type=int))
         project_id = request.form.get("project_id", type=int)
         priority = request.form.get("priority", "medium")

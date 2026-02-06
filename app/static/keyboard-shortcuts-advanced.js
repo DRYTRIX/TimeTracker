@@ -209,19 +209,14 @@ class KeyboardShortcutManager {
             classList: e.target.classList ? Array.from(e.target.classList) : [],
             isContentEditable: e.target.isContentEditable
         };
-        console.log('[KS-Advanced] Key pressed:', debugInfo);
-        
         // When palette is open, do not trigger a second open; let commands.js handle focus
         const palette = document.getElementById('commandPaletteModal');
         const paletteOpen = palette && !palette.classList.contains('hidden');
 
         // Check if typing in input field
         const isTypingInInput = this.isTyping(e);
-        console.log('[KS-Advanced] isTyping result:', isTypingInInput);
-
         // If typing in input/textarea, ONLY allow specific global combos
         if (isTypingInInput) {
-            console.log('[KS-Advanced] BLOCKED - User is typing in input field');
             // Allow Ctrl+/ to focus search even when typing
             if ((e.ctrlKey || e.metaKey) && e.key === '/') {
                 e.preventDefault();
@@ -247,25 +242,11 @@ class KeyboardShortcutManager {
                 return;
             }
             // Block ALL other shortcuts when typing
-            console.log('[KS-Advanced] Blocking shortcut - in input field');
             return;
         }
         
-        console.log('[KS-Advanced] NOT blocked - processing shortcut');
-
         const key = this.getKeyCombo(e);
         const normalizedKey = this.normalizeKey(key);
-
-        // Debug logging (can be removed in production)
-        if ((e.ctrlKey || e.metaKey) && e.key === '/') {
-            console.log('Keyboard shortcut detected:', {
-                key: e.key,
-                combo: key,
-                normalized: normalizedKey,
-                ctrlKey: e.ctrlKey,
-                metaKey: e.metaKey
-            });
-        }
 
         // Prevent duplicate open when palette already visible (Ctrl+K, ?, etc.)
         if (paletteOpen) {
@@ -337,55 +318,12 @@ class KeyboardShortcutManager {
     }
 
     /**
-     * Check if user is typing in an input field
+     * Check if user is typing in an input field (delegates to shared utility from typing-utils.js)
      */
     isTyping(e) {
-        const target = e.target;
-        const tagName = target.tagName.toLowerCase();
-        
-        console.log('[KS-Advanced isTyping] Checking:', {
-            tagName: tagName,
-            isContentEditable: target.isContentEditable,
-            classList: target.classList ? Array.from(target.classList) : []
-        });
-        
-        // Check standard input elements
-        if (tagName === 'input' || 
-            tagName === 'textarea' || 
-            tagName === 'select' ||
-            target.isContentEditable) {
-            console.log('[KS-Advanced isTyping] TRUE - standard input');
-            return true;
-        }
-        
-        // Check for rich text editors (Toast UI Editor, TinyMCE, CodeMirror, etc.)
-        const richEditorSelectors = [
-            '.toastui-editor',
-            '.toastui-editor-contents',
-            '.ProseMirror',
-            '.CodeMirror',
-            '.ql-editor',  // Quill
-            '.tox-edit-area',  // TinyMCE
-            '.note-editable',  // Summernote
-            '[contenteditable="true"]',
-            // Additional Toast UI Editor specific selectors
-            '.toastui-editor-ww-container',
-            '.toastui-editor-md-container',
-            '.te-editor',
-            '.te-ww-container',
-            '.te-md-container'
-        ];
-        
-        // Check if target is within any rich text editor
-        for (const selector of richEditorSelectors) {
-            if (target.closest && target.closest(selector)) {
-                console.log('[KS-Advanced isTyping] TRUE - inside editor:', selector);
-                return true;
-            }
-        }
-        
-        console.log('[KS-Advanced isTyping] FALSE - not in input');
-        return false;
+        return window.TimeTracker && window.TimeTracker.isTyping
+            ? window.TimeTracker.isTyping(e)
+            : false;
     }
 
     /**
@@ -646,8 +584,7 @@ class KeyboardShortcutManager {
     }
 
     executeAction(action) {
-        // Execute custom action
-        console.log('Executing custom action:', action);
+        // no-op
     }
 
     customizeShortcuts() {
@@ -658,5 +595,5 @@ class KeyboardShortcutManager {
 // Initialize
 window.shortcutManager = new KeyboardShortcutManager();
 
-console.log('Advanced keyboard shortcuts loaded. Press ? to see all shortcuts.');
+
 

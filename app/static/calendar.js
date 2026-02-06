@@ -146,15 +146,6 @@ class Calendar {
                 extendedProps: { ...(e.extendedProps || {}), ...e, item_type: (e.extendedProps && e.extendedProps.item_type) || 'time_entry' }
             }));
             
-            console.log('API Response:', {
-                total: this.events.length + this.tasks.length + this.timeEntries.length,
-                events: this.events.length,
-                tasks: this.tasks.length,
-                time_entries: this.timeEntries.length,
-                summary: data.summary,
-                rawData: data
-            });
-            
             this.render();
             // Update color inputs and legend from API typeColors if present
             if (data.typeColors) {
@@ -250,16 +241,6 @@ class Calendar {
     
     render() {
         this.updateTitle();
-        
-        console.log('Calendar rendering:', {
-            viewType: this.viewType,
-            eventsCount: this.events.length,
-            tasksCount: this.tasks.length,
-            timeEntriesCount: this.timeEntries.length,
-            showEvents: this.showEvents,
-            showTasks: this.showTasks,
-            showTimeEntries: this.showTimeEntries
-        });
         
         switch (this.viewType) {
             case 'day':

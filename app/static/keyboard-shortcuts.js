@@ -572,55 +572,10 @@
         }
 
         isTyping(event) {
-            const target = event.target;
-            const tagName = target.tagName.toLowerCase();
-            
-            // Debug logging (can be removed after testing)
-            if (window.location.pathname.includes('create') || window.location.pathname.includes('edit')) {
-                console.log('[Keyboard Shortcuts Debug]', {
-                    target: target,
-                    tagName: tagName,
-                    classList: target.classList ? Array.from(target.classList) : [],
-                    isContentEditable: target.isContentEditable,
-                    parentClasses: target.parentElement ? Array.from(target.parentElement.classList || []) : []
-                });
-            }
-            
-            // Check standard input elements
-            if (tagName === 'input' || 
-                tagName === 'textarea' || 
-                tagName === 'select' ||
-                target.isContentEditable) {
-                return true;
-            }
-            
-            // Check for rich text editors (Toast UI Editor, TinyMCE, CodeMirror, etc.)
-            const richEditorSelectors = [
-                '.toastui-editor',
-                '.toastui-editor-contents',
-                '.ProseMirror',
-                '.CodeMirror',
-                '.ql-editor',  // Quill
-                '.tox-edit-area',  // TinyMCE
-                '.note-editable',  // Summernote
-                '[contenteditable="true"]',
-                // Additional Toast UI Editor specific selectors
-                '.toastui-editor-ww-container',
-                '.toastui-editor-md-container',
-                '.te-editor',
-                '.te-ww-container',
-                '.te-md-container'
-            ];
-            
-            // Check if target is within any rich text editor
-            for (const selector of richEditorSelectors) {
-                if (target.closest && target.closest(selector)) {
-                    console.log('[Keyboard Shortcuts] Blocked - inside editor:', selector);
-                    return true;
-                }
-            }
-            
-            return false;
+            // Delegate to shared utility (typing-utils.js)
+            return window.TimeTracker && window.TimeTracker.isTyping
+                ? window.TimeTracker.isTyping(event)
+                : false;
         }
 
         detectKeyboardNavigation() {

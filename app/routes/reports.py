@@ -18,9 +18,9 @@ from app.models import (
 from app.services.scheduled_report_service import ScheduledReportService
 from datetime import datetime, timedelta
 from sqlalchemy import or_, func, case
+from sqlalchemy.orm import joinedload
 import csv
 import io
-import pytz
 import time
 from app.utils.excel_export import create_time_entries_excel, create_project_report_excel
 from app.utils.posthog_monitoring import track_error, track_export_performance, track_validation_error
@@ -157,7 +157,10 @@ def project_report():
             flash(_("You do not have permission to view other users' time entries"), "error")
             return render_template("reports/project_report.html", projects=projects, users=users)
 
-    entries = query.order_by(TimeEntry.start_time.desc()).all()
+    entries = query.options(
+        joinedload(TimeEntry.project).joinedload(Project.client),
+        joinedload(TimeEntry.user),
+    ).order_by(TimeEntry.start_time.desc()).all()
 
     # Aggregate by project for template expectations
     projects_map = {}
@@ -314,7 +317,10 @@ def user_report():
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
 
-    entries = query.order_by(TimeEntry.start_time.desc()).all()
+    entries = query.options(
+        joinedload(TimeEntry.project),
+        joinedload(TimeEntry.user),
+    ).order_by(TimeEntry.start_time.desc()).all()
 
     # Calculate totals
     total_hours = sum(entry.duration_hours for entry in entries)
@@ -467,7 +473,11 @@ def export_csv():
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
 
-    entries = query.order_by(TimeEntry.start_time.desc()).all()
+    entries = query.options(
+        joinedload(TimeEntry.project).joinedload(Project.client),
+        joinedload(TimeEntry.user),
+        joinedload(TimeEntry.task),
+    ).order_by(TimeEntry.start_time.desc()).all()
 
     # Get settings for delimiter
     settings = Settings.get_settings()
@@ -776,7 +786,11 @@ def export_excel():
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
 
-    entries = query.order_by(TimeEntry.start_time.desc()).all()
+    entries = query.options(
+        joinedload(TimeEntry.project).joinedload(Project.client),
+        joinedload(TimeEntry.user),
+        joinedload(TimeEntry.task),
+    ).order_by(TimeEntry.start_time.desc()).all()
 
     # Create Excel file
     output, filename = create_time_entries_excel(entries, filename_prefix="timetracker_export")
@@ -935,7 +949,9 @@ def export_user_excel():
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
 
-    entries = query.order_by(TimeEntry.start_time.desc()).all()
+    entries = query.options(
+        joinedload(TimeEntry.user),
+    ).order_by(TimeEntry.start_time.desc()).all()
 
     # Group by user
     user_totals = {}
@@ -1089,7 +1105,11 @@ def export_user_entries_excel():
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
 
-    entries = query.order_by(TimeEntry.start_time.desc()).all()
+    entries = query.options(
+        joinedload(TimeEntry.project).joinedload(Project.client),
+        joinedload(TimeEntry.user),
+        joinedload(TimeEntry.task),
+    ).order_by(TimeEntry.start_time.desc()).all()
 
     # Create Excel file (row-per-entry)
     output, filename = create_time_entries_excel(entries, filename_prefix="user_entries", columns=columns)

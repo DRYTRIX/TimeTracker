@@ -23,7 +23,6 @@ class OnboardingManager {
         // Disable tour on mobile devices (width < 768px)
         const isMobile = window.innerWidth <= 768;
         if (isMobile) {
-            console.log('Onboarding tour disabled on mobile devices');
             // Mark as completed to prevent future attempts
             localStorage.setItem(this.storageKey, 'true');
             return;
@@ -38,7 +37,6 @@ class OnboardingManager {
             const isMobile = window.innerWidth <= 768;
             if (isMobile) {
                 // If window is resized to mobile size, cancel the tour
-                console.log('Window resized to mobile size, cancelling tour');
                 this.complete();
             }
         };
