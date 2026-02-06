@@ -1512,8 +1512,12 @@ def setup_logging(app):
         if log_dir and not os.path.exists(log_dir):
             os.makedirs(log_dir, exist_ok=True)
 
-        # Create file handler
-        file_handler = logging.FileHandler(log_file)
+        # Create rotating file handler (10MB max, keep 5 backups)
+        from logging.handlers import RotatingFileHandler
+
+        file_handler = RotatingFileHandler(
+            log_file, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
+        )
         handlers.append(file_handler)
     except (PermissionError, OSError) as e:
         print(f"Warning: Could not create log file '{log_file}': {e}")
@@ -1546,7 +1550,11 @@ def setup_logging(app):
         if json_log_dir and not os.path.exists(json_log_dir):
             os.makedirs(json_log_dir, exist_ok=True)
 
-        json_handler = logging.FileHandler(json_log_path)
+        from logging.handlers import RotatingFileHandler as _RotatingFileHandler
+
+        json_handler = _RotatingFileHandler(
+            json_log_path, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
+        )
         json_formatter = jsonlogger.JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s")
         json_handler.setFormatter(json_formatter)
         json_handler.setLevel(logging.INFO)

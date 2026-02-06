@@ -547,7 +547,7 @@ def get_upload_folder():
 
 @admin_bp.route("/admin")
 @login_required
-@admin_required
+@admin_or_permission_required("access_admin")
 def admin_dashboard():
     """Admin dashboard"""
     from app.config import Config
@@ -689,7 +689,7 @@ def admin_dashboard():
 # Compatibility alias for code/templates that might reference 'admin.dashboard'
 @admin_bp.route("/admin/dashboard")
 @login_required
-@admin_required
+@admin_or_permission_required("access_admin")
 def admin_dashboard_alias():
     """Alias endpoint so url_for('admin.dashboard') remains valid.
 
@@ -1121,10 +1121,10 @@ def settings():
         # Validate timezone
         timezone = request.form.get("timezone") or settings_obj.timezone
         try:
-            import pytz
+            from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-            pytz.timezone(timezone)  # This will raise an exception if timezone is invalid
-        except pytz.exceptions.UnknownTimeZoneError:
+            ZoneInfo(timezone)  # This will raise an exception if timezone is invalid
+        except (ZoneInfoNotFoundError, KeyError):
             flash(_("Invalid timezone: %(timezone)s", timezone=timezone), "error")
             return render_template(
                 "admin/settings.html",
@@ -1164,7 +1164,8 @@ def settings():
             log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".cursor", "debug.log")
             with open(log_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(log_data) + "\n")
-        except: pass
+        except (OSError, IOError, TypeError, ValueError):
+            pass
         # #endregion
         settings_obj.invoice_prefix = invoice_prefix_form
         settings_obj.invoice_start_number = int(invoice_start_number_form)
@@ -1248,7 +1249,8 @@ def settings():
             log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".cursor", "debug.log")
             with open(log_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(log_data) + "\n")
-        except: pass
+        except (OSError, IOError, TypeError, ValueError):
+            pass
         # #endregion
         flash(_("Settings updated successfully"), "success")
         return redirect(url_for("admin.settings"))
@@ -4146,7 +4148,7 @@ def oidc_wizard_generate_config():
 
 @admin_bp.route("/admin/api-tokens")
 @login_required
-@admin_required
+@admin_or_permission_required("manage_api_tokens")
 def api_tokens():
     """API tokens management page"""
     from app.models import ApiToken
@@ -4159,7 +4161,7 @@ def api_tokens():
 
 @admin_bp.route("/admin/api-tokens", methods=["POST"])
 @login_required
-@admin_required
+@admin_or_permission_required("manage_api_tokens")
 def create_api_token():
     """Create a new API token"""
     from app.models import ApiToken
@@ -4211,7 +4213,7 @@ def create_api_token():
 
 @admin_bp.route("/admin/api-tokens/<int:token_id>/toggle", methods=["POST"])
 @login_required
-@admin_required
+@admin_or_permission_required("manage_api_tokens")
 def toggle_api_token(token_id):
     """Toggle API token active status"""
     from app.models import ApiToken
@@ -4232,7 +4234,7 @@ def toggle_api_token(token_id):
 
 @admin_bp.route("/admin/api-tokens/<int:token_id>", methods=["DELETE"])
 @login_required
-@admin_required
+@admin_or_permission_required("manage_api_tokens")
 def delete_api_token(token_id):
     """Delete an API token"""
     from app.models import ApiToken
@@ -4564,7 +4566,7 @@ def delete_email_template(template_id):
 
 @admin_bp.route("/admin/integrations")
 @login_required
-@admin_required
+@admin_or_permission_required("manage_integrations")
 def list_integrations_admin():
     """List all integrations (admin view). Redirect to main integrations page."""
     return redirect(url_for("integrations.list_integrations"))
@@ -4572,7 +4574,7 @@ def list_integrations_admin():
 
 @admin_bp.route("/admin/integrations/<provider>/setup", methods=["GET", "POST"])
 @login_required
-@admin_required
+@admin_or_permission_required("manage_integrations")
 def integration_setup(provider):
     """Setup page for configuring integration OAuth credentials. Redirect to main integrations manage page."""
     return redirect(url_for("integrations.manage_integration", provider=provider))

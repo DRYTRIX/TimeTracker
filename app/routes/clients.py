@@ -11,11 +11,14 @@ from app.utils.permissions import admin_or_permission_required
 from app.utils.timezone import convert_app_datetime_to_user
 from app.utils.email import send_client_portal_password_setup_email
 from app.utils.module_registry import ModuleRegistry
+from app.services.client_service import ClientService
 from sqlalchemy.orm import joinedload
 from sqlalchemy import or_
 import csv
 import io
 import json
+
+_client_service = ClientService()
 
 clients_bp = Blueprint("clients", __name__)
 
@@ -216,12 +219,14 @@ def create_client():
         return redirect(url_for("clients.list_clients"))
 
     if request.method == "POST":
-        name = request.form.get("name", "").strip()
-        description = request.form.get("description", "").strip()
-        contact_person = request.form.get("contact_person", "").strip()
+        from app.utils.validation import sanitize_input, validate_email as validate_email_format
+
+        name = sanitize_input(request.form.get("name", "").strip(), max_length=200)
+        description = sanitize_input(request.form.get("description", "").strip(), max_length=2000)
+        contact_person = sanitize_input(request.form.get("contact_person", "").strip(), max_length=200)
         email = request.form.get("email", "").strip()
-        phone = request.form.get("phone", "").strip()
-        address = request.form.get("address", "").strip()
+        phone = sanitize_input(request.form.get("phone", "").strip(), max_length=50)
+        address = sanitize_input(request.form.get("address", "").strip(), max_length=500)
         default_hourly_rate = request.form.get("default_hourly_rate", "").strip()
         prepaid_hours_input = request.form.get("prepaid_hours_monthly", "").strip()
         prepaid_reset_day_input = request.form.get("prepaid_reset_day", "").strip()
@@ -247,7 +252,7 @@ def create_client():
             return render_template("clients/create.html")
 
         # Check if client name already exists
-        if Client.query.filter_by(name=name).first():
+        if _client_service.get_by_name(name):
             if wants_json:
                 return (
                     jsonify({"error": "validation_error", "messages": ["A client with this name already exists"]}),
@@ -259,6 +264,16 @@ def create_client():
             except Exception:
                 pass
             return render_template("clients/create.html")
+
+        # Validate email format if provided
+        if email:
+            try:
+                email = validate_email_format(email)
+            except Exception:
+                if wants_json:
+                    return jsonify({"error": "validation_error", "messages": ["Invalid email address"]}), 400
+                flash(_("Invalid email address"), "error")
+                return render_template("clients/create.html")
 
         # Validate hourly rate
         try:

@@ -5,7 +5,7 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db
 from app.models import Webhook, WebhookDelivery
-from app.routes.admin import admin_required
+from app.utils.permissions import admin_or_permission_required
 from app.utils.db import safe_commit
 from app.utils.webhook_service import WebhookService
 from sqlalchemy.exc import IntegrityError
@@ -15,7 +15,7 @@ webhooks_bp = Blueprint("webhooks", __name__)
 
 @webhooks_bp.route("/admin/webhooks")
 @login_required
-@admin_required
+@admin_or_permission_required("manage_webhooks")
 def list_webhooks():
     """List all webhooks"""
     # Filter by user if not admin
@@ -29,7 +29,7 @@ def list_webhooks():
 
 @webhooks_bp.route("/admin/webhooks/create", methods=["GET", "POST"])
 @login_required
-@admin_required
+@admin_or_permission_required("manage_webhooks")
 def create_webhook():
     """Create a new webhook"""
     if request.method == "POST":
@@ -92,7 +92,7 @@ def create_webhook():
 
 @webhooks_bp.route("/admin/webhooks/<int:webhook_id>")
 @login_required
-@admin_required
+@admin_or_permission_required("manage_webhooks")
 def view_webhook(webhook_id):
     """View webhook details and deliveries"""
     webhook = Webhook.query.get_or_404(webhook_id)
@@ -115,7 +115,7 @@ def view_webhook(webhook_id):
 
 @webhooks_bp.route("/admin/webhooks/<int:webhook_id>/edit", methods=["GET", "POST"])
 @login_required
-@admin_required
+@admin_or_permission_required("manage_webhooks")
 def edit_webhook(webhook_id):
     """Edit a webhook"""
     webhook = Webhook.query.get_or_404(webhook_id)
@@ -158,7 +158,7 @@ def edit_webhook(webhook_id):
 
 @webhooks_bp.route("/admin/webhooks/<int:webhook_id>/delete", methods=["POST"])
 @login_required
-@admin_required
+@admin_or_permission_required("manage_webhooks")
 def delete_webhook(webhook_id):
     """Delete a webhook"""
     webhook = Webhook.query.get_or_404(webhook_id)
@@ -181,7 +181,7 @@ def delete_webhook(webhook_id):
 
 @webhooks_bp.route("/admin/webhooks/<int:webhook_id>/test", methods=["POST"])
 @login_required
-@admin_required
+@admin_or_permission_required("manage_webhooks")
 def test_webhook(webhook_id):
     """Test a webhook by sending a test event"""
     webhook = Webhook.query.get_or_404(webhook_id)

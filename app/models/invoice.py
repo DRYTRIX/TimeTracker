@@ -300,7 +300,8 @@ class Invoice(db.Model):
             log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".cursor", "debug.log")
             with open(log_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(log_data) + "\n")
-        except: pass
+        except (OSError, IOError, TypeError, ValueError):
+            pass
         # #endregion
         prefix = "INV"  # Default prefix
         start_number = 1  # Default start number
@@ -314,7 +315,8 @@ class Invoice(db.Model):
                 log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".cursor", "debug.log")
                 with open(log_path, "a", encoding="utf-8") as f:
                     f.write(json.dumps(log_data) + "\n")
-            except: pass
+            except (OSError, IOError, TypeError, ValueError):
+                pass
             # #endregion
             prefix = prefix_raw or "INV"
             start_number = start_number_raw or 1
@@ -331,7 +333,8 @@ class Invoice(db.Model):
             log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".cursor", "debug.log")
             with open(log_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(log_data) + "\n")
-        except: pass
+        except (OSError, IOError, TypeError, ValueError):
+            pass
         # #endregion
 
         # Format: {prefix}-YYYYMMDD-XXX (where XXX is the sequential number)

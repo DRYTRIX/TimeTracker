@@ -11,6 +11,11 @@ from app.utils.db import safe_commit
 from app.utils.posthog_funnels import track_onboarding_first_timer, track_onboarding_first_time_entry
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import ProgrammingError
+from app.services.project_service import ProjectService
+from app.services.client_service import ClientService
+
+_project_service = ProjectService()
+_client_service = ClientService()
 
 timer_bp = Blueprint("timer", __name__)
 
@@ -72,7 +77,7 @@ def start_timer():
 
     # Validate project if provided
     if project_id:
-        project = Project.query.get(project_id)
+        project = _project_service.get_by_id(project_id)
         if not project:
             flash(_("Invalid project selected"), "error")
             current_app.logger.warning("Start timer failed: invalid project_id=%s", project_id)
@@ -109,8 +114,8 @@ def start_timer():
 
     # Validate client if provided (and no project)
     if client_id and not project_id:
-        client = Client.query.filter_by(id=client_id, status="active").first()
-        if not client:
+        client = _client_service.get_by_id(client_id)
+        if not client or client.status != "active":
             flash(_("Invalid client selected"), "error")
             current_app.logger.warning("Start timer failed: invalid client_id=%s", client_id)
             return redirect(url_for("main.dashboard"))
@@ -275,7 +280,7 @@ def start_timer_from_template(template_id):
         return redirect(url_for("time_entry_templates.list_templates"))
 
     # Check if project is active
-    project = Project.query.get(template.project_id)
+    project = _project_service.get_by_id(template.project_id)
     if not project or project.status != "active":
         flash(_("Cannot start timer for this project"), "error")
         return redirect(url_for("time_entry_templates.list_templates"))
@@ -340,7 +345,7 @@ def start_timer_for_project(project_id):
     current_app.logger.info("GET /timer/start/%s user=%s task_id=%s", project_id, current_user.username, task_id)
 
     # Check if project exists
-    project = Project.query.get(project_id)
+    project = _project_service.get_by_id(project_id)
     if not project:
         flash(_("Invalid project selected"), "error")
         current_app.logger.warning("Start timer (GET) failed: invalid project_id=%s", project_id)
@@ -554,20 +559,24 @@ def edit_timer(timer_id):
         return redirect(url_for("main.dashboard"))
 
     if request.method == "POST":
+        from app.utils.validation import sanitize_input
+
         # Get reason for change
-        reason = request.form.get("reason", "").strip() or None
+        reason = sanitize_input(request.form.get("reason", "").strip(), max_length=500) or None
         
         # Use service layer for update to get enhanced audit logging
         from app.services import TimeTrackingService
         service = TimeTrackingService()
         
         # Prepare update parameters
+        notes_raw = request.form.get("notes", "").strip()
+        tags_raw = request.form.get("tags", "").strip()
         update_params = {
             "entry_id": timer_id,
             "user_id": current_user.id,
             "is_admin": current_user.is_admin,
-            "notes": request.form.get("notes", "").strip() or None,
-            "tags": request.form.get("tags", "").strip() or None,
+            "notes": sanitize_input(notes_raw, max_length=2000) if notes_raw else None,
+            "tags": sanitize_input(tags_raw, max_length=500) if tags_raw else None,
             "billable": request.form.get("billable") == "on",
             "paid": request.form.get("paid") == "on",
             "reason": reason,
@@ -1029,6 +1038,8 @@ def manual_entry():
                 task_id = template.task_id
 
     if request.method == "POST":
+        from app.utils.validation import sanitize_input
+
         project_id = request.form.get("project_id", type=int) or None
         client_id = request.form.get("client_id", type=int) or None
         client_id = enforce_locked_client_id(client_id)
@@ -1039,8 +1050,8 @@ def manual_entry():
         end_time = request.form.get("end_time")
         worked_time = (request.form.get("worked_time") or "").strip()
         worked_time_mode = (request.form.get("worked_time_mode") or "").strip()  # 'explicit' when user typed duration
-        notes = request.form.get("notes", "").strip()
-        tags = request.form.get("tags", "").strip()
+        notes = sanitize_input(request.form.get("notes", "").strip(), max_length=2000)
+        tags = sanitize_input(request.form.get("tags", "").strip(), max_length=500)
         billable = request.form.get("billable") == "on"
 
         def _parse_worked_time_minutes(raw: str):
@@ -1110,7 +1121,7 @@ def manual_entry():
         # If a locked client is configured, ensure selected project matches it.
         locked_id = get_locked_client_id()
         if locked_id and project_id:
-            project = Project.query.get(project_id)
+            project = _project_service.get_by_id(project_id)
             if project and getattr(project, "client_id", None) and int(project.client_id) != int(locked_id):
                 flash(_("Selected project does not match the locked client."), "error")
                 return redirect(url_for("timer.manual_entry"))
@@ -1367,7 +1378,7 @@ def bulk_entry():
             )
 
         # Check if project exists
-        project = Project.query.get(project_id)
+        project = _project_service.get_by_id(project_id)
         if not project:
             flash(_("Invalid project selected"), "error")
             return render_template(
@@ -1763,7 +1774,7 @@ def resume_timer(timer_id):
     # Check if timer is linked to a project or client
     if timer.project_id:
         # Timer is linked to a project
-        project = Project.query.get(timer.project_id)
+        project = _project_service.get_by_id(timer.project_id)
         if not project:
             flash(_("Project no longer exists"), "error")
             return redirect(url_for("main.dashboard"))
@@ -2614,10 +2625,34 @@ def export_time_entries_pdf():
                 filtered.append(entry)
         entries = filtered
 
-    # Generate data-only PDF with ReportLab (table only, no page chrome).
+    # Build filter context for the PDF report header
+    pdf_filters = {}
+    if user_id:
+        _pdf_user = User.query.get(user_id)
+        if _pdf_user:
+            pdf_filters["User"] = _pdf_user.username
+    if project_id:
+        _pdf_project = _project_service.get_by_id(project_id)
+        if _pdf_project:
+            pdf_filters["Project"] = _pdf_project.name
+    if client_id:
+        _pdf_client = _client_service.get_by_id(client_id)
+        if _pdf_client:
+            pdf_filters["Client"] = _pdf_client.name
+    if billable_filter:
+        pdf_filters["Billable"] = billable_filter
+    if paid_filter:
+        pdf_filters["Paid"] = paid_filter
+
+    # Generate professional PDF report with ReportLab.
     try:
         from app.utils.time_entries_pdf import build_time_entries_pdf
-        pdf_bytes = build_time_entries_pdf(entries)
+        pdf_bytes = build_time_entries_pdf(
+            entries,
+            start_date=start_date or None,
+            end_date=end_date or None,
+            filters=pdf_filters if pdf_filters else None,
+        )
     except Exception as e:
         current_app.logger.warning("Time entries PDF export failed: %s", e, exc_info=True)
         flash(_("PDF export failed: %(error)s", error=str(e)), "error")

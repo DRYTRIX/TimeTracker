@@ -248,6 +248,5 @@ class QuickActionsMenu {
 // Initialize
 window.addEventListener('DOMContentLoaded', () => {
     window.quickActionsMenu = new QuickActionsMenu();
-    console.log('Quick Actions menu initialized');
 });
 

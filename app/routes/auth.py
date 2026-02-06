@@ -436,8 +436,10 @@ def edit_profile():
     requires_password = auth_method in ("local", "both")
 
     if request.method == "POST":
+        from app.utils.validation import sanitize_input
+
         # Update real name if provided
-        full_name = request.form.get("full_name", "").strip()
+        full_name = sanitize_input(request.form.get("full_name", "").strip(), max_length=200)
         current_user.full_name = full_name or None
         # Update preferred language
         preferred_language = (request.form.get("preferred_language") or "").strip().lower()

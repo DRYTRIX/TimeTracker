@@ -29,12 +29,9 @@ const RUNTIME_CACHE_URLS = [
 
 // Install event - precache critical resources
 self.addEventListener('install', event => {
-    console.log('[ServiceWorker] Installing...');
-    
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
-                console.log('[ServiceWorker] Precaching app shell');
                 // Only cache same-origin resources to avoid CSP violations
                 const sameOriginUrls = PRECACHE_URLS.filter(url => {
                     try {
@@ -56,15 +53,12 @@ self.addEventListener('install', event => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', event => {
-    console.log('[ServiceWorker] Activating...');
-    
     event.waitUntil(
         caches.keys()
             .then(cacheNames => {
                 return Promise.all(
                     cacheNames.map(cacheName => {
                         if (cacheName !== CACHE_NAME) {
-                            console.log('[ServiceWorker] Deleting old cache:', cacheName);
                             return caches.delete(cacheName);
                         }
                     })
@@ -152,7 +146,6 @@ async function networkFirst(request) {
         
         return response;
     } catch (error) {
-        console.log('[ServiceWorker] Network failed, trying cache');
         const cached = await cache.match(request);
         
         if (cached) {
@@ -260,8 +253,6 @@ function createOfflinePage() {
 
 // Background sync for offline actions
 self.addEventListener('sync', event => {
-    console.log('[ServiceWorker] Background sync:', event.tag);
-    
     if (event.tag === 'sync-time-entries') {
         event.waitUntil(syncTimeEntries());
     }
@@ -277,8 +268,6 @@ async function syncTimeEntries() {
         if (entries.length === 0) {
             return;
         }
-        
-        console.log('[ServiceWorker] Syncing', entries.length, 'time entries');
         
         // Sync each entry
         for (const entry of entries) {
@@ -360,8 +349,6 @@ function markEntryAsSynced(db, id) {
 
 // Push notifications
 self.addEventListener('push', event => {
-    console.log('[ServiceWorker] Push received');
-    
     const data = event.data ? event.data.json() : {};
     const title = data.title || 'TimeTracker';
     const options = {
@@ -380,8 +367,6 @@ self.addEventListener('push', event => {
 
 // Notification click
 self.addEventListener('notificationclick', event => {
-    console.log('[ServiceWorker] Notification clicked');
-    
     event.notification.close();
     
     const urlToOpen = event.notification.data?.url || '/';
@@ -405,8 +390,6 @@ self.addEventListener('notificationclick', event => {
 
 // Message handling
 self.addEventListener('message', event => {
-    console.log('[ServiceWorker] Message received:', event.data);
-    
     if (event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
     }
@@ -427,6 +410,4 @@ self.addEventListener('message', event => {
         );
     }
 });
-
-console.log('[ServiceWorker] Script loaded');
 

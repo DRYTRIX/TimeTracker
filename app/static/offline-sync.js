@@ -82,12 +82,10 @@ class OfflineSyncManager {
 
     setupOnlineListener() {
         window.addEventListener('online', () => {
-            console.log('[OfflineSync] Back online, starting sync...');
             this.syncAll();
         });
 
         window.addEventListener('offline', () => {
-            console.log('[OfflineSync] Gone offline');
             this.updateUI();
         });
     }
@@ -97,7 +95,7 @@ class OfflineSyncManager {
             navigator.serviceWorker.ready.then(registration => {
                 // Register background sync
                 registration.sync.register('sync-time-entries').catch(err => {
-                    console.log('[OfflineSync] Background sync not supported:', err);
+                    // no-op
                 });
             });
         }
@@ -315,7 +313,6 @@ class OfflineSyncManager {
             await this.processSyncQueue();
 
             await this.checkPendingSync();
-            console.log('[OfflineSync] Sync complete');
         } catch (error) {
             console.error('[OfflineSync] Sync error:', error);
         } finally {
@@ -859,7 +856,7 @@ class OfflineSyncManager {
                     console.error('[OfflineSync] Online create failed:', response.status, response.statusText, errorText);
                 }
             } catch (error) {
-                console.log('[OfflineSync] Online create failed, saving offline:', error);
+                // no-op
             }
         }
 
@@ -884,7 +881,7 @@ class OfflineSyncManager {
                     console.error('[OfflineSync] Online task create failed:', response.status, response.statusText, errorText);
                 }
             } catch (error) {
-                console.log('[OfflineSync] Online task create failed, saving offline:', error);
+                // no-op
             }
         }
 
@@ -909,7 +906,7 @@ class OfflineSyncManager {
                     console.error('[OfflineSync] Online project create failed:', response.status, response.statusText, errorText);
                 }
             } catch (error) {
-                console.log('[OfflineSync] Online project create failed, saving offline:', error);
+                // no-op
             }
         }
 

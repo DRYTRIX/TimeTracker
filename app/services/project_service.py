@@ -43,6 +43,15 @@ class ProjectService:
         self.project_repo = ProjectRepository()
         self.client_repo = ClientRepository()
 
+    def get_by_id(self, project_id: int) -> Optional[Project]:
+        """
+        Get a project by its ID.
+
+        Returns:
+            Project instance or None if not found
+        """
+        return self.project_repo.get_by_id(project_id)
+
     def create_project(
         self,
         name: str,

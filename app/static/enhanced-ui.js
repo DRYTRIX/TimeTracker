@@ -644,11 +644,6 @@ class FilterManager {
             fullUrl = url;
         }
         
-        // Debug: log what we're sending
-        console.log('Filter URL:', fullUrl);
-        console.log('Search value:', params.get('search'));
-        console.log('Status value:', params.get('status'));
-        
         // Update URL without page reload
         if (window.history && window.history.pushState) {
             window.history.pushState({}, '', fullUrl);
@@ -712,9 +707,6 @@ class FilterManager {
             }
             
             // Handle projects container (original logic)
-            // Debug: log response length
-            console.log('Response HTML length:', html.length);
-            console.log('Response preview:', html.substring(0, 200));
             // Update the projects list container
             let targetContainer = projectsContainer;
             
@@ -1451,8 +1443,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         observer.observe(el);
     });
-    
-    console.log('Enhanced UI initialized');
+
 });
 
 // ============================================
@@ -1502,7 +1493,6 @@ function bulkExport() {
     if (table) {
         const enhancedTable = table.__enhancedTable;
         const data = enhancedTable?.getSelectedRowData() || [];
-        console.log('Exporting:', data);
         window.toastManager?.success('Export started');
     }
 }

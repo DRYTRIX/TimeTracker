@@ -343,5 +343,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-console.log('Toast Notification System initialized');
 

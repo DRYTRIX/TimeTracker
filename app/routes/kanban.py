@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from app import db, socketio
 from app.models import KanbanColumn, Task
 from app.utils.db import safe_commit
-from app.routes.admin import admin_required
+from app.utils.permissions import admin_or_permission_required
 from app.utils.module_helpers import module_enabled
 
 kanban_bp = Blueprint("kanban", __name__)
@@ -91,7 +91,7 @@ def board():
 @kanban_bp.route("/kanban/columns")
 @login_required
 @module_enabled("kanban")
-@admin_required
+@admin_or_permission_required("manage_kanban")
 def list_columns():
     """List kanban columns for management, optionally filtered by project"""
     project_id = request.args.get("project_id", type=int)
@@ -116,7 +116,7 @@ def list_columns():
 @kanban_bp.route("/kanban/columns/create", methods=["GET", "POST"])
 @login_required
 @module_enabled("kanban")
-@admin_required
+@admin_or_permission_required("manage_kanban")
 def create_column():
     """Create a new kanban column"""
     project_id = request.args.get("project_id", type=int) or request.form.get("project_id", type=int)
@@ -221,7 +221,7 @@ def create_column():
 @kanban_bp.route("/kanban/columns/<int:column_id>/edit", methods=["GET", "POST"])
 @login_required
 @module_enabled("kanban")
-@admin_required
+@admin_or_permission_required("manage_kanban")
 def edit_column(column_id):
     """Edit an existing kanban column"""
     column = KanbanColumn.query.get_or_404(column_id)
@@ -287,7 +287,7 @@ def edit_column(column_id):
 @kanban_bp.route("/kanban/columns/<int:column_id>/delete", methods=["POST"])
 @login_required
 @module_enabled("kanban")
-@admin_required
+@admin_or_permission_required("manage_kanban")
 def delete_column(column_id):
     """Delete a kanban column (only if not system and has no tasks)"""
     column = KanbanColumn.query.get_or_404(column_id)
@@ -362,7 +362,7 @@ def delete_column(column_id):
 @kanban_bp.route("/kanban/columns/<int:column_id>/toggle", methods=["POST"])
 @login_required
 @module_enabled("kanban")
-@admin_required
+@admin_or_permission_required("manage_kanban")
 def toggle_column(column_id):
     """Toggle column active status"""
     column = KanbanColumn.query.get_or_404(column_id)
@@ -410,7 +410,7 @@ def toggle_column(column_id):
 @kanban_bp.route("/api/kanban/columns/reorder", methods=["POST"])
 @login_required
 @module_enabled("kanban")
-@admin_required
+@admin_or_permission_required("manage_kanban")
 def reorder_columns():
     """Reorder kanban columns via API"""
     data = request.get_json()

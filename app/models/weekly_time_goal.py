@@ -6,11 +6,11 @@ from sqlalchemy import func
 def local_now():
     """Get current time in local timezone"""
     import os
-    import pytz
+    from zoneinfo import ZoneInfo
 
     # Get timezone from environment variable, default to Europe/Rome
     timezone_name = os.getenv("TZ", "Europe/Rome")
-    tz = pytz.timezone(timezone_name)
+    tz = ZoneInfo(timezone_name)
     now = datetime.now(tz)
     return now.replace(tzinfo=None)
 

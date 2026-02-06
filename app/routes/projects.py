@@ -40,6 +40,9 @@ from app.utils.posthog_funnels import (
     track_project_setup_billing_configured,
     track_project_setup_completed,
 )
+from app.services import ProjectService
+
+_project_service = ProjectService()
 
 projects_bp = Blueprint("projects", __name__)
 
@@ -106,7 +109,10 @@ def list_projects():
     )
 
     # Get user's favorite project IDs for quick lookup in template
-    favorite_project_ids = {p.id for p in current_user.favorite_projects.all()}
+    from app.models.user_favorite_project import UserFavoriteProject
+    favorite_project_ids = set(
+        fav_id for (fav_id,) in db.session.query(UserFavoriteProject.project_id).filter_by(user_id=current_user.id).all()
+    )
 
     # Get clients for filter dropdown
     clients = Client.get_active_clients()
@@ -273,19 +279,21 @@ def create_project():
         track_project_setup_started(current_user.id)
 
     if request.method == "POST":
-        name = request.form.get("name", "").strip()
+        from app.utils.validation import sanitize_input
+
+        name = sanitize_input(request.form.get("name", "").strip(), max_length=200)
         client_id = request.form.get("client_id", "").strip()
         locked_id = get_locked_client_id()
         if locked_id:
             client_id = str(locked_id)
-        description = request.form.get("description", "").strip()
+        description = sanitize_input(request.form.get("description", "").strip(), max_length=2000)
         billable = request.form.get("billable") == "on"
         hourly_rate = request.form.get("hourly_rate", "").strip()
-        billing_ref = request.form.get("billing_ref", "").strip()
+        billing_ref = sanitize_input(request.form.get("billing_ref", "").strip(), max_length=100)
         # Budgets
         budget_amount_raw = request.form.get("budget_amount", "").strip()
         budget_threshold_raw = request.form.get("budget_threshold_percent", "").strip()
-        code = request.form.get("code", "").strip()
+        code = sanitize_input(request.form.get("code", "").strip(), max_length=50)
         try:
             current_app.logger.info(
                 "POST /projects/create user=%s name=%s client_id=%s billable=%s",
@@ -1132,7 +1140,7 @@ def bulk_delete_projects():
     for project_id_str in project_ids:
         try:
             project_id = int(project_id_str)
-            project = Project.query.get(project_id)
+            project = _project_service.get_by_id(project_id)
 
             if not project:
                 continue
@@ -1207,7 +1215,7 @@ def bulk_status_change():
     for project_id_str in project_ids:
         try:
             project_id = int(project_id_str)
-            project = Project.query.get(project_id)
+            project = _project_service.get_by_id(project_id)
 
             if not project:
                 continue

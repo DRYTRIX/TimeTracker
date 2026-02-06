@@ -363,7 +363,6 @@ class DashboardWidgetManager {
 window.addEventListener('DOMContentLoaded', () => {
     if (document.querySelector('[data-dashboard]')) {
         window.widgetManager = new DashboardWidgetManager();
-        console.log('Dashboard widgets initialized');
     }
 });
 

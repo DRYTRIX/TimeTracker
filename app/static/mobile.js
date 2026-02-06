@@ -834,7 +834,7 @@ class MobileGestures {
                     if (path.startsWith('/tasks')) { window.location.href = '/reports'; return; }
                 }
             }
-        } catch (e) { console.log('Swipe left detected'); }
+        } catch (e) { /* no-op */ }
     }
     
     handleSwipeRight() {
@@ -846,7 +846,7 @@ class MobileGestures {
                 if (path.startsWith('/tasks')) { window.location.href = '/projects'; return; }
                 if (path.startsWith('/projects')) { window.location.href = '/'; return; }
             }
-        } catch (e) { console.log('Swipe right detected'); }
+        } catch (e) { /* no-op */ }
     }
     
     preventPinchZoom() {
@@ -880,8 +880,7 @@ class MobileGestures {
     }
     
     handleDoubleTap(event) {
-        // Handle double tap gesture
-        console.log('Double tap detected');
+        // no-op
     }
 }
 
@@ -929,15 +928,11 @@ class MobileErrorHandling {
     }
     
     handleOffline() {
-        console.log('Device went offline');
-        
         // Show offline indicator
         this.showOfflineIndicator();
     }
     
     handleOnline() {
-        console.log('Device came online');
-        
         // Hide offline indicator
         this.hideOfflineIndicator();
     }
@@ -984,7 +979,6 @@ class MobileErrorHandling {
 document.addEventListener('DOMContentLoaded', function() {
     // Prevent double initialization
     if (window.mobileEnhancementsInitialized) {
-        console.log('Mobile enhancements already initialized, skipping...');
         return;
     }
     
@@ -1009,15 +1003,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.classList.add('mobile-view');
     }
     
-    // Log mobile initialization
-    console.log('Mobile enhancements initialized successfully');
-    console.log('Device info:', {
-        isMobile: MobileUtils.isMobile(),
-        isSmallMobile: MobileUtils.isSmallMobile(),
-        isTouchDevice: MobileUtils.isTouchDevice(),
-        isIOS: MobileUtils.isIOS(),
-        isAndroid: MobileUtils.isAndroid()
-    });
 });
 
 // Export for use in other scripts
