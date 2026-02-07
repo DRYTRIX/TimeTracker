@@ -32,10 +32,10 @@
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Total Amount</p>
-                <p class="text-2xl font-bold">€{{ '%.2f'|format(total_amount) }}</p>
+                <p class="text-2xl font-bold">{{ total_amount|format_currency(currency) }}</p>
             </div>
             <div class="text-green-500 text-3xl">
-                <i class="fas fa-euro-sign"></i>
+                <i class="fas {{ currency|currency_icon }}"></i>
             </div>
         </div>
     </div>
@@ -219,7 +219,7 @@
                         </td>
                         <td class="p-4">{{ claim.city + ', ' if claim.city else '' }}{{ claim.country }}</td>
                         <td class="p-4 table-number">{{ claim.total_days if claim.total_days else ((claim.full_days or 0) + (claim.half_days or 0) * 0.5) }}</td>
-                        <td class="p-4 table-number font-medium">{{ claim.currency_code or 'EUR' }} {{ '%.2f'|format(claim.calculated_amount or 0) }}</td>
+                        <td class="p-4 table-number font-medium">{{ (claim.calculated_amount or 0)|format_currency(claim.currency_code) }}</td>
                         <td class="p-4">
                             {% if claim.status == 'pending' %}
                             <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Pending</span>

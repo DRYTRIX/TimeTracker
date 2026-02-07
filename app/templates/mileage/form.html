@@ -41,9 +41,9 @@
                     </label>
                     <select name="currency_code" id="currency_code"
                             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
-                        <option value="EUR" {% if not mileage or mileage.currency_code == 'EUR' %}selected{% endif %}>EUR</option>
-                        <option value="USD" {% if mileage and mileage.currency_code == 'USD' %}selected{% endif %}>USD</option>
-                        <option value="GBP" {% if mileage and mileage.currency_code == 'GBP' %}selected{% endif %}>GBP</option>
+                        {% for code in supported_currencies|default(['USD', 'EUR', 'GBP']) %}
+                        <option value="{{ code }}" {% if (not mileage and code == 'EUR') or (mileage and mileage.currency_code == code) %}selected{% endif %}>{{ code }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 

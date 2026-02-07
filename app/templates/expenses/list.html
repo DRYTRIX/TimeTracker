@@ -37,7 +37,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Total Amount</p>
-                <p class="text-2xl font-bold">{{ currency|currency_symbol }}{{ '%.2f'|format(total_amount) }}</p>
+                <p class="text-2xl font-bold">{{ total_amount|format_currency(currency) }}</p>
             </div>
             <div class="text-green-500 text-3xl">
                 <i class="fas {{ currency|currency_icon }}"></i>
@@ -308,7 +308,7 @@
                             </span>
                         </td>
                         <td class="p-4 table-number font-medium">
-                            {{ expense.currency_code }} {{ '%.2f'|format(expense.total_amount) }}
+                            {{ expense.total_amount|format_currency(expense.currency_code) }}
                             {% if expense.billable %}
                             <span class="ml-1 text-xs text-green-600 dark:text-green-400" title="Billable"><i class="fas fa-check-circle"></i></span>
                             {% endif %}

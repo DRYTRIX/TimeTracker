@@ -2,7 +2,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
-from app.models import Mileage, Project, Client, Expense
+from app.models import Mileage, Project, Client, Expense, Settings
+from app.constants import SUPPORTED_CURRENCIES
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 from app.utils.db import safe_commit
@@ -117,6 +118,9 @@ def list_mileage():
 
     total_amount = total_amount_query.scalar() or 0
 
+    settings = Settings.get_settings()
+    currency = settings.currency if settings else "EUR"
+
     return render_template(
         "mileage/list.html",
         mileage_entries=mileage_pagination.items,
@@ -127,6 +131,7 @@ def list_mileage():
         single_client=single_client,
         total_distance=total_distance,
         total_amount=float(total_amount),
+        currency=currency,
         # Pass back filter values
         status=status,
         project_id=project_id,
@@ -157,6 +162,7 @@ def create_mileage():
             only_one_client=only_one_client,
             single_client=single_client,
             default_rates=default_rates,
+            supported_currencies=SUPPORTED_CURRENCIES,
         )
 
     try:
@@ -294,6 +300,7 @@ def edit_mileage(mileage_id):
             only_one_client=only_one_client,
             single_client=single_client,
             default_rates=default_rates,
+            supported_currencies=SUPPORTED_CURRENCIES,
         )
 
     try:

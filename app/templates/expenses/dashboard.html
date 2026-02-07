@@ -57,7 +57,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Total Amount</p>
-                <p class="text-3xl font-bold text-green-600">{{ currency|currency_symbol }}{{ '%.2f'|format(total_amount) }}</p>
+                <p class="text-3xl font-bold text-green-600">{{ total_amount|format_currency(currency) }}</p>
             </div>
             <div class="text-green-500 text-4xl">
                 <i class="fas {{ currency|currency_icon }}"></i>
@@ -148,7 +148,7 @@
                         <span class="text-sm font-medium">{{ stat.category|title }}</span>
                     </div>
                     <div class="text-right">
-                        <div class="font-bold">{{ currency|currency_symbol }}{{ '%.2f'|format(stat.total_amount) }}</div>
+                        <div class="font-bold">{{ stat.total_amount|format_currency(currency) }}</div>
                         <div class="text-xs text-gray-500">{{ stat.count }} items</div>
                     </div>
                 </div>
@@ -198,7 +198,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            {{ expense.currency_code }} {{ '%.2f'|format(expense.total_amount) }}
+                            {{ expense.total_amount|format_currency(expense.currency_code) }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             {% if expense.status == 'pending' %}
