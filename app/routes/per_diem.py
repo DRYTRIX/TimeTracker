@@ -2,7 +2,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
-from app.models import PerDiem, PerDiemRate, Project, Client
+from app.models import PerDiem, PerDiemRate, Project, Client, Settings
+from app.constants import SUPPORTED_CURRENCIES
 from datetime import datetime, date, time
 from decimal import Decimal
 from app.utils.db import safe_commit
@@ -81,6 +82,9 @@ def list_per_diem():
 
     total_amount = total_amount_query.scalar() or 0
 
+    settings = Settings.get_settings()
+    currency = settings.currency if settings else "EUR"
+
     return render_template(
         "per_diem/list.html",
         per_diem_claims=per_diem_pagination.items,
@@ -88,6 +92,7 @@ def list_per_diem():
         projects=projects,
         clients=clients,
         total_amount=float(total_amount),
+        currency=currency,
         status=status,
         project_id=project_id,
         client_id=client_id,
@@ -577,7 +582,7 @@ def list_rates():
 def create_rate():
     """Create a new per diem rate"""
     if request.method == "GET":
-        return render_template("per_diem/rate_form.html", rate=None)
+        return render_template("per_diem/rate_form.html", rate=None, supported_currencies=SUPPORTED_CURRENCIES)
 
     try:
         country = request.form.get("country", "").strip()
@@ -633,7 +638,7 @@ def edit_rate(rate_id):
     rate = PerDiemRate.query.get_or_404(rate_id)
 
     if request.method == "GET":
-        return render_template("per_diem/rate_form.html", rate=rate)
+        return render_template("per_diem/rate_form.html", rate=rate, supported_currencies=SUPPORTED_CURRENCIES)
 
     try:
         country = request.form.get("country", "").strip()

@@ -1073,6 +1073,54 @@ def test_pdf_export_with_extra_goods_smoke(app, sample_invoice, sample_user):
     assert pdf_bytes[:4] == b"%PDF"  # PDF magic number
 
 
+@pytest.mark.unit
+@pytest.mark.invoices
+def test_pdf_reportlab_generator_includes_extra_goods(app, sample_invoice, sample_user):
+    """Test that main ReportLab PDF path includes both invoice items and extra goods in the PDF."""
+    pytest.importorskip("reportlab")
+    from app.utils.pdf_generator import InvoicePDFGenerator
+
+    # Add an invoice item
+    item = InvoiceItem(
+        invoice_id=sample_invoice.id,
+        description="Development work",
+        quantity=Decimal("10.00"),
+        unit_price=Decimal("75.00"),
+    )
+    db.session.add(item)
+
+    # Add an extra good
+    good = ExtraGood(
+        name="Hardware Component",
+        description="Raspberry Pi 4 Model B",
+        category="product",
+        quantity=Decimal("2.00"),
+        unit_price=Decimal("55.00"),
+        sku="RPI4-4GB",
+        created_by=sample_user.id,
+        invoice_id=sample_invoice.id,
+    )
+    db.session.add(good)
+    db.session.commit()
+
+    sample_invoice.calculate_totals()
+    db.session.commit()
+
+    # Generate PDF via main path (ReportLab template JSON)
+    generator = InvoicePDFGenerator(sample_invoice)
+    with app.test_request_context("/"):
+        pdf_bytes = generator.generate_pdf()
+
+    assert pdf_bytes is not None
+    assert len(pdf_bytes) > 0
+    assert pdf_bytes[:4] == b"%PDF"
+
+    # PDF stores text in streams; item and extra good text should appear in raw bytes
+    assert b"Development work" in pdf_bytes
+    assert b"Hardware Component" in pdf_bytes
+    assert b"Raspberry Pi 4 Model B" in pdf_bytes or b"RPI4-4GB" in pdf_bytes
+
+
 @pytest.mark.smoke
 @pytest.mark.invoices
 def test_pdf_export_fallback_with_extra_goods_smoke(app, sample_invoice, sample_user):

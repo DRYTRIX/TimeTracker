@@ -271,6 +271,34 @@ class InvoicePDFGeneratorFallback:
             ]
             data.append(row)
 
+        # Add expenses
+        expenses = (
+            self.invoice.expenses.all()
+            if hasattr(self.invoice.expenses, "all")
+            else list(self.invoice.expenses) if getattr(self.invoice, "expenses", None) else []
+        )
+        for expense in expenses:
+            description_parts = [expense.title]
+            if expense.description:
+                description_parts.append(f"\n{expense.description}")
+            if expense.category:
+                description_parts.append(f"\n{_('Expense')}: {expense.category.title()}")
+            if expense.vendor:
+                description_parts.append(f"\n{_('Vendor')}: {expense.vendor}")
+            if expense.expense_date:
+                description_parts.append(f"\n{_('Date')}: {expense.expense_date.strftime('%d.%m.%Y')}")
+
+            description = "\n".join(description_parts)
+            total = getattr(expense, "total_amount", expense.amount)
+
+            row = [
+                description,
+                "1",
+                self._format_currency(total),
+                self._format_currency(total),
+            ]
+            data.append(row)
+
         # Add totals
         data.append(["", "", _("Subtotal:"), self._format_currency(self.invoice.subtotal)])
 

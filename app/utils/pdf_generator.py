@@ -527,7 +527,50 @@ class InvoicePDFGenerator:
                 invoice_wrapper.expenses = list(self.invoice.expenses) if hasattr(self.invoice, "expenses") and self.invoice.expenses else []
         except Exception:
             invoice_wrapper.expenses = []
-        
+
+        # Build combined all_line_items for PDF table (items + extra_goods + expenses)
+        # Each entry has: description, quantity, unit_price, total_amount
+        all_line_items = []
+        for item in invoice_wrapper.items:
+            all_line_items.append(
+                SimpleNamespace(
+                    description=getattr(item, "description", str(item)) or "",
+                    quantity=getattr(item, "quantity", 1),
+                    unit_price=getattr(item, "unit_price", 0),
+                    total_amount=getattr(item, "total_amount", 0),
+                )
+            )
+        for good in invoice_wrapper.extra_goods:
+            desc_parts = [getattr(good, "name", str(good)) or ""]
+            if getattr(good, "description", None):
+                desc_parts.append(str(good.description))
+            if getattr(good, "sku", None):
+                desc_parts.append(f"SKU: {good.sku}")
+            if getattr(good, "category", None):
+                desc_parts.append(f"Category: {good.category.title()}")
+            all_line_items.append(
+                SimpleNamespace(
+                    description="\n".join(desc_parts),
+                    quantity=getattr(good, "quantity", 1),
+                    unit_price=getattr(good, "unit_price", 0),
+                    total_amount=getattr(good, "total_amount", 0),
+                )
+            )
+        for expense in invoice_wrapper.expenses:
+            desc_parts = [getattr(expense, "title", str(expense)) or ""]
+            if getattr(expense, "description", None):
+                desc_parts.append(str(expense.description))
+            amt = getattr(expense, "total_amount", None) or getattr(expense, "amount", 0)
+            all_line_items.append(
+                SimpleNamespace(
+                    description="\n".join(desc_parts),
+                    quantity=1,
+                    unit_price=amt,
+                    total_amount=amt,
+                )
+            )
+        invoice_wrapper.all_line_items = all_line_items
+
         # Project
         invoice_wrapper.project = self.invoice.project
 

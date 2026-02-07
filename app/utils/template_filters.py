@@ -404,7 +404,12 @@ def register_template_filters(app):
     def currency_symbol_filter(currency_code):
         """Convert currency code to symbol"""
         if not currency_code:
-            return "$"
+            try:
+                from app.models import Settings
+                settings = Settings.get_settings()
+                currency_code = settings.currency if settings else "EUR"
+            except Exception:
+                currency_code = "EUR"
 
         currency_symbols = {
             "USD": "$",
@@ -440,7 +445,12 @@ def register_template_filters(app):
     def currency_icon_filter(currency_code):
         """Convert currency code to FontAwesome icon class"""
         if not currency_code:
-            return "fa-dollar-sign"
+            try:
+                from app.models import Settings
+                settings = Settings.get_settings()
+                currency_code = settings.currency if settings else "EUR"
+            except Exception:
+                currency_code = "EUR"
 
         currency_icons = {
             "USD": "fa-dollar-sign",

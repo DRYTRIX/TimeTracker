@@ -48,7 +48,7 @@
                 <div class="col-span-2 mt-2">
                     <div class="p-4 bg-primary/10 rounded-lg">
                         <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Amount</p>
-                        <p class="font-bold text-2xl text-primary">{{ per_diem.currency_code or 'EUR' }} {{ '%.2f'|format(per_diem.calculated_amount or 0) }}</p>
+                        <p class="font-bold text-2xl text-primary">{{ (per_diem.calculated_amount or 0)|format_currency(per_diem.currency_code) }}</p>
                     </div>
                 </div>
             </div>

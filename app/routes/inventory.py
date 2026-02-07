@@ -5,6 +5,7 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event
 from app.models import (
+    Settings,
     Warehouse,
     StockItem,
     WarehouseStock,
@@ -2130,12 +2131,16 @@ def reports_dashboard():
                 low_stock_count += 1
                 break
 
+    settings = Settings.get_settings()
+    currency = settings.currency if settings else "EUR"
+
     return render_template(
         "inventory/reports/dashboard.html",
         total_items=total_items,
         total_warehouses=total_warehouses,
         total_value=float(total_value),
         low_stock_count=low_stock_count,
+        currency=currency,
     )
 
 
@@ -2191,6 +2196,9 @@ def reports_valuation():
                 "cost": item_detail.get("cost")
             })
 
+    settings = Settings.get_settings()
+    currency = settings.currency if settings else "EUR"
+
     return render_template(
         "inventory/reports/valuation.html",
         valuation_data=valuation_data,
@@ -2202,6 +2210,7 @@ def reports_valuation():
         selected_warehouse_id=warehouse_id,
         selected_category=category,
         selected_currency=currency_code,
+        currency=currency,
     )
 
 

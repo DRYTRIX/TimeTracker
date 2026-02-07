@@ -43,10 +43,10 @@
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ _('Total Inventory Value') }}</p>
-                <p class="text-3xl font-bold mt-2">{{ "%.2f"|format(total_value) }} EUR</p>
+                <p class="text-3xl font-bold mt-2">{{ total_value|format_currency(currency) }}</p>
             </div>
             <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                <i class="fas fa-euro-sign text-purple-600 dark:text-purple-400 text-2xl"></i>
+                <i class="fas {{ currency|currency_icon }} text-purple-600 dark:text-purple-400 text-2xl"></i>
             </div>
         </div>
     </div>

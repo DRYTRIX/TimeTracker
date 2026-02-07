@@ -46,7 +46,7 @@
         <h2 class="text-lg font-semibold">{{ _('Inventory Valuation') }}</h2>
         <div class="text-right">
             <p class="text-sm text-gray-500 dark:text-gray-400">{{ _('Total Value') }}</p>
-            <p class="text-2xl font-bold text-primary">{{ "%.2f"|format(total_value) }} EUR</p>
+            <p class="text-2xl font-bold text-primary">{{ total_value|format_currency(currency) }}</p>
         </div>
     </div>
     
@@ -79,8 +79,8 @@
                     <td class="p-4 font-mono text-sm">{{ item_data.stock.stock_item.sku }}</td>
                     <td class="p-4">{{ item_data.stock.stock_item.category or '—' }}</td>
                     <td class="p-4">{{ "%.2f"|format(item_data.quantity) if item_data.quantity is not none else item_data.stock.quantity_on_hand }}</td>
-                    <td class="p-4">{{ "%.2f"|format(item_data.cost) if item_data.cost is not none else (item_data.stock.stock_item.default_cost or 0) }} EUR</td>
-                    <td class="p-4 font-semibold">{{ "%.2f"|format(item_data.value) }} EUR</td>
+                    <td class="p-4">{{ (item_data.cost if item_data.cost is not none else (item_data.stock.stock_item.default_cost or 0))|format_currency(item_data.stock.stock_item.currency_code) }}</td>
+                    <td class="p-4 font-semibold">{{ item_data.value|format_currency(item_data.stock.stock_item.currency_code) }}</td>
                 </tr>
                 {% else %}
                 <tr>
@@ -93,7 +93,7 @@
             <tfoot>
                 <tr class="font-bold">
                     <td colspan="6" class="p-4 text-right">{{ _('Total Value') }}:</td>
-                    <td class="p-4">{{ "%.2f"|format(total_value) }} EUR</td>
+                    <td class="p-4">{{ total_value|format_currency(currency) }}</td>
                 </tr>
             </tfoot>
         </table>
