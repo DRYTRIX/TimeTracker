@@ -34,7 +34,7 @@
                 
                 <div>
                     <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Requested At') }}</dt>
-                    <dd class="text-text-light dark:text-text-dark">{{ approval.requested_at.strftime('%Y-%m-%d %H:%M') }}</dd>
+                    <dd class="text-text-light dark:text-text-dark">{{ approval.requested_at|user_datetime }}</dd>
                 </div>
                 
                 {% if approval.approved_at %}

@@ -47,11 +47,11 @@
                                 <strong>{{ comment.author.full_name or comment.author.username }}</strong>
                                 <div class="text-muted small">
                                     <i class="fas fa-clock me-1"></i>
-                                    {{ _('Originally posted on') }} {{ comment.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                                    {{ _('Originally posted on') }} {{ comment.created_at|user_datetime }}
                                     {% if comment.created_at != comment.updated_at %}
                                     <br>
                                     <i class="fas fa-edit me-1"></i>
-                                    {{ _('Last edited on') }} {{ comment.updated_at.strftime('%B %d, %Y at %I:%M %p') }}
+                                    {{ _('Last edited on') }} {{ comment.updated_at|user_datetime }}
                                     {% endif %}
                                 </div>
                             </div>

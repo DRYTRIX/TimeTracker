@@ -293,7 +293,7 @@
                             <input type="checkbox" class="expense-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ expense.id }}" onchange="updateBulkDeleteButton()">
                         </td>
                         {% endif %}
-                        <td class="p-4 whitespace-nowrap">{{ expense.expense_date.strftime('%Y-%m-%d') }}</td>
+                        <td class="p-4 whitespace-nowrap">{{ expense.expense_date|format_date }}</td>
                         <td class="p-4">
                             <a href="{{ url_for('expenses.view_expense', expense_id=expense.id) }}" class="text-primary hover:underline font-medium">
                                 {{ expense.title }}

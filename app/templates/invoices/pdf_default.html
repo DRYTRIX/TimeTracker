@@ -120,7 +120,7 @@
                                 <br><small class="expense-vendor">{{ _('Vendor') }}: {{ expense.vendor|e }}</small>
                             {% endif %}
                             {% if expense.expense_date %}
-                                <br><small class="expense-date">{{ _('Date') }}: {{ expense.expense_date.strftime('%Y-%m-%d') }}</small>
+                                <br><small class="expense-date">{{ _('Date') }}: {{ expense.expense_date|format_date }}</small>
                             {% endif %}
                         </td>
                         <td class="num">1</td>

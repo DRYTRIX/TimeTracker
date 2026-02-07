@@ -34,7 +34,7 @@
                 {% if credentials.expires_at %}
                 <div>
                     <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Token Expires') }}</dt>
-                    <dd class="text-text-light dark:text-text-dark">{{ credentials.expires_at.strftime('%Y-%m-%d %H:%M') }}</dd>
+                    <dd class="text-text-light dark:text-text-dark">{{ credentials.expires_at|user_datetime }}</dd>
                 </div>
                 {% endif %}
                 {% else %}
@@ -47,7 +47,7 @@
                 <div>
                     <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Last Sync') }}</dt>
                     <dd class="text-text-light dark:text-text-dark">
-                        {{ integration.last_sync_at.strftime('%Y-%m-%d %H:%M') }}
+                        {{ integration.last_sync_at|user_datetime }}
                         {% if integration.last_sync_status %}
                             {% if integration.last_sync_status == 'success' %}
                             <span class="ml-2 px-2 py-1 text-xs rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Success') }}</span>
@@ -91,7 +91,7 @@
                             {% if event.message %}
                             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ event.message }}</p>
                             {% endif %}
-                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ event.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ event.created_at|user_datetime }}</p>
                         </div>
                     </div>
                 </div>

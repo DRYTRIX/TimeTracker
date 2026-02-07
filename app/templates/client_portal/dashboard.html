@@ -189,7 +189,7 @@
                             </span>
                         </div>
                         <div class="flex items-center space-x-4 text-sm text-text-muted-light dark:text-text-muted-dark">
-                            <span><i class="fas fa-calendar mr-1"></i>{{ invoice.issue_date.strftime('%b %d, %Y') }}</span>
+                            <span><i class="fas fa-calendar mr-1"></i>{{ invoice.issue_date|user_date }}</span>
                             <span class="font-semibold text-text-light dark:text-text-dark">{{ "%.2f"|format(invoice.total_amount) }} {{ invoice.currency_code }}</span>
                         </div>
                     </div>
@@ -240,8 +240,8 @@
                 {% for entry in recent_time_entries[:10] %}
                 <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
                     <td class="py-3 px-4 text-sm">
-                        <div class="font-medium text-text-light dark:text-text-dark">{{ entry.start_time.strftime('%b %d') }}</div>
-                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ entry.start_time.strftime('%Y') }}</div>
+                        <div class="font-medium text-text-light dark:text-text-dark">{{ entry.start_time|user_date }}</div>
+                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ entry.start_time|user_date }}</div>
                     </td>
                     <td class="py-3 px-4">
                         <div class="flex items-center space-x-2">

@@ -36,8 +36,8 @@ class User(UserMixin, db.Model):
     notification_task_comments = db.Column(db.Boolean, default=True, nullable=False)  # Notify about task comments
     notification_weekly_summary = db.Column(db.Boolean, default=False, nullable=False)  # Send weekly time summary
     timezone = db.Column(db.String(50), nullable=True)  # User-specific timezone override
-    date_format = db.Column(db.String(20), default="YYYY-MM-DD", nullable=False)  # Date format preference
-    time_format = db.Column(db.String(10), default="24h", nullable=False)  # '12h' or '24h'
+    date_format = db.Column(db.String(20), default=None, nullable=True)  # None = use system default
+    time_format = db.Column(db.String(10), default=None, nullable=True)  # None = use system default
     week_start_day = db.Column(db.Integer, default=1, nullable=False)  # 0=Sunday, 1=Monday, etc.
 
     # Time rounding preferences
@@ -255,7 +255,23 @@ class User(UserMixin, db.Model):
             return "offline"
 
     def to_dict(self):
-        """Convert user to dictionary for API responses"""
+        """Convert user to dictionary for API responses.
+        Includes resolved date_format and time_format (user override or system default) for clients (e.g. mobile).
+        """
+        from app.utils.timezone import (
+            get_resolved_date_format_key,
+            get_resolved_time_format_key,
+            get_user_timezone_name,
+            get_app_timezone,
+        )
+        try:
+            resolved_date = get_resolved_date_format_key(self)
+            resolved_time = get_resolved_time_format_key(self)
+            resolved_timezone = get_user_timezone_name(self) or get_app_timezone()
+        except Exception:
+            resolved_date = "YYYY-MM-DD"
+            resolved_time = "24h"
+            resolved_timezone = "Europe/Rome"
         return {
             "id": self.id,
             "username": self.username,
@@ -269,6 +285,9 @@ class User(UserMixin, db.Model):
             "total_hours": self.total_hours,
             "avatar_url": self.get_avatar_url(),
             "status": self.get_status(),
+            "date_format": resolved_date,
+            "time_format": resolved_time,
+            "timezone": resolved_timezone,
         }
 
     # Avatar helpers

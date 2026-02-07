@@ -44,7 +44,7 @@
                 <td class="p-4">{{ stock.location or '—' }}</td>
                 <td class="p-4">
                     {% if stock.last_counted_at %}
-                        {{ stock.last_counted_at.strftime('%Y-%m-%d') }}
+                        {{ stock.last_counted_at|user_date }}
                     {% else %}
                         — 
                     {% endif %}

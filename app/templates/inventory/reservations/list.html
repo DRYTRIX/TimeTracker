@@ -86,10 +86,10 @@
                         <span class="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">{{ _('Expired') }}</span>
                     {% endif %}
                 </td>
-                <td class="p-4">{{ reservation.reserved_at.strftime('%Y-%m-%d %H:%M') if reservation.reserved_at else '—' }}</td>
+                <td class="p-4">{{ reservation.reserved_at|user_datetime if reservation.reserved_at else '—' }}</td>
                 <td class="p-4">
                     {% if reservation.expires_at %}
-                        {{ reservation.expires_at.strftime('%Y-%m-%d') if reservation.expires_at else '—' }}
+                        {{ reservation.expires_at|format_date if reservation.expires_at else '—' }}
                         {% if reservation.is_expired %}
                             <span class="ml-2 text-amber-500" title="{{ _('Expired') }}"><i class="fas fa-exclamation-triangle"></i></span>
                         {% endif %}

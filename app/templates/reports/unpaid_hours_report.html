@@ -130,7 +130,7 @@
                                                 <td class="p-2">{{ entry.user.display_name if entry.user else 'Unknown' }}</td>
                                                 <td class="p-2">{{ entry.project.name if entry.project else 'No Project' }}</td>
                                                 <td class="p-2">{{ entry.task.name if entry.task else '-' }}</td>
-                                                <td class="p-2">{{ entry.start_time.strftime('%Y-%m-%d') if entry.start_time else '-' }}</td>
+                                                <td class="p-2">{{ entry.start_time|user_date if entry.start_time else '-' }}</td>
                                                 <td class="p-2">{{ "%.2f"|format(entry.duration_hours) }}h</td>
                                                 <td class="p-2">{{ entry.notes or '-' }}</td>
                                             </tr>

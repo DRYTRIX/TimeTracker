@@ -211,7 +211,7 @@
                                 {% endif %}
                             </td>
                             <td class="p-3 text-gray-600 dark:text-gray-400">
-                                {{ lot.created_at.strftime('%Y-%m-%d') if lot.created_at else '—' }}
+                                {{ lot.created_at|user_date if lot.created_at else '—' }}
                             </td>
                         </tr>
                         {% endfor %}
@@ -246,7 +246,7 @@
                 <tbody>
                     {% for movement in recent_movements %}
                     <tr>
-                        <td class="p-4">{{ movement.moved_at.strftime('%Y-%m-%d %H:%M') if movement.moved_at else '—' }}</td>
+                        <td class="p-4">{{ movement.moved_at|user_datetime if movement.moved_at else '—' }}</td>
                         <td class="p-4">
                             <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 capitalize">
                                 {{ movement.movement_type }}

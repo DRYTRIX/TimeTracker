@@ -101,7 +101,7 @@
                         {% set is_overdue = invoice._is_overdue %}
                         <span class="chip whitespace-nowrap {% if is_overdue %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border-2 border-red-500{% else %}chip-neutral{% endif %}">
                             {% if is_overdue %}<i class="fas fa-exclamation-circle mr-1"></i>{% endif %}
-                            {{ invoice.due_date.strftime('%Y-%m-%d') }}
+                            {{ invoice.due_date|format_date }}
                         </span>
                     {% else %}
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>

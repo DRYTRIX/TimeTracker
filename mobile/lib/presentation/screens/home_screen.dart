@@ -5,6 +5,8 @@ import 'package:timetracker_mobile/core/theme/app_tokens.dart';
 import '../providers/timer_provider.dart';
 import '../providers/time_entries_provider.dart';
 import '../providers/projects_provider.dart';
+import '../providers/user_prefs_provider.dart';
+import 'package:timetracker_mobile/utils/date_format_utils.dart';
 import '../widgets/empty_state.dart';
 import 'timer_screen.dart';
 import 'projects_screen.dart';
@@ -258,7 +260,11 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                 final projectName = _projectName(entry.projectId, projectsState.projects);
                 final subtitle = (entry.notes != null && entry.notes!.trim().isNotEmpty)
                     ? entry.notes!.trim()
-                    : entry.formattedDateRange;
+                    : formatDateRange(
+                        entry.startTime,
+                        entry.endTime,
+                        ref.watch(userPrefsProvider).valueOrNull?.dateFormat,
+                      );
                 return Card(
                   margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: ListTile(

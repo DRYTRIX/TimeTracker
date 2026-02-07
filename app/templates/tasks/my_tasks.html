@@ -253,7 +253,7 @@
                                 <i class="fas fa-calendar text-{% if task.is_overdue %}danger{% else %}secondary{% endif %} fa-xs"></i>
                             </div>
                             <span class="text-muted small {% if task.is_overdue %}text-danger fw-bold{% endif %}">
-                                Due: {{ task.due_date.strftime('%b %d, %Y') }}
+                                Due: {{ task.due_date|format_date }}
                                 {% if task.is_overdue %}<i class="fas fa-exclamation-triangle text-warning ms-1"></i>{% endif %}
                             </span>
                         </div>

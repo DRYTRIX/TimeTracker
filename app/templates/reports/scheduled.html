@@ -60,7 +60,7 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         {% if schedule.next_run_at %}
-                        <div class="text-sm">{{ schedule.next_run_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                        <div class="text-sm">{{ schedule.next_run_at|user_datetime }}</div>
                         {% else %}
                         <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Not scheduled') }}</span>
                         {% endif %}

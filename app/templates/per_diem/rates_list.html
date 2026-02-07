@@ -47,9 +47,9 @@
                             {{ rate.currency_code }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            {{ rate.effective_from.strftime('%Y-%m-%d') }}
+                            {{ rate.effective_from|format_date }}
                             {% if rate.effective_to %}
-                            <br><span class="text-xs text-gray-500">to {{ rate.effective_to.strftime('%Y-%m-%d') }}</span>
+                            <br><span class="text-xs text-gray-500">to {{ rate.effective_to|format_date }}</span>
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">

@@ -5,6 +5,8 @@ import 'package:timetracker_mobile/core/theme/app_tokens.dart';
 import 'package:timetracker_mobile/presentation/providers/projects_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/tasks_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/time_entries_provider.dart';
+import 'package:timetracker_mobile/presentation/providers/user_prefs_provider.dart';
+import 'package:timetracker_mobile/utils/date_format_utils.dart';
 
 class TimeEntryFormScreen extends ConsumerStatefulWidget {
   final int? entryId;
@@ -300,11 +302,11 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
                   },
                 ),
               const SizedBox(height: AppSpacing.md),
-              // Start date/time
+              // Start date/time (display uses user's format; API still gets ISO)
               ListTile(
                 title: const Text('Start Date & Time *'),
                 subtitle: Text(
-                  DateFormat('yyyy-MM-dd HH:mm').format(
+                  formatDateTime(
                     DateTime(
                       _startDate.year,
                       _startDate.month,
@@ -312,6 +314,8 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
                       _startTime.hour,
                       _startTime.minute,
                     ),
+                    ref.read(userPrefsProvider).valueOrNull?.dateFormat,
+                    ref.read(userPrefsProvider).valueOrNull?.timeFormat,
                   ),
                 ),
                 trailing: const Icon(Icons.calendar_today),
@@ -323,7 +327,7 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
                 title: const Text('End Date & Time (Optional)'),
                 subtitle: Text(
                   _endDate != null && _endTime != null
-                      ? DateFormat('yyyy-MM-dd HH:mm').format(
+                      ? formatDateTime(
                           DateTime(
                             _endDate!.year,
                             _endDate!.month,
@@ -331,6 +335,8 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
                             _endTime!.hour,
                             _endTime!.minute,
                           ),
+                          ref.read(userPrefsProvider).valueOrNull?.dateFormat,
+                          ref.read(userPrefsProvider).valueOrNull?.timeFormat,
                         )
                       : 'Not set',
                 ),

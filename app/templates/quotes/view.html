@@ -205,14 +205,14 @@
                     <p class="text-sm text-green-700 dark:text-green-300 mb-2">
                         {{ _('Approved by') }} {{ quote.approver.full_name or quote.approver.username if quote.approver else 'N/A' }}
                         {% if quote.approved_at %}
-                        {{ _('on') }} {{ quote.approved_at|user_datetime('%Y-%m-%d %H:%M') }}
+                        {{ _('on') }} {{ quote.approved_at|user_datetime }}
                         {% endif %}
                     </p>
                     {% elif quote.approval_status == 'rejected' %}
                     <p class="text-sm text-red-700 dark:text-red-300 mb-2">
                         {{ _('Rejected by') }} {{ quote.rejecter.full_name or quote.rejecter.username if quote.rejecter else 'N/A' }}
                         {% if quote.rejected_at %}
-                        {{ _('on') }} {{ quote.rejected_at|user_datetime('%Y-%m-%d %H:%M') }}
+                        {{ _('on') }} {{ quote.rejected_at|user_datetime }}
                         {% endif %}
                     </p>
                     {% if quote.rejection_reason %}
@@ -312,7 +312,7 @@
                                 {% else %}
                                 <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Client Visible') }}</span>
                                 {% endif %}
-                                <span class="text-sm text-gray-500 dark:text-gray-400">{{ comment.created_at|user_datetime('%Y-%m-%d %H:%M') }}</span>
+                                <span class="text-sm text-gray-500 dark:text-gray-400">{{ comment.created_at|user_datetime }}</span>
                             </div>
                             {% if comment.can_edit(current_user) %}
                             <div class="flex gap-2">
@@ -337,7 +337,7 @@
                                         {% if reply.is_internal %}
                                         <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ _('Internal') }}</span>
                                         {% endif %}
-                                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ reply.created_at|user_datetime('%Y-%m-%d %H:%M') }}</span>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ reply.created_at|user_datetime }}</span>
                                     </div>
                                     {% if reply.can_edit(current_user) %}
                                     <div class="flex gap-2">
@@ -397,13 +397,13 @@
             <dl class="space-y-3 text-sm">
                 <div class="pb-3 border-b border-border-light dark:border-border-dark">
                     <dt class="font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Created') }}</dt>
-                    <dd class="text-gray-600 dark:text-gray-400">{{ quote.created_at.strftime('%Y-%m-%d %H:%M') if quote.created_at else '' }}</dd>
+                    <dd class="text-gray-600 dark:text-gray-400">{{ quote.created_at|user_datetime if quote.created_at else '' }}</dd>
                 </div>
                 {% if quote.valid_until %}
                 <div class="pb-3 border-b border-border-light dark:border-border-dark">
                     <dt class="font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Valid Until') }}</dt>
                     <dd class="text-gray-600 dark:text-gray-400">
-                        {{ quote.valid_until.strftime('%Y-%m-%d') if quote.valid_until else '' }}
+                        {{ quote.valid_until|format_date if quote.valid_until else '' }}
                         {% if quote.valid_until and quote.valid_until < now() %}
                             <span class="ml-2 px-2 py-1 text-xs rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">{{ _('Expired') }}</span>
                         {% endif %}
@@ -413,13 +413,13 @@
                 {% if quote.sent_at %}
                 <div class="pb-3 border-b border-border-light dark:border-border-dark">
                     <dt class="font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Sent At') }}</dt>
-                    <dd class="text-gray-600 dark:text-gray-400">{{ quote.sent_at.strftime('%Y-%m-%d %H:%M') if quote.sent_at else '' }}</dd>
+                    <dd class="text-gray-600 dark:text-gray-400">{{ quote.sent_at|user_datetime if quote.sent_at else '' }}</dd>
                 </div>
                 {% endif %}
                 {% if quote.accepted_at %}
                 <div class="pb-3 border-b border-border-light dark:border-border-dark">
                     <dt class="font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Accepted At') }}</dt>
-                    <dd class="text-gray-600 dark:text-gray-400">{{ quote.accepted_at.strftime('%Y-%m-%d %H:%M') if quote.accepted_at else '' }}</dd>
+                    <dd class="text-gray-600 dark:text-gray-400">{{ quote.accepted_at|user_datetime if quote.accepted_at else '' }}</dd>
                 </div>
                 {% endif %}
             </dl>

@@ -206,8 +206,8 @@
                         </td>
                         {% endif %}
                         <td class="p-4 whitespace-nowrap">
-                            {{ claim.start_date.strftime('%Y-%m-%d') }}<br>
-                            <span class="text-xs text-gray-500 dark:text-gray-400">to {{ claim.end_date.strftime('%Y-%m-%d') }}</span>
+                            {{ claim.start_date|format_date }}<br>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">to {{ claim.end_date|format_date }}</span>
                         </td>
                         <td class="p-4">
                             <a href="{{ url_for('per_diem.view_per_diem', per_diem_id=claim.id) }}" class="text-primary hover:underline font-medium">

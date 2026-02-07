@@ -220,6 +220,55 @@
             }
         };
     </script>
+
+    <!-- User date/time format preferences for JavaScript (resolved: user override or system default) -->
+    <script>
+        window.userPrefs = {
+            dateFormat: {{ resolved_date_format_key|tojson }},
+            timeFormat: {{ resolved_time_format_key|tojson }}
+        };
+        /**
+         * Format a JS Date according to the user's preferred date format.
+         * @param {Date} date
+         * @returns {string}
+         */
+        window.formatUserDate = function(date) {
+            if (!date || isNaN(date)) return '';
+            var d = date.getDate().toString().padStart(2, '0');
+            var m = (date.getMonth() + 1).toString().padStart(2, '0');
+            var y = date.getFullYear();
+            switch (window.userPrefs.dateFormat) {
+                case 'DD/MM/YYYY': return d + '/' + m + '/' + y;
+                case 'DD.MM.YYYY': return d + '.' + m + '.' + y;
+                case 'MM/DD/YYYY': return m + '/' + d + '/' + y;
+                default:           return y + '-' + m + '-' + d;
+            }
+        };
+        /**
+         * Format a JS Date's time portion according to the user's preferred time format.
+         * @param {Date} date
+         * @returns {string}
+         */
+        window.formatUserTime = function(date) {
+            if (!date || isNaN(date)) return '';
+            if (window.userPrefs.timeFormat === '12h') {
+                var h = date.getHours();
+                var ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12 || 12;
+                return h.toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0') + ' ' + ampm;
+            }
+            return date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+        };
+        /**
+         * Format a JS Date as date + time according to user preferences.
+         * @param {Date} date
+         * @returns {string}
+         */
+        window.formatUserDateTime = function(date) {
+            if (!date || isNaN(date)) return '';
+            return window.formatUserDate(date) + ' ' + window.formatUserTime(date);
+        };
+    </script>
     
     {% block extra_css %}{% endblock %}
 </head>

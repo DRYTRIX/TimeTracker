@@ -48,7 +48,7 @@
         
         <div>
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Date') }}</h3>
-            <p class="font-medium">{{ approval.time_entry.start_time.strftime('%Y-%m-%d') if approval.time_entry.start_time else _('N/A') }}</p>
+            <p class="font-medium">{{ approval.time_entry.start_time|user_date if approval.time_entry.start_time else _('N/A') }}</p>
         </div>
         
         <div>
@@ -58,12 +58,12 @@
         
         <div>
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Start Time') }}</h3>
-            <p class="font-medium">{{ approval.time_entry.start_time.strftime('%H:%M') if approval.time_entry.start_time else _('N/A') }}</p>
+            <p class="font-medium">{{ approval.time_entry.start_time|user_time if approval.time_entry.start_time else _('N/A') }}</p>
         </div>
         
         <div>
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('End Time') }}</h3>
-            <p class="font-medium">{{ approval.time_entry.end_time.strftime('%H:%M') if approval.time_entry.end_time else _('N/A') }}</p>
+            <p class="font-medium">{{ approval.time_entry.end_time|user_time if approval.time_entry.end_time else _('N/A') }}</p>
         </div>
         
         {% if approval.time_entry.billable %}
@@ -107,7 +107,7 @@
         <h3 class="text-sm font-medium text-green-900 dark:text-green-200 mb-2">{{ _('Approval Comment') }}</h3>
         <p class="text-sm text-green-800 dark:text-green-300 whitespace-pre-line">{{ approval.approval_comment }}</p>
         <p class="text-xs text-green-700 dark:text-green-400 mt-2">
-            {{ _('Approved on') }} {{ approval.approved_at.strftime('%Y-%m-%d %H:%M') if approval.approved_at else _('N/A') }}
+            {{ _('Approved on') }} {{ approval.approved_at|user_datetime if approval.approved_at else _('N/A') }}
         </p>
     </div>
     {% endif %}
@@ -117,14 +117,14 @@
         <h3 class="text-sm font-medium text-red-900 dark:text-red-200 mb-2">{{ _('Rejection Reason') }}</h3>
         <p class="text-sm text-red-800 dark:text-red-300 whitespace-pre-line">{{ approval.rejection_reason }}</p>
         <p class="text-xs text-red-700 dark:text-red-400 mt-2">
-            {{ _('Rejected on') }} {{ approval.rejected_at.strftime('%Y-%m-%d %H:%M') if approval.rejected_at else _('N/A') }}
+            {{ _('Rejected on') }} {{ approval.rejected_at|user_datetime if approval.rejected_at else _('N/A') }}
         </p>
     </div>
     {% endif %}
     
     <div class="pt-6 border-t border-border-light dark:border-border-dark">
         <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
-            <p><strong>{{ _('Requested on') }}:</strong> {{ approval.requested_at.strftime('%Y-%m-%d %H:%M') if approval.requested_at else _('N/A') }}</p>
+            <p><strong>{{ _('Requested on') }}:</strong> {{ approval.requested_at|user_datetime if approval.requested_at else _('N/A') }}</p>
             {% if approval.requester %}
             <p><strong>{{ _('Requested by') }}:</strong> {{ approval.requester.username if approval.requester else _('N/A') }}</p>
             {% endif %}

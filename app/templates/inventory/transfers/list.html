@@ -50,7 +50,7 @@
                     {% set in_movement = movements|selectattr('quantity', 'gt', 0)|first %}
                     {% if out_movement and in_movement %}
                     <tr>
-                        <td class="p-4">{{ out_movement.moved_at.strftime('%Y-%m-%d %H:%M') if out_movement.moved_at else '—' }}</td>
+                        <td class="p-4">{{ out_movement.moved_at|user_datetime if out_movement.moved_at else '—' }}</td>
                         <td class="p-4">
                             <a href="{{ url_for('inventory.view_stock_item', item_id=out_movement.stock_item_id) }}" class="text-primary hover:underline">
                                 {{ out_movement.stock_item.name }} ({{ out_movement.stock_item.sku }})

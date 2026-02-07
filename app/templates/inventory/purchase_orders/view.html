@@ -56,18 +56,18 @@
                 </div>
                 <div>
                     <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Order Date') }}</label>
-                    <p class="mt-1">{{ purchase_order.order_date.strftime('%Y-%m-%d') if purchase_order.order_date else '—' }}</p>
+                    <p class="mt-1">{{ purchase_order.order_date|format_date if purchase_order.order_date else '—' }}</p>
                 </div>
                 {% if purchase_order.expected_delivery_date %}
                 <div>
                     <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Expected Delivery') }}</label>
-                    <p class="mt-1">{{ purchase_order.expected_delivery_date.strftime('%Y-%m-%d') }}</p>
+                    <p class="mt-1">{{ purchase_order.expected_delivery_date|format_date }}</p>
                 </div>
                 {% endif %}
                 {% if purchase_order.received_date %}
                 <div>
                     <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Received Date') }}</label>
-                    <p class="mt-1">{{ purchase_order.received_date.strftime('%Y-%m-%d') }}</p>
+                    <p class="mt-1">{{ purchase_order.received_date|format_date }}</p>
                 </div>
                 {% endif %}
                 {% if purchase_order.notes %}
@@ -193,7 +193,7 @@
                 </div>
                 <div>
                     <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Created') }}</label>
-                    <p class="text-sm mt-1">{{ purchase_order.created_at.strftime('%Y-%m-%d %H:%M') if purchase_order.created_at else '—' }}</p>
+                    <p class="text-sm mt-1">{{ purchase_order.created_at|user_datetime if purchase_order.created_at else '—' }}</p>
                 </div>
             </div>
         </div>

@@ -75,7 +75,7 @@
                 <p><strong>Title:</strong> {{ quote.title }}</p>
                 <p><strong>Client:</strong> {{ quote.client.name if quote.client else 'N/A' }}</p>
                 <p><strong>Total Amount:</strong> {{ quote.currency_code }} {{ "%.2f"|format(quote.total_amount) }}</p>
-                <p><strong>Sent At:</strong> {{ quote.sent_at.strftime('%Y-%m-%d %H:%M') if quote.sent_at else 'N/A' }}</p>
+                <p><strong>Sent At:</strong> {{ quote.sent_at|user_datetime if quote.sent_at else 'N/A' }}</p>
             </div>
             
             <a href="{{ url_for('quotes.view_quote', quote_id=quote.id, _external=True) }}" class="button">{{ _('View Quote') }}</a>

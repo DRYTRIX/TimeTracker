@@ -2,7 +2,11 @@ from flask import g, request, current_app
 from flask_babel import get_locale
 from flask_login import current_user
 from app.models import Settings
-from app.utils.timezone import get_timezone_offset_for_timezone
+from app.utils.timezone import (
+    get_timezone_offset_for_timezone,
+    get_resolved_date_format_key,
+    get_resolved_time_format_key,
+)
 
 
 def register_context_processors(app):
@@ -22,7 +26,15 @@ def register_context_processors(app):
             # Check if we have an active database session
             if db.session.is_active:
                 settings = Settings.get_settings()
-                return {"settings": settings, "currency": settings.currency, "timezone": settings.timezone}
+                resolved_date = get_resolved_date_format_key()
+                resolved_time = get_resolved_time_format_key()
+                return {
+                    "settings": settings,
+                    "currency": settings.currency,
+                    "timezone": settings.timezone,
+                    "resolved_date_format_key": resolved_date,
+                    "resolved_time_format_key": resolved_time,
+                }
         except Exception as e:
             # Log the error but continue with defaults
             print(f"Warning: Could not inject settings: {e}")
@@ -35,8 +47,20 @@ def register_context_processors(app):
                 pass
             pass
 
-        # Return defaults if settings not available
-        return {"settings": None, "currency": "EUR", "timezone": "Europe/Rome"}
+        # Return defaults if settings not available (resolved keys still work without db)
+        try:
+            resolved_date = get_resolved_date_format_key()
+            resolved_time = get_resolved_time_format_key()
+        except Exception:
+            resolved_date = "YYYY-MM-DD"
+            resolved_time = "24h"
+        return {
+            "settings": None,
+            "currency": "EUR",
+            "timezone": "Europe/Rome",
+            "resolved_date_format_key": resolved_date,
+            "resolved_time_format_key": resolved_time,
+        }
 
     @app.context_processor
     def inject_globals():

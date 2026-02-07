@@ -45,12 +45,12 @@
         <div class="border-t border-border-light dark:border-border-dark"></div>
         <div>
             <h2 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Member Since') }}</h2>
-            <p class="mt-1 text-lg">{{ current_user.created_at.strftime('%B %d, %Y') }}</p>
+            <p class="mt-1 text-lg">{{ current_user.created_at|user_date }}</p>
         </div>
         <div class="border-t border-border-light dark:border-border-dark"></div>
         <div>
             <h2 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Last Login') }}</h2>
-            <p class="mt-1 text-lg">{{ current_user.last_login.strftime('%B %d, %Y at %I:%M %p') if current_user.last_login else 'Never' }}</p>
+            <p class="mt-1 text-lg">{{ current_user.last_login|user_datetime if current_user.last_login else 'Never' }}</p>
         </div>
     </div>
 </div>

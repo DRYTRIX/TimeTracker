@@ -154,7 +154,7 @@
                                 </div>
                                 {% endif %}
                             </td>
-                            <td class="p-4">{{ payment.payment_date.strftime('%Y-%m-%d') if payment.payment_date else '—' }}</td>
+                            <td class="p-4">{{ payment.payment_date|format_date if payment.payment_date else '—' }}</td>
                             <td class="p-4">{{ payment.method or '—' }}</td>
                             <td class="p-4">
                                 {% if payment.status == 'completed' %}

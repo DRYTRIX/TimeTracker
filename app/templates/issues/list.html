@@ -130,7 +130,7 @@
                         </span>
                     </td>
                     <td class="p-3">{{ issue.assigned_user.display_name if issue.assigned_user else '-' }}</td>
-                    <td class="p-3">{{ issue.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td class="p-3">{{ issue.created_at|user_date }}</td>
                     <td class="p-3">
                         <a href="{{ url_for('issues.view_issue', issue_id=issue.id) }}" class="text-primary hover:underline text-sm">
                             <i class="fas fa-eye mr-1"></i>{{ _('View') }}

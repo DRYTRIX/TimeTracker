@@ -76,7 +76,7 @@
                         {% endif %}
                     </td>
                     <td class="py-3">{{ deal.probability }}%</td>
-                    <td class="py-3">{{ deal.expected_close_date.strftime('%Y-%m-%d') if deal.expected_close_date else 'N/A' }}</td>
+                    <td class="py-3">{{ deal.expected_close_date|format_date if deal.expected_close_date else 'N/A' }}</td>
                     <td class="py-3">
                         <a href="{{ url_for('deals.view_deal', deal_id=deal.id) }}" class="text-primary hover:underline text-sm">{{ _('View') }}</a>
                     </td>

@@ -83,7 +83,7 @@
             {% if webhook.last_delivery_at %}
             <div>
                 <dt class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Last Delivery') }}</dt>
-                <dd class="mt-1">{{ webhook.last_delivery_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
+                <dd class="mt-1">{{ webhook.last_delivery_at|user_datetime }}</dd>
             </div>
             {% endif %}
         </dl>
@@ -129,7 +129,7 @@
                         <div class="text-xs text-red-600 dark:text-red-400 mt-1">{{ delivery.error_message[:50] }}{% if delivery.error_message|length > 50 %}...{% endif %}</div>
                         {% endif %}
                     </td>
-                    <td class="p-4 text-sm">{{ delivery.started_at.strftime('%Y-%m-%d %H:%M:%S') if delivery.started_at else '' }}</td>
+                    <td class="p-4 text-sm">{{ delivery.started_at|user_datetime if delivery.started_at else '' }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

@@ -64,7 +64,7 @@
         <tbody>
             {% for adjustment in adjustments %}
             <tr>
-                <td class="p-4">{{ adjustment.moved_at.strftime('%Y-%m-%d %H:%M') if adjustment.moved_at else '—' }}</td>
+                <td class="p-4">{{ adjustment.moved_at|user_datetime if adjustment.moved_at else '—' }}</td>
                 <td class="p-4">
                     <a href="{{ url_for('inventory.view_stock_item', item_id=adjustment.stock_item_id) }}" class="text-primary hover:underline">
                         {{ adjustment.stock_item.name }} ({{ adjustment.stock_item.sku }})

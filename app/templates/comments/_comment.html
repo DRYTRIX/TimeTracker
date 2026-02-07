@@ -21,11 +21,11 @@
             </div>
             <div class="comment-timestamp text-muted">
                 <i class="fas fa-clock me-1"></i>
-                <time datetime="{{ comment.created_at.isoformat() }}" title="{{ comment.created_at.strftime('%B %d, %Y at %I:%M %p') }}">
-                    {{ comment.created_at.strftime('%b %d, %Y at %I:%M %p') }}
+                <time datetime="{{ comment.created_at.isoformat() }}" title="{{ comment.created_at|user_datetime }}">
+                    {{ comment.created_at|user_datetime }}
                 </time>
                 {% if comment.created_at != comment.updated_at %}
-                <span class="text-muted ms-2" title="{{ _('Edited on') }} {{ comment.updated_at.strftime('%B %d, %Y at %I:%M %p') }}">
+                <span class="text-muted ms-2" title="{{ _('Edited on') }} {{ comment.updated_at|user_datetime }}">
                     <i class="fas fa-edit"></i> {{ _('edited') }}
                 </span>
                 {% endif %}

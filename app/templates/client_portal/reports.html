@@ -153,7 +153,7 @@
                 <tr class="hover:bg-background-light dark:hover:bg-background-dark transition-colors">
                     <td class="py-4 px-6">
                         <div class="text-sm font-medium text-text-light dark:text-text-dark">
-                            {{ entry.start_time.strftime('%b %d, %Y') if entry.start_time else _('N/A') }}
+                            {{ entry.start_time|user_date if entry.start_time else _('N/A') }}
                         </div>
                     </td>
                     <td class="py-4 px-6">

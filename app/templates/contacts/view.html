@@ -90,7 +90,7 @@
                     <div class="flex justify-between items-start">
                         <div>
                             <h3 class="font-medium">{{ comm.subject or comm.type|title }}</h3>
-                            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ comm.communication_date.strftime('%Y-%m-%d %H:%M') }}</p>
+                            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ comm.communication_date|user_datetime }}</p>
                             {% if comm.content %}
                             <p class="mt-2 text-sm">{{ comm.content }}</p>
                             {% endif %}

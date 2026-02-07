@@ -53,7 +53,7 @@
                     
                     {% if integration.last_sync_at %}
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark">
-                        {{ _('Last synced') }}: {{ integration.last_sync_at.strftime('%Y-%m-%d %H:%M') }}
+                        {{ _('Last synced') }}: {{ integration.last_sync_at|user_datetime }}
                         {% if integration.last_sync_status %}
                         <span class="ml-2 px-2 py-1 text-xs rounded
                             {% if integration.last_sync_status == 'success' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200

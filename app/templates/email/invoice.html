@@ -76,11 +76,11 @@
                 </tr>
                 <tr>
                     <td>Issue Date:</td>
-                    <td>{{ invoice.issue_date.strftime('%Y-%m-%d') if invoice.issue_date else 'N/A' }}</td>
+                    <td>{{ invoice.issue_date|format_date if invoice.issue_date else 'N/A' }}</td>
                 </tr>
                 <tr>
                     <td>Due Date:</td>
-                    <td>{{ invoice.due_date.strftime('%Y-%m-%d') if invoice.due_date else 'N/A' }}</td>
+                    <td>{{ invoice.due_date|format_date if invoice.due_date else 'N/A' }}</td>
                 </tr>
                 <tr>
                     <td>Amount:</td>

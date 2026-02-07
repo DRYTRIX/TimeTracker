@@ -6,6 +6,8 @@ import 'package:timetracker_mobile/data/models/task.dart';
 import 'package:timetracker_mobile/core/theme/app_tokens.dart';
 import 'package:timetracker_mobile/presentation/providers/projects_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/tasks_provider.dart';
+import 'package:timetracker_mobile/presentation/providers/user_prefs_provider.dart';
+import 'package:timetracker_mobile/utils/date_format_utils.dart';
 
 class TimeEntryCard extends ConsumerWidget {
   final TimeEntry entry;
@@ -106,7 +108,11 @@ class TimeEntryCard extends ConsumerWidget {
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   Text(
-                    entry.formattedDateRange,
+                    formatDateRange(
+                      entry.startTime,
+                      entry.endTime,
+                      ref.watch(userPrefsProvider).valueOrNull?.dateFormat,
+                    ),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
