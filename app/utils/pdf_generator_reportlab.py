@@ -9,6 +9,7 @@ import json
 import os
 import tempfile
 import io
+from types import SimpleNamespace
 from typing import Dict, List, Any, Optional, Union
 from datetime import datetime
 
@@ -610,6 +611,25 @@ class ReportLabTemplateRenderer:
         
         return LineFlowable(width, stroke, stroke_width or 1)
     
+    def _normalize_extra_good_for_items_row(self, good: Any) -> SimpleNamespace:
+        """Convert an ExtraGood to a row-like object with description, quantity, unit_price, total_amount.
+        Description is built from name + optional description, SKU, category (same shape as items table)."""
+        description_parts = [getattr(good, "name", "") or ""]
+        if getattr(good, "description", None):
+            description_parts.append(f"\n{good.description}")
+        if getattr(good, "sku", None):
+            description_parts.append(f"\n{_('SKU')}: {good.sku}")
+        if getattr(good, "category", None):
+            cat = good.category.title() if isinstance(good.category, str) else str(good.category)
+            description_parts.append(f"\n{_('Category')}: {cat}")
+        description = "\n".join(description_parts)
+        return SimpleNamespace(
+            description=description,
+            quantity=getattr(good, "quantity", 0),
+            unit_price=getattr(good, "unit_price", 0),
+            total_amount=getattr(good, "total_amount", 0),
+        )
+    
     def _render_table(self, element: Dict[str, Any]) -> Table:
         """Render a table element"""
         columns = element.get("columns", [])
@@ -631,6 +651,20 @@ class ReportLabTemplateRenderer:
         if data_source:
             # Process template variable to get actual data
             data = self._resolve_data_source(data_source)
+            # When this table is the invoice items table, include extra_goods so they appear in the PDF
+            var_name = data_source.replace("{{", "").replace("}}", "").strip()
+            if var_name == "invoice.items":
+                invoice = self.context.get("invoice")
+                if invoice is not None:
+                    extra_goods = getattr(invoice, "extra_goods", None)
+                    if extra_goods is not None:
+                        if hasattr(extra_goods, "all"):
+                            extra_goods = list(extra_goods.all())
+                        elif hasattr(extra_goods, "__iter__") and not isinstance(extra_goods, (str, bytes)):
+                            extra_goods = list(extra_goods)
+                        else:
+                            extra_goods = []
+                        data = list(data) + [self._normalize_extra_good_for_items_row(g) for g in extra_goods]
             row_template = element.get("row_template", {})
 
             if isinstance(data, list) and data:

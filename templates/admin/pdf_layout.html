@@ -2111,9 +2111,13 @@
                 
                 <div class="element-group">
                     <div class="element-group-title">{{ _('Invoice Items Loop') }}</div>
+                    <div class="variable-item" data-variable="for-loop-start-all">
+                        <div class="variable-name">{{ '{%' }} for item in invoice.all_line_items {{ '%}' }}</div>
+                        <div class="variable-desc">{{ _('All items (time + extra goods + expenses)') }}</div>
+                    </div>
                     <div class="variable-item" data-variable="for-loop-start">
                         <div class="variable-name">{{ '{%' }} for item in invoice.items {{ '%}' }}</div>
-                        <div class="variable-desc">{{ _('Loop through invoice items') }}</div>
+                        <div class="variable-desc">{{ _('Time-based items only') }}</div>
                     </div>
                     <div class="variable-item" data-variable="item.description">
                         <div class="variable-name">{{ '{{' }} item.description {{ '}}' }}</div>
@@ -2134,6 +2138,21 @@
                     <div class="variable-item" data-variable="for-loop-end">
                         <div class="variable-name">{{ '{%' }} endfor {{ '%}' }}</div>
                         <div class="variable-desc">{{ _('End loop') }}</div>
+                    </div>
+                </div>
+                <div class="element-group">
+                    <div class="element-group-title">{{ _('Extra Goods Loop') }}</div>
+                    <div class="variable-item" data-variable="for-loop-extra-goods">
+                        <div class="variable-name">{{ '{%' }} for good in invoice.extra_goods {{ '%}' }}</div>
+                        <div class="variable-desc">{{ _('Loop through extra goods only') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="good.name">
+                        <div class="variable-name">{{ '{{' }} good.name {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Good name') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="format_money(good.total_amount)">
+                        <div class="variable-name">{{ '{{' }} format_money(good.total_amount) {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Good total amount') }}</div>
                     </div>
                 </div>
             </div>
@@ -2824,6 +2843,14 @@ function initializePDFEditor() {
                 {% raw %}
                 text = '{% for item in invoice.items %}';
                 {% endraw %}
+            } else if (variable === 'for-loop-start-all') {
+                {% raw %}
+                text = '{% for item in invoice.all_line_items %}';
+                {% endraw %}
+            } else if (variable === 'for-loop-extra-goods') {
+                {% raw %}
+                text = '{% for good in invoice.extra_goods %}';
+                {% endraw %}
             } else if (variable === 'for-loop-end') {
                 {% raw %}
                 text = '{% endfor %}';
@@ -3069,7 +3096,7 @@ function initializePDFEditor() {
         {% raw %}
         const items = new Konva.Text({
             y: 25,
-            text: '{% for item in invoice.items %}\\n{{ item.description }} | {{ item.quantity }} | {{ format_money(item.unit_price) }} | {{ format_money(item.total_amount) }}\\n{% endfor %}',
+            text: '{% for item in invoice.all_line_items %}\\n{{ item.description }} | {{ item.quantity }} | {{ format_money(item.unit_price) }} | {{ format_money(item.total_amount) }}\\n{% endfor %}',
             fontSize: 11,
             fill: 'black',
             width: 500
@@ -5484,7 +5511,7 @@ function initializePDFEditor() {
                     
                     // Add to ReportLab template JSON - items table
                     {% raw %}
-                    const itemsData = '{{ invoice.items }}';
+                    const itemsData = '{{ invoice.all_line_items }}';
                     const itemsRowTemplate = {
                         description: '{{ item.description }}',
                         quantity: '{{ item.quantity }}',
@@ -5522,8 +5549,8 @@ function initializePDFEditor() {
                     bodyContent += `      </thead>\n`;
                     bodyContent += `      <tbody>\n`;
                     {% raw %}
-                    bodyContent += `        {% if invoice.items %}\n`;
-                    bodyContent += `        {% for item in invoice.items %}\n`;
+                    bodyContent += `        {% if invoice.all_line_items %}\n`;
+                    bodyContent += `        {% for item in invoice.all_line_items %}\n`;
                     bodyContent += `        <tr style="border-bottom:1px solid #ddd;">\n`;
                     bodyContent += `          <td style="padding:10px;vertical-align:top;">{{ item.description }}</td>\n`;
                     bodyContent += `          <td style="padding:10px;text-align:center;vertical-align:top;">{{ item.quantity }}</td>\n`;
@@ -5805,7 +5832,7 @@ table tr:last-child td {
         
         // Check if items table is present
         const hasItemsTable = html.includes('<!-- Items Table Start -->');
-        const hasForLoop = html.includes('{' + '% for item in invoice.items');
+        const hasForLoop = html.includes('{' + '% for item in invoice.all_line_items') || html.includes('{' + '% for item in invoice.items');
         console.log('Has Items Table marker:', hasItemsTable);
         console.log('Has Jinja2 loop:', hasForLoop);
         
@@ -5979,7 +6006,7 @@ table tr:last-child td {
         console.log('CSS length:', css.length);
         console.log('JSON template length:', json ? json.length : 0);
         console.log('Has Items Table:', html.includes('<!-- Items Table Start -->'));
-        console.log('Has Jinja2 loop:', html.includes('{' + '% for item in invoice.items'));
+        console.log('Has Jinja2 loop:', hasForLoop);
         console.log('Number of elements:', layer.children.length);
         console.log('Page size:', CURRENT_PAGE_SIZE);
 

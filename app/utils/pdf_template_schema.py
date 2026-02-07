@@ -280,7 +280,7 @@ def get_default_template(page_size: str = "A4") -> Dict[str, Any]:
             {"header": "Unit Price", "width": 110, "field": "unit_price", "align": "right"},
             {"header": "Total", "width": 110, "field": "total_amount", "align": "right"}
         ],
-        "data": "{{ invoice.items }}",
+        "data": "{{ invoice.all_line_items }}",
         "row_template": {
             "description": "{{ item.description }}",
             "quantity": "{{ item.quantity }}",
