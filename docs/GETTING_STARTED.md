@@ -97,7 +97,7 @@ python app.py
 1. **Open TimeTracker** in your browser: `http://localhost:8080`
 
 2. **Enter your credentials** (depends on authentication method configured)
-   - **Default (`AUTH_METHOD=local`)**: Enter username and password
+   - **Default (`AUTH_METHOD=local`)**: Enter username and password. **Note**: The default admin user has no password set initially. On first login, enter the admin username (e.g. `admin`) and choose any password (minimum 8 characters). Your password is set and you are logged in.
    - **No authentication (`AUTH_METHOD=none`)**: Enter username only (no password)
    - **OIDC (`AUTH_METHOD=oidc`)**: Click "Sign in with SSO" button
    - **Both (`AUTH_METHOD=both`)**: Choose either SSO or local username/password
@@ -140,7 +140,7 @@ The Admin Settings page has multiple sections. Configure what you need:
 - **Single Active Timer**: Allow only one running timer per user
 
 #### User Management
-- **Allow Self-Registration**: ☑ Enable this to let users create accounts by entering any username on the login page
+- **Allow Self-Registration**: ☑ Enable this to let users create accounts by entering any username and password on the login page. When enabled, anyone can create an app user with whatever credentials they type—there is no link to database credentials. **Security note**: Avoid using your database username (e.g. `timetracker`) as an app username, and do not share database passwords. With self-register enabled, someone could create an app account with credentials that match your DB user, which can be confusing or a security risk.
 - **Note**: Admin users are set via `ADMIN_USERNAMES` environment variable, not in this UI
 
 #### Company Branding
@@ -444,6 +444,10 @@ TimeTracker is fully responsive:
 ---
 
 ## ❓ Common Questions
+
+### What is the default admin password?
+
+There is no default password. The default admin user (from `ADMIN_USERNAMES`, typically `admin`) is created without a password. On first login with `AUTH_METHOD=local`, enter the admin username and choose any password (minimum 8 characters). Your password is set and you are logged in.
 
 ### How do I reset my database?
 
