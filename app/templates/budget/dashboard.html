@@ -83,7 +83,7 @@
                     <p class="text-sm mb-2">{{ alert.message }}</p>
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark">
                         <i class="far fa-clock mr-1"></i>
-                        {{ _('Created') }}: {{ alert.created_at|user_datetime('%Y-%m-%d %H:%M') }}
+                        {{ _('Created') }}: {{ alert.created_at|user_datetime }}
                     </p>
                 </div>
                 <div class="flex gap-2 flex-shrink-0">
@@ -128,13 +128,13 @@
                     <td class="p-4">
                         <strong>{{ project.project_name }}</strong>
                     </td>
-                    <td class="p-4">${{ "%.2f"|format(project.budget_amount) }}</td>
-                    <td class="p-4">${{ "%.2f"|format(project.consumed_amount) }}</td>
+                    <td class="p-4">{{ project.budget_amount|format_currency }}</td>
+                    <td class="p-4">{{ project.consumed_amount|format_currency }}</td>
                     <td class="p-4">
                         {% if project.remaining_amount >= 0 %}
-                        <span class="text-green-600 dark:text-green-400">${{ "%.2f"|format(project.remaining_amount) }}</span>
+                        <span class="text-green-600 dark:text-green-400">{{ project.remaining_amount|format_currency }}</span>
                         {% else %}
-                        <span class="text-red-600 dark:text-red-400">${{ "%.2f"|format(project.remaining_amount|abs) }} {{ _('over') }}</span>
+                        <span class="text-red-600 dark:text-red-400">{{ project.remaining_amount|abs|format_currency }} {{ _('over') }}</span>
                         {% endif %}
                     </td>
                     <td class="p-4">
