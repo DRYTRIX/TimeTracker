@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav %}
+
+{% block title %}{{ lead.full_name }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Leads'), 'url': url_for('leads.list_leads')},
+    {'text': lead.full_name}
+] %}
+
+{% set actions_html %}
+<a href="{{ url_for('leads.edit_lead', lead_id=lead.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-edit mr-2"></i>{{ _('Edit') }}</a>
+<a href="{{ url_for('leads.create_activity', lead_id=lead.id) }}" class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors"><i class="fas fa-plus mr-2"></i>{{ _('Add Activity') }}</a>
+{% if not lead.is_converted and not lead.is_lost %}
+<a href="{{ url_for('leads.convert_to_client', lead_id=lead.id) }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-user-check mr-2"></i>{{ _('Convert to Client') }}</a>
+<a href="{{ url_for('leads.convert_to_deal', lead_id=lead.id) }}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"><i class="fas fa-handshake mr-2"></i>{{ _('Convert to Deal') }}</a>
+<form method="POST" action="{{ url_for('leads.mark_lost', lead_id=lead.id) }}" class="inline" onsubmit="return confirm('{{ _('Mark this lead as lost?')|e }}');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"><i class="fas fa-times mr-2"></i>{{ _('Mark Lost') }}</button>
+</form>
+{% endif %}
+{% endset %}
+
+{{ page_header(
+    icon_class='fas fa-user-plus',
+    title_text=lead.full_name,
+    subtitle_text=lead.company_name or lead.title or _('Lead'),
+    breadcrumbs=breadcrumbs,
+    actions_html=actions_html
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left Column: Lead Details -->
+    <div class="lg:col-span-1 space-y-6">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Contact Information') }}</h2>
+            <div class="space-y-4">
+                {% if lead.company_name %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Company') }}</h3>
+                    <p>{{ lead.company_name }}</p>
+                </div>
+                {% endif %}
+                {% if lead.email %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Email') }}</h3>
+                    <p><a href="mailto:{{ lead.email }}" class="text-primary hover:underline">{{ lead.email }}</a></p>
+                </div>
+                {% endif %}
+                {% if lead.phone %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Phone') }}</h3>
+                    <p>{{ lead.phone }}</p>
+                </div>
+                {% endif %}
+                {% if lead.title %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Title') }}</h3>
+                    <p>{{ lead.title }}</p>
+                </div>
+                {% endif %}
+                {% if lead.source %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Source') }}</h3>
+                    <p>{{ lead.source }}</p>
+                </div>
+                {% endif %}
+                {% if not lead.company_name and not lead.email and not lead.phone and not lead.title and not lead.source %}
+                <p class="text-text-muted-light dark:text-text-muted-dark text-sm">{{ _('No contact details yet') }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Lead Details') }}</h2>
+            <div class="space-y-4">
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Status') }}</h3>
+                    <span class="px-2 py-1 text-xs rounded {% if lead.status == 'qualified' %}bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200{% elif lead.status == 'new' %}bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200{% elif lead.status == 'converted' %}bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200{% elif lead.status == 'lost' %}bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200{% else %}bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200{% endif %}">
+                        {{ lead.status|title }}
+                    </span>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Score') }}</h3>
+                    <p>
+                        <span class="px-2 py-1 text-xs rounded {% if lead.score >= 70 %}bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200{% elif lead.score >= 40 %}bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200{% else %}bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200{% endif %}">
+                            {{ lead.score or 0 }}
+                        </span>
+                    </p>
+                </div>
+                {% if lead.estimated_value is not none and lead.estimated_value %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Estimated Value') }}</h3>
+                    <p>{{ "%.2f"|format(lead.estimated_value) }} {{ lead.currency_code }}</p>
+                </div>
+                {% endif %}
+                {% if lead.owner %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Owner') }}</h3>
+                    <p>{{ lead.owner.display_name if lead.owner.display_name else lead.owner.email }}</p>
+                </div>
+                {% endif %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Created') }}</h3>
+                    <p>{{ lead.created_at|user_datetime if lead.created_at else '—' }}</p>
+                </div>
+            </div>
+        </div>
+
+        {% if lead.notes %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Notes') }}</h2>
+            <p class="text-sm whitespace-pre-wrap">{{ lead.notes }}</p>
+        </div>
+        {% endif %}
+
+        {% if lead.tags %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Tags') }}</h2>
+            <div class="flex flex-wrap gap-2">
+                {% for tag in lead.tags.split(',') if tag.strip() %}
+                <span class="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">{{ tag.strip() }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Activities -->
+    <div class="lg:col-span-2">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold">{{ _('Activity') }}</h2>
+                <a href="{{ url_for('leads.create_activity', lead_id=lead.id) }}" class="bg-primary text-white px-3 py-1.5 rounded-lg hover:bg-primary/90 transition-colors text-sm">
+                    <i class="fas fa-plus mr-1"></i>{{ _('Add Activity') }}
+                </a>
+            </div>
+            {% if activities %}
+            <div class="space-y-4">
+                {% for activity in activities %}
+                <div class="border-l-4 border-primary pl-4 py-2">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-medium">{{ activity.subject or activity.type|title }}</h3>
+                            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                                {{ activity.activity_date|user_datetime if activity.activity_date else '' }}
+                                {% if activity.creator %}
+                                · {{ _('by') }} {{ activity.creator.display_name if activity.creator.display_name else activity.creator.email }}
+                                {% endif %}
+                            </p>
+                            {% if activity.description %}
+                            <p class="mt-2 text-sm whitespace-pre-wrap">{{ activity.description }}</p>
+                            {% endif %}
+                        </div>
+                        <span class="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">{{ activity.type|title }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No activities recorded yet') }}</p>
+            <a href="{{ url_for('leads.create_activity', lead_id=lead.id) }}" class="mt-3 inline-block text-primary hover:underline text-sm">
+                <i class="fas fa-plus mr-1"></i>{{ _('Add first activity') }}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
