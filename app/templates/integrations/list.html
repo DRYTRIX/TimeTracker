@@ -98,7 +98,7 @@
                     {% endif %}
                     {% if existing_integration.last_sync_at %}
                     <span class="text-xs text-text-muted-light dark:text-text-muted-dark">
-                        {{ _('Synced') }} {{ existing_integration.last_sync_at.strftime('%m/%d') }}
+                        {{ _('Synced') }} {{ existing_integration.last_sync_at|user_date }}
                     </span>
                     {% endif %}
                 {% else %}

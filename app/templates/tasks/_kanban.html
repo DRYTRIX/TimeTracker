@@ -131,7 +131,7 @@
               {% if task.due_date %}
               <div class="kanban-meta-item kanban-meta-date {% if task.is_overdue %}kanban-meta-overdue{% endif %}" title="{{ _('Due Date') }}">
                 <i class="fas fa-calendar"></i>
-                <span>{{ task.due_date.strftime('%b %d') }}</span>
+                <span>{{ task.due_date|format_date }}</span>
               </div>
               {% endif %}
             </div>

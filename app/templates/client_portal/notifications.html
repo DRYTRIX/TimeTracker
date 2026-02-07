@@ -93,7 +93,7 @@
                                     {{ notification.type|replace('_', ' ')|title }}
                                 </span>
                                 <span class="text-xs text-text-muted-light dark:text-text-muted-dark">
-                                    <i class="fas fa-clock mr-1"></i>{{ notification.created_at.strftime('%b %d, %Y at %H:%M') if notification.created_at else _('N/A') }}
+                                    <i class="fas fa-clock mr-1"></i>{{ notification.created_at|user_datetime if notification.created_at else _('N/A') }}
                                 </span>
                             </div>
                         </div>

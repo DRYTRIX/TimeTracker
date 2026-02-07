@@ -85,7 +85,7 @@
                 </td>
                 <td class="p-2">
                     {% if task_row.completed_at %}
-                        {{ task_row.completed_at.strftime('%Y-%m-%d') }}
+                        {{ task_row.completed_at|user_date }}
                     {% else %}
                         <span class="text-gray-400 dark:text-gray-500">-</span>
                     {% endif %}

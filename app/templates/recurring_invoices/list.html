@@ -47,7 +47,7 @@
                         </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-500 dark:text-gray-400">{{ recurring.next_run_date.strftime('%Y-%m-%d') if recurring.next_run_date else 'N/A' }}</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">{{ recurring.next_run_date|format_date if recurring.next_run_date else 'N/A' }}</div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         {% if recurring.is_active %}

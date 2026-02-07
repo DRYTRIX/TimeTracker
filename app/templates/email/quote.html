@@ -80,12 +80,12 @@
                 </tr>
                 <tr>
                     <td>Date:</td>
-                    <td>{{ quote.created_at.strftime('%Y-%m-%d') if quote.created_at else 'N/A' }}</td>
+                    <td>{{ quote.created_at|user_date if quote.created_at else 'N/A' }}</td>
                 </tr>
                 {% if quote.valid_until %}
                 <tr>
                     <td>Valid Until:</td>
-                    <td>{{ quote.valid_until.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ quote.valid_until|format_date }}</td>
                 </tr>
                 {% endif %}
                 <tr>

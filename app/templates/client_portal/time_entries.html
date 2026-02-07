@@ -72,10 +72,10 @@
                 <tr class="hover:bg-background-light dark:hover:bg-background-dark transition-colors">
                     <td class="py-4 px-6">
                         <div class="text-sm font-medium text-text-light dark:text-text-dark">
-                            {{ entry.start_time.strftime('%b %d, %Y') }}
+                            {{ entry.start_time|user_date }}
                         </div>
                         <div class="text-xs text-text-muted-light dark:text-text-muted-dark">
-                            {{ entry.start_time.strftime('%A') }}
+                            {{ entry.start_time|user_date }}
                         </div>
                     </td>
                     <td class="py-4 px-6">
@@ -106,13 +106,13 @@
                         <div class="flex items-center space-x-3 text-sm">
                             <div class="flex items-center space-x-1">
                                 <i class="fas fa-play-circle text-green-500 text-xs"></i>
-                                <span class="text-text-light dark:text-text-dark font-medium">{{ entry.start_time.strftime('%H:%M') }}</span>
+                                <span class="text-text-light dark:text-text-dark font-medium">{{ entry.start_time|user_time }}</span>
                             </div>
                             {% if entry.end_time %}
                             <span class="text-text-muted-light dark:text-text-muted-dark">→</span>
                             <div class="flex items-center space-x-1">
                                 <i class="fas fa-stop-circle text-red-500 text-xs"></i>
-                                <span class="text-text-light dark:text-text-dark font-medium">{{ entry.end_time.strftime('%H:%M') }}</span>
+                                <span class="text-text-light dark:text-text-dark font-medium">{{ entry.end_time|user_time }}</span>
                             </div>
                             {% endif %}
                         </div>

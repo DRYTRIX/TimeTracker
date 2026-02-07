@@ -184,7 +184,7 @@
                             <input type="checkbox" class="mileage-entry-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ entry.id }}" onchange="updateBulkDeleteButton()">
                         </td>
                         {% endif %}
-                        <td class="p-4 whitespace-nowrap">{{ entry.date.strftime('%Y-%m-%d') if entry.date else (entry.trip_date.strftime('%Y-%m-%d') if entry.trip_date else '—') }}</td>
+                        <td class="p-4 whitespace-nowrap">{{ entry.date|format_date if entry.date else (entry.trip_date|format_date if entry.trip_date else '—') }}</td>
                         <td class="p-4">
                             <a href="{{ url_for('mileage.view_mileage', mileage_id=entry.id) }}" class="text-primary hover:underline font-medium">
                                 {{ entry.purpose }}

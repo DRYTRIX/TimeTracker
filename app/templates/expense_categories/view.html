@@ -172,12 +172,12 @@
             <div class="space-y-3">
                 <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Created</p>
-                    <p class="font-semibold text-sm">{{ category.created_at|user_datetime('%Y-%m-%d %H:%M') if category.created_at else '-' }}</p>
+                    <p class="font-semibold text-sm">{{ category.created_at|user_datetime if category.created_at else '-' }}</p>
                 </div>
                 
                 <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Last Updated</p>
-                    <p class="font-semibold text-sm">{{ category.updated_at|user_datetime('%Y-%m-%d %H:%M') if category.updated_at else '-' }}</p>
+                    <p class="font-semibold text-sm">{{ category.updated_at|user_datetime if category.updated_at else '-' }}</p>
                 </div>
             </div>
         </div>

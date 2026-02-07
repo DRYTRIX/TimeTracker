@@ -60,7 +60,7 @@
                             {% endif %}
                         </small>
                         <br><small class="text-danger fw-bold">
-                            <i class="fas fa-calendar"></i> {{ _('Due:') }} {{ task.due_date.strftime('%Y-%m-%d') }}
+                            <i class="fas fa-calendar"></i> {{ _('Due:') }} {{ task.due_date|format_date }}
                             <i class="fas fa-exclamation-triangle text-warning"></i>
                         </small>
                         {% if task.estimated_hours %}

@@ -30,7 +30,7 @@
                 {% endif %}
             </p>
             <p class="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                {{ _('Original:') }} {{ original_entry.start_time|user_datetime('%Y-%m-%d %H:%M') }} {{ _('to') }} {{ original_entry.end_time|user_datetime('%Y-%m-%d %H:%M') if original_entry.end_time else _('N/A') }} ({{ original_entry.duration_formatted }})
+                {{ _('Original:') }} {{ original_entry.start_time|user_datetime }} {{ _('to') }} {{ original_entry.end_time|user_datetime if original_entry.end_time else _('N/A') }} ({{ original_entry.duration_formatted }})
             </p>
         </div>
     </div>

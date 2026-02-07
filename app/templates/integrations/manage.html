@@ -552,7 +552,7 @@
                         <span class="font-medium text-text-light dark:text-text-dark">{{ _('Connection Status') }}:</span>
                         <span class="text-text-muted-light dark:text-text-muted-dark ml-2">
                             {% if credentials.expires_at %}
-                            {{ _('Expires') }}: {{ credentials.expires_at.strftime('%Y-%m-%d %H:%M') }}
+                            {{ _('Expires') }}: {{ credentials.expires_at|user_datetime }}
                             {% else %}
                             {{ _('No expiration') }}
                             {% endif %}
@@ -569,7 +569,7 @@
                     <div>
                         <span class="font-medium text-text-light dark:text-text-dark">{{ _('Last Sync') }}:</span>
                         <span class="text-text-muted-light dark:text-text-muted-dark ml-2">
-                            {{ active_integration.last_sync_at.strftime('%Y-%m-%d %H:%M') }}
+                            {{ active_integration.last_sync_at|user_datetime }}
                         </span>
                     </div>
                     {% else %}

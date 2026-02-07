@@ -32,9 +32,9 @@
         <div>
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Quote Details') }}</h3>
             <p class="text-sm mb-1"><span class="font-medium">{{ _('Title') }}:</span> {{ quote.title }}</p>
-            <p class="text-sm mb-1"><span class="font-medium">{{ _('Date') }}:</span> {{ quote.created_at.strftime('%Y-%m-%d') if quote.created_at else 'N/A' }}</p>
+            <p class="text-sm mb-1"><span class="font-medium">{{ _('Date') }}:</span> {{ quote.created_at|user_date if quote.created_at else 'N/A' }}</p>
             {% if quote.valid_until %}
-            <p class="text-sm mb-1"><span class="font-medium">{{ _('Valid Until') }}:</span> {{ quote.valid_until.strftime('%Y-%m-%d') }}</p>
+            <p class="text-sm mb-1"><span class="font-medium">{{ _('Valid Until') }}:</span> {{ quote.valid_until|format_date }}</p>
             {% endif %}
             <p class="text-sm mb-1"><span class="font-medium">{{ _('Status') }}:</span> 
                 <span class="px-2 py-1 text-xs rounded-full 

@@ -294,7 +294,14 @@ class Calendar {
     renderTimeSlots() {
         const slots = [];
         for (let hour = 0; hour < 24; hour++) {
-            const time = `${hour.toString().padStart(2, '0')}:00`;
+            let time;
+            if (window.userPrefs && window.userPrefs.timeFormat === '12h') {
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const h12 = hour % 12 || 12;
+                time = `${h12}:00 ${ampm}`;
+            } else {
+                time = `${hour.toString().padStart(2, '0')}:00`;
+            }
             slots.push(`<div class="time-slot" data-hour="${hour}">${time}</div>`);
         }
         return slots.join('');
@@ -381,7 +388,7 @@ class Calendar {
                     event,
                     topPosition: startMinutes,
                     heightMinutes,
-                    time: effectiveStart.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+                    time: window.formatUserTime(effectiveStart),
                     title: this.escapeHtml(event.title),
                     color: event.color || '#3b82f6'
                 });
@@ -404,8 +411,8 @@ class Calendar {
                 } else {
                     heightMinutes = Math.min(30, 1440 - startMinutes);
                 }
-                const startTime = effectiveStart.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-                const endTimeStr = entryEnd ? effectiveEnd.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
+                const startTime = window.formatUserTime(effectiveStart);
+                const endTimeStr = entryEnd ? window.formatUserTime(effectiveEnd) : '';
                 const notesText = entry.notes || entry.extendedProps?.notes || '';
                 const notes = notesText ? `<br><small class="text-xs">${this.escapeHtml(notesText)}</small>` : '';
                 const entryColor = entry.color || '#10b981';
@@ -485,14 +492,24 @@ class Calendar {
             day.setDate(start.getDate() + i);
             days.push(day);
         }
-        const timeSlots = Array.from({ length: 24 }, (_, h) => `<div class="week-time-slot">${h.toString().padStart(2, '0')}:00</div>`).join('');
+        const timeSlots = Array.from({ length: 24 }, (_, h) => {
+            let label;
+            if (window.userPrefs && window.userPrefs.timeFormat === '12h') {
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                const h12 = h % 12 || 12;
+                label = `${h12}:00 ${ampm}`;
+            } else {
+                label = `${h.toString().padStart(2, '0')}:00`;
+            }
+            return `<div class="week-time-slot">${label}</div>`;
+        }).join('');
         const dayColumns = days.map(day => {
             const blocks = this.renderWeekDayBlocks(day);
             return `<div class="week-day-column" data-date="${day.toISOString().split('T')[0]}"><div class="week-day-blocks">${blocks}</div></div>`;
         }).join('');
         const dayHeaders = days.map(day => {
             const isToday = this.isToday(day);
-            return `<div class="week-day-header-cell ${isToday ? 'today' : ''}">${day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</div>`;
+            return `<div class="week-day-header-cell ${isToday ? 'today' : ''}">${day.toLocaleDateString(undefined, { weekday: 'short' })} ${window.formatUserDate(day)}</div>`;
         }).join('');
         this.container.innerHTML = `
             <div class="calendar-week-view">
@@ -528,7 +545,7 @@ class Calendar {
                 const startMinutes = effectiveStart.getHours() * 60 + effectiveStart.getMinutes();
                 const durationMinutes = (effectiveEnd - effectiveStart) / (1000 * 60);
                 const heightMinutes = Math.max(30, Math.min(1440 - startMinutes, durationMinutes));
-                const timeStr = effectiveStart.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                const timeStr = window.formatUserTime(effectiveStart);
                 timedItems.push({
                     type: 'event',
                     startMs: effectiveStart.getTime(),
@@ -558,8 +575,8 @@ class Calendar {
                 } else {
                     heightMinutes = Math.min(30, 1440 - startMinutes);
                 }
-                const startTime = effectiveStart.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-                const endTimeStr = entryEnd ? effectiveEnd.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
+                const startTime = window.formatUserTime(effectiveStart);
+                const endTimeStr = entryEnd ? window.formatUserTime(effectiveEnd) : '';
                 const entryColor = entry.color || '#10b981';
                 timedItems.push({
                     type: 'time_entry',
@@ -764,7 +781,7 @@ class Calendar {
         const formatDate = (d) => {
             if (!d) return '—';
             const dt = new Date(d);
-            return dt.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+            return window.formatUserDateTime(dt);
         };
         // Use effective type for link: registered time (time entries) must go to /timer/edit/, not /calendar/event/
         let effectiveType = props.item_type || props.type || type;

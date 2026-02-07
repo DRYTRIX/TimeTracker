@@ -185,7 +185,7 @@
                     {% for expense in recent_expenses %}
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            {{ expense.expense_date.strftime('%Y-%m-%d') }}
+                            {{ expense.expense_date|format_date }}
                         </td>
                         <td class="px-6 py-4 text-sm">
                             <a href="{{ url_for('expenses.view_expense', expense_id=expense.id) }}" class="text-primary hover:underline font-medium">

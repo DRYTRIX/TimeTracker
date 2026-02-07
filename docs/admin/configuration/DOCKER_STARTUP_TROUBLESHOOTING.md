@@ -183,7 +183,7 @@ If the issue persists, check:
 
 1. **Login with the first admin user**:
    - Use the first username from `ADMIN_USERNAMES` (default: "admin")
-   - If using `AUTH_METHOD=local`, you may need to set a password on first login
+   - If using `AUTH_METHOD=local`, the default admin has no password initially. On first login, enter the username and choose any password (minimum 8 characters)—it will be set and you will be logged in. There is no default password; you define it yourself on first use.
    - If using `AUTH_METHOD=none`, you can login immediately (no password required)
 
 2. **Create additional admin users**:

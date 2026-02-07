@@ -42,7 +42,7 @@
                         <div class="mt-2 flex items-center justify-between">
                             <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ deal.probability }}%</span>
                             {% if deal.expected_close_date %}
-                            <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ deal.expected_close_date.strftime('%m/%d') }}</span>
+                            <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ deal.expected_close_date|format_date }}</span>
                             {% endif %}
                         </div>
                     </div>

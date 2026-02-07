@@ -32,6 +32,8 @@ class Settings(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     timezone = db.Column(db.String(50), default="Europe/Rome", nullable=False)
+    date_format = db.Column(db.String(20), default="YYYY-MM-DD", nullable=False)  # YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY, DD.MM.YYYY
+    time_format = db.Column(db.String(10), default="24h", nullable=False)  # 24h or 12h
     currency = db.Column(db.String(3), default="EUR", nullable=False)
     rounding_minutes = db.Column(db.Integer, default=1, nullable=False)
     single_active_timer = db.Column(db.Boolean, default=True, nullable=False)
@@ -151,6 +153,8 @@ class Settings(db.Model):
     def __init__(self, **kwargs):
         # Set defaults from config
         self.timezone = kwargs.get("timezone", Config.TZ)
+        self.date_format = kwargs.get("date_format", "YYYY-MM-DD")
+        self.time_format = kwargs.get("time_format", "24h")
         self.currency = kwargs.get("currency", Config.CURRENCY)
         self.rounding_minutes = kwargs.get("rounding_minutes", Config.ROUNDING_MINUTES)
         self.single_active_timer = kwargs.get("single_active_timer", Config.SINGLE_ACTIVE_TIMER)
@@ -370,6 +374,8 @@ class Settings(db.Model):
         return {
             "id": self.id,
             "timezone": self.timezone,
+            "date_format": self.date_format,
+            "time_format": self.time_format,
             "currency": self.currency,
             "rounding_minutes": self.rounding_minutes,
             "single_active_timer": self.single_active_timer,
@@ -577,6 +583,8 @@ class Settings(db.Model):
         # Map environment variable names to Settings model attributes
         env_mapping = {
             "TZ": "timezone",
+            "DATE_FORMAT": "date_format",
+            "TIME_FORMAT": "time_format",
             "CURRENCY": "currency",
             "ROUNDING_MINUTES": "rounding_minutes",
             "SINGLE_ACTIVE_TIMER": "single_active_timer",

@@ -5,6 +5,122 @@ from functools import lru_cache
 from flask import current_app
 
 
+# ---- Date/time format preference mappings ----
+
+USER_DATE_FORMATS = {
+    "YYYY-MM-DD": "%Y-%m-%d",
+    "MM/DD/YYYY": "%m/%d/%Y",
+    "DD/MM/YYYY": "%d/%m/%Y",
+    "DD.MM.YYYY": "%d.%m.%Y",
+}
+
+USER_TIME_FORMATS = {
+    "24h": "%H:%M",
+    "12h": "%I:%M %p",
+}
+
+# Default fallbacks when no preference is set
+_DEFAULT_DATE_FORMAT_KEY = "YYYY-MM-DD"
+_DEFAULT_TIME_FORMAT_KEY = "24h"
+
+
+def _get_system_date_format_key():
+    """Return the system-wide date_format key from Settings, or the hardcoded default."""
+    try:
+        from flask import has_app_context
+        if not has_app_context():
+            return _DEFAULT_DATE_FORMAT_KEY
+        from app.models import Settings
+        from app import db
+        try:
+            if db.session.is_active and not getattr(db.session, "_flushing", False):
+                settings = Settings.get_settings()
+                if settings:
+                    val = getattr(settings, "date_format", None)
+                    if val and val in USER_DATE_FORMATS:
+                        return val
+        except Exception:
+            pass
+    except Exception:
+        pass
+    return _DEFAULT_DATE_FORMAT_KEY
+
+
+def _get_system_time_format_key():
+    """Return the system-wide time_format key from Settings, or the hardcoded default."""
+    try:
+        from flask import has_app_context
+        if not has_app_context():
+            return _DEFAULT_TIME_FORMAT_KEY
+        from app.models import Settings
+        from app import db
+        try:
+            if db.session.is_active and not getattr(db.session, "_flushing", False):
+                settings = Settings.get_settings()
+                if settings:
+                    val = getattr(settings, "time_format", None)
+                    if val and val in USER_TIME_FORMATS:
+                        return val
+        except Exception:
+            pass
+    except Exception:
+        pass
+    return _DEFAULT_TIME_FORMAT_KEY
+
+
+def get_resolved_date_format_key(user=None):
+    """Return the date format key (e.g. YYYY-MM-DD) for the user, falling back to system."""
+    resolved_user = _get_authenticated_user(user)
+    if resolved_user:
+        pref = getattr(resolved_user, "date_format", None)
+        if pref and pref in USER_DATE_FORMATS:
+            return pref
+    return _get_system_date_format_key()
+
+
+def get_resolved_time_format_key(user=None):
+    """Return the time format key (e.g. 24h) for the user, falling back to system."""
+    resolved_user = _get_authenticated_user(user)
+    if resolved_user:
+        pref = getattr(resolved_user, "time_format", None)
+        if pref and pref in USER_TIME_FORMATS:
+            return pref
+    return _get_system_time_format_key()
+
+
+def get_user_date_format(user=None):
+    """Return the strftime date format string for the user's preference.
+
+    Fallback chain: user preference -> system setting -> hardcoded default.
+    """
+    resolved_user = _get_authenticated_user(user)
+    if resolved_user:
+        pref = getattr(resolved_user, "date_format", None)
+        if pref and pref in USER_DATE_FORMATS:
+            return USER_DATE_FORMATS[pref]
+    # Fall back to system setting
+    return USER_DATE_FORMATS[_get_system_date_format_key()]
+
+
+def get_user_time_format(user=None):
+    """Return the strftime time format string for the user's preference.
+
+    Fallback chain: user preference -> system setting -> hardcoded default.
+    """
+    resolved_user = _get_authenticated_user(user)
+    if resolved_user:
+        pref = getattr(resolved_user, "time_format", None)
+        if pref and pref in USER_TIME_FORMATS:
+            return USER_TIME_FORMATS[pref]
+    # Fall back to system setting
+    return USER_TIME_FORMATS[_get_system_time_format_key()]
+
+
+def get_user_datetime_format(user=None):
+    """Return combined date+time strftime format string from user preferences."""
+    return f"{get_user_date_format(user)} {get_user_time_format(user)}"
+
+
 @lru_cache()
 def get_available_timezones():
     """Return a cached, alphabetically sorted list of common timezones."""
@@ -246,12 +362,25 @@ def format_local_datetime(utc_dt, format_str="%Y-%m-%d %H:%M"):
     return local_dt.strftime(format_str)
 
 
-def format_user_datetime(dt, format_str="%Y-%m-%d %H:%M", user=None, assume_app_timezone=True):
-    """Format datetime using the user's timezone preference."""
+def format_user_datetime(dt, format_str=None, user=None, assume_app_timezone=True):
+    """Format datetime using the user's timezone and format preferences.
+
+    When *format_str* is ``None`` (the default), the format is resolved
+    automatically from the user's ``date_format`` / ``time_format``
+    preferences, falling back to the system-wide setting and ultimately
+    to ``%Y-%m-%d %H:%M``.
+
+    Callers that pass an explicit *format_str* get the exact same
+    behaviour as before (the string is used as-is).
+    """
     if dt is None:
         return ""
 
     resolved_user = _get_authenticated_user(user)
+
+    if format_str is None:
+        format_str = get_user_datetime_format(resolved_user)
+
     if assume_app_timezone:
         localized = convert_app_datetime_to_user(dt, user=resolved_user)
     else:

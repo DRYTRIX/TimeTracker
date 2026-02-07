@@ -40,10 +40,10 @@
                         </a>
                     </td>
                     <td class="p-3">{{ quote.title }}</td>
-                    <td class="p-3">{{ quote.created_at.strftime('%Y-%m-%d') if quote.created_at else 'N/A' }}</td>
+                    <td class="p-3">{{ quote.created_at|user_date if quote.created_at else 'N/A' }}</td>
                     <td class="p-3">
                         {% if quote.valid_until %}
-                            {{ quote.valid_until.strftime('%Y-%m-%d') }}
+                            {{ quote.valid_until|format_date }}
                             {% if quote.is_expired %}
                             <span class="text-red-600 text-xs ml-1">({{ _('Expired') }})</span>
                             {% endif %}

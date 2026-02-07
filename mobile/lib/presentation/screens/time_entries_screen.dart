@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:timetracker_mobile/core/theme/app_tokens.dart';
 import 'package:timetracker_mobile/presentation/providers/time_entries_provider.dart';
+import 'package:timetracker_mobile/presentation/providers/user_prefs_provider.dart';
 import 'package:timetracker_mobile/presentation/screens/time_entry_form_screen.dart';
 import 'package:timetracker_mobile/presentation/widgets/empty_state.dart';
 import 'package:timetracker_mobile/presentation/widgets/error_view.dart';
 import 'package:timetracker_mobile/presentation/widgets/time_entry_card.dart';
+import 'package:timetracker_mobile/utils/date_format_utils.dart';
 
 class TimeEntriesScreen extends ConsumerStatefulWidget {
   const TimeEntriesScreen({super.key});
@@ -135,6 +137,8 @@ class _TimeEntriesScreenState extends ConsumerState<TimeEntriesScreen> {
 
   void _showFilterDialog() {
     final currentFilter = ref.read(timeEntriesProvider).filter;
+    final prefs = ref.read(userPrefsProvider).valueOrNull;
+    final dateFormatKey = prefs?.dateFormat;
     DateTime? startDate;
     DateTime? endDate;
 
@@ -158,7 +162,7 @@ class _TimeEntriesScreenState extends ConsumerState<TimeEntriesScreen> {
                   title: const Text('Start Date'),
                   subtitle: Text(
                     startDate != null
-                        ? DateFormat('yyyy-MM-dd').format(startDate!)
+                        ? formatDate(startDate, dateFormatKey)
                         : 'No date selected',
                   ),
                   trailing: const Icon(Icons.calendar_today),
@@ -180,7 +184,7 @@ class _TimeEntriesScreenState extends ConsumerState<TimeEntriesScreen> {
                   title: const Text('End Date'),
                   subtitle: Text(
                     endDate != null
-                        ? DateFormat('yyyy-MM-dd').format(endDate!)
+                        ? formatDate(endDate, dateFormatKey)
                         : 'No date selected',
                   ),
                   trailing: const Icon(Icons.calendar_today),

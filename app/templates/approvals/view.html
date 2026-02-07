@@ -55,7 +55,7 @@
                 {% endif %}
                 <div>
                     <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Date') }}</dt>
-                    <dd class="text-text-light dark:text-text-dark">{{ approval.time_entry.start_time|local_datetime('%Y-%m-%d') if approval.time_entry.start_time else 'N/A' }}</dd>
+                    <dd class="text-text-light dark:text-text-dark">{{ approval.time_entry.start_time|local_date if approval.time_entry.start_time else 'N/A' }}</dd>
                 </div>
                 {% if approval.time_entry.description %}
                 <div>

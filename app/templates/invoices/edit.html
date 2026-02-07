@@ -356,7 +356,7 @@
                     <div class="grid grid-cols-2 gap-3 text-sm">
                         <div>
                             <div class="text-text-muted-light dark:text-text-muted-dark text-xs">{{ _('Issue Date') }}</div>
-                            <div class="font-medium">{{ invoice.issue_date.strftime('%Y-%m-%d') if invoice.issue_date else '-' }}</div>
+                            <div class="font-medium">{{ invoice.issue_date|format_date if invoice.issue_date else '-' }}</div>
                         </div>
                         <div>
                             <div class="text-text-muted-light dark:text-text-muted-dark text-xs">{{ _('Status') }}</div>

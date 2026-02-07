@@ -87,7 +87,7 @@
                                 </a>
                             </h3>
                             <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                                {{ _('Requested on') }} {{ approval.requested_at.strftime('%B %d, %Y at %H:%M') if approval.requested_at else _('N/A') }}
+                                {{ _('Requested on') }} {{ approval.requested_at|user_datetime if approval.requested_at else _('N/A') }}
                             </p>
                         </div>
                         <span class="ml-auto px-3 py-1.5 text-xs font-semibold rounded-full
@@ -140,7 +140,7 @@
                             <div>
                                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Date') }}</p>
                                 <p class="font-semibold text-text-light dark:text-text-dark">
-                                    {{ approval.time_entry.start_time.strftime('%b %d, %Y') if approval.time_entry.start_time else _('N/A') }}
+                                    {{ approval.time_entry.start_time|user_date if approval.time_entry.start_time else _('N/A') }}
                                 </p>
                             </div>
                         </div>

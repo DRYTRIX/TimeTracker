@@ -85,7 +85,7 @@
                 {% for log in audit_logs %}
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                        {{ log.created_at|user_datetime('%Y-%m-%d %H:%M') }}
+                        {{ log.created_at|user_datetime }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                         {% if log.user %}
@@ -118,7 +118,7 @@
                                 {% if metadata.created_at is string %}
                                     {{ metadata.created_at[:16]|replace('T', ' ') }}
                                 {% else %}
-                                    {{ metadata.created_at|user_datetime('%Y-%m-%d %H:%M') }}
+                                    {{ metadata.created_at|user_datetime }}
                                 {% endif %}
                             </div>
                             {% endif %}

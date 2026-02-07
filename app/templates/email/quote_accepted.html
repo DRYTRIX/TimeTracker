@@ -20,7 +20,7 @@
                 <li><strong>Client:</strong> {{ client.name }}</li>
                 <li><strong>Title:</strong> {{ quote.title }}</li>
                 <li><strong>Total Amount:</strong> {{ "%.2f"|format(quote.total_amount) }} {{ quote.currency_code }}</li>
-                <li><strong>Accepted Date:</strong> {{ quote.accepted_at.strftime('%Y-%m-%d %H:%M') if quote.accepted_at else 'N/A' }}</li>
+                <li><strong>Accepted Date:</strong> {{ quote.accepted_at|user_datetime if quote.accepted_at else 'N/A' }}</li>
             </ul>
         </div>
         

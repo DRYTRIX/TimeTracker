@@ -81,20 +81,20 @@
                 
                 <div>
                     <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Created') }}:</span>
-                    <span class="ml-2">{{ issue.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                    <span class="ml-2">{{ issue.created_at|user_datetime }}</span>
                 </div>
                 
                 {% if issue.updated_at != issue.created_at %}
                 <div>
                     <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Last Updated') }}:</span>
-                    <span class="ml-2">{{ issue.updated_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                    <span class="ml-2">{{ issue.updated_at|user_datetime }}</span>
                 </div>
                 {% endif %}
                 
                 {% if issue.resolved_at %}
                 <div>
                     <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Resolved') }}:</span>
-                    <span class="ml-2">{{ issue.resolved_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                    <span class="ml-2">{{ issue.resolved_at|user_datetime }}</span>
                 </div>
                 {% endif %}
             </div>

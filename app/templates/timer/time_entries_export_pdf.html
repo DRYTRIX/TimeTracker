@@ -23,8 +23,8 @@
       <tbody class="bg-card-light dark:bg-card-dark divide-y divide-border-light dark:divide-border-dark">
         {% for entry in entries %}
         <tr>
-          <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{{ entry.start_time|user_datetime('%Y-%m-%d %H:%M') if entry.start_time else '-' }}</td>
-          <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{{ entry.end_time|user_datetime('%Y-%m-%d %H:%M') if entry.end_time else '-' }}</td>
+          <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{{ entry.start_time|user_datetime if entry.start_time else '-' }}</td>
+          <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{{ entry.end_time|user_datetime if entry.end_time else '-' }}</td>
           <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
             {% if entry.project %}{{ entry.project.name }}{% elif entry.client %}{{ entry.client.name }}{% else %}-{% endif %}
           </td>

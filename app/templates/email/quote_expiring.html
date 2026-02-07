@@ -86,7 +86,7 @@
                 <p><strong>Title:</strong> {{ quote.title }}</p>
                 <p><strong>Client:</strong> {{ quote.client.name if quote.client else 'N/A' }}</p>
                 <p><strong>Total Amount:</strong> {{ quote.currency_code }} {{ "%.2f"|format(quote.total_amount) }}</p>
-                <p><strong>Valid Until:</strong> {{ quote.valid_until.strftime('%Y-%m-%d') if quote.valid_until else 'N/A' }}</p>
+                <p><strong>Valid Until:</strong> {{ quote.valid_until|format_date if quote.valid_until else 'N/A' }}</p>
                 <p><strong>Days Remaining:</strong> {{ days_remaining }}</p>
             </div>
             

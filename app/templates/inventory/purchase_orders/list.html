@@ -69,8 +69,8 @@
                         {{ po.supplier.name }}
                     </a>
                 </td>
-                <td class="p-4">{{ po.order_date.strftime('%Y-%m-%d') if po.order_date else '—' }}</td>
-                <td class="p-4">{{ po.expected_delivery_date.strftime('%Y-%m-%d') if po.expected_delivery_date else '—' }}</td>
+                <td class="p-4">{{ po.order_date|format_date if po.order_date else '—' }}</td>
+                <td class="p-4">{{ po.expected_delivery_date|format_date if po.expected_delivery_date else '—' }}</td>
                 <td class="p-4">
                     {% if po.status == 'draft' %}
                         <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ _('Draft') }}</span>

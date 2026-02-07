@@ -65,7 +65,7 @@
                 <td class="p-4 table-number">
                     {% if task.due_date %}
                         {% set overdue = task.is_overdue %}
-                        <span class="chip whitespace-nowrap {{ 'status-overdue' if overdue else 'chip-neutral' }}">{{ task.due_date.strftime('%Y-%m-%d') }}</span>
+                        <span class="chip whitespace-nowrap {{ 'status-overdue' if overdue else 'chip-neutral' }}">{{ task.due_date|format_date }}</span>
                     {% else %}
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}

@@ -3,6 +3,9 @@ from app.utils.timezone import (
     utc_to_local,
     format_local_datetime,
     format_user_datetime,
+    get_user_date_format,
+    get_user_time_format,
+    get_user_datetime_format,
 )
 
 try:
@@ -17,52 +20,71 @@ def register_template_filters(app):
     """Register custom template filters for the application"""
 
     @app.template_filter("local_datetime")
-    def local_datetime_filter(utc_dt, format_str="%Y-%m-%d %H:%M"):
-        """Convert UTC datetime to local timezone for display"""
+    def local_datetime_filter(utc_dt, format_str=None):
+        """Convert UTC datetime to local timezone for display.
+
+        When *format_str* is omitted the user's date+time preferences are used.
+        """
         if utc_dt is None:
             return ""
+        if format_str is None:
+            format_str = get_user_datetime_format()
         return format_local_datetime(utc_dt, format_str)
 
     @app.template_filter("local_date")
-    def local_date_filter(utc_dt):
-        """Convert UTC datetime to local date only"""
+    def local_date_filter(utc_dt, format_str=None):
+        """Convert UTC datetime to local date only using user's date format preference."""
         if utc_dt is None:
             return ""
-        return format_local_datetime(utc_dt, "%Y-%m-%d")
+        if format_str is None:
+            format_str = get_user_date_format()
+        return format_local_datetime(utc_dt, format_str)
 
     @app.template_filter("local_time")
-    def local_time_filter(utc_dt):
-        """Convert UTC datetime to local time only"""
+    def local_time_filter(utc_dt, format_str=None):
+        """Convert UTC datetime to local time only using user's time format preference."""
         if utc_dt is None:
             return ""
-        return format_local_datetime(utc_dt, "%H:%M")
+        if format_str is None:
+            format_str = get_user_time_format()
+        return format_local_datetime(utc_dt, format_str)
 
     @app.template_filter("local_datetime_short")
     def local_datetime_short_filter(utc_dt):
-        """Convert UTC datetime to local timezone in short format"""
+        """Convert UTC datetime to local timezone in short format using user's date/time prefs."""
         if utc_dt is None:
             return ""
-        return format_local_datetime(utc_dt, "%m/%d %H:%M")
+        # Use the user's preferred date + time format instead of hardcoded US format
+        fmt = f"{get_user_date_format()} {get_user_time_format()}"
+        return format_local_datetime(utc_dt, fmt)
 
     @app.template_filter("user_datetime")
-    def user_datetime_filter(dt, format_str="%Y-%m-%d %H:%M"):
-        """Format datetime using the authenticated user's timezone preference."""
+    def user_datetime_filter(dt, format_str=None):
+        """Format datetime using the authenticated user's timezone and format preferences.
+
+        When *format_str* is omitted the user's date_format + time_format
+        preferences are applied automatically.
+        """
         if dt is None:
             return ""
         return format_user_datetime(dt, format_str=format_str)
 
     @app.template_filter("user_date")
-    def user_date_filter(dt, format_str="%Y-%m-%d"):
-        """Format date using the authenticated user's timezone preference."""
+    def user_date_filter(dt, format_str=None):
+        """Format date using the authenticated user's timezone and format preferences."""
         if dt is None:
             return ""
+        if format_str is None:
+            format_str = get_user_date_format()
         return format_user_datetime(dt, format_str=format_str)
 
     @app.template_filter("user_time")
-    def user_time_filter(dt, format_str="%H:%M"):
-        """Format time using the authenticated user's timezone preference."""
+    def user_time_filter(dt, format_str=None):
+        """Format time using the authenticated user's timezone and format preferences."""
         if dt is None:
             return ""
+        if format_str is None:
+            format_str = get_user_time_format()
         return format_user_datetime(dt, format_str=format_str)
 
     @app.template_filter("nl2br")
@@ -283,10 +305,10 @@ def register_template_filters(app):
             return ""
         if isinstance(value, (datetime.date, datetime.datetime)):
             try:
-                # Use DD.MM.YYYY format for invoices and quotes
-                return value.strftime("%d.%m.%Y")
+                # Use the user's preferred date format
+                return value.strftime(get_user_date_format())
             except Exception:
-                return value.strftime("%d.%m.%Y")
+                return value.strftime(get_user_date_format())
         return str(value)
 
     @app.template_filter("format_money")
@@ -295,6 +317,31 @@ def register_template_filters(app):
             return f"{float(value):,.2f}"
         except Exception:
             return str(value)
+
+    @app.template_filter("format_currency")
+    def format_currency_filter(value, currency_code=None):
+        """Format a number with thousand separators and currency symbol from settings."""
+        if value is None:
+            return ""
+        try:
+            num_str = f"{float(value):,.2f}"
+        except (TypeError, ValueError):
+            return str(value)
+        if currency_code is None:
+            try:
+                from app.models import Settings
+                settings = Settings.get_settings()
+                currency_code = settings.currency if settings else "EUR"
+            except Exception:
+                currency_code = "EUR"
+        currency_symbols = {
+            "USD": "$", "EUR": "€", "GBP": "£", "JPY": "¥", "CNY": "¥", "INR": "₹",
+            "AUD": "A$", "CAD": "C$", "CHF": "CHF", "SEK": "kr", "NOK": "kr", "DKK": "kr",
+            "PLN": "zł", "CZK": "Kč", "RUB": "₽", "BRL": "R$", "ZAR": "R", "MXN": "MX$",
+            "SGD": "S$", "HKD": "HK$", "NZD": "NZ$", "KRW": "₩", "TRY": "₺", "AED": "د.إ", "SAR": "﷼",
+        }
+        symbol = currency_symbols.get((currency_code or "").upper(), currency_code or "EUR")
+        return f"{symbol} {num_str}"
 
     @app.template_filter("timeago")
     def timeago_filter(dt):

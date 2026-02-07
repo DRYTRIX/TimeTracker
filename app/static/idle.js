@@ -25,7 +25,7 @@
   }
 
   function formatTime(d){
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return window.formatUserTime ? window.formatUserTime(d) : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
   async function stopAt(ts){

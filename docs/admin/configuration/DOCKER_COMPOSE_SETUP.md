@@ -78,7 +78,7 @@ All environment variables can be provided via `.env` and are consumed by the `ap
 - ROUNDING_MINUTES: Rounding step for entries. Default: `1`.
 - SINGLE_ACTIVE_TIMER: Allow only one active timer per user. Default: `true`.
 - IDLE_TIMEOUT_MINUTES: Auto-pause after idle. Default: `30`.
-- ALLOW_SELF_REGISTER: Allow new users to self-register. Default: `true`.
+- ALLOW_SELF_REGISTER: Allow new users to self-register by entering any username and password on the login page. Default: `true`. **Security note**: When enabled, anyone can create an app user with whatever credentials they type. The app does not use or import database credentials—users are created with exactly what is entered. Avoid using your database username (e.g. `timetracker`) as an app username; if someone creates an app user with matching DB credentials, it can be confusing or a security risk.
 - ADMIN_USERNAMES: Comma-separated admin usernames. Default: `admin`. **Important**: Only the first username in the list is automatically created during database initialization. Additional admin usernames must either:
   - Self-register by logging in (if `ALLOW_SELF_REGISTER=true`), or
   - Be created manually by an existing admin user.
@@ -240,6 +240,6 @@ For CSRF and cookie issues behind proxies, see `docs/CSRF_CONFIGURATION.md`.
 3. **For fresh installations**, ensure:
    - `ADMIN_USERNAMES` is set in your `.env` file before starting containers
    - Database initialization completed successfully (check logs)
-   - If using `AUTH_METHOD=local`, you'll need to set a password after first login
+   - If using `AUTH_METHOD=local`, the default admin user has no password initially. On first login, enter the admin username and choose any password (minimum 8 characters)—it will be set and you will be logged in. There is no default password documented because you define it yourself on first use.
 
 

@@ -81,7 +81,7 @@
         <tbody>
             {% for movement in movements %}
             <tr>
-                <td class="p-4">{{ movement.moved_at.strftime('%Y-%m-%d %H:%M') if movement.moved_at else '—' }}</td>
+                <td class="p-4">{{ movement.moved_at|user_datetime if movement.moved_at else '—' }}</td>
                 <td class="p-4">
                     <a href="{{ url_for('inventory.view_stock_item', item_id=movement.stock_item_id) }}" class="text-primary hover:underline">
                         {{ movement.stock_item.name }} ({{ movement.stock_item.sku }})

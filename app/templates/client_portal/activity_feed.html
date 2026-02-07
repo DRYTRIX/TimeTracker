@@ -57,7 +57,7 @@
                                 {% endif %}
                                 <div class="flex items-center space-x-1 text-text-muted-light dark:text-text-muted-dark">
                                     <i class="fas fa-clock"></i>
-                                    <span>{{ activity.created_at.strftime('%b %d, %Y at %H:%M') if activity.created_at else _('N/A') }}</span>
+                                    <span>{{ activity.created_at|user_datetime if activity.created_at else _('N/A') }}</span>
                                 </div>
                             </div>
                         </div>

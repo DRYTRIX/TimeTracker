@@ -42,11 +42,11 @@
         </div>
         <div>
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Created</dt>
-            <dd class="text-sm text-gray-900 dark:text-gray-100">{{ template.created_at.strftime('%Y-%m-%d %H:%M') if template.created_at else '-' }}</dd>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">{{ template.created_at|user_datetime if template.created_at else '-' }}</dd>
         </div>
         <div>
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Last Updated</dt>
-            <dd class="text-sm text-gray-900 dark:text-gray-100">{{ template.updated_at.strftime('%Y-%m-%d %H:%M') if template.updated_at else '-' }}</dd>
+            <dd class="text-sm text-gray-900 dark:text-gray-100">{{ template.updated_at|user_datetime if template.updated_at else '-' }}</dd>
         </div>
     </dl>
 </div>

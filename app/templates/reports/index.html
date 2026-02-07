@@ -213,7 +213,7 @@
             <tr class="border-b border-border-light dark:border-border-dark">
                 <td class="p-2">{{ entry.project.name }}</td>
                 <td class="p-2">{{ entry.duration }}</td>
-                <td class="p-2">{{ entry.start_time|user_date('%Y-%m-%d') }}</td>
+                <td class="p-2">{{ entry.start_time|user_date }}</td>
             </tr>
             {% else %}
             <tr>

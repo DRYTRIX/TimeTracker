@@ -71,7 +71,7 @@
                     <tbody>
                         {% for entry in time_entries %}
                         <tr class="border-b border-border-light dark:border-border-dark">
-                            <td class="p-4">{{ entry.start_time|user_date('%Y-%m-%d') }}</td>
+                            <td class="p-4">{{ entry.start_time|user_date }}</td>
                             <td class="p-4">{{ entry.duration_formatted }}</td>
                             <td class="p-4">{{ entry.user.display_name }}</td>
                             <td class="p-4">{% if entry.notes %}<span title="{{ entry.notes|striptags }}">{{ entry.notes|striptags|truncate(40) }}</span>{% else %}-{% endif %}</td>
@@ -136,7 +136,7 @@
                 {% if task.due_date %}
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Due Date</h3>
-                    <p class="{{ 'text-red-500' if task.is_overdue else '' }}">{{ task.due_date.strftime('%Y-%m-%d') }}</p>
+                    <p class="{{ 'text-red-500' if task.is_overdue else '' }}">{{ task.due_date|format_date }}</p>
                 </div>
                 {% endif %}
             </div>

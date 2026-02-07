@@ -92,7 +92,7 @@
             <dl class="space-y-3">
                 <div>
                     <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Created') }}</dt>
-                    <dd class="text-text-light dark:text-text-dark">{{ template.created_at.strftime('%Y-%m-%d') }}</dd>
+                    <dd class="text-text-light dark:text-text-dark">{{ template.created_at|user_date }}</dd>
                 </div>
                 <div>
                     <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Usage Count') }}</dt>
@@ -101,7 +101,7 @@
                 {% if template.last_used_at %}
                 <div>
                     <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Last Used') }}</dt>
-                    <dd class="text-text-light dark:text-text-dark">{{ template.last_used_at.strftime('%Y-%m-%d') }}</dd>
+                    <dd class="text-text-light dark:text-text-dark">{{ template.last_used_at|user_date }}</dd>
                 </div>
                 {% endif %}
             </dl>

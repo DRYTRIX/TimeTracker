@@ -45,7 +45,7 @@
                         {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-text-muted-light dark:text-text-muted-dark">
-                        {{ template.created_at.strftime('%Y-%m-%d') if template.created_at else '-' }}
+                        {{ template.created_at|user_date if template.created_at else '-' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <a href="{{ url_for('admin.view_email_template', template_id=template.id) }}" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-3">View</a>

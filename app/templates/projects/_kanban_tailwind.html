@@ -50,7 +50,7 @@
                                 {% if task.due_date %}
                                 <span class="{{ 'text-red-500 dark:text-red-400' if task.is_overdue else 'text-text-muted-light dark:text-text-muted-dark' }}">
                                     <i class="fas fa-calendar-alt mr-1"></i>
-                                    {{ task.due_date.strftime('%b %d') }}
+                                    {{ task.due_date|format_date }}
                                 </span>
                                 {% endif %}
                             </div>

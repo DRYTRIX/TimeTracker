@@ -34,7 +34,7 @@ class ExpenseRepository(BaseRepository[Expense]):
 
         if include_relations:
             query = query.options(
-                joinedload(Expense.project), joinedload(Expense.category) if hasattr(Expense, "category") else query
+                joinedload(Expense.project), joinedload(Expense.user)
             )
 
         return query.order_by(Expense.expense_date.desc()).all()

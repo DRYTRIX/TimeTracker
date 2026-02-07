@@ -134,7 +134,7 @@ class ExpenseService:
         query = self.expense_repo.query()
 
         # Eagerly load relations to prevent N+1
-        query = query.options(joinedload(Expense.project), joinedload(Expense.user), joinedload(Expense.category))
+        query = query.options(joinedload(Expense.project), joinedload(Expense.user), joinedload(Expense.client))
 
         # Permission filter - non-admins only see their expenses
         if not is_admin and user_id:

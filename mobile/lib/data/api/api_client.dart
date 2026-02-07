@@ -35,6 +35,13 @@ class ApiClient {
     );
   }
 
+  /// Get current authenticated user (includes resolved date_format, time_format, timezone).
+  Future<Map<String, dynamic>> getCurrentUser() async {
+    final response = await _dio.get('/api/v1/users/me');
+    final data = response.data as Map<String, dynamic>;
+    return data['user'] as Map<String, dynamic>;
+  }
+
   // ==================== Timer Operations ====================
 
   /// Get timer status

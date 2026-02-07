@@ -110,7 +110,7 @@
     </div>
     
     <div class="footer">
-        <p>Generated at: {{ generated_at.strftime('%Y-%m-%d %H:%M:%S') if generated_at else 'N/A' }}</p>
+        <p>Generated at: {{ generated_at|user_datetime if generated_at else 'N/A' }}</p>
         <p>This is an automated report from TimeTracker.</p>
     </div>
 </body>

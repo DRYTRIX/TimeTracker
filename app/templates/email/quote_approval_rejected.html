@@ -83,7 +83,7 @@
                 <p><strong>Client:</strong> {{ quote.client.name if quote.client else 'N/A' }}</p>
                 <p><strong>Total Amount:</strong> {{ quote.currency_code }} {{ "%.2f"|format(quote.total_amount) }}</p>
                 <p><strong>Rejected By:</strong> {{ quote.rejecter.full_name or quote.rejecter.username if quote.rejecter else 'N/A' }}</p>
-                <p><strong>Rejected At:</strong> {{ quote.rejected_at.strftime('%Y-%m-%d %H:%M') if quote.rejected_at else 'N/A' }}</p>
+                <p><strong>Rejected At:</strong> {{ quote.rejected_at|user_datetime if quote.rejected_at else 'N/A' }}</p>
             </div>
             
             {% if quote.rejection_reason %}

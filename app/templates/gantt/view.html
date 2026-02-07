@@ -148,7 +148,7 @@ async function loadGanttChart() {
             bar_corner_radius: 6,
             arrow_curve: 5,
             padding: 20,
-            date_format: 'YYYY-MM-DD',
+            date_format: window.userPrefs ? window.userPrefs.dateFormat : 'YYYY-MM-DD',
             language: 'en',
             on_click: function(task) {
                 // Handle task click

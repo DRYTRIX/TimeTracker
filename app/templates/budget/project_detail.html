@@ -26,7 +26,7 @@
         <div class="flex items-center justify-between mb-2">
             <i class="fas fa-wallet fa-2x opacity-80"></i>
         </div>
-        <h3 class="text-3xl font-bold">${{ "%.2f"|format(budget_status.budget_amount) }}</h3>
+        <h3 class="text-3xl font-bold">{{ budget_status.budget_amount|format_currency }}</h3>
         <p class="text-sm opacity-90">{{ _('Total Budget') }}</p>
     </div>
     
@@ -35,7 +35,7 @@
         <div class="flex items-center justify-between mb-2">
             <i class="fas fa-chart-pie fa-2x opacity-80"></i>
         </div>
-        <h3 class="text-3xl font-bold">${{ "%.2f"|format(budget_status.consumed_amount) }}</h3>
+        <h3 class="text-3xl font-bold">{{ budget_status.consumed_amount|format_currency }}</h3>
         <p class="text-sm opacity-90">{{ _('Consumed') }} ({{ "%.1f"|format(budget_status.consumed_percentage) }}%)</p>
     </div>
     
@@ -44,7 +44,7 @@
         <div class="flex items-center justify-between mb-2">
             <i class="fas fa-piggy-bank fa-2x opacity-80"></i>
         </div>
-        <h3 class="text-3xl font-bold">${{ "%.2f"|format(budget_status.remaining_amount|abs) }}</h3>
+        <h3 class="text-3xl font-bold">{{ (budget_status.remaining_amount|abs)|format_currency }}</h3>
         <p class="text-sm opacity-90">{% if budget_status.remaining_amount >= 0 %}{{ _('Remaining') }}{% else %}{{ _('Over Budget') }}{% endif %}</p>
     </div>
     
@@ -83,19 +83,19 @@
         <div class="grid grid-cols-2 gap-4">
             <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                 <h6 class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Daily Burn Rate') }}</h6>
-                <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">${{ "%.2f"|format(burn_rate.daily_burn_rate) }}</p>
+                <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ burn_rate.daily_burn_rate|format_currency }}</p>
             </div>
             <div class="bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded-lg">
                 <h6 class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Weekly Burn Rate') }}</h6>
-                <p class="text-2xl font-bold text-cyan-600 dark:text-cyan-400">${{ "%.2f"|format(burn_rate.weekly_burn_rate) }}</p>
+                <p class="text-2xl font-bold text-cyan-600 dark:text-cyan-400">{{ burn_rate.weekly_burn_rate|format_currency }}</p>
             </div>
             <div class="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg">
                 <h6 class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Monthly Burn Rate') }}</h6>
-                <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">${{ "%.2f"|format(burn_rate.monthly_burn_rate) }}</p>
+                <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ burn_rate.monthly_burn_rate|format_currency }}</p>
             </div>
             <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
                 <h6 class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Period Total') }}</h6>
-                <p class="text-2xl font-bold text-green-600 dark:text-green-400">${{ "%.2f"|format(burn_rate.period_total) }}</p>
+                <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ burn_rate.period_total|format_currency }}</p>
             </div>
         </div>
         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-4">
@@ -165,7 +165,7 @@
             {{ _('Trend') }}: {{ cost_trends.trend_direction|upper }}
         </span>
         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-            {{ _('Average') }}: ${{ "%.2f"|format(cost_trends.average_cost_per_period) }}
+            {{ _('Average') }}: {{ cost_trends.average_cost_per_period|format_currency }}
         </span>
         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
             {{ _('Change') }}: {{ "%.1f"|format(cost_trends.trend_percentage) }}%
@@ -191,11 +191,11 @@
         </div>
         <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
             <h6 class="text-sm text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Total Cost') }}</h6>
-            <p class="text-2xl font-bold text-green-600 dark:text-green-400">${{ "%.2f"|format(resource_allocation.total_cost) }}</p>
+            <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ resource_allocation.total_cost|format_currency }}</p>
         </div>
         <div class="bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded-lg">
             <h6 class="text-sm text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Hourly Rate') }}</h6>
-            <p class="text-2xl font-bold text-cyan-600 dark:text-cyan-400">${{ "%.2f"|format(resource_allocation.hourly_rate) }}</p>
+            <p class="text-2xl font-bold text-cyan-600 dark:text-cyan-400">{{ resource_allocation.hourly_rate|format_currency }}</p>
         </div>
     </div>
     <div class="overflow-x-auto">
@@ -217,7 +217,7 @@
                         <strong>{{ user.username }}</strong>
                     </td>
                     <td class="p-4">{{ "%.2f"|format(user.hours) }}</td>
-                    <td class="p-4">${{ "%.2f"|format(user.cost) }}</td>
+                    <td class="p-4">{{ user.cost|format_currency }}</td>
                     <td class="p-4">
                         <div class="flex items-center gap-2">
                             <div class="flex-grow bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden" style="min-width: 100px;">
@@ -276,7 +276,7 @@
                     <p class="text-sm mb-2">{{ alert.message }}</p>
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark">
                         <i class="far fa-clock mr-1"></i>
-                        {{ _('Created') }}: {{ alert.created_at|user_datetime('%Y-%m-%d %H:%M') }}
+                        {{ _('Created') }}: {{ alert.created_at|user_datetime }}
                     </p>
                 </div>
                 <button class="bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition flex-shrink-0 acknowledge-alert" 
@@ -292,6 +292,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
+window.BUDGET_CURRENCY_SYMBOL = {{ (settings.currency|currency_symbol)|tojson }};
+function budgetFormatCurrency(value) {
+    return window.BUDGET_CURRENCY_SYMBOL + ' ' + Number(value).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
 document.addEventListener('DOMContentLoaded', function() {
     // Cost Trend Chart
     {% if cost_trends and cost_trends.periods %}
@@ -352,7 +356,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return '$' + value.toFixed(2);
+                            return budgetFormatCurrency(value);
                         },
                         color: textColor
                     },

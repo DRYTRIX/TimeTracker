@@ -51,10 +51,10 @@
                         </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm">{% if view.created_at %}{{ convert_app_datetime_to_user(view.created_at, user=current_user).strftime('%Y-%m-%d %H:%M') }}{% endif %}</div>
+                        <div class="text-sm">{% if view.created_at %}{{ view.created_at|user_datetime }}{% endif %}</div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm">{% if view.updated_at %}{{ convert_app_datetime_to_user(view.updated_at, user=current_user).strftime('%Y-%m-%d %H:%M') }}{% endif %}</div>
+                        <div class="text-sm">{% if view.updated_at %}{{ view.updated_at|user_datetime }}{% endif %}</div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div class="flex justify-end gap-2">

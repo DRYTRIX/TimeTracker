@@ -31,7 +31,7 @@
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1">
                         <span class="font-semibold text-text-light dark:text-text-dark">{{ message.user.username if message.user else 'Unknown' }}</span>
-                        <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ message.created_at|local_datetime('%H:%M') if message.created_at else '' }}</span>
+                        <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ message.created_at|local_time if message.created_at else '' }}</span>
                     </div>
                     <div class="text-text-light dark:text-text-dark whitespace-pre-wrap">{{ message.content }}</div>
                     {% if message.attachments %}

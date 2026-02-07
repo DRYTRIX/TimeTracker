@@ -27,13 +27,13 @@
                     <div>
                         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Start Time') }}</h3>
                         <p class="text-text-light dark:text-text-dark">
-                            {{ timer.start_time|user_datetime('%Y-%m-%d %H:%M:%S') if timer.start_time else '-' }}
+                            {{ timer.start_time|user_datetime if timer.start_time else '-' }}
                         </p>
                     </div>
                     <div>
                         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('End Time') }}</h3>
                         <p class="text-text-light dark:text-text-dark">
-                            {{ timer.end_time|user_datetime('%Y-%m-%d %H:%M:%S') if timer.end_time else '-' }}
+                            {{ timer.end_time|user_datetime if timer.end_time else '-' }}
                         </p>
                     </div>
                 </div>

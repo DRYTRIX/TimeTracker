@@ -89,14 +89,14 @@
                     <td class="py-4 px-6">
                         <div class="flex items-center space-x-2 text-sm text-text-light dark:text-text-dark">
                             <i class="fas fa-calendar text-text-muted-light dark:text-text-muted-dark text-xs"></i>
-                            <span>{{ invoice.issue_date.strftime('%b %d, %Y') }}</span>
+                            <span>{{ invoice.issue_date|user_date }}</span>
                         </div>
                     </td>
                     <td class="py-4 px-6">
                         <div class="flex items-center space-x-2">
                             <div class="flex items-center space-x-2 text-sm text-text-light dark:text-text-dark">
                                 <i class="fas fa-calendar-check text-text-muted-light dark:text-text-muted-dark text-xs"></i>
-                                <span>{{ invoice.due_date.strftime('%b %d, %Y') }}</span>
+                                <span>{{ invoice.due_date|user_date }}</span>
                             </div>
                             {% if invoice.is_overdue %}
                             <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">

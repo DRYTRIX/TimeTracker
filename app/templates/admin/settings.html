@@ -51,6 +51,28 @@
                         <label for="currency" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Currency</label>
                         <input type="text" name="currency" id="currency" value="{{ settings.currency }}" required class="form-input">
                     </div>
+                    <div>
+                        <label for="date_format" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Date Format</label>
+                        <select name="date_format" id="date_format" class="form-input">
+                            <option value="YYYY-MM-DD" {% if settings.date_format == 'YYYY-MM-DD' %}selected{% endif %}>YYYY-MM-DD (2026-02-06)</option>
+                            <option value="MM/DD/YYYY" {% if settings.date_format == 'MM/DD/YYYY' %}selected{% endif %}>MM/DD/YYYY (02/06/2026)</option>
+                            <option value="DD/MM/YYYY" {% if settings.date_format == 'DD/MM/YYYY' %}selected{% endif %}>DD/MM/YYYY (06/02/2026)</option>
+                            <option value="DD.MM.YYYY" {% if settings.date_format == 'DD.MM.YYYY' %}selected{% endif %}>DD.MM.YYYY (06.02.2026)</option>
+                        </select>
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            System-wide default date format. Users can override this in their profile.
+                        </p>
+                    </div>
+                    <div>
+                        <label for="time_format" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Time Format</label>
+                        <select name="time_format" id="time_format" class="form-input">
+                            <option value="24h" {% if settings.time_format == '24h' %}selected{% endif %}>24-hour (14:30)</option>
+                            <option value="12h" {% if settings.time_format == '12h' %}selected{% endif %}>12-hour (2:30 PM)</option>
+                        </select>
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            System-wide default time format. Users can override this in their profile.
+                        </p>
+                    </div>
                 </div>
             </div>
 

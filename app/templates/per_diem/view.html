@@ -27,7 +27,7 @@
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Period</p>
-                    <p class="font-semibold">{{ per_diem.start_date.strftime('%Y-%m-%d') }} to {{ per_diem.end_date.strftime('%Y-%m-%d') }}</p>
+                    <p class="font-semibold">{{ per_diem.start_date|format_date }} to {{ per_diem.end_date|format_date }}</p>
                 </div>
                 
                 <div>

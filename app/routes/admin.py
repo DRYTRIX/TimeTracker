@@ -1136,6 +1136,15 @@ def settings():
 
         # Update basic settings
         settings_obj.timezone = timezone
+
+        # Validate and update date/time format
+        date_fmt = request.form.get("date_format", "YYYY-MM-DD")
+        if date_fmt in ("YYYY-MM-DD", "MM/DD/YYYY", "DD/MM/YYYY", "DD.MM.YYYY"):
+            settings_obj.date_format = date_fmt
+        time_fmt = request.form.get("time_format", "24h")
+        if time_fmt in ("24h", "12h"):
+            settings_obj.time_format = time_fmt
+
         settings_obj.currency = request.form.get("currency", "EUR")
         settings_obj.rounding_minutes = int(request.form.get("rounding_minutes", 1))
         settings_obj.single_active_timer = request.form.get("single_active_timer") == "on"

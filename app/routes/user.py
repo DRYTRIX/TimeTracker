@@ -81,12 +81,13 @@ def settings():
                         return redirect(url_for("user.settings"))
 
             date_format = request.form.get("date_format")
-            if date_format:
-                current_user.date_format = date_format
+            if date_format is not None:
+                allowed_date = {"YYYY-MM-DD", "MM/DD/YYYY", "DD/MM/YYYY", "DD.MM.YYYY"}
+                current_user.date_format = date_format if date_format in allowed_date else None
 
             time_format = request.form.get("time_format")
-            if time_format in ["12h", "24h"]:
-                current_user.time_format = time_format
+            if time_format is not None:
+                current_user.time_format = time_format if time_format in ("12h", "24h") else None
 
             week_start_day = request.form.get("week_start_day", type=int)
             if week_start_day is not None and 0 <= week_start_day <= 6:

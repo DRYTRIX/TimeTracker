@@ -107,7 +107,7 @@
                     <div class="space-y-2 text-sm">
                         <div>
                             <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Archived on:') }}</span>
-                            <span class="font-medium">{{ project.archived_at|user_datetime('%Y-%m-%d %H:%M') }}</span>
+                            <span class="font-medium">{{ project.archived_at|user_datetime }}</span>
                         </div>
                         {% if project.archived_by_user %}
                         <div>
@@ -231,16 +231,16 @@
             <div class="grid grid-cols-2 gap-3">
                 <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
                     <div class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Total Budget') }}</div>
-                    <div class="text-lg font-bold text-blue-600 dark:text-blue-400">${{ "%.2f"|format(budget_amt) }}</div>
+                    <div class="text-lg font-bold text-blue-600 dark:text-blue-400">{{ budget_amt|format_currency }}</div>
                 </div>
                 <div class="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg">
                     <div class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Consumed') }}</div>
-                    <div class="text-lg font-bold text-amber-600 dark:text-amber-400">${{ "%.2f"|format(consumed_amount) }}</div>
+                    <div class="text-lg font-bold text-amber-600 dark:text-amber-400">{{ consumed_amount|format_currency }}</div>
                 </div>
                 <div class="{% if remaining >= 0 %}bg-green-50 dark:bg-green-900/20{% else %}bg-red-50 dark:bg-red-900/20{% endif %} p-3 rounded-lg">
                     <div class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Remaining') }}</div>
                     <div class="text-lg font-bold {% if remaining >= 0 %}text-green-600 dark:text-green-400{% else %}text-red-600 dark:text-red-400{% endif %}">
-                        ${{ "%.2f"|format(remaining|abs) }}
+                        {{ (remaining|abs)|format_currency }}
                         {% if remaining < 0 %}<span class="text-xs">{{ _('over') }}</span>{% endif %}
                     </div>
                 </div>
@@ -365,7 +365,7 @@
                                 <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ attachment.description }}</p>
                                 {% endif %}
                                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                                    {{ attachment.file_size_display }} • {{ attachment.uploaded_at|user_datetime('%Y-%m-%d %H:%M') if attachment.uploaded_at else '' }}
+                                    {{ attachment.file_size_display }} • {{ attachment.uploaded_at|user_datetime if attachment.uploaded_at else '' }}
                                     {% if attachment.is_visible_to_client %}
                                     <span class="ml-2 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs">{{ _('Client Visible') }}</span>
                                     {% endif %}
@@ -428,7 +428,7 @@
                         <td class="p-3">
                             {% if task.due_date %}
                                 {% set overdue = task.is_overdue %}
-                                <span class="px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap {{ 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' if overdue else 'bg-primary/10 text-primary' }}">{{ task.due_date.strftime('%Y-%m-%d') }}</span>
+                                <span class="px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap {{ 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' if overdue else 'bg-primary/10 text-primary' }}">{{ task.due_date|format_date }}</span>
                             {% else %}
                                 <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                             {% endif %}

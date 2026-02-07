@@ -17,7 +17,7 @@
             </div>
             <div class="flex justify-between">
                 <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Due Date') }}:</span>
-                <span>{{ invoice.due_date.strftime('%Y-%m-%d') }}</span>
+                <span>{{ invoice.due_date|format_date }}</span>
             </div>
         </div>
     </div>

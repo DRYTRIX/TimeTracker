@@ -72,8 +72,8 @@
         </div>
         <div>
             <h2 class="text-lg font-semibold">Details</h2>
-            <p><strong>Issue Date:</strong> {{ invoice.issue_date.strftime('%Y-%m-%d') }}</p>
-            <p><strong>Due Date:</strong> {{ invoice.due_date.strftime('%Y-%m-%d') }}</p>
+            <p><strong>Issue Date:</strong> {{ invoice.issue_date|format_date }}</p>
+            <p><strong>Due Date:</strong> {{ invoice.due_date|format_date }}</p>
             <p><strong>Status:</strong> {{ invoice.status }}</p>
             {% if invoice.payment_reference %}
             <p><strong>{{ _('Payment Reference') }}:</strong> 
@@ -190,7 +190,7 @@
                     <td class="p-2">{{ expense.title }}</td>
                     <td class="p-2">{{ expense.description or '-' }}</td>
                     <td class="p-2">{{ expense.category|capitalize }}</td>
-                    <td class="p-2">{{ expense.expense_date.strftime('%Y-%m-%d') if expense.expense_date else '-' }}</td>
+                    <td class="p-2">{{ expense.expense_date|format_date if expense.expense_date else '-' }}</td>
                     <td class="p-2">{{ expense.vendor or '-' }}</td>
                     <td class="p-2">{{ "%.2f"|format(expense.total_amount) }} {{ expense.currency_code }}</td>
                 </tr>
@@ -278,7 +278,7 @@
             <tbody>
                 {% for payment in invoice.sorted_payments %}
                 <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td class="p-2">{{ payment.payment_date.strftime('%Y-%m-%d') if payment.payment_date else 'N/A' }}</td>
+                    <td class="p-2">{{ payment.payment_date|format_date if payment.payment_date else 'N/A' }}</td>
                     <td class="p-2 font-semibold text-green-600 dark:text-green-400">
                         {{ "%.2f"|format(payment.amount) }} {{ payment.currency or invoice.currency_code }}
                         {% if payment.gateway_fee %}
@@ -415,7 +415,7 @@
                 {% for email in email_history %}
                 <tr class="border-b border-border-light dark:border-border-dark">
                     <td class="p-2 text-sm">
-                        {{ email.sent_at.strftime('%Y-%m-%d %H:%M:%S') if email.sent_at else 'N/A' }}
+                        {{ email.sent_at|user_datetime if email.sent_at else 'N/A' }}
                     </td>
                     <td class="p-2 text-sm">{{ email.recipient_email }}</td>
                     <td class="p-2 text-sm">
@@ -472,7 +472,7 @@
             <tbody>
                 {% for tx in peppol_history %}
                 <tr class="border-b border-border-light dark:border-border-dark">
-                    <td class="p-2 text-sm">{{ tx.created_at.strftime('%Y-%m-%d %H:%M:%S') if tx.created_at else 'N/A' }}</td>
+                    <td class="p-2 text-sm">{{ tx.created_at|user_datetime if tx.created_at else 'N/A' }}</td>
                     <td class="p-2 text-sm">
                         <span class="px-2 py-1 rounded text-xs font-medium
                             {% if tx.status == 'sent' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200

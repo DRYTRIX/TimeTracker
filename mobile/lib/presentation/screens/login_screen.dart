@@ -351,9 +351,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     controller: _serverUrlController,
                     decoration: const InputDecoration(
                       labelText: 'Server URL',
-                      hintText: 'your-server.com or https://your-server.com',
+                      hintText: 'https://timetracker.example.com (no path)',
                       prefixIcon: Icon(Icons.link),
-                      helperText: 'Self-signed certificates may require Trust.',
+                      helperText: 'Use exact base URL. For self-signed or DDNS certs, tap "Yes, trust" if prompted.',
                     ),
                     keyboardType: TextInputType.url,
                     validator: (value) {

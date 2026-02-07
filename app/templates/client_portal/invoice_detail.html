@@ -31,8 +31,8 @@
         </div>
         <div>
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Invoice Details') }}</h3>
-            <p class="text-sm mb-1"><span class="font-medium">{{ _('Issue Date') }}:</span> {{ invoice.issue_date.strftime('%Y-%m-%d') }}</p>
-            <p class="text-sm mb-1"><span class="font-medium">{{ _('Due Date') }}:</span> {{ invoice.due_date.strftime('%Y-%m-%d') }}</p>
+            <p class="text-sm mb-1"><span class="font-medium">{{ _('Issue Date') }}:</span> {{ invoice.issue_date|format_date }}</p>
+            <p class="text-sm mb-1"><span class="font-medium">{{ _('Due Date') }}:</span> {{ invoice.due_date|format_date }}</p>
             <p class="text-sm mb-1"><span class="font-medium">{{ _('Status') }}:</span> 
                 <span class="px-2 py-1 text-xs rounded-full 
                     {% if invoice.payment_status == 'fully_paid' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200

@@ -54,7 +54,7 @@
         <div class="flex items-center justify-between px-6 py-4 border-b border-border-light dark:border-border-dark">
             <div class="font-semibold flex items-center gap-2">
                 <i class="fas fa-calendar-day text-primary"></i>
-                <span>{{ day.date.strftime('%Y-%m-%d') if day.date else '-' }}</span>
+                <span>{{ day.date|format_date if day.date else '-' }}</span>
             </div>
             <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
                 <span class="font-semibold text-text-light dark:text-text-dark">{{ '%.2f'|format(day.total_hours) }}</span> {{ _('hours') }}
@@ -76,8 +76,8 @@
                 <tbody>
                     {% for entry in day.entries %}
                     <tr class="border-t border-border-light dark:border-border-dark">
-                        <td class="p-3 whitespace-nowrap">{{ entry.start_time|user_datetime('%H:%M') if entry.start_time else '-' }}</td>
-                        <td class="p-3 whitespace-nowrap">{{ entry.end_time|user_datetime('%H:%M') if entry.end_time else '-' }}</td>
+                        <td class="p-3 whitespace-nowrap">{{ entry.start_time|user_time if entry.start_time else '-' }}</td>
+                        <td class="p-3 whitespace-nowrap">{{ entry.end_time|user_time if entry.end_time else '-' }}</td>
                         <td class="p-3 whitespace-nowrap font-medium">{{ '%.2f'|format(entry.duration_hours) }}</td>
                         <td class="p-3">{{ entry.task.name if entry.task else '—' }}</td>
                         <td class="p-3">
