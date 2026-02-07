@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav %}
+
+{% block title %}{{ deal.name }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Deals'), 'url': url_for('deals.list_deals')},
+    {'text': deal.name}
+] %}
+
+{% set actions_html %}
+<a href="{{ url_for('deals.edit_deal', deal_id=deal.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-edit mr-2"></i>{{ _('Edit') }}</a>
+<a href="{{ url_for('deals.create_activity', deal_id=deal.id) }}" class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors"><i class="fas fa-plus mr-2"></i>{{ _('Add Activity') }}</a>
+<a href="{{ url_for('deals.pipeline_view') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-columns mr-2"></i>{{ _('Pipeline') }}</a>
+{% endset %}
+
+{{ page_header(
+    icon_class='fas fa-handshake',
+    title_text=deal.name,
+    subtitle_text=deal.client.name if deal.client else (deal.stage|replace('_', ' ')|title),
+    breadcrumbs=breadcrumbs,
+    actions_html=actions_html
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left Column: Deal Details -->
+    <div class="lg:col-span-1 space-y-6">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Deal Information') }}</h2>
+            <div class="space-y-4">
+                {% if deal.client %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Client') }}</h3>
+                    <p><a href="{{ url_for('clients.view_client', client_id=deal.client.id) }}" class="text-primary hover:underline">{{ deal.client.name }}</a></p>
+                </div>
+                {% endif %}
+                {% if deal.contact %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Contact') }}</h3>
+                    <p><a href="{{ url_for('contacts.view_contact', contact_id=deal.contact.id) }}" class="text-primary hover:underline">{{ deal.contact.full_name }}</a></p>
+                </div>
+                {% endif %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Stage') }}</h3>
+                    <span class="px-2 py-1 text-xs rounded {% if deal.stage == 'closed_won' %}bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200{% elif deal.stage == 'closed_lost' %}bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200{% else %}bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200{% endif %}">
+                        {{ deal.stage|replace('_', ' ')|title }}
+                    </span>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Status') }}</h3>
+                    <span class="px-2 py-1 text-xs rounded {% if deal.status == 'won' %}bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200{% elif deal.status == 'lost' %}bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200{% else %}bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200{% endif %}">
+                        {{ deal.status|title }}
+                    </span>
+                </div>
+                {% if deal.value is not none and deal.value %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Value') }}</h3>
+                    <p>{{ "%.2f"|format(deal.value) }} {{ deal.currency_code }}</p>
+                </div>
+                {% endif %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Probability') }}</h3>
+                    <p>{{ deal.probability }}%</p>
+                </div>
+                {% if deal.expected_close_date %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Expected Close') }}</h3>
+                    <p>{{ deal.expected_close_date|format_date }}</p>
+                </div>
+                {% endif %}
+                {% if deal.actual_close_date %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Actual Close') }}</h3>
+                    <p>{{ deal.actual_close_date|format_date }}</p>
+                </div>
+                {% endif %}
+                {% if deal.owner %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Owner') }}</h3>
+                    <p>{{ deal.owner.display_name if deal.owner.display_name else deal.owner.email }}</p>
+                </div>
+                {% endif %}
+                {% if deal.lead %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Related Lead') }}</h3>
+                    <p><a href="{{ url_for('leads.view_lead', lead_id=deal.lead.id) }}" class="text-primary hover:underline">{{ deal.lead.display_name }}</a></p>
+                </div>
+                {% endif %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Created') }}</h3>
+                    <p>{{ deal.created_at|user_datetime if deal.created_at else '—' }}</p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Updated') }}</h3>
+                    <p>{{ deal.updated_at|user_datetime if deal.updated_at else '—' }}</p>
+                </div>
+            </div>
+        </div>
+
+        {% if deal.description %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Description') }}</h2>
+            <p class="text-sm whitespace-pre-wrap">{{ deal.description }}</p>
+        </div>
+        {% endif %}
+
+        {% if deal.notes %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Notes') }}</h2>
+            <p class="text-sm whitespace-pre-wrap">{{ deal.notes }}</p>
+        </div>
+        {% endif %}
+
+        {% if deal.status == 'lost' and deal.loss_reason %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Loss Reason') }}</h2>
+            <p class="text-sm">{{ deal.loss_reason }}</p>
+        </div>
+        {% endif %}
+
+        {% if deal.related_quote %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Related Quote') }}</h2>
+            <p class="text-sm">{{ deal.related_quote.quote_number }}{% if deal.related_quote.title %} - {{ deal.related_quote.title }}{% endif %}</p>
+        </div>
+        {% endif %}
+
+        {% if deal.related_project %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Related Project') }}</h2>
+            <p class="text-sm">{{ deal.related_project.name }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Activities -->
+    <div class="lg:col-span-2">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold">{{ _('Activity') }}</h2>
+                <a href="{{ url_for('deals.create_activity', deal_id=deal.id) }}" class="bg-primary text-white px-3 py-1.5 rounded-lg hover:bg-primary/90 transition-colors text-sm">
+                    <i class="fas fa-plus mr-1"></i>{{ _('Add Activity') }}
+                </a>
+            </div>
+            {% if activities %}
+            <div class="space-y-4">
+                {% for activity in activities %}
+                <div class="border-l-4 border-primary pl-4 py-2">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-medium">{{ activity.subject or activity.type|replace('_', ' ')|title }}</h3>
+                            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                                {{ activity.activity_date|user_datetime if activity.activity_date else '' }}
+                                {% if activity.creator %}
+                                · {{ _('by') }} {{ activity.creator.display_name if activity.creator.display_name else activity.creator.email }}
+                                {% endif %}
+                            </p>
+                            {% if activity.description %}
+                            <p class="mt-2 text-sm whitespace-pre-wrap">{{ activity.description }}</p>
+                            {% endif %}
+                        </div>
+                        <span class="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">{{ activity.type|replace('_', ' ')|title }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No activities recorded yet') }}</p>
+            <a href="{{ url_for('deals.create_activity', deal_id=deal.id) }}" class="mt-3 inline-block text-primary hover:underline text-sm">
+                <i class="fas fa-plus mr-1"></i>{{ _('Add first activity') }}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
