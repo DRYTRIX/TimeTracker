@@ -253,7 +253,7 @@
         } else if (diffDays < 7) {
             return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
         } else {
-            return date.toLocaleDateString();
+            return window.formatUserDate ? window.formatUserDate(date) : date.toLocaleDateString();
         }
     }
 

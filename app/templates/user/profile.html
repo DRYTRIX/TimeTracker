@@ -98,7 +98,7 @@
                                 {{ entry.project.name if entry.project else _('No project') }}
                             </p>
                             <p class="text-sm text-gray-600 dark:text-gray-400">
-                                {{ entry.start_time|user_datetime('%Y-%m-%d %H:%M') if entry.start_time else '' }}
+                                {{ entry.start_time|user_datetime if entry.start_time else '' }}
                             </p>
                         </div>
                         <div class="text-right">
@@ -143,7 +143,7 @@
                                 {{ activity.description or (activity.action ~ ' ' ~ activity.entity_type) }}
                             </p>
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                {{ activity.created_at|user_datetime('%Y-%m-%d %H:%M') if activity.created_at else '' }}
+                                {{ activity.created_at|user_datetime if activity.created_at else '' }}
                             </p>
                         </div>
                     </div>

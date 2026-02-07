@@ -251,7 +251,7 @@
                                 <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ attachment.description }}</p>
                                 {% endif %}
                                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                                    {{ attachment.file_size_display }} • {{ attachment.uploaded_at|user_datetime('%Y-%m-%d %H:%M') if attachment.uploaded_at else '' }}
+                                    {{ attachment.file_size_display }} • {{ attachment.uploaded_at|user_datetime if attachment.uploaded_at else '' }}
                                     {% if attachment.is_visible_to_client %}
                                     <span class="ml-2 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs">{{ _('Client Visible') }}</span>
                                     {% endif %}
@@ -343,12 +343,12 @@
                         <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark cursor-pointer" onclick="window.location.href='{{ url_for('timer.view_timer', timer_id=entry.id) }}'">
                             <td class="p-3">
                                 <div class="text-sm">
-                                    {{ entry.start_time|user_datetime('%Y-%m-%d') }}
+                                    {{ entry.start_time|user_date }}
                                 </div>
                                 <div class="text-xs text-text-muted-light dark:text-text-muted-dark">
-                                    {{ entry.start_time|user_datetime('%H:%M') }}
+                                    {{ entry.start_time|user_time }}
                                     {% if entry.end_time %}
-                                        - {{ entry.end_time|user_datetime('%H:%M') }}
+                                        - {{ entry.end_time|user_time }}
                                     {% endif %}
                                 </div>
                             </td>
@@ -461,7 +461,7 @@
                             <div>
                                 <div class="font-medium">{{ note.author_name }}</div>
                                 <div class="text-xs text-text-muted-light dark:text-text-muted-dark">
-                                    {{ note.created_at|user_datetime('%B %d, %Y at %I:%M %p') }}
+                                    {{ note.created_at|user_datetime }}
                                     {% if note.created_at != note.updated_at %}
                                     <span class="ml-1">({{ _('edited') }})</span>
                                     {% endif %}

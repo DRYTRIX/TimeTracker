@@ -42,7 +42,7 @@ Use the same **username and password** you use to log in to the TimeTracker web 
 
 1. **Launch the app** on your device
 2. On the login screen, enter:
-   - **Server URL**: The base URL of your TimeTracker server (e.g., `https://your-server.com`). Use HTTPS if your server uses SSL.
+   - **Server URL**: The **exact** base URL you use in the browser for the TimeTracker web app. If the web app opens at `https://example.com/timetracker/` (with a path), use `https://example.com/timetracker` as the Server URL — no trailing slash. If it opens at `https://example.com/`, use `https://example.com`.
    - **Username**: Your web login username
    - **Password**: Your web login password
 3. Tap **"Login"**
@@ -61,7 +61,14 @@ The default TimeTracker deployment uses **docker-compose** with **NGINX** on por
 - Use the same username and password you use on the web app
 - Ensure the server URL is correct and the server is reachable
 
-**"Connection failed" error:**
+**"Connection failed" or certificate errors (e.g. on DDNS or custom domains like `timetracker.example.ddns.net`):**
+- Enter the **exact** base URL with `https://` (e.g. `https://timetracker.techteam.ddns.net`) — no path and no trailing slash after the host.
+- If the server uses a **self-signed or custom CA certificate**, the app will show a "Certificate not trusted" dialog — tap **"Yes, trust"** to allow that host and retry.
+- For production, use a **publicly trusted certificate** (e.g. Let's Encrypt) for your hostname so the app connects without prompts.
+- Ensure the hostname **resolves from the phone’s network** (e.g. if the server is only reachable on office Wi‑Fi, connect the phone to that network or VPN).
+- Use the **"Details"** button on the error to copy diagnostics (URL, error type, message) for debugging.
+
+**General "Connection failed" error:**
 - Verify the server URL is correct and accessible
 - Check your internet connection
 - Ensure the server is running and the API is accessible

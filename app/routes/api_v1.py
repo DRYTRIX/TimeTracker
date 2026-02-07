@@ -1811,7 +1811,7 @@ def get_expense(expense_id):
     from app.models import Expense
 
     expense = (
-        Expense.query.options(joinedload(Expense.project), joinedload(Expense.user), joinedload(Expense.category))
+        Expense.query.options(joinedload(Expense.project), joinedload(Expense.user), joinedload(Expense.client))
         .filter_by(id=expense_id)
         .first_or_404()
     )

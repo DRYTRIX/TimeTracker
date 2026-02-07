@@ -212,6 +212,7 @@ logs/app.jsonl
 
 # Mobile
 mobile/android/app/build/
+mobile/android/.gradle/
 mobile/ios/build/
 mobile/ios/Pods/
 mobile/ios/Podfile.lock

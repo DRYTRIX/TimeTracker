@@ -88,20 +88,26 @@ NOTES_STYLE = ParagraphStyle(
 # ---------------------------------------------------------------------------
 
 def _fmt_time(dt):
-    """Format datetime as HH:MM."""
+    """Format datetime using the current user's time format preference."""
     if dt is None:
         return ""
     if isinstance(dt, datetime):
-        return dt.strftime("%H:%M")
+        try:
+            from app.utils.timezone import get_user_time_format
+            return dt.strftime(get_user_time_format())
+        except Exception:
+            return dt.strftime("%H:%M")
     return str(dt)
 
 
 def _fmt_date_group(dt):
-    """Format a date for the group header row, e.g. 'Monday, 2026-02-02'."""
+    """Format a date for the group header row, e.g. 'Monday, 06.02.2026'."""
     if dt is None:
         return "Unknown date"
     try:
-        return dt.strftime("%A, %Y-%m-%d")
+        from app.utils.timezone import get_user_date_format
+        date_fmt = get_user_date_format()
+        return dt.strftime(f"%A, {date_fmt}")
     except Exception:
         return str(dt)
 
@@ -203,7 +209,12 @@ def _build_report_header(start_date=None, end_date=None, filters=None):
     else:
         period = "Period: All dates"
 
-    generated = f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+    try:
+        from app.utils.timezone import get_user_datetime_format
+        gen_fmt = get_user_datetime_format()
+    except Exception:
+        gen_fmt = "%Y-%m-%d %H:%M"
+    generated = f"Generated: {datetime.now().strftime(gen_fmt)}"
 
     # Build a two-column layout: period on left, generated on right
     meta_left = Paragraph(period, meta_style)

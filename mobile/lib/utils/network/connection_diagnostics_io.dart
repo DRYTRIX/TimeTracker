@@ -154,7 +154,8 @@ ConnectionDiagnostics diagnoseDioFailure(
       checks.add('If the server redirects from HTTP to HTTPS, enter the final HTTPS URL directly.');
     }
     if (status == 404) {
-      checks.add('Ensure the reverse proxy routes /api/v1/... to the TimeTracker app.');
+      checks.add('If you open the web app in a browser at a URL with a path (e.g. …/timetracker/ or …/app/), use that same full base URL in the app (e.g. https://example.com/timetracker).');
+      checks.add('Otherwise ensure the reverse proxy forwards /api/v1/... to the TimeTracker backend.');
     }
     if (status == 502 || status == 503 || status == 504) {
       checks.add('Reverse proxy is up but backend is down/misconfigured (NGINX ↔ app).');

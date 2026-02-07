@@ -131,7 +131,7 @@
             <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg {% if is_weekend and goal.exclude_weekends %}opacity-50{% endif %}">
                 <div>
                     <p class="font-medium text-gray-900 dark:text-white">
-                        {{ date.strftime('%A, %B %d') }}
+                        {{ date|format_date }}
                         {% if is_weekend and goal.exclude_weekends %}
                         <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">({{ _('excluded') }})</span>
                         {% endif %}
@@ -195,7 +195,7 @@
                         {% endif %}
                     </div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        {{ entry.start_time|user_datetime('%a, %b %d at %H:%M') }}
+                        {{ entry.start_time|user_datetime }}
                         {% if entry.notes %}
                         • {{ entry.notes[:50] }}{% if entry.notes|length > 50 %}...{% endif %}
                         {% endif %}

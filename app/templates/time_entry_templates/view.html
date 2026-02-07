@@ -106,7 +106,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Used</label>
                     <p class="text-text-light dark:text-text-dark">
-                        <i class="fas fa-clock mr-2"></i>{{ template.last_used_at|user_datetime('%Y-%m-%d %H:%M') }}
+                        <i class="fas fa-clock mr-2"></i>{{ template.last_used_at|user_datetime }}
                         <span class="text-sm text-text-muted-light dark:text-text-muted-dark">
                             ({{ template.last_used_at|timeago }})
                         </span>
@@ -117,14 +117,14 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Created</label>
                     <p class="text-text-light dark:text-text-dark">
-                        <i class="fas fa-calendar mr-2"></i>{{ template.created_at|user_datetime('%Y-%m-%d %H:%M') }}
+                        <i class="fas fa-calendar mr-2"></i>{{ template.created_at|user_datetime }}
                     </p>
                 </div>
                 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Updated</label>
                     <p class="text-text-light dark:text-text-dark">
-                        <i class="fas fa-edit mr-2"></i>{{ template.updated_at|user_datetime('%Y-%m-%d %H:%M') }}
+                        <i class="fas fa-edit mr-2"></i>{{ template.updated_at|user_datetime }}
                     </p>
                 </div>
             </div>

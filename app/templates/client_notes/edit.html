@@ -35,10 +35,10 @@
                 <div>
                     <strong>{{ note.author_name }}</strong>
                     <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                        {{ _('Created on') }} {{ note.created_at|user_datetime('%B %d, %Y at %I:%M %p') }}
+                        {{ _('Created on') }} {{ note.created_at|user_datetime }}
                         {% if note.created_at != note.updated_at %}
                         <br>
-                        {{ _('Last edited on') }} {{ note.updated_at|user_datetime('%B %d, %Y at %I:%M %p') }}
+                        {{ _('Last edited on') }} {{ note.updated_at|user_datetime }}
                         {% endif %}
                     </div>
                 </div>

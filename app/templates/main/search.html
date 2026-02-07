@@ -51,8 +51,8 @@
                                             {{ _('N/A') }}
                                         {% endif %}
                                     </td>
-                                                                <td>{{ entry.start_time|user_datetime('%Y-%m-%d %H:%M') }}</td>
-                            <td>{{ entry.end_time|user_datetime('%Y-%m-%d %H:%M') if entry.end_time else '-' }}</td>
+                                                                <td>{{ entry.start_time|user_datetime }}</td>
+                            <td>{{ entry.end_time|user_datetime if entry.end_time else '-' }}</td>
                                     <td><strong>{{ entry.duration_formatted }}</strong></td>
                                     <td>
                                         {% if entry.notes %}

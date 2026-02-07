@@ -24,7 +24,7 @@
             <div>
                 <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Timestamp</dt>
                 <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-                    {{ audit_log.created_at|user_datetime('%Y-%m-%d %H:%M:%S') }}
+                    {{ audit_log.created_at|user_datetime }}
                 </dd>
             </div>
             <div>
@@ -99,7 +99,7 @@
                             {% if metadata.created_at is string %}
                                 {{ metadata.created_at[:19]|replace('T', ' ') }}
                             {% else %}
-                                {{ metadata.created_at|user_datetime('%Y-%m-%d %H:%M:%S') }}
+                                {{ metadata.created_at|user_datetime }}
                             {% endif %}
                         </div>
                         {% endif %}
