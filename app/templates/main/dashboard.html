@@ -406,6 +406,7 @@
             </div>
         </div>
 
+        {% if current_user.ui_show_donate %}
         <!-- Support TimeTracker Widget -->
         <div class="bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card text-white">
             <div class="flex items-start justify-between mb-4">
@@ -456,6 +457,7 @@
                 </a>
             </div>
         </div>
+        {% endif %}
     </div>
     <!-- Delete Entry Confirmation Dialogs -->
     {% for entry in recent_entries %}
@@ -473,7 +475,7 @@
 
     <!-- Start Timer Modal -->
     <div id="startTimerModal"
-         class="fixed inset-0 z-50 hidden"
+         class="fixed inset-0 z-50 hidden overflow-y-auto"
          aria-hidden="true"
          data-tasks-api-url="{{ url_for('api.get_project_tasks', project_id=0) }}"
          data-create-task-url="{{ url_for('api.create_task_inline') }}"
@@ -489,7 +491,7 @@
          data-only-one-client="{{ 'true' if only_one_client|default(false) else 'false' }}"
          data-single-client-id="{{ single_client.id if single_client else '' }}">
         <div class="absolute inset-0 bg-black/50" data-overlay></div>
-        <div class="relative max-w-lg mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-lg" data-modal-content>
+        <div class="relative max-w-lg mx-auto mt-24 max-h-[90vh] overflow-y-auto bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-lg" data-modal-content>
             <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
                 <div class="text-lg font-semibold">{{ _('Start Timer') }}</div>
                 <button type="button" data-close class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded">{{ _('Close') }}</button>
