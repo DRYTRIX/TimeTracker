@@ -210,6 +210,10 @@ app/static/dist/
 logs/app.jsonl
 
 
+# Internal / code-generation only (do not commit to public repo)
+docs/internal/
+scripts/generate_donate_hide_code.py
+
 # Mobile
 mobile/android/app/build/
 mobile/android/.gradle/

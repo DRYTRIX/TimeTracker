@@ -12,7 +12,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.14.0\n"
+"Generated-By: Babel 2.18.0\n"
 
 #: app/__init__.py:721 app/__init__.py:754
 msgid "Your session expired or the page was open too long. Please try again."
@@ -5298,6 +5298,7 @@ msgid "No users found."
 msgstr "Käyttäjiä ei löytynyt."
 
 #: app/templates/admin/users.html:100
+#, python-brace-format
 msgid ""
 "Cannot delete user \"{name}\" because they have {count} time entries. Users "
 "with existing time entries cannot be deleted."
@@ -5310,6 +5311,7 @@ msgid "Cannot Delete User"
 msgstr "Käyttäjää ei voi poistaa"
 
 #: app/templates/admin/users.html:115
+#, python-brace-format
 msgid ""
 "Are you sure you want to delete user \"{name}\"? This action cannot be "
 "undone."
@@ -13649,10 +13651,12 @@ msgid "Move Tasks"
 msgstr "Siirrä tehtävät"
 
 #: app/templates/tasks/list.html:324
+#, python-brace-format
 msgid "Are you sure you want to delete the task \"{name}\"?"
 msgstr ""
 
 #: app/templates/tasks/list.html:325
+#, python-brace-format
 msgid ""
 "Cannot delete task \"{name}\" because it has time entries. Please delete the"
 " time entries first."
@@ -14466,6 +14470,5096 @@ msgstr "Kokonais:"
 #: app/utils/permissions.py:29 app/utils/permissions.py:61
 msgid "Please log in to access this page"
 msgstr "Kirjaudu sisään päästäksesi tälle sivulle"
+
+msgid "Default 'user' role not found. Please run 'flask seed_permissions_cmd' first."
+msgstr ""
+
+#, python-format
+msgid "Password reset successfully for user \"%(username)s\""
+msgstr ""
+
+msgid "Invalid locked client selection."
+msgstr ""
+
+msgid "Selected locked client does not exist or is not active."
+msgstr ""
+
+#, python-format
+msgid ""
+"Cannot disable '%(module)s' because the following modules depend on it: "
+"%(dependents)s"
+msgstr ""
+
+msgid ""
+"Could not update module visibility due to a database error. Please check "
+"server logs."
+msgstr ""
+
+msgid "Module visibility updated successfully"
+msgstr ""
+
+msgid "Invalid template JSON format. Please try again."
+msgstr ""
+
+msgid "Error: Template JSON is empty. Please try saving again."
+msgstr ""
+
+msgid "Error: Template JSON is invalid. Please try saving again."
+msgstr ""
+
+msgid "Error: Template JSON is not valid JSON. Please try saving again."
+msgstr ""
+
+msgid ""
+"PDF layout saved but template JSON verification failed. Please check the "
+"template."
+msgstr ""
+
+msgid "Invalid page size"
+msgstr ""
+
+msgid "Template not found for this page size"
+msgstr ""
+
+msgid "No file uploaded"
+msgstr ""
+
+msgid "Invalid template JSON format. Missing 'page' property."
+msgstr ""
+
+msgid "Could not import template due to a database error."
+msgstr ""
+
+msgid "Template imported successfully"
+msgstr ""
+
+#, python-format
+msgid "Invalid JSON file: %(error)s"
+msgstr ""
+
+#, python-format
+msgid "Error importing template: %(error)s"
+msgstr ""
+
+msgid "Invoice not found"
+msgstr ""
+
+msgid "Quote not found"
+msgstr ""
+
+#, python-format
+msgid "✗ Failed to parse issuer URL: %(error)s"
+msgstr ""
+
+msgid "Testing DNS resolution with multiple strategies..."
+msgstr ""
+
+#, python-format
+msgid "✓ DNS resolution successful using %(strategy)s strategy: %(ip)s"
+msgstr ""
+
+#, python-format
+msgid "✗ DNS resolution failed using %(strategy)s strategy: %(error)s"
+msgstr ""
+
+msgid "ℹ Docker environment detected - internal service names may be available"
+msgstr ""
+
+#, python-format
+msgid "✓ DNS strategy used: %(strategy)s"
+msgstr ""
+
+msgid "✗ Failed to retrieve discovery document"
+msgstr ""
+
+msgid "Task name and project are required"
+msgstr ""
+
+#, python-format
+msgid "Task \"%(name)s\" created successfully"
+msgstr ""
+
+msgid "Invalid username format"
+msgstr ""
+
+msgid "Password is required to create an account."
+msgstr ""
+
+msgid "Password is required"
+msgstr ""
+
+msgid "Invalid username or password"
+msgstr ""
+
+msgid ""
+"No password is set for your account. Please enter a password to set one and "
+"log in."
+msgstr ""
+
+msgid "Could not set password due to a database error. Please try again."
+msgstr ""
+
+msgid "Password has been set. You are now logged in."
+msgstr ""
+
+msgid "You must change your password before continuing."
+msgstr ""
+
+msgid "New password is required"
+msgstr ""
+
+msgid "Current password is required"
+msgstr ""
+
+msgid "Current password is incorrect"
+msgstr ""
+
+msgid "Password changed successfully. You can now continue."
+msgstr ""
+
+msgid "Could not update password due to a database error."
+msgstr ""
+
+#, python-format
+msgid ""
+"Failed to connect to Single Sign-On provider. Please contact an "
+"administrator. Error: %(error)s"
+msgstr ""
+
+#, python-format
+msgid ""
+"Cannot connect to Single Sign-On provider. DNS resolution may be failing. "
+"Please contact an administrator. Error: %(error)s"
+msgstr ""
+
+msgid "SSO failed. If this repeats, check session cookie and proxy configuration."
+msgstr ""
+
+msgid "Clients module is disabled by the administrator."
+msgstr ""
+
+msgid ""
+"You don't have permission to access this resource. Client portal access may "
+"not be enabled for your account."
+msgstr ""
+
+msgid "Your account may not have client portal access enabled"
+msgstr ""
+
+msgid "Your account may be inactive"
+msgstr ""
+
+msgid "You may not be assigned to a client"
+msgstr ""
+
+msgid "404 Not Found"
+msgstr ""
+
+msgid "500 Internal Server Error"
+msgstr ""
+
+msgid ""
+"An unexpected error occurred. Please try again later or contact support if "
+"the problem persists."
+msgstr ""
+
+msgid "Issue reporting is not available."
+msgstr ""
+
+msgid "Title is required."
+msgstr ""
+
+msgid "Invalid project selected."
+msgstr ""
+
+msgid "Could not create issue due to a database error."
+msgstr ""
+
+msgid "Issue reported successfully. We will review it shortly."
+msgstr ""
+
+msgid "Issue not found."
+msgstr ""
+
+msgid "Approval not found."
+msgstr ""
+
+msgid "No contact found for approval."
+msgstr ""
+
+msgid "Time entry approved successfully."
+msgstr ""
+
+#, python-format
+msgid "Error approving time entry: %(error)s"
+msgstr ""
+
+msgid "Rejection reason is required."
+msgstr ""
+
+msgid "Time entry rejected."
+msgstr ""
+
+#, python-format
+msgid "Error rejecting time entry: %(error)s"
+msgstr ""
+
+msgid "This quote cannot be accepted."
+msgstr ""
+
+msgid "Quote accepted successfully. We will contact you shortly."
+msgstr ""
+
+msgid "This quote cannot be rejected."
+msgstr ""
+
+msgid "Quote rejected. We appreciate your feedback."
+msgstr ""
+
+msgid "This invoice is already paid."
+msgstr ""
+
+msgid ""
+"Online payment is not currently available. Please contact us for payment "
+"instructions."
+msgstr ""
+
+msgid "Payment gateway not yet supported."
+msgstr ""
+
+msgid "Project not found."
+msgstr ""
+
+msgid "Comment cannot be empty."
+msgstr ""
+
+msgid "No contact found for commenting."
+msgstr ""
+
+msgid "Comment added successfully."
+msgstr ""
+
+#, python-format
+msgid "Marked %(count)d notifications as read."
+msgstr ""
+
+msgid "Attachment not found or access denied."
+msgstr ""
+
+msgid "File too large. Maximum 5MB."
+msgstr ""
+
+msgid "Portal customization updated successfully"
+msgstr ""
+
+msgid "Search query is too long. Maximum 200 characters."
+msgstr ""
+
+msgid "Invalid email address"
+msgstr ""
+
+#, python-format
+msgid "Custom field '%(field)s' is required"
+msgstr ""
+
+msgid ""
+"Cannot delete client with existing projects. Please delete all projects "
+"first."
+msgstr ""
+
+msgid ""
+"Cannot delete client with existing invoices. Please delete all invoices "
+"first before deleting the client."
+msgstr ""
+
+msgid ""
+"The attachments feature requires a database migration. Please run: flask db "
+"upgrade"
+msgstr ""
+
+msgid "You do not have permission to add attachments to this comment"
+msgstr ""
+
+#, python-format
+msgid "Error uploading attachment: %(error)s"
+msgstr ""
+
+msgid "Error deleting attachment"
+msgstr ""
+
+#, python-format
+msgid "Error deleting attachment: %(error)s"
+msgstr ""
+
+msgid "Field key is required"
+msgstr ""
+
+msgid "Field key must contain only letters, numbers, and underscores"
+msgstr ""
+
+msgid "A custom field definition with this key already exists"
+msgstr ""
+
+msgid "Could not create custom field definition due to a database error."
+msgstr ""
+
+msgid "Custom field definition created successfully"
+msgstr ""
+
+msgid "Could not update custom field definition due to a database error."
+msgstr ""
+
+msgid "Custom field definition updated successfully"
+msgstr ""
+
+msgid "Could not remove custom field from clients due to a database error."
+msgstr ""
+
+msgid "Could not delete custom field definition due to a database error."
+msgstr ""
+
+#, python-format
+msgid ""
+"Custom field definition deleted successfully. The field was removed from "
+"%(count)d client(s)."
+msgstr ""
+
+msgid "Custom field definition deleted successfully"
+msgstr ""
+
+msgid "You do not have permission to edit this report."
+msgstr ""
+
+#, python-format
+msgid "Report %(action)s successfully"
+msgstr ""
+
+msgid "You do not have permission to view this report."
+msgstr ""
+
+msgid "You do not have permission to delete this report view."
+msgstr ""
+
+#, python-format
+msgid "Cannot delete report view: it is used in %(count)d scheduled report(s)."
+msgstr ""
+
+#, python-format
+msgid "Report view \"%(name)s\" deleted successfully."
+msgstr ""
+
+msgid "Could not delete report view due to a database error"
+msgstr ""
+
+msgid "Selected project does not match the locked client."
+msgstr ""
+
+msgid "Error saving receipt file. Please check directory permissions."
+msgstr ""
+
+msgid "Error uploading receipt file."
+msgstr ""
+
+msgid "Integration provider not available."
+msgstr ""
+
+msgid "Trello integration must be configured by an administrator."
+msgstr ""
+
+msgid "Only administrators can set up global integrations."
+msgstr ""
+
+msgid "Could not initialize connector."
+msgstr ""
+
+msgid ""
+"Google Calendar OAuth credentials need to be configured first. Redirecting "
+"to setup..."
+msgstr ""
+
+msgid "Google Calendar integration needs to be configured by an administrator first."
+msgstr ""
+
+msgid "OAuth credentials not configured. Please configure them first."
+msgstr ""
+
+msgid ""
+"Integration not configured. Please ask an administrator to set up OAuth "
+"credentials."
+msgstr ""
+
+#, python-format
+msgid "Authorization failed: %(error)s"
+msgstr ""
+
+msgid "Authorization code not received."
+msgstr ""
+
+msgid "Integration not found."
+msgstr ""
+
+msgid "Invalid state parameter. Please try connecting again."
+msgstr ""
+
+msgid "Integration connected successfully!"
+msgstr ""
+
+#, python-format
+msgid "Integration connected but connection test failed: %(message)s"
+msgstr ""
+
+#, python-format
+msgid "Error connecting integration: %(error)s"
+msgstr ""
+
+msgid "Only administrators can configure global integrations."
+msgstr ""
+
+msgid "Trello API Key is required."
+msgstr ""
+
+msgid "Trello API Secret is required for new setup."
+msgstr ""
+
+msgid "OAuth Client ID is required."
+msgstr ""
+
+msgid "OAuth Client Secret is required for new setup."
+msgstr ""
+
+msgid "GitLab Instance URL must be a valid URL (e.g., https://gitlab.com)."
+msgstr ""
+
+msgid "GitLab Instance URL format is invalid."
+msgstr ""
+
+msgid "Integration credentials updated successfully."
+msgstr ""
+
+msgid ""
+"Users can now connect their Google Calendar. They will be automatically "
+"redirected to Google for authorization."
+msgstr ""
+
+msgid "Failed to update credentials."
+msgstr ""
+
+msgid "This action is only available for CalDAV integrations."
+msgstr ""
+
+msgid "Integration not found. Please connect the integration first."
+msgstr ""
+
+msgid "Username is required."
+msgstr ""
+
+msgid "Password is required for new setup."
+msgstr ""
+
+msgid "CalDAV credentials updated successfully."
+msgstr ""
+
+#, python-format
+msgid "Failed to update CalDAV credentials: %(message)s"
+msgstr ""
+
+#, python-format
+msgid "Invalid number for field %(field)s"
+msgstr ""
+
+#, python-format
+msgid "Field %(field)s is required"
+msgstr ""
+
+#, python-format
+msgid "Invalid JSON for field %(field)s"
+msgstr ""
+
+msgid "Integration configuration updated successfully."
+msgstr ""
+
+msgid "Failed to update configuration."
+msgstr ""
+
+msgid "Connection test successful!"
+msgstr ""
+
+#, python-format
+msgid "Connection test failed: %(message)s"
+msgstr ""
+
+msgid "Integration deleted successfully."
+msgstr ""
+
+msgid "Integration reset successfully. You can now reconfigure it."
+msgstr ""
+
+msgid "Connector not available."
+msgstr ""
+
+#, python-format
+msgid "Sync completed successfully. %(details)s"
+msgstr ""
+
+#, python-format
+msgid "Sync failed: %(message)s"
+msgstr ""
+
+#, python-format
+msgid "Error during sync: %(error)s"
+msgstr ""
+
+msgid "Either server URL or calendar URL is required."
+msgstr ""
+
+msgid "Server URL must be a valid URL (e.g., https://mail.example.com/dav)."
+msgstr ""
+
+msgid "Server URL format is invalid."
+msgstr ""
+
+msgid "Calendar URL must be a valid URL."
+msgstr ""
+
+msgid "Calendar URL format is invalid."
+msgstr ""
+
+msgid "Selected project not found or is not active."
+msgstr ""
+
+msgid "Lookback days must be between 1 and 365."
+msgstr ""
+
+msgid "Lookback days must be a valid number."
+msgstr ""
+
+#, python-format
+msgid "Failed to save credentials: %(message)s"
+msgstr ""
+
+msgid "CalDAV integration configured successfully."
+msgstr ""
+
+msgid "Failed to save CalDAV configuration."
+msgstr ""
+
+msgid "ActivityWatch server URL is required."
+msgstr ""
+
+msgid "Server URL must be a valid URL (e.g., http://localhost:5600)."
+msgstr ""
+
+msgid "Lookback days must be between 1 and 90."
+msgstr ""
+
+msgid "ActivityWatch integration configured successfully."
+msgstr ""
+
+#, python-format
+msgid "Configuration saved but connection test failed: %(message)s"
+msgstr ""
+
+msgid "Failed to save ActivityWatch configuration."
+msgstr ""
+
+msgid "Setup wizard not available for this integration."
+msgstr ""
+
+msgid "Connector class not found."
+msgstr ""
+
+msgid "Integration configured successfully!"
+msgstr ""
+
+msgid "Failed to save configuration."
+msgstr ""
+
+msgid "OAuth Setup"
+msgstr ""
+
+msgid "Connection Test"
+msgstr ""
+
+msgid "Sync Config"
+msgstr ""
+
+msgid "Instance"
+msgstr ""
+
+msgid "OAuth"
+msgstr ""
+
+msgid "Repositories"
+msgstr ""
+
+msgid "Sync Settings"
+msgstr ""
+
+msgid "Mappings"
+msgstr ""
+
+msgid "Tenant"
+msgstr ""
+
+msgid "Workspace"
+msgstr ""
+
+msgid "API Keys"
+msgstr ""
+
+msgid "Tenant ID"
+msgstr ""
+
+#, python-format
+msgid "%(name)s Setup Wizard"
+msgstr ""
+
+#, python-format
+msgid "Guided step-by-step configuration for %(name)s"
+msgstr ""
+
+msgid "Integration not found"
+msgstr ""
+
+msgid "Connector not available"
+msgstr ""
+
+msgid "SKU is required"
+msgstr ""
+
+msgid "Name is required"
+msgstr ""
+
+#, python-format
+msgid "Invalid SKU: %(error)s"
+msgstr ""
+
+#, python-format
+msgid "Invalid name: %(error)s"
+msgstr ""
+
+msgid "Stock item is not trackable. Devaluation requires trackable items."
+msgstr ""
+
+msgid "Devaluation quantity must be positive"
+msgstr ""
+
+msgid "Stock item must have a default cost to perform devaluation"
+msgstr ""
+
+msgid "Devaluation percent is required when using percent method"
+msgstr ""
+
+msgid "Invalid devaluation percent value"
+msgstr ""
+
+msgid "Devaluation percent cannot be negative"
+msgstr ""
+
+msgid "Devaluation percent cannot exceed 100%"
+msgstr ""
+
+msgid "New unit cost is required when using fixed cost method"
+msgstr ""
+
+msgid "Invalid unit cost value"
+msgstr ""
+
+msgid "Unit cost cannot be negative"
+msgstr ""
+
+msgid "Invalid devaluation method"
+msgstr ""
+
+#, python-format
+msgid ""
+"Devaluation cost (%(devalued)s) cannot be greater than original cost "
+"(%(original)s)"
+msgstr ""
+
+#, python-format
+msgid ""
+"Insufficient stock to devalue. Available: %(available)s, Requested: "
+"%(requested)s"
+msgstr ""
+
+msgid "Stock devaluation recorded successfully."
+msgstr ""
+
+msgid "Return movements must use a positive quantity"
+msgstr ""
+
+msgid "Waste movements must use a negative quantity"
+msgstr ""
+
+msgid "Devaluation percent is required when devaluation is enabled"
+msgstr ""
+
+msgid "New unit cost is required when devaluation is enabled"
+msgstr ""
+
+#, python-format
+msgid ""
+"Insufficient stock to waste. Available: %(available)s, Requested: "
+"%(requested)s"
+msgstr ""
+
+#, python-format
+msgid "Failed to devalue stock before waste: %(error)s"
+msgstr ""
+
+#, python-format
+msgid "Failed to record movement: %(error)s"
+msgstr ""
+
+msgid "Return movement recorded successfully with devaluation applied."
+msgstr ""
+
+msgid "Waste movement recorded successfully with devaluation applied."
+msgstr ""
+
+#, python-format
+msgid "Error: %(error)s"
+msgstr ""
+
+msgid "Stock item not found."
+msgstr ""
+
+msgid "Source warehouse not found."
+msgstr ""
+
+msgid "Destination warehouse not found."
+msgstr ""
+
+#, python-format
+msgid "Supplier with code '%(code)s' already exists"
+msgstr ""
+
+msgid "An approval request is already pending for this invoice."
+msgstr ""
+
+msgid "Please select at least one approver."
+msgstr ""
+
+msgid "Approval request created successfully."
+msgstr ""
+
+msgid "Invoice approved successfully."
+msgstr ""
+
+msgid "Please provide a reason for rejection."
+msgstr ""
+
+msgid "Invoice approval rejected."
+msgstr ""
+
+msgid "Company Tax ID (VAT) is missing in Admin → Settings → Company Branding."
+msgstr ""
+
+msgid "Sender Endpoint ID is missing in Admin → Settings → Peppol e-Invoicing."
+msgstr ""
+
+msgid "Sender Scheme ID is missing in Admin → Settings → Peppol e-Invoicing."
+msgstr ""
+
+msgid ""
+"Client Peppol Endpoint ID is missing. Add peppol_endpoint_id to the client's"
+" custom fields."
+msgstr ""
+
+msgid ""
+"Client Peppol Scheme ID is missing. Add peppol_scheme_id to the client's "
+"custom fields."
+msgstr ""
+
+msgid "Invoice has no linked client; buyer PEPPOL identifiers cannot be checked."
+msgstr ""
+
+#, python-format
+msgid "Cannot generate UBL: %(msg)s"
+msgstr ""
+
+#, python-format
+msgid "UBL export failed: %(msg)s"
+msgstr ""
+
+msgid "You do not have permission to upload images to this invoice"
+msgstr ""
+
+msgid "File type not allowed. Only images are allowed"
+msgstr ""
+
+msgid "File size exceeds maximum allowed size (5 MB)"
+msgstr ""
+
+msgid "Could not upload image due to a database error. Please check server logs."
+msgstr ""
+
+msgid "Image uploaded successfully"
+msgstr ""
+
+msgid "You do not have permission to delete images from this invoice"
+msgstr ""
+
+msgid "Could not delete image due to a database error. Please check server logs."
+msgstr ""
+
+msgid "Image deleted successfully"
+msgstr ""
+
+msgid "You do not have permission to create issues."
+msgstr ""
+
+msgid "Client is required."
+msgstr ""
+
+msgid "Issue created successfully."
+msgstr ""
+
+msgid "You do not have permission to view this issue."
+msgstr ""
+
+msgid "You do not have permission to edit this issue."
+msgstr ""
+
+msgid "Project must belong to the same client."
+msgstr ""
+
+msgid "Could not update issue due to a database error."
+msgstr ""
+
+msgid "Issue updated successfully."
+msgstr ""
+
+msgid "Please select a task."
+msgstr ""
+
+msgid "Issue linked to task successfully."
+msgstr ""
+
+msgid "Please select a project."
+msgstr ""
+
+msgid "Task created from issue successfully."
+msgstr ""
+
+msgid "Status is required."
+msgstr ""
+
+msgid "Issue status updated successfully."
+msgstr ""
+
+msgid "Issue assigned successfully."
+msgstr ""
+
+msgid "Could not assign issue."
+msgstr ""
+
+msgid "Priority is required."
+msgstr ""
+
+msgid "Issue priority updated successfully."
+msgstr ""
+
+msgid "Only administrators can delete issues."
+msgstr ""
+
+msgid "Could not delete issue due to a database error."
+msgstr ""
+
+msgid "Issue deleted successfully."
+msgstr ""
+
+msgid "Kiosk mode is not enabled. Please contact an administrator."
+msgstr ""
+
+msgid ""
+"No password is set for this account. Please set a password in your profile "
+"first."
+msgstr ""
+
+msgid "You have been logged out"
+msgstr ""
+
+msgid "Stock adjustment recorded successfully"
+msgstr ""
+
+msgid "Stock transfer completed successfully"
+msgstr ""
+
+msgid "Timer started successfully"
+msgstr ""
+
+msgid "URL template is required"
+msgstr ""
+
+#, python-brace-format
+msgid "URL template must contain {value} or %value% placeholder"
+msgstr ""
+
+msgid "Could not create link template due to a database error."
+msgstr ""
+
+msgid "Link template created successfully"
+msgstr ""
+
+msgid "Could not update link template due to a database error."
+msgstr ""
+
+msgid "Link template updated successfully"
+msgstr ""
+
+msgid "Could not delete link template due to a database error."
+msgstr ""
+
+msgid "Link template deleted successfully"
+msgstr ""
+
+msgid "Payment gateway created successfully."
+msgstr ""
+
+msgid "No payment gateway configured. Please contact an administrator."
+msgstr ""
+
+msgid "Stripe API key not configured."
+msgstr ""
+
+msgid "Payment processed successfully."
+msgstr ""
+
+msgid "System role names cannot be changed"
+msgstr ""
+
+msgid "Only Super Admins can assign the super_admin role"
+msgstr ""
+
+msgid "Only Super Admins can remove the admin role from themselves"
+msgstr ""
+
+msgid "Only Super Admins can remove the admin role from other users"
+msgstr ""
+
+msgid "Template created successfully."
+msgstr ""
+
+msgid "Template not found."
+msgstr ""
+
+msgid "You do not have permission to view this template."
+msgstr ""
+
+msgid "You do not have permission to edit this template."
+msgstr ""
+
+msgid "Template updated successfully."
+msgstr ""
+
+msgid "Template deleted successfully."
+msgstr ""
+
+msgid "Please select a client."
+msgstr ""
+
+msgid "Project created from template successfully."
+msgstr ""
+
+msgid "Could not save project due to a database error"
+msgstr ""
+
+msgid "Could not update project due to a database error"
+msgstr ""
+
+msgid "Quote ID is required"
+msgstr ""
+
+msgid "You do not have permission to upload images to this quote"
+msgstr ""
+
+msgid "You do not have permission to delete images from this quote"
+msgstr ""
+
+msgid "Recurring task created successfully"
+msgstr ""
+
+msgid "You do not have permission to view other users' time entries"
+msgstr ""
+
+msgid "You do not have permission to export other users' time entries"
+msgstr ""
+
+msgid "You do not have permission to access this page."
+msgstr ""
+
+msgid "Error loading scheduled reports. Please check the logs."
+msgstr ""
+
+msgid "Please fill in all required fields."
+msgstr ""
+
+msgid "Please specify a custom field name when enabling report iteration."
+msgstr ""
+
+msgid "Scheduled report created successfully."
+msgstr ""
+
+msgid "Scheduled report deleted successfully."
+msgstr ""
+
+msgid "Permission denied"
+msgstr ""
+
+msgid "You do not have permission to fix this schedule."
+msgstr ""
+
+msgid "Scheduled report deleted: saved view no longer exists."
+msgstr ""
+
+msgid "Scheduled report deactivated: invalid configuration."
+msgstr ""
+
+msgid "Scheduled report deactivated: could not parse configuration."
+msgstr ""
+
+msgid "Scheduled report validated and reactivated."
+msgstr ""
+
+msgid "Saved report view not found"
+msgstr ""
+
+msgid "Google Calendar OAuth credentials have been configured."
+msgstr ""
+
+#, python-format
+msgid "Invalid task name: %(error)s"
+msgstr ""
+
+msgid "Task not found"
+msgstr ""
+
+msgid "You don't have access to this channel"
+msgstr ""
+
+msgid "Message cannot be empty"
+msgstr ""
+
+msgid "Invalid message"
+msgstr ""
+
+msgid "No attachment found"
+msgstr ""
+
+msgid "Invalid filename"
+msgstr ""
+
+msgid "Server error: Could not create upload directory"
+msgstr ""
+
+msgid "Server error: Could not save file"
+msgstr ""
+
+msgid "Cannot create direct message with yourself"
+msgstr ""
+
+msgid "User is not active"
+msgstr ""
+
+msgid "Time entry approved"
+msgstr ""
+
+msgid "Time entry rejected"
+msgstr ""
+
+msgid "Approval requested"
+msgstr ""
+
+msgid "Approval cancelled"
+msgstr ""
+
+msgid "Either a project or a client is required"
+msgstr ""
+
+msgid "Invalid client selected"
+msgstr ""
+
+msgid "Tasks can only be selected for project-based timers"
+msgstr ""
+
+msgid "Timer started"
+msgstr ""
+
+#, python-format
+msgid "Cannot stop timer: %(error)s"
+msgstr ""
+
+msgid ""
+"Could not stop timer due to an error. Please try again or contact support if"
+" the problem persists."
+msgstr ""
+
+msgid "You do not have permission to view this time entry"
+msgstr ""
+
+msgid "No time entries selected"
+msgstr ""
+
+msgid "Invalid entry IDs"
+msgstr ""
+
+msgid "No time entries found"
+msgstr ""
+
+#, python-format
+msgid "Successfully deleted %(count)d time entry/entries"
+msgstr ""
+
+#, python-format
+msgid "Skipped %(count)d time entry/entries (no permission or active timer)"
+msgstr ""
+
+msgid "Please provide either start/end date+time or a worked time duration (HH:MM)."
+msgstr ""
+
+msgid "Either a project or a client must be selected"
+msgstr ""
+
+#, python-format
+msgid "Manual entry created for %(project)s - %(task)s"
+msgstr ""
+
+#, python-format
+msgid "Manual entry created for %(target)s"
+msgstr ""
+
+msgid "Client no longer exists or is inactive"
+msgstr ""
+
+msgid "Timer is not linked to a project or client"
+msgstr ""
+
+msgid "Resumed timer"
+msgstr ""
+
+msgid "Timer resumed"
+msgstr ""
+
+#, python-format
+msgid "PDF export failed: %(error)s"
+msgstr ""
+
+msgid "Invalid paid status"
+msgstr ""
+
+msgid ""
+"Could not update time entries due to a database error. Please check server "
+"logs."
+msgstr ""
+
+#, python-format
+msgid "Successfully marked %(count)d time entry/entries as %(status)s"
+msgstr ""
+
+msgid "paid"
+msgstr ""
+
+msgid "unpaid"
+msgstr ""
+
+msgid "Invalid code."
+msgstr ""
+
+msgid "Workflow created successfully"
+msgstr ""
+
+msgid "Task Status Changes"
+msgstr ""
+
+msgid "Task Created"
+msgstr ""
+
+msgid "Task Completed"
+msgstr ""
+
+msgid "Time Logged"
+msgstr ""
+
+msgid "Deadline Approaching"
+msgstr ""
+
+msgid "Budget Threshold Reached"
+msgstr ""
+
+msgid "Invoice Created"
+msgstr ""
+
+msgid "Invoice Paid"
+msgstr ""
+
+msgid "Log Time Entry"
+msgstr ""
+
+msgid "Send Notification"
+msgstr ""
+
+msgid "Assign Task"
+msgstr ""
+
+msgid "Update Project"
+msgstr ""
+
+msgid "Trigger Webhook"
+msgstr ""
+
+msgid "Workflow updated successfully"
+msgstr ""
+
+msgid "Workflow deleted successfully"
+msgstr ""
+
+msgid "Please select either a project or a client"
+msgstr ""
+
+msgid "Integrations"
+msgstr ""
+
+msgid "Project Templates"
+msgstr ""
+
+msgid "Gantt Chart"
+msgstr ""
+
+msgid "Issues"
+msgstr ""
+
+msgid "Contacts"
+msgstr ""
+
+msgid "via Clients"
+msgstr ""
+
+msgid "Deals"
+msgstr ""
+
+msgid "Leads"
+msgstr ""
+
+msgid "All Reports"
+msgstr ""
+
+msgid "Report Builder"
+msgstr ""
+
+msgid "Saved Views"
+msgstr ""
+
+msgid "Invoice Approvals"
+msgstr ""
+
+msgid "Payment Gateways"
+msgstr ""
+
+msgid "Manage Users"
+msgstr ""
+
+msgid "Module Management"
+msgstr ""
+
+msgid "Security & Access"
+msgstr ""
+
+msgid "Data Management"
+msgstr ""
+
+msgid "Custom Fields"
+msgstr ""
+
+msgid "Link Templates"
+msgstr ""
+
+msgid "System Maintenance"
+msgstr ""
+
+msgid "Telemetry"
+msgstr ""
+
+msgid "Open chat"
+msgstr ""
+
+msgid "Chat"
+msgstr ""
+
+msgid "Your support helps fund server costs and new features"
+msgstr ""
+
+msgid "Buy Me a Coffee"
+msgstr ""
+
+msgid "Amazing! You've tracked over 100 hours"
+msgstr ""
+
+msgid "Your support helps us keep TimeTracker free and improving"
+msgstr ""
+
+msgid "Great progress! You've logged 50+ entries"
+msgstr ""
+
+msgid "Help us continue developing features you love"
+msgstr ""
+
+msgid "Thanks for using TimeTracker!"
+msgstr ""
+
+msgid "Total Users"
+msgstr ""
+
+msgid "Active Users"
+msgstr ""
+
+msgid "Currently active"
+msgstr ""
+
+msgid "Total Entries"
+msgstr ""
+
+msgid "Time entries logged"
+msgstr ""
+
+msgid "Active Timers"
+msgstr ""
+
+msgid "Currently running"
+msgstr ""
+
+msgid "All time tracked"
+msgstr ""
+
+msgid "Billable time"
+msgstr ""
+
+msgid "User Activity (30 Days)"
+msgstr ""
+
+msgid "Project Status"
+msgstr ""
+
+msgid "Time Entry Trends (30 Days)"
+msgstr ""
+
+msgid "System Health"
+msgstr ""
+
+msgid "Connected"
+msgstr ""
+
+msgid "OIDC Authentication"
+msgstr ""
+
+msgid "Configured"
+msgstr ""
+
+msgid "Not Configured"
+msgstr ""
+
+msgid "Client Lock (optional)"
+msgstr ""
+
+msgid ""
+"If set, all client selectors across the app will auto-select this client and"
+" prevent changes."
+msgstr ""
+
+msgid "Locked Client"
+msgstr ""
+
+msgid "None (no lock)"
+msgstr ""
+
+msgid "Module Visibility"
+msgstr ""
+
+msgid ""
+"Disable modules to hide them from all users. Disabled modules will not "
+"appear in the sidebar. Core modules (Dashboard, Projects, Timer, etc.) are "
+"always enabled and cannot be disabled."
+msgstr ""
+
+msgid "Enable All"
+msgstr ""
+
+msgid "Disable All"
+msgstr ""
+
+msgid "Total Modules:"
+msgstr ""
+
+msgid "Enabled:"
+msgstr ""
+
+msgid "Disabled:"
+msgstr ""
+
+msgid "Search modules..."
+msgstr ""
+
+msgid "Show disabled only"
+msgstr ""
+
+msgid "Show with dependencies"
+msgstr ""
+
+msgid "Warning: Disabling these modules will also affect dependent modules:"
+msgstr ""
+
+msgid "Depends on:"
+msgstr ""
+
+msgid ""
+"Disabling \"Reports\" hides the whole Reports submenu including Report "
+"Builder and Scheduled Reports."
+msgstr ""
+
+msgid "No modules available."
+msgstr ""
+
+msgid "All modules are enabled by default."
+msgstr ""
+
+msgid ""
+"Core modules cannot be disabled as they are required for the application to "
+"function."
+msgstr ""
+
+msgid ""
+"Disabling a module affects all users system-wide. Disabled modules will not "
+"appear in the navigation sidebar."
+msgstr ""
+
+msgid "Enable all modules?"
+msgstr ""
+
+msgid "Disable all modules? This may affect functionality."
+msgstr ""
+
+msgid "Disable"
+msgstr ""
+
+msgid "module(s) in this category?"
+msgstr ""
+
+msgid "Validation errors:"
+msgstr ""
+
+msgid "Setup Wizard"
+msgstr ""
+
+msgid "OIDC Setup Wizard"
+msgstr ""
+
+msgid "Guided step-by-step configuration for OpenID Connect authentication"
+msgstr ""
+
+msgid "Basic Config"
+msgstr ""
+
+msgid "Test Connection"
+msgstr ""
+
+msgid "Finalize"
+msgstr ""
+
+msgid "Step 1: Basic Configuration"
+msgstr ""
+
+msgid "OIDC Issuer URL"
+msgstr ""
+
+msgid ""
+"The base URL of your OIDC provider (e.g., https://auth.example.com or "
+"https://login.microsoftonline.com/tenant-id/v2.0)"
+msgstr ""
+
+msgid "The client ID from your OIDC provider"
+msgstr ""
+
+msgid "Enter client secret"
+msgstr ""
+
+msgid "The client secret from your OIDC provider"
+msgstr ""
+
+msgid "OIDC Only"
+msgstr ""
+
+msgid "SSO login only, no local passwords"
+msgstr ""
+
+msgid "Both"
+msgstr ""
+
+msgid "SSO and local password authentication"
+msgstr ""
+
+msgid ""
+"Choose whether to allow only OIDC login or both OIDC and local password "
+"authentication"
+msgstr ""
+
+msgid "Step 2: Test Connection"
+msgstr ""
+
+msgid ""
+"Click \"Test Connection\" to verify DNS resolution and metadata endpoint "
+"accessibility."
+msgstr ""
+
+msgid "Step 3: Claim Mapping"
+msgstr ""
+
+msgid "Claim name containing the username (default: preferred_username)"
+msgstr ""
+
+msgid "Claim name containing the email address (default: email)"
+msgstr ""
+
+msgid "Claim name containing the full name (default: name)"
+msgstr ""
+
+msgid "Claim name containing user groups (default: groups, optional)"
+msgstr ""
+
+msgid "optional"
+msgstr ""
+
+msgid "Group name that grants admin access (optional)"
+msgstr ""
+
+msgid "Comma-separated list of email addresses that grant admin access (optional)"
+msgstr ""
+
+msgid "Step 4: Advanced Settings"
+msgstr ""
+
+msgid "Space-separated list of OIDC scopes (default: openid profile email)"
+msgstr ""
+
+msgid "OAuth callback URL (usually auto-generated, but can be customized)"
+msgstr ""
+
+msgid "Post-Logout Redirect URI"
+msgstr ""
+
+msgid ""
+"URL to redirect to after logout (optional, only if your provider supports "
+"end_session_endpoint)"
+msgstr ""
+
+msgid "Step 5: Generate Configuration"
+msgstr ""
+
+msgid ""
+"Click \"Generate Configuration\" to create environment variable "
+"configuration."
+msgstr ""
+
+msgid "Generate Configuration"
+msgstr ""
+
+msgid "Environment Variables (.env file)"
+msgstr ""
+
+msgid "Copy"
+msgstr ""
+
+msgid "Docker Compose"
+msgstr ""
+
+msgid ""
+"Copy the configuration above and add it to your environment variables or "
+"Docker Compose file, then restart the application."
+msgstr ""
+
+msgid "Export JSON"
+msgstr ""
+
+msgid "Import JSON"
+msgstr ""
+
+msgid "Decorative Image"
+msgstr ""
+
+msgid "Template Settings"
+msgstr ""
+
+#, python-format
+msgid "Use strftime format (e.g., %d.%m.%Y for 12.09.2025)"
+msgstr ""
+
+msgid "Page Size"
+msgstr ""
+
+msgid "Refresh Preview"
+msgstr ""
+
+msgid "Toggle Fullscreen"
+msgstr ""
+
+msgid "Close Preview"
+msgstr ""
+
+msgid "Zoom Level"
+msgstr ""
+
+msgid "Reset Zoom"
+msgstr ""
+
+msgid "Fit to Width"
+msgstr ""
+
+msgid "Fit Width"
+msgstr ""
+
+msgid "Fit to Height"
+msgstr ""
+
+msgid "Fit Height"
+msgstr ""
+
+msgid "Actual Size"
+msgstr ""
+
+msgid "Generating preview..."
+msgstr ""
+
+msgid "Preview Error"
+msgstr ""
+
+msgid "Retry"
+msgstr ""
+
+msgid "Change Image"
+msgstr ""
+
+msgid "Upload Image"
+msgstr ""
+
+msgid "Remove Image"
+msgstr ""
+
+msgid "Only image files (PNG, JPG, JPEG, GIF, WEBP) are allowed"
+msgstr ""
+
+msgid "File size must be less than 5MB"
+msgstr ""
+
+msgid "Uploading..."
+msgstr ""
+
+msgid "Error: Image update function not found"
+msgstr ""
+
+msgid "Failed to upload image"
+msgstr ""
+
+msgid "Are you sure you want to remove this image?"
+msgstr ""
+
+msgid "Exit Fullscreen"
+msgstr ""
+
+msgid "Failed to load preview. Please try again."
+msgstr ""
+
+msgid ""
+"Changing page size will reload the preview with the template for that size. "
+"Continue?"
+msgstr ""
+
+msgid ""
+"Preview functionality is currently unavailable. Please check the browser "
+"console for errors."
+msgstr ""
+
+msgid "Error importing template"
+msgstr ""
+
+msgid "Salesman Email Mappings"
+msgstr ""
+
+msgid "Email Mappings"
+msgstr ""
+
+msgid "Add Mapping"
+msgstr ""
+
+msgid "Salesman Initial"
+msgstr ""
+
+msgid "Pattern/Domain"
+msgstr ""
+
+msgid "Add Email Mapping"
+msgstr ""
+
+msgid "1-20 letters only"
+msgstr ""
+
+msgid "The salesman initial from client custom fields (e.g., MM for Max Mustermann)"
+msgstr ""
+
+msgid "Direct Email Address"
+msgstr ""
+
+#, python-brace-format
+msgid "Pattern (e.g., {value}@test.de)"
+msgstr ""
+
+msgid "Domain (e.g., test.de)"
+msgstr ""
+
+#, python-brace-format
+msgid "Will generate: {initial}@domain"
+msgstr ""
+
+msgid "Additional notes about this mapping"
+msgstr ""
+
+msgid "Preview:"
+msgstr ""
+
+msgid "No mappings configured. Click \"Add Mapping\" to create one."
+msgstr ""
+
+msgid "Edit Email Mapping"
+msgstr ""
+
+msgid "Error saving mapping"
+msgstr ""
+
+msgid "Are you sure you want to delete this mapping?"
+msgstr ""
+
+msgid "Error deleting mapping"
+msgstr ""
+
+msgid "Kiosk Mode"
+msgstr ""
+
+msgid "Enable Kiosk Mode"
+msgstr ""
+
+msgid ""
+"Kiosk mode provides a simplified interface for warehouse operations with "
+"barcode scanning and time tracking. Access at"
+msgstr ""
+
+msgid "Auto-Logout Timeout (Minutes)"
+msgstr ""
+
+msgid "Default Movement Type"
+msgstr ""
+
+msgid "Allow Camera-Based Barcode Scanning"
+msgstr ""
+
+msgid "Require Reason for Stock Adjustments"
+msgstr ""
+
+msgid "Password Reset"
+msgstr ""
+
+msgid "Custom Field Definitions"
+msgstr ""
+
+msgid "Create"
+msgstr ""
+
+msgid "Edit Custom Field Definition"
+msgstr ""
+
+msgid "Create Custom Field Definition"
+msgstr ""
+
+msgid "Define a global custom field that can be used across all clients"
+msgstr ""
+
+msgid "Field Key"
+msgstr ""
+
+msgid "e.g., debtor_number"
+msgstr ""
+
+msgid ""
+"Unique identifier for this field (letters, numbers, and underscores only). "
+"Cannot be changed after creation."
+msgstr ""
+
+msgid "e.g., Debtor Number"
+msgstr ""
+
+msgid "Display name shown in client forms"
+msgstr ""
+
+msgid "Optional help text for this field"
+msgstr ""
+
+msgid "Display Order"
+msgstr ""
+
+msgid "Lower numbers appear first"
+msgstr ""
+
+msgid "Mandatory"
+msgstr ""
+
+msgid "Required field - clients must fill this in"
+msgstr ""
+
+msgid "Only active fields are shown in client forms"
+msgstr ""
+
+msgid "Manage global custom field definitions for clients"
+msgstr ""
+
+msgid "Create Custom Field"
+msgstr ""
+
+msgid "Order"
+msgstr ""
+
+msgid "Required"
+msgstr ""
+
+msgid "No custom field definitions found."
+msgstr ""
+
+msgid "How Custom Field Definitions Work"
+msgstr ""
+
+msgid ""
+"Custom field definitions allow you to create global fields that can be used "
+"across all clients. This eliminates the need to recreate the same custom "
+"fields for each client."
+msgstr ""
+
+msgid "Features:"
+msgstr ""
+
+msgid "Define custom fields once and use them for all clients"
+msgstr ""
+
+msgid "Mark fields as mandatory to ensure they are always filled"
+msgstr ""
+
+msgid "Control field order and visibility"
+msgstr ""
+
+msgid "Link templates can be assigned to make field values clickable"
+msgstr ""
+
+msgid "Example:"
+msgstr ""
+
+msgid ""
+"Create a field definition with key \"debtor_number\" and label \"Debtor "
+"Number\""
+msgstr ""
+
+msgid "Mark it as mandatory if required"
+msgstr ""
+
+msgid "When creating or editing a client, this field will automatically appear"
+msgstr ""
+
+msgid ""
+"Create a link template to make the value clickable (e.g., "
+"https://erp.example.com/customer/%value%)"
+msgstr ""
+
+#, python-format
+msgid ""
+"Warning: %(count)d client(s) have a value for this custom field. Deleting "
+"this field definition will remove the field value from all %(count)d "
+"client(s). Are you sure you want to delete the custom field definition "
+"\"%(label)s\"?"
+msgstr ""
+
+msgid "Are you sure you want to delete this custom field definition?"
+msgstr ""
+
+msgid "Integration Setup"
+msgstr ""
+
+msgid ""
+"Configure OAuth credentials for each integration. Global integrations are "
+"shared across all users."
+msgstr ""
+
+msgid "Global"
+msgstr ""
+
+msgid "Per User"
+msgstr ""
+
+msgid "Setup"
+msgstr ""
+
+msgid "Trello API Key"
+msgstr ""
+
+msgid "Get from https://trello.com/app-key"
+msgstr ""
+
+msgid "Get your API key from"
+msgstr ""
+
+msgid "Trello API Secret"
+msgstr ""
+
+msgid "Leave empty to keep current value"
+msgstr ""
+
+msgid "Get your API secret from"
+msgstr ""
+
+msgid "(shown after generating API key)"
+msgstr ""
+
+msgid ""
+"After saving API Key and Secret, you can connect Trello using OAuth flow. "
+"The token will be generated automatically during connection."
+msgstr ""
+
+msgid "OAuth Client ID"
+msgstr ""
+
+msgid "OAuth Client Secret"
+msgstr ""
+
+msgid "Required for new setup. Leave empty to keep existing secret."
+msgstr ""
+
+msgid "Leave empty for \"common\" (multi-tenant)"
+msgstr ""
+
+msgid ""
+"Leave empty to use \"common\" (multi-tenant). Enter your Azure AD tenant ID "
+"for single-tenant apps."
+msgstr ""
+
+msgid "GitLab Instance URL"
+msgstr ""
+
+msgid ""
+"URL of your GitLab instance. Use \"https://gitlab.com\" for GitLab.com or "
+"your self-hosted GitLab URL."
+msgstr ""
+
+msgid "OAuth Redirect URI"
+msgstr ""
+
+msgid "Add this URL as an authorized redirect URI in your OAuth app settings:"
+msgstr ""
+
+msgid "Automatic Connection Flow"
+msgstr ""
+
+msgid "After you save these credentials, users can click \"Connect Google Calendar\""
+msgstr ""
+
+msgid "They will be automatically redirected to Google OAuth"
+msgstr ""
+
+msgid "No manual credential entry needed - fully automatic!"
+msgstr ""
+
+msgid "Each user connects their own Google Calendar account"
+msgstr ""
+
+msgid "Save Credentials"
+msgstr ""
+
+msgid "How Google Calendar Works"
+msgstr ""
+
+msgid ""
+"After you save the OAuth credentials above, users can connect their Google "
+"Calendar by clicking \"Connect Google Calendar\" on the Integrations page."
+msgstr ""
+
+msgid ""
+"They will be automatically redirected to Google to authorize access - no "
+"manual credential entry needed!"
+msgstr ""
+
+msgid "Each user connects their own Google Calendar account (per-user integration)."
+msgstr ""
+
+msgid "Connection Status"
+msgstr ""
+
+msgid "View Integration"
+msgstr ""
+
+msgid "Next Steps"
+msgstr ""
+
+msgid "After saving credentials, connect the integration:"
+msgstr ""
+
+msgid "Connect Integration"
+msgstr ""
+
+msgid "Edit Link Template"
+msgstr ""
+
+msgid "Create Link Template"
+msgstr ""
+
+msgid "Configure URL template for client custom fields"
+msgstr ""
+
+msgid "Template Name"
+msgstr ""
+
+msgid "e.g., ERP System Link"
+msgstr ""
+
+msgid "A descriptive name for this link template"
+msgstr ""
+
+msgid "Optional description"
+msgstr ""
+
+msgid "URL Template"
+msgstr ""
+
+msgid "https://example.com/customer/%value%"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"URL with {value} or %value% placeholder. Examples: "
+"https://erp.example.com/customer/{value} or "
+"https://erp.example.com/customer/%value%"
+msgstr ""
+
+msgid "The key in the client custom_fields JSON to use"
+msgstr ""
+
+msgid "fas fa-link"
+msgstr ""
+
+msgid "Font Awesome icon class (e.g., fas fa-link)"
+msgstr ""
+
+msgid "Only active templates are shown on client pages"
+msgstr ""
+
+msgid "Manage URL templates for client custom fields"
+msgstr ""
+
+msgid "Are you sure you want to delete this link template?"
+msgstr ""
+
+msgid "No link templates found."
+msgstr ""
+
+msgid "How Link Templates Work"
+msgstr ""
+
+msgid ""
+"Link templates allow you to create quick links to external systems (like ERP"
+" systems) using values from client custom fields."
+msgstr ""
+
+msgid "Create a custom field called \"debtor_number\" on a client"
+msgstr ""
+
+msgid "Create a link template with URL:"
+msgstr ""
+
+msgid "Set the field key to \"debtor_number\""
+msgstr ""
+
+msgid ""
+"When viewing the client, a link will appear that opens the ERP system with "
+"the correct customer ID"
+msgstr ""
+
+msgid "URL Template Format:"
+msgstr ""
+
+#, python-brace-format
+msgid "Use {value} as a placeholder for the custom field value."
+msgstr ""
+
+msgid "Module visibility"
+msgstr ""
+
+msgid ""
+"Select which modules should be hidden for this role. Hidden modules will not"
+" appear in the navigation and cannot be accessed directly."
+msgstr ""
+
+msgid "Hide"
+msgstr ""
+
+msgid "Time Entry Approvals"
+msgstr ""
+
+msgid "Review and approve time entries"
+msgstr ""
+
+msgid "Pending Approvals"
+msgstr ""
+
+msgid "Requested by"
+msgstr ""
+
+msgid "Direct"
+msgstr ""
+
+msgid "No pending approvals"
+msgstr ""
+
+msgid "All time entries have been reviewed."
+msgstr ""
+
+msgid "My Requests"
+msgstr ""
+
+msgid "No pending requests"
+msgstr ""
+
+msgid "You have no time entry approval requests."
+msgstr ""
+
+msgid "Reject Time Entry"
+msgstr ""
+
+msgid "Reason for rejection"
+msgstr ""
+
+msgid "Approval Details"
+msgstr ""
+
+msgid "Review time entry approval request"
+msgstr ""
+
+msgid "Time Entry Details"
+msgstr ""
+
+msgid "Entry ID"
+msgstr ""
+
+msgid "Approval Information"
+msgstr ""
+
+msgid "Requested at"
+msgstr ""
+
+msgid "Approved at"
+msgstr ""
+
+msgid "Entity Context"
+msgstr ""
+
+msgid "TimeEntry Created"
+msgstr ""
+
+msgid "Entry Owner"
+msgstr ""
+
+msgid "Field Change Details"
+msgstr ""
+
+msgid "Full Entity State"
+msgstr ""
+
+msgid "Before Change"
+msgstr ""
+
+msgid "After Change"
+msgstr ""
+
+msgid "Change Password"
+msgstr ""
+
+msgid "Update your password."
+msgstr ""
+
+msgid "Current Password"
+msgstr ""
+
+msgid "New Password"
+msgstr ""
+
+msgid "Confirm New Password"
+msgstr ""
+
+msgid "Please fill both password fields or leave both empty"
+msgstr ""
+
+msgid "Passwords do not match"
+msgstr ""
+
+msgid "Calendar Integrations"
+msgstr ""
+
+msgid "Last synced"
+msgstr ""
+
+msgid "Manage Integration"
+msgstr ""
+
+msgid "Are you sure you want to disconnect this integration?"
+msgstr ""
+
+msgid "Disconnect"
+msgstr ""
+
+msgid "No Calendar Integrations"
+msgstr ""
+
+msgid "Connect your calendar to automatically sync time entries and events."
+msgstr ""
+
+msgid "Connect Google Calendar"
+msgstr ""
+
+msgid "How Calendar Integration Works"
+msgstr ""
+
+msgid "Time entries are automatically synced to your calendar"
+msgstr ""
+
+msgid "Calendar events can be converted to time entries"
+msgstr ""
+
+msgid "Bidirectional sync keeps everything in sync"
+msgstr ""
+
+msgid "Calendar colors"
+msgstr ""
+
+msgid "Legend"
+msgstr ""
+
+msgid "Go to all details"
+msgstr ""
+
+msgid "Team Chat"
+msgstr ""
+
+msgid "Team chat channel"
+msgstr ""
+
+msgid "Type a message..."
+msgstr ""
+
+msgid "Channel Info"
+msgstr ""
+
+msgid "Members"
+msgstr ""
+
+msgid "Channel Settings"
+msgstr ""
+
+msgid "Upload Attachment"
+msgstr ""
+
+msgid "Select File"
+msgstr ""
+
+msgid "Maximum file size: 10 MB"
+msgstr ""
+
+msgid "Selected:"
+msgstr ""
+
+msgid "Upload"
+msgstr ""
+
+msgid "Please select a file"
+msgstr ""
+
+msgid "File size exceeds 10 MB limit"
+msgstr ""
+
+msgid "Failed to upload attachment"
+msgstr ""
+
+msgid "Communicate with your team"
+msgstr ""
+
+msgid "Channels"
+msgstr ""
+
+msgid "Direct Messages"
+msgstr ""
+
+msgid "Select a channel to start chatting"
+msgstr ""
+
+msgid "Create Channel"
+msgstr ""
+
+msgid "Channel Name"
+msgstr ""
+
+msgid "Private channel"
+msgstr ""
+
+msgid "Activity Feed"
+msgstr ""
+
+msgid "Recent project activities"
+msgstr ""
+
+msgid "No Activity"
+msgstr ""
+
+msgid ""
+"No recent activity to display. Activity will appear here as projects are "
+"updated and time entries are logged."
+msgstr ""
+
+msgid "Approvals"
+msgstr ""
+
+msgid "Requested on"
+msgstr ""
+
+msgid "Request Comment"
+msgstr ""
+
+msgid "No Approvals"
+msgstr ""
+
+msgid "You have no pending time entry approvals. All caught up!"
+msgstr ""
+
+msgid "No approvals found for this status."
+msgstr ""
+
+msgid "Notifications"
+msgstr ""
+
+msgid "More"
+msgstr ""
+
+msgid "Documents"
+msgstr ""
+
+msgid "Activity"
+msgstr ""
+
+msgid "Toggle menu"
+msgstr ""
+
+msgid "Total active"
+msgstr ""
+
+msgid "Hours tracked"
+msgstr ""
+
+msgid "All invoices"
+msgstr ""
+
+msgid "Action Required"
+msgstr ""
+
+msgid "Time entries awaiting your review"
+msgstr ""
+
+msgid "Review Now"
+msgstr ""
+
+msgid "New Updates"
+msgstr ""
+
+msgid "Unread"
+msgstr ""
+
+msgid "Notifications waiting for you"
+msgstr ""
+
+msgid "No projects found"
+msgstr ""
+
+msgid "Projects will appear here once they are created"
+msgstr ""
+
+msgid "No invoices found"
+msgstr ""
+
+msgid "Invoices will appear here once they are created"
+msgstr ""
+
+msgid "Time entries will appear here once they are logged"
+msgstr ""
+
+msgid "View and download project documents"
+msgstr ""
+
+msgid "Client Document"
+msgstr ""
+
+msgid "Download"
+msgstr ""
+
+msgid "No Documents"
+msgstr ""
+
+msgid ""
+"No documents have been shared with you yet. Documents will appear here once "
+"they are uploaded and made visible to clients."
+msgstr ""
+
+msgid "An error occurred"
+msgstr ""
+
+msgid "Login to Client Portal"
+msgstr ""
+
+msgid ""
+"If you believe you should have access to the client portal, please contact "
+"your administrator or use the login link above."
+msgstr ""
+
+msgid "Pay Invoice"
+msgstr ""
+
+msgid "No paid invoices"
+msgstr ""
+
+msgid "No unpaid invoices"
+msgstr ""
+
+msgid "No overdue invoices"
+msgstr ""
+
+msgid ""
+"There are no invoices available at this time. Invoices will appear here once"
+" they are created."
+msgstr ""
+
+msgid "There are no invoices matching this filter. Try selecting a different status."
+msgstr ""
+
+msgid "View All Invoices"
+msgstr ""
+
+#, python-format
+msgid "Issue #%(id)s"
+msgstr ""
+
+msgid "No description provided."
+msgstr ""
+
+msgid "Linked Task"
+msgstr ""
+
+msgid "Resolved"
+msgstr ""
+
+msgid "Back to Issues"
+msgstr ""
+
+msgid "Issue Reports"
+msgstr ""
+
+#, python-format
+msgid "Report and track issues for %(client_name)s"
+msgstr ""
+
+msgid "Closed"
+msgstr ""
+
+msgid "Report New Issue"
+msgstr ""
+
+msgid "No issues found."
+msgstr ""
+
+msgid "Report a bug or issue you've encountered"
+msgstr ""
+
+msgid "Brief description of the issue"
+msgstr ""
+
+msgid "Detailed description of the issue, steps to reproduce, etc."
+msgstr ""
+
+msgid "Select a project (optional)"
+msgstr ""
+
+msgid "Your Name"
+msgstr ""
+
+msgid "Your name (optional)"
+msgstr ""
+
+msgid "Your Email"
+msgstr ""
+
+msgid "Your email (optional)"
+msgstr ""
+
+msgid "Submit Issue"
+msgstr ""
+
+msgid "Stay updated on your projects and invoices"
+msgstr ""
+
+msgid "Mark All as Read"
+msgstr ""
+
+msgid "Mark as read"
+msgstr ""
+
+msgid "No Notifications"
+msgstr ""
+
+msgid "You have no unread notifications. All caught up!"
+msgstr ""
+
+msgid ""
+"You have no notifications yet. Notifications will appear here when there are"
+" updates to your projects or invoices."
+msgstr ""
+
+msgid "Project Comments"
+msgstr ""
+
+msgid "Enter your comment..."
+msgstr ""
+
+msgid "No Comments"
+msgstr ""
+
+msgid "Be the first to comment on this project."
+msgstr ""
+
+msgid "View Time Entries"
+msgstr ""
+
+msgid ""
+"There are no projects available at this time. Projects will appear here once"
+" they are created and assigned to your account."
+msgstr ""
+
+msgid "Are you sure you want to accept this quote?"
+msgstr ""
+
+msgid "Reason (optional)"
+msgstr ""
+
+msgid "Please provide a reason for rejecting this quote..."
+msgstr ""
+
+msgid "Project and invoice summaries"
+msgstr ""
+
+msgid "Total Invoiced"
+msgstr ""
+
+msgid "No project hours data available."
+msgstr ""
+
+msgid "Recent Time Entries (Last 30 Days)"
+msgstr ""
+
+msgid "No recent time entries."
+msgstr ""
+
+msgid ""
+"No time entries match your current filters. Try adjusting your filter "
+"criteria."
+msgstr ""
+
+msgid ""
+"There are no time entries available at this time. Time entries will appear "
+"here once they are logged for your projects."
+msgstr ""
+
+msgid "Clear Filters"
+msgstr ""
+
+msgid "These custom fields are defined globally and available for all clients."
+msgstr ""
+
+msgid "Enter value"
+msgstr ""
+
+msgid "Enable Issue Reporting"
+msgstr ""
+
+msgid "Allow clients to report bugs and issues through the portal"
+msgstr ""
+
+msgid "Attachments"
+msgstr ""
+
+msgid "File"
+msgstr ""
+
+msgid "Max size: 10 MB. Allowed: images, PDFs, documents, spreadsheets, archives"
+msgstr ""
+
+msgid "Description (optional)"
+msgstr ""
+
+msgid "e.g., Contract, Agreement, etc."
+msgstr ""
+
+msgid "Visible to client in portal"
+msgstr ""
+
+msgid "Are you sure you want to delete this attachment?"
+msgstr ""
+
+msgid "Delete Attachment"
+msgstr ""
+
+msgid "No attachments yet"
+msgstr ""
+
+msgid "Recent Hours History"
+msgstr ""
+
+#, python-format
+msgid "Showing last %(count)s entries"
+msgstr ""
+
+msgid "No recent time entries found."
+msgstr ""
+
+msgid "Add Attachment"
+msgstr ""
+
+msgid "Max 10 MB. Images, PDFs, documents, spreadsheets, archives"
+msgstr ""
+
+msgid "Replies are too deeply nested to display."
+msgstr ""
+
+msgid "Comment nesting too deep to display."
+msgstr ""
+
+msgid "Start a Chat"
+msgstr ""
+
+msgid "Search users..."
+msgstr ""
+
+msgid "Loading users..."
+msgstr ""
+
+msgid "Failed to load users"
+msgstr ""
+
+msgid "No users found"
+msgstr ""
+
+msgid "Starting chat..."
+msgstr ""
+
+msgid "Failed to start chat"
+msgstr ""
+
+msgid "Client (auto-selected)"
+msgstr ""
+
+msgid "Select a client (optional)"
+msgstr ""
+
+msgid "Selected"
+msgstr ""
+
+msgid "Search..."
+msgstr ""
+
+msgid "Select all"
+msgstr ""
+
+msgid "No items available"
+msgstr ""
+
+msgid "Apply"
+msgstr ""
+
+msgid "Sync Now"
+msgstr ""
+
+msgid "Pending Sync"
+msgstr ""
+
+msgid "No pending items"
+msgstr ""
+
+msgid "Sync All"
+msgstr ""
+
+msgid "Error loading queue"
+msgstr ""
+
+msgid "Toggle chat"
+msgstr ""
+
+msgid "Start new chat"
+msgstr ""
+
+msgid "Minimize chat"
+msgstr ""
+
+msgid "View full"
+msgstr ""
+
+msgid "Failed to load messages"
+msgstr ""
+
+msgid "No messages yet"
+msgstr ""
+
+msgid "Failed to send message"
+msgstr ""
+
+msgid "Add Activity"
+msgstr ""
+
+msgid "Pipeline"
+msgstr ""
+
+msgid "Deal Information"
+msgstr ""
+
+msgid "Actual Close"
+msgstr ""
+
+msgid "Owner"
+msgstr ""
+
+msgid "Related Lead"
+msgstr ""
+
+msgid "Loss Reason"
+msgstr ""
+
+msgid "by"
+msgstr ""
+
+msgid "No activities recorded yet"
+msgstr ""
+
+msgid "Add first activity"
+msgstr ""
+
+msgid "Add task"
+msgstr ""
+
+msgid "CSV Import - Time Entries"
+msgstr ""
+
+msgid "CSV Import - Clients"
+msgstr ""
+
+msgid "Import clients with custom fields and multiple contacts from a CSV file"
+msgstr ""
+
+msgid "Skip duplicate clients"
+msgstr ""
+
+msgid "Use these fields for duplicate detection:"
+msgstr ""
+
+msgid "Custom fields (comma-separated):"
+msgstr ""
+
+msgid "e.g., debtor_number, erp_id"
+msgstr ""
+
+msgid ""
+"Example: Enter \"debtor_number\" to detect duplicates by debtor number only "
+"(not by name)"
+msgstr ""
+
+msgid "Restore data from a JSON or ZIP backup file"
+msgstr ""
+
+msgid "Export Clients"
+msgstr ""
+
+msgid "Export all clients with custom fields and contacts to CSV"
+msgstr ""
+
+msgid "Export Clients to CSV"
+msgstr ""
+
+msgid "ActivityWatch Setup"
+msgstr ""
+
+msgid ""
+"Import window and web activity from ActivityWatch (aw-server) as automatic "
+"time entries"
+msgstr ""
+
+msgid "Server Connection"
+msgstr ""
+
+msgid "ActivityWatch Server URL"
+msgstr ""
+
+msgid ""
+"Base URL of your aw-server (no trailing slash). aw-server must be running "
+"and reachable from this server."
+msgstr ""
+
+msgid "Use http://localhost:5600 if TimeTracker runs on the same machine."
+msgstr ""
+
+msgid "Import Settings"
+msgstr ""
+
+msgid "Default Project"
+msgstr ""
+
+msgid "No project (import without project)"
+msgstr ""
+
+msgid ""
+"Assign imported activity events to this project. Leave empty to import "
+"without a project."
+msgstr ""
+
+msgid "No active projects found. Events will be imported without a project."
+msgstr ""
+
+msgid "You can create a project later and assign events to it."
+msgstr ""
+
+msgid "Create a project"
+msgstr ""
+
+msgid "Lookback Days"
+msgstr ""
+
+msgid "How many days back to import on full sync (1–90, default: 7)."
+msgstr ""
+
+msgid "Bucket IDs"
+msgstr ""
+
+msgid ""
+"Comma-separated or JSON array. Leave empty to use all aw-watcher-window_* "
+"and aw-watcher-web_* buckets."
+msgstr ""
+
+msgid "Enable automatic sync"
+msgstr ""
+
+msgid "Automatically sync activity on a schedule. You can also trigger manual syncs."
+msgstr ""
+
+msgid "Sync Schedule"
+msgstr ""
+
+msgid "Manual only"
+msgstr ""
+
+msgid "Every hour"
+msgstr ""
+
+msgid "Daily"
+msgstr ""
+
+msgid "Test & Sync"
+msgstr ""
+
+msgid ""
+"After saving, you can test the connection and run a sync from the "
+"integration page."
+msgstr ""
+
+msgid "CalDAV Calendar Setup"
+msgstr ""
+
+msgid ""
+"Connect to a CalDAV server (e.g., Zimbra) to import calendar events as time "
+"entries"
+msgstr ""
+
+msgid "CalDAV Server URL"
+msgstr ""
+
+msgid "optional if calendar URL is provided"
+msgstr ""
+
+msgid "Base URL of your CalDAV server. Used for calendar discovery."
+msgstr ""
+
+msgid "Example: https://mail.example.com/dav for Zimbra"
+msgstr ""
+
+msgid "Calendar URL"
+msgstr ""
+
+msgid "optional if server URL is provided"
+msgstr ""
+
+msgid ""
+"Direct URL to your calendar collection. If provided, server URL is only used"
+" for discovery."
+msgstr ""
+
+msgid "Calendar Name"
+msgstr ""
+
+msgid "My Calendar"
+msgstr ""
+
+msgid "Authentication"
+msgstr ""
+
+msgid "Your CalDAV username (usually your email address)."
+msgstr ""
+
+msgid "Your CalDAV password or app-specific password."
+msgstr ""
+
+msgid "Leave empty to keep your current password."
+msgstr ""
+
+msgid "Verify SSL certificate"
+msgstr ""
+
+msgid "Uncheck only if using a self-signed certificate."
+msgstr ""
+
+msgid ""
+"Calendar events will be imported as time entries. If a project is selected, "
+"events will be assigned to that project."
+msgstr ""
+
+msgid "If an event title contains a project name, that project will be used instead."
+msgstr ""
+
+msgid "If no project is selected, events will be imported without a project."
+msgstr ""
+
+msgid "How many days back to import events from (default: 90)."
+msgstr ""
+
+msgid ""
+"Automatically sync calendar events every hour. You can still trigger manual "
+"syncs."
+msgstr ""
+
+msgid "After saving, you can test the connection and discover available calendars."
+msgstr ""
+
+msgid ""
+"Connect your Time Tracker with external services. Configure integrations "
+"below to sync data, automate workflows, and enhance productivity."
+msgstr ""
+
+msgid "OIDC / Single Sign-On"
+msgstr ""
+
+msgid ""
+"Configure OpenID Connect authentication for Single Sign-On (SSO) with your "
+"identity provider"
+msgstr ""
+
+msgid "Not Connected"
+msgstr ""
+
+msgid "Synced"
+msgstr ""
+
+msgid "Not Set Up"
+msgstr ""
+
+msgid "Connect"
+msgstr ""
+
+msgid "Integration"
+msgstr ""
+
+msgid "Guided Setup Wizard"
+msgstr ""
+
+msgid "Use our step-by-step wizard to configure this integration easily."
+msgstr ""
+
+msgid "Launch Setup Wizard"
+msgstr ""
+
+msgid "OAuth Credentials Setup"
+msgstr ""
+
+msgid "After saving API Key and Secret, you can connect Trello using OAuth flow."
+msgstr ""
+
+msgid "Use \"common\" for multi-tenant, or leave empty for common"
+msgstr ""
+
+msgid "CalDAV Authentication"
+msgstr ""
+
+msgid ""
+"CalDAV uses username and password authentication (not OAuth). Update your "
+"credentials below."
+msgstr ""
+
+msgid "Integration Configuration"
+msgstr ""
+
+msgid "Configure sync settings, data mappings, and other integration options."
+msgstr ""
+
+msgid "Connection Management"
+msgstr ""
+
+msgid "Connector Error"
+msgstr ""
+
+msgid "Sync OK"
+msgstr ""
+
+msgid "Sync Error"
+msgstr ""
+
+msgid "Expires"
+msgstr ""
+
+msgid "No expiration"
+msgstr ""
+
+msgid "Not connected"
+msgstr ""
+
+msgid "Last Sync"
+msgstr ""
+
+msgid "Last Error"
+msgstr ""
+
+msgid ""
+"CalDAV uses username/password authentication. Click below to set up your "
+"CalDAV connection."
+msgstr ""
+
+msgid "Setup CalDAV Integration"
+msgstr ""
+
+msgid ""
+"ActivityWatch imports window and web activity from your local aw-server. "
+"Click below to configure."
+msgstr ""
+
+msgid "Setup ActivityWatch Integration"
+msgstr ""
+
+msgid "OAuth credentials are configured. You can now connect Trello."
+msgstr ""
+
+msgid "Connect Trello"
+msgstr ""
+
+msgid ""
+"Please configure Trello API key and token in the OAuth Credentials Setup "
+"section above."
+msgstr ""
+
+msgid "Please configure OAuth credentials in the section above before connecting."
+msgstr ""
+
+msgid "OAuth credentials need to be configured by an administrator first."
+msgstr ""
+
+msgid ""
+"Connect your Google Calendar account. You will be redirected to Google for "
+"authorization."
+msgstr ""
+
+msgid ""
+"Connect this integration. You will be redirected to the provider for "
+"authorization."
+msgstr ""
+
+msgid "Back to Integrations"
+msgstr ""
+
+msgid "Integration Status"
+msgstr ""
+
+msgid "Token Expires"
+msgstr ""
+
+msgid "Sync History"
+msgstr ""
+
+msgid "No sync events yet"
+msgstr ""
+
+msgid "Configure CalDAV Integration"
+msgstr ""
+
+msgid "Configure ActivityWatch"
+msgstr ""
+
+msgid ""
+"Are you sure you want to reset this integration? This will remove all "
+"credentials and configuration."
+msgstr ""
+
+msgid ""
+"Are you sure you want to delete this integration? This action cannot be "
+"undone."
+msgstr ""
+
+msgid "Edit Configuration"
+msgstr ""
+
+msgid "Step 1: OAuth Setup"
+msgstr ""
+
+msgid "Create an Asana app in Settings → Apps → Manage Developer Apps."
+msgstr ""
+
+msgid "Asana OAuth Client ID"
+msgstr ""
+
+msgid "Enter OAuth Client ID"
+msgstr ""
+
+msgid "Asana OAuth Client Secret"
+msgstr ""
+
+msgid "Enter OAuth Client Secret"
+msgstr ""
+
+msgid "Step 2: Workspace Selection"
+msgstr ""
+
+msgid "Workspace GID"
+msgstr ""
+
+msgid "Find your workspace GID in Asana workspace settings or API"
+msgstr ""
+
+msgid "Step 3: Project Selection"
+msgstr ""
+
+msgid "Project GIDs"
+msgstr ""
+
+msgid ""
+"Comma-separated list of specific project GIDs to sync. Leave empty to sync "
+"all projects in the workspace."
+msgstr ""
+
+msgid "Step 4: Sync Configuration"
+msgstr ""
+
+msgid "Sync Direction"
+msgstr ""
+
+msgid "Asana → TimeTracker (Import only)"
+msgstr ""
+
+msgid "TimeTracker → Asana (Export only)"
+msgstr ""
+
+msgid "Bidirectional (Two-way sync)"
+msgstr ""
+
+msgid "Items to Sync"
+msgstr ""
+
+msgid "Subtasks"
+msgstr ""
+
+msgid "Auto Sync"
+msgstr ""
+
+msgid "Sync Completed Tasks"
+msgstr ""
+
+msgid "Step 5: Review & Save"
+msgstr ""
+
+msgid "Review your configuration and click \"Finish\" to save."
+msgstr ""
+
+msgid "Finish"
+msgstr ""
+
+msgid "Step"
+msgstr ""
+
+msgid "Create a GitHub OAuth App in Settings → Developer settings → OAuth Apps."
+msgstr ""
+
+msgid "GitHub OAuth Client ID"
+msgstr ""
+
+msgid "GitHub OAuth Client Secret"
+msgstr ""
+
+msgid "Step 2: Repository Selection"
+msgstr ""
+
+msgid ""
+"Comma-separated list of repositories (e.g., \"octocat/Hello-World\"). Leave "
+"empty to sync all accessible repositories."
+msgstr ""
+
+msgid "Create Projects"
+msgstr ""
+
+msgid "Step 3: Sync Configuration"
+msgstr ""
+
+msgid "GitHub → TimeTracker (Import only)"
+msgstr ""
+
+msgid "TimeTracker → GitHub (Export only)"
+msgstr ""
+
+msgid "Pull Requests"
+msgstr ""
+
+msgid "Projects (Repositories)"
+msgstr ""
+
+msgid "Issue States to Sync"
+msgstr ""
+
+msgid "Open Issues"
+msgstr ""
+
+msgid "Closed Issues"
+msgstr ""
+
+msgid "Step 4: Webhook Setup"
+msgstr ""
+
+msgid "Webhook Secret"
+msgstr ""
+
+msgid "Enter webhook secret"
+msgstr ""
+
+msgid ""
+"Secret token for verifying webhook signatures. Configure this in your GitHub"
+" repository webhook settings."
+msgstr ""
+
+msgid "Weekly"
+msgstr ""
+
+msgid "Automatically sync when webhooks are received from GitHub"
+msgstr ""
+
+msgid "Add this URL as a webhook in your GitHub repository settings:"
+msgstr ""
+
+msgid "All repositories"
+msgstr ""
+
+msgid "Step 1: Instance Configuration"
+msgstr ""
+
+msgid "You can use GitLab.com or your self-hosted GitLab instance."
+msgstr ""
+
+msgid "Step 2: OAuth Setup"
+msgstr ""
+
+msgid ""
+"Configure OAuth credentials. Create an application in GitLab Settings → "
+"Applications."
+msgstr ""
+
+msgid "GitLab OAuth Client ID"
+msgstr ""
+
+msgid "GitLab OAuth Client Secret"
+msgstr ""
+
+msgid ""
+"Add this URL as an authorized redirect URI in your GitLab application "
+"settings:"
+msgstr ""
+
+msgid "Step 3: Repository Selection"
+msgstr ""
+
+msgid "Repository IDs"
+msgstr ""
+
+msgid ""
+"Comma-separated list of GitLab project IDs to sync. Leave empty to sync all "
+"accessible projects."
+msgstr ""
+
+msgid "Automatically create projects in TimeTracker from GitLab projects"
+msgstr ""
+
+msgid "Step 4: Sync Settings"
+msgstr ""
+
+msgid "GitLab → TimeTracker (Import only)"
+msgstr ""
+
+msgid "TimeTracker → GitLab (Export only)"
+msgstr ""
+
+msgid "Merge Requests"
+msgstr ""
+
+msgid "Automatically sync when webhooks are received from GitLab"
+msgstr ""
+
+msgid "Secret token for verifying webhook signatures"
+msgstr ""
+
+msgid "Instance URL"
+msgstr ""
+
+msgid "Step 1: OAuth Setup & Basic Configuration"
+msgstr ""
+
+msgid ""
+"First, configure OAuth credentials for Jira. You can get these from "
+"Atlassian Developer Console."
+msgstr ""
+
+msgid "Jira OAuth Client ID"
+msgstr ""
+
+msgid "Get this from Atlassian Developer Console"
+msgstr ""
+
+msgid "Jira OAuth Client Secret"
+msgstr ""
+
+msgid "Jira Instance URL"
+msgstr ""
+
+msgid "Your Jira Cloud or Server URL (e.g., https://your-domain.atlassian.net)"
+msgstr ""
+
+msgid "Add this URL as an authorized redirect URI in your Jira OAuth app settings:"
+msgstr ""
+
+msgid ""
+"Click \"Test Connection\" to verify that Jira is accessible and OAuth "
+"credentials are correct."
+msgstr ""
+
+msgid "JQL Query"
+msgstr ""
+
+msgid ""
+"Jira Query Language query to filter issues to sync. Leave empty to sync all "
+"assigned issues."
+msgstr ""
+
+msgid "Jira → TimeTracker (Import only)"
+msgstr ""
+
+msgid "TimeTracker → Jira (Export only)"
+msgstr ""
+
+msgid "Choose how data flows between Jira and TimeTracker"
+msgstr ""
+
+msgid "Issues (Tasks)"
+msgstr ""
+
+msgid "Automatically sync when webhooks are received from Jira"
+msgstr ""
+
+msgid "Automatically create projects in TimeTracker from Jira projects"
+msgstr ""
+
+msgid ""
+"Review your configuration below. Click \"Finish\" to save and complete the "
+"setup."
+msgstr ""
+
+msgid "Jira URL"
+msgstr ""
+
+msgid "Please test the connection before proceeding."
+msgstr ""
+
+msgid "Please enter Jira URL first."
+msgstr ""
+
+msgid "Step 1: Tenant ID Configuration"
+msgstr ""
+
+msgid ""
+"Enter your Azure AD tenant ID. Use \"common\" for multi-tenant apps or leave"
+" empty for default."
+msgstr ""
+
+msgid "Configure OAuth credentials from Azure AD App Registrations."
+msgstr ""
+
+msgid "Microsoft Teams OAuth Client ID"
+msgstr ""
+
+msgid "Microsoft Teams OAuth Client Secret"
+msgstr ""
+
+msgid "Step 3: Review & Save"
+msgstr ""
+
+msgid "Outlook Calendar OAuth Client ID"
+msgstr ""
+
+msgid "Outlook Calendar OAuth Client Secret"
+msgstr ""
+
+msgid ""
+"Review your configuration and click \"Finish\" to save. After saving, users "
+"can connect their Outlook Calendar accounts."
+msgstr ""
+
+msgid "Step 1: OAuth Connection"
+msgstr ""
+
+msgid "Configure OAuth credentials from Intuit Developer Dashboard."
+msgstr ""
+
+msgid "QuickBooks OAuth Client ID"
+msgstr ""
+
+msgid "QuickBooks OAuth Client Secret"
+msgstr ""
+
+msgid ""
+"After saving OAuth credentials, you will need to connect your QuickBooks "
+"account via OAuth."
+msgstr ""
+
+msgid "Step 2: Company Selection"
+msgstr ""
+
+msgid "Company ID (Realm ID)"
+msgstr ""
+
+msgid "Find your company ID (realm ID) in QuickBooks after connecting via OAuth."
+msgstr ""
+
+msgid "Use Sandbox"
+msgstr ""
+
+msgid "Use QuickBooks sandbox environment for testing"
+msgstr ""
+
+msgid "QuickBooks → TimeTracker (Import only)"
+msgstr ""
+
+msgid "TimeTracker → QuickBooks (Export only)"
+msgstr ""
+
+msgid "Customers"
+msgstr ""
+
+msgid "Step 4: Account Mappings"
+msgstr ""
+
+msgid "Default Expense Account ID"
+msgstr ""
+
+msgid "QuickBooks account ID to use for expenses when no mapping is configured"
+msgstr ""
+
+msgid "Customer Mappings"
+msgstr ""
+
+msgid "JSON"
+msgstr ""
+
+msgid "Map TimeTracker client IDs to QuickBooks customer IDs (JSON format)"
+msgstr ""
+
+msgid "Account Mappings"
+msgstr ""
+
+msgid "Map TimeTracker expense category IDs to QuickBooks account IDs (JSON format)"
+msgstr ""
+
+msgid "Company ID"
+msgstr ""
+
+msgid "Step 1: API Keys Setup"
+msgstr ""
+
+msgid "Get your API key and secret from"
+msgstr ""
+
+msgid "Enter API Key"
+msgstr ""
+
+msgid "Enter API Secret"
+msgstr ""
+
+msgid "Generate a token after creating the API key"
+msgstr ""
+
+msgid ""
+"Click \"Test Connection\" to verify that your Trello API credentials are "
+"correct."
+msgstr ""
+
+msgid "API Key"
+msgstr ""
+
+msgid "Not tested"
+msgstr ""
+
+msgid "Connection failed"
+msgstr ""
+
+msgid "Configure OAuth credentials from Xero Developer Portal."
+msgstr ""
+
+msgid "Xero OAuth Client ID"
+msgstr ""
+
+msgid "Xero OAuth Client Secret"
+msgstr ""
+
+msgid "Step 2: Tenant Selection"
+msgstr ""
+
+msgid "Find your tenant ID (organisation ID) in Xero after connecting via OAuth."
+msgstr ""
+
+msgid "Xero → TimeTracker (Import only)"
+msgstr ""
+
+msgid "TimeTracker → Xero (Export only)"
+msgstr ""
+
+msgid "Default Expense Account Code"
+msgstr ""
+
+msgid "Xero account code to use for expenses when no mapping is configured"
+msgstr ""
+
+msgid "Contact Mappings"
+msgstr ""
+
+msgid "Map TimeTracker client IDs to Xero Contact IDs (JSON format)"
+msgstr ""
+
+msgid "Map TimeTracker expense category IDs to Xero account codes (JSON format)"
+msgstr ""
+
+msgid "Use a positive quantity (items coming back)"
+msgstr ""
+
+msgid "Use a negative quantity (items written off)"
+msgstr ""
+
+msgid "Quantity to revalue (positive)"
+msgstr ""
+
+msgid "Return requires a positive quantity."
+msgstr ""
+
+msgid "Waste requires a negative quantity."
+msgstr ""
+
+msgid "Devaluation"
+msgstr ""
+
+msgid ""
+"You can apply devaluation below to record returned or wasted items at a "
+"reduced cost."
+msgstr ""
+
+msgid "Devalue items without creating a new stock item"
+msgstr ""
+
+msgid "Apply devaluation"
+msgstr ""
+
+msgid "Method"
+msgstr ""
+
+msgid "Percent off default cost"
+msgstr ""
+
+msgid "Fixed new unit cost"
+msgstr ""
+
+msgid "Percent"
+msgstr ""
+
+msgid "Example: 30 = reduce cost by 30%"
+msgstr ""
+
+msgid "New Unit Cost"
+msgstr ""
+
+msgid "Devalued"
+msgstr ""
+
+msgid "Stock Breakdown by Valuation"
+msgstr ""
+
+msgid "Detailed breakdown showing remaining stock with different devaluation rates"
+msgstr ""
+
+msgid "No devaluation"
+msgstr ""
+
+msgid "Current Approver"
+msgstr ""
+
+msgid "You"
+msgstr ""
+
+msgid "No Pending Approvals"
+msgstr ""
+
+msgid "You have no invoices awaiting your approval."
+msgstr ""
+
+msgid "Reject Invoice Approval"
+msgstr ""
+
+msgid "Reason for Rejection"
+msgstr ""
+
+msgid "Please provide a reason for rejecting this invoice..."
+msgstr ""
+
+msgid "Request Invoice Approval"
+msgstr ""
+
+msgid "Back to Invoice"
+msgstr ""
+
+msgid "Select Approvers"
+msgstr ""
+
+msgid ""
+"Select one or more users who need to approve this invoice. Approvals will be"
+" processed in order."
+msgstr ""
+
+msgid "Requested By"
+msgstr ""
+
+msgid "Requested At"
+msgstr ""
+
+msgid "Approved By"
+msgstr ""
+
+msgid "Rejected By"
+msgstr ""
+
+msgid "Approval Stages"
+msgstr ""
+
+msgid "Waiting for approval from another user."
+msgstr ""
+
+msgid "Buyer reference (PEPPOL BT-10)"
+msgstr ""
+
+msgid "Optional; used in PEPPOL UBL"
+msgstr ""
+
+msgid "Decorative Images"
+msgstr ""
+
+msgid "Add decorative images to appear in the PDF"
+msgstr ""
+
+msgid "No images uploaded yet"
+msgstr ""
+
+msgid "Position images in the PDF Designer after uploading"
+msgstr ""
+
+msgid "Project / Stock Item"
+msgstr ""
+
+msgid "Task / Warehouse"
+msgstr ""
+
+msgid "Project hours"
+msgstr ""
+
+msgid "Quantity is from logged hours and cannot be edited"
+msgstr ""
+
+msgid "Are you sure you want to delete this image?"
+msgstr ""
+
+msgid "Failed to delete image"
+msgstr ""
+
+msgid "Select Status"
+msgstr ""
+
+msgid "Invoice Reference"
+msgstr ""
+
+msgid "e.g., Payment confirmation number"
+msgstr ""
+
+msgid "Download UBL"
+msgstr ""
+
+msgid "Pay Online"
+msgstr ""
+
+msgid "Payment Reference"
+msgstr ""
+
+msgid "PEPPOL compliance: the following are missing"
+msgstr ""
+
+msgid "Invoice Approval"
+msgstr ""
+
+msgid "Request approval before sending this invoice to the client."
+msgstr ""
+
+msgid "Edit Issue"
+msgstr ""
+
+msgid "Create Issue"
+msgstr ""
+
+msgid "Filter Issues"
+msgstr ""
+
+msgid "Search by title or description"
+msgstr ""
+
+msgid "Create New Issue"
+msgstr ""
+
+msgid "Are you sure you want to delete this issue?"
+msgstr ""
+
+msgid "Delete Issue"
+msgstr ""
+
+msgid "Link to existing task"
+msgstr ""
+
+msgid "Select a task"
+msgstr ""
+
+msgid "Link"
+msgstr ""
+
+msgid "Create new task from this issue"
+msgstr ""
+
+msgid "Submitted By"
+msgstr ""
+
+msgid "Keyboard Shortcuts (Press ?)"
+msgstr ""
+
+msgid "Show keyboard shortcuts"
+msgstr ""
+
+msgid "Logout from kiosk mode"
+msgstr ""
+
+msgid "Scan"
+msgstr ""
+
+msgid "Adjust Stock"
+msgstr ""
+
+msgid "Close keyboard shortcuts"
+msgstr ""
+
+msgid "Scan Barcode or Enter SKU"
+msgstr ""
+
+msgid "Use a barcode scanner or type the SKU manually"
+msgstr ""
+
+msgid "Scan barcode or enter SKU..."
+msgstr ""
+
+msgid "Barcode or SKU input"
+msgstr ""
+
+msgid "Use Camera to Scan"
+msgstr ""
+
+msgid "Open camera scanner"
+msgstr ""
+
+msgid "Close camera scanner"
+msgstr ""
+
+msgid "Close Camera"
+msgstr ""
+
+msgid "Decrease quantity"
+msgstr ""
+
+msgid "Adjustment quantity"
+msgstr ""
+
+msgid "Increase quantity"
+msgstr ""
+
+msgid "Kiosk adjustment"
+msgstr ""
+
+msgid "Physical count"
+msgstr ""
+
+msgid "Found"
+msgstr ""
+
+msgid "Damaged"
+msgstr ""
+
+msgid "Apply stock adjustment"
+msgstr ""
+
+msgid "Apply Adjustment"
+msgstr ""
+
+msgid "Undo last adjustment"
+msgstr ""
+
+msgid "Undo Last Adjustment"
+msgstr ""
+
+msgid "Transfer quantity"
+msgstr ""
+
+msgid "Transfer stock"
+msgstr ""
+
+msgid "Transfer Stock"
+msgstr ""
+
+msgid "Stop timer"
+msgstr ""
+
+msgid "Select project..."
+msgstr ""
+
+msgid "No projects available"
+msgstr ""
+
+msgid "No active projects found. Please create a project first."
+msgstr ""
+
+msgid "Tasks will load after selecting a project"
+msgstr ""
+
+msgid "Start timer"
+msgstr ""
+
+msgid "Recent Items"
+msgstr ""
+
+msgid "Kiosk Login"
+msgstr ""
+
+msgid "Quick access for warehouse operations"
+msgstr ""
+
+msgid "Barcode scanning"
+msgstr ""
+
+msgid "Stock management"
+msgstr ""
+
+msgid "Time tracking"
+msgstr ""
+
+msgid "Sign in to Kiosk Mode"
+msgstr ""
+
+msgid "Select your username to continue"
+msgstr ""
+
+msgid "Toggle Theme"
+msgstr ""
+
+msgid "Select User"
+msgstr ""
+
+msgid "your-username"
+msgstr ""
+
+msgid "Standard Login"
+msgstr ""
+
+msgid "Convert to Client"
+msgstr ""
+
+msgid "Convert to Deal"
+msgstr ""
+
+msgid "Mark this lead as lost?"
+msgstr ""
+
+msgid "Mark Lost"
+msgstr ""
+
+msgid "Lead"
+msgstr ""
+
+msgid "No contact details yet"
+msgstr ""
+
+msgid "Lead Details"
+msgstr ""
+
+msgid "Support TimeTracker Development"
+msgstr ""
+
+msgid ""
+"TimeTracker is free and open-source. Your support helps fund server costs, "
+"new features, security updates, and keeps the project alive. Every "
+"contribution makes a difference!"
+msgstr ""
+
+msgid "Donate Now"
+msgstr ""
+
+msgid "Today's Hours"
+msgstr ""
+
+msgid "Week's Hours"
+msgstr ""
+
+msgid "Month's Hours"
+msgstr ""
+
+msgid "Running"
+msgstr ""
+
+msgid "Click \"Start Timer\" to begin tracking your time."
+msgstr ""
+
+msgid "Start tracking time to see entries here."
+msgstr ""
+
+msgid "Start tracking time on projects to see them here."
+msgstr ""
+
+msgid "Live"
+msgstr ""
+
+msgid "Activity will appear here as you use the system."
+msgstr ""
+
+msgid ""
+"Your support helps fund server costs, new features, and keeps TimeTracker "
+"free for everyone."
+msgstr ""
+
+#, python-format
+msgid "You've tracked %(count)s time entries"
+msgstr ""
+
+#, python-format
+msgid "You've logged %(hours)s hours"
+msgstr ""
+
+msgid "Create new task..."
+msgstr ""
+
+msgid "Loading tasks..."
+msgstr ""
+
+msgid "Enter new task name:"
+msgstr ""
+
+msgid "Failed to create task: "
+msgstr ""
+
+msgid "Please complete creating the task or select an existing task"
+msgstr ""
+
+msgid "Select either a project or a client"
+msgstr ""
+
+msgid ""
+"Select a project first to load tasks, or choose \"Create new task...\" to "
+"add one"
+msgstr ""
+
+msgid "Enter a name for the new task."
+msgstr ""
+
+msgid "Task name"
+msgstr ""
+
+msgid "Create task"
+msgstr ""
+
+msgid "Task name is required."
+msgstr ""
+
+msgid "No valid image files selected. Please select PNG, JPG, GIF, or WebP images."
+msgstr ""
+
+msgid "Uploading"
+msgstr ""
+
+msgid "images"
+msgstr ""
+
+msgid "Uploading image"
+msgstr ""
+
+msgid "Successfully uploaded"
+msgstr ""
+
+msgid "image(s) failed to upload"
+msgstr ""
+
+msgid "Failed to upload images. Please try again."
+msgstr ""
+
+msgid "Failed to upload images. Please check your connection and try again."
+msgstr ""
+
+msgid "Your support helps keep TimeTracker free and continuously improving"
+msgstr ""
+
+msgid "Why Your Support Matters"
+msgstr ""
+
+msgid ""
+"TimeTracker is a free, open-source project built with passion and "
+"dedication. Your donations directly support:"
+msgstr ""
+
+msgid "Server Infrastructure"
+msgstr ""
+
+msgid "Hosting, databases, and CDN costs to keep TimeTracker fast and reliable"
+msgstr ""
+
+msgid "Feature Development"
+msgstr ""
+
+msgid "New features, improvements, and bug fixes based on your feedback"
+msgstr ""
+
+msgid "Security & Maintenance"
+msgstr ""
+
+msgid ""
+"Regular security updates, dependency maintenance, and performance "
+"optimization"
+msgstr ""
+
+msgid "Internationalization"
+msgstr ""
+
+msgid ""
+"Translation support, localization, and making TimeTracker accessible "
+"worldwide"
+msgstr ""
+
+msgid "Your TimeTracker Journey"
+msgstr ""
+
+msgid "Days using TimeTracker"
+msgstr ""
+
+msgid "Time entries tracked"
+msgstr ""
+
+msgid "Thank you for being part of the TimeTracker community!"
+msgstr ""
+
+msgid "How to Support"
+msgstr ""
+
+msgid ""
+"Every contribution, no matter the size, makes a difference. Your support "
+"helps ensure TimeTracker remains free and continues to evolve."
+msgstr ""
+
+msgid "Support on Buy Me a Coffee"
+msgstr ""
+
+msgid ""
+"You'll be redirected to Buy Me a Coffee where you can choose your "
+"contribution amount"
+msgstr ""
+
+msgid "The Impact of Your Support"
+msgstr ""
+
+msgid "Enables faster development cycles and quicker feature releases"
+msgstr ""
+
+msgid "Supports better documentation and user guides"
+msgstr ""
+
+msgid "Helps maintain high-quality code and security standards"
+msgstr ""
+
+msgid "Keeps TimeTracker free and accessible for everyone"
+msgstr ""
+
+msgid "Other Ways to Help"
+msgstr ""
+
+msgid "Contribute on GitHub"
+msgstr ""
+
+msgid "Report bugs, suggest features, or submit code"
+msgstr ""
+
+msgid "Help Others"
+msgstr ""
+
+msgid "Share your knowledge in the community"
+msgstr ""
+
+msgid ""
+"This help page covers most common questions and features. For complete "
+"documentation:"
+msgstr ""
+
+msgid "Complete Documentation Index"
+msgstr ""
+
+msgid "Getting Started Guide"
+msgstr ""
+
+msgid "Product Overview & Features"
+msgstr ""
+
+msgid "Changelog"
+msgstr ""
+
+msgid "Admin documentation:"
+msgstr ""
+
+msgid "Administrator Guide"
+msgstr ""
+
+msgid "Complete Documentation"
+msgstr ""
+
+msgid "Documentation Index"
+msgstr ""
+
+msgid "Getting Started"
+msgstr ""
+
+msgid "Feature Guides"
+msgstr ""
+
+msgid "Admin Documentation"
+msgstr ""
+
+msgid "Configure Payment Gateway"
+msgstr ""
+
+msgid "Set up payment processing for online invoice payments"
+msgstr ""
+
+msgid "Back to Gateways"
+msgstr ""
+
+msgid "Gateway Name"
+msgstr ""
+
+msgid "e.g., Stripe Production"
+msgstr ""
+
+msgid "A descriptive name for this gateway configuration"
+msgstr ""
+
+msgid "Provider"
+msgstr ""
+
+msgid "Select provider..."
+msgstr ""
+
+msgid "Stripe Configuration"
+msgstr ""
+
+msgid "Your Stripe secret key"
+msgstr ""
+
+msgid "Publishable Key"
+msgstr ""
+
+msgid "Your Stripe publishable key"
+msgstr ""
+
+msgid "Webhook signing secret for verifying webhook events"
+msgstr ""
+
+msgid "PayPal Configuration"
+msgstr ""
+
+msgid "Test Mode"
+msgstr ""
+
+msgid "Enable test mode for development and testing"
+msgstr ""
+
+msgid "Save Gateway"
+msgstr ""
+
+msgid "Mode"
+msgstr ""
+
+msgid "Production"
+msgstr ""
+
+msgid "Add Gateway"
+msgstr ""
+
+msgid "No Payment Gateways"
+msgstr ""
+
+msgid "Configure a payment gateway to enable online invoice payments."
+msgstr ""
+
+msgid "Amount Due"
+msgstr ""
+
+msgid "You will be redirected to a secure payment page to complete your payment."
+msgstr ""
+
+msgid "Continue to Payment"
+msgstr ""
+
+msgid "Payment gateway not yet supported. Please contact support."
+msgstr ""
+
+msgid "Create Project Template"
+msgstr ""
+
+msgid "Create a reusable template for quick project setup"
+msgstr ""
+
+msgid "Back to Templates"
+msgstr ""
+
+msgid "e.g., Web Development Project"
+msgstr ""
+
+msgid "Describe what this template is used for..."
+msgstr ""
+
+msgid "e.g., Web Development, Marketing"
+msgstr ""
+
+msgid "Comma-separated tags"
+msgstr ""
+
+msgid "Project Configuration"
+msgstr ""
+
+msgid "Template Tasks"
+msgstr ""
+
+msgid "Tasks will be created when a project is created from this template"
+msgstr ""
+
+msgid "Add Task"
+msgstr ""
+
+msgid "Make this template public (visible to all users)"
+msgstr ""
+
+msgid "Create Project from Template"
+msgstr ""
+
+msgid "Using template:"
+msgstr ""
+
+msgid "Back to Template"
+msgstr ""
+
+msgid "Leave empty to use template name"
+msgstr ""
+
+msgid "Override Settings (Optional)"
+msgstr ""
+
+msgid "The following tasks will be created:"
+msgstr ""
+
+msgid "Edit Project Template"
+msgstr ""
+
+msgid "Remove Task"
+msgstr ""
+
+msgid "Show Public Templates"
+msgstr ""
+
+msgid "uses"
+msgstr ""
+
+msgid "Public"
+msgstr ""
+
+msgid "No Templates Found"
+msgstr ""
+
+msgid ""
+"Create your first project template to quickly set up new projects with pre-"
+"configured settings and tasks."
+msgstr ""
+
+msgid "Project Template"
+msgstr ""
+
+msgid "Template Info"
+msgstr ""
+
+msgid "Usage Count"
+msgstr ""
+
+msgid "Last Used"
+msgstr ""
+
+msgid "Add task to this column"
+msgstr ""
+
+msgid "Gantt color"
+msgstr ""
+
+msgid ""
+"Optional: Color for this project on the Gantt chart. Pick or enter a hex "
+"code (e.g. #3b82f6)."
+msgstr ""
+
+msgid "These custom fields are defined globally and available for all projects."
+msgstr ""
+
+msgid "Entries Overview"
+msgstr ""
+
+msgid "Time Entries Overview"
+msgstr ""
+
+msgid "Days"
+msgstr ""
+
+msgid "No time entries found for this project in the selected period."
+msgstr ""
+
+msgid "Quick Links"
+msgstr ""
+
+msgid "e.g., Contract, Specification, etc."
+msgstr ""
+
+msgid "Recurring Task"
+msgstr ""
+
+msgid "Recurring Tasks"
+msgstr ""
+
+msgid "Create Recurring Task"
+msgstr ""
+
+msgid "Edit Recurring Task"
+msgstr ""
+
+msgid "Set up automated task creation"
+msgstr ""
+
+msgid "Task Name Template"
+msgstr ""
+
+msgid "e.g., Weekly Team Meeting"
+msgstr ""
+
+msgid "This will be used as the base name for created tasks"
+msgstr ""
+
+msgid "Schedule"
+msgstr ""
+
+msgid "Monthly"
+msgstr ""
+
+msgid "Yearly"
+msgstr ""
+
+msgid "Interval"
+msgstr ""
+
+msgid "Repeat every N periods (e.g., every 2 weeks)"
+msgstr ""
+
+msgid "Next Run Date"
+msgstr ""
+
+msgid "Optional: Stop creating tasks after this date"
+msgstr ""
+
+msgid "Task Settings"
+msgstr ""
+
+msgid "Auto-assign to creator"
+msgstr ""
+
+msgid "Automated task creation templates"
+msgstr ""
+
+msgid "Not scheduled"
+msgstr ""
+
+msgid "Are you sure you want to delete this recurring task?"
+msgstr ""
+
+msgid "No recurring tasks"
+msgstr ""
+
+msgid ""
+"Create recurring task templates to automatically generate tasks on a "
+"schedule."
+msgstr ""
+
+msgid "Edit Report"
+msgstr ""
+
+msgid "Custom Report Builder"
+msgstr ""
+
+msgid "Quick start"
+msgstr ""
+
+msgid "Unpaid time entries"
+msgstr ""
+
+msgid "Time entries, unpaid only, last 30 days"
+msgstr ""
+
+msgid "Data Sources"
+msgstr ""
+
+msgid "Components"
+msgstr ""
+
+msgid "Table"
+msgstr ""
+
+msgid "Chart"
+msgstr ""
+
+msgid "Report Canvas"
+msgstr ""
+
+msgid "Drag data sources and components here to build your report"
+msgstr ""
+
+msgid "Advanced Filters"
+msgstr ""
+
+msgid "Unpaid Hours Only"
+msgstr ""
+
+msgid "Unpaid = billable, not yet on any invoice."
+msgstr ""
+
+msgid "Custom Field"
+msgstr ""
+
+msgid "No Filter"
+msgstr ""
+
+msgid "Field Value"
+msgstr ""
+
+msgid "e.g., MM, PB"
+msgstr ""
+
+msgid "Enter the value to filter by (e.g., salesman initial)"
+msgstr ""
+
+msgid "Report Preview"
+msgstr ""
+
+msgid "Loading preview..."
+msgstr ""
+
+msgid "Save Report"
+msgstr ""
+
+msgid "Report Name"
+msgstr ""
+
+msgid "My Custom Report"
+msgstr ""
+
+msgid "Scope"
+msgstr ""
+
+msgid "Private"
+msgstr ""
+
+msgid "Team"
+msgstr ""
+
+msgid "Iterative Report Generation"
+msgstr ""
+
+msgid "Generate one report per custom field value (e.g., one report per salesman)"
+msgstr ""
+
+msgid "Custom Field Name"
+msgstr ""
+
+msgid "Select Field"
+msgstr ""
+
+msgid "Select the custom field to iterate over (e.g., \"salesman\")"
+msgstr ""
+
+msgid "Please select a data source first"
+msgstr ""
+
+msgid "Failed to generate preview"
+msgstr ""
+
+msgid "Unknown error occurred"
+msgstr ""
+
+msgid "Error loading preview"
+msgstr ""
+
+msgid "No data found for the selected filters"
+msgstr ""
+
+msgid "Please enter a report name"
+msgstr ""
+
+msgid "Report created successfully!"
+msgstr ""
+
+msgid "Report updated successfully!"
+msgstr ""
+
+msgid "Failed to save report"
+msgstr ""
+
+msgid "Error saving report"
+msgstr ""
+
+msgid "Custom Report"
+msgstr ""
+
+msgid "Data Table"
+msgstr ""
+
+msgid "No data found"
+msgstr ""
+
+msgid ""
+"This report has no data matching the current filters. Try adjusting your "
+"date range or filters."
+msgstr ""
+
+msgid "No summary data available."
+msgstr ""
+
+msgid "No data available for chart."
+msgstr ""
+
+msgid "No components configured"
+msgstr ""
+
+msgid ""
+"This report has no components configured. Please edit the report to add "
+"components."
+msgstr ""
+
+msgid "Unpaid Hours Report"
+msgstr ""
+
+msgid "Report Management"
+msgstr ""
+
+msgid "Saved Report Views"
+msgstr ""
+
+msgid "View and manage your saved report configurations"
+msgstr ""
+
+msgid "Manage automated report delivery via email"
+msgstr ""
+
+msgid ""
+"You need to create a saved report view first. Please create one from the "
+"reports page."
+msgstr ""
+
+msgid "Schedule Report"
+msgstr ""
+
+msgid "Report View"
+msgstr ""
+
+msgid "Select a report view..."
+msgstr ""
+
+msgid "Recipients"
+msgstr ""
+
+msgid "Comma-separated email addresses"
+msgstr ""
+
+msgid "Create Schedule"
+msgstr ""
+
+msgid "Failed to load report views"
+msgstr ""
+
+msgid "Scheduled report created successfully"
+msgstr ""
+
+msgid "Failed to create scheduled report"
+msgstr ""
+
+msgid "Failed to update schedule"
+msgstr ""
+
+msgid "Are you sure you want to delete this scheduled report?"
+msgstr ""
+
+msgid "Scheduled report deleted successfully"
+msgstr ""
+
+msgid "Failed to delete scheduled report"
+msgstr ""
+
+msgid "Iterative Report"
+msgstr ""
+
+#, python-format
+msgid "Iterative Report - One report per %(field_name)s value"
+msgstr ""
+
+msgid "Summary by Client"
+msgstr ""
+
+#, python-format
+msgid "No data found for this %(field_name)s value"
+msgstr ""
+
+#, python-format
+msgid "No unique values found for custom field \"%(field_name)s\""
+msgstr ""
+
+msgid "Features"
+msgstr ""
+
+msgid "Iterative"
+msgstr ""
+
+msgid "Are you sure you want to delete this report view?"
+msgstr ""
+
+msgid "No Saved Report Views"
+msgstr ""
+
+msgid "Create and save report configurations to use them in scheduled reports."
+msgstr ""
+
+msgid "Create Report"
+msgstr ""
+
+msgid "Set up automated email delivery for reports"
+msgstr ""
+
+msgid "Back to Scheduled Reports"
+msgstr ""
+
+msgid "Select a saved report view..."
+msgstr ""
+
+msgid "Select a saved report view to schedule"
+msgstr ""
+
+msgid "Email Recipients"
+msgstr ""
+
+msgid "email1@example.com, email2@example.com"
+msgstr ""
+
+msgid ""
+"Enter one or more email addresses separated by commas. These recipients will"
+" receive the scheduled report via email."
+msgstr ""
+
+msgid ""
+"When using Mapping or Template, these are used as fallback if no address is "
+"found for a value."
+msgstr ""
+
+msgid "Select frequency..."
+msgstr ""
+
+msgid "Custom (Cron)"
+msgstr ""
+
+msgid "Use previous calendar month as date range"
+msgstr ""
+
+msgid ""
+"For monthly runs: report will use the first and last day of the previous "
+"month."
+msgstr ""
+
+msgid "Cron Expression"
+msgstr ""
+
+msgid "Cron format: minute hour day month weekday"
+msgstr ""
+
+msgid "Report Iteration (Optional)"
+msgstr ""
+
+msgid "Split report by custom field value"
+msgstr ""
+
+msgid ""
+"The custom field name to iterate over (e.g., \"salesman\"). A separate "
+"report will be generated for each unique value."
+msgstr ""
+
+msgid "Email distribution"
+msgstr ""
+
+msgid "All reports to recipients below"
+msgstr ""
+
+msgid "Per value: SalesmanEmailMapping table"
+msgstr ""
+
+msgid "Per value: email from template"
+msgstr ""
+
+msgid "Recipient email template"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Use {value} for the value (e.g. KF); {value}@test.de yields KF@test.de. Use "
+"{value_lower} for lowercase, e.g. {value_lower}@test.de yields kf@test.de."
+msgstr ""
+
+msgid "Report"
+msgstr ""
+
+msgid "Split by"
+msgstr ""
+
+msgid "Distribution"
+msgstr ""
+
+msgid "Template"
+msgstr ""
+
+msgid "Invalid: saved view not found"
+msgstr ""
+
+msgid "Trigger report now (for testing)"
+msgstr ""
+
+msgid "Fix or remove invalid schedule"
+msgstr ""
+
+msgid "No Scheduled Reports"
+msgstr ""
+
+msgid "Create scheduled reports to automatically receive reports via email."
+msgstr ""
+
+msgid "Report triggered successfully!"
+msgstr ""
+
+msgid "Report sent to recipients."
+msgstr ""
+
+msgid "Error triggering report:"
+msgstr ""
+
+msgid "Error triggering report. Please check the console for details."
+msgstr ""
+
+msgid "Total Unpaid Hours"
+msgstr ""
+
+msgid "Estimated Amount"
+msgstr ""
+
+msgid "Clients with Unpaid Hours"
+msgstr ""
+
+msgid "Unpaid Hours by Client"
+msgstr ""
+
+msgid "No unpaid hours found for the selected period."
+msgstr ""
+
+msgid "Export entries (Excel)"
+msgstr ""
+
+msgid "Select columns:"
+msgstr ""
+
+msgid "Duration (hours)"
+msgstr ""
+
+msgid "Duration (formatted)"
+msgstr ""
+
+msgid "Integration Setup (Optional)"
+msgstr ""
+
+msgid ""
+"Configure OAuth credentials now to enable calendar and other integrations. "
+"You can also configure these later in Admin → Settings."
+msgstr ""
+
+msgid "Google Calendar OAuth"
+msgstr ""
+
+msgid "Client ID (optional)"
+msgstr ""
+
+msgid "Client Secret (optional)"
+msgstr ""
+
+msgid "Get these from"
+msgstr ""
+
+msgid "Google Cloud Console"
+msgstr ""
+
+msgid "How to get Google Calendar OAuth credentials?"
+msgstr ""
+
+msgid "Go to"
+msgstr ""
+
+msgid "Create a new project or select an existing one"
+msgstr ""
+
+msgid "Enable the Google Calendar API"
+msgstr ""
+
+msgid "Go to Credentials → Create Credentials → OAuth 2.0 Client ID"
+msgstr ""
+
+msgid "Set application type to \"Web application\""
+msgstr ""
+
+msgid "Add authorized redirect URI:"
+msgstr ""
+
+msgid "Copy the Client ID and Client Secret"
+msgstr ""
+
+msgid ""
+"Optional: Color for this task on the Gantt chart. If unset, the project "
+"color is used. Pick or enter a hex code (e.g. #3b82f6)."
+msgstr ""
+
+msgid "Select All"
+msgstr ""
+
+msgid "selected"
+msgstr ""
+
+msgid "Bulk Actions"
+msgstr ""
+
+msgid "Mark Paid/Unpaid"
+msgstr ""
+
+msgid "Project/Client"
+msgstr ""
+
+msgid "Invoice Ref"
+msgstr ""
+
+#, python-format
+msgid "Showing %(start)s to %(end)s of %(total)s entries"
+msgstr ""
+
+msgid "Worked Time"
+msgstr ""
+
+msgid ""
+"Optional: enter HH:MM for duration. You can combine with Start Date/Time to "
+"log time on a specific day."
+msgstr ""
+
+msgid "Session may have expired. Please refresh the page and try again."
+msgstr ""
+
+msgid "Project not found or inactive"
+msgstr ""
+
+msgid "Time Entries Export"
+msgstr ""
+
+msgid "Generated at"
+msgstr ""
+
+msgid "View and manage all time entries"
+msgstr ""
+
+msgid "Paid Hours"
+msgstr ""
+
+msgid "Exports use current filters"
+msgstr ""
+
+msgid "Toggle filters"
+msgstr ""
+
+msgid "Paid Status"
+msgstr ""
+
+msgid "Billable Status"
+msgstr ""
+
+msgid "Search in notes and tags..."
+msgstr ""
+
+msgid "Delete Selected Time Entries"
+msgstr ""
+
+msgid "Reason for Deletion"
+msgstr ""
+
+msgid "Optional but recommended"
+msgstr ""
+
+msgid "e.g., Duplicate entry, incorrect time, etc."
+msgstr ""
+
+msgid "Mark Selected Entries as Paid/Unpaid"
+msgstr ""
+
+msgid "e.g., Invoice number or payment reference"
+msgstr ""
+
+msgid "Please select at least one time entry"
+msgstr ""
+
+msgid "time entry/entries"
+msgstr ""
+
+msgid "View Entry"
+msgstr ""
+
+msgid "View time entry details"
+msgstr ""
+
+msgid "Entry Details"
+msgstr ""
+
+msgid "Project & Client"
+msgstr ""
+
+msgid "Status & Billing"
+msgstr ""
+
+msgid "Use system default"
+msgstr ""
+
+msgid "Support visibility"
+msgstr ""
+
+msgid ""
+"You can hide donate and support buttons and the support banner by entering a"
+" valid code."
+msgstr ""
+
+msgid "System ID"
+msgstr ""
+
+msgid "Use this ID when requesting a code to hide donate prompts."
+msgstr ""
+
+msgid "Donate and support prompts are hidden."
+msgstr ""
+
+msgid "Enter code"
+msgstr ""
+
+msgid "Verify"
+msgstr ""
+
+msgid "Copied"
+msgstr ""
+
+msgid "Please enter a code."
+msgstr ""
+
+msgid "Error verifying code."
+msgstr ""
+
+msgid "Exclude weekends (5-day work week)"
+msgstr ""
+
+msgid ""
+"If checked, the goal will only count Monday through Friday. Week ends on "
+"Friday instead of Sunday."
+msgstr ""
+
+msgid ""
+"Use \"Exclude weekends\" for a 5-day work week (Monday-Friday) instead of 7 "
+"days"
+msgstr ""
+
+msgid "5-day work week"
+msgstr ""
+
+msgid "excluded"
+msgstr ""
+
+msgid "Authentication required."
+msgstr ""
+
+#, python-format
+msgid "Module '%(module)s' is disabled."
+msgstr ""
+
+#, python-format
+msgid "Module '%(module)s' is disabled. Enable it in Settings."
+msgstr ""
 
 # Navigation and Common
 #~ msgid "Time Tracker"
