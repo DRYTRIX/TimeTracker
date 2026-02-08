@@ -120,6 +120,7 @@ class User(UserMixin, db.Model):
     ui_show_team_chat = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Team Chat
     ui_show_client_portal = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Client Portal
     ui_show_kiosk = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide Kiosk Mode
+    ui_show_donate = db.Column(db.Boolean, default=True, nullable=False)  # Show/hide donate/support UI
 
     # Relationships
     time_entries = db.relationship("TimeEntry", backref="user", lazy="dynamic", cascade="all, delete-orphan")

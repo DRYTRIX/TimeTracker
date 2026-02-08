@@ -943,6 +943,7 @@
                             <span class="ml-3 sidebar-label">{{ _('Help') }}</span>
                         </a>
                     </li>
+                    {% if current_user.is_authenticated and current_user.ui_show_donate %}
                     <li class="mt-2">
                         <a href="{{ url_for('main.donate') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg {% if ep == 'main.donate' %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30{% endif %} transition-all duration-200 group">
                             <i class="fas fa-mug-saucer w-6 text-center group-hover:scale-110 transition-transform"></i>
@@ -950,6 +951,7 @@
                             <span class="ml-auto text-xs opacity-70">☕</span>
                         </a>
                     </li>
+                    {% endif %}
                 </ul>
                 <!-- App Version -->
                 <div class="mt-4 pt-3 border-t border-border-light dark:border-border-dark">
@@ -985,6 +987,7 @@
 
                 <!-- Right side controls -->
                 <div class="flex items-center space-x-4">
+                    {% if current_user.is_authenticated and current_user.ui_show_donate %}
                     <!-- BuyMeACoffee Button -->
                     <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=header&utm_campaign=support" 
                        target="_blank" 
@@ -995,7 +998,7 @@
                         <i class="fas fa-mug-saucer"></i>
                         <span class="hidden lg:inline">{{ _('Support') }}</span>
                     </a>
-                    
+                    {% endif %}
                     <button id="theme-toggle" type="button" class="text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5" aria-label="{{ _('Toggle dark mode') }}">
                         <i id="theme-toggle-dark-icon" class="hidden fa-solid fa-moon w-5 h-5"></i>
                         <i id="theme-toggle-light-icon" class="hidden fa-solid fa-sun w-5 h-5"></i>
@@ -1060,7 +1063,7 @@
                             </li>
                             <li><a href="{{ url_for('auth.profile') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-user w-4"></i> {{ _('My Profile') }}</a></li>
                             <li><a href="{{ url_for('user.settings') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-cog w-4"></i> {{ _('My Settings') }}</a></li>
-                            <li><a href="{{ url_for('main.donate') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-mug-saucer w-4"></i> {{ _('Support Development') }}</a></li>
+                            {% if current_user.ui_show_donate %}<li><a href="{{ url_for('main.donate') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-mug-saucer w-4"></i> {{ _('Support Development') }}</a></li>{% endif %}
                             <li class="border-t border-border-light dark:border-border-dark"><a href="{{ url_for('auth.logout') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-sign-out-alt w-4"></i> {{ _('Logout') }}</a></li>
                         </ul>
                     </div>
@@ -1087,6 +1090,7 @@
                 {% endwith %}
             </div>
 
+            {% if current_user.is_authenticated and current_user.ui_show_donate %}
             <!-- Dismissible Support Banner -->
             <div id="supportBanner" class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-3 opacity-0 invisible max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
                 <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
@@ -1128,6 +1132,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
 
             <!-- Main page content -->
             <main id="mainContentAnchor" class="flex-1 p-6">

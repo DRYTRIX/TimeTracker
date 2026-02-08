@@ -5,7 +5,7 @@ import re
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import User, Activity
+from app.models import User, Activity, Settings
 from app.utils.db import safe_commit
 from flask_babel import gettext as _
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -167,6 +167,8 @@ def settings():
     rounding_intervals = get_available_rounding_intervals()
     rounding_methods = get_available_rounding_methods()
 
+    system_instance_id = Settings.get_system_instance_id()
+
     return render_template(
         "user/settings.html",
         user=current_user,
@@ -174,7 +176,45 @@ def settings():
         languages=languages,
         rounding_intervals=rounding_intervals,
         rounding_methods=rounding_methods,
+        system_instance_id=system_instance_id,
     )
+
+
+@user_bp.route("/settings/verify-donate-hide-code", methods=["POST"])
+@login_required
+def verify_donate_hide_code():
+    """Verify code (Ed25519 signature or HMAC) and set ui_show_donate=False."""
+    import hmac
+    from flask import current_app
+    from app.utils.donate_hide_code import compute_donate_hide_code, verify_ed25519_signature
+
+    if not getattr(current_user, "ui_show_donate", True):
+        return jsonify({"success": True})
+
+    data = request.get_json() or {}
+    code = (data.get("code") or "").strip()
+    system_id = Settings.get_system_instance_id()
+
+    if not system_id:
+        return jsonify({"error": _("Invalid code.")}), 400
+
+    valid = False
+    public_key_pem = current_app.config.get("DONATE_HIDE_PUBLIC_KEY_PEM") or ""
+    if public_key_pem:
+        valid = verify_ed25519_signature(code, system_id, public_key_pem)
+    if not valid:
+        secret = current_app.config.get("DONATE_HIDE_UNLOCK_SECRET") or ""
+        if secret:
+            expected = compute_donate_hide_code(secret, system_id)
+            valid = bool(expected and hmac.compare_digest(code, expected))
+
+    if not valid:
+        return jsonify({"error": _("Invalid code.")}), 400
+
+    current_user.ui_show_donate = False
+    if safe_commit(db.session):
+        return jsonify({"success": True})
+    return jsonify({"error": _("Error saving settings")}), 500
 
 
 @user_bp.route("/api/preferences", methods=["PATCH"])
