@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav %}
+
+{% block title %}{{ _('Convert to Deal') }} - {{ lead.full_name }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Leads'), 'url': url_for('leads.list_leads')},
+    {'text': lead.full_name, 'url': url_for('leads.view_lead', lead_id=lead.id)},
+    {'text': _('Convert to Deal')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-handshake',
+    title_text=_('Convert to Deal'),
+    subtitle_text=lead.full_name,
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="md:col-span-2">
+                <label for="name" class="block text-sm font-medium mb-2">{{ _('Deal Name') }} *</label>
+                <input type="text" name="name" id="name" value="{{ 'Deal: ' ~ lead.display_name }}" class="form-input" required>
+            </div>
+            <div>
+                <label for="client_id" class="block text-sm font-medium mb-2">{{ _('Client') }}</label>
+                <select name="client_id" id="client_id" class="form-input">
+                    <option value="">{{ _('Select Client') }}</option>
+                    {% for client in clients %}
+                    <option value="{{ client.id }}">{{ client.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="stage" class="block text-sm font-medium mb-2">{{ _('Stage') }} *</label>
+                <select name="stage" id="stage" class="form-input" required>
+                    {% for stage_name in pipeline_stages %}
+                    <option value="{{ stage_name }}" {% if stage_name == 'prospecting' %}selected{% endif %}>{{ stage_name|replace('_', ' ')|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="probability" class="block text-sm font-medium mb-2">{{ _('Win Probability') }} (%)</label>
+                <input type="number" min="0" max="100" name="probability" id="probability" value="50" class="form-input" required>
+            </div>
+            <div>
+                <label for="expected_close_date" class="block text-sm font-medium mb-2">{{ _('Expected Close Date') }}</label>
+                <input type="date" name="expected_close_date" id="expected_close_date" class="form-input">
+            </div>
+            <div class="md:col-span-2">
+                <label for="description" class="block text-sm font-medium mb-2">{{ _('Description') }}</label>
+                <textarea name="description" id="description" rows="4" class="form-input">{{ lead.notes or '' }}</textarea>
+            </div>
+        </div>
+        <div class="mt-6 flex gap-2">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-handshake mr-2"></i>{{ _('Convert to Deal') }}
+            </button>
+            <a href="{{ url_for('leads.view_lead', lead_id=lead.id) }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                {{ _('Cancel') }}
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

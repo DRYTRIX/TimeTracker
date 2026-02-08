@@ -16,6 +16,9 @@ leads_bp = Blueprint("leads", __name__)
 # Lead statuses
 LEAD_STATUSES = ["new", "contacted", "qualified", "converted", "lost"]
 
+# Pipeline stages for convert-to-deal (must match deals module)
+PIPELINE_STAGES = ["prospecting", "qualification", "proposal", "negotiation", "closed_won", "closed_lost"]
+
 
 @leads_bp.route("/leads")
 @login_required
@@ -273,7 +276,12 @@ def convert_to_deal(lead_id):
     # Get clients for selection
     clients = Client.query.filter_by(status="active").order_by(Client.name).all()
 
-    return render_template("leads/convert_to_deal.html", lead=lead, clients=clients)
+    return render_template(
+        "leads/convert_to_deal.html",
+        lead=lead,
+        clients=clients,
+        pipeline_stages=PIPELINE_STAGES,
+    )
 
 
 @leads_bp.route("/leads/<int:lead_id>/mark-lost", methods=["POST"])
