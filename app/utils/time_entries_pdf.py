@@ -130,14 +130,19 @@ def _safe_str(val, fallback=""):
     return s if s else fallback
 
 
-def _make_notes_paragraph(text):
-    """Wrap notes text in a Paragraph for word-wrapping inside the table cell."""
+def _make_cell_paragraph(text):
+    """Wrap text in a Paragraph for word-wrapping inside table cells (notes, task, client, project)."""
     clean = _safe_str(text)
     if not clean:
         return ""
     # Escape XML-special characters for ReportLab Paragraph
     clean = clean.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     return Paragraph(clean, NOTES_STYLE)
+
+
+def _make_notes_paragraph(text):
+    """Wrap notes text in a Paragraph for word-wrapping inside the table cell."""
+    return _make_cell_paragraph(text)
 
 
 # ---------------------------------------------------------------------------
@@ -343,13 +348,17 @@ def build_time_entries_pdf(entries, start_date=None, end_date=None, filters=None
                 if entry.end_time:
                     time_range += f" - {_fmt_time(entry.end_time)}"
 
+                # Use wrapping Paragraphs for long-text columns so they break across lines (like notes)
+                client_cell = _make_cell_paragraph(entry.client.name if entry.client else "")
+                project_cell = _make_cell_paragraph(entry.project.name if entry.project else "")
+                task_cell = _make_cell_paragraph(entry.task.name if entry.task else "")
                 notes_cell = _make_notes_paragraph(entry.notes)
 
                 row = [
                     _safe_str(entry.user.username if entry.user else ""),
-                    _safe_str(entry.client.name if entry.client else ""),
-                    _safe_str(entry.project.name if entry.project else ""),
-                    _safe_str(entry.task.name if entry.task else ""),
+                    client_cell if client_cell else " ",
+                    project_cell if project_cell else " ",
+                    task_cell if task_cell else " ",
                     time_range if time_range else " ",
                     _duration_hhmm(dur_sec),
                     notes_cell if notes_cell else " ",

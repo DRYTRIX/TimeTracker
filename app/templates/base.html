@@ -57,6 +57,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='keyboard-shortcuts.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='ui-enhancements.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
     <style>
         /* RTL Support */
         html[dir="rtl"] {
@@ -225,7 +226,8 @@
     <script>
         window.userPrefs = {
             dateFormat: {{ resolved_date_format_key|tojson }},
-            timeFormat: {{ resolved_time_format_key|tojson }}
+            timeFormat: {{ resolved_time_format_key|tojson }},
+            weekStartDay: {{ resolved_week_start_day|tojson }}
         };
         /**
          * Format a JS Date according to the user's preferred date format.
@@ -1166,6 +1168,8 @@
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+    <script src="{{ url_for('static', filename='date-picker-init.js') }}"></script>
     <!-- Enhanced UI scripts -->
     <script src="{{ url_for('static', filename='enhanced-search.js') }}"></script>
     <script src="{{ url_for('static', filename='form-validation.js') }}"></script>

@@ -88,6 +88,16 @@ def get_resolved_time_format_key(user=None):
     return _get_system_time_format_key()
 
 
+def get_resolved_week_start_day(user=None):
+    """Return the week start day (0=Sunday, 1=Monday, ..., 6=Saturday) for the user, default 1."""
+    resolved_user = _get_authenticated_user(user)
+    if resolved_user:
+        day = getattr(resolved_user, "week_start_day", None)
+        if day is not None and 0 <= day <= 6:
+            return day
+    return 1
+
+
 def get_user_date_format(user=None):
     """Return the strftime date format string for the user's preference.
 

@@ -6,6 +6,7 @@ from app.utils.timezone import (
     get_timezone_offset_for_timezone,
     get_resolved_date_format_key,
     get_resolved_time_format_key,
+    get_resolved_week_start_day,
 )
 
 
@@ -28,12 +29,14 @@ def register_context_processors(app):
                 settings = Settings.get_settings()
                 resolved_date = get_resolved_date_format_key()
                 resolved_time = get_resolved_time_format_key()
+                resolved_week_start = get_resolved_week_start_day()
                 return {
                     "settings": settings,
                     "currency": settings.currency,
                     "timezone": settings.timezone,
                     "resolved_date_format_key": resolved_date,
                     "resolved_time_format_key": resolved_time,
+                    "resolved_week_start_day": resolved_week_start,
                 }
         except Exception as e:
             # Log the error but continue with defaults
@@ -51,15 +54,18 @@ def register_context_processors(app):
         try:
             resolved_date = get_resolved_date_format_key()
             resolved_time = get_resolved_time_format_key()
+            resolved_week_start = get_resolved_week_start_day()
         except Exception:
             resolved_date = "YYYY-MM-DD"
             resolved_time = "24h"
+            resolved_week_start = 1
         return {
             "settings": None,
             "currency": "EUR",
             "timezone": "Europe/Rome",
             "resolved_date_format_key": resolved_date,
             "resolved_time_format_key": resolved_time,
+            "resolved_week_start_day": resolved_week_start,
         }
 
     @app.context_processor

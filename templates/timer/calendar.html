@@ -379,7 +379,7 @@ document.addEventListener('DOMContentLoaded', function() {
     selectMirror: true,
     editable: true,
     nowIndicator: true,
-    firstDay: 1,
+    firstDay: (window.userPrefs && window.userPrefs.weekStartDay !== undefined) ? window.userPrefs.weekStartDay : 1,
     timeZone: 'local',
     slotDuration: '00:30:00',
     slotMinTime: '06:00:00',
