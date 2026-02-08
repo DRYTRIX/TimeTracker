@@ -492,9 +492,12 @@
          data-single-client-id="{{ single_client.id if single_client else '' }}">
         <div class="absolute inset-0 bg-black/50" data-overlay></div>
         <div class="relative max-w-lg mx-auto mt-24 max-h-[90vh] overflow-y-auto bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-lg" data-modal-content>
-            <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+            <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between gap-2">
                 <div class="text-lg font-semibold">{{ _('Start Timer') }}</div>
-                <button type="button" data-close class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded">{{ _('Close') }}</button>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="submit" form="startTimerForm" id="startTimerSubmitBtn" class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-dark">{{ _('Start') }}</button>
+                    <button type="button" data-close class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded">{{ _('Close') }}</button>
+                </div>
             </div>
             <form method="POST" action="{{ url_for('timer.start_timer') }}" id="startTimerForm" class="p-4">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -563,9 +566,6 @@
                         </div>
                     </div>
                     {% endif %}
-                </div>
-                <div class="mt-6 flex justify-end">
-                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Start') }}</button>
                 </div>
             </form>
         </div>
@@ -877,7 +877,7 @@
             const startTimerForm = modal ? modal.querySelector('form') : null;
             if (startTimerForm) {
                 // Store original button state to restore if needed
-                const submitBtn = startTimerForm.querySelector('button[type="submit"]');
+                const submitBtn = modal.querySelector('#startTimerSubmitBtn');
                 let originalButtonHTML = submitBtn ? submitBtn.innerHTML : null;
                 
                 startTimerForm.addEventListener('submit', async function(e) {
