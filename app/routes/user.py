@@ -167,8 +167,6 @@ def settings():
     rounding_intervals = get_available_rounding_intervals()
     rounding_methods = get_available_rounding_methods()
 
-    system_instance_id = Settings.get_system_instance_id()
-
     return render_template(
         "user/settings.html",
         user=current_user,
@@ -176,7 +174,6 @@ def settings():
         languages=languages,
         rounding_intervals=rounding_intervals,
         rounding_methods=rounding_methods,
-        system_instance_id=system_instance_id,
     )
 
 

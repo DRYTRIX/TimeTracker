@@ -88,6 +88,8 @@ class Settings(db.Model):
 
     # Stable per-installation ID (UUID); used for donate-hide code requests.
     system_instance_id = db.Column(db.String(36), nullable=True)
+    # When True, donate/support UI is hidden for all users (set after code verification in Admin).
+    donate_ui_hidden = db.Column(db.Boolean, default=False, nullable=False)
 
     # Kiosk mode settings
     kiosk_mode_enabled = db.Column(db.Boolean, default=False, nullable=False)

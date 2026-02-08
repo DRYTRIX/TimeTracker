@@ -1126,12 +1126,14 @@ def settings():
             ZoneInfo(timezone)  # This will raise an exception if timezone is invalid
         except (ZoneInfoNotFoundError, KeyError):
             flash(_("Invalid timezone: %(timezone)s", timezone=timezone), "error")
+            system_instance_id = Settings.get_system_instance_id()
             return render_template(
                 "admin/settings.html",
                 settings=settings_obj,
                 timezones=timezones,
                 kiosk_settings=kiosk_settings,
                 peppol_env_enabled=peppol_env_enabled,
+                system_instance_id=system_instance_id,
             )
 
         # Update basic settings
@@ -1244,12 +1246,14 @@ def settings():
 
         if not safe_commit("admin_update_settings"):
             flash(_("Could not update settings due to a database error. Please check server logs."), "error")
+            system_instance_id = Settings.get_system_instance_id()
             return render_template(
                 "admin/settings.html",
                 settings=settings_obj,
                 timezones=timezones,
                 kiosk_settings=kiosk_settings,
                 peppol_env_enabled=peppol_env_enabled,
+                system_instance_id=system_instance_id,
             )
         # #region agent log
         try:
@@ -1273,13 +1277,52 @@ def settings():
         "kiosk_default_movement_type": getattr(settings_obj, "kiosk_default_movement_type", "adjustment"),
     }
 
+    system_instance_id = Settings.get_system_instance_id()
     return render_template(
         "admin/settings.html",
         settings=settings_obj,
         timezones=timezones,
         kiosk_settings=kiosk_settings,
         peppol_env_enabled=peppol_env_enabled,
+        system_instance_id=system_instance_id,
     )
+
+
+@admin_bp.route("/admin/settings/verify-donate-hide-code", methods=["POST"])
+@login_required
+@admin_or_permission_required("manage_settings")
+def admin_verify_donate_hide_code():
+    """Verify code (Ed25519 or HMAC) and set system-wide donate_ui_hidden=True."""
+    import hmac
+    from app.utils.donate_hide_code import compute_donate_hide_code, verify_ed25519_signature
+
+    settings_obj = Settings.get_settings()
+    if getattr(settings_obj, "donate_ui_hidden", False):
+        return jsonify({"success": True})
+
+    data = request.get_json() or {}
+    code = (data.get("code") or "").strip()
+    system_id = Settings.get_system_instance_id()
+    if not system_id:
+        return jsonify({"error": _("Invalid code.")}), 400
+
+    valid = False
+    public_key_pem = current_app.config.get("DONATE_HIDE_PUBLIC_KEY_PEM") or ""
+    if public_key_pem:
+        valid = verify_ed25519_signature(code, system_id, public_key_pem)
+    if not valid:
+        secret = current_app.config.get("DONATE_HIDE_UNLOCK_SECRET") or ""
+        if secret:
+            expected = compute_donate_hide_code(secret, system_id)
+            valid = bool(expected and hmac.compare_digest(code, expected))
+
+    if not valid:
+        return jsonify({"error": _("Invalid code.")}), 400
+
+    settings_obj.donate_ui_hidden = True
+    if safe_commit(db.session):
+        return jsonify({"success": True})
+    return jsonify({"error": _("Error saving settings")}), 500
 
 
 @admin_bp.route("/admin/pdf-layout", methods=["GET", "POST"])

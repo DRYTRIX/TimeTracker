@@ -109,6 +109,44 @@
                 </div>
             </div>
 
+            <!-- Support / Donate visibility (system-wide) -->
+            <div class="border-b border-border-light dark:border-border-dark pb-6" id="donateVisibilitySection">
+                <h2 class="text-lg font-semibold mb-4"><i class="fas fa-eye-slash mr-2"></i>{{ _('Support visibility') }}</h2>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+                    {{ _('Hide donate and support UI for all users by verifying a code. The code is generated from the system ID (see internal documentation).') }}
+                </p>
+                {% if system_instance_id %}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('System ID') }}</label>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="adminSystemInstanceId" value="{{ system_instance_id }}" readonly class="flex-1 form-input font-mono text-sm bg-gray-100 dark:bg-gray-700">
+                        <button type="button" onclick="copyAdminSystemId(this)" class="px-3 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded-md text-sm font-medium transition">
+                            <i class="fas fa-copy mr-1"></i>{{ _('Copy') }}
+                        </button>
+                    </div>
+                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Use this ID to generate the code (see internal documentation).') }}</p>
+                </div>
+                {% endif %}
+                {% if settings.donate_ui_hidden %}
+                <div class="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                    <p class="text-sm font-medium text-green-800 dark:text-green-200">
+                        <i class="fas fa-check-circle mr-2"></i>{{ _('Donate and support UI are hidden for all users.') }}
+                    </p>
+                </div>
+                {% else %}
+                <div class="flex flex-wrap items-end gap-2">
+                    <div class="flex-1 min-w-[200px]">
+                        <label for="adminDonateHideCode" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Code') }}</label>
+                        <input type="text" id="adminDonateHideCode" placeholder="{{ _('Enter code') }}" class="form-input w-full">
+                    </div>
+                    <button type="button" id="adminVerifyDonateHideCodeBtn" onclick="verifyAdminDonateHideCode()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition">
+                        {{ _('Verify and hide for everyone') }}
+                    </button>
+                </div>
+                <p id="adminDonateHideCodeMessage" class="mt-2 text-sm hidden"></p>
+                {% endif %}
+            </div>
+
             <!-- Company Branding -->
             <div class="border-b border-border-light dark:border-border-dark pb-6">
                 <h2 class="text-lg font-semibold mb-4">{{ _('Company Branding') }}</h2>
@@ -448,6 +486,61 @@ async function confirmRemoveLogo() {
     if (confirmed) {
         document.getElementById('removeLogoForm').submit();
     }
+}
+
+function copyAdminSystemId(btn) {
+    const input = document.getElementById('adminSystemInstanceId');
+    if (input) {
+        input.select();
+        document.execCommand('copy');
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check mr-1"></i>{{ _("Copied") }}';
+        setTimeout(function() { btn.innerHTML = orig; }, 2000);
+    }
+}
+
+async function verifyAdminDonateHideCode() {
+    const codeInput = document.getElementById('adminDonateHideCode');
+    const msgEl = document.getElementById('adminDonateHideCodeMessage');
+    const btn = document.getElementById('adminVerifyDonateHideCodeBtn');
+    if (!codeInput || !msgEl || !btn) return;
+    msgEl.classList.add('hidden');
+    msgEl.textContent = '';
+    const code = (codeInput.value || '').trim();
+    if (!code) {
+        msgEl.textContent = '{{ _("Please enter a code.") }}';
+        msgEl.classList.remove('hidden');
+        msgEl.classList.add('text-amber-600', 'dark:text-amber-400');
+        return;
+    }
+    btn.disabled = true;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : '';
+    try {
+        const res = await fetch('{{ url_for("admin.admin_verify_donate_hide_code") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ code: code })
+        });
+        const data = await res.json().catch(function() { return {}; });
+        if (res.ok && data.success) {
+            msgEl.textContent = '{{ _("Success. Donate UI is now hidden for everyone. Reload the page to see the change.") }}';
+            msgEl.classList.remove('text-amber-600', 'dark:text-amber-400', 'text-red-600', 'dark:text-red-400');
+            msgEl.classList.add('text-green-600', 'dark:text-green-400');
+            msgEl.classList.remove('hidden');
+            setTimeout(function() { window.location.reload(); }, 1500);
+        } else {
+            msgEl.textContent = data.error || '{{ _("Invalid code.") }}';
+            msgEl.classList.remove('text-green-600', 'dark:text-green-400');
+            msgEl.classList.add('text-red-600', 'dark:text-red-400');
+            msgEl.classList.remove('hidden');
+        }
+    } catch (e) {
+        msgEl.textContent = '{{ _("Request failed.") }}';
+        msgEl.classList.remove('text-green-600', 'dark:text-green-400');
+        msgEl.classList.add('text-red-600', 'dark:text-red-400');
+        msgEl.classList.remove('hidden');
+    }
+    btn.disabled = false;
 }
 
 // Initialize: keep collapsed by default

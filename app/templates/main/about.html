@@ -179,14 +179,14 @@
         <a href="https://github.com/drytrix/TimeTracker" target="_blank" rel="noopener" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
             <i class="fab fa-github mr-2"></i>{{ _('View on GitHub') }}
         </a>
-        {% if current_user.is_authenticated and current_user.ui_show_donate %}
+        {% if current_user.is_authenticated and (not settings or not getattr(settings, 'donate_ui_hidden', false)) and current_user.ui_show_donate %}
         <a href="{{ url_for('main.donate') }}" class="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-md hover:shadow-lg transition-all">
             <i class="fas fa-heart mr-2"></i>{{ _('Support Development') }}
         </a>
         {% endif %}
     </div>
     
-    {% if current_user.is_authenticated and current_user.ui_show_donate %}
+    {% if current_user.is_authenticated and (not settings or not getattr(settings, 'donate_ui_hidden', false)) and current_user.ui_show_donate %}
     <!-- Support Section -->
     <div class="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-6 rounded-lg border border-amber-200 dark:border-amber-800 mt-6">
         <div class="flex items-start gap-4">

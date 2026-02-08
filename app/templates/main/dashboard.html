@@ -406,7 +406,7 @@
             </div>
         </div>
 
-        {% if current_user.ui_show_donate %}
+        {% if (not settings or not getattr(settings, 'donate_ui_hidden', false)) and current_user.ui_show_donate %}
         <!-- Support TimeTracker Widget -->
         <div class="bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card text-white">
             <div class="flex items-start justify-between mb-4">

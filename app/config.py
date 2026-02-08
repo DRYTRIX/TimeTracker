@@ -85,14 +85,24 @@ class Config:
     #
     # Option A - Ed25519 (recommended): Server only has the PUBLIC key. You keep the private key
     # and sign the system_id to generate codes. Set DONATE_HIDE_PUBLIC_KEY (PEM string) or
-    # DONATE_HIDE_PUBLIC_KEY_FILE (path to PEM file). Safe to put in .env or a file.
+    # DONATE_HIDE_PUBLIC_KEY_FILE (path to PEM file). If unset, a file named donate_hide_public.pem
+    # in the project root is used when present (local builds and Docker when copied into image).
     _donate_public_key = os.getenv("DONATE_HIDE_PUBLIC_KEY", "").strip()
     if not _donate_public_key:
         _pk_file = os.getenv("DONATE_HIDE_PUBLIC_KEY_FILE", "").strip()
+        if not _pk_file:
+            # Default: project root (parent of app/) for local builds and Docker (/app)
+            _project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            _default_pk = os.path.join(_project_root, "donate_hide_public.pem")
+            if os.path.isfile(_default_pk):
+                _pk_file = _default_pk
         if _pk_file and os.path.isfile(_pk_file):
             try:
                 with open(_pk_file, "r", encoding="utf-8") as f:
                     _donate_public_key = f.read().strip()
+                # Refuse to load a private key on the server
+                if "PRIVATE KEY" in _donate_public_key and "PUBLIC KEY" not in _donate_public_key:
+                    _donate_public_key = ""
             except OSError:
                 _donate_public_key = ""
     DONATE_HIDE_PUBLIC_KEY_PEM = _donate_public_key
