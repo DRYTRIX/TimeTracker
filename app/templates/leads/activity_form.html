@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav %}
+
+{% block title %}{{ _('Add Activity') }} - {{ lead.full_name }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Leads'), 'url': url_for('leads.list_leads')},
+    {'text': lead.full_name, 'url': url_for('leads.view_lead', lead_id=lead.id)},
+    {'text': _('Add Activity')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-plus',
+    title_text=_('Add Activity'),
+    subtitle_text=lead.full_name,
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="type" class="block text-sm font-medium mb-2">{{ _('Type') }} *</label>
+                <select name="type" id="type" class="form-input" required>
+                    <option value="note" selected>{{ _('Note') }}</option>
+                    <option value="call">{{ _('Call') }}</option>
+                    <option value="email">{{ _('Email') }}</option>
+                    <option value="meeting">{{ _('Meeting') }}</option>
+                </select>
+            </div>
+            <div>
+                <label for="status" class="block text-sm font-medium mb-2">{{ _('Status') }}</label>
+                <select name="status" id="status" class="form-input">
+                    <option value="completed" selected>{{ _('Completed') }}</option>
+                    <option value="pending">{{ _('Pending') }}</option>
+                    <option value="scheduled">{{ _('Scheduled') }}</option>
+                </select>
+            </div>
+            <div>
+                <label for="activity_date" class="block text-sm font-medium mb-2">{{ _('Activity Date') }} *</label>
+                <input type="datetime-local" name="activity_date" id="activity_date" class="form-input" required>
+            </div>
+            <div>
+                <label for="due_date" class="block text-sm font-medium mb-2">{{ _('Due Date') }}</label>
+                <input type="datetime-local" name="due_date" id="due_date" class="form-input">
+            </div>
+            <div class="md:col-span-2">
+                <label for="subject" class="block text-sm font-medium mb-2">{{ _('Subject') }}</label>
+                <input type="text" name="subject" id="subject" class="form-input" placeholder="{{ _('Brief subject or title') }}">
+            </div>
+            <div class="md:col-span-2">
+                <label for="description" class="block text-sm font-medium mb-2">{{ _('Description') }}</label>
+                <textarea name="description" id="description" rows="4" class="form-input"></textarea>
+            </div>
+        </div>
+        <div class="mt-6 flex gap-2">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-plus mr-2"></i>{{ _('Add Activity') }}
+            </button>
+            <a href="{{ url_for('leads.view_lead', lead_id=lead.id) }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                {{ _('Cancel') }}
+            </a>
+        </div>
+    </form>
+</div>
+<script>
+document.getElementById('activity_date').value = new Date().toISOString().slice(0, 16);
+</script>
+{% endblock %}

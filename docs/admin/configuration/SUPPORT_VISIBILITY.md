@@ -1,12 +1,12 @@
 # Support / Donate visibility
 
-This guide describes how to configure the optional **Support visibility** feature. When enabled, users can hide donate and support prompts (sidebar link, header button, support banner, and donate widgets) by entering a **code** that is issued per installation.
+This guide describes how to configure the optional **Support visibility** feature. When enabled, an **admin** can hide donate and support prompts (sidebar link, header button, support banner, and donate widgets) **for all users** by entering a **code** that is issued per installation.
 
-## What users see
+## What admins see
 
-- In **Settings → Support visibility**, each user sees a **System ID** (a stable UUID for your installation) and a field to enter a code.
-- After a valid code is entered and verified, donate and support UI is hidden for that user and the setting is saved.
-- The System ID does not change between restarts; it identifies your instance so you can issue the correct code.
+- In **Admin → Settings**, the **Support visibility** section shows the **System ID** (a stable UUID for your installation) and a field to enter a code.
+- After a valid code is entered and **Verify and hide for everyone** is clicked, donate and support UI is hidden **system-wide** for all users.
+- The System ID does not change between restarts; it identifies your instance so you can request the correct code.
 
 ## Server configuration
 
@@ -14,20 +14,32 @@ You can enable verification in two ways. Only one is required.
 
 ### Option A: Public key (recommended)
 
-The server stores **only a public key**. No secret is on the server; codes are generated offline using the matching private key. This is the most secure option.
+The server stores **only a public key**. The **private key** is never used by the application; you keep it only for running the code-generation script. This is the most secure option.
 
 | Variable | Description |
 |----------|-------------|
 | `DONATE_HIDE_PUBLIC_KEY_FILE` | Path to a file containing the PEM-encoded Ed25519 **public** key. |
 | `DONATE_HIDE_PUBLIC_KEY`     | Alternatively, the PEM string itself (e.g. for env or secrets). |
 
-The public key is not sensitive and can be committed or stored in normal config. Code generation uses the private key and is done outside the server (see internal documentation).
+**Quick setup (when you already have the private key):**
 
-**Example (path to file):**
+1. **Derive the public key** from your private key (run once, on the same machine where you have the private key):
+   ```bash
+   openssl pkey -in donate_hide_private.pem -pubout -out donate_hide_public.pem
+   ```
+2. **On the server**, configure the **public** key only. For example in `.env` or your deployment config:
+   ```bash
+   DONATE_HIDE_PUBLIC_KEY_FILE=/path/to/donate_hide_public.pem
+   ```
+   Use a path where you deploy `donate_hide_public.pem` (not the private key). Alternatively set `DONATE_HIDE_PUBLIC_KEY` to the full PEM contents of the public key.
+3. Restart the application. The app will use the public key to **verify** codes; it never needs or uses the private key.
+4. When issuing codes, run the code-generation script **offline** with your **private** key (see internal documentation).
 
-```bash
-DONATE_HIDE_PUBLIC_KEY_FILE=/etc/timetracker/donate_hide_public.pem
-```
+**Automatic detection:** If you do not set `DONATE_HIDE_PUBLIC_KEY` or `DONATE_HIDE_PUBLIC_KEY_FILE`, the app looks for a file named **`donate_hide_public.pem`** in the project root. Place it there for local runs; for Docker, place it in the build context root and the image sets `DONATE_HIDE_PUBLIC_KEY_FILE=/app/donate_hide_public.pem` so the copied file is used.
+
+**GitHub Actions (release and development workflows):** To bake the public key into the Docker image when building via GitHub Actions, add a repository secret **`DONATE_HIDE_PUBLIC_KEY_PEM`** (Settings → Secrets and variables → Actions) with the **full PEM contents** of your public key (including `-----BEGIN PUBLIC KEY-----` and `-----END PUBLIC KEY-----`). The workflow writes it to `donate_hide_public.pem` before the build so the image has the key at `/app/donate_hide_public.pem`. If the secret is not set, the image still builds; Support visibility verification will simply be disabled until you configure the key at runtime (e.g. via volume or env).
+
+The public key file is not sensitive and can live in normal config. Never deploy or configure the private key on the server.
 
 ### Option B: Shared secret (HMAC)
 
@@ -52,20 +64,20 @@ If both Option A and Option B are configured, the app uses the public key first;
 2. Set the corresponding environment variable(s) for your deployment (e.g. in `.env`, Docker Compose, or your process manager).
 3. Restart the application.
 
-If neither is set, the feature is disabled: no code will be accepted and the Support visibility section still appears in Settings, but verification will always fail until you configure one of the options.
+If neither is set, the feature is disabled: no code will be accepted and the Support visibility section still appears in Admin → Settings, but verification will always fail until you configure one of the options.
 
-## Issuing codes to users
+## Issuing codes
 
 Codes are **per installation**: each instance has its own System ID, and a valid code for one instance is not valid for another.
 
-- Users send you the **System ID** shown in their Settings → Support visibility.
+- An admin copies the **System ID** from Admin → Settings → Support visibility (or you provide it from your deployment).
 - You generate the code for that System ID using the procedure and tools described in **internal documentation**. The code-generation script, key-generation steps, and private key handling are not in the public repository; maintainers use a separate, non-committed guide and script.
-- You send the code to the user; they enter it in Settings and click Verify.
+- You send the code to the admin; they enter it in Admin → Settings and click **Verify and hide for everyone**.
 
 ## User experience
 
-- **Before verification:** Donate/support links and the support banner are visible (unless the user previously verified a code on this account).
-- **After verification:** Donate and support UI is hidden for that user. The setting is stored per user and persists across sessions.
+- **Before verification:** Donate/support links and the support banner are visible to all users.
+- **After verification:** Donate and support UI is hidden **for everyone**. The setting is stored in system settings and persists across restarts.
 
 ## Security notes
 

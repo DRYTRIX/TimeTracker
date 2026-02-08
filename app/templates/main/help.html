@@ -805,7 +805,7 @@
                 <a href="https://github.com/drytrix/TimeTracker/issues" target="_blank" rel="noopener" class="px-4 py-2 rounded-lg border border-amber-600 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20">
                     <i class="fas fa-bug mr-1"></i>{{ _('Report Issue') }}
                 </a>
-                {% if current_user.is_authenticated and current_user.ui_show_donate %}
+                {% if current_user.is_authenticated and (not settings or not getattr(settings, 'donate_ui_hidden', false)) and current_user.ui_show_donate %}
                 <a href="{{ url_for('main.donate') }}" class="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-md hover:shadow-lg transition-all">
                     <i class="fas fa-heart mr-1"></i>{{ _('Support Development') }}
                 </a>

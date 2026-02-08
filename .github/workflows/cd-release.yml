@@ -474,6 +474,18 @@ jobs:
           echo "   • Users can still opt-in/opt-out of telemetry via admin dashboard"
           echo "" 
       
+      - name: Inject donate-hide public key (optional)
+        env:
+          DONATE_HIDE_PUBLIC_KEY_PEM: ${{ secrets.DONATE_HIDE_PUBLIC_KEY_PEM }}
+        run: |
+          if [ -n "$DONATE_HIDE_PUBLIC_KEY_PEM" ]; then
+            echo "✅ DONATE_HIDE_PUBLIC_KEY_PEM secret set — writing donate_hide_public.pem for Docker build"
+            echo "$DONATE_HIDE_PUBLIC_KEY_PEM" > donate_hide_public.pem
+            echo "   → File will be copied into image at /app/donate_hide_public.pem (DONATE_HIDE_PUBLIC_KEY_FILE)"
+          else
+            echo "⚠️  DONATE_HIDE_PUBLIC_KEY_PEM not set — Support visibility code verification will be disabled in image"
+          fi
+      
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:

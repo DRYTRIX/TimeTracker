@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav %}
+
+{% block title %}{{ _('Convert to Client') }} - {{ lead.full_name }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Leads'), 'url': url_for('leads.list_leads')},
+    {'text': lead.full_name, 'url': url_for('leads.view_lead', lead_id=lead.id)},
+    {'text': _('Convert to Client')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-user-check',
+    title_text=_('Convert to Client'),
+    subtitle_text=lead.full_name,
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <p class="mb-4">{{ _('This will create a new client and primary contact from this lead, then mark the lead as converted.') }}</p>
+    <div class="mb-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+        <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Lead summary') }}</h3>
+        <p class="font-medium">{{ lead.full_name }}{% if lead.company_name %} · {{ lead.company_name }}{% endif %}</p>
+        {% if lead.email %}<p class="text-sm">{{ lead.email }}</p>{% endif %}
+        {% if lead.phone %}<p class="text-sm">{{ lead.phone }}</p>{% endif %}
+    </div>
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="flex gap-2">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-user-check mr-2"></i>{{ _('Convert to Client') }}
+            </button>
+            <a href="{{ url_for('leads.view_lead', lead_id=lead.id) }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                {{ _('Cancel') }}
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

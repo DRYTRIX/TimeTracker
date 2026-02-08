@@ -28,6 +28,8 @@ ENV FLASK_APP=app
 ENV FLASK_ENV=production
 ENV APP_VERSION=${APP_VERSION}
 ENV TZ=Europe/Rome
+# Support visibility: if donate_hide_public.pem is in project root it is copied to /app; set path so app finds it (override in compose if needed)
+ENV DONATE_HIDE_PUBLIC_KEY_FILE=/app/donate_hide_public.pem
 
 # Install all system dependencies in a single layer
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -86,7 +88,7 @@ RUN mkdir -p \
     /app/static/uploads/logos \
     /app/app/static/dist
 
-# Copy project files with correct ownership
+# Copy project files with correct ownership (includes optional donate_hide_public.pem from root when present)
 COPY --chown=timetracker:timetracker . .
 
 # Also install certificate generation script to a stable path used by docs/compose

@@ -853,9 +853,8 @@ document.addEventListener('DOMContentLoaded', function() {
             fileInput.value = '';
         });
 
-        // Sync editor content to hidden textarea on form submit
-        const form = document.querySelector('form');
-        if (form) {
+        // Sync editor content to hidden textarea on form submit (attach to all forms so both admin and regular user form work)
+        document.querySelectorAll('form').forEach(function(form) {
             form.addEventListener('submit', function(e) {
                 if (mdEditor && notesInput) {
                     try {
@@ -865,7 +864,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             });
-        }
+        });
     }
 });
 </script>

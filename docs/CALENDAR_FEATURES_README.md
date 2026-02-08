@@ -387,11 +387,11 @@ Edit FullCalendar config in `templates/timer/calendar.html`:
 
 ### Changing First Day of Week
 
-```javascript
-{
-  firstDay: 0,  // 0 = Sunday, 1 = Monday
-}
-```
+The calendar's first day of week (Sunday vs Monday) is controlled by the user's **Week Starts On** setting in **My Settings** (Profile → My Settings). Users can choose Sunday, Monday, or Saturday. The timer calendar (FullCalendar) and date pickers respect this setting; no code changes are required.
+
+### Date format in input fields
+
+Date input fields on **Log Time**, **Time entries**, and **Gantt Charts** (and other screens that use the `user-date-input` class) display and accept dates in the user's preferred format (system default or personal override from Admin → Settings or My Settings). The app uses Flatpickr for these inputs so the display matches the chosen format (e.g. DD/MM/YYYY or DD.MM.YYYY); values are still submitted to the server as YYYY-MM-DD.
 
 ---
 
