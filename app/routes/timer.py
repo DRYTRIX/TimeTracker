@@ -2423,68 +2423,77 @@ def export_time_entries_csv():
                 filtered.append(entry)
         entries = filtered
 
-    # CSV output
-    settings = Settings.get_settings()
-    delimiter = getattr(settings, "export_delimiter", ",") or ","
-    output = io.StringIO()
-    writer = csv.writer(output, delimiter=delimiter)
+    # CSV output (null-safe: user/project/client can be missing; wrap in try/except for Docker log visibility)
+    try:
+        settings = Settings.get_settings()
+        delimiter = getattr(settings, "export_delimiter", ",") or ","
+        output = io.StringIO()
+        writer = csv.writer(output, delimiter=delimiter)
 
-    writer.writerow(
-        [
-            "ID",
-            "User",
-            "Project",
-            "Client",
-            "Task",
-            "Start Time",
-            "End Time",
-            "Duration (hours)",
-            "Duration (formatted)",
-            "Notes",
-            "Tags",
-            "Source",
-            "Billable",
-            "Paid",
-            "Created At",
-            "Updated At",
-        ]
-    )
-
-    for entry in entries:
         writer.writerow(
             [
-                entry.id,
-                entry.user.display_name if entry.user else "",
-                entry.project.name if entry.project else "",
-                entry.client.name if entry.client else (entry.project.client if entry.project else ""),
-                entry.task.name if entry.task else "",
-                entry.start_time.isoformat() if entry.start_time else "",
-                entry.end_time.isoformat() if entry.end_time else "",
-                getattr(entry, "duration_hours", ""),
-                getattr(entry, "duration_formatted", ""),
-                entry.notes or "",
-                entry.tags or "",
-                entry.source or "",
-                "Yes" if entry.billable else "No",
-                "Yes" if entry.paid else "No",
-                entry.created_at.isoformat() if entry.created_at else "",
-                entry.updated_at.isoformat() if entry.updated_at else "",
+                "ID",
+                "User",
+                "Project",
+                "Client",
+                "Task",
+                "Start Time",
+                "End Time",
+                "Duration (hours)",
+                "Duration (formatted)",
+                "Notes",
+                "Tags",
+                "Source",
+                "Billable",
+                "Paid",
+                "Created At",
+                "Updated At",
             ]
         )
 
-    csv_bytes = output.getvalue().encode("utf-8")
+        for entry in entries:
+            # Project.client is a property returning the client name string
+            client_name = (
+                (entry.client.name if entry.client else "")
+                or (entry.project.client if entry.project else "")
+            )
+            writer.writerow(
+                [
+                    entry.id,
+                    (entry.user.display_name if entry.user else ""),
+                    (entry.project.name if entry.project else ""),
+                    client_name,
+                    (entry.task.name if entry.task else ""),
+                    entry.start_time.isoformat() if entry.start_time else "",
+                    entry.end_time.isoformat() if entry.end_time else "",
+                    getattr(entry, "duration_hours", ""),
+                    getattr(entry, "duration_formatted", ""),
+                    entry.notes or "",
+                    entry.tags or "",
+                    entry.source or "",
+                    "Yes" if entry.billable else "No",
+                    "Yes" if entry.paid else "No",
+                    entry.created_at.isoformat() if entry.created_at else "",
+                    entry.updated_at.isoformat() if entry.updated_at else "",
+                ]
+            )
 
-    # Filename includes optional date range
-    start_part = start_date or "all"
-    end_part = end_date or "all"
-    filename = f"time_entries_{start_part}_to_{end_part}.csv"
+        csv_bytes = output.getvalue().encode("utf-8")
 
-    return send_file(
-        io.BytesIO(csv_bytes),
-        mimetype="text/csv",
-        as_attachment=True,
-        download_name=filename,
-    )
+        # Filename includes optional date range
+        start_part = start_date or "all"
+        end_part = end_date or "all"
+        filename = f"time_entries_{start_part}_to_{end_part}.csv"
+
+        return send_file(
+            io.BytesIO(csv_bytes),
+            mimetype="text/csv",
+            as_attachment=True,
+            download_name=filename,
+        )
+    except Exception:
+        current_app.logger.exception("CSV export failed (timer.export_time_entries_csv)")
+        raise
 
 
 @timer_bp.route("/time-entries/export/pdf")
