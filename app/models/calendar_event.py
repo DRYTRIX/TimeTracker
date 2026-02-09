@@ -233,6 +233,25 @@ class CalendarEvent(db.Model):
                 for entry in time_entries
                 if entry.start_time and entry.end_time  # Ensure both times are set for proper display
             ]
+            # Include active (running) timer in range so it appears on calendar before being stopped
+            active_timer = TimeEntry.query.filter(
+                TimeEntry.user_id == user_id,
+                TimeEntry.end_time.is_(None),
+            ).first()
+            if active_timer and active_timer.start_time and start_date <= active_timer.start_time <= end_date:
+                now_end = now_in_app_timezone()
+                result["time_entries"].append({
+                    "id": active_timer.id,
+                    "title": "Time: " + (active_timer.project.name if active_timer.project else "Unknown"),
+                    "start": _isoformat_calendar(active_timer.start_time),
+                    "end": _isoformat_calendar(now_end),
+                    "projectId": active_timer.project_id,
+                    "taskId": active_timer.task_id,
+                    "notes": active_timer.notes,
+                    "type": "time_entry",
+                    "source": getattr(active_timer, "source", None),
+                    "is_running": True,
+                })
         else:
             print(f"MODEL - Not including time entries (include_time_entries=False)")
             logger.info("Not including time entries (include_time_entries=False)")

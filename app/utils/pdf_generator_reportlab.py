@@ -629,7 +629,22 @@ class ReportLabTemplateRenderer:
             unit_price=getattr(good, "unit_price", 0),
             total_amount=getattr(good, "total_amount", 0),
         )
-    
+
+    def _normalize_expense_for_items_row(self, expense: Any) -> SimpleNamespace:
+        """Convert an Expense to a row-like object with description, quantity=1, unit_price, total_amount.
+        Same shape as items table for backward compatibility when template uses invoice.items."""
+        desc_parts = [getattr(expense, "title", str(expense)) or ""]
+        if getattr(expense, "description", None):
+            desc_parts.append(str(expense.description))
+        description = "\n".join(desc_parts)
+        amt = getattr(expense, "total_amount", None) or getattr(expense, "amount", 0)
+        return SimpleNamespace(
+            description=description,
+            quantity=1,
+            unit_price=amt,
+            total_amount=amt,
+        )
+
     def _render_table(self, element: Dict[str, Any]) -> Table:
         """Render a table element"""
         columns = element.get("columns", [])
@@ -651,7 +666,7 @@ class ReportLabTemplateRenderer:
         if data_source:
             # Process template variable to get actual data
             data = self._resolve_data_source(data_source)
-            # When this table is the invoice items table, include extra_goods so they appear in the PDF
+            # When this table is the invoice items table, include extra_goods and expenses so they appear in the PDF
             var_name = data_source.replace("{{", "").replace("}}", "").strip()
             if var_name == "invoice.items":
                 invoice = self.context.get("invoice")
@@ -665,6 +680,15 @@ class ReportLabTemplateRenderer:
                         else:
                             extra_goods = []
                         data = list(data) + [self._normalize_extra_good_for_items_row(g) for g in extra_goods]
+                    expenses = getattr(invoice, "expenses", None)
+                    if expenses is not None:
+                        if hasattr(expenses, "all"):
+                            expenses = list(expenses.all())
+                        elif hasattr(expenses, "__iter__") and not isinstance(expenses, (str, bytes)):
+                            expenses = list(expenses)
+                        else:
+                            expenses = []
+                        data = list(data) + [self._normalize_expense_for_items_row(e) for e in expenses]
             row_template = element.get("row_template", {})
 
             if isinstance(data, list) and data:

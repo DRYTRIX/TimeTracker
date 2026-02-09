@@ -76,7 +76,7 @@
     <!-- Left Column: Active Timer & Recent Entries -->
     <div class="lg:col-span-2 space-y-6">
         <!-- Active Timer -->
-        <div class="{% if active_timer %}bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800{% else %}bg-card-light dark:bg-card-dark{% endif %} p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card">
+        <div class="{% if active_timer %}bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800{% else %}bg-card-light dark:bg-card-dark{% endif %} p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card" {% if active_timer %}data-timer-start="{{ active_timer.start_time.isoformat() }}" data-today-hours="{{ today_hours }}" data-week-hours="{{ week_hours }}" data-month-hours="{{ month_hours }}"{% endif %}>
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
                     <div class="{% if active_timer %}bg-blue-500/10 dark:bg-blue-400/10{% else %}bg-gray-100 dark:bg-gray-800{% endif %} p-3 rounded-lg">
@@ -110,6 +110,9 @@
                         </p>
                         <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
                             <i class="fas fa-clock mr-1"></i>{{ _('Started at') }} {{ active_timer.start_time|user_time }}
+                        </p>
+                        <p class="text-sm font-semibold text-text-light dark:text-text-dark mt-2">
+                            {{ _('Elapsed') }}: <span id="dashboard-timer-elapsed">{{ active_timer.duration_formatted }}</span>
                         </p>
                     </div>
                     <form action="{{ url_for('timer.stop_timer') }}" method="POST" class="inline">
@@ -197,7 +200,7 @@
                             </td>
                             <td class="p-4">
                                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                    <i class="fas fa-clock mr-1"></i>{{ entry.duration_formatted }}
+                                    <i class="fas fa-clock mr-1"></i>{% if active_timer and entry.id == active_timer.id %}<span class="dashboard-live-duration" data-timer-start="{{ active_timer.start_time.isoformat() }}">{{ entry.duration_formatted }}</span>{% else %}{{ entry.duration_formatted }}{% endif %}
                                 </span>
                             </td>
                             <td class="p-4 text-sm text-text-light dark:text-text-dark">{{ entry.start_time|user_datetime }}</td>
@@ -589,6 +592,50 @@
 {% block scripts_extra %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Live timer: update elapsed every second when a timer is running; also live Today/Week/Month hours
+        (function initLiveTimer() {
+            var timerWidget = document.querySelector('[data-timer-start]');
+            if (!timerWidget) return;
+            var startIso = timerWidget.getAttribute('data-timer-start');
+            if (!startIso) return;
+            var startTime = new Date(startIso).getTime();
+            var todayHours = parseFloat(timerWidget.getAttribute('data-today-hours')) || 0;
+            var weekHours = parseFloat(timerWidget.getAttribute('data-week-hours')) || 0;
+            var monthHours = parseFloat(timerWidget.getAttribute('data-month-hours')) || 0;
+            var startDate = new Date(startIso);
+            function formatElapsed(seconds) {
+                var h = Math.floor(seconds / 3600);
+                var m = Math.floor((seconds % 3600) / 60);
+                var s = seconds % 60;
+                return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+            }
+            function tick() {
+                var now = Date.now();
+                var elapsedSec = (now - startTime) / 1000;
+                var elapsedHours = elapsedSec / 3600;
+                var display = formatElapsed(Math.floor(elapsedSec));
+                var elapsedEl = document.getElementById('dashboard-timer-elapsed');
+                if (elapsedEl) elapsedEl.textContent = display;
+                document.querySelectorAll('.dashboard-live-duration').forEach(function(span) {
+                    span.textContent = display;
+                });
+                var nowDate = new Date(now);
+                var sameDay = startDate.getFullYear() === nowDate.getFullYear() && startDate.getMonth() === nowDate.getMonth() && startDate.getDate() === nowDate.getDate();
+                var startWeek = new Date(startDate); startWeek.setDate(startWeek.getDate() - startWeek.getDay());
+                var nowWeek = new Date(nowDate); nowWeek.setDate(nowWeek.getDate() - nowWeek.getDay());
+                var sameWeek = startWeek.getTime() === nowWeek.getTime();
+                var sameMonth = startDate.getFullYear() === nowDate.getFullYear() && startDate.getMonth() === nowDate.getMonth();
+                var todayEl = document.getElementById('todayHoursValue');
+                var weekEl = document.getElementById('weekHoursValue');
+                var monthEl = document.getElementById('monthHoursValue');
+                if (todayEl && sameDay) todayEl.textContent = (todayHours + elapsedHours).toFixed(2);
+                if (weekEl && sameWeek) weekEl.textContent = (weekHours + elapsedHours).toFixed(2);
+                if (monthEl && sameMonth) monthEl.textContent = (monthHours + elapsedHours).toFixed(2);
+            }
+            tick();
+            setInterval(tick, 1000);
+        })();
+
         try {
             if (typeof anime !== 'undefined') {
                 anime({

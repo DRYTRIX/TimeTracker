@@ -93,6 +93,12 @@ def settings():
             if week_start_day is not None and 0 <= week_start_day <= 6:
                 current_user.week_start_day = week_start_day
 
+            # Calendar default view
+            calendar_default_view = request.form.get("calendar_default_view") or None
+            if calendar_default_view is not None and calendar_default_view not in ("day", "week", "month"):
+                calendar_default_view = None
+            current_user.calendar_default_view = calendar_default_view
+
             # Language preference
             preferred_language = request.form.get("preferred_language")
             if preferred_language is not None:  # Allow empty string to clear preference
@@ -253,6 +259,15 @@ def update_preferences():
                     setattr(current_user, attr, val)
                 else:
                     return jsonify({"error": f"Invalid {key}: must be null or hex color (#RRGGBB)"}), 400
+
+        if "calendar_default_view" in data:
+            val = data["calendar_default_view"]
+            if val is None or val == "":
+                current_user.calendar_default_view = None
+            elif val in ("day", "week", "month"):
+                current_user.calendar_default_view = val
+            else:
+                return jsonify({"error": "Invalid calendar_default_view: must be day, week, month, or null"}), 400
 
         db.session.commit()
 

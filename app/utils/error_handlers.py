@@ -3,6 +3,7 @@ Enhanced error handling utilities.
 Provides consistent error handling across the application.
 """
 
+import sys
 from typing import Dict, Any, Optional
 from flask import jsonify, request, current_app
 from werkzeug.exceptions import HTTPException
@@ -98,7 +99,12 @@ def register_error_handlers(app):
     @app.errorhandler(SQLAlchemyError)
     def handle_sqlalchemy_error(error):
         """Handle SQLAlchemy errors"""
-        current_app.logger.error(f"SQLAlchemy error: {error}")
+        current_app.logger.exception("SQLAlchemy error: %s", error)
+        try:
+            sys.stderr.write(f"SQLAlchemy error: {error}\n")
+            sys.stderr.flush()
+        except Exception:
+            pass
 
         if request.is_json or request.path.startswith("/api/"):
             return error_response(message="Database error occurred", error_code="database_error", status_code=500)

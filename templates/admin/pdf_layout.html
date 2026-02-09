@@ -6001,6 +6001,7 @@ table tr:last-child td {
         const { html, css, json } = generateCode();
 
         // Log what we're saving for debugging
+        const hasForLoop = html.includes('{' + '% for item in invoice.all_line_items') || html.includes('{' + '% for item in invoice.items');
         console.log('=== SAVING TO DATABASE ===');
         console.log('HTML length:', html.length);
         console.log('CSS length:', css.length);
@@ -6183,6 +6184,10 @@ table tr:last-child td {
                     if (!jsonChild.attrs) jsonChild.attrs = {};
                     jsonChild.attrs.name = 'decorative-image';
                     jsonChild.attrs.imageUrl = (layerChild.getAttr ? layerChild.getAttr('imageUrl') : (layerChild.attrs && layerChild.attrs.imageUrl)) || '';
+                } else if (name === 'items-table' || name === 'expenses-table') {
+                    // CRITICAL FIX (Issue #504): Inject table group names so design_json persists them; Konva may not serialize custom attrs on Groups
+                    if (!jsonChild.attrs) jsonChild.attrs = {};
+                    jsonChild.attrs.name = name;
                 }
             }
         }
@@ -6499,6 +6504,32 @@ table tr:last-child td {
                 if (decorativeImageCountInSaved > 0 && imageUrlCountInSaved === 0) {
                     console.error('[INVOICE] [LOAD] ⚠️ WARNING: Found decorative images in saved JSON but NO imageUrl attributes!');
                 }
+                
+                // Defensive fix (Issue #504): Restore table group names from structure when missing from saved design_json
+                layer.children.forEach((child) => {
+                    if (!child || child === background || child.className !== 'Group') return;
+                    const currentName = child.getAttr ? child.getAttr('name') : (child.attrs && child.attrs.name);
+                    if (currentName === 'items-table' || currentName === 'expenses-table') return;
+                    const children = child.getChildren ? child.getChildren() : (child.children || []);
+                    if (children.length < 3) return;
+                    const textElements = children.filter(function(c) { return c.className === 'Text'; });
+                    const hasLine = children.some(function(c) { return c.className === 'Line'; });
+                    if (textElements.length < 2 || !hasLine) return;
+                    const headerText = (textElements[0].attrs && textElements[0].attrs.text) ? textElements[0].attrs.text : '';
+                    const h = headerText.toLowerCase();
+                    let inferredName = null;
+                    if (h.indexOf('expense') !== -1 && (h.indexOf('date') !== -1 || h.indexOf('category') !== -1)) {
+                        inferredName = 'expenses-table';
+                    } else if (h.indexOf('description') !== -1 && (h.indexOf('qty') !== -1 || h.indexOf('quantity') !== -1 || h.indexOf('unit price') !== -1)) {
+                        inferredName = 'items-table';
+                    }
+                    if (inferredName) {
+                        if (child.setAttr) child.setAttr('name', inferredName);
+                        if (child.attrs) child.attrs.name = inferredName;
+                        if (child.name) child.name(inferredName);
+                        console.log('[INVOICE] [LOAD] Restored table group name from structure:', inferredName);
+                    }
+                });
                 
                 // Find or create background by name and resize it
                 background = layer.findOne('[name="background"]');

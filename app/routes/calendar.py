@@ -14,12 +14,27 @@ import os
 calendar_bp = Blueprint("calendar", __name__)
 
 
+VALID_CALENDAR_VIEWS = ("day", "week", "month")
+
+
 @calendar_bp.route("/calendar")
 @login_required
 @module_enabled("calendar")
 def view_calendar():
     """Display the calendar view with events, tasks, and time entries"""
-    view_type = request.args.get("view", "month")  # day, week, month
+    url_view = request.args.get("view")
+    if url_view and url_view in VALID_CALENDAR_VIEWS:
+        view_type = url_view
+        session["calendar_last_view"] = view_type
+    else:
+        user_default = getattr(current_user, "calendar_default_view", None)
+        if user_default and user_default in VALID_CALENDAR_VIEWS:
+            view_type = user_default
+        else:
+            view_type = session.get("calendar_last_view", "month")
+            if view_type not in VALID_CALENDAR_VIEWS:
+                view_type = "month"
+
     date_str = request.args.get("date", "")
 
     # Parse the date or use today
@@ -100,13 +115,15 @@ def get_events():
 
     # Effective type colors (user preference or defaults)
     def get_type_color(typ):
-        defaults = {"event": "#3b82f6", "task": "#f59e0b", "time_entry": "#10b981"}
+        defaults = {"event": "#3b82f6", "task": "#f59e0b", "time_entry": "#10b981", "time_entry_running": "#06b6d4"}
         if typ == "event":
             return (current_user.calendar_color_events or defaults["event"])
         if typ == "task":
             return (current_user.calendar_color_tasks or defaults["task"])
         if typ == "time_entry":
             return (current_user.calendar_color_time_entries or defaults["time_entry"])
+        if typ == "time_entry_running":
+            return defaults["time_entry_running"]
         return defaults.get(typ, "#6b7280")
 
     # Attach color to each item
@@ -115,12 +132,16 @@ def get_events():
     for t in result.get("tasks", []):
         t["color"] = get_type_color("task")
     for e in result.get("time_entries", []):
-        e["color"] = get_type_color("time_entry")
+        if e.get("is_running"):
+            e["color"] = get_type_color("time_entry_running")
+        else:
+            e["color"] = get_type_color("time_entry")
 
     result["typeColors"] = {
         "event": get_type_color("event"),
         "task": get_type_color("task"),
         "time_entry": get_type_color("time_entry"),
+        "time_entry_running": get_type_color("time_entry_running"),
     }
 
     print(f"\n{'='*80}")

@@ -188,6 +188,31 @@ class TestUserSettingsUpdate:
         assert response.status_code == 200
         assert b"Invalid timezone selected" in response.data
 
+    def test_update_calendar_default_view_via_settings_form(self, client, user):
+        """Test saving calendar default view via settings form POST."""
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+
+        response = client.post(
+            "/settings",
+            data={"calendar_default_view": "week"},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        assert b"Settings saved successfully" in response.data
+        db.session.refresh(user)
+        assert user.calendar_default_view == "week"
+
+        # Save "Remember last view" (empty)
+        response2 = client.post(
+            "/settings",
+            data={"calendar_default_view": ""},
+            follow_redirects=True,
+        )
+        assert response2.status_code == 200
+        db.session.refresh(user)
+        assert user.calendar_default_view is None
+
     def test_update_date_format(self, client, user):
         """Test updating date format preference"""
         with client.session_transaction() as sess:
@@ -424,6 +449,34 @@ class TestUserSettingsAPIEndpoints:
 
         response = client.patch("/api/preferences", json={"timezone": "Invalid/Zone"})
 
+        assert response.status_code == 400
+        data = response.get_json()
+        assert "error" in data
+
+    def test_update_calendar_default_view_via_api(self, client, user):
+        """Test updating calendar default view via PATCH /api/preferences."""
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+
+        response = client.patch("/api/preferences", json={"calendar_default_view": "week"})
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data.get("success") is True
+        db.session.refresh(user)
+        assert user.calendar_default_view == "week"
+
+        # Clear to "remember last view"
+        response2 = client.patch("/api/preferences", json={"calendar_default_view": ""})
+        assert response2.status_code == 200
+        db.session.refresh(user)
+        assert user.calendar_default_view is None
+
+    def test_update_calendar_default_view_invalid_via_api(self, client, user):
+        """Test that invalid calendar_default_view is rejected."""
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+
+        response = client.patch("/api/preferences", json={"calendar_default_view": "year"})
         assert response.status_code == 400
         data = response.get_json()
         assert "error" in data

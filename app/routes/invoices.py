@@ -1109,6 +1109,12 @@ def export_invoice_pdf(invoice_id):
     current_app.logger.info(f"[PDF_EXPORT] Action: export_request, InvoiceID: {invoice_id}, User: {current_user.username}")
     
     invoice = Invoice.query.get_or_404(invoice_id)
+    # Eager-load line item relationships so PDF generator has items, extra_goods, and expenses in session
+    # (Invoice uses lazy="dynamic" so joinedload isn't applicable; trigger loads explicitly)
+    _ = invoice.items.all() if hasattr(invoice.items, "all") else list(invoice.items) if invoice.items else []
+    _ = invoice.extra_goods.all() if hasattr(invoice.extra_goods, "all") else list(invoice.extra_goods) if invoice.extra_goods else []
+    if hasattr(invoice, "expenses"):
+        _ = invoice.expenses.all() if hasattr(invoice.expenses, "all") else list(invoice.expenses) if invoice.expenses else []
     current_app.logger.info(f"[PDF_EXPORT] Invoice found: {invoice.invoice_number}, Status: {invoice.status}")
 
     if not current_user.is_admin and invoice.created_by != current_user.id:

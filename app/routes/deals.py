@@ -5,8 +5,9 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db
 from app.models import Deal, DealActivity, Client, Contact, Lead, Quote, Project
+from app.models.audit_log import AuditLog
 from app.utils.db import safe_commit
-from app.utils.timezone import parse_local_datetime
+from app.utils.timezone import parse_local_datetime_from_string
 from app.utils.module_helpers import module_enabled
 from datetime import datetime, date
 from decimal import Decimal, InvalidOperation
@@ -162,7 +163,13 @@ def view_deal(deal_id):
     activities = (
         DealActivity.query.filter_by(deal_id=deal_id).order_by(DealActivity.activity_date.desc()).limit(50).all()
     )
-    return render_template("deals/view.html", deal=deal, activities=activities)
+    audit_logs = (
+        AuditLog.query.filter_by(entity_type="Deal", entity_id=deal_id)
+        .order_by(AuditLog.created_at.desc())
+        .limit(25)
+        .all()
+    )
+    return render_template("deals/view.html", deal=deal, activities=activities, audit_logs=audit_logs)
 
 
 @deals_bp.route("/deals/<int:deal_id>/edit", methods=["GET", "POST"])
@@ -291,10 +298,12 @@ def create_activity(deal_id):
     if request.method == "POST":
         try:
             activity_date_str = request.form.get("activity_date", "")
-            activity_date = parse_local_datetime(activity_date_str) if activity_date_str else datetime.utcnow()
+            activity_date = parse_local_datetime_from_string(activity_date_str) if activity_date_str else datetime.utcnow()
+            if activity_date is None:
+                activity_date = datetime.utcnow()
 
             due_date_str = request.form.get("due_date", "")
-            due_date = parse_local_datetime(due_date_str) if due_date_str else None
+            due_date = parse_local_datetime_from_string(due_date_str) if due_date_str else None
 
             activity = DealActivity(
                 deal_id=deal_id,

@@ -158,7 +158,7 @@ def project_report():
             return render_template("reports/project_report.html", projects=projects, users=users)
 
     entries = query.options(
-        joinedload(TimeEntry.project).joinedload(Project.client),
+        joinedload(TimeEntry.project).joinedload(Project.client_obj),
         joinedload(TimeEntry.user),
     ).order_by(TimeEntry.start_time.desc()).all()
 
@@ -474,119 +474,128 @@ def export_csv():
         query = query.filter(TimeEntry.project_id == project_id)
 
     entries = query.options(
-        joinedload(TimeEntry.project).joinedload(Project.client),
+        joinedload(TimeEntry.project).joinedload(Project.client_obj),
         joinedload(TimeEntry.user),
         joinedload(TimeEntry.task),
     ).order_by(TimeEntry.start_time.desc()).all()
 
-    # Get settings for delimiter
-    settings = Settings.get_settings()
-    delimiter = settings.export_delimiter
+    try:
+        # Get settings for delimiter
+        settings = Settings.get_settings()
+        delimiter = settings.export_delimiter
 
-    # Create CSV
-    output = io.StringIO()
-    writer = csv.writer(output, delimiter=delimiter)
+        # Create CSV
+        output = io.StringIO()
+        writer = csv.writer(output, delimiter=delimiter)
 
-    # Write header with task column
-    writer.writerow(
-        [
-            "ID",
-            "User",
-            "Project",
-            "Client",
-            "Task",
-            "Start Time",
-            "End Time",
-            "Duration (hours)",
-            "Duration (formatted)",
-            "Notes",
-            "Tags",
-            "Source",
-            "Billable",
-            "Created At",
-            "Updated At",
-        ]
-    )
-
-    # Write data
-    for entry in entries:
+        # Write header with task column
         writer.writerow(
             [
-                entry.id,
-                entry.user.display_name,
-                entry.project.name,
-                entry.project.client,
-                entry.task.name if entry.task else "",
-                entry.start_time.isoformat(),
-                entry.end_time.isoformat() if entry.end_time else "",
-                entry.duration_hours,
-                entry.duration_formatted,
-                entry.notes or "",
-                entry.tags or "",
-                entry.source,
-                "Yes" if entry.billable else "No",
-                entry.created_at.isoformat(),
-                entry.updated_at.isoformat() if entry.updated_at else "",
+                "ID",
+                "User",
+                "Project",
+                "Client",
+                "Task",
+                "Start Time",
+                "End Time",
+                "Duration (hours)",
+                "Duration (formatted)",
+                "Notes",
+                "Tags",
+                "Source",
+                "Billable",
+                "Created At",
+                "Updated At",
             ]
         )
 
-    output.seek(0)
+        # Write data (null-safe: user/project/client can be missing)
+        for entry in entries:
+            # Project.client is a property returning the client name string; use client_obj for the relationship
+            client_name = (
+                (entry.client.name if entry.client else "")
+                or (entry.project.client if entry.project else "")
+            )
+            writer.writerow(
+                [
+                    entry.id,
+                    (entry.user.display_name if entry.user else ""),
+                    (entry.project.name if entry.project else ""),
+                    client_name,
+                    (entry.task.name if entry.task else ""),
+                    entry.start_time.isoformat(),
+                    entry.end_time.isoformat() if entry.end_time else "",
+                    entry.duration_hours,
+                    entry.duration_formatted,
+                    entry.notes or "",
+                    entry.tags or "",
+                    entry.source,
+                    "Yes" if entry.billable else "No",
+                    entry.created_at.isoformat(),
+                    entry.updated_at.isoformat() if entry.updated_at else "",
+                ]
+            )
 
-    # Create filename with filters indication
-    filename_parts = [f"timetracker_export_{start_date}_to_{end_date}"]
-    if project_id:
-        filename_parts.append("project")
-    if client_id:
-        filename_parts.append("client")
-    if task_id:
-        filename_parts.append("task")
-    filename = "_".join(filename_parts) + ".csv"
+        output.seek(0)
 
-    # Track CSV export event with enhanced metadata
-    log_event(
-        "export.csv",
-        user_id=current_user.id,
-        export_type="time_entries",
-        num_rows=len(entries),
-        date_range_days=(end_dt - start_dt).days,
-        filters_applied={
-            "user_id": user_id,
-            "project_id": project_id,
-            "task_id": task_id,
-            "client_id": client_id,
-            "billable": billable,
-            "source": source,
-            "tags": tags,
-        },
-    )
-    track_event(
-        current_user.id,
-        "export.csv",
-        {
-            "export_type": "time_entries",
-            "num_rows": len(entries),
-            "date_range_days": (end_dt - start_dt).days,
-            "has_project_filter": project_id is not None,
-            "has_client_filter": client_id is not None,
-            "has_task_filter": task_id is not None,
-            "has_billable_filter": billable is not None and billable != "all",
-            "has_source_filter": source is not None and source != "all",
-            "has_tags_filter": bool(tags),
-        },
-    )
+        # Create filename with filters indication
+        filename_parts = [f"timetracker_export_{start_date}_to_{end_date}"]
+        if project_id:
+            filename_parts.append("project")
+        if client_id:
+            filename_parts.append("client")
+        if task_id:
+            filename_parts.append("task")
+        filename = "_".join(filename_parts) + ".csv"
 
-    # Track performance
-    try:
-        duration_ms = (time.time() - start_time) * 1000
-        csv_content = output.getvalue().encode("utf-8")
-        track_export_performance(
-            current_user.id, "csv", row_count=len(entries), duration_ms=duration_ms, file_size_bytes=len(csv_content)
+        # Track CSV export event with enhanced metadata
+        log_event(
+            "export.csv",
+            user_id=current_user.id,
+            export_type="time_entries",
+            num_rows=len(entries),
+            date_range_days=(end_dt - start_dt).days,
+            filters_applied={
+                "user_id": user_id,
+                "project_id": project_id,
+                "task_id": task_id,
+                "client_id": client_id,
+                "billable": billable,
+                "source": source,
+                "tags": tags,
+            },
         )
-    except Exception as e:
-        # Don't let tracking errors break the export
-        pass
+        track_event(
+            current_user.id,
+            "export.csv",
+            {
+                "export_type": "time_entries",
+                "num_rows": len(entries),
+                "date_range_days": (end_dt - start_dt).days,
+                "has_project_filter": project_id is not None,
+                "has_client_filter": client_id is not None,
+                "has_task_filter": task_id is not None,
+                "has_billable_filter": billable is not None and billable != "all",
+                "has_source_filter": source is not None and source != "all",
+                "has_tags_filter": bool(tags),
+            },
+        )
 
-    return send_file(io.BytesIO(csv_content), mimetype="text/csv", as_attachment=True, download_name=filename)
+        # Track performance
+        try:
+            duration_ms = (time.time() - start_time) * 1000
+            csv_content = output.getvalue().encode("utf-8")
+            track_export_performance(
+                current_user.id, "csv", row_count=len(entries), duration_ms=duration_ms, file_size_bytes=len(csv_content)
+            )
+        except Exception:
+            # Don't let tracking errors break the export
+            pass
+
+        return send_file(io.BytesIO(csv_content), mimetype="text/csv", as_attachment=True, download_name=filename)
+    except Exception:
+        current_app.logger.exception("CSV export failed (reports.export_csv)")
+        raise
 
 
 @reports_bp.route("/reports/summary")
@@ -787,7 +796,7 @@ def export_excel():
         query = query.filter(TimeEntry.project_id == project_id)
 
     entries = query.options(
-        joinedload(TimeEntry.project).joinedload(Project.client),
+        joinedload(TimeEntry.project).joinedload(Project.client_obj),
         joinedload(TimeEntry.user),
         joinedload(TimeEntry.task),
     ).order_by(TimeEntry.start_time.desc()).all()
@@ -1106,7 +1115,7 @@ def export_user_entries_excel():
         query = query.filter(TimeEntry.project_id == project_id)
 
     entries = query.options(
-        joinedload(TimeEntry.project).joinedload(Project.client),
+        joinedload(TimeEntry.project).joinedload(Project.client_obj),
         joinedload(TimeEntry.user),
         joinedload(TimeEntry.task),
     ).order_by(TimeEntry.start_time.desc()).all()

@@ -33,6 +33,7 @@
                 dateFormat: 'Y-m-d',
                 altInput: true,
                 altFormat: altFormat,
+                altInputClass: 'form-input',
                 allowInput: false,
                 locale: { firstDayOfWeek: firstDay }
             });

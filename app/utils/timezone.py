@@ -343,6 +343,24 @@ def parse_local_datetime(date_str, time_str):
         raise ValueError(f"Invalid date/time format: {e}")
 
 
+def parse_local_datetime_from_string(datetime_str):
+    """Parse a single datetime string from datetime-local input (YYYY-MM-DDTHH:MM or YYYY-MM-DDTHH:MM:SS).
+    Returns UTC datetime or None if empty/invalid.
+    """
+    if not datetime_str or "T" not in datetime_str:
+        return None
+    s = datetime_str.strip()
+    parts = s.split("T", 1)
+    if len(parts) != 2:
+        return None
+    date_part = parts[0]
+    time_part = parts[1][:5]  # HH:MM
+    try:
+        return parse_local_datetime(date_part, time_part)
+    except ValueError:
+        return None
+
+
 def parse_user_local_datetime(date_str, time_str, user=None):
     """Parse date and time strings as user's local time; return naive datetime in app timezone for storage.
 

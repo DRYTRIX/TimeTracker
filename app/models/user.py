@@ -60,6 +60,8 @@ class User(UserMixin, db.Model):
     calendar_color_events = db.Column(db.String(7), nullable=True)
     calendar_color_tasks = db.Column(db.String(7), nullable=True)
     calendar_color_time_entries = db.Column(db.String(7), nullable=True)
+    # Calendar default view: 'day' | 'week' | 'month'; None = use last view (session)
+    calendar_default_view = db.Column(db.String(10), nullable=True)
 
     # UI feature flags - allow users to customize which features are visible
     # All default to True (enabled) for backward compatibility

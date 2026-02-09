@@ -294,6 +294,19 @@
                         <option value="6" {% if user.week_start_day == 6 %}selected{% endif %}>{{ _('Saturday') }}</option>
                     </select>
                 </div>
+
+                <div>
+                    <label for="calendar_default_view" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {{ _('Calendar default view') }}
+                    </label>
+                    <select id="calendar_default_view" name="calendar_default_view"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="" {% if not user.calendar_default_view %}selected{% endif %}>{{ _('Remember last view') }}</option>
+                        <option value="day" {% if user.calendar_default_view == 'day' %}selected{% endif %}>{{ _('Day') }}</option>
+                        <option value="week" {% if user.calendar_default_view == 'week' %}selected{% endif %}>{{ _('Week') }}</option>
+                        <option value="month" {% if user.calendar_default_view == 'month' %}selected{% endif %}>{{ _('Month') }}</option>
+                    </select>
+                </div>
             </div>
         </div>
 

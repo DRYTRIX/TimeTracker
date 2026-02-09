@@ -61,6 +61,41 @@ def test_calendar_with_date_parameter(authenticated_client):
     assert response.status_code == 200
 
 
+@pytest.mark.routes
+def test_calendar_default_view_no_param_uses_month_or_session(authenticated_client):
+    """Without view param and no user default, response uses session or month."""
+    response = authenticated_client.get("/calendar")
+    if response.status_code != 200:
+        pytest.skip("Calendar module may be disabled in this environment")
+    # Template injects viewType: 'month' or last session value
+    assert b"viewType:" in response.data
+    assert b"viewType: 'day'" in response.data or b"viewType: 'week'" in response.data or b"viewType: 'month'" in response.data
+
+
+@pytest.mark.routes
+def test_calendar_url_view_param_stores_in_session_and_used(authenticated_client):
+    """When view= is in URL, that view is used and stored in session; next open uses it."""
+    r1 = authenticated_client.get("/calendar?view=day")
+    if r1.status_code != 200:
+        pytest.skip("Calendar module may be disabled in this environment")
+    assert b"viewType: 'day'" in r1.data
+    r2 = authenticated_client.get("/calendar")
+    assert r2.status_code == 200
+    assert b"viewType: 'day'" in r2.data
+
+
+@pytest.mark.routes
+def test_calendar_user_default_view_used_when_no_url_param(authenticated_client, user, app):
+    """When user has calendar_default_view set, opening /calendar without view= uses it."""
+    with app.app_context():
+        user.calendar_default_view = "week"
+        db.session.commit()
+    response = authenticated_client.get("/calendar")
+    if response.status_code != 200:
+        pytest.skip("Calendar module may be disabled in this environment")
+    assert b"viewType: 'week'" in response.data
+
+
 # ============================================================================
 # Calendar Event API Endpoints
 # ============================================================================

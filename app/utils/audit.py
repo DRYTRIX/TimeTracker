@@ -36,6 +36,7 @@ TRACKED_MODELS = [
     "Invoice",
     "InvoiceItem",
     "Client",
+    "Deal",
     "User",
     "Expense",
     "Payment",

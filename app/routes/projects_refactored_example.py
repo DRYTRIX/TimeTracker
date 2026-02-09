@@ -39,7 +39,7 @@ def list_projects():
 
     # Use repository with eager loading to fix N+1 queries
     project_repo = ProjectRepository()
-    query = project_repo.query().options(joinedload(Project.client))  # Eagerly load client to avoid N+1
+    query = project_repo.query().options(joinedload(Project.client_obj))  # Eagerly load client to avoid N+1
 
     # Filter by favorites if requested
     if favorites_only:
