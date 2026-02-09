@@ -21790,6 +21790,14 @@ msgstr ""
 msgid "Saturday"
 msgstr ""
 
+#: app/templates/user/settings.html
+msgid "Calendar default view"
+msgstr ""
+
+#: app/templates/user/settings.html
+msgid "Remember last view"
+msgstr ""
+
 #: app/templates/user/settings.html:303
 msgid "Support visibility"
 msgstr ""

@@ -14,12 +14,27 @@ import os
 calendar_bp = Blueprint("calendar", __name__)
 
 
+VALID_CALENDAR_VIEWS = ("day", "week", "month")
+
+
 @calendar_bp.route("/calendar")
 @login_required
 @module_enabled("calendar")
 def view_calendar():
     """Display the calendar view with events, tasks, and time entries"""
-    view_type = request.args.get("view", "month")  # day, week, month
+    url_view = request.args.get("view")
+    if url_view and url_view in VALID_CALENDAR_VIEWS:
+        view_type = url_view
+        session["calendar_last_view"] = view_type
+    else:
+        user_default = getattr(current_user, "calendar_default_view", None)
+        if user_default and user_default in VALID_CALENDAR_VIEWS:
+            view_type = user_default
+        else:
+            view_type = session.get("calendar_last_view", "month")
+            if view_type not in VALID_CALENDAR_VIEWS:
+                view_type = "month"
+
     date_str = request.args.get("date", "")
 
     # Parse the date or use today
