@@ -451,10 +451,31 @@ body {{
                 table_html += f'<th style="text-align: {align}; background-color: {header_bg};"{width_attr}>{html_escape.escape(header)}</th>'
             table_html += '</tr></thead><tbody>'
             
-            # Build data rows with actual invoice/quote data
+            # Resolve table data from element's data source (e.g. invoice.all_line_items or invoice.items)
             data_obj = invoice if invoice else quote
             items = []
-            if data_obj and hasattr(data_obj, "items"):
+            data_source = element.get("data", "").strip()
+            var_name = data_source.replace("{{", "").replace("}}", "").strip() if data_source else ""
+            if data_obj and var_name:
+                try:
+                    parts = var_name.split(".")
+                    if len(parts) >= 2 and parts[0] in ("invoice", "quote"):
+                        resolved = data_obj
+                        for part in parts[1:]:
+                            resolved = getattr(resolved, part, None) if resolved is not None else None
+                            if resolved is None:
+                                break
+                        if resolved is not None:
+                            if hasattr(resolved, "all"):
+                                items = list(resolved.all())
+                            elif hasattr(resolved, "__iter__") and not isinstance(resolved, (str, bytes)):
+                                items = list(resolved)
+                            else:
+                                items = [resolved]
+                except Exception:
+                    pass
+            # Fallback: use data_obj.items (e.g. when data source not set or resolution failed)
+            if not items and data_obj and hasattr(data_obj, "items"):
                 try:
                     if hasattr(data_obj.items, "all"):
                         items = data_obj.items.all()
@@ -2354,6 +2375,48 @@ def pdf_layout_preview():
             invoice_wrapper.expenses = []
     except Exception:
         invoice_wrapper.expenses = []
+
+    # Build combined all_line_items for preview (items + extra_goods + expenses) to match PDF export
+    all_line_items = []
+    for item in invoice_wrapper.items:
+        all_line_items.append(
+            SimpleNamespace(
+                description=getattr(item, "description", str(item)) or "",
+                quantity=getattr(item, "quantity", 1),
+                unit_price=getattr(item, "unit_price", 0),
+                total_amount=getattr(item, "total_amount", 0),
+            )
+        )
+    for good in invoice_wrapper.extra_goods:
+        desc_parts = [getattr(good, "name", str(good)) or ""]
+        if getattr(good, "description", None):
+            desc_parts.append(str(good.description))
+        if getattr(good, "sku", None):
+            desc_parts.append(f"SKU: {good.sku}")
+        if getattr(good, "category", None):
+            desc_parts.append(f"Category: {good.category.title()}")
+        all_line_items.append(
+            SimpleNamespace(
+                description="\n".join(desc_parts),
+                quantity=getattr(good, "quantity", 1),
+                unit_price=getattr(good, "unit_price", 0),
+                total_amount=getattr(good, "total_amount", 0),
+            )
+        )
+    for expense in invoice_wrapper.expenses:
+        desc_parts = [getattr(expense, "title", str(expense)) or ""]
+        if getattr(expense, "description", None):
+            desc_parts.append(str(expense.description))
+        amt = getattr(expense, "total_amount", None) or getattr(expense, "amount", 0)
+        all_line_items.append(
+            SimpleNamespace(
+                description="\n".join(desc_parts),
+                quantity=1,
+                unit_price=amt,
+                total_amount=amt,
+            )
+        )
+    invoice_wrapper.all_line_items = all_line_items
 
     # Use the wrapper instead of the original invoice
     invoice = invoice_wrapper

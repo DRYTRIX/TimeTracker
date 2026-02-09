@@ -197,7 +197,13 @@ Content-Disposition: attachment; filename="invoice-{number}.pdf"
 
 ### Custom Templates
 
-If using custom invoice templates, extra goods can be accessed via:
+**Recommended: use `invoice.all_line_items`** for the items table in custom JSON templates (e.g. in the PDF Designer). This single list contains time-based items, extra goods, and expenses in one combined table, so all line types appear in the PDF. The default template uses this.
+
+**Backward compatibility:** Templates that use `invoice.items` for the table data source are still supported. The PDF generator automatically appends extra goods and expenses to the table when it detects `invoice.items`, so all line types are included in the exported PDF.
+
+The admin PDF Designer preview now uses the same data: it resolves the table’s data source (e.g. `invoice.all_line_items` or `invoice.items`) and shows the same rows in the preview as in the exported PDF.
+
+You can also loop over extra goods explicitly in HTML/Jinja templates:
 
 ```jinja2
 {% for good in invoice.extra_goods %}
@@ -238,7 +244,8 @@ If using custom invoice templates, extra goods can be accessed via:
 
 ### Common Issues
 
-**Issue**: Extra goods not appearing in PDF
+**Issue**: Extra goods (or other line items) not appearing in PDF
+- **Solution**: Use `invoice.all_line_items` as the table data source in the PDF Designer so the table includes items, extra goods, and expenses. If you use a custom template with `invoice.items`, the generator now appends extra goods and expenses automatically.
 - **Solution**: Ensure goods are associated with `invoice_id` correctly
 - **Check**: Run `invoice.extra_goods` to verify goods are linked
 
