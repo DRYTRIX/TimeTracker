@@ -6,7 +6,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import Lead, LeadActivity, Client, Deal
 from app.utils.db import safe_commit
-from app.utils.timezone import parse_local_datetime
+from app.utils.timezone import parse_local_datetime_from_string
 from app.utils.module_helpers import module_enabled
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
@@ -191,10 +191,10 @@ def convert_to_client(lead_id):
                 email=lead.email,
                 phone=lead.phone,
                 description=f"Converted from lead: {lead.display_name}",
-                status="active",
             )
 
             db.session.add(client)
+            client.status = "active"
             db.session.flush()  # Get client ID
 
             # Convert lead
@@ -311,10 +311,12 @@ def create_activity(lead_id):
     if request.method == "POST":
         try:
             activity_date_str = request.form.get("activity_date", "")
-            activity_date = parse_local_datetime(activity_date_str) if activity_date_str else datetime.utcnow()
+            activity_date = parse_local_datetime_from_string(activity_date_str) if activity_date_str else datetime.utcnow()
+            if activity_date is None:
+                activity_date = datetime.utcnow()
 
             due_date_str = request.form.get("due_date", "")
-            due_date = parse_local_datetime(due_date_str) if due_date_str else None
+            due_date = parse_local_datetime_from_string(due_date_str) if due_date_str else None
 
             activity = LeadActivity(
                 lead_id=lead_id,
