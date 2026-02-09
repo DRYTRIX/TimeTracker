@@ -58,6 +58,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='keyboard-shortcuts.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='ui-enhancements.css') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+    <link id="flatpickr-dark-theme" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/dark.css" media="none">
     <style>
         /* RTL Support */
         html[dir="rtl"] {
@@ -174,6 +175,8 @@
             document.documentElement.classList.remove('dark');
         }
         {% endif %}
+        var fpDark = document.getElementById('flatpickr-dark-theme');
+        if (fpDark) fpDark.media = document.documentElement.classList.contains('dark') ? 'all' : 'none';
     </script>
     
     <!-- i18n translations for JavaScript (use tojson to avoid syntax errors from quotes/ampersands in translations) -->
@@ -1354,17 +1357,19 @@
                 }
             });
             
-            // Close sidebar when clicking on menu items (on small screens)
+            // Close sidebar when clicking on navigation links only (on small screens).
+            // Do not close when clicking dropdown toggles (section headings) so the user can expand and then select a sub-item.
             if (sidebar) {
-                const menuLinks = sidebar.querySelectorAll('a, [data-dropdown]');
+                const menuLinks = sidebar.querySelectorAll('a[href]');
                 menuLinks.forEach(link => {
                     link.addEventListener('click', function(e) {
-                        if (isSmallScreen()) {
-                            // Small delay to allow navigation to start
-                            setTimeout(() => {
-                                closeMobileSidebar();
-                            }, 100);
-                        }
+                        if (!isSmallScreen()) return;
+                        const href = (this.getAttribute('href') || '').trim();
+                        if (!href || href === '#') return;
+                        // Small delay to allow navigation to start
+                        setTimeout(() => {
+                            closeMobileSidebar();
+                        }, 100);
                     });
                 });
             }
@@ -1703,7 +1708,9 @@
                     newTheme = 'dark';
                 }
             }
-            
+            var fpDark = document.getElementById('flatpickr-dark-theme');
+            if (fpDark) fpDark.media = document.documentElement.classList.contains('dark') ? 'all' : 'none';
+
             // Save to database if user is logged in
             {% if current_user.is_authenticated %}
             fetch('/api/theme', {
