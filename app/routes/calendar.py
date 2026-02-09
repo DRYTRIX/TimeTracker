@@ -115,13 +115,15 @@ def get_events():
 
     # Effective type colors (user preference or defaults)
     def get_type_color(typ):
-        defaults = {"event": "#3b82f6", "task": "#f59e0b", "time_entry": "#10b981"}
+        defaults = {"event": "#3b82f6", "task": "#f59e0b", "time_entry": "#10b981", "time_entry_running": "#06b6d4"}
         if typ == "event":
             return (current_user.calendar_color_events or defaults["event"])
         if typ == "task":
             return (current_user.calendar_color_tasks or defaults["task"])
         if typ == "time_entry":
             return (current_user.calendar_color_time_entries or defaults["time_entry"])
+        if typ == "time_entry_running":
+            return defaults["time_entry_running"]
         return defaults.get(typ, "#6b7280")
 
     # Attach color to each item
@@ -130,12 +132,16 @@ def get_events():
     for t in result.get("tasks", []):
         t["color"] = get_type_color("task")
     for e in result.get("time_entries", []):
-        e["color"] = get_type_color("time_entry")
+        if e.get("is_running"):
+            e["color"] = get_type_color("time_entry_running")
+        else:
+            e["color"] = get_type_color("time_entry")
 
     result["typeColors"] = {
         "event": get_type_color("event"),
         "task": get_type_color("task"),
         "time_entry": get_type_color("time_entry"),
+        "time_entry_running": get_type_color("time_entry_running"),
     }
 
     print(f"\n{'='*80}")
