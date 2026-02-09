@@ -122,25 +122,41 @@ class Calendar {
             const data = await response.json();
             
             // Build unified lists from calendar API (events, tasks, time_entries are separate).
-            // Map to common shape with start/end and extendedProps.item_type for render.
+            // If API returns merged list (only data.events with item_type), split by item_type.
             const rawEvents = data.events || [];
             const rawTasks = data.tasks || [];
             const rawTimeEntries = data.time_entries || [];
             const typeColors = data.typeColors || (window.calendarData && window.calendarData.typeColors) || { event: '#3b82f6', task: '#f59e0b', time_entry: '#10b981' };
-            this.events = rawEvents.map(e => ({
+
+            const getItemType = (e) => (e.extendedProps && e.extendedProps.item_type) || e.type || 'event';
+            let eventsForDisplay = rawEvents;
+            let tasksForDisplay = rawTasks;
+            let timeEntriesForDisplay = rawTimeEntries;
+            if (rawTimeEntries.length === 0 && rawTasks.length === 0 && rawEvents.length > 0) {
+                // Merged response: split by item_type so time entries show as Time Entry category
+                eventsForDisplay = rawEvents.filter(e => getItemType(e) === 'event');
+                tasksForDisplay = rawEvents.filter(e => getItemType(e) === 'task');
+                timeEntriesForDisplay = rawEvents.filter(e => getItemType(e) === 'time_entry');
+            }
+
+            this.events = eventsForDisplay.map(e => ({
                 ...e,
                 color: e.color != null ? e.color : typeColors.event,
                 extendedProps: { ...(e.extendedProps || {}), ...e, item_type: (e.extendedProps && e.extendedProps.item_type) || 'event' }
             }));
-            this.tasks = rawTasks.map(t => ({
-                id: t.id,
-                title: t.title,
-                start: t.dueDate,
-                end: t.dueDate,
-                color: t.color != null ? t.color : typeColors.task,
-                extendedProps: { ...t, item_type: 'task' }
-            }));
-            this.timeEntries = rawTimeEntries.map(e => ({
+            this.tasks = tasksForDisplay.map(t => {
+                const start = t.dueDate != null ? t.dueDate : t.start;
+                const end = t.dueDate != null ? t.dueDate : t.end;
+                return {
+                    id: t.id,
+                    title: t.title,
+                    start: start,
+                    end: end,
+                    color: t.color != null ? t.color : typeColors.task,
+                    extendedProps: { ...(t.extendedProps || {}), ...t, item_type: 'task' }
+                };
+            });
+            this.timeEntries = timeEntriesForDisplay.map(e => ({
                 ...e,
                 color: e.color != null ? e.color : typeColors.time_entry,
                 extendedProps: { ...(e.extendedProps || {}), ...e, item_type: (e.extendedProps && e.extendedProps.item_type) || 'time_entry' }
@@ -381,16 +397,26 @@ class Calendar {
                 const startMinutes = effectiveStart.getHours() * 60 + effectiveStart.getMinutes();
                 const durationMinutes = (effectiveEnd - effectiveStart) / (1000 * 60);
                 const heightMinutes = Math.max(30, Math.min(1440 - startMinutes, durationMinutes));
+                const blockType = (event.extendedProps && event.extendedProps.item_type) || 'event';
+                const startTime = window.formatUserTime(effectiveStart);
+                const endTimeStr = eventEnd ? window.formatUserTime(effectiveEnd) : '';
+                const notesText = event.notes || (event.extendedProps && event.extendedProps.notes) || '';
+                const notes = notesText ? `<br><small class="text-xs">${this.escapeHtml(notesText)}</small>` : '';
                 timedItems.push({
-                    type: 'event',
+                    type: blockType,
                     startMs: effectiveStart.getTime(),
                     endMs: effectiveEnd.getTime(),
                     event,
+                    entry: event,
                     topPosition: startMinutes,
                     heightMinutes,
-                    time: window.formatUserTime(effectiveStart),
+                    time: startTime,
                     title: this.escapeHtml(event.title),
-                    color: event.color || '#3b82f6'
+                    color: event.color || (blockType === 'time_entry' ? '#10b981' : '#3b82f6'),
+                    startTime,
+                    endTimeStr,
+                    entryEnd: eventEnd || null,
+                    notes
                 });
             });
         }
@@ -440,25 +466,28 @@ class Calendar {
         timedItems.forEach(item => {
             const { left, width } = this.columnStyle(item.column, item.totalColumns);
             const style = `left: ${left}; width: ${width}; top: ${item.topPosition}px; height: ${item.heightMinutes}px;`;
+            const detailType = item.type;
+            const detailId = item.event ? item.event.id : item.entry.id;
             if (item.type === 'event') {
                 html += `
                     <div class="event-card event" data-id="${item.event.id}" data-type="event"
                          style="border-left-color: ${item.color}; ${style}"
-                         onclick="window.calendar.showEventDetails(${item.event.id}, 'event', event)">
+                         onclick="window.calendar.showEventDetails(${item.event.id}, '${detailType}', event)">
                         <i class="fas fa-calendar mr-2 text-blue-600 dark:text-blue-400"></i>
                         <strong>${item.title}</strong>
                         <br><small>${item.time}</small>
                     </div>
                 `;
-            } else {
-                const durationText = item.entryEnd ? `${item.startTime} - ${item.endTimeStr}` : `${item.startTime} (active)`;
+            } else if (item.type === 'time_entry') {
+                const durationText = item.entryEnd != null ? `${item.startTime} - ${item.endTimeStr}` : (item.time ? `${item.time} (active)` : '');
+                const notes = item.notes != null ? item.notes : '';
                 html += `
-                    <div class="event-card time_entry" data-id="${item.entry.id}" data-type="time_entry"
+                    <div class="event-card time_entry" data-id="${detailId}" data-type="time_entry"
                          style="border-left-color: ${item.color}; ${style}"
-                         onclick="window.calendar.showEventDetails(${item.entry.id}, 'time_entry', event)">
+                         onclick="window.calendar.showEventDetails(${detailId}, 'time_entry', event)">
                         ⏱ <strong>${item.title}</strong>
                         <br><small>${durationText}</small>
-                        ${item.notes}
+                        ${notes}
                     </div>
                 `;
             }
@@ -546,16 +575,23 @@ class Calendar {
                 const durationMinutes = (effectiveEnd - effectiveStart) / (1000 * 60);
                 const heightMinutes = Math.max(30, Math.min(1440 - startMinutes, durationMinutes));
                 const timeStr = window.formatUserTime(effectiveStart);
+                const blockType = (event.extendedProps && event.extendedProps.item_type) || 'event';
+                const endTimeStr = eventEnd ? window.formatUserTime(effectiveEnd) : '';
+                const durationText = eventEnd ? `${timeStr} - ${endTimeStr}` : timeStr;
                 timedItems.push({
-                    type: 'event',
+                    type: blockType,
                     startMs: effectiveStart.getTime(),
                     endMs: effectiveEnd.getTime(),
                     event,
+                    entry: event,
                     topPosition: startMinutes,
                     heightMinutes,
                     title: this.escapeHtml(event.title),
-                    color: event.color || '#3b82f6',
-                    timeStr
+                    color: event.color || (blockType === 'time_entry' ? '#10b981' : '#3b82f6'),
+                    timeStr,
+                    startTime: timeStr,
+                    endTimeStr,
+                    entryEnd: eventEnd
                 });
             });
         }
@@ -617,10 +653,11 @@ class Calendar {
             const { left, width } = this.columnStyle(item.column, item.totalColumns);
             const style = `left: ${left}; width: ${width}; top: ${item.topPosition}px; height: ${item.heightMinutes}px;`;
             if (item.type === 'event') {
-                html += `<div class="week-event-block event" data-id="${item.event.id}" data-type="event" style="border-left-color: ${item.color}; ${style}" onclick="window.calendar.showEventDetails(${item.event.id}, 'event', event)" title="${item.title} (${item.timeStr})"><i class="fas fa-calendar mr-1"></i><strong>${item.title}</strong><br><small>${item.timeStr}</small></div>`;
+                html += `<div class="week-event-block event" data-id="${item.event.id}" data-type="event" style="border-left-color: ${item.color}; ${style}" onclick="window.calendar.showEventDetails(${item.event.id}, '${item.type}', event)" title="${item.title} (${item.timeStr})"><i class="fas fa-calendar mr-1"></i><strong>${item.title}</strong><br><small>${item.timeStr}</small></div>`;
             } else if (item.type === 'time_entry') {
-                const durationText = item.entryEnd ? `${item.startTime} - ${item.endTimeStr}` : `${item.startTime} (active)`;
-                html += `<div class="week-event-block time_entry" data-id="${item.entry.id}" data-type="time_entry" style="border-left-color: ${item.color}; ${style}" title="${item.title}" onclick="window.calendar.showEventDetails(${item.entry.id}, 'time_entry', event)"><i class="fas fa-clock mr-1"></i><strong>${item.title}</strong><br><small>${durationText}</small></div>`;
+                const durationText = (item.entryEnd != null && item.startTime != null) ? `${item.startTime} - ${item.endTimeStr}` : (item.startTime || item.timeStr || '');
+                const blockId = (item.entry && item.entry.id) != null ? item.entry.id : item.event.id;
+                html += `<div class="week-event-block time_entry" data-id="${blockId}" data-type="time_entry" style="border-left-color: ${item.color}; ${style}" title="${item.title}" onclick="window.calendar.showEventDetails(${blockId}, 'time_entry', event)"><i class="fas fa-clock mr-1"></i><strong>${item.title}</strong><br><small>${durationText}</small></div>`;
             } else {
                 html += `<div class="week-event-block task" data-id="${item.task.id}" data-type="task" style="border-left-color: ${item.color}; ${style}" onclick="window.calendar.showEventDetails(${item.task.id}, 'task', event); event.stopPropagation();" title="${item.title}">\uD83D\uDCCB ${item.title}</div>`;
             }
@@ -682,15 +719,18 @@ class Calendar {
         let count = 0;
         const maxDisplay = 3;
         
-        // Events
+        // Events (and any time_entry items that ended up in this.events - use item_type for badge and modal)
         if (this.showEvents) {
             this.events.forEach(event => {
                 const eventStart = new Date(event.start);
                 if (eventStart >= dayStart && eventStart <= dayEnd) {
                     if (count < maxDisplay) {
                         const eventTitle = this.escapeHtml(event.title);
-                        const eventColor = event.color || '#3b82f6';
-                        html += `<div class="event-badge" style="background-color: ${eventColor}" onclick="window.calendar.showEventDetails(${event.id}, 'event', event); event.stopPropagation();" title="${eventTitle}">📅 ${eventTitle}</div>`;
+                        const blockType = (event.extendedProps && event.extendedProps.item_type) || 'event';
+                        const eventColor = event.color || (blockType === 'time_entry' ? '#10b981' : '#3b82f6');
+                        const badgeIcon = blockType === 'time_entry' ? '⏱' : '📅';
+                        const badgeClass = blockType === 'time_entry' ? 'event-badge time-entry-badge' : 'event-badge';
+                        html += `<div class="${badgeClass}" style="background-color: ${eventColor}" onclick="window.calendar.showEventDetails(${event.id}, '${blockType}', event); event.stopPropagation();" title="${eventTitle}">${badgeIcon} ${eventTitle}</div>`;
                     }
                     count++;
                 }
