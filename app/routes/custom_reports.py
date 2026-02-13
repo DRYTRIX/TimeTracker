@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db
-from app.models import SavedReportView, TimeEntry, Project, Task, User, Client
+from app.models import SavedReportView, TimeEntry, Project, Task, User, Client, Expense, Invoice
 from app.utils.db import safe_commit
 from app.services.unpaid_hours_service import UnpaidHoursService
 import json
@@ -446,6 +446,126 @@ def generate_report_data(config, user_id=None):
                 for p in projects
             ],
             "summary": {"total_projects": len(projects)},
+        }
+
+    elif data_source == "expenses":
+        from sqlalchemy.orm import joinedload
+
+        start_date = start_dt.date() if hasattr(start_dt, "date") else start_dt
+        end_date = end_dt.date() if hasattr(end_dt, "date") else end_dt
+
+        query = Expense.query.filter(
+            Expense.expense_date >= start_date,
+            Expense.expense_date <= end_date,
+        )
+
+        if user_id:
+            user = User.query.get(user_id)
+            if not user:
+                return {"success": False, "message": f"User {user_id} not found", "data": []}
+            if not user.is_admin:
+                query = query.filter(Expense.user_id == user_id)
+
+        if filters.get("project_id"):
+            try:
+                pid = int(filters["project_id"]) if isinstance(filters["project_id"], str) else filters["project_id"]
+                query = query.filter(Expense.project_id == pid)
+            except (ValueError, TypeError):
+                pass
+
+        expenses = query.options(
+            joinedload(Expense.project),
+            joinedload(Expense.user),
+            joinedload(Expense.client),
+        ).order_by(Expense.expense_date.desc()).all()
+
+        data_list = [
+            {
+                "id": e.id,
+                "date": e.expense_date.isoformat() if e.expense_date else "",
+                "title": e.title,
+                "category": e.category,
+                "amount": float(e.amount),
+                "total_amount": float(e.total_amount),
+                "currency_code": e.currency_code,
+                "status": e.status,
+                "project": e.project.name if e.project else "",
+                "client": e.client.name if e.client else "",
+                "user": e.user.username if e.user else "",
+                "billable": e.billable,
+                "vendor": e.vendor or "",
+                "notes": e.notes or "",
+            }
+            for e in expenses
+        ]
+
+        return {
+            "data": data_list,
+            "summary": {
+                "total_expenses": len(expenses),
+                "total_amount": round(sum(float(e.total_amount) for e in expenses), 2),
+            },
+        }
+
+    elif data_source == "invoices":
+        from sqlalchemy.orm import joinedload
+
+        start_date = start_dt.date() if hasattr(start_dt, "date") else start_dt
+        end_date = end_dt.date() if hasattr(end_dt, "date") else end_dt
+
+        query = Invoice.query.filter(
+            Invoice.issue_date >= start_date,
+            Invoice.issue_date <= end_date,
+        )
+
+        if user_id:
+            user = User.query.get(user_id)
+            if not user:
+                return {"success": False, "message": f"User {user_id} not found", "data": []}
+            if not user.is_admin:
+                query = query.filter(Invoice.created_by == user_id)
+
+        if filters.get("project_id"):
+            try:
+                pid = int(filters["project_id"]) if isinstance(filters["project_id"], str) else filters["project_id"]
+                query = query.filter(Invoice.project_id == pid)
+            except (ValueError, TypeError):
+                pass
+
+        if filters.get("client_id"):
+            try:
+                cid = int(filters["client_id"]) if isinstance(filters["client_id"], str) else filters["client_id"]
+                query = query.filter(Invoice.client_id == cid)
+            except (ValueError, TypeError):
+                pass
+
+        invoices = query.options(
+            joinedload(Invoice.project),
+            joinedload(Invoice.client),
+        ).order_by(Invoice.issue_date.desc()).all()
+
+        data_list = [
+            {
+                "id": inv.id,
+                "invoice_number": inv.invoice_number,
+                "issue_date": inv.issue_date.isoformat() if inv.issue_date else None,
+                "due_date": inv.due_date.isoformat() if inv.due_date else None,
+                "client_name": inv.client_name,
+                "status": inv.status,
+                "total_amount": float(inv.total_amount),
+                "currency_code": inv.currency_code,
+                "project": inv.project.name if inv.project else "",
+                "is_paid": inv.is_paid,
+            }
+            for inv in invoices
+        ]
+
+        return {
+            "data": data_list,
+            "summary": {
+                "total_invoices": len(invoices),
+                "total_amount": round(sum(float(inv.total_amount) for inv in invoices), 2),
+            },
         }
 
     # Add more data sources as needed

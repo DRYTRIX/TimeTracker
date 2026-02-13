@@ -47,8 +47,13 @@ ALLOWED_TIME_ENTRY_EXPORT_COLUMNS = {
     "project": ("Project", lambda e: e.project.name if getattr(e, "project", None) else "N/A"),
     "client": (
         "Client",
-        lambda e: (e.project.client if (getattr(e, "project", None) and getattr(e.project, "client", None)) else "N/A"),
+        lambda e: (
+            (e.client.name if getattr(e, "client", None) else None)
+            or (e.project.client if (getattr(e, "project", None) and getattr(e.project, "client", None)) else None)
+            or "N/A"
+        ),
     ),
+    "billed": ("Billed", lambda e: "Yes" if getattr(e, "paid", False) else "No"),
     "task": ("Task", lambda e: e.task.name if getattr(e, "task", None) else "N/A"),
     "start_time": ("Start Time", lambda e: _safe_user_dt_iso(getattr(e, "start_time", None))),
     "end_time": ("End Time", lambda e: _safe_user_dt_iso(getattr(e, "end_time", None))),

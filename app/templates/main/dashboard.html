@@ -31,6 +31,15 @@
                     <span class="text-3xl font-bold text-blue-900 dark:text-blue-100 stat-value" id="todayHoursValue">{{ "%.2f"|format(today_hours) }}</span>
                     <span class="text-sm text-blue-600/70 dark:text-blue-400/70">hours</span>
                 </div>
+                {% if standard_hours_per_day is defined and today_overtime_hours is defined %}
+                <div id="todayOvertimeLine" class="mt-1 text-xs text-blue-700 dark:text-blue-300" {% if today_overtime_hours <= 0 %}style="display: none;"{% endif %}>
+                    {% if today_overtime_hours > 0 %}
+                    <span class="font-medium">+ {{ "%.2f"|format(today_overtime_hours) }}h {{ _('overtime') }}</span>
+                    {% elif standard_hours_per_day %}
+                    <span class="text-blue-600/70 dark:text-blue-400/70">{{ "%.2f"|format(today_hours) }}h / {{ "%.1f"|format(standard_hours_per_day) }}h</span>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
             <div class="bg-blue-500/10 dark:bg-blue-400/10 p-4 rounded-full">
                 <i class="fas fa-clock text-blue-600 dark:text-blue-400 text-2xl"></i>
@@ -47,6 +56,11 @@
                     <span class="text-3xl font-bold text-green-900 dark:text-green-100 stat-value" id="weekHoursValue">{{ "%.2f"|format(week_hours) }}</span>
                     <span class="text-sm text-green-600/70 dark:text-green-400/70">hours</span>
                 </div>
+                {% if standard_hours_per_day is defined and week_overtime_hours is defined %}
+                <div id="weekOvertimeLine" class="mt-1 text-xs text-green-700 dark:text-green-300" {% if week_overtime_hours <= 0 %}style="display: none;"{% endif %}>
+                    {% if week_overtime_hours > 0 %}<span class="font-medium">+ {{ "%.2f"|format(week_overtime_hours) }}h {{ _('overtime') }}</span>{% endif %}
+                </div>
+                {% endif %}
             </div>
             <div class="bg-green-500/10 dark:bg-green-400/10 p-4 rounded-full">
                 <i class="fas fa-calendar-week text-green-600 dark:text-green-400 text-2xl"></i>
@@ -492,7 +506,13 @@
          data-error-title="{{ _('Error')|e }}"
          data-notes-placeholder="{{ _('What are you working on?')|e }}"
          data-only-one-client="{{ 'true' if only_one_client|default(false) else 'false' }}"
-         data-single-client-id="{{ single_client.id if single_client else '' }}">
+         data-single-client-id="{{ single_client.id if single_client else '' }}"
+         data-require-task="{{ 'true' if getattr(settings, 'time_entry_require_task', false) else 'false' }}"
+         data-require-description="{{ 'true' if getattr(settings, 'time_entry_require_description', false) else 'false' }}"
+         data-description-min-length="{{ getattr(settings, 'time_entry_description_min_length', 20) }}"
+         data-task-required-msg="{{ _('A task must be selected when logging time for a project')|e }}"
+         data-description-required-msg="{{ _('A description is required when logging time')|e }}"
+         data-description-min-msg="{{ _('Description must be at least %(min)s characters', min=getattr(settings, 'time_entry_description_min_length', 20))|e }}">
         <div class="absolute inset-0 bg-black/50" data-overlay></div>
         <div class="relative max-w-lg mx-auto mt-24 max-h-[90vh] overflow-y-auto bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-lg" data-modal-content>
             <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between gap-2">
@@ -524,7 +544,7 @@
                         </div>
                     </div>
                     <div>
-                        <label for="startTimerTask" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Task (optional)') }}</label>
+                        <label for="startTimerTask" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{% if getattr(settings, 'time_entry_require_task', false) %}{{ _('Task') }} *{% else %}{{ _('Task (optional)') }}{% endif %}</label>
                         <select id="startTimerTask" name="task_id" class="form-input w-full">
                             <option value="">{{ _('No task') }}</option>
                             <!-- Options populated dynamically when project is selected -->
@@ -534,7 +554,7 @@
                         </p>
                     </div>
                     <div>
-                        <label for="startTimerNotes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Notes (optional)') }}</label>
+                        <label for="startTimerNotes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{% if getattr(settings, 'time_entry_require_description', false) %}{{ _('Notes') }} *{% else %}{{ _('Notes (optional)') }}{% endif %}</label>
                         <div class="markdown-editor-wrapper">
                             <textarea id="startTimerNotes" name="notes" class="hidden" placeholder="{{ _('What are you working on?') }}"></textarea>
                             <div id="startTimerNotes_editor"></div>
@@ -952,6 +972,46 @@
                             alert(completeTaskCreationText);
                         }
                         return false;
+                    }
+
+                    // Validate time entry requirements (task, description)
+                    const notesEl = document.getElementById('startTimerNotes');
+                    const requireTask = modal && modal.dataset.requireTask === 'true';
+                    const requireDescription = modal && modal.dataset.requireDescription === 'true';
+                    const descMinLen = modal ? parseInt(modal.dataset.descriptionMinLength || '20', 10) : 20;
+                    if (projectVal && requireTask && !taskVal) {
+                        const msg = modal?.dataset.taskRequiredMsg || 'A task must be selected when logging time for a project';
+                        if (window.toastManager && typeof window.toastManager.error === 'function') {
+                            window.toastManager.error(msg, errorTitleText, 5000);
+                        } else {
+                            alert(msg);
+                        }
+                        return false;
+                    }
+                    if (requireDescription) {
+                        let notesVal = notesEl ? notesEl.value : '';
+                        if (window.dashboardNotesEditor && typeof window.dashboardNotesEditor.getMarkdown === 'function') {
+                            try { notesVal = window.dashboardNotesEditor.getMarkdown(); } catch (e) {}
+                        }
+                        const notesTrimmed = (notesVal || '').trim();
+                        if (!notesTrimmed) {
+                            const msg = modal?.dataset.descriptionRequiredMsg || 'A description is required when logging time';
+                            if (window.toastManager && typeof window.toastManager.error === 'function') {
+                                window.toastManager.error(msg, errorTitleText, 5000);
+                            } else {
+                                alert(msg);
+                            }
+                            return false;
+                        }
+                        if (notesTrimmed.length < descMinLen) {
+                            const msg = (modal?.dataset.descriptionMinMsg || 'Description must be at least ' + descMinLen + ' characters').replace(/\d+/, String(descMinLen));
+                            if (window.toastManager && typeof window.toastManager.error === 'function') {
+                                window.toastManager.error(msg, errorTitleText, 5000);
+                            } else {
+                                alert(msg);
+                            }
+                            return false;
+                        }
                     }
                     
                     // Sync Toast UI Editor notes into hidden textarea (programmatic submit does not fire submit event)

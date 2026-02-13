@@ -26,20 +26,23 @@ def calculate_daily_overtime(total_hours: float, standard_hours: float) -> float
 
 
 def calculate_period_overtime(
-    user, start_date: date, end_date: date, include_weekends: bool = True
+    user, start_date: date, end_date: date, include_weekends: Optional[bool] = None
 ) -> Dict[str, float]:
     """
     Calculate overtime for a specific period.
 
     Args:
-        user: User object with standard_hours_per_day setting
+        user: User object with standard_hours_per_day and optional overtime_include_weekends
         start_date: Start date of the period
         end_date: End date of the period
-        include_weekends: Whether to count weekend hours as overtime
+        include_weekends: If None, use user.overtime_include_weekends; if True, weekend hours
+            count as regular/overtime like weekdays; if False, all weekend hours count as overtime.
 
     Returns:
-        Dictionary with regular_hours, overtime_hours, and total_hours
+        Dictionary with regular_hours, overtime_hours, undertime_hours, and total_hours
     """
+    if include_weekends is None:
+        include_weekends = getattr(user, "overtime_include_weekends", True)
     from app.models import TimeEntry
     from app import db
 
@@ -67,10 +70,12 @@ def calculate_period_overtime(
             daily_hours[entry_date] = 0.0
         daily_hours[entry_date] += hours
 
-    # Calculate overtime per day
-    standard_hours = user.standard_hours_per_day
+    # Calculate overtime and undertime per day
+    standard_hours = getattr(user, "standard_hours_per_day", 8.0) or 8.0
     total_regular = 0.0
     total_overtime = 0.0
+    total_undertime = 0.0
+    days_under = 0
 
     for day_date, hours in daily_hours.items():
         # Check if weekend
@@ -78,9 +83,13 @@ def calculate_period_overtime(
             # All weekend hours are overtime
             total_overtime += hours
         else:
-            # Calculate regular vs overtime
+            # Calculate regular vs overtime vs undertime
             if hours <= standard_hours:
                 total_regular += hours
+                undertime = max(0.0, standard_hours - hours)
+                if undertime > 0:
+                    total_undertime += undertime
+                    days_under += 1
             else:
                 total_regular += standard_hours
                 total_overtime += hours - standard_hours
@@ -88,23 +97,30 @@ def calculate_period_overtime(
     return {
         "regular_hours": round(total_regular, 2),
         "overtime_hours": round(total_overtime, 2),
+        "undertime_hours": round(total_undertime, 2),
+        "days_under": days_under,
         "total_hours": round(total_regular + total_overtime, 2),
         "days_with_overtime": sum(1 for h in daily_hours.values() if h > standard_hours),
     }
 
 
-def get_daily_breakdown(user, start_date: date, end_date: date) -> List[Dict]:
+def get_daily_breakdown(
+    user, start_date: date, end_date: date, include_weekends: Optional[bool] = None
+) -> List[Dict]:
     """
     Get a daily breakdown of regular and overtime hours.
 
     Args:
-        user: User object with standard_hours_per_day setting
+        user: User object with standard_hours_per_day and optional overtime_include_weekends
         start_date: Start date of the period
         end_date: End date of the period
+        include_weekends: If None, use user.overtime_include_weekends (see calculate_period_overtime).
 
     Returns:
         List of dictionaries with daily breakdown
     """
+    if include_weekends is None:
+        include_weekends = getattr(user, "overtime_include_weekends", True)
     from app.models import TimeEntry
     from app import db
 
@@ -137,16 +153,24 @@ def get_daily_breakdown(user, start_date: date, end_date: date) -> List[Dict]:
         daily_data[entry_date]["total_hours"] += entry.duration_hours
         daily_data[entry_date]["entries"].append(entry)
 
-    # Calculate overtime for each day
-    standard_hours = user.standard_hours_per_day
+    # Calculate overtime and undertime for each day
+    standard_hours = getattr(user, "standard_hours_per_day", 8.0) or 8.0
     breakdown = []
 
     for day_date in sorted(daily_data.keys()):
         day_info = daily_data[day_date]
         total_hours = day_info["total_hours"]
 
-        regular_hours = min(total_hours, standard_hours)
-        overtime_hours = max(0, total_hours - standard_hours)
+        # When include_weekends is False, weekend days count all hours as overtime
+        if not include_weekends and day_date.weekday() >= 5:
+            regular_hours = 0.0
+            overtime_hours = total_hours
+            undertime_hours = 0.0
+        else:
+            regular_hours = min(total_hours, standard_hours)
+            overtime_hours = max(0, total_hours - standard_hours)
+            undertime_hours = max(0, standard_hours - total_hours) if total_hours < standard_hours else 0.0
+        is_undertime = undertime_hours > 0
 
         breakdown.append(
             {
@@ -156,7 +180,9 @@ def get_daily_breakdown(user, start_date: date, end_date: date) -> List[Dict]:
                 "total_hours": round(total_hours, 2),
                 "regular_hours": round(regular_hours, 2),
                 "overtime_hours": round(overtime_hours, 2),
+                "undertime_hours": round(undertime_hours, 2),
                 "is_overtime": overtime_hours > 0,
+                "is_undertime": is_undertime,
                 "entries_count": len(day_info["entries"]),
             }
         )

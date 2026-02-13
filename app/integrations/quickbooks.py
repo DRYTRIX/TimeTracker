@@ -293,7 +293,7 @@ class QuickBooksConnector(BaseConnector):
             # Sync expenses (create as expenses in QuickBooks)
             if sync_type == "full" or sync_type == "expenses":
                 try:
-                    expenses = Expense.query.filter(Expense.date >= datetime.utcnow().date() - timedelta(days=90)).all()
+                    expenses = Expense.query.filter(Expense.expense_date >= datetime.utcnow().date() - timedelta(days=90)).all()
 
                     for expense in expenses:
                         try:

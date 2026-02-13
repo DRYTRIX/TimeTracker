@@ -356,6 +356,8 @@ def user_report():
             overtime_data = calculate_period_overtime(data["user_obj"], start_dt.date(), end_dt.date())
             data["regular_hours"] = overtime_data["regular_hours"]
             data["overtime_hours"] = overtime_data["overtime_hours"]
+            data["undertime_hours"] = overtime_data.get("undertime_hours", 0)
+            data["days_under"] = overtime_data.get("days_under", 0)
             data["days_with_overtime"] = overtime_data["days_with_overtime"]
 
     summary = {
@@ -383,7 +385,7 @@ def user_report():
 @login_required
 @module_enabled("reports")
 def export_form():
-    """Display CSV export form with filter options"""
+    """Display export form with filter options (CSV or Excel)."""
     # Get all users (for admin)
     users = []
     if current_user.is_admin:
@@ -401,6 +403,11 @@ def export_form():
     default_end_date = datetime.utcnow().strftime("%Y-%m-%d")
     default_start_date = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
 
+    # Format from query (csv or excel) for Quick Actions consistency
+    export_format = request.args.get("format", "csv").lower()
+    if export_format not in ("csv", "excel"):
+        export_format = "csv"
+
     return render_template(
         "reports/export_form.html",
         users=users,
@@ -410,6 +417,7 @@ def export_form():
         single_client=single_client,
         default_start_date=default_start_date,
         default_end_date=default_end_date,
+        export_format=export_format,
     )
 
 
@@ -751,6 +759,229 @@ def task_report():
     )
 
 
+def _time_entries_report_query(request, require_dates=True):
+    """Shared query logic for time entries report and its exports. Returns (entries, start_dt, end_dt, start_date, end_date) or (None, None, None, start_date, end_date) on date error."""
+    from app.utils.client_lock import enforce_locked_client_id
+
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+    user_id = request.args.get("user_id", type=int)
+    project_id = request.args.get("project_id", type=int)
+    client_id = request.args.get("client_id", type=int)
+    client_id = enforce_locked_client_id(client_id)
+    task_id = request.args.get("task_id", type=int)
+    billed = request.args.get("billed", "all")  # 'all', 'yes', 'no'
+
+    if not start_date:
+        start_date = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
+    if not end_date:
+        end_date = datetime.utcnow().strftime("%Y-%m-%d")
+
+    try:
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1) - timedelta(seconds=1)
+    except ValueError:
+        if require_dates:
+            return None, None, None, start_date, end_date
+        start_dt = datetime.utcnow() - timedelta(days=30)
+        end_dt = datetime.utcnow()
+
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
+    query = TimeEntry.query.filter(
+        TimeEntry.end_time.isnot(None),
+        TimeEntry.start_time >= start_dt,
+        TimeEntry.start_time <= end_dt,
+    )
+
+    if not can_view_all:
+        query = query.filter(TimeEntry.user_id == current_user.id)
+
+    if user_id:
+        if can_view_all:
+            query = query.filter(TimeEntry.user_id == user_id)
+        elif user_id != current_user.id:
+            return None, None, None, start_date, end_date
+
+    if project_id:
+        query = query.filter(TimeEntry.project_id == project_id)
+    if task_id:
+        query = query.filter(TimeEntry.task_id == task_id)
+    if billed == "yes":
+        query = query.filter(TimeEntry.paid == True)
+    elif billed == "no":
+        query = query.filter(TimeEntry.paid == False)
+
+    if client_id:
+        project_ids_for_client = db.session.query(Project.id).filter(Project.client_id == client_id)
+        query = query.filter(
+            or_(TimeEntry.client_id == client_id, TimeEntry.project_id.in_(project_ids_for_client))
+        )
+
+    entries = query.options(
+        joinedload(TimeEntry.project).joinedload(Project.client_obj),
+        joinedload(TimeEntry.user),
+        joinedload(TimeEntry.task),
+        joinedload(TimeEntry.client),
+    ).order_by(TimeEntry.start_time.desc()).all()
+
+    return entries, start_dt, end_dt, start_date, end_date
+
+
+@reports_bp.route("/reports/time-entries")
+@login_required
+@module_enabled("reports")
+def time_entries_report():
+    """Time Entries report: list all time entries (billed and unbilled) with Date, Start, Stop, Duration, Project, Task, Notes, Billed, Client."""
+    from app.utils.client_lock import enforce_locked_client_id
+
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
+    user_id_arg = request.args.get("user_id", type=int)
+    if not can_view_all and user_id_arg and user_id_arg != current_user.id:
+        flash(_("You do not have permission to view other users' time entries"), "error")
+        return redirect(url_for("reports.time_entries_report"))
+
+    projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    users = User.query.filter_by(is_active=True).order_by(User.username).all()
+    clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+    tasks = Task.query.order_by(Task.name).all()
+
+    entries, start_dt, end_dt, start_date, end_date = _time_entries_report_query(request, require_dates=True)
+    if entries is None:
+        flash(_("Invalid date format"), "error")
+        return render_template(
+            "reports/time_entries_report.html",
+            projects=projects,
+            users=users,
+            clients=clients,
+            tasks=tasks,
+            entries=[],
+            summary={"entries_count": 0, "total_hours": 0},
+            start_date=start_date,
+            end_date=end_date,
+            selected_user=request.args.get("user_id", type=int),
+            selected_project=request.args.get("project_id", type=int),
+            selected_client=enforce_locked_client_id(request.args.get("client_id", type=int)),
+            selected_task=request.args.get("task_id", type=int),
+            selected_billed=request.args.get("billed", "all"),
+        )
+
+    total_hours = sum(e.duration_hours or 0 for e in entries)
+    summary = {"entries_count": len(entries), "total_hours": round(total_hours, 2)}
+
+    return render_template(
+        "reports/time_entries_report.html",
+        projects=projects,
+        users=users,
+        clients=clients,
+        tasks=tasks,
+        entries=entries,
+        summary=summary,
+        start_date=start_date,
+        end_date=end_date,
+        selected_user=request.args.get("user_id", type=int),
+        selected_project=request.args.get("project_id", type=int),
+        selected_client=enforce_locked_client_id(request.args.get("client_id", type=int)),
+        selected_task=request.args.get("task_id", type=int),
+        selected_billed=request.args.get("billed", "all"),
+    )
+
+
+@reports_bp.route("/reports/time-entries/export/excel")
+@login_required
+@module_enabled("reports")
+def time_entries_export_excel():
+    """Export Time Entries report as Excel (same filters as report, includes Billed and Client)."""
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
+    user_id_arg = request.args.get("user_id", type=int)
+    if not can_view_all and user_id_arg and user_id_arg != current_user.id:
+        flash(_("You do not have permission to export other users' time entries"), "error")
+        return redirect(url_for("reports.time_entries_report"))
+
+    entries, start_dt, end_dt, start_date, end_date = _time_entries_report_query(request, require_dates=True)
+    if entries is None:
+        flash(_("Invalid date format"), "error")
+        return redirect(url_for("reports.time_entries_report"))
+
+    columns = ["date", "start_time", "end_time", "duration_hours", "project", "task", "notes", "billed", "client"]
+    if can_view_all:
+        columns.insert(2, "user")  # insert user after end_time for multi-user export
+    output, filename = create_time_entries_excel(
+        entries, filename_prefix="time_entries_report", columns=columns
+    )
+    log_event(
+        "export.excel",
+        user_id=current_user.id,
+        export_type="time_entries_report",
+        num_rows=len(entries),
+        date_range_days=(end_dt - start_dt).days,
+    )
+    track_event(
+        current_user.id,
+        "export.excel",
+        {"export_type": "time_entries_report", "num_rows": len(entries)},
+    )
+    return send_file(
+        output,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+@reports_bp.route("/reports/time-entries/export/csv")
+@login_required
+@module_enabled("reports")
+def time_entries_export_csv():
+    """Export Time Entries report as CSV (same filters as report, includes Billed and Client)."""
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
+    user_id_arg = request.args.get("user_id", type=int)
+    if not can_view_all and user_id_arg and user_id_arg != current_user.id:
+        flash(_("You do not have permission to export other users' time entries"), "error")
+        return redirect(url_for("reports.time_entries_report"))
+
+    entries, start_dt, end_dt, start_date, end_date = _time_entries_report_query(request, require_dates=True)
+    if entries is None:
+        flash(_("Invalid date format"), "error")
+        return redirect(url_for("reports.time_entries_report"))
+
+    settings = Settings.get_settings()
+    delimiter = settings.export_delimiter
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=delimiter)
+    headers = [_("Date"), _("Start"), _("End"), _("Duration (hours)"), _("Project"), _("Task"), _("Notes"), _("Billed"), _("Client")]
+    if can_view_all:
+        headers.insert(2, _("User"))  # after End
+    writer.writerow(headers)
+    for entry in entries:
+        client_name = (
+            (entry.client.name if entry.client else "")
+            or (entry.project.client if entry.project else "")
+            or ""
+        )
+        row = [
+            entry.start_time.date().isoformat() if entry.start_time else "",
+            entry.start_time.isoformat() if entry.start_time else "",
+            entry.end_time.isoformat() if entry.end_time else "",
+            entry.duration_hours if entry.end_time else "",
+            entry.project.name if entry.project else "",
+            entry.task.name if entry.task else "",
+            entry.notes or "",
+            _("Yes") if entry.paid else _("No"),
+            client_name,
+        ]
+        if can_view_all:
+            row.insert(2, entry.user.display_name if entry.user else "Unknown")
+        writer.writerow(row)
+    output.seek(0)
+    filename = f"time_entries_report_{start_date}_to_{end_date}.csv"
+    return send_file(
+        io.BytesIO(output.getvalue().encode("utf-8")),
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
 @reports_bp.route("/reports/export/excel")
 @login_required
 @module_enabled("reports")
@@ -984,10 +1215,14 @@ def export_user_excel():
             overtime_data = calculate_period_overtime(data["user_obj"], start_dt.date(), end_dt.date())
             data["regular_hours"] = overtime_data["regular_hours"]
             data["overtime_hours"] = overtime_data["overtime_hours"]
+            data["undertime_hours"] = overtime_data.get("undertime_hours", 0)
+            data["days_under"] = overtime_data.get("days_under", 0)
             data["days_with_overtime"] = overtime_data["days_with_overtime"]
         else:
             data["regular_hours"] = data["hours"]
             data["overtime_hours"] = 0
+            data["undertime_hours"] = 0
+            data["days_under"] = 0
             data["days_with_overtime"] = 0
 
     # Create Excel file
@@ -1007,14 +1242,14 @@ def export_user_excel():
     )
 
     # Title
-    ws.merge_cells("A1:F1")
+    ws.merge_cells("A1:H1")
     title_cell = ws["A1"]
     title_cell.value = f"User Report: {start_date} to {end_date}"
     title_cell.font = Font(bold=True, size=14)
     title_cell.alignment = Alignment(horizontal="center")
 
     # Headers
-    headers = ["User", "Total Hours", "Regular Hours", "Overtime Hours", "Billable Hours", "Days with Overtime"]
+    headers = ["User", "Total Hours", "Regular Hours", "Overtime Hours", "Undertime Hours", "Billable Hours", "Days with Overtime", "Days Under"]
     for col_num, header in enumerate(headers, 1):
         cell = ws.cell(row=3, column=col_num)
         cell.value = header
@@ -1030,8 +1265,10 @@ def export_user_excel():
         ws.cell(row=row_num, column=2).value = round(data["hours"], 2)
         ws.cell(row=row_num, column=3).value = round(data.get("regular_hours", data["hours"]), 2)
         ws.cell(row=row_num, column=4).value = round(data.get("overtime_hours", 0), 2)
-        ws.cell(row=row_num, column=5).value = round(data["billable_hours"], 2)
-        ws.cell(row=row_num, column=6).value = data.get("days_with_overtime", 0)
+        ws.cell(row=row_num, column=5).value = round(data.get("undertime_hours", 0), 2)
+        ws.cell(row=row_num, column=6).value = round(data["billable_hours"], 2)
+        ws.cell(row=row_num, column=7).value = data.get("days_with_overtime", 0)
+        ws.cell(row=row_num, column=8).value = data.get("days_under", 0)
 
         for col_num in range(1, len(headers) + 1):
             cell = ws.cell(row=row_num, column=col_num)

@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">{{ _('Time Entries Report') }}</h1>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+        <div>
+            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <i class="fas fa-calendar mr-1"></i>{{ _('Start Date') }}
+            </label>
+            <input type="date" name="start_date" id="start_date" value="{{ start_date }}" class="form-input">
+        </div>
+        <div>
+            <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <i class="fas fa-calendar mr-1"></i>{{ _('End Date') }}
+            </label>
+            <input type="date" name="end_date" id="end_date" value="{{ end_date }}" class="form-input">
+        </div>
+        <div>
+            <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <i class="fas fa-user mr-1"></i>{{ _('User') }}
+            </label>
+            <select name="user_id" id="user_id" class="form-input">
+                <option value="">{{ _('All Users') }}</option>
+                {% for user in users %}
+                <option value="{{ user.id }}" {% if selected_user == user.id %}selected{% endif %}>{{ user.display_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <i class="fas fa-project-diagram mr-1"></i>{{ _('Project') }}
+            </label>
+            <select name="project_id" id="project_id" class="form-input">
+                <option value="">{{ _('All Projects') }}</option>
+                {% for project in projects %}
+                <option value="{{ project.id }}" {% if selected_project == project.id %}selected{% endif %}>{{ project.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <i class="fas fa-building mr-1"></i>{{ _('Client') }}
+            </label>
+            <select name="client_id" id="client_id" class="form-input">
+                <option value="">{{ _('All Clients') }}</option>
+                {% for client in clients %}
+                <option value="{{ client.id }}" {% if selected_client == client.id %}selected{% endif %}>{{ client.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="task_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <i class="fas fa-tasks mr-1"></i>{{ _('Task') }}
+            </label>
+            <select name="task_id" id="task_id" class="form-input">
+                <option value="">{{ _('All Tasks') }}</option>
+                {% for task in tasks %}
+                <option value="{{ task.id }}" {% if selected_task == task.id %}selected{% endif %}>{{ task.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="billed" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <i class="fas fa-money-bill mr-1"></i>{{ _('Billed') }}
+            </label>
+            <select name="billed" id="billed" class="form-input">
+                <option value="all" {% if selected_billed == 'all' %}selected{% endif %}>{{ _('All') }}</option>
+                <option value="yes" {% if selected_billed == 'yes' %}selected{% endif %}>{{ _('Yes') }}</option>
+                <option value="no" {% if selected_billed == 'no' %}selected{% endif %}>{{ _('No') }}</option>
+            </select>
+        </div>
+        <div class="self-end">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition">
+                <i class="fas fa-filter mr-2"></i>{{ _('Filter') }}
+            </button>
+        </div>
+    </form>
+
+    <div class="mt-4 flex flex-wrap gap-2 items-center">
+        <span class="text-sm text-text-muted-light dark:text-text-muted-dark">
+            {{ summary.entries_count }} {{ _('entries') }}, {{ "%.2f"|format(summary.total_hours) }} {{ _('hours') }}
+        </span>
+        <a href="{{ url_for('reports.time_entries_export_excel', start_date=start_date, end_date=end_date, user_id=selected_user or '', project_id=selected_project or '', client_id=selected_client or '', task_id=selected_task or '', billed=selected_billed) }}"
+           class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 inline-flex items-center text-sm">
+            <i class="fas fa-file-excel mr-2"></i>{{ _('Export to Excel') }}
+        </a>
+        <a href="{{ url_for('reports.time_entries_export_csv', start_date=start_date, end_date=end_date, user_id=selected_user or '', project_id=selected_project or '', client_id=selected_client or '', task_id=selected_task or '', billed=selected_billed) }}"
+           class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 inline-flex items-center text-sm">
+            <i class="fas fa-file-csv mr-2"></i>{{ _('Export to CSV') }}
+        </a>
+    </div>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+    <table class="w-full text-left">
+        <thead>
+            <tr>
+                <th class="p-2">{{ _('Date') }}</th>
+                <th class="p-2">{{ _('Start') }}</th>
+                <th class="p-2">{{ _('Stop') }}</th>
+                <th class="p-2">{{ _('Duration') }}</th>
+                <th class="p-2">{{ _('Project') }}</th>
+                <th class="p-2">{{ _('Task') }}</th>
+                <th class="p-2">{{ _('Notes') }}</th>
+                <th class="p-2">{{ _('Billed') }}</th>
+                <th class="p-2">{{ _('Client') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            <tr class="border-b border-border-light dark:border-border-dark">
+                <td class="p-2">{{ entry.start_time|user_date if entry.start_time else '-' }}</td>
+                <td class="p-2">{{ entry.start_time|user_datetime if entry.start_time else '-' }}</td>
+                <td class="p-2">{{ entry.end_time|user_datetime if entry.end_time else '-' }}</td>
+                <td class="p-2">{{ entry.duration_formatted if entry.end_time else '-' }}</td>
+                <td class="p-2">{{ entry.project.name if entry.project else '-' }}</td>
+                <td class="p-2">{{ entry.task.name if entry.task else '-' }}</td>
+                <td class="p-2 max-w-xs truncate" title="{{ entry.notes or '' }}">{{ entry.notes or '-' }}</td>
+                <td class="p-2">{{ _('Yes') if entry.paid else _('No') }}</td>
+                <td class="p-2">
+                    {% if entry.client %}
+                        {{ entry.client.name }}
+                    {% elif entry.project and entry.project.client_obj %}
+                        {{ entry.project.client_obj.name }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9" class="p-4 text-center text-text-muted-light dark:text-text-muted-dark">{{ _('No time entries found for the selected filters.') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

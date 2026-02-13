@@ -286,9 +286,13 @@ def list_tasks_for_project():
 @login_required
 def api_start_timer():
     """Start timer via API"""
-    data = request.get_json()
+    from app.models import Settings
+    from app.utils.time_entry_validation import validate_time_entry_requirements
+
+    data = request.get_json() or {}
     project_id = data.get("project_id")
     task_id = data.get("task_id")
+    notes = (data.get("notes") or "").strip() or None
 
     if not project_id:
         return jsonify({"error": "Project ID is required"}), 400
@@ -305,6 +309,14 @@ def api_start_timer():
         if not task:
             return jsonify({"error": "Invalid task for selected project"}), 400
 
+    # Validate time entry requirements (task, description)
+    settings = Settings.get_settings()
+    err = validate_time_entry_requirements(
+        settings, project_id=project_id, client_id=None, task_id=task_id, notes=notes
+    )
+    if err:
+        return jsonify({"error": err["message"]}), 400
+
     # Check if user already has an active timer
     active_timer = current_user.active_timer
     if active_timer:
@@ -318,6 +330,7 @@ def api_start_timer():
         project_id=project_id,
         task_id=task.id if task else None,
         start_time=local_now(),
+        notes=notes,
         source="auto",
     )
 
@@ -1428,22 +1441,32 @@ def get_users():
 @login_required
 def get_stats():
     """Get user statistics"""
+    from app.utils.overtime import calculate_period_overtime
+
     # Get date range
     end_date = datetime.utcnow()
     start_date = end_date - timedelta(days=30)
+    today = end_date.date()
+    week_start = today - timedelta(days=today.weekday())
+    user_id = current_user.id if not current_user.is_admin else None
 
     # Calculate statistics
     today_hours = TimeEntry.get_total_hours_for_period(
-        start_date=end_date.date(), user_id=current_user.id if not current_user.is_admin else None
+        start_date=today, user_id=user_id
     )
 
     week_hours = TimeEntry.get_total_hours_for_period(
-        start_date=end_date.date() - timedelta(days=7), user_id=current_user.id if not current_user.is_admin else None
+        start_date=week_start, user_id=user_id
     )
 
     month_hours = TimeEntry.get_total_hours_for_period(
-        start_date=start_date.date(), user_id=current_user.id if not current_user.is_admin else None
+        start_date=start_date.date(), user_id=user_id
     )
+
+    # Overtime for today and week
+    today_overtime = calculate_period_overtime(current_user, today, today)
+    week_overtime = calculate_period_overtime(current_user, week_start, today)
+    standard_hours = float(getattr(current_user, "standard_hours_per_day", 8.0) or 8.0)
 
     return jsonify(
         {
@@ -1451,6 +1474,11 @@ def get_stats():
             "week_hours": week_hours,
             "month_hours": month_hours,
             "total_hours": current_user.total_hours,
+            "standard_hours_per_day": standard_hours,
+            "today_regular_hours": today_overtime["regular_hours"],
+            "today_overtime_hours": today_overtime["overtime_hours"],
+            "week_regular_hours": week_overtime["regular_hours"],
+            "week_overtime_hours": week_overtime["overtime_hours"],
         }
     )
 
@@ -1752,6 +1780,7 @@ def dashboard_stats():
     """Get dashboard statistics for real-time updates"""
     from app.models import TimeEntry
     from datetime import datetime, timedelta
+    from app.utils.overtime import calculate_period_overtime
 
     today = datetime.utcnow().date()
     week_start = today - timedelta(days=today.weekday())
@@ -1763,12 +1792,22 @@ def dashboard_stats():
 
     month_hours = TimeEntry.get_total_hours_for_period(start_date=month_start, user_id=current_user.id)
 
+    # Overtime for today and week (for dashboard cards)
+    today_overtime = calculate_period_overtime(current_user, today, today)
+    week_overtime = calculate_period_overtime(current_user, week_start, today)
+    standard_hours = float(getattr(current_user, "standard_hours_per_day", 8.0) or 8.0)
+
     return jsonify(
         {
             "success": True,
             "today_hours": float(today_hours),
             "week_hours": float(week_hours),
             "month_hours": float(month_hours),
+            "standard_hours_per_day": standard_hours,
+            "today_regular_hours": today_overtime["regular_hours"],
+            "today_overtime_hours": today_overtime["overtime_hours"],
+            "week_regular_hours": week_overtime["regular_hours"],
+            "week_overtime_hours": week_overtime["overtime_hours"],
         }
     )
 

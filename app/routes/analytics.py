@@ -410,6 +410,8 @@ def overtime_analytics():
     total_overtime = 0
     total_regular = 0
 
+    total_undertime = 0
+    total_days_under = 0
     for user in users:
         overtime_info = calculate_period_overtime(user, start_date, end_date)
         if overtime_info["total_hours"] > 0:  # Only include users with tracked time
@@ -418,12 +420,16 @@ def overtime_analytics():
                     "username": user.display_name,
                     "regular_hours": overtime_info["regular_hours"],
                     "overtime_hours": overtime_info["overtime_hours"],
+                    "undertime_hours": overtime_info.get("undertime_hours", 0),
+                    "days_under": overtime_info.get("days_under", 0),
                     "total_hours": overtime_info["total_hours"],
                     "days_with_overtime": overtime_info["days_with_overtime"],
                 }
             )
             total_overtime += overtime_info["overtime_hours"]
             total_regular += overtime_info["regular_hours"]
+            total_undertime += overtime_info.get("undertime_hours", 0)
+            total_days_under += overtime_info.get("days_under", 0)
 
     # Get daily breakdown for chart
     if not current_user.is_admin:
@@ -438,6 +444,8 @@ def overtime_analytics():
             "summary": {
                 "total_regular_hours": round(total_regular, 2),
                 "total_overtime_hours": round(total_overtime, 2),
+                "total_undertime_hours": round(total_undertime, 2),
+                "days_under": total_days_under,
                 "total_hours": round(total_regular + total_overtime, 2),
                 "overtime_percentage": round(
                     (
@@ -453,6 +461,8 @@ def overtime_analytics():
                     "date": day["date_str"],
                     "regular_hours": day["regular_hours"],
                     "overtime_hours": day["overtime_hours"],
+                    "undertime_hours": day.get("undertime_hours", 0),
+                    "is_undertime": day.get("is_undertime", False),
                     "total_hours": day["total_hours"],
                 }
                 for day in daily_data

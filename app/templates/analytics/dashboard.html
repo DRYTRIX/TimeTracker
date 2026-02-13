@@ -70,6 +70,16 @@
                 </div>
             </div>
         </div>
+        <div class="col-md-3 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-business-time fa-2x text-info mb-2"></i>
+                    <h4 class="text-info" id="overtimeSummary">-</h4>
+                    <p class="text-muted mb-0">{{ _('Regular') }} / {{ _('Overtime') }}</p>
+                    <p class="text-muted small mb-0" id="overtimeDaysLabel"></p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Charts Row 1 -->
@@ -130,6 +140,24 @@
                 <div class="card-body">
                     <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
                         <canvas id="weeklyTrendsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overtime Chart -->
+    <div class="row mb-4">
+        <div class="col-12 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-business-time"></i> {{ _('Daily Regular vs Overtime') }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
+                        <canvas id="overtimeChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -298,6 +326,7 @@ class AnalyticsDashboard {
                 this.loadWeeklyTrendsChart(),
                 this.loadHourlyChart(),
                 this.loadEfficiencyChart(),
+                this.loadOvertimeChart(),
                 {% if current_user.is_admin %}
                 this.loadUserChart(),
                 {% endif %}
@@ -321,6 +350,7 @@ class AnalyticsDashboard {
                 this.loadWeeklyTrendsChart(true),
                 this.loadHourlyChart(true),
                 this.loadEfficiencyChart(true),
+                this.loadOvertimeChart(true),
                 {% if current_user.is_admin %}
                 this.loadUserChart(true),
                 {% endif %}
@@ -548,6 +578,50 @@ class AnalyticsDashboard {
                             drawOnChartArea: false,
                         },
                     }
+                }
+            }
+        });
+    }
+
+    async loadOvertimeChart(refresh = false) {
+        const response = await fetch(`/api/analytics/overtime?days=${this.timeRange}`);
+        const data = await response.json();
+        if (!response.ok) return;
+
+        const summary = data.summary || {};
+        const summaryEl = document.getElementById('overtimeSummary');
+        const daysLabelEl = document.getElementById('overtimeDaysLabel');
+        if (summaryEl) {
+            summaryEl.textContent = (summary.total_regular_hours || 0).toFixed(1) + 'h / ' + (summary.total_overtime_hours || 0).toFixed(1) + 'h';
+        }
+        if (daysLabelEl && data.users && data.users.length > 0) {
+            const daysWithOt = data.users.reduce((s, u) => s + (u.days_with_overtime || 0), 0);
+            daysLabelEl.textContent = daysWithOt > 0 ? (daysWithOt + ' ' + (i18n_analytics.days_overtime || 'days with overtime')) : '';
+        }
+
+        const daily = data.daily_breakdown || [];
+        if (refresh && this.charts.overtime) {
+            this.charts.overtime.destroy();
+        }
+        const ctx = document.getElementById('overtimeChart');
+        if (!ctx) return;
+        const chartData = {
+            labels: daily.map(d => d.date),
+            datasets: [
+                { label: (i18n_analytics.regular_hours || 'Regular'), data: daily.map(d => d.regular_hours), backgroundColor: 'rgba(59, 130, 246, 0.8)', borderColor: '#3b82f6', borderWidth: 1 },
+                { label: (i18n_analytics.overtime_hours || 'Overtime'), data: daily.map(d => d.overtime_hours), backgroundColor: 'rgba(245, 158, 11, 0.8)', borderColor: '#f59e0b', borderWidth: 1 }
+            ]
+        };
+        this.charts.overtime = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: {
+                    x: { stacked: true, ticks: { maxRotation: 45, minRotation: 45 } },
+                    y: { stacked: true, beginAtZero: true, title: { display: true, text: (i18n_analytics.hours_label || 'Hours') } }
                 }
             }
         });

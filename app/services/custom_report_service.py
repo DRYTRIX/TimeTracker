@@ -104,9 +104,9 @@ class CustomReportService:
         query = Expense.query
 
         if filters.get("start_date"):
-            query = query.filter(Expense.date >= filters["start_date"])
+            query = query.filter(Expense.expense_date >= filters["start_date"])
         if filters.get("end_date"):
-            query = query.filter(Expense.date <= filters["end_date"])
+            query = query.filter(Expense.expense_date <= filters["end_date"])
 
         expenses = query.all()
 

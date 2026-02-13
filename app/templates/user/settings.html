@@ -235,6 +235,19 @@
                     </div>
                 </div>
             </div>
+            <div class="mt-4">
+                <div class="flex items-center">
+                    <input type="checkbox" id="overtime_include_weekends" name="overtime_include_weekends"
+                           {% if getattr(user, 'overtime_include_weekends', true) %}checked{% endif %}
+                           class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600">
+                    <label for="overtime_include_weekends" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                        {{ _('Count weekend hours in overtime') }}
+                    </label>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
+                    {{ _('When unchecked, any hours worked on Saturday or Sunday are always counted as overtime.') }}
+                </p>
+            </div>
         </div>
 
         <!-- Regional Settings -->

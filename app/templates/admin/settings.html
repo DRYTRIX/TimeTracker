@@ -95,6 +95,34 @@
                 </div>
             </div>
 
+            <!-- Time Entry Requirements -->
+            <div class="border-b border-border-light dark:border-border-dark pb-6">
+                <h2 class="text-lg font-semibold mb-4">{{ _('Time Entry Requirements') }}</h2>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+                    {{ _('Optionally require users to provide task and description when logging worked time. Enforced across web, mobile, and desktop.') }}
+                </p>
+                <div class="space-y-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" name="time_entry_require_task" id="time_entry_require_task" {% if getattr(settings, 'time_entry_require_task', false) %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <label for="time_entry_require_task" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">{{ _('Require task selection when logging time (project-based entries only)') }}</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="time_entry_require_description" id="time_entry_require_description" {% if getattr(settings, 'time_entry_require_description', false) %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <label for="time_entry_require_description" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">{{ _('Require description when logging time') }}</label>
+                    </div>
+                    <div id="time_entry_min_length_row" class="ml-6 {% if not getattr(settings, 'time_entry_require_description', false) %}hidden{% endif %}">
+                        <label for="time_entry_description_min_length" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Minimum description length (characters)') }}</label>
+                        <input type="number" name="time_entry_description_min_length" id="time_entry_description_min_length" value="{{ getattr(settings, 'time_entry_description_min_length', 20) }}" min="1" max="500" class="form-input w-32 mt-1">
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Minimum number of characters required in the description field.') }}</p>
+                    </div>
+                    <div class="pt-4 border-t border-border-light dark:border-border-dark mt-4">
+                        <label for="default_daily_working_hours" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Default daily working hours (for new users)') }}</label>
+                        <input type="number" name="default_daily_working_hours" id="default_daily_working_hours" value="{{ getattr(settings, 'default_daily_working_hours', 8.0) }}" min="0.5" max="24" step="0.5" class="form-input w-32 mt-1">
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Used as the standard hours per day for overtime calculation when new users are created. Existing users keep their own setting.') }}</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- User Management -->
             <div class="border-b border-border-light dark:border-border-dark pb-6">
                 <h2 class="text-lg font-semibold mb-4">{{ _('User Management') }}</h2>
@@ -543,7 +571,7 @@ async function verifyAdminDonateHideCode() {
     btn.disabled = false;
 }
 
-// Initialize: keep collapsed by default
+// Initialize: keep collapsed by default; toggle time entry min length visibility
 document.addEventListener('DOMContentLoaded', function() {
     const content = document.getElementById('integrationCredentialsContent');
     const toggleIcon = document.getElementById('integrationCredentialsToggleIcon');
@@ -553,7 +581,14 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleIcon.classList.remove('fa-chevron-up');
         toggleIcon.classList.add('fa-chevron-down');
     }
-    
+
+    const descCheck = document.getElementById('time_entry_require_description');
+    const minLenRow = document.getElementById('time_entry_min_length_row');
+    if (descCheck && minLenRow) {
+        descCheck.addEventListener('change', function() {
+            minLenRow.classList.toggle('hidden', !descCheck.checked);
+        });
+    }
 });
 </script>
 {% endblock %}

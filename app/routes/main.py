@@ -68,6 +68,14 @@ def dashboard():
     week_hours = stats["time_tracking"]["week_hours"]
     month_hours = stats["time_tracking"]["month_hours"]
 
+    # Overtime for dashboard cards (today and week)
+    from app.utils.overtime import calculate_period_overtime
+    today_dt = datetime.utcnow().date()
+    week_start_dt = today_dt - timedelta(days=today_dt.weekday())
+    today_overtime = calculate_period_overtime(current_user, today_dt, today_dt)
+    week_overtime = calculate_period_overtime(current_user, week_start_dt, today_dt)
+    standard_hours_per_day = float(getattr(current_user, "standard_hours_per_day", 8.0) or 8.0)
+
     # Build Top Projects (last 30 days) - using optimized query with eager loading
     from sqlalchemy.orm import joinedload
 
@@ -139,6 +147,11 @@ def dashboard():
         "today_hours": today_hours,
         "week_hours": week_hours,
         "month_hours": month_hours,
+        "standard_hours_per_day": standard_hours_per_day,
+        "today_regular_hours": today_overtime["regular_hours"],
+        "today_overtime_hours": today_overtime["overtime_hours"],
+        "week_regular_hours": week_overtime["regular_hours"],
+        "week_overtime_hours": week_overtime["overtime_hours"],
         "top_projects": top_projects,
         "current_week_goal": current_week_goal,
         "templates": templates,

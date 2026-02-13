@@ -6,7 +6,7 @@
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
             <i class="fas fa-file-export mr-2"></i>
-            Export Time Entries to CSV
+            {{ _('Export Time Entries') }}
         </h1>
         <a href="{{ url_for('reports.reports') }}" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition inline-block">
             <i class="fas fa-arrow-left mr-2"></i>Back to Reports
@@ -21,7 +21,7 @@
             </div>
             <div class="ml-3">
                 <p class="text-sm text-blue-700 dark:text-blue-200">
-                    Use the filters below to customize your CSV export. All filters are optional - leave blank to include all entries within the date range.
+                    {{ _('Use the filters below to customize your export. Choose CSV or Excel format. All filters are optional - leave blank to include all entries within the date range.') }}
                 </p>
             </div>
         </div>
@@ -30,6 +30,16 @@
     <!-- Export Form -->
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-lg">
         <form id="exportForm" method="GET" action="{{ url_for('reports.export_csv') }}" class="space-y-6">
+            <!-- Format selector: same form supports CSV and Excel -->
+            <div>
+                <label for="export_format" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <i class="fas fa-file-alt mr-1"></i> {{ _('Export format') }}
+                </label>
+                <select id="export_format" class="form-input w-full max-w-xs" aria-label="{{ _('Export format') }}">
+                    <option value="csv" {% if export_format == 'csv' %}selected{% endif %}>CSV</option>
+                    <option value="excel" {% if export_format == 'excel' %}selected{% endif %}>Excel (.xlsx)</option>
+                </select>
+            </div>
             
             <!-- Date Range Section -->
             <div>
@@ -178,11 +188,12 @@
                 <button type="button" 
                         id="resetBtn"
                         class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition">
-                    <i class="fas fa-undo mr-2"></i>Reset Filters
+                    <i class="fas fa-undo mr-2"></i>{{ _('Reset Filters') }}
                 </button>
                 <button type="submit" 
+                        id="exportSubmitBtn"
                         class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition">
-                    <i class="fas fa-download mr-2"></i>Export to CSV
+                    <i class="fas fa-download mr-2"></i><span id="exportSubmitLabel">{{ _('Export to CSV') if export_format == 'csv' else _('Export to Excel') }}</span>
                 </button>
             </div>
         </form>
@@ -195,7 +206,7 @@
             Export Preview
         </h3>
         <div class="text-sm text-gray-600 dark:text-gray-400">
-            <p class="mb-2"><strong>CSV Format:</strong></p>
+            <p class="mb-2"><strong>{{ _('CSV / Excel') }}</strong></p>
             <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded font-mono text-xs overflow-x-auto">
                 <div class="text-gray-700 dark:text-gray-300">
                     ID, User, Project, Client, Task, Start Time, End Time, Duration (hours), Duration (formatted), Notes, Tags, Source, Billable, Created At, Updated At
@@ -203,7 +214,7 @@
             </div>
             <p class="mt-4 text-xs">
                 <i class="fas fa-info-circle mr-1"></i>
-                The CSV file will be downloaded with a filename indicating the date range and applied filters.
+                {{ _('The file will be downloaded with a filename indicating the date range and applied filters.') }}
             </p>
         </div>
     </div>
@@ -304,25 +315,43 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Form validation
+    // Set form action to CSV or Excel route based on format (both use same form params)
+    function setExportAction() {
+        const format = document.getElementById('export_format').value;
+        const csvUrl = '{{ url_for("reports.export_csv") }}';
+        const excelUrl = '{{ url_for("reports.export_excel") }}';
+        exportForm.action = format === 'excel' ? excelUrl : csvUrl;
+    }
+
+    document.getElementById('export_format').addEventListener('change', function() {
+        setExportAction();
+        const label = document.getElementById('exportSubmitLabel');
+        label.textContent = this.value === 'excel' ? '{{ _("Export to Excel") }}' : '{{ _("Export to CSV") }}';
+    });
+
+    // Form validation and set action on submit
     exportForm.addEventListener('submit', function(e) {
+        setExportAction();
+
         const startDate = document.getElementById('start_date').value;
         const endDate = document.getElementById('end_date').value;
-        
+
         if (!startDate || !endDate) {
             e.preventDefault();
-            alert('Please select both start and end dates.');
+            alert('{{ _("Please select both start and end dates.") }}');
             return false;
         }
-        
+
         if (new Date(startDate) > new Date(endDate)) {
             e.preventDefault();
-            alert('Start date must be before or equal to end date.');
+            alert('{{ _("Start date must be before or equal to end date.") }}');
             return false;
         }
-        
+
         return true;
     });
+
+    setExportAction();
 });
 </script>
 
