@@ -4805,7 +4805,16 @@ def get_current_user():
       200:
         description: Current user information
     """
-    return jsonify({"user": g.api_user.to_dict()})
+    from app.models import Settings
+
+    response = {"user": g.api_user.to_dict()}
+    settings = Settings.get_settings()
+    response["time_entry_requirements"] = {
+        "require_task": getattr(settings, "time_entry_require_task", False),
+        "require_description": getattr(settings, "time_entry_require_description", False),
+        "description_min_length": getattr(settings, "time_entry_description_min_length", 20),
+    }
+    return jsonify(response)
 
 
 @api_v1_bp.route("/users", methods=["GET"])

@@ -135,6 +135,21 @@ def start_timer():
         current_app.logger.info("Start timer blocked: user already has an active timer")
         return redirect(url_for("main.dashboard"))
 
+    # Validate time entry requirements (task, description)
+    from app.utils.time_entry_validation import validate_time_entry_requirements
+
+    settings = Settings.get_settings()
+    err = validate_time_entry_requirements(
+        settings,
+        project_id=project_id,
+        client_id=client_id if client_id and not project_id else None,
+        task_id=task.id if task else task_id,
+        notes=notes if notes else None,
+    )
+    if err:
+        flash(_(err["message"]), "error")
+        return redirect(url_for("main.dashboard"))
+
     # Create new timer
     from app.models.time_entry import local_now
 
@@ -787,7 +802,28 @@ def view_timer(timer_id):
         else:
             raise
 
-    return render_template("timer/view_timer.html", timer=timer, link_templates_by_field=link_templates_by_field)
+    # Time entry approvals: can current user request approval for this entry?
+    from app.utils.module_helpers import is_module_enabled
+    time_approvals_enabled = is_module_enabled("time_approvals")
+    can_request_approval = False
+    if time_approvals_enabled and timer.user_id == current_user.id and timer.end_time:
+        try:
+            from app.models.time_entry_approval import TimeEntryApproval, ApprovalStatus
+            pending = TimeEntryApproval.query.filter_by(
+                time_entry_id=timer.id,
+                status=ApprovalStatus.PENDING,
+            ).first()
+            can_request_approval = pending is None
+        except Exception:
+            can_request_approval = False
+
+    return render_template(
+        "timer/view_timer.html",
+        timer=timer,
+        link_templates_by_field=link_templates_by_field,
+        time_approvals_enabled=time_approvals_enabled,
+        can_request_approval=can_request_approval,
+    )
 
 
 @timer_bp.route("/timer/delete/<int:timer_id>", methods=["POST"])
@@ -2244,6 +2280,22 @@ def time_entries_overview():
         else:
             raise
     
+    # Time entry approvals: which entries on this page have a pending approval?
+    from app.utils.module_helpers import is_module_enabled
+    time_approvals_enabled = is_module_enabled("time_approvals")
+    entry_ids_with_pending_approval = set()
+    if time_approvals_enabled and time_entries:
+        try:
+            from app.models.time_entry_approval import TimeEntryApproval, ApprovalStatus
+            entry_ids = [e.id for e in time_entries]
+            pending = TimeEntryApproval.query.filter(
+                TimeEntryApproval.time_entry_id.in_(entry_ids),
+                TimeEntryApproval.status == ApprovalStatus.PENDING,
+            ).all()
+            entry_ids_with_pending_approval = {a.time_entry_id for a in pending}
+        except Exception:
+            entry_ids_with_pending_approval = set()
+    
     # Check if this is an AJAX request
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         # Return only the time entries list HTML for AJAX requests
@@ -2257,6 +2309,8 @@ def time_entries_overview():
             url_filters=url_filters,
             custom_field_definitions=custom_field_definitions,
             link_templates_by_field=link_templates_by_field,
+            time_approvals_enabled=time_approvals_enabled,
+            entry_ids_with_pending_approval=entry_ids_with_pending_approval,
         ))
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         return response
@@ -2275,6 +2329,8 @@ def time_entries_overview():
         url_filters=url_filters,
         custom_field_definitions=custom_field_definitions,
         link_templates_by_field=link_templates_by_field,
+        time_approvals_enabled=time_approvals_enabled,
+        entry_ids_with_pending_approval=entry_ids_with_pending_approval,
         totals={
             "total_hours": round(total_hours, 2),
             "total_billable_hours": round(total_billable_hours, 2),

@@ -78,7 +78,7 @@ class ImportService:
                         errors.append(f"Row {row_num}: Invalid time format")
                         continue
 
-                    # Create entry
+                    # Create entry (skip requirements for imported data)
                     result = self.time_tracking_service.create_manual_entry(
                         user_id=user_id,
                         project_id=project_id,
@@ -87,6 +87,7 @@ class ImportService:
                         notes=row.get("Notes", "").strip() or None,
                         tags=row.get("Tags", "").strip() or None,
                         billable=row.get("Billable", "Yes").strip().lower() == "yes",
+                        skip_entry_requirements=True,
                     )
 
                     if result["success"]:
