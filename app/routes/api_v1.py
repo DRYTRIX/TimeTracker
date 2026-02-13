@@ -44,8 +44,19 @@ from app.models import (
     Supplier,
     PurchaseOrder,
     ApiToken,
+    Deal,
+    Lead,
+    Contact,
 )
+from app.models.time_entry_approval import TimeEntryApproval, ApprovalStatus
 from app.utils.api_auth import require_api_token
+from app.utils.api_responses import (
+    success_response,
+    error_response,
+    paginated_response,
+    forbidden_response,
+    not_found_response,
+)
 from datetime import datetime, timedelta
 from sqlalchemy import func, or_
 from app.utils.timezone import get_app_timezone, parse_local_datetime, utc_to_local
@@ -192,6 +203,10 @@ def api_info():
                 "expenses": "/api/v1/expenses",
                 "payments": "/api/v1/payments",
                 "mileage": "/api/v1/mileage",
+                "deals": "/api/v1/deals",
+                "leads": "/api/v1/leads",
+                "contacts": "/api/v1/clients/<client_id>/contacts",
+                "time_entry_approvals": "/api/v1/time-entry-approvals",
                 "per_diems": "/api/v1/per-diems",
                 "per_diem_rates": "/api/v1/per-diem-rates",
                 "budget_alerts": "/api/v1/budget-alerts",
@@ -369,7 +384,7 @@ def get_project(project_id):
     result = project_service.get_project_with_details(project_id=project_id, include_time_entries=False)
 
     if not result:
-        return jsonify({"error": "Project not found"}), 404
+        return not_found_response("Project", project_id)
 
     return jsonify({"project": result.to_dict()})
 
@@ -435,7 +450,7 @@ def create_project():
     )
 
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not create project")}), 400
+        return error_response(result.get("message", "Could not create project"), status_code=400)
 
     return jsonify({"message": "Project created successfully", "project": result["project"].to_dict()}), 201
 
@@ -495,7 +510,7 @@ def update_project(project_id):
     result = project_service.update_project(project_id=project_id, user_id=g.api_user.id, **update_kwargs)
 
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not update project")}), 400
+        return error_response(result.get("message", "Could not update project"), status_code=400)
 
     return jsonify({"message": "Project updated successfully", "project": result["project"].to_dict()})
 
@@ -526,7 +541,7 @@ def delete_project(project_id):
     result = project_service.archive_project(project_id=project_id, user_id=g.api_user.id, reason="Archived via API")
 
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not archive project")}), 404
+        return error_response(result.get("message", "Could not archive project"), status_code=404)
 
     return jsonify({"message": "Project archived successfully"})
 
@@ -2451,6 +2466,509 @@ def delete_mileage(entry_id):
     entry.status = "rejected"
     db.session.commit()
     return jsonify({"message": "Mileage entry rejected successfully"})
+
+
+# ==================== Deals (CRM) ====================
+
+
+@api_v1_bp.route("/deals", methods=["GET"])
+@require_api_token("read:deals")
+def list_deals():
+    """List deals with optional filters (status, stage, owner_id)."""
+    blocked = _require_module_enabled_for_api("deals")
+    if blocked:
+        return blocked
+    status = request.args.get("status", "open")
+    stage = request.args.get("stage", "")
+    owner_id = request.args.get("owner", type=int)
+    query = Deal.query
+    if status == "open":
+        query = query.filter_by(status="open")
+    elif status == "won":
+        query = query.filter_by(status="won")
+    elif status == "lost":
+        query = query.filter_by(status="lost")
+    if stage:
+        query = query.filter_by(stage=stage)
+    if owner_id and not g.api_user.is_admin:
+        query = query.filter_by(owner_id=g.api_user.id)
+    elif owner_id:
+        query = query.filter_by(owner_id=owner_id)
+    query = query.order_by(Deal.expected_close_date, Deal.created_at.desc())
+    page = request.args.get("page", 1, type=int)
+    per_page = min(request.args.get("per_page", 50, type=int), 100)
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    pagination_dict = {
+        "page": pagination.page,
+        "per_page": pagination.per_page,
+        "total": pagination.total,
+        "pages": pagination.pages,
+        "has_next": pagination.has_next,
+        "has_prev": pagination.has_prev,
+        "next_page": pagination.page + 1 if pagination.has_next else None,
+        "prev_page": pagination.page - 1 if pagination.has_prev else None,
+    }
+    return jsonify({"deals": [d.to_dict() for d in pagination.items], "pagination": pagination_dict})
+
+
+@api_v1_bp.route("/deals/<int:deal_id>", methods=["GET"])
+@require_api_token("read:deals")
+def get_deal(deal_id):
+    """Get a deal by id."""
+    blocked = _require_module_enabled_for_api("deals")
+    if blocked:
+        return blocked
+    deal = Deal.query.filter_by(id=deal_id).first_or_404()
+    if not g.api_user.is_admin and deal.owner_id != g.api_user.id:
+        return forbidden_response("Access denied")
+    return jsonify({"deal": deal.to_dict()})
+
+
+@api_v1_bp.route("/deals", methods=["POST"])
+@require_api_token("write:deals")
+def create_deal():
+    """Create a deal."""
+    blocked = _require_module_enabled_for_api("deals")
+    if blocked:
+        return blocked
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "name is required"}), 400
+    from decimal import Decimal
+    value = None
+    if data.get("value") is not None:
+        try:
+            value = Decimal(str(data["value"]))
+        except Exception:
+            return error_response("Invalid value", status_code=400)
+    expected_close_date = _parse_date(data.get("expected_close_date"))
+    deal = Deal(
+        name=name,
+        created_by=g.api_user.id,
+        client_id=data.get("client_id"),
+        contact_id=data.get("contact_id"),
+        lead_id=data.get("lead_id"),
+        description=(data.get("description") or "").strip() or None,
+        stage=(data.get("stage") or "prospecting").strip(),
+        value=value,
+        currency_code=(data.get("currency_code") or "EUR").strip(),
+        probability=int(data.get("probability", 50)),
+        expected_close_date=expected_close_date,
+        status=(data.get("status") or "open").strip(),
+        loss_reason=(data.get("loss_reason") or "").strip() or None,
+        notes=(data.get("notes") or "").strip() or None,
+        owner_id=data.get("owner_id") or g.api_user.id,
+        related_quote_id=data.get("related_quote_id"),
+        related_project_id=data.get("related_project_id"),
+    )
+    db.session.add(deal)
+    db.session.commit()
+    return jsonify({"message": "Deal created successfully", "deal": deal.to_dict()}), 201
+
+
+@api_v1_bp.route("/deals/<int:deal_id>", methods=["PUT", "PATCH"])
+@require_api_token("write:deals")
+def update_deal(deal_id):
+    """Update a deal."""
+    blocked = _require_module_enabled_for_api("deals")
+    if blocked:
+        return blocked
+    deal = Deal.query.filter_by(id=deal_id).first_or_404()
+    if not g.api_user.is_admin and deal.owner_id != g.api_user.id:
+        return forbidden_response("Access denied")
+    data = request.get_json() or {}
+    from decimal import Decimal
+    for field in ("name", "description", "stage", "status", "loss_reason", "notes", "currency_code"):
+        if field in data and data[field] is not None:
+            setattr(deal, field, str(data[field]).strip() if isinstance(data[field], str) else data[field])
+    for field in ("client_id", "contact_id", "lead_id", "probability", "related_quote_id", "related_project_id", "owner_id"):
+        if field in data:
+            setattr(deal, field, data[field])
+    if "value" in data:
+        try:
+            deal.value = Decimal(str(data["value"])) if data["value"] is not None else None
+        except Exception:
+            pass
+    if "expected_close_date" in data:
+        deal.expected_close_date = _parse_date(data["expected_close_date"])
+    if "actual_close_date" in data:
+        deal.actual_close_date = _parse_date(data["actual_close_date"])
+    db.session.commit()
+    return jsonify({"message": "Deal updated successfully", "deal": deal.to_dict()})
+
+
+@api_v1_bp.route("/deals/<int:deal_id>", methods=["DELETE"])
+@require_api_token("write:deals")
+def delete_deal(deal_id):
+    """Delete (or cancel) a deal."""
+    blocked = _require_module_enabled_for_api("deals")
+    if blocked:
+        return blocked
+    deal = Deal.query.filter_by(id=deal_id).first_or_404()
+    if not g.api_user.is_admin and deal.owner_id != g.api_user.id:
+        return forbidden_response("Access denied")
+    db.session.delete(deal)
+    db.session.commit()
+    return jsonify({"message": "Deal deleted successfully"})
+
+
+# ==================== Leads (CRM) ====================
+
+
+@api_v1_bp.route("/leads", methods=["GET"])
+@require_api_token("read:leads")
+def list_leads():
+    """List leads with optional filters (status, source, owner)."""
+    blocked = _require_module_enabled_for_api("leads")
+    if blocked:
+        return blocked
+    status = request.args.get("status", "")
+    source = request.args.get("source", "")
+    owner_id = request.args.get("owner", type=int)
+    search = (request.args.get("search") or "").strip()
+    query = Lead.query
+    if status:
+        query = query.filter_by(status=status)
+    else:
+        query = query.filter(~Lead.status.in_(["converted", "lost"]))
+    if source:
+        query = query.filter_by(source=source)
+    if owner_id and not g.api_user.is_admin:
+        query = query.filter_by(owner_id=g.api_user.id)
+    elif owner_id:
+        query = query.filter_by(owner_id=owner_id)
+    if search:
+        like = f"%{search}%"
+        query = query.filter(or_(Lead.first_name.ilike(like), Lead.last_name.ilike(like), Lead.company_name.ilike(like), Lead.email.ilike(like)))
+    query = query.order_by(Lead.score.desc(), Lead.created_at.desc())
+    page = request.args.get("page", 1, type=int)
+    per_page = min(request.args.get("per_page", 50, type=int), 100)
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    pagination_dict = {
+        "page": pagination.page,
+        "per_page": pagination.per_page,
+        "total": pagination.total,
+        "pages": pagination.pages,
+        "has_next": pagination.has_next,
+        "has_prev": pagination.has_prev,
+        "next_page": pagination.page + 1 if pagination.has_next else None,
+        "prev_page": pagination.page - 1 if pagination.has_prev else None,
+    }
+    return jsonify({"leads": [l.to_dict() for l in pagination.items], "pagination": pagination_dict})
+
+
+@api_v1_bp.route("/leads/<int:lead_id>", methods=["GET"])
+@require_api_token("read:leads")
+def get_lead(lead_id):
+    """Get a lead by id."""
+    blocked = _require_module_enabled_for_api("leads")
+    if blocked:
+        return blocked
+    lead = Lead.query.filter_by(id=lead_id).first_or_404()
+    if not g.api_user.is_admin and lead.owner_id != g.api_user.id:
+        return forbidden_response("Access denied")
+    return jsonify({"lead": lead.to_dict()})
+
+
+@api_v1_bp.route("/leads", methods=["POST"])
+@require_api_token("write:leads")
+def create_lead():
+    """Create a lead."""
+    blocked = _require_module_enabled_for_api("leads")
+    if blocked:
+        return blocked
+    data = request.get_json() or {}
+    first_name = (data.get("first_name") or "").strip()
+    last_name = (data.get("last_name") or "").strip()
+    if not first_name or not last_name:
+        return error_response("first_name and last_name are required", status_code=400)
+    from decimal import Decimal
+    estimated_value = None
+    if data.get("estimated_value") is not None:
+        try:
+            estimated_value = Decimal(str(data["estimated_value"]))
+        except Exception:
+            pass
+    lead = Lead(
+        first_name=first_name,
+        last_name=last_name,
+        created_by=g.api_user.id,
+        company_name=(data.get("company_name") or "").strip() or None,
+        email=(data.get("email") or "").strip() or None,
+        phone=(data.get("phone") or "").strip() or None,
+        title=(data.get("title") or "").strip() or None,
+        source=(data.get("source") or "").strip() or None,
+        status=(data.get("status") or "new").strip(),
+        score=int(data.get("score", 0)),
+        estimated_value=estimated_value,
+        currency_code=(data.get("currency_code") or "EUR").strip(),
+        notes=(data.get("notes") or "").strip() or None,
+        tags=(data.get("tags") or "").strip() or None,
+        owner_id=data.get("owner_id") or g.api_user.id,
+    )
+    db.session.add(lead)
+    db.session.commit()
+    return jsonify({"message": "Lead created successfully", "lead": lead.to_dict()}), 201
+
+
+@api_v1_bp.route("/leads/<int:lead_id>", methods=["PUT", "PATCH"])
+@require_api_token("write:leads")
+def update_lead(lead_id):
+    """Update a lead."""
+    blocked = _require_module_enabled_for_api("leads")
+    if blocked:
+        return blocked
+    lead = Lead.query.filter_by(id=lead_id).first_or_404()
+    if not g.api_user.is_admin and lead.owner_id != g.api_user.id:
+        return forbidden_response("Access denied")
+    data = request.get_json() or {}
+    from decimal import Decimal
+    for field in ("first_name", "last_name", "company_name", "email", "phone", "title", "source", "status", "notes", "tags"):
+        if field in data and data[field] is not None:
+            setattr(lead, field, str(data[field]).strip() if isinstance(data[field], str) else data[field])
+    if "score" in data:
+        lead.score = int(data["score"])
+    if "estimated_value" in data:
+        try:
+            lead.estimated_value = Decimal(str(data["estimated_value"])) if data["estimated_value"] is not None else None
+        except Exception:
+            pass
+    if "owner_id" in data:
+        lead.owner_id = data["owner_id"]
+    db.session.commit()
+    return jsonify({"message": "Lead updated successfully", "lead": lead.to_dict()})
+
+
+@api_v1_bp.route("/leads/<int:lead_id>", methods=["DELETE"])
+@require_api_token("write:leads")
+def delete_lead(lead_id):
+    """Delete a lead."""
+    blocked = _require_module_enabled_for_api("leads")
+    if blocked:
+        return blocked
+    lead = Lead.query.filter_by(id=lead_id).first_or_404()
+    if not g.api_user.is_admin and lead.owner_id != g.api_user.id:
+        return forbidden_response("Access denied")
+    db.session.delete(lead)
+    db.session.commit()
+    return jsonify({"message": "Lead deleted successfully"})
+
+
+# ==================== Contacts (CRM) ====================
+
+
+@api_v1_bp.route("/clients/<int:client_id>/contacts", methods=["GET"])
+@require_api_token("read:contacts")
+def list_contacts(client_id):
+    """List contacts for a client."""
+    blocked = _require_module_enabled_for_api("contacts")
+    if blocked:
+        return blocked
+    Client.query.filter_by(id=client_id).first_or_404()
+    contacts = Contact.get_active_contacts(client_id)
+    return jsonify({"contacts": [c.to_dict() for c in contacts]})
+
+
+@api_v1_bp.route("/clients/<int:client_id>/contacts", methods=["POST"])
+@require_api_token("write:contacts")
+def create_contact(client_id):
+    """Create a contact for a client."""
+    blocked = _require_module_enabled_for_api("contacts")
+    if blocked:
+        return blocked
+    client = Client.query.filter_by(id=client_id).first_or_404()
+    data = request.get_json() or {}
+    first_name = (data.get("first_name") or "").strip()
+    last_name = (data.get("last_name") or "").strip()
+    if not first_name or not last_name:
+        return error_response("first_name and last_name are required", status_code=400)
+    contact = Contact(
+        client_id=client_id,
+        first_name=first_name,
+        last_name=last_name,
+        created_by=g.api_user.id,
+        email=(data.get("email") or "").strip() or None,
+        phone=(data.get("phone") or "").strip() or None,
+        mobile=(data.get("mobile") or "").strip() or None,
+        title=(data.get("title") or "").strip() or None,
+        department=(data.get("department") or "").strip() or None,
+        role=(data.get("role") or "contact").strip(),
+        is_primary=bool(data.get("is_primary", False)),
+        address=(data.get("address") or "").strip() or None,
+        notes=(data.get("notes") or "").strip() or None,
+        tags=(data.get("tags") or "").strip() or None,
+    )
+    db.session.add(contact)
+    if contact.is_primary:
+        Contact.query.filter(Contact.client_id == client_id, Contact.id != contact.id, Contact.is_primary == True).update({"is_primary": False})
+    db.session.commit()
+    return jsonify({"message": "Contact created successfully", "contact": contact.to_dict()}), 201
+
+
+@api_v1_bp.route("/contacts/<int:contact_id>", methods=["GET"])
+@require_api_token("read:contacts")
+def get_contact(contact_id):
+    """Get a contact by id."""
+    blocked = _require_module_enabled_for_api("contacts")
+    if blocked:
+        return blocked
+    contact = Contact.query.filter_by(id=contact_id).first_or_404()
+    return jsonify({"contact": contact.to_dict()})
+
+
+@api_v1_bp.route("/contacts/<int:contact_id>", methods=["PUT", "PATCH"])
+@require_api_token("write:contacts")
+def update_contact(contact_id):
+    """Update a contact."""
+    blocked = _require_module_enabled_for_api("contacts")
+    if blocked:
+        return blocked
+    contact = Contact.query.filter_by(id=contact_id).first_or_404()
+    data = request.get_json() or {}
+    for field in ("first_name", "last_name", "email", "phone", "mobile", "title", "department", "role", "address", "notes", "tags"):
+        if field in data and data[field] is not None:
+            setattr(contact, field, str(data[field]).strip() if isinstance(data[field], str) else data[field])
+    if "is_primary" in data:
+        contact.is_primary = bool(data["is_primary"])
+        if contact.is_primary:
+            Contact.query.filter(Contact.client_id == contact.client_id, Contact.id != contact.id, Contact.is_primary == True).update({"is_primary": False})
+    db.session.commit()
+    return jsonify({"message": "Contact updated successfully", "contact": contact.to_dict()})
+
+
+@api_v1_bp.route("/contacts/<int:contact_id>", methods=["DELETE"])
+@require_api_token("write:contacts")
+def delete_contact(contact_id):
+    """Soft-delete a contact (set is_active=False)."""
+    blocked = _require_module_enabled_for_api("contacts")
+    if blocked:
+        return blocked
+    contact = Contact.query.filter_by(id=contact_id).first_or_404()
+    contact.is_active = False
+    db.session.commit()
+    return jsonify({"message": "Contact deleted successfully"})
+
+
+# ==================== Time Entry Approvals ====================
+
+
+@api_v1_bp.route("/time-entry-approvals", methods=["GET"])
+@require_api_token("read:time_approvals")
+def list_time_entry_approvals():
+    """List pending time entry approvals for the current user (as approver)."""
+    blocked = _require_module_enabled_for_api("time_approvals")
+    if blocked:
+        return blocked
+    from app.services.time_approval_service import TimeApprovalService
+    service = TimeApprovalService()
+    approvals = service.get_pending_approvals(g.api_user.id)
+    return jsonify({"approvals": [a.to_dict() for a in approvals]})
+
+
+@api_v1_bp.route("/time-entry-approvals/<int:approval_id>", methods=["GET"])
+@require_api_token("read:time_approvals")
+def get_time_entry_approval(approval_id):
+    """Get a time entry approval by id."""
+    blocked = _require_module_enabled_for_api("time_approvals")
+    if blocked:
+        return blocked
+    approval = TimeEntryApproval.query.filter_by(id=approval_id).first_or_404()
+    from app.services.time_approval_service import TimeApprovalService
+    service = TimeApprovalService()
+    approver_ids = service._get_approvers_for_entry(approval.time_entry)
+    if approval.requested_by != g.api_user.id and (approval.approved_by or 0) != g.api_user.id:
+        if g.api_user.id not in approver_ids and not g.api_user.is_admin:
+            return forbidden_response("Access denied")
+    return jsonify({"approval": approval.to_dict()})
+
+
+@api_v1_bp.route("/time-entry-approvals/<int:approval_id>/approve", methods=["POST"])
+@require_api_token("write:time_approvals")
+def approve_time_entry(approval_id):
+    """Approve a time entry."""
+    blocked = _require_module_enabled_for_api("time_approvals")
+    if blocked:
+        return blocked
+    from app.services.time_approval_service import TimeApprovalService
+    service = TimeApprovalService()
+    data = request.get_json(silent=True) or {}
+    result = service.approve(approval_id=approval_id, approver_id=g.api_user.id, comment=data.get("comment"))
+    if not result.get("success"):
+        return error_response(result.get("message", "Approval failed"), status_code=400)
+    return jsonify(result)
+
+
+@api_v1_bp.route("/time-entry-approvals/<int:approval_id>/reject", methods=["POST"])
+@require_api_token("write:time_approvals")
+def reject_time_entry(approval_id):
+    """Reject a time entry."""
+    blocked = _require_module_enabled_for_api("time_approvals")
+    if blocked:
+        return blocked
+    from app.services.time_approval_service import TimeApprovalService
+    service = TimeApprovalService()
+    data = request.get_json(silent=True) or {}
+    reason = data.get("reason") or data.get("rejection_reason")
+    if not reason:
+        return error_response("Rejection reason required", status_code=400)
+    result = service.reject(approval_id=approval_id, approver_id=g.api_user.id, reason=reason)
+    if not result.get("success"):
+        return error_response(result.get("message", "Rejection failed"), status_code=400)
+    return jsonify(result)
+
+
+@api_v1_bp.route("/time-entry-approvals/<int:approval_id>/cancel", methods=["POST"])
+@require_api_token("write:time_approvals")
+def cancel_time_entry_approval(approval_id):
+    """Cancel an approval request (requester only)."""
+    blocked = _require_module_enabled_for_api("time_approvals")
+    if blocked:
+        return blocked
+    from app.services.time_approval_service import TimeApprovalService
+    service = TimeApprovalService()
+    result = service.cancel_approval(approval_id=approval_id, user_id=g.api_user.id)
+    if not result.get("success"):
+        return error_response(result.get("message", "Cancellation failed"), status_code=400)
+    return jsonify(result)
+
+
+@api_v1_bp.route("/time-entries/<int:entry_id>/request-approval", methods=["POST"])
+@require_api_token("write:time_approvals")
+def request_time_entry_approval(entry_id):
+    """Request approval for a time entry."""
+    blocked = _require_module_enabled_for_api("time_approvals")
+    if blocked:
+        return blocked
+    from app.services.time_approval_service import TimeApprovalService
+    service = TimeApprovalService()
+    data = request.get_json(silent=True) or {}
+    result = service.request_approval(
+        time_entry_id=entry_id,
+        requested_by=g.api_user.id,
+        comment=data.get("comment"),
+        approver_ids=data.get("approver_ids"),
+    )
+    if not result.get("success"):
+        return error_response(result.get("message", "Request failed"), status_code=400)
+    return jsonify(result)
+
+
+@api_v1_bp.route("/time-entry-approvals/bulk-approve", methods=["POST"])
+@require_api_token("write:time_approvals")
+def bulk_approve_time_entries():
+    """Bulk approve multiple time entry approvals."""
+    blocked = _require_module_enabled_for_api("time_approvals")
+    if blocked:
+        return blocked
+    from app.services.time_approval_service import TimeApprovalService
+    service = TimeApprovalService()
+    data = request.get_json(silent=True) or {}
+    approval_ids = data.get("approval_ids", [])
+    if not approval_ids:
+        return error_response("approval_ids required", status_code=400)
+    result = service.bulk_approve(approval_ids=approval_ids, approver_id=g.api_user.id, comment=data.get("comment"))
+    return jsonify(result)
 
 
 # ==================== Per Diem ====================
@@ -4805,7 +5323,16 @@ def get_current_user():
       200:
         description: Current user information
     """
-    return jsonify({"user": g.api_user.to_dict()})
+    from app.models import Settings
+
+    response = {"user": g.api_user.to_dict()}
+    settings = Settings.get_settings()
+    response["time_entry_requirements"] = {
+        "require_task": getattr(settings, "time_entry_require_task", False),
+        "require_description": getattr(settings, "time_entry_require_description", False),
+        "description_min_length": getattr(settings, "time_entry_description_min_length", 20),
+    }
+    return jsonify(response)
 
 
 @api_v1_bp.route("/users", methods=["GET"])

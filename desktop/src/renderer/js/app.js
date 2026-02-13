@@ -424,11 +424,18 @@ async function handleStartTimer() {
 
 async function showStartTimerDialog() {
   return new Promise(async (resolve) => {
-    // Load projects
+    // Load projects and time entry requirements
     let projects = [];
+    let requirements = { require_task: false, require_description: false, description_min_length: 20 };
     try {
-      const projectsResponse = await apiClient.getProjects({ status: 'active' });
+      const [projectsResponse, usersMeResponse] = await Promise.all([
+        apiClient.getProjects({ status: 'active' }),
+        apiClient.getUsersMe().catch(() => ({})),
+      ]);
       projects = projectsResponse.data.projects || [];
+      if (usersMeResponse.time_entry_requirements) {
+        requirements = usersMeResponse.time_entry_requirements;
+      }
     } catch (error) {
       showError('Failed to load projects');
       resolve(null);
@@ -459,13 +466,13 @@ async function showStartTimerDialog() {
             </select>
           </div>
           <div class="form-group">
-            <label for="timer-task-select">Task (Optional)</label>
+            <label for="timer-task-select">${requirements.require_task ? 'Task *' : 'Task (Optional)'}</label>
             <select id="timer-task-select" class="form-control">
               <option value="">No task</option>
             </select>
           </div>
           <div class="form-group">
-            <label for="timer-notes-input">Notes (Optional)</label>
+            <label for="timer-notes-input">${requirements.require_description ? 'Notes *' : 'Notes (Optional)'}</label>
             <textarea id="timer-notes-input" class="form-control" rows="3" placeholder="What are you working on?"></textarea>
           </div>
         </div>
@@ -508,12 +515,28 @@ async function showStartTimerDialog() {
         showError('Please select a project');
         return;
       }
-      
+
       const taskId = taskSelect.value ? parseInt(taskSelect.value) : null;
-      const notes = notesInput.value.trim() || null;
+      if (requirements.require_task && !taskId) {
+        showError('A task must be selected when logging time for a project');
+        return;
+      }
+
+      const notes = notesInput.value.trim();
+      if (requirements.require_description) {
+        if (!notes) {
+          showError('A description is required when logging time');
+          return;
+        }
+        const minLen = requirements.description_min_length || 20;
+        if (notes.length < minLen) {
+          showError(`Description must be at least ${minLen} characters`);
+          return;
+        }
+      }
       
       modal.remove();
-      resolve({ projectId, taskId, notes });
+      resolve({ projectId, taskId, notes: notes || null });
     });
     
     // Close on backdrop click
@@ -851,11 +874,18 @@ async function loadProjectsForFilter() {
 
 // Time entry form
 async function showTimeEntryForm(entryId = null) {
-  // Load projects
+  // Load projects and time entry requirements
   let projects = [];
+  let requirements = { require_task: false, require_description: false, description_min_length: 20 };
   try {
-    const projectsResponse = await apiClient.getProjects({ status: 'active' });
+    const [projectsResponse, usersMeResponse] = await Promise.all([
+      apiClient.getProjects({ status: 'active' }),
+      apiClient.getUsersMe().catch(() => ({})),
+    ]);
     projects = projectsResponse.data.projects || [];
+    if (usersMeResponse.time_entry_requirements) {
+      requirements = usersMeResponse.time_entry_requirements;
+    }
   } catch (error) {
     showError('Failed to load projects');
     return;
@@ -917,7 +947,7 @@ async function showTimeEntryForm(entryId = null) {
           </select>
         </div>
         <div class="form-group">
-          <label for="entry-task-select">Task (Optional)</label>
+          <label for="entry-task-select">${requirements.require_task ? 'Task *' : 'Task (Optional)'}</label>
           <select id="entry-task-select" class="form-control">
             <option value="">No task</option>
             ${tasks.map(t => `<option value="${t.id}" ${entry && entry.task_id === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
@@ -944,7 +974,7 @@ async function showTimeEntryForm(entryId = null) {
           </div>
         </div>
         <div class="form-group">
-          <label for="entry-notes">Notes</label>
+          <label for="entry-notes">${requirements.require_description ? 'Notes *' : 'Notes'}</label>
           <textarea id="entry-notes" class="form-control" rows="3">${entry?.notes || ''}</textarea>
         </div>
         <div class="form-group">
@@ -996,13 +1026,31 @@ async function showTimeEntryForm(entryId = null) {
       showError('Please select a project');
       return;
     }
-    
+
     const taskId = taskSelect.value ? parseInt(taskSelect.value) : null;
+    if (requirements.require_task && !taskId) {
+      showError('A task must be selected when logging time for a project');
+      return;
+    }
+
+    const notesEl = document.getElementById('entry-notes');
+    const notes = notesEl ? notesEl.value.trim() : '';
+    if (requirements.require_description) {
+      if (!notes) {
+        showError('A description is required when logging time');
+        return;
+      }
+      const minLen = requirements.description_min_length || 20;
+      if (notes.length < minLen) {
+        showError(`Description must be at least ${minLen} characters`);
+        return;
+      }
+    }
     const startDate = document.getElementById('entry-start-date').value;
     const startTime = document.getElementById('entry-start-time').value;
     const endDate = document.getElementById('entry-end-date').value;
     const endTime = document.getElementById('entry-end-time').value;
-    const notes = document.getElementById('entry-notes').value.trim() || null;
+    const notesForApi = notes || null;
     const tags = document.getElementById('entry-tags').value.trim() || null;
     const billable = document.getElementById('entry-billable').checked;
     
@@ -1018,7 +1066,7 @@ async function showTimeEntryForm(entryId = null) {
           task_id: taskId,
           start_time: startDateTime,
           end_time: endDateTime,
-          notes: notes,
+          notes: notesForApi,
           tags: tags,
           billable: billable,
         });
@@ -1029,7 +1077,7 @@ async function showTimeEntryForm(entryId = null) {
           task_id: taskId,
           start_time: startDateTime,
           end_time: endDateTime,
-          notes: notes,
+          notes: notesForApi,
           tags: tags,
           billable: billable,
         });

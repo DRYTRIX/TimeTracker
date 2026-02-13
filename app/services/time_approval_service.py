@@ -146,17 +146,21 @@ class TimeApprovalService:
         return {"success": True, "message": "Approval cancelled", "approval": approval.to_dict()}
 
     def get_pending_approvals(self, approver_id: int = None) -> List[TimeEntryApproval]:
-        """Get pending approvals for an approver"""
-        query = TimeEntryApproval.query.filter_by(status=ApprovalStatus.PENDING)
-
-        if approver_id:
-            # Get approvals where user is an approver
-            approver_ids = self._get_all_approver_ids(approver_id)
-            # This would need a more sophisticated query in production
-            # For now, return all pending approvals
-            pass
-
-        return query.order_by(TimeEntryApproval.requested_at.desc()).all()
+        """Get pending approvals for an approver. When approver_id is set, only return approvals this user may approve."""
+        all_pending = (
+            TimeEntryApproval.query.filter_by(status=ApprovalStatus.PENDING)
+            .order_by(TimeEntryApproval.requested_at.desc())
+            .all()
+        )
+        if not approver_id:
+            return all_pending
+        # Filter to approvals where this user is a valid approver for the time entry
+        result = []
+        for approval in all_pending:
+            entry_approvers = self._get_approvers_for_entry(approval.time_entry)
+            if approver_id in entry_approvers:
+                result.append(approval)
+        return result
 
     def bulk_approve(self, approval_ids: List[int], approver_id: int, comment: str = None) -> Dict[str, Any]:
         """Bulk approve multiple time entries"""
@@ -213,13 +217,9 @@ class TimeApprovalService:
         return approver_ids
 
     def _mark_entry_approved(self, time_entry: TimeEntry):
-        """Mark time entry as approved"""
-        # Add metadata to indicate approval
-        if not hasattr(time_entry, "metadata") or not time_entry.metadata:
-            time_entry.metadata = {}
-        time_entry.metadata["approved"] = True
-        time_entry.metadata["approved_at"] = datetime.utcnow().isoformat()
-        db.session.commit()
+        """Mark time entry as approved. Approval state is derived from TimeEntryApproval records; no column on TimeEntry."""
+        # No-op: approved status is determined by existence of an approved TimeEntryApproval for this entry.
+        pass
 
     def _notify_approvers(self, approval: TimeEntryApproval, approver_ids: List[int]):
         """Send notifications to approvers"""

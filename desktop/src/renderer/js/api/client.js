@@ -69,6 +69,11 @@ class ApiClient {
       return false;
     }
   }
+
+  async getUsersMe() {
+    const response = await this.client.get('/api/v1/users/me');
+    return response.data;
+  }
   
   // Timer endpoints
   async getTimerStatus() {

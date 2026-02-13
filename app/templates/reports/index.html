@@ -149,11 +149,11 @@
         <div class="p-4 border border-border-light dark:border-border-dark rounded-lg">
             <h3 class="font-medium mb-2">{{ _('Quick Actions') }}</h3>
             <div class="space-y-2">
-                <a href="{{ url_for('reports.export_form') }}" class="block w-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-center">
-                    <i class="fas fa-file-csv mr-2"></i>CSV Export
+                <a href="{{ url_for('reports.export_form', format='csv') }}" class="block w-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-center">
+                    <i class="fas fa-file-csv mr-2"></i>{{ _('CSV Export') }}
                 </a>
-                <a href="{{ url_for('reports.export_excel') }}" class="block w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-center">
-                    <i class="fas fa-file-excel mr-2"></i>Excel Export
+                <a href="{{ url_for('reports.export_form', format='excel') }}" class="block w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-center">
+                    <i class="fas fa-file-excel mr-2"></i>{{ _('Excel Export') }}
                 </a>
             </div>
         </div>
@@ -174,6 +174,9 @@
         </a>
         <a href="{{ url_for('reports.task_report') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
             <i class="fas fa-tasks mr-2"></i>{{ _('Task Report') }}
+        </a>
+        <a href="{{ url_for('reports.time_entries_report') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
+            <i class="fas fa-list-alt mr-2"></i>{{ _('Time Entries Report') }}
         </a>
         <a href="{{ url_for('reports.unpaid_hours_report') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
             <i class="fas fa-money-bill-wave mr-2"></i>{{ _('Unpaid Hours Report') }}
@@ -330,18 +333,20 @@ function exportReport() {
     const format = document.getElementById('exportFormat').value;
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
-    
+
+    if (!startDate || !endDate) {
+        alert('{{ _("Please set a date range") }}');
+        return;
+    }
+
     let url = '';
     if (format === 'csv') {
         url = `{{ url_for('reports.export_csv') }}`;
     } else if (format === 'excel') {
         url = `{{ url_for('reports.export_excel') }}`;
     }
-    
-    if (startDate && endDate) {
-        url += `?start_date=${startDate}&end_date=${endDate}`;
-    }
-    
+
+    url += `?start_date=${startDate}&end_date=${endDate}`;
     window.location.href = url;
 }
 

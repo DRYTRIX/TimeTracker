@@ -38,7 +38,11 @@
 {% endif %}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow max-w-3xl mx-auto">
-    <form method="POST" action="{{ url_for('timer.manual_entry') }}" autocomplete="off" novalidate data-validate-form id="manualEntryForm">
+    <form method="POST" action="{{ url_for('timer.manual_entry') }}" autocomplete="off" novalidate data-validate-form id="manualEntryForm"
+          data-require-task="{{ 'true' if getattr(settings, 'time_entry_require_task', false) else 'false' }}"
+          data-require-description="{{ 'true' if getattr(settings, 'time_entry_require_description', false) else 'false' }}"
+          data-description-min-length="{{ getattr(settings, 'time_entry_description_min_length', 20) }}"
+          data-description-min-msg="{{ _('Description must be at least %(min)s characters', min=getattr(settings, 'time_entry_description_min_length', 20))|e }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="worked_time_mode" id="worked_time_mode" value="{{ prefill_worked_time_mode or '' }}">
         <div class="space-y-6">
@@ -61,7 +65,7 @@
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label for="task_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Task (optional)') }}</label>
+                    <label for="task_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{% if getattr(settings, 'time_entry_require_task', false) %}{{ _('Task') }} *{% else %}{{ _('Task (optional)') }}{% endif %}</label>
                     <select name="task_id" id="task_id" class="form-input" data-selected-task-id="{{ selected_task_id or '' }}" {% if not selected_project_id %}disabled{% endif %}>
                         <option value="">{{ _('No task') }}</option>
                     </select>
@@ -101,7 +105,7 @@
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="md:col-span-2">
-                    <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Notes') }}</label>
+                    <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{% if getattr(settings, 'time_entry_require_description', false) %}{{ _('Notes') }} *{% else %}{{ _('Notes') }}{% endif %}</label>
                     <div class="markdown-editor-wrapper">
                         <textarea name="notes" id="notes" class="hidden">{{ prefill_notes or '' }}</textarea>
                         <div id="notes_editor"></div>
@@ -438,6 +442,67 @@ document.addEventListener('DOMContentLoaded', async function(){
                             submitBtn.disabled = false;
                         }
                 return false;
+            }
+
+            // Validate time entry requirements (task, description)
+            const requireTask = form.dataset.requireTask === 'true';
+            const requireDescription = form.dataset.requireDescription === 'true';
+            const descMinLen = parseInt(form.dataset.descriptionMinLength || '20', 10);
+            if (projectVal && requireTask) {
+                const taskVal = taskSelect ? taskSelect.value : '';
+                if (!taskVal) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    if (submitBtn && originalButtonHTML) {
+                        submitBtn.innerHTML = originalButtonHTML;
+                        submitBtn.disabled = false;
+                    }
+                    const errorMsg = {{ _("A task must be selected when logging time for a project")|tojson }};
+                    if (window.toastManager && typeof window.toastManager.error === 'function') {
+                        window.toastManager.error(errorMsg, {{ _("Error")|tojson }}, 5000);
+                    } else {
+                        alert(errorMsg);
+                    }
+                    return false;
+                }
+            }
+            if (requireDescription) {
+                const notesEl = document.getElementById('notes');
+                let notesVal = notesEl ? notesEl.value : '';
+                if (window.mdEditor && typeof window.mdEditor.getMarkdown === 'function') {
+                    try { notesVal = window.mdEditor.getMarkdown(); } catch (err) {}
+                }
+                const notesTrimmed = (notesVal || '').trim();
+                if (!notesTrimmed) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    if (submitBtn && originalButtonHTML) {
+                        submitBtn.innerHTML = originalButtonHTML;
+                        submitBtn.disabled = false;
+                    }
+                    const errorMsg = {{ _("A description is required when logging time")|tojson }};
+                    if (window.toastManager && typeof window.toastManager.error === 'function') {
+                        window.toastManager.error(errorMsg, {{ _("Error")|tojson }}, 5000);
+                    } else {
+                        alert(errorMsg);
+                    }
+                    return false;
+                }
+                if (notesTrimmed.length < descMinLen) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    if (submitBtn && originalButtonHTML) {
+                        submitBtn.innerHTML = originalButtonHTML;
+                        submitBtn.disabled = false;
+                    }
+                    const errorMsg = form.dataset.descriptionMinMsg || ('Description must be at least ' + descMinLen + ' characters');
+                    if (window.toastManager && typeof window.toastManager.error === 'function') {
+                        window.toastManager.error(errorMsg, {{ _("Error")|tojson }}, 5000);
+                    } else {
+                        alert(errorMsg);
+                    }
+                    return false;
+                }
             }
             
             // Validate that either full start/end is present, or a worked_time duration is provided.

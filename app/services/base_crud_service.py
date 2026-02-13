@@ -1,6 +1,10 @@
 """
 Base CRUD service to reduce code duplication across services.
 Provides common CRUD operations with consistent error handling.
+
+Optional use: extend this class when adding a new domain that has a repository
+and simple CRUD needs. Existing domain services do not use it. See
+docs/development/SERVICE_LAYER_AND_BASE_CRUD.md for the chosen service pattern.
 """
 
 from typing import TypeVar, Generic, Optional, Dict, Any, List

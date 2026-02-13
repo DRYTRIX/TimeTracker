@@ -34,7 +34,7 @@
                             </a>
                         </h3>
                         <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                            {{ _('Requested by') }}: {{ approval.requested_by_user.username if approval.requested_by_user else 'N/A' }} • 
+                            {{ _('Requested by') }}: {{ approval.requester.username if approval.requester else 'N/A' }} • 
                             {{ approval.time_entry.duration_hours|round(2) }} {{ _('hours') }}
                         </p>
                         {% if approval.time_entry.project %}
@@ -59,10 +59,10 @@
                         </button>
                     </div>
                 </div>
-                {% if approval.comments %}
+                {% if approval.request_comment %}
                 <div class="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
                     <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                        <i class="fas fa-comment mr-1"></i>{{ approval.comments }}
+                        <i class="fas fa-comment mr-1"></i>{{ approval.request_comment }}
                     </p>
                 </div>
                 {% endif %}
@@ -71,9 +71,9 @@
         </div>
         {% else %}
         {{ empty_state(
-            icon='fas fa-check-circle',
-            title=_('No pending approvals'),
-            message=_('All time entries have been reviewed.')
+            'fas fa-check-circle',
+            _('No pending approvals'),
+            _('All time entries have been reviewed.')
         ) }}
         {% endif %}
     </div>
@@ -112,9 +112,9 @@
         </div>
         {% else %}
         {{ empty_state(
-            icon='fas fa-inbox',
-            title=_('No pending requests'),
-            message=_('You have no time entry approval requests.')
+            'fas fa-inbox',
+            _('No pending requests'),
+            _('You have no time entry approval requests.')
         ) }}
         {% endif %}
     </div>
@@ -132,7 +132,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-4">
                 <label for="rejectReason" class="block text-sm font-medium mb-2">{{ _('Reason for rejection') }}</label>
-                <textarea id="rejectReason" name="comments" rows="4" class="form-input w-full" required></textarea>
+                <textarea id="rejectReason" name="reason" rows="4" class="form-input w-full" required></textarea>
             </div>
             <div class="flex justify-end gap-2">
                 <button type="button" onclick="closeRejectModal()" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">{{ _('Cancel') }}</button>

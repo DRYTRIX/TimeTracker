@@ -107,6 +107,7 @@
                 <th class="p-2">Total Hours</th>
                 <th class="p-2">Regular Hours</th>
                 <th class="p-2">Overtime Hours</th>
+                <th class="p-2">Undertime Hours</th>
                 <th class="p-2">Billable Hours</th>
                 <th class="p-2">Days with Overtime</th>
             </tr>
@@ -128,6 +129,13 @@
                         <span class="text-gray-400">0.00</span>
                     {% endif %}
                 </td>
+                <td class="p-2">
+                    {% if totals.undertime_hours is defined and totals.undertime_hours > 0 %}
+                        <span class="text-amber-600 dark:text-amber-400 font-medium">{{ "%.2f"|format(totals.undertime_hours) }}</span>
+                    {% else %}
+                        <span class="text-gray-400">0.00</span>
+                    {% endif %}
+                </td>
                 <td class="p-2">{{ "%.2f"|format(totals.billable_hours) }}</td>
                 <td class="p-2 text-center">
                     {% if totals.days_with_overtime is defined and totals.days_with_overtime > 0 %}
@@ -141,7 +149,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="6" class="p-4 text-center">No data for the selected period.</td>
+                <td colspan="7" class="p-4 text-center">No data for the selected period.</td>
             </tr>
             {% endfor %}
         </tbody>

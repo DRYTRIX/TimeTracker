@@ -49,6 +49,9 @@ class User(UserMixin, db.Model):
     standard_hours_per_day = db.Column(
         db.Float, default=8.0, nullable=False
     )  # Standard working hours per day for overtime calculation
+    overtime_include_weekends = db.Column(
+        db.Boolean, default=True, nullable=False
+    )  # If True, weekend hours count toward regular/overtime; if False, all weekend hours count as overtime
 
     # Client portal settings
     client_portal_enabled = db.Column(db.Boolean, default=False, nullable=False)  # Enable/disable client portal access
@@ -291,6 +294,8 @@ class User(UserMixin, db.Model):
             "date_format": resolved_date,
             "time_format": resolved_time,
             "timezone": resolved_timezone,
+            "standard_hours_per_day": float(getattr(self, "standard_hours_per_day", 8.0) or 8.0),
+            "overtime_include_weekends": getattr(self, "overtime_include_weekends", True),
         }
 
     # Avatar helpers

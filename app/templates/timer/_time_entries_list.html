@@ -158,6 +158,14 @@
                                 <a href="{{ url_for('timer.edit_timer', timer_id=entry.id) }}" class="text-primary hover:text-primary/80" title="{{ _('Edit') }}">
                                     <i class="fas fa-edit"></i>
                                 </a>
+                                {% if (time_approvals_enabled|default(false)) and entry.end_time and entry.user_id == current_user.id and entry.id not in (entry_ids_with_pending_approval|default([])) %}
+                                <form method="POST" action="{{ url_for('time_approvals.request_approval', entry_id=entry.id) }}" class="inline" title="{{ _('Request approval') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="text-primary hover:text-primary/80 bg-transparent border-none cursor-pointer p-0" title="{{ _('Request approval') }}">
+                                        <i class="fas fa-check-double"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

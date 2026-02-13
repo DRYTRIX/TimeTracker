@@ -133,6 +133,8 @@ def settings():
                 else:
                     flash(_("Standard hours per day must be between 0.5 and 24"), "error")
                     return redirect(url_for("user.settings"))
+            if hasattr(current_user, "overtime_include_weekends"):
+                current_user.overtime_include_weekends = request.form.get("overtime_include_weekends") == "on"
 
             # Save changes
             if safe_commit(db.session):

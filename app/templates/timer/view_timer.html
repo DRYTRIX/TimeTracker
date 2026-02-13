@@ -99,6 +99,18 @@
             </div>
         </div>
 
+        {% if time_approvals_enabled|default(false) and can_request_approval|default(false) %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Approval') }}</h2>
+            <form method="POST" action="{{ url_for('time_approvals.request_approval', entry_id=timer.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-check-double mr-2"></i>{{ _('Request approval') }}
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
             <h2 class="text-lg font-semibold mb-4">{{ _('Status & Billing') }}</h2>
             <div class="space-y-4">

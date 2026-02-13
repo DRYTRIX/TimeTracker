@@ -119,7 +119,7 @@ Both apps support offline operation:
 
 ## Version Management
 
-App versions should align with the backend version (currently 4.9.16). Update version numbers in:
+App versions should align with the backend version (see `setup.py` for current version). Update version numbers in:
 
 - Mobile: `mobile/pubspec.yaml`
 - Desktop: `desktop/package.json`

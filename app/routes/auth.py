@@ -140,6 +140,13 @@ def login():
                     # Create new user, promote to admin if username is configured as admin
                     role_name = "admin" if username in admin_usernames else "user"
                     user = User(username=username, role=role_name)
+                    # Apply company default for daily working hours (overtime)
+                    try:
+                        from app.models import Settings
+                        settings = Settings.get_settings()
+                        user.standard_hours_per_day = float(getattr(settings, "default_daily_working_hours", 8.0) or 8.0)
+                    except Exception:
+                        pass
 
                     # Assign role from the new Role system
                     from app.models import Role
@@ -985,6 +992,13 @@ def oidc_callback():
                 user.is_active = True
                 user.oidc_issuer = issuer
                 user.oidc_sub = sub
+                # Apply company default for daily working hours (overtime)
+                try:
+                    from app.models import Settings
+                    settings = Settings.get_settings()
+                    user.standard_hours_per_day = float(getattr(settings, "default_daily_working_hours", 8.0) or 8.0)
+                except Exception:
+                    pass
 
                 # Assign role from the new Role system
                 from app.models import Role

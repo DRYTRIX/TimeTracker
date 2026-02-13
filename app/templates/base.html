@@ -292,7 +292,7 @@
             </div>
             <nav class="flex-1">
                 {% set ep = request.endpoint or '' %}
-                {% set work_open = ep.startswith('projects.') or ep.startswith('tasks.') or ep.startswith('issues.') or ep.startswith('timer.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') or ep.startswith('project_templates.') or ep.startswith('gantt.') %}
+                {% set work_open = ep.startswith('projects.') or ep.startswith('tasks.') or ep.startswith('issues.') or ep.startswith('timer.') or ep.startswith('time_approvals.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') or ep.startswith('project_templates.') or ep.startswith('gantt.') %}
                 {% set calendar_open = ep.startswith('calendar.') %}
                 {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('recurring_invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('mileage.') or ep.startswith('per_diem.') or ep.startswith('budget_alerts.') or ep.startswith('invoice_approvals.') or ep.startswith('payment_gateways.') or ep.startswith('scheduled_reports.') or ep.startswith('custom_reports.') %}
                 {% set crm_open = ep.startswith('clients.') or ep.startswith('quotes.') or ep.startswith('contacts.') or ep.startswith('deals.') or ep.startswith('leads.') %}
@@ -351,6 +351,7 @@
                 <ul id="workDropdown" class="{% if not work_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
                             {% set nav_active_timer = ep.startswith('timer.manual') %}
                             {% set nav_active_time_entries = ep == 'timer.time_entries_overview' %}
+                            {% set nav_active_time_approvals = ep.startswith('time_approvals.') %}
                             {% set nav_active_projects = ep.startswith('projects.') %}
                             {% set nav_active_clients = ep.startswith('clients.') %}
                             {% set nav_active_quotes = ep.startswith('quotes.') %}
@@ -370,6 +371,13 @@
                                     <i class="fas fa-list-alt w-4 mr-2"></i>{{ _('Time Entries') }}
                                 </a>
                             </li>
+                            {% if is_module_enabled('time_approvals') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_time_approvals %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('time_approvals.list_approvals') }}">
+                                    <i class="fas fa-check-double w-4 mr-2"></i>{{ _('Time Approvals') }}
+                                </a>
+                            </li>
+                            {% endif %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_projects %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('projects.list_projects') }}">
                                     <i class="fas fa-folder w-4 mr-2"></i>{{ _('Projects') }}

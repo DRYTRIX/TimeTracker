@@ -772,6 +772,12 @@ def create_user():
 
         # Create user with legacy role field for backward compatibility
         user = User(username=username, role=role_name)
+        # Apply company default for daily working hours (overtime)
+        try:
+            settings = Settings.get_settings()
+            user.standard_hours_per_day = float(getattr(settings, "default_daily_working_hours", 8.0) or 8.0)
+        except Exception:
+            pass
 
         # Assign the role from the new Role system
         user.roles.append(role_obj)
@@ -1245,6 +1251,23 @@ def settings():
             settings_obj.kiosk_default_movement_type = request.form.get("kiosk_default_movement_type", "adjustment")
         except AttributeError:
             # Kiosk columns don't exist yet (migration not run)
+            pass
+
+        # Update time entry requirements (if columns exist)
+        try:
+            settings_obj.time_entry_require_task = request.form.get("time_entry_require_task") == "on"
+            settings_obj.time_entry_require_description = request.form.get("time_entry_require_description") == "on"
+            min_len = int(request.form.get("time_entry_description_min_length", 20))
+            settings_obj.time_entry_description_min_length = max(1, min(500, min_len))
+        except AttributeError:
+            pass
+
+        # Update default daily working hours (overtime) for new users
+        try:
+            val = request.form.get("default_daily_working_hours", type=float)
+            if val is not None and 0.5 <= val <= 24:
+                settings_obj.default_daily_working_hours = val
+        except (AttributeError, ValueError, TypeError):
             pass
 
         # Update privacy and analytics settings

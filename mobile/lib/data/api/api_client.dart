@@ -42,6 +42,12 @@ class ApiClient {
     return data['user'] as Map<String, dynamic>;
   }
 
+  /// Get full /api/v1/users/me response (user + time_entry_requirements).
+  Future<Map<String, dynamic>> getUsersMe() async {
+    final response = await _dio.get('/api/v1/users/me');
+    return response.data as Map<String, dynamic>;
+  }
+
   // ==================== Timer Operations ====================
 
   /// Get timer status

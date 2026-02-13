@@ -1,8 +1,10 @@
 """
-Example refactored projects route using service layer and fixing N+1 queries.
-This demonstrates the new architecture pattern.
+REFERENCE ONLY — This module is not registered as an active blueprint.
 
-To use: Replace the corresponding functions in app/routes/projects.py
+Example refactored projects route using service layer and fixing N+1 queries.
+It demonstrates the intended architecture pattern (service layer, eager loading).
+The active routes live in app/routes/projects.py. Do not register this blueprint;
+use it as reference when refactoring or when adding new project routes.
 """
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify

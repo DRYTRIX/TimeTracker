@@ -337,6 +337,27 @@
             if (data.month_hours !== undefined) {
                 updateStatCard('monthHoursValue', data.month_hours);
             }
+
+            // Update overtime lines (today and week)
+            const todayOvertimeEl = document.getElementById('todayOvertimeLine');
+            if (todayOvertimeEl && data.standard_hours_per_day !== undefined) {
+                if (data.today_overtime_hours > 0) {
+                    todayOvertimeEl.style.display = '';
+                    todayOvertimeEl.innerHTML = '<span class="font-medium">+ ' + Number(data.today_overtime_hours).toFixed(2) + 'h overtime</span>';
+                } else {
+                    todayOvertimeEl.innerHTML = '<span class="text-blue-600/70 dark:text-blue-400/70">' + Number(data.today_hours).toFixed(2) + 'h / ' + Number(data.standard_hours_per_day).toFixed(1) + 'h</span>';
+                    todayOvertimeEl.style.display = data.today_hours > 0 ? '' : 'none';
+                }
+            }
+            const weekOvertimeEl = document.getElementById('weekOvertimeLine');
+            if (weekOvertimeEl && data.week_overtime_hours !== undefined) {
+                if (data.week_overtime_hours > 0) {
+                    weekOvertimeEl.style.display = '';
+                    weekOvertimeEl.innerHTML = '<span class="font-medium">+ ' + Number(data.week_overtime_hours).toFixed(2) + 'h overtime</span>';
+                } else {
+                    weekOvertimeEl.style.display = 'none';
+                }
+            }
         } catch (error) {
             console.error('Error updating stats:', error);
         }

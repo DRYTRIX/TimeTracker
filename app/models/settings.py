@@ -98,6 +98,14 @@ class Settings(db.Model):
     kiosk_require_reason_for_adjustments = db.Column(db.Boolean, default=False, nullable=False)
     kiosk_default_movement_type = db.Column(db.String(20), default="adjustment", nullable=False)
 
+    # Time entry requirements (admin-enforced when logging time)
+    time_entry_require_task = db.Column(db.Boolean, default=False, nullable=False)
+    time_entry_require_description = db.Column(db.Boolean, default=False, nullable=False)
+    time_entry_description_min_length = db.Column(db.Integer, default=20, nullable=False)
+
+    # Overtime / time tracking: default daily working hours for new users (e.g. 8.0)
+    default_daily_working_hours = db.Column(db.Float, default=8.0, nullable=False)
+
     # Email configuration settings (stored in database, takes precedence over environment variables)
     mail_enabled = db.Column(db.Boolean, default=False, nullable=False)  # Enable database-backed email config
     mail_server = db.Column(db.String(255), default="", nullable=True)
@@ -451,6 +459,10 @@ class Settings(db.Model):
             "quickbooks_client_secret_set": bool(getattr(self, "quickbooks_client_secret", "")),
             "xero_client_id": getattr(self, "xero_client_id", "") or "",
             "xero_client_secret_set": bool(getattr(self, "xero_client_secret", "")),
+            "time_entry_require_task": getattr(self, "time_entry_require_task", False),
+            "time_entry_require_description": getattr(self, "time_entry_require_description", False),
+            "time_entry_description_min_length": getattr(self, "time_entry_description_min_length", 20),
+            "default_daily_working_hours": float(getattr(self, "default_daily_working_hours", 8.0) or 8.0),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -620,6 +632,7 @@ class Settings(db.Model):
             "IDLE_TIMEOUT_MINUTES": "idle_timeout_minutes",
             "BACKUP_RETENTION_DAYS": "backup_retention_days",
             "BACKUP_TIME": "backup_time",
+            "DEFAULT_DAILY_WORKING_HOURS": "default_daily_working_hours",
         }
 
         for env_var, attr_name in env_mapping.items():
@@ -638,6 +651,11 @@ class Settings(db.Model):
                             setattr(settings_instance, attr_name, int(env_value))
                         except (ValueError, TypeError):
                             pass  # Keep default if conversion fails
+                    elif isinstance(current_value, float):
+                        try:
+                            setattr(settings_instance, attr_name, float(env_value))
+                        except (ValueError, TypeError):
+                            pass
                     else:
                         # Handle string values
                         setattr(settings_instance, attr_name, env_value)
