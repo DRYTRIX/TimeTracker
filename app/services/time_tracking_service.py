@@ -14,6 +14,8 @@ from app.models.time_entry import local_now
 from app.utils.db import safe_commit
 from app.utils.event_bus import emit_event
 from app.constants import WebhookEvent
+from app.models import Settings
+from app.utils.time_entry_validation import validate_time_entry_requirements
 
 
 class TimeTrackingService:
@@ -112,6 +114,14 @@ class TimeTrackingService:
                     "error": "invalid_task",
                 }
 
+        # Validate time entry requirements (task, description)
+        settings = Settings.get_settings()
+        err = validate_time_entry_requirements(
+            settings, project_id=project_id, client_id=None, task_id=task_id, notes=notes
+        )
+        if err:
+            return err
+
         # Create timer
         timer = self.time_entry_repo.create_timer(
             user_id=user_id, project_id=project_id, task_id=task_id, notes=notes, source=TimeEntrySource.AUTO.value
@@ -179,6 +189,7 @@ class TimeTrackingService:
         billable: bool = True,
         paid: bool = False,
         invoice_number: Optional[str] = None,
+        skip_entry_requirements: bool = False,
     ) -> Dict[str, Any]:
         """
         Create a manual time entry.
@@ -222,6 +233,15 @@ class TimeTrackingService:
                     "message": "Tasks can only be assigned to project-based time entries",
                     "error": "task_not_allowed",
                 }
+
+        # Validate time entry requirements (task, description) - skip for imports
+        if not skip_entry_requirements:
+            settings = Settings.get_settings()
+            err = validate_time_entry_requirements(
+                settings, project_id=project_id, client_id=client_id, task_id=task_id, notes=notes
+            )
+            if err:
+                return err
 
         # Validate time range
         if end_time <= start_time:
@@ -409,6 +429,20 @@ class TimeTrackingService:
                 entry.invoice_number = None
         if invoice_number is not None:
             entry.invoice_number = invoice_number.strip() if invoice_number else None
+
+        # Validate time entry requirements on updated state (entry reflects changes applied above)
+        settings = Settings.get_settings()
+        err = validate_time_entry_requirements(
+            settings,
+            project_id=entry.project_id,
+            client_id=entry.client_id,
+            task_id=entry.task_id,
+            notes=entry.notes,
+        )
+        if err:
+            # Rollback uncommitted changes
+            db.session.rollback()
+            return err
 
         entry.updated_at = local_now()
 

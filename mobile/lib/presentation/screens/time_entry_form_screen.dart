@@ -5,6 +5,7 @@ import 'package:timetracker_mobile/core/theme/app_tokens.dart';
 import 'package:timetracker_mobile/presentation/providers/projects_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/tasks_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/time_entries_provider.dart';
+import 'package:timetracker_mobile/presentation/providers/time_entry_requirements_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/user_prefs_provider.dart';
 import 'package:timetracker_mobile/utils/date_format_utils.dart';
 
@@ -149,6 +150,33 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
       return;
     }
 
+    final requirements = await ref.read(timeEntryRequirementsProvider.future);
+    if (requirements.requireTask && _selectedTaskId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('A task must be selected when logging time for a project')),
+      );
+      return;
+    }
+    final notes = _notesController.text.trim();
+    if (requirements.requireDescription) {
+      if (notes.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('A description is required when logging time')),
+        );
+        return;
+      }
+      if (notes.length < requirements.descriptionMinLength) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Description must be at least ${requirements.descriptionMinLength} characters',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -181,9 +209,7 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
               taskId: _selectedTaskId,
               startTime: startDateTime.toIso8601String(),
               endTime: endDateTimeStr,
-              notes: _notesController.text.trim().isEmpty
-                  ? null
-                  : _notesController.text.trim(),
+              notes: notes.isEmpty ? null : notes,
               tags: _tagsController.text.trim().isEmpty
                   ? null
                   : _tagsController.text.trim(),
@@ -195,9 +221,7 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
               taskId: _selectedTaskId,
               startTime: startDateTime.toIso8601String(),
               endTime: endDateTimeStr,
-              notes: _notesController.text.trim().isEmpty
-                  ? null
-                  : _notesController.text.trim(),
+              notes: notes.isEmpty ? null : notes,
               tags: _tagsController.text.trim().isEmpty
                   ? null
                   : _tagsController.text.trim(),
@@ -227,6 +251,7 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
   Widget build(BuildContext context) {
     final projectsState = ref.watch(projectsProvider);
     final tasksState = ref.watch(tasksProvider);
+    final requirementsAsync = ref.watch(timeEntryRequirementsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -275,9 +300,11 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
               // Task selection
               if (_selectedProjectId != null)
                 DropdownButtonFormField<int>(
-                  decoration: const InputDecoration(
-                    labelText: 'Task (Optional)',
-                    prefixIcon: Icon(Icons.task),
+                  decoration: InputDecoration(
+                    labelText: requirementsAsync.valueOrNull?.requireTask == true
+                        ? 'Task *'
+                        : 'Task (Optional)',
+                    prefixIcon: const Icon(Icons.task),
                   ),
                   initialValue: _selectedTaskId != null &&
                           tasksState.tasks.any((t) => t.id == _selectedTaskId)
@@ -347,9 +374,11 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
               // Notes
               TextFormField(
                 controller: _notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  prefixIcon: Icon(Icons.note),
+                decoration: InputDecoration(
+                  labelText: requirementsAsync.valueOrNull?.requireDescription == true
+                      ? 'Notes *'
+                      : 'Notes',
+                  prefixIcon: const Icon(Icons.note),
                 ),
                 maxLines: 3,
               ),

@@ -7,6 +7,7 @@ import 'package:timetracker_mobile/data/models/project.dart';
 import 'package:timetracker_mobile/presentation/providers/api_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/projects_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/tasks_provider.dart';
+import 'package:timetracker_mobile/presentation/providers/time_entry_requirements_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/timer_provider.dart';
 
 Future<void> showStartTimerSheet(
@@ -87,10 +88,37 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
       return;
     }
 
+    final requirements = await ref.read(timeEntryRequirementsProvider.future);
+    if (requirements.requireTask && _selectedTaskId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('A task must be selected when logging time for a project')),
+      );
+      return;
+    }
+    final notes = _notesController.text.trim();
+    if (requirements.requireDescription) {
+      if (notes.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('A description is required when logging time')),
+        );
+        return;
+      }
+      if (notes.length < requirements.descriptionMinLength) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Description must be at least ${requirements.descriptionMinLength} characters',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
     await ref.read(timerProvider.notifier).startTimer(
           projectId: _selectedProjectId!,
           taskId: _selectedTaskId,
-          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          notes: notes.isEmpty ? null : notes,
         );
 
     if (!mounted) return;
@@ -109,6 +137,7 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
     final projectsState = ref.watch(projectsProvider);
     final tasksState = ref.watch(tasksProvider);
     final timerState = ref.watch(timerProvider);
+    final requirementsAsync = ref.watch(timeEntryRequirementsProvider);
 
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
@@ -246,9 +275,11 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
             const SizedBox(height: AppSpacing.md),
             DropdownButtonFormField<int>(
               key: ValueKey('task_$_selectedTaskId'),
-              decoration: const InputDecoration(
-                labelText: 'Task (optional)',
-                prefixIcon: Icon(Icons.task_outlined),
+              decoration: InputDecoration(
+                labelText: requirementsAsync.valueOrNull?.requireTask == true
+                    ? 'Task *'
+                    : 'Task (optional)',
+                prefixIcon: const Icon(Icons.task_outlined),
               ),
               initialValue: _selectedTaskId,
               items: [
@@ -269,9 +300,11 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
             TextField(
               controller: _notesController,
               textInputAction: TextInputAction.done,
-              decoration: const InputDecoration(
-                labelText: 'Notes (optional)',
-                prefixIcon: Icon(Icons.note_outlined),
+              decoration: InputDecoration(
+                labelText: requirementsAsync.valueOrNull?.requireDescription == true
+                    ? 'Notes *'
+                    : 'Notes (optional)',
+                prefixIcon: const Icon(Icons.note_outlined),
               ),
               maxLines: 3,
             ),
