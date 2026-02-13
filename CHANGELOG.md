@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Additional features and improvements in development
 
+## [4.19.0] - 2025-02-13
+
+### Added
+- **REST API v1** - CRM and time approvals: `/api/v1/deals`, `/api/v1/leads`, `/api/v1/clients/<id>/contacts`, `/api/v1/contacts/<id>`, `/api/v1/time-entry-approvals` (list, get, approve, reject, cancel, request-approval, bulk-approve). New API token scopes: `read:deals`, `write:deals`, `read:leads`, `write:leads`, `read:contacts`, `write:contacts`, `read:time_approvals`, `write:time_approvals`.
+- **Documentation** - Service layer and BaseCRUD pattern ([docs/development/SERVICE_LAYER_AND_BASE_CRUD.md](docs/development/SERVICE_LAYER_AND_BASE_CRUD.md)); RBAC permission model ([docs/development/RBAC_PERMISSION_MODEL.md](docs/development/RBAC_PERMISSION_MODEL.md)).
+
+### Changed
+- **API responses** - Projects and new CRM/approvals API v1 routes use standardized `error_response` / `forbidden_response` / `not_found_response` from `app.utils.api_responses`.
+- **Templates** - All templates consolidated under `app/templates/`; root `templates/` removed and extra Jinja loader removed.
+- **Version** - README, FEATURES_COMPLETE.md, and docs reference `setup.py` as single source of truth for version (4.19.0).
+- **Refactored examples** - `projects_refactored_example.py`, `timer_refactored.py`, `invoices_refactored.py` marked as reference-only in module docstrings.
+
 ## [4.14.0] - 2025-01-27
 
 ### Changed

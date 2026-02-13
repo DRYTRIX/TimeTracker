@@ -1,8 +1,10 @@
 """
-Refactored timer routes using service layer.
-This demonstrates the new architecture pattern.
+REFERENCE ONLY — This module is not registered as an active blueprint.
 
-To use: Replace functions in app/routes/timer.py with these implementations.
+Refactored timer routes using service layer and app.utils.api_responses.
+It demonstrates the intended architecture pattern. The active routes live in
+app/routes/timer.py. Do not register this blueprint; use it as reference when
+refactoring or when adding new timer routes.
 """
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app

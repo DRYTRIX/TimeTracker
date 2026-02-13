@@ -16,7 +16,6 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from authlib.integrations.flask_client import OAuth
 import re
-from jinja2 import ChoiceLoader, FileSystemLoader
 from urllib.parse import urlparse
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.http import parse_options_header
@@ -270,11 +269,9 @@ def create_app(config=None):
         # Do not fail app creation for engine option tweaks
         pass
 
-    # Add top-level templates directory in addition to app/templates
-    extra_templates_path = os.path.abspath(os.path.join(app.root_path, "..", "templates"))
-    app.jinja_loader = ChoiceLoader([app.jinja_loader, FileSystemLoader(extra_templates_path)])
+    # All templates live in app/templates (legacy root templates/ was merged in)
 
-    # Prefer Postgres if POSTGRES_* envs are present but URL points to SQLite
+    # Prefer Postgres if POSTGRES_* env vars are present but URL points to SQLite
     # BUT only if DATABASE_URL was not explicitly set to SQLite
     current_url = app.config.get("SQLALCHEMY_DATABASE_URI", "")
     explicit_database_url = os.getenv("DATABASE_URL", "")
