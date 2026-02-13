@@ -40,14 +40,20 @@ def view_approval(approval_id):
     approval = TimeEntryApproval.query.get_or_404(approval_id)
 
     # Check permissions
+    service = TimeApprovalService()
+    approver_ids = service._get_approvers_for_entry(approval.time_entry)
     if approval.requested_by != current_user.id and approval.approved_by != current_user.id:
-        service = TimeApprovalService()
-        approver_ids = service._get_approvers_for_entry(approval.time_entry)
         if current_user.id not in approver_ids and not current_user.is_admin:
             flash(_("Access denied"), "error")
             return redirect(url_for("time_approvals.list_approvals"))
 
-    return render_template("approvals/view.html", approval=approval)
+    # Can current user approve this (pending) request?
+    can_approve = (
+        approval.status == ApprovalStatus.PENDING
+        and (current_user.id in approver_ids or current_user.is_admin)
+    )
+
+    return render_template("approvals/view.html", approval=approval, can_approve=can_approve)
 
 
 @time_approvals_bp.route("/approvals/<int:approval_id>/approve", methods=["POST"])
@@ -122,7 +128,7 @@ def request_approval(entry_id):
     else:
         flash(_(result.get("message", "Request failed")), "error")
 
-    return redirect(url_for("main.dashboard"))
+    return redirect(url_for("time_approvals.list_approvals"))
 
 
 @time_approvals_bp.route("/approvals/<int:approval_id>/cancel", methods=["POST"])

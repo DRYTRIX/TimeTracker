@@ -25,8 +25,13 @@ class TimeEntryApproval(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     time_entry_id = db.Column(db.Integer, db.ForeignKey("time_entries.id"), nullable=False, index=True)
 
-    # Approval workflow
-    status = db.Column(SQLEnum(ApprovalStatus), default=ApprovalStatus.PENDING, nullable=False, index=True)
+    # Approval workflow (use enum value for PostgreSQL: 'pending' not 'PENDING')
+    status = db.Column(
+        SQLEnum(ApprovalStatus, values_callable=lambda x: [e.value for e in x]),
+        default=ApprovalStatus.PENDING,
+        nullable=False,
+        index=True,
+    )
     requested_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     approved_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
 
