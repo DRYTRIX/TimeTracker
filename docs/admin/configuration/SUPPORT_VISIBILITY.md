@@ -8,6 +8,10 @@ This guide describes how to configure the optional **Support visibility** featur
 - After a valid code is entered and **Verify and hide for everyone** is clicked, donate and support UI is hidden **system-wide** for all users.
 - The System ID does not change between restarts; it identifies your instance so you can request the correct code.
 
+### How to get a code
+
+To purchase a key and receive your code, go to **[Support & Purchase Key](https://timetracker.drytrix.com/support.html)**. You will need your **System ID**, shown in Admin → Settings → Support visibility. One key per instance; the code is sent by email after payment.
+
 ## Server configuration
 
 You can enable verification in two ways. Only one is required.
@@ -70,9 +74,7 @@ If neither is set, the feature is disabled: no code will be accepted and the Sup
 
 Codes are **per installation**: each instance has its own System ID, and a valid code for one instance is not valid for another.
 
-- An admin copies the **System ID** from Admin → Settings → Support visibility (or you provide it from your deployment).
-- You generate the code for that System ID using the procedure and tools described in **internal documentation**. The code-generation script, key-generation steps, and private key handling are not in the public repository; maintainers use a separate, non-committed guide and script.
-- You send the code to the admin; they enter it in Admin → Settings and click **Verify and hide for everyone**.
+The public-facing way for admins to obtain a code is via the [Support & Purchase Key](https://timetracker.drytrix.com/support.html) page (see **How to get a code** above). For maintainers: an admin copies the **System ID** from Admin → Settings → Support visibility (or you provide it from your deployment); you generate the code for that System ID using the procedure and tools described in **internal documentation**. The code-generation script, key-generation steps, and private key handling are not in the public repository; maintainers use a separate, non-committed guide and script. You send the code to the admin; they enter it in Admin → Settings and click **Verify and hide for everyone**.
 
 ## User experience
 

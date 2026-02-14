@@ -86,6 +86,27 @@
         </div>
     </div>
 
+    <!-- Remove Donation Messages -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark mb-6 border-l-4 border-l-blue-500">
+        <h2 class="text-2xl font-semibold mb-4">
+            <i class="fas fa-eye-slash text-blue-500 mr-2"></i>
+            {{ _('Remove Donation Messages') }}
+        </h2>
+        <p class="mb-4 text-text-light dark:text-text-dark">
+            {{ _('Purchase a key to hide donate and support prompts in this TimeTracker instance. One key per instance; the key is sent by email after payment (€25 one-time).') }}
+        </p>
+        <p class="mb-4 text-sm text-text-muted-light dark:text-text-muted-dark">
+            {{ _('Admins: find your System ID in Admin → Settings → Support visibility.') }}
+        </p>
+        <a href="{{ support_purchase_url }}" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg">
+            <i class="fas fa-key mr-2"></i>{{ _('Get Key') }}
+            <i class="fas fa-external-link-alt text-sm"></i>
+        </a>
+    </div>
+
     <!-- Your Usage Stats -->
     {% if time_entries_count > 0 or total_hours > 0 %}
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark mb-6">
@@ -207,6 +228,19 @@
                     <div class="font-semibold">{{ _('Help Others') }}</div>
                     <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
                         {{ _('Share your knowledge in the community') }}
+                    </div>
+                </div>
+            </a>
+
+            <a href="{{ support_purchase_url }}" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               class="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-lg hover:bg-background-hover-light dark:hover:bg-background-hover-dark transition-colors">
+                <i class="fas fa-key text-2xl text-text-light dark:text-text-dark"></i>
+                <div>
+                    <div class="font-semibold">{{ _('Purchase a key to hide donate UI') }}</div>
+                    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                        {{ _('One-time key per instance to remove donate and support prompts') }}
                     </div>
                 </div>
             </a>

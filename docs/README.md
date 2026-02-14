@@ -82,6 +82,7 @@ See [features/](features/) for additional feature documentation.
 - **[Docker Startup Troubleshooting](admin/configuration/DOCKER_STARTUP_TROUBLESHOOTING.md)** — Fix startup issues
 - **[Email Configuration](admin/configuration/EMAIL_CONFIGURATION.md)** — Email setup
 - **[OIDC Setup](admin/configuration/OIDC_SETUP.md)** — OIDC/SSO authentication setup
+- **[Support visibility](admin/configuration/SUPPORT_VISIBILITY.md)** — Hide donate/support UI with a purchased key; [purchase key](https://timetracker.drytrix.com/support.html)
 
 ### Deployment
 - **[Version Management](admin/deployment/VERSION_MANAGEMENT.md)** — Managing versions

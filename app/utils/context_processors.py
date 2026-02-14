@@ -149,6 +149,10 @@ def register_context_processors(app):
         rtl_languages = current_app.config.get("RTL_LANGUAGES", set())
         is_rtl = short_locale in rtl_languages
 
+        support_purchase_url = current_app.config.get(
+            "SUPPORT_PURCHASE_URL", "https://timetracker.drytrix.com/support.html"
+        )
+
         return {
             "app_name": "Time Tracker",
             "app_version": version_value,
@@ -161,6 +165,7 @@ def register_context_processors(app):
             "is_rtl": is_rtl,
             "available_languages": available_languages,
             "config": current_app.config,
+            "support_purchase_url": support_purchase_url,
         }
 
     @app.before_request
