@@ -1137,6 +1137,9 @@
                            class="px-3 py-1.5 text-white text-sm font-medium rounded-lg transition-colors border border-blue-600 hover:opacity-90" style="background: linear-gradient(to right, #0070ba, #003087);">
                             <i class="fab fa-paypal mr-1"></i>{{ _('PayPal') }}
                         </a>
+                        <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="text-xs text-amber-700 dark:text-amber-300 hover:underline self-center">
+                            {{ _('Purchase key to hide') }}
+                        </a>
                         <button onclick="dismissSupportBanner()" 
                                 class="p-1.5 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded transition-colors"
                                 aria-label="{{ _('Dismiss') }}">

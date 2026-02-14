@@ -141,7 +141,13 @@
             <div class="border-b border-border-light dark:border-border-dark pb-6" id="donateVisibilitySection">
                 <h2 class="text-lg font-semibold mb-4"><i class="fas fa-eye-slash mr-2"></i>{{ _('Support visibility') }}</h2>
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
-                    {{ _('Hide donate and support UI for all users by verifying a code. The code is generated from the system ID (see internal documentation).') }}
+                    {{ _('Hide donate and support UI for all users by entering a code. Get your code by purchasing a key at the link below (one key per instance).') }}
+                </p>
+                <p class="mb-4">
+                    <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition">
+                        <i class="fas fa-key mr-1"></i>{{ _('Get key at Support & Purchase') }}
+                        <i class="fas fa-external-link-alt text-xs"></i>
+                    </a>
                 </p>
                 {% if system_instance_id %}
                 <div class="mb-4">
@@ -152,7 +158,7 @@
                             <i class="fas fa-copy mr-1"></i>{{ _('Copy') }}
                         </button>
                     </div>
-                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Use this ID to generate the code (see internal documentation).') }}</p>
+                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Use this ID when requesting your key at the support page above.') }}</p>
                 </div>
                 {% endif %}
                 {% if settings.donate_ui_hidden %}

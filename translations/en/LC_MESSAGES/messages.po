@@ -22162,6 +22162,62 @@ msgstr ""
 msgid "Please log in to access this page"
 msgstr ""
 
+#: app/templates/main/donate.html
+msgid "Remove Donation Messages"
+msgstr ""
+
+#: app/templates/main/donate.html
+msgid "Purchase a key to hide donate and support prompts in this TimeTracker instance. One key per instance; the key is sent by email after payment (€25 one-time)."
+msgstr ""
+
+#: app/templates/main/donate.html
+msgid "Admins: find your System ID in Admin → Settings → Support visibility."
+msgstr ""
+
+#: app/templates/main/donate.html
+msgid "Get Key"
+msgstr ""
+
+#: app/templates/main/donate.html
+msgid "Purchase a key to hide donate UI"
+msgstr ""
+
+#: app/templates/main/donate.html
+msgid "One-time key per instance to remove donate and support prompts"
+msgstr ""
+
+#: app/templates/admin/settings.html
+msgid "Hide donate and support UI for all users by entering a code. Get your code by purchasing a key at the link below (one key per instance)."
+msgstr ""
+
+#: app/templates/admin/settings.html
+msgid "Get key at Support & Purchase"
+msgstr ""
+
+#: app/templates/admin/settings.html
+msgid "Use this ID when requesting your key at the support page above."
+msgstr ""
+
+#: app/templates/user/settings.html
+msgid "Administrators can purchase a key to hide these prompts:"
+msgstr ""
+
+#: app/templates/user/settings.html
+msgid "Support & Purchase Key"
+msgstr ""
+
+#: app/templates/base.html
+msgid "Purchase key to hide"
+msgstr ""
+
+#: app/templates/main/dashboard.html
+msgid "Want to hide this widget?"
+msgstr ""
+
+#: app/templates/main/dashboard.html
+msgid "Purchase a key"
+msgstr ""
+
 #~ msgid "Log"
 #~ msgstr "Log"
 

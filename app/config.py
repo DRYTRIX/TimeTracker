@@ -120,6 +120,11 @@ class Config:
                 _donate_secret = ""
     DONATE_HIDE_UNLOCK_SECRET = _donate_secret
 
+    # Support & Purchase Key page URL (for links to purchase a key to hide donate UI)
+    SUPPORT_PURCHASE_URL = os.getenv(
+        "SUPPORT_PURCHASE_URL", "https://timetracker.drytrix.com/support.html"
+    ).strip()
+
     # Backup settings
     BACKUP_RETENTION_DAYS = int(os.getenv("BACKUP_RETENTION_DAYS", 30))
     BACKUP_TIME = os.getenv("BACKUP_TIME", "02:00")

@@ -22,6 +22,8 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 - 🏢 **Agencies** needing detailed reporting and client billing
 - 🔒 **Privacy-focused organizations** wanting self-hosted solutions
 
+You can [support the project and purchase a key](https://timetracker.drytrix.com/support.html) to hide donate prompts in your instance.
+
 ---
 
 ## 🛠️ Technology Stack
@@ -984,6 +986,7 @@ This means you can:
 
 ## 🆘 Support
 
+- 💙 **Support the project & purchase key:** [Support & Purchase Key](https://timetracker.drytrix.com/support.html) — donate or purchase a one-time key to remove donate/support prompts in your instance
 - 📖 **Documentation**: Check the [`docs/`](docs/) directory
 - 🐛 **Bug Reports**: [Open an issue](https://github.com/drytrix/TimeTracker/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/drytrix/TimeTracker/discussions)
