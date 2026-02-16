@@ -1246,6 +1246,7 @@ def settings():
 
             settings_obj.peppol_provider = (request.form.get("peppol_provider", "") or "").strip() or "generic"
             settings_obj.invoices_peppol_compliant = request.form.get("invoices_peppol_compliant") == "on"
+            settings_obj.invoices_zugferd_pdf = request.form.get("invoices_zugferd_pdf") == "on"
         except AttributeError:
             # Peppol columns don't exist yet (migration not run)
             pass

@@ -40,6 +40,7 @@ WeasyPrint==60.2
 pydyf==0.10.0
 Pillow==10.4.0
 reportlab==4.0.7
+pikepdf>=8.0.0
 
 # Background tasks
 APScheduler==3.10.4

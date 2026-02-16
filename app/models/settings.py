@@ -75,6 +75,8 @@ class Settings(db.Model):
     peppol_access_point_timeout = db.Column(db.Integer, default=30, nullable=True)
     peppol_provider = db.Column(db.String(50), default="generic", nullable=True)
     invoices_peppol_compliant = db.Column(db.Boolean, default=False, nullable=False)
+    # When True, exported invoice PDFs embed EN 16931 UBL XML (ZugFerd/Factur-X)
+    invoices_zugferd_pdf = db.Column(db.Boolean, default=False, nullable=False)
 
     # Privacy and analytics settings
     allow_analytics = db.Column(db.Boolean, default=True, nullable=False)  # Controls system info sharing for analytics
@@ -208,6 +210,7 @@ class Settings(db.Model):
         self.peppol_access_point_timeout = kwargs.get("peppol_access_point_timeout", 30)
         self.peppol_provider = kwargs.get("peppol_provider", "generic")
         self.invoices_peppol_compliant = kwargs.get("invoices_peppol_compliant", False)
+        self.invoices_zugferd_pdf = kwargs.get("invoices_zugferd_pdf", False)
 
         # Kiosk mode defaults
         self.kiosk_mode_enabled = kwargs.get("kiosk_mode_enabled", False)
@@ -420,6 +423,7 @@ class Settings(db.Model):
             "peppol_access_point_timeout": getattr(self, "peppol_access_point_timeout", None),
             "peppol_provider": getattr(self, "peppol_provider", "") or "",
             "invoices_peppol_compliant": getattr(self, "invoices_peppol_compliant", False),
+            "invoices_zugferd_pdf": getattr(self, "invoices_zugferd_pdf", False),
             "invoice_pdf_template_html": self.invoice_pdf_template_html,
             "invoice_pdf_template_css": self.invoice_pdf_template_css,
             "invoice_pdf_design_json": self.invoice_pdf_design_json,

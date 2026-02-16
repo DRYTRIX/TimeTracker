@@ -1149,6 +1149,12 @@ def export_invoice_pdf(invoice_id):
         pdf_generator = InvoicePDFGenerator(invoice, settings=settings, page_size=page_size)
         current_app.logger.info(f"[PDF_EXPORT] Starting PDF generation - PageSize: '{page_size}', InvoiceID: {invoice_id}")
         pdf_bytes = pdf_generator.generate_pdf()
+        # Optionally embed ZugFerd/Factur-X EN 16931 XML in PDF
+        if getattr(settings, "invoices_zugferd_pdf", False):
+            from app.utils.zugferd import embed_zugferd_xml_in_pdf
+            pdf_bytes, embed_err = embed_zugferd_xml_in_pdf(pdf_bytes, invoice, settings)
+            if embed_err:
+                current_app.logger.warning(f"[PDF_EXPORT] ZugFerd embed skipped - InvoiceID: {invoice_id}, Error: {embed_err}")
         pdf_size_bytes = len(pdf_bytes)
         current_app.logger.info(f"[PDF_EXPORT] PDF generation completed successfully - PageSize: '{page_size}', InvoiceID: {invoice_id}, PDFSize: {pdf_size_bytes} bytes")
         # Filename should be template+date+number (invoice number format)
@@ -1166,6 +1172,11 @@ def export_invoice_pdf(invoice_id):
             settings = Settings.get_settings()
             pdf_generator = InvoicePDFGeneratorFallback(invoice, settings=settings)
             pdf_bytes = pdf_generator.generate_pdf()
+            if getattr(settings, "invoices_zugferd_pdf", False):
+                from app.utils.zugferd import embed_zugferd_xml_in_pdf
+                pdf_bytes, embed_err = embed_zugferd_xml_in_pdf(pdf_bytes, invoice, settings)
+                if embed_err:
+                    current_app.logger.warning(f"[PDF_EXPORT] ZugFerd embed skipped (fallback path) - InvoiceID: {invoice_id}, Error: {embed_err}")
             pdf_size_bytes = len(pdf_bytes)
             current_app.logger.info(f"[PDF_EXPORT] Fallback PDF generated successfully - PageSize: '{page_size}', InvoiceID: {invoice_id}, PDFSize: {pdf_size_bytes} bytes")
             # Filename should be template+date+number (invoice number format)
