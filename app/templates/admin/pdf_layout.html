@@ -1669,6 +1669,21 @@
     </p>
 </div>
 
+<!-- Help Section -->
+<details class="mb-4 border border-gray-200 dark:border-gray-600 rounded-lg" style="font-size: 0.875rem;">
+    <summary class="px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-t-lg flex items-center gap-2">
+        <i class="fas fa-question-circle text-gray-500"></i>
+        <span class="font-medium">{{ _('Help: Items Table, Expenses Table & Saving') }}</span>
+    </summary>
+    <div class="px-4 py-3 pt-0 text-gray-600 dark:text-gray-400 space-y-2">
+        <p><strong>{{ _('Items Table:') }}</strong> {{ _('Displays time entries, extra goods, and expenses. Add from Invoice Data in the sidebar. Uses') }} <code>invoice.all_line_items</code>.</p>
+        <p><strong>{{ _('Expenses Table:') }}</strong> {{ _('Optional separate table for expenses. Add from Invoice Data in the sidebar.') }}</p>
+        <p><strong>{{ _('Saving:') }}</strong> {{ _('Click "Save Design" to persist. If tables disappear after save, try Reset to restore defaults, then re-add tables.') }}</p>
+        <p><strong>{{ _('Preview:') }}</strong> {{ _('Use "Generate Preview" to see how the PDF will look with real invoice data.') }}</p>
+        <p>{{ _('See') }} <code>docs/PDF_LAYOUT_CUSTOMIZATION.md</code> {{ _('for full documentation.') }}</p>
+    </div>
+</details>
+
 <!-- Action Bar -->
 <div class="action-bar">
     <button id="btn-clear" type="button" class="btn btn-secondary">
@@ -2414,6 +2429,50 @@ const PAGE_SIZE_DIMENSIONS = {
     'A5': { width: 420, height: 595 },
     'Tabloid': { width: 792, height: 1224 }
 };
+
+// Issue #504: Infer table type from group structure (supports localized headers)
+function inferTableNameFromGroup(child, excludeNode) {
+    if (!child || child === excludeNode || (child.className !== 'Group' && (!child.constructor || child.constructor.name !== 'Group'))) return null;
+    const children = child.getChildren ? child.getChildren() : (child.children || []);
+    if (children.length < 3) return null;
+    const textElements = children.filter(function(c) { return c.className === 'Text'; });
+    const hasLine = children.some(function(c) { return c.className === 'Line'; });
+    if (textElements.length < 2 || !hasLine) return null;
+    const headerText = (textElements[0].attrs && textElements[0].attrs.text) ? textElements[0].attrs.text : '';
+    const h = headerText.toLowerCase();
+    const hasPipeColumns = headerText.indexOf('|') !== -1 && headerText.split('|').length >= 3;
+    const expensesKeywords = ['expense', 'date', 'category', 'amount', 'ausgabe', 'datum', 'kategorie', 'betrag', 'dépense', 'catégorie', 'montant', 'spesa', 'data', 'categoria', 'importo', 'uitgave', 'datum', 'categorie', 'bedrag'];
+    const itemsKeywords = ['description', 'qty', 'quantity', 'unit price', 'total', 'beschreibung', 'menge', 'preis', 'betrag', 'gesamt', 'quantité', 'prix', 'descrizione', 'quantità', 'prezzo', 'totale', 'omschrijving', 'aantal', 'eenheidsprijs', 'totaal'];
+    const hasExpenseKw = expensesKeywords.some(function(kw) { return h.indexOf(kw) !== -1; });
+    const hasItemsKw = itemsKeywords.some(function(kw) { return h.indexOf(kw) !== -1; });
+    if (hasExpenseKw && (h.indexOf('date') !== -1 || h.indexOf('datum') !== -1 || h.indexOf('category') !== -1 || h.indexOf('kategorie') !== -1 || h.indexOf('catégorie') !== -1 || h.indexOf('categoria') !== -1 || h.indexOf('categorie') !== -1)) {
+        return 'expenses-table';
+    }
+    if (hasItemsKw || (hasPipeColumns && (h.indexOf('price') !== -1 || h.indexOf('preis') !== -1 || h.indexOf('prix') !== -1 || h.indexOf('amount') !== -1 || h.indexOf('betrag') !== -1 || h.indexOf('total') !== -1 || h.indexOf('gesamt') !== -1))) {
+        return 'items-table';
+    }
+    if (hasPipeColumns && textElements.length >= 2 && hasLine) {
+        return 'items-table';
+    }
+    return null;
+}
+
+function ensureTableGroupNames(layerRef, bgRef) {
+    if (!layerRef || !layerRef.children) return;
+    const bg = bgRef || (typeof background !== 'undefined' ? background : null);
+    layerRef.children.forEach(function(child) {
+        if (!child || child === bg || child.className !== 'Group') return;
+        const currentName = child.getAttr ? child.getAttr('name') : (child.attrs && child.attrs.name);
+        if (currentName === 'items-table' || currentName === 'expenses-table') return;
+        const inferred = inferTableNameFromGroup(child);
+        if (inferred) {
+            if (child.setAttr) child.setAttr('name', inferred);
+            if (child.attrs) child.attrs.name = inferred;
+            if (child.name) child.name(inferred);
+            console.log('[PDF_EDITOR] Ensured table group name before save:', inferred);
+        }
+    });
+}
 
 // Overflow and overlap detection functions
 function getElementBoundingBox(element) {
@@ -5419,13 +5478,15 @@ function initializePDFEditor() {
                     const groupName = child.attrs.name || '';
                     const isDecorativeImage = groupName && groupName.includes('decorative-image');
                     
-                    // Fallback: Check if group has multiple children (header, line, items) - likely a table
+                    // Fallback: Check if group has table-like structure but missing name (Issue #504 - i18n-aware)
                     if (!isItemsTable && !isExpensesTable && !isDecorativeImage && child.children && child.children.length >= 3) {
-                        const hasTextChildren = child.children.filter(c => c.className === 'Text').length >= 2;
-                        const hasLine = child.children.some(c => c.className === 'Line');
-                        if (hasTextChildren && hasLine) {
-                            console.log('⚠ Table detected by structure (missing name attribute) - consider re-saving layout');
+                        const inferred = inferTableNameFromGroup(child, null);
+                        if (inferred === 'items-table') {
                             isItemsTable = true;
+                            console.log('⚠ Items table detected by structure (missing name) - using inference');
+                        } else if (inferred === 'expenses-table') {
+                            isExpensesTable = true;
+                            console.log('⚠ Expenses table detected by structure (missing name) - using inference');
                         }
                     }
                     
@@ -5997,7 +6058,11 @@ table tr:last-child td {
     document.getElementById('btn-save').addEventListener('click', function() {
         // Clean up unwanted elements before generating code
         cleanupUnwantedElements();
-        
+        // Issue #504: Ensure table groups have correct name before generateCode (so they are included in template_json)
+        if (typeof ensureTableGroupNames === 'function' && layer) {
+            ensureTableGroupNames(layer, background);
+            layer.draw();
+        }
         const { html, css, json } = generateCode();
 
         // Log what we're saving for debugging
@@ -6505,24 +6570,12 @@ table tr:last-child td {
                     console.error('[INVOICE] [LOAD] ⚠️ WARNING: Found decorative images in saved JSON but NO imageUrl attributes!');
                 }
                 
-                // Defensive fix (Issue #504): Restore table group names from structure when missing from saved design_json
+                // Defensive fix (Issue #504): Restore table group names from structure when missing from saved design_json (i18n-aware)
                 layer.children.forEach((child) => {
                     if (!child || child === background || child.className !== 'Group') return;
                     const currentName = child.getAttr ? child.getAttr('name') : (child.attrs && child.attrs.name);
                     if (currentName === 'items-table' || currentName === 'expenses-table') return;
-                    const children = child.getChildren ? child.getChildren() : (child.children || []);
-                    if (children.length < 3) return;
-                    const textElements = children.filter(function(c) { return c.className === 'Text'; });
-                    const hasLine = children.some(function(c) { return c.className === 'Line'; });
-                    if (textElements.length < 2 || !hasLine) return;
-                    const headerText = (textElements[0].attrs && textElements[0].attrs.text) ? textElements[0].attrs.text : '';
-                    const h = headerText.toLowerCase();
-                    let inferredName = null;
-                    if (h.indexOf('expense') !== -1 && (h.indexOf('date') !== -1 || h.indexOf('category') !== -1)) {
-                        inferredName = 'expenses-table';
-                    } else if (h.indexOf('description') !== -1 && (h.indexOf('qty') !== -1 || h.indexOf('quantity') !== -1 || h.indexOf('unit price') !== -1)) {
-                        inferredName = 'items-table';
-                    }
+                    const inferredName = inferTableNameFromGroup(child, background);
                     if (inferredName) {
                         if (child.setAttr) child.setAttr('name', inferredName);
                         if (child.attrs) child.attrs.name = inferredName;

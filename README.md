@@ -228,6 +228,7 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 - **Custom Line Items** — Add manual items for expenses or services
 - **Tax Calculation** — Automatic tax calculations with configurable rates
 - **PDF Export** — Professional PDF invoice generation with customizable layouts
+- **PDF Invoice Layout** — Customize invoice and quote PDF layouts via Admin > PDF Layout; Items table includes time entries, extra goods, and expenses ([Guide](docs/PDF_LAYOUT_CUSTOMIZATION.md), [Extra Goods in PDF](docs/INVOICE_EXTRA_GOODS_PDF_EXPORT.md))
 - **Status Tracking** — Track draft, sent, paid, and overdue invoices
 - **Company Branding** — Add logos and custom company information
 - **Expense Integration** — Include tracked expenses in invoices

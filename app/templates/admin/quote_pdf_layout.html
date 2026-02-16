@@ -1480,6 +1480,20 @@
     </p>
 </div>
 
+<!-- Help Section -->
+<details class="mb-4 border border-gray-200 dark:border-gray-600 rounded-lg" style="font-size: 0.875rem;">
+    <summary class="px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-t-lg flex items-center gap-2">
+        <i class="fas fa-question-circle text-gray-500"></i>
+        <span class="font-medium">{{ _('Help: Quote Items Table & Saving') }}</span>
+    </summary>
+    <div class="px-4 py-3 pt-0 text-gray-600 dark:text-gray-400 space-y-2">
+        <p><strong>{{ _('Quote Items Table:') }}</strong> {{ _('Displays quote line items. Add from Invoice Data in the sidebar.') }}</p>
+        <p><strong>{{ _('Saving:') }}</strong> {{ _('Click "Save Design" to persist. If the table disappears after save, try Reset to restore defaults, then re-add the Items Table.') }}</p>
+        <p><strong>{{ _('Preview:') }}</strong> {{ _('Use "Generate Preview" to see how the PDF will look with real quote data.') }}</p>
+        <p>{{ _('See') }} <code>docs/PDF_LAYOUT_CUSTOMIZATION.md</code> {{ _('for full documentation.') }}</p>
+    </div>
+</details>
+
 <!-- Action Bar -->
 <div class="action-bar">
     <button id="btn-clear" type="button" class="btn btn-secondary">
@@ -2187,6 +2201,43 @@ const PAGE_SIZE_DIMENSIONS = {
     'A5': { width: 420, height: 595 },
     'Tabloid': { width: 792, height: 1224 }
 };
+
+// Issue #504: Infer quote items table from group structure (supports localized headers)
+function inferQuoteTableNameFromGroup(child, excludeNode) {
+    if (!child || child === excludeNode || (child.className !== 'Group' && (!child.constructor || child.constructor.name !== 'Group'))) return null;
+    const children = child.getChildren ? child.getChildren() : (child.children || []);
+    if (children.length < 3) return null;
+    const textElements = children.filter(function(c) { return c.className === 'Text'; });
+    const hasLine = children.some(function(c) { return c.className === 'Line'; });
+    if (textElements.length < 2 || !hasLine) return null;
+    const headerText = (textElements[0].attrs && textElements[0].attrs.text) ? textElements[0].attrs.text : '';
+    const h = headerText.toLowerCase();
+    const hasPipeColumns = headerText.indexOf('|') !== -1 && headerText.split('|').length >= 3;
+    const itemsKeywords = ['description', 'qty', 'quantity', 'unit price', 'total', 'beschreibung', 'menge', 'preis', 'betrag', 'gesamt', 'quantité', 'prix', 'descrizione', 'quantità', 'prezzo', 'totale', 'omschrijving', 'aantal', 'eenheidsprijs', 'totaal'];
+    const hasItemsKw = itemsKeywords.some(function(kw) { return h.indexOf(kw) !== -1; });
+    if (hasItemsKw || (hasPipeColumns && (h.indexOf('price') !== -1 || h.indexOf('preis') !== -1 || h.indexOf('prix') !== -1 || h.indexOf('amount') !== -1 || h.indexOf('betrag') !== -1 || h.indexOf('total') !== -1 || h.indexOf('gesamt') !== -1))) {
+        return 'quote-items-table';
+    }
+    if (hasPipeColumns && textElements.length >= 2 && hasLine) return 'quote-items-table';
+    return null;
+}
+
+function ensureQuoteTableGroupNames(layerRef, bgRef) {
+    if (!layerRef || !layerRef.children) return;
+    const bg = bgRef || (typeof background !== 'undefined' ? background : null);
+    layerRef.children.forEach(function(child) {
+        if (!child || child === bg || child.className !== 'Group') return;
+        const currentName = child.getAttr ? child.getAttr('name') : (child.attrs && child.attrs.name);
+        if (currentName === 'quote-items-table') return;
+        const inferred = inferQuoteTableNameFromGroup(child, bg);
+        if (inferred) {
+            if (child.setAttr) child.setAttr('name', inferred);
+            if (child.attrs) child.attrs.name = inferred;
+            if (child.name) child.name(inferred);
+            console.log('[QUOTE_PDF_EDITOR] Ensured quote table group name before save:', inferred);
+        }
+    });
+}
 
 // Overflow and overlap detection functions (same as invoice template)
 function getElementBoundingBox(element) {
@@ -3088,7 +3139,7 @@ function initializePDFEditor() {
             // Properly escape text for HTML and convert \n to actual newlines
             const textContent = (attrs.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/\\n/g, '\n');
             // Use more rows for table items which might be longer
-            const isTableText = node.parent && node.parent.attrs && (node.parent.attrs.name === 'items-table' || node.parent.attrs.name === 'expenses-table');
+            const isTableText = node.parent && node.parent.attrs && (node.parent.attrs.name === 'items-table' || node.parent.attrs.name === 'expenses-table' || node.parent.attrs.name === 'quote-items-table');
             const textareaRows = isTableText ? 8 : 3;
             
             html += '<div class="property-group">';
@@ -3230,7 +3281,7 @@ function initializePDFEditor() {
         // Group-specific properties (for items-table and expenses-table)
         // Check both className and constructor name for Groups
         const isGroup = className === 'Group' || (node.constructor && node.constructor.name === 'Group');
-        const isTableGroup = isGroup && (attrs.name === 'items-table' || attrs.name === 'expenses-table');
+        const isTableGroup = isGroup && (attrs.name === 'items-table' || attrs.name === 'expenses-table' || attrs.name === 'quote-items-table');
         console.log('Group check:', {
             className: className,
             constructorName: node.constructor ? node.constructor.name : 'unknown',
@@ -3356,7 +3407,7 @@ function initializePDFEditor() {
                 html += `<input type="text" value="Unknown" disabled class="property-input bg-gray-100">`;
             }
             html += '</div>';
-            html += '<p class="text-sm text-gray-500 italic mt-2">This is a Group element. If this is a table, make sure it has the name "items-table" or "expenses-table".</p>';
+            html += '<p class="text-sm text-gray-500 italic mt-2">This is a Group element. If this is a table, make sure it has the name "quote-items-table".</p>';
             html += '</div>';
         }
         
@@ -4964,21 +5015,20 @@ function initializePDFEditor() {
                 }
             } else if (child.className === 'Group' || child.constructor.name === 'Group' || child.children) {
                 // It's a Group element (check multiple ways since className might be undefined after JSON restore)
-                // Check if this is a table by looking at the group's name
-                let isItemsTable = child.attrs.name === 'items-table';
+                // Check if this is a table by looking at the group's name (quotes use quote-items-table)
+                let isItemsTable = child.attrs.name === 'items-table' || child.attrs.name === 'quote-items-table';
                 let isExpensesTable = child.attrs.name === 'expenses-table';
                 
                 // CRITICAL FIX: Check if this is a decorative-image group (handle name variations)
                 const groupName = child.attrs.name || '';
                 const isDecorativeImage = groupName && groupName.includes('decorative-image');
                 
-                // Fallback: Check if group has multiple children (header, line, items) - likely a table
+                // Fallback: Check if group has table-like structure but missing name (Issue #504 - i18n-aware)
                 if (!isItemsTable && !isExpensesTable && !isDecorativeImage && child.children && child.children.length >= 3) {
-                    const hasTextChildren = child.children.filter(c => c.className === 'Text').length >= 2;
-                    const hasLine = child.children.some(c => c.className === 'Line');
-                    if (hasTextChildren && hasLine) {
-                        console.log('⚠ Table detected by structure (missing name attribute) - consider re-saving layout');
+                    const inferred = inferQuoteTableNameFromGroup(child, null);
+                    if (inferred === 'quote-items-table') {
                         isItemsTable = true;
+                        console.log('⚠ Quote items table detected by structure (missing name) - using inference');
                     }
                 }
                 
@@ -5545,7 +5595,11 @@ table tr:last-child td {
     document.getElementById('btn-save').addEventListener('click', function() {
         // Clean up unwanted elements before generating code
         cleanupUnwantedElements();
-        
+        // Issue #504: Ensure quote table groups have correct name before generateCode
+        if (typeof ensureQuoteTableGroupNames === 'function' && layer) {
+            ensureQuoteTableGroupNames(layer, background);
+            layer.draw();
+        }
         const { html, css, json } = generateCode();
 
         // Log what we're saving for debugging
@@ -5644,6 +5698,9 @@ table tr:last-child td {
                     if (!jsonChild.attrs) jsonChild.attrs = {};
                     jsonChild.attrs.name = 'decorative-image';
                     jsonChild.attrs.imageUrl = (layerChild.getAttr ? layerChild.getAttr('imageUrl') : (layerChild.attrs && layerChild.attrs.imageUrl)) || '';
+                } else if (name === 'quote-items-table') {
+                    if (!jsonChild.attrs) jsonChild.attrs = {};
+                    jsonChild.attrs.name = 'quote-items-table';
                 }
             }
         }
@@ -5891,7 +5948,7 @@ table tr:last-child td {
                     if (child !== background && child.className !== 'Transformer') {
                         setupSelection(child);
                         // If it's a table Group, also setup selection on children
-                        if (child.className === 'Group' && (child.attrs.name === 'items-table' || child.attrs.name === 'expenses-table')) {
+                        if (child.className === 'Group' && (child.attrs.name === 'items-table' || child.attrs.name === 'expenses-table' || child.attrs.name === 'quote-items-table')) {
                             child.children.forEach(grandChild => {
                                 setupSelection(grandChild);
                             });
@@ -6009,6 +6066,20 @@ table tr:last-child td {
                     layer.add(newPageBorder);
                     newPageBorder.moveToBottom();
                 }
+                
+                // Defensive fix (Issue #504): Restore quote-items-table group name from structure when missing (i18n-aware)
+                layer.children.forEach((child) => {
+                    if (!child || child === background || child.className !== 'Group') return;
+                    const currentName = child.getAttr ? child.getAttr('name') : (child.attrs && child.attrs.name);
+                    if (currentName === 'quote-items-table') return;
+                    const inferredName = inferQuoteTableNameFromGroup(child, background);
+                    if (inferredName) {
+                        if (child.setAttr) child.setAttr('name', inferredName);
+                        if (child.attrs) child.attrs.name = inferredName;
+                        if (child.name) child.name(inferredName);
+                        console.log('[QUOTE] [LOAD] Restored quote table group name from structure:', inferredName);
+                    }
+                });
                 
                 // Clean up unwanted elements that might have been saved
                 // Remove unwanted full-page rectangle borders
@@ -6742,7 +6813,7 @@ table tr:last-child td {
                         }
                         setupSelection(child);
                         // If it's a table Group, also setup selection on children
-                        if (child.className === 'Group' && (child.attrs.name === 'items-table' || child.attrs.name === 'expenses-table')) {
+                        if (child.className === 'Group' && (child.attrs.name === 'items-table' || child.attrs.name === 'expenses-table' || child.attrs.name === 'quote-items-table')) {
                             child.children.forEach(grandChild => {
                                 setupSelection(grandChild);
                             });

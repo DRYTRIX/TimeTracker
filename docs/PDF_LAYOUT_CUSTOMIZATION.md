@@ -95,6 +95,19 @@ For comprehensive feature documentation, see [Enhanced PDF Editor Features](./PD
 
 ### Invoice Items Loop
 
+For the combined items table (time entries, extra goods, and expenses), use `invoice.all_line_items` in the PDF Designer:
+
+```jinja
+{% for item in invoice.all_line_items %}
+    {{ item.description }}              # Item description
+    {{ item.quantity }}                 # Quantity
+    {{ item.unit_price }}               # Unit price
+    {{ item.total_amount }}             # Line total
+{% endfor %}
+```
+
+For invoice items only (time-based billing):
+
 ```jinja
 {% for item in invoice.items %}
     {{ item.description }}              # Item description
@@ -395,6 +408,16 @@ tr, td, th {
 **Solution:**
 - Wait a minute before trying again
 - Rate limits: 60 previews/minute, 30 saves/minute
+
+### Items or Expenses Table Disappears After Save
+
+**Issue:** After adding an Items Table or Expenses Table from the Invoice Data section and clicking Save, the tables disappear from the design and are not present in the generated PDF.
+
+**Solutions:**
+- Ensure you add the **Items Table** or **Expenses Table** elements from the left sidebar (Invoice Data section)
+- Use **Reset** to restore the default layout, then re-add the Items Table and Expenses Table as needed
+- The Items Table uses `invoice.all_line_items` and displays time-based items, extra goods, and expenses in one combined table
+- See [Invoice Extra Goods PDF Export](INVOICE_EXTRA_GOODS_PDF_EXPORT.md) for details on the data sources
 
 ## API Endpoints
 
