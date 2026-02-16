@@ -45,25 +45,32 @@ See `docs/all_tracked_events.md` for a complete list of tracked events.
 - `app/utils/telemetry.py` - Now uses installation config for salt
 - `app/__init__.py` - Integrated setup check middleware
 
-### 3. First-Time Setup Page
+### 3. First-Time Setup (Guided Wizard)
 
-**Files Created:**
-- `app/routes/setup.py` - Setup route handler
-- `app/templates/setup/initial_setup.html` - Beautiful setup page
+**Files:**
+- `app/routes/setup.py` - Setup route handler (GET: wizard with settings/timezones; POST: validate and save all steps)
+- `app/templates/setup/initial_setup.html` - 6-step wizard UI
+- `app/static/js/setup-wizard.js` - Step navigation and optional client-side validation
+
+**Wizard steps:**
+1. **Welcome** – Intro; Next to continue
+2. **Region & time** – Timezone, date format, time format, currency (saved to Settings)
+3. **Company** – Company name, address, email, optional phone/website (saved to Settings)
+4. **System** – Allow self-registration, rounding minutes, single active timer, idle timeout (saved to Settings)
+5. **Integrations (optional)** – Google Calendar OAuth credentials; can skip
+6. **Privacy & finish** – Telemetry opt-in; Complete Setup submits form and marks setup complete
 
 **Features:**
-- **Welcome Screen:** Professional, user-friendly design
-- **Telemetry Opt-In:** Clear explanation of what's collected
-- **Privacy Transparency:** Detailed list of what is/isn't collected
-- **Setup Completion Tracking:** Prevents re-showing after completion
-- **Middleware Integration:** Redirects to setup if not complete
+- **Guided flow:** One form, single POST at the end; progress indicator (Step X of 6)
+- **Telemetry opt-in:** Clear explanation of what is/isn't collected; opt-in by default (unchecked)
+- **Setup completion tracking:** Stored in installation config; redirect to dashboard when complete
+- **Middleware:** Unauthenticated users are redirected to `/setup` if setup not complete
 
-**User Experience:**
-- ✅ Modern, clean UI with Tailwind CSS
-- ✅ Clear privacy explanations
-- ✅ Opt-in by default (unchecked checkbox)
-- ✅ Links to privacy policy and documentation
-- ✅ Easy to understand language
+**User experience:**
+- ✅ Modern UI with Tailwind CSS; Back/Next navigation
+- ✅ Prefilled from existing Settings when re-rendered (e.g. validation error)
+- ✅ Server-side validation (timezone, date format, currency, rounding, idle timeout)
+- ✅ Links to privacy policy and GPL-3.0
 
 ### 4. Admin Telemetry Dashboard
 

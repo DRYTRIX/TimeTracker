@@ -2,17 +2,21 @@
 
 ## For End Users
 
-### First-Time Setup
+### First-Time Setup (Guided Wizard)
 
-When you first access TimeTracker, you'll see a welcome screen asking about telemetry:
+When you first access TimeTracker, you'll see a **guided setup wizard** (6 steps). You can configure the basics in one flow, then continue to the dashboard.
 
-1. **Read the Privacy Information** - Review what data is collected (and what isn't)
-2. **Choose Your Preference:**
-   - ✅ **Enable Telemetry** - Help improve TimeTracker by sharing anonymous usage data
-   - ⬜ **Disable Telemetry** - No data will be sent (default)
-3. **Click "Complete Setup & Continue"**
+1. **Welcome** – Intro; click **Next** to start.
+2. **Region & time** – Timezone, date format, time format, and currency (used for reports and invoices).
+3. **Company** – Company name, address, email; optional phone and website (for invoices and branding).
+4. **System** – Allow self-registration, time rounding, single active timer per user, idle timeout (minutes).
+5. **Integrations (optional)** – Google Calendar OAuth (Client ID / Secret). You can skip this and configure later in Admin → Settings.
+6. **Privacy & finish** – Choose whether to enable anonymous telemetry:
+   - ✅ **Enable Telemetry** – Help improve TimeTracker with anonymous usage data
+   - ⬜ **Disable Telemetry** – No data will be sent (default)
+   - Click **Complete Setup & Continue** to finish.
 
-You can change this decision anytime in the admin settings.
+You can change telemetry and all other options anytime in **Admin → Settings**.
 
 ### Viewing Telemetry Status (Admin Only)
 

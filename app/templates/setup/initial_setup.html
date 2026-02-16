@@ -28,7 +28,6 @@
                     <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="logo" class="w-24 h-24 mx-auto">
                     <h1 class="text-3xl font-bold mt-4 text-primary">TimeTracker</h1>
                     <p class="mt-2 text-text-muted-light dark:text-text-muted-dark">{{ _('Track time. Stay organized.') }}</p>
-                    
                     <!-- Privacy Principles -->
                     <div class="mt-8 space-y-3 text-left">
                         <p class="text-sm font-semibold text-text-light dark:text-text-dark mb-3">🔒 {{ _('Privacy First') }}</p>
@@ -60,136 +59,229 @@
                 </div>
             </div>
 
-            <!-- Right side - Setup Form -->
+            <!-- Right side - Wizard -->
             <div class="p-8 overflow-y-auto max-h-[90vh]">
-                <h2 class="text-2xl font-bold tracking-tight">{{ _('Welcome to TimeTracker') }}</h2>
-                <p class="mt-2 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _("Let's get you set up in just a moment") }}</p>
+                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-4" id="wizard-progress-label">{{ _('Step 1 of 6') }}</p>
+                <div class="flex gap-1 mb-6" aria-hidden="true">
+                    <div class="h-1 flex-1 rounded-full bg-primary setup-progress-dot" data-step="1"></div>
+                    <div class="h-1 flex-1 rounded-full bg-gray-200 dark:bg-gray-700 setup-progress-dot" data-step="2"></div>
+                    <div class="h-1 flex-1 rounded-full bg-gray-200 dark:bg-gray-700 setup-progress-dot" data-step="3"></div>
+                    <div class="h-1 flex-1 rounded-full bg-gray-200 dark:bg-gray-700 setup-progress-dot" data-step="4"></div>
+                    <div class="h-1 flex-1 rounded-full bg-gray-200 dark:bg-gray-700 setup-progress-dot" data-step="5"></div>
+                    <div class="h-1 flex-1 rounded-full bg-gray-200 dark:bg-gray-700 setup-progress-dot" data-step="6"></div>
+                </div>
 
-                <form class="mt-6 space-y-6" method="POST" action="{{ url_for('setup.initial_setup') }}">
+                <form id="setup-form" class="space-y-6" method="POST" action="{{ url_for('setup.initial_setup') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    
-                    <!-- Welcome Message -->
-                    <div class="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                        <h3 class="text-sm font-semibold text-primary mb-2">🎉 {{ _('Thank you for choosing TimeTracker!') }}</h3>
-                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                            {{ _('Your data stays on your server, and you have complete control.') }}
-                        </p>
-                    </div>
 
-                    <!-- OAuth Integration Setup Section -->
-                    <div class="bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg p-4">
-                        <h3 class="text-base font-semibold mb-3">🔌 {{ _('Integration Setup (Optional)') }}</h3>
-                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
-                            {{ _('Configure OAuth credentials now to enable calendar and other integrations. You can also configure these later in Admin → Settings.') }}
-                        </p>
-                        
-                        <!-- Google Calendar OAuth -->
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium mb-2">
-                                <i class="fab fa-google text-blue-600 mr-2"></i>{{ _('Google Calendar OAuth') }}
-                            </label>
-                            <div class="space-y-2">
-                                <div>
-                                    <input 
-                                        type="text" 
-                                        name="google_calendar_client_id" 
-                                        placeholder="{{ _('Client ID (optional)') }}"
-                                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent"
-                                    >
-                                </div>
-                                <div>
-                                    <input 
-                                        type="password" 
-                                        name="google_calendar_client_secret" 
-                                        placeholder="{{ _('Client Secret (optional)') }}"
-                                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent"
-                                    >
-                                </div>
-                            </div>
-                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-2">
-                                {{ _('Get these from') }} <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="text-primary hover:underline">{{ _('Google Cloud Console') }}</a>
+                    <!-- Step 1: Welcome -->
+                    <div class="wizard-step" data-step="1" aria-current="step">
+                        <h2 class="text-2xl font-bold tracking-tight">{{ _('Welcome to TimeTracker') }}</h2>
+                        <p class="mt-2 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _("Let's get you set up in just a moment") }}</p>
+                        <div class="mt-6 bg-primary/10 border border-primary/20 rounded-lg p-4">
+                            <h3 class="text-sm font-semibold text-primary mb-2">🎉 {{ _('Thank you for choosing TimeTracker!') }}</h3>
+                            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                                {{ _('Your data stays on your server, and you have complete control.') }}
                             </p>
                         </div>
-
-                        <details class="text-sm mt-3">
-                            <summary class="cursor-pointer font-medium text-primary hover:underline">
-                                {{ _('How to get Google Calendar OAuth credentials?') }}
-                            </summary>
-                            <div class="mt-3 space-y-2 pl-4 border-l-2 border-primary/30 text-text-muted-light dark:text-text-muted-dark">
-                                <ol class="list-decimal list-inside space-y-2">
-                                    <li>{{ _('Go to') }} <a href="https://console.cloud.google.com/" target="_blank" class="text-primary hover:underline">{{ _('Google Cloud Console') }}</a></li>
-                                    <li>{{ _('Create a new project or select an existing one') }}</li>
-                                    <li>{{ _('Enable the Google Calendar API') }}</li>
-                                    <li>{{ _('Go to Credentials → Create Credentials → OAuth 2.0 Client ID') }}</li>
-                                    <li>{{ _('Set application type to "Web application"') }}</li>
-                                    <li>{{ _('Add authorized redirect URI:') }} <code class="bg-gray-100 dark:bg-gray-800 dark:text-text-light px-1 rounded text-xs break-all">{{ url_for('integrations.oauth_callback', provider='google_calendar', _external=True) }}</code></li>
-                                    <li>{{ _('Copy the Client ID and Client Secret') }}</li>
-                                </ol>
-                            </div>
-                        </details>
                     </div>
 
-                    <!-- Telemetry Opt-in Section -->
-                    <div class="bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg p-4">
-                        <h3 class="text-base font-semibold mb-3">📊 {{ _('Help Us Improve (Optional)') }}</h3>
-                        
-                        <div class="mb-3">
-                            <label class="flex items-start cursor-pointer">
-                                <input type="checkbox" name="telemetry_enabled" class="mt-1 h-4 w-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary">
-                                <span class="ml-3 text-sm">
-                                    <span class="font-medium">{{ _('Enable anonymous telemetry') }}</span>
-                                    <span class="block text-text-muted-light dark:text-text-muted-dark mt-1">
-                                        {{ _('Help us understand usage patterns to improve TimeTracker') }}
-                                    </span>
-                                </span>
-                            </label>
+                    <!-- Step 2: Region & time -->
+                    <div class="wizard-step hidden" data-step="2">
+                        <h2 class="text-xl font-bold tracking-tight">{{ _('Region & time') }}</h2>
+                        <p class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Set your default timezone, date and time format, and currency.') }}</p>
+                        <div class="mt-4 space-y-4">
+                            <div>
+                                <label for="timezone" class="block text-sm font-medium mb-1">{{ _('Timezone') }} <span class="text-red-500">*</span></label>
+                                <select name="timezone" id="timezone" required class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    {% for tz in timezones or [] %}
+                                    <option value="{{ tz }}" {% if settings and settings.timezone == tz %}selected{% endif %}>{{ tz }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="date_format" class="block text-sm font-medium mb-1">{{ _('Date format') }}</label>
+                                    <select name="date_format" id="date_format" class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent">
+                                        <option value="YYYY-MM-DD" {% if settings and settings.date_format == 'YYYY-MM-DD' %}selected{% endif %}>YYYY-MM-DD</option>
+                                        <option value="MM/DD/YYYY" {% if settings and settings.date_format == 'MM/DD/YYYY' %}selected{% endif %}>MM/DD/YYYY</option>
+                                        <option value="DD/MM/YYYY" {% if settings and settings.date_format == 'DD/MM/YYYY' %}selected{% endif %}>DD/MM/YYYY</option>
+                                        <option value="DD.MM.YYYY" {% if settings and settings.date_format == 'DD.MM.YYYY' %}selected{% endif %}>DD.MM.YYYY</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="time_format" class="block text-sm font-medium mb-1">{{ _('Time format') }}</label>
+                                    <select name="time_format" id="time_format" class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent">
+                                        <option value="24h" {% if not settings or settings.time_format == '24h' %}selected{% endif %}>{{ _('24-hour') }}</option>
+                                        <option value="12h" {% if settings and settings.time_format == '12h' %}selected{% endif %}>{{ _('12-hour') }}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="currency" class="block text-sm font-medium mb-1">{{ _('Currency') }} <span class="text-red-500">*</span></label>
+                                <input type="text" name="currency" id="currency" value="{{ settings.currency if settings else 'EUR' }}" required maxlength="10" class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="EUR">
+                            </div>
                         </div>
-
-                        <!-- Collapsible details -->
-                        <details class="text-sm mt-3">
-                            <summary class="cursor-pointer font-medium text-primary hover:underline">
-                                {{ _('What data is collected?') }}
-                            </summary>
-                            <div class="mt-3 space-y-3 pl-4 border-l-2 border-primary/30">
-                                <div>
-                                    <p class="font-semibold text-green-600 dark:text-green-400">✓ {{ _('What we collect:') }}</p>
-                                    <ul class="list-disc list-inside space-y-1 ml-2 text-text-muted-light dark:text-text-muted-dark">
-                                        <li>{{ _('Anonymous installation fingerprint (hashed)') }}</li>
-                                        <li>{{ _('Application version & platform info') }}</li>
-                                        <li>{{ _('Feature usage statistics') }}</li>
-                                        <li>{{ _('Internal numeric IDs only') }}</li>
-                                    </ul>
-                                </div>
-                                
-                                <div>
-                                    <p class="font-semibold text-red-600 dark:text-red-400">✗ {{ _("What we DON'T collect:") }}</p>
-                                    <ul class="list-disc list-inside space-y-1 ml-2 text-text-muted-light dark:text-text-muted-dark">
-                                        <li>{{ _('No usernames or emails') }}</li>
-                                        <li>{{ _('No project names or descriptions') }}</li>
-                                        <li>{{ _('No time entry data or notes') }}</li>
-                                        <li>{{ _('No client or business data') }}</li>
-                                        <li>{{ _('No IP addresses or PII') }}</li>
-                                    </ul>
-                                </div>
-
-                                <div class="bg-primary/10 rounded p-3 text-xs">
-                                    <p class="text-text-light dark:text-text-dark">
-                                        <strong>{{ _('Why?') }}</strong> {{ _('Anonymous usage data helps us prioritize features and fix issues.') }}
-                                        {{ _('You can change this anytime in') }} <strong>{{ _('Admin → Settings') }}</strong> ({{ _('Privacy & Analytics section') }}).
-                                    </p>
-                                </div>
-                            </div>
-                        </details>
                     </div>
 
-                    <!-- Submit Button -->
-                    <button type="submit" class="btn btn-primary w-full">
-                        <i class="fa-solid fa-check mr-2"></i>
-                        {{ _('Complete Setup & Continue') }}
-                    </button>
+                    <!-- Step 3: Company -->
+                    <div class="wizard-step hidden" data-step="3">
+                        <h2 class="text-xl font-bold tracking-tight">{{ _('Company') }}</h2>
+                        <p class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Company details for invoices and branding.') }}</p>
+                        <div class="mt-4 space-y-4">
+                            <div>
+                                <label for="company_name" class="block text-sm font-medium mb-1">{{ _('Company name') }}</label>
+                                <input type="text" name="company_name" id="company_name" value="{{ settings.company_name if settings else '' }}" class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="{{ _('Your Company Name') }}">
+                            </div>
+                            <div>
+                                <label for="company_address" class="block text-sm font-medium mb-1">{{ _('Address') }}</label>
+                                <textarea name="company_address" id="company_address" rows="2" class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="{{ _('Your Company Address') }}">{{ settings.company_address if settings else '' }}</textarea>
+                            </div>
+                            <div>
+                                <label for="company_email" class="block text-sm font-medium mb-1">{{ _('Email') }}</label>
+                                <input type="email" name="company_email" id="company_email" value="{{ settings.company_email if settings else '' }}" class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="info@yourcompany.com">
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="company_phone" class="block text-sm font-medium mb-1">{{ _('Phone') }} ({{ _('optional') }})</label>
+                                    <input type="text" name="company_phone" id="company_phone" value="{{ settings.company_phone if settings else '' }}" class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent">
+                                </div>
+                                <div>
+                                    <label for="company_website" class="block text-sm font-medium mb-1">{{ _('Website') }} ({{ _('optional') }})</label>
+                                    <input type="text" name="company_website" id="company_website" value="{{ settings.company_website if settings else '' }}" class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                    <div class="text-xs text-center text-text-muted-light dark:text-text-muted-dark">
-                        <p>{{ _('By continuing, you agree to use TimeTracker under the') }} <a href="https://www.gnu.org/licenses/gpl-3.0.html" class="text-primary hover:underline" target="_blank">{{ _('GPL-3.0 License') }}</a></p>
+                    <!-- Step 4: System -->
+                    <div class="wizard-step hidden" data-step="4">
+                        <h2 class="text-xl font-bold tracking-tight">{{ _('System') }}</h2>
+                        <p class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('App behavior and timer settings.') }}</p>
+                        <div class="mt-4 space-y-4">
+                            <div class="flex items-start">
+                                <input type="checkbox" name="allow_self_register" id="allow_self_register" {% if settings and settings.allow_self_register %}checked{% endif %} class="mt-1 h-4 w-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary">
+                                <label for="allow_self_register" class="ml-3 text-sm">
+                                    <span class="font-medium">{{ _('Allow self-registration') }}</span>
+                                    <span class="block text-text-muted-light dark:text-text-muted-dark mt-0.5">{{ _('Users can create accounts from the login page') }}</span>
+                                </label>
+                            </div>
+                            <div>
+                                <label for="rounding_minutes" class="block text-sm font-medium mb-1">{{ _('Time rounding (minutes)') }}</label>
+                                <select name="rounding_minutes" id="rounding_minutes" class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="1" {% if not settings or settings.rounding_minutes == 1 %}selected{% endif %}>1</option>
+                                    <option value="5" {% if settings and settings.rounding_minutes == 5 %}selected{% endif %}>5</option>
+                                    <option value="15" {% if settings and settings.rounding_minutes == 15 %}selected{% endif %}>15</option>
+                                    <option value="30" {% if settings and settings.rounding_minutes == 30 %}selected{% endif %}>30</option>
+                                </select>
+                                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Round time entries to the nearest N minutes.') }}</p>
+                            </div>
+                            <div class="flex items-start">
+                                <input type="checkbox" name="single_active_timer" id="single_active_timer" {% if not settings or settings.single_active_timer %}checked{% endif %} class="mt-1 h-4 w-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary">
+                                <label for="single_active_timer" class="ml-3 text-sm">
+                                    <span class="font-medium">{{ _('Single active timer per user') }}</span>
+                                    <span class="block text-text-muted-light dark:text-text-muted-dark mt-0.5">{{ _('Only one running timer at a time per user') }}</span>
+                                </label>
+                            </div>
+                            <div>
+                                <label for="idle_timeout_minutes" class="block text-sm font-medium mb-1">{{ _('Idle timeout (minutes)') }}</label>
+                                <input type="number" name="idle_timeout_minutes" id="idle_timeout_minutes" value="{{ settings.idle_timeout_minutes if settings else 30 }}" min="1" max="480" class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Pause timer after this many minutes of inactivity.') }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 5: Integrations -->
+                    <div class="wizard-step hidden" data-step="5">
+                        <h2 class="text-xl font-bold tracking-tight">{{ _('Integrations') }} ({{ _('optional') }})</h2>
+                        <p class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Configure calendar OAuth now or later in Admin → Settings.') }}</p>
+                        <div class="mt-4 bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg p-4">
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium mb-2">
+                                    <i class="fab fa-google text-blue-600 mr-2"></i>{{ _('Google Calendar OAuth') }}
+                                </label>
+                                <div class="space-y-2">
+                                    <input type="text" name="google_calendar_client_id" placeholder="{{ _('Client ID (optional)') }}" class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <input type="password" name="google_calendar_client_secret" placeholder="{{ _('Client Secret (optional)') }}" class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent">
+                                </div>
+                                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-2">
+                                    {{ _('Get these from') }} <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener" class="text-primary hover:underline">{{ _('Google Cloud Console') }}</a>
+                                </p>
+                            </div>
+                            <details class="text-sm mt-3">
+                                <summary class="cursor-pointer font-medium text-primary hover:underline">{{ _('How to get Google Calendar OAuth credentials?') }}</summary>
+                                <div class="mt-3 space-y-2 pl-4 border-l-2 border-primary/30 text-text-muted-light dark:text-text-muted-dark">
+                                    <ol class="list-decimal list-inside space-y-2">
+                                        <li>{{ _('Go to') }} <a href="https://console.cloud.google.com/" target="_blank" rel="noopener" class="text-primary hover:underline">{{ _('Google Cloud Console') }}</a></li>
+                                        <li>{{ _('Create a new project or select an existing one') }}</li>
+                                        <li>{{ _('Enable the Google Calendar API') }}</li>
+                                        <li>{{ _('Go to Credentials → Create Credentials → OAuth 2.0 Client ID') }}</li>
+                                        <li>{{ _('Set application type to "Web application"') }}</li>
+                                        <li>{{ _('Add authorized redirect URI:') }} <code class="bg-gray-100 dark:bg-gray-800 dark:text-text-light px-1 rounded text-xs break-all">{{ url_for('integrations.oauth_callback', provider='google_calendar', _external=True) }}</code></li>
+                                        <li>{{ _('Copy the Client ID and Client Secret') }}</li>
+                                    </ol>
+                                </div>
+                            </details>
+                        </div>
+                        <p class="mt-3 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _("You can skip this step and configure integrations later.") }}</p>
+                    </div>
+
+                    <!-- Step 6: Privacy & finish -->
+                    <div class="wizard-step hidden" data-step="6">
+                        <h2 class="text-xl font-bold tracking-tight">{{ _('Privacy & finish') }}</h2>
+                        <p class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Choose whether to help improve TimeTracker with anonymous usage data.') }}</p>
+                        <div class="mt-4 bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg p-4">
+                            <div class="mb-3">
+                                <label class="flex items-start cursor-pointer">
+                                    <input type="checkbox" name="telemetry_enabled" class="mt-1 h-4 w-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary">
+                                    <span class="ml-3 text-sm">
+                                        <span class="font-medium">{{ _('Enable anonymous telemetry') }}</span>
+                                        <span class="block text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Help us understand usage patterns to improve TimeTracker') }}</span>
+                                    </span>
+                                </label>
+                            </div>
+                            <details class="text-sm mt-3">
+                                <summary class="cursor-pointer font-medium text-primary hover:underline">{{ _('What data is collected?') }}</summary>
+                                <div class="mt-3 space-y-3 pl-4 border-l-2 border-primary/30">
+                                    <div>
+                                        <p class="font-semibold text-green-600 dark:text-green-400">✓ {{ _('What we collect:') }}</p>
+                                        <ul class="list-disc list-inside space-y-1 ml-2 text-text-muted-light dark:text-text-muted-dark">
+                                            <li>{{ _('Anonymous installation fingerprint (hashed)') }}</li>
+                                            <li>{{ _('Application version & platform info') }}</li>
+                                            <li>{{ _('Feature usage statistics') }}</li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold text-red-600 dark:text-red-400">✗ {{ _("What we DON'T collect:") }}</p>
+                                        <ul class="list-disc list-inside space-y-1 ml-2 text-text-muted-light dark:text-text-muted-dark">
+                                            <li>{{ _('No usernames or emails') }}</li>
+                                            <li>{{ _('No time entry data or notes') }}</li>
+                                            <li>{{ _('No client or business data') }}</li>
+                                        </ul>
+                                    </div>
+                                    <p class="text-xs">{{ _('You can change this anytime in') }} <strong>{{ _('Admin → Settings') }}</strong>.</p>
+                                </div>
+                            </details>
+                        </div>
+                        <div class="mt-4 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            <p>{{ _('By continuing, you agree to use TimeTracker under the') }} <a href="https://www.gnu.org/licenses/gpl-3.0.html" class="text-primary hover:underline" target="_blank" rel="noopener">{{ _('GPL-3.0 License') }}</a></p>
+                        </div>
+                    </div>
+
+                    <!-- Navigation -->
+                    <div class="flex justify-between items-center pt-6 border-t border-border-light dark:border-border-dark mt-6">
+                        <button type="button" id="setup-back-btn" class="btn border border-border-light dark:border-border-dark hidden" aria-label="{{ _('Back') }}">
+                            <i class="fa-solid fa-arrow-left mr-2"></i>{{ _('Back') }}
+                        </button>
+                        <div class="flex-1"></div>
+                        <div class="flex gap-2">
+                            <button type="button" id="setup-next-btn" class="btn btn-primary">
+                                {{ _('Next') }}<i class="fa-solid fa-arrow-right ml-2"></i>
+                            </button>
+                            <button type="submit" id="setup-submit-btn" class="btn btn-primary hidden" aria-label="{{ _('Complete Setup & Continue') }}">
+                                <i class="fa-solid fa-check mr-2"></i>{{ _('Complete Setup & Continue') }}
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -210,6 +302,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
     <script src="{{ url_for('static', filename='toast-notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='error-handling-enhanced.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/setup-wizard.js') }}"></script>
 </body>
 </html>
-
