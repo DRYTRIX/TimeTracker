@@ -54,7 +54,7 @@ If you prefer to create the database and web service manually:
 
 1. Create a **PostgreSQL** database and note the **Internal Database URL** (or **External** if your app runs elsewhere).
 2. Create a **Web Service**, connect the repo, and set:
-   - **Build Command**: `pip install -r requirements.txt && npm ci && npm run build:docker`
+   - **Build Command**: `pip install -r requirements.txt && npm install && npm run build:docker`
    - **Start Command**: `gunicorn --bind 0.0.0.0:$PORT --worker-class eventlet --workers 1 --timeout 120 "app:create_app()"`
    - **Pre-deploy Command**: `flask db upgrade`
 3. In **Environment**, set **FLASK_APP** to `app:create_app()`, **DATABASE_URL** to the Postgres URL, **SECRET_KEY**, and any demo-mode variables as above.
@@ -62,5 +62,6 @@ If you prefer to create the database and web service manually:
 ## Troubleshooting
 
 - **Migrations**: The pre-deploy command runs `flask db upgrade`. If it fails, check that **FLASK_APP** is set to `app:create_app()` and that **DATABASE_URL** is set and reachable from Render.
-- **Build**: The build installs Python dependencies and compiles Tailwind CSS. If `npm run build:docker` fails, ensure `package.json` and `app/static/src/input.css` are in the repo.
+- **Build**: The build installs Python dependencies and compiles Tailwind CSS. Use `npm install` (not `npm ci`) in the build command because the repo has no `package-lock.json`. If `npm run build:docker` fails, ensure `package.json` and `app/static/src/input.css` are in the repo.
+- **Python version**: The repo includes a `.python-version` file set to `3.11` so Render does not use a newer Python (e.g. 3.14) that may break some dependencies.
 - **Database URL**: Render’s PostgreSQL URL is usually in `postgres://` form; the app uses `postgresql+psycopg2`. If you see connection errors, try setting **DATABASE_URL** to the same URL with the scheme changed to `postgresql://` (Render may also provide a direct URL in the database dashboard).

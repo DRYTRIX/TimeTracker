@@ -1,5 +1,6 @@
 # Render Blueprint: TimeTracker Web Service + PostgreSQL
 # Connect this repo in Render Dashboard (New > Blueprint) for auto-deploy on push.
+# Python version: set by .python-version (3.11). Build uses npm install (no package-lock.json in repo).
 
 databases:
   - name: timetracker-db
@@ -13,7 +14,7 @@ services:
     runtime: python
     region: oregon
 
-    buildCommand: pip install -r requirements.txt && npm ci && npm run build:docker
+    buildCommand: pip install -r requirements.txt && npm install && npm run build:docker
     startCommand: gunicorn --bind 0.0.0.0:$PORT --worker-class eventlet --workers 1 --timeout 120 "app:create_app()"
     preDeployCommand: flask db upgrade
 
