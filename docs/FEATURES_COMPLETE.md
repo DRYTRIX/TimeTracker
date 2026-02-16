@@ -1,7 +1,7 @@
 # TimeTracker - Complete Features Documentation
 
-**Version:** 4.19.0 (see `setup.py` for single source of truth)  
-**Last Updated:** 2025-02-13
+**Version:** 4.20.0 (see `setup.py` for single source of truth)  
+**Last Updated:** 2025-02-16
 
 ---
 

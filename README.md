@@ -80,7 +80,7 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 > **📋 For complete release history, see [CHANGELOG.md](CHANGELOG.md)**
 
-**Latest Release: v4.19.0** (February 2025). Version is defined in `setup.py` (single source of truth).
+**Latest Release: v4.20.0** (February 2025). Version is defined in `setup.py` (single source of truth).
 - 📱 **Native Mobile & Desktop Apps** — Flutter mobile app (iOS/Android) and Electron desktop app with time tracking, offline support, and API integration ([Build Guide](BUILD.md), [Docs](docs/mobile-desktop-apps/README.md))
 - 📋 **Project Analysis & Documentation** — Comprehensive project analysis and documentation updates
 - 🔧 **Version Consistency** — Fixed version inconsistencies across documentation files
