@@ -31,7 +31,7 @@ To access the PDF layout editor:
 The PDF Layout Editor is powered by **Konva.js** and consists of three main sections:
 
 1. **Element Library (Left Sidebar)**: Drag-and-drop elements organized by category
-   - Basic Elements (text, shapes, lines)
+   - Basic Elements (text, shapes, lines, decorative images)
    - Company Information (logo, name, address, contact details)
    - Invoice Data (numbers, dates, client info, totals)
    - Advanced Elements (QR codes, watermarks, page numbers)

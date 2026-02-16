@@ -429,29 +429,27 @@ class ReportLabTemplateRenderer:
         # Process template variables for source
         source = self._process_template_variables(source)
         
-        # CRITICAL FIX: Skip decorative images with empty or invalid source
-        # Decorative images are optional and should not break PDF generation if missing
-        if not source or not source.strip():
-            # For decorative images, silently skip if source is empty
-            if element.get("decorative", False):
-                if current_app:
-                    current_app.logger.warning(f"Skipping decorative image flowable with empty source")
-                return None
-            # For non-decorative images, also return None
+        # Issue #432: Explicit skip for decorative images with empty source (never add flowable or draw)
+        if element.get("decorative", False) and (not source or not source.strip()):
+            if current_app:
+                current_app.logger.warning("Skipping decorative image flowable with empty source")
             return None
-        
-        # Handle base64 data URI
+        if not source or not source.strip():
+            return None
+
+        # Handle base64 data URI with validated decode (Issue #432)
         if source.startswith("data:image"):
-            # Extract base64 data
             import base64
-            header, data = source.split(",", 1)
+            parts = source.split(",", 1)
+            if len(parts) < 2 or not (parts[1] and parts[1].strip()):
+                if current_app:
+                    current_app.logger.warning("Skipping image: data URI has no base64 payload")
+                return None
             try:
-                img_data = base64.b64decode(data)
+                img_data = base64.b64decode(parts[1])
                 img_reader = ImageReader(io.BytesIO(img_data))
-                
-                width = element.get("width", 100)  # Already in points from generateCode
-                height = element.get("height", 100)  # Already in points from generateCode
-                
+                width = element.get("width", 100)
+                height = element.get("height", 100)
                 return Image(img_reader, width=width, height=height)
             except Exception as e:
                 if current_app:
@@ -1026,19 +1024,16 @@ class ReportLabTemplateRenderer:
         source = element.get("source", "")
         source = self._process_template_variables(source)
         
-        # CRITICAL FIX: Skip decorative images with empty or invalid source to prevent black screen
-        # Decorative images are optional and should not break PDF generation if missing
+        # Issue #432: Explicit skip for decorative images with empty source (never draw)
+        if element.get("decorative", False) and (not source or not source.strip()):
+            if current_app:
+                current_app.logger.warning(f"Skipping decorative image with empty source at position ({x}, {y})")
+            return
         if not source or not source.strip():
-            # For decorative images, silently skip if source is empty
-            if element.get("decorative", False):
-                if current_app:
-                    current_app.logger.warning(f"Skipping decorative image with empty source at position ({x}, {y})")
-                return
-            # For non-decorative images, also skip but log warning
             if current_app:
                 current_app.logger.warning(f"Skipping image with empty source at position ({x}, {y})")
             return
-        
+
         width = element.get("width", 100)
         height = element.get("height", 100)
         
@@ -1058,14 +1053,22 @@ class ReportLabTemplateRenderer:
             return
         
         try:
-            # Handle base64 data URI
+            # Handle base64 data URI with validated decode (Issue #432)
             if source.startswith("data:image"):
                 import base64
-                header, data = source.split(",", 1)
-                img_data = base64.b64decode(data)
-                img_reader = ImageReader(io.BytesIO(img_data))
-                # mask='auto' preserves transparency for PNG images
-                canv.drawImage(img_reader, x, y - height, width=width, height=height, preserveAspectRatio=True, mask='auto')
+                parts = source.split(",", 1)
+                if len(parts) < 2 or not (parts[1] and parts[1].strip()):
+                    if current_app:
+                        current_app.logger.warning("Skipping image draw: data URI has no base64 payload")
+                    return
+                try:
+                    img_data = base64.b64decode(parts[1])
+                    img_reader = ImageReader(io.BytesIO(img_data))
+                    canv.drawImage(img_reader, x, y - height, width=width, height=height, preserveAspectRatio=True, mask='auto')
+                except Exception as e:
+                    if current_app:
+                        current_app.logger.error(f"Error decoding base64 image for canvas: {e}")
+                    return
             # Handle template image URLs (convert to file path or base64)
             elif source.startswith("/uploads/template_images/"):
                 try:

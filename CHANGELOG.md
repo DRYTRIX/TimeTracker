@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **PDF layout: decorative image persistence and PDF preview (Issue #432)** — Decorative images now survive save/load: image URLs are synced onto groups before generating the template, injected into the saved design JSON using position-based matching, and restored from the saved JSON onto the canvas on load. Empty decorative image elements are no longer added to the ReportLab template, and the PDF generator skips empty or invalid image sources and validates base64 data URIs, preventing a mostly-black or broken PDF preview.
+
 ### Added
 - **ZugFerd / Factur-X support for invoice PDFs** — When enabled in Admin → Settings → Peppol e-Invoicing, exported invoice PDFs embed EN 16931 UBL XML as `ZUGFeRD-invoice.xml`, producing hybrid human- and machine-readable invoices. Uses the same UBL as Peppol; these PDFs can be sent via Peppol or email. New setting `invoices_zugferd_pdf`, migration `128_add_invoices_zugferd_pdf`, dependency `pikepdf`, and [docs/admin/configuration/PEPPOL_EINVOICING.md](docs/admin/configuration/PEPPOL_EINVOICING.md) updated for both Peppol and ZugFerd.
 - **Subcontractor role and assigned clients** — Users with the Subcontractor role can be restricted to specific clients and their projects. Admins assign clients in Admin → Users → Edit user (section "Assigned Clients (Subcontractor)"). Scope is applied to clients, projects, time entries, reports, invoices, timer, and API v1; direct access to other clients/projects returns 403. New table `user_clients`, migration `127_add_user_clients_table`, and docs in [docs/SUBCONTRACTOR_ROLE.md](docs/SUBCONTRACTOR_ROLE.md).
