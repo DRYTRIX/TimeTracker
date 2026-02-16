@@ -4,22 +4,22 @@
 
 {% block content %}
 {% set breadcrumbs = [
-    {'text': 'Reports'}
+    {'text': _('Reports')}
 ] %}
 
 {{ page_header(
     icon_class='fas fa-chart-bar',
-    title_text='Reports',
-    subtitle_text='View comprehensive reports and analytics for your time tracking data',
+    title_text=_('Reports'),
+    subtitle_text=_('View comprehensive reports and analytics for your time tracking data'),
     breadcrumbs=breadcrumbs,
     actions_html=None
 ) }}
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-    {{ info_card("Total Hours", "%.2f"|format(summary.total_hours), "All time") }}
-    {{ info_card("Billable Hours", "%.2f"|format(summary.billable_hours), "All time") }}
-    {{ info_card("Active Projects", summary.active_projects, "Currently active") }}
-    {{ info_card("Active Users", summary.total_users, "Currently active") }}
+    {{ info_card(_("Total Hours"), "%.2f"|format(summary.total_hours), _("All time")) }}
+    {{ info_card(_("Billable Hours"), "%.2f"|format(summary.billable_hours), _("All time")) }}
+    {{ info_card(_("Active Projects"), summary.active_projects, _("Currently active")) }}
+    {{ info_card(_("Active Users"), summary.total_users, _("Currently active")) }}
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
@@ -28,32 +28,32 @@
             <i class="fas fa-money-bill-wave text-green-600 text-xl"></i>
         </div>
         <div class="text-2xl font-semibold text-green-600">{{ currency|currency_symbol }}{{ "%.2f"|format(summary.total_payments) }}</div>
-        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">Total Payments</div>
-        <div class="text-[11px] text-text-muted-light dark:text-text-muted-dark">Last 30 days</div>
+        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Total Payments') }}</div>
+        <div class="text-[11px] text-text-muted-light dark:text-text-muted-dark">{{ _('Last 30 days') }}</div>
     </div>
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
         <div class="flex items-center justify-between mb-2">
             <i class="fas fa-receipt text-blue-600 text-xl"></i>
         </div>
         <div class="text-2xl font-semibold text-blue-600">{{ summary.payment_count }}</div>
-        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">Payments Received</div>
-        <div class="text-[11px] text-text-muted-light dark:text-text-muted-dark">Last 30 days</div>
+        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Payments Received') }}</div>
+        <div class="text-[11px] text-text-muted-light dark:text-text-muted-dark">{{ _('Last 30 days') }}</div>
     </div>
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
         <div class="flex items-center justify-between mb-2">
             <i class="fas fa-credit-card text-amber-600 text-xl"></i>
         </div>
         <div class="text-2xl font-semibold text-amber-600">{{ currency|currency_symbol }}{{ "%.2f"|format(summary.payment_fees) }}</div>
-        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">Gateway Fees</div>
-        <div class="text-[11px] text-text-muted-light dark:text-text-muted-dark">Last 30 days</div>
+        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Gateway Fees') }}</div>
+        <div class="text-[11px] text-text-muted-light dark:text-text-muted-dark">{{ _('Last 30 days') }}</div>
     </div>
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
         <div class="flex items-center justify-between mb-2">
             <i class="fas fa-chart-line text-emerald-600 text-xl"></i>
         </div>
         <div class="text-2xl font-semibold text-emerald-600">{{ currency|currency_symbol }}{{ "%.2f"|format(summary.total_payments - summary.payment_fees) }}</div>
-        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">Net Received</div>
-        <div class="text-[11px] text-text-muted-light dark:text-text-muted-dark">After fees</div>
+        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Net Received') }}</div>
+        <div class="text-[11px] text-text-muted-light dark:text-text-muted-dark">{{ _('After fees') }}</div>
     </div>
 </div>
 
@@ -66,25 +66,25 @@
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('Quick Date Ranges') }}</h3>
             <div class="flex flex-wrap gap-2">
                 <button type="button" onclick="setDateRange('today')" class="date-preset-btn px-4 py-2 rounded-lg text-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                    <i class="fas fa-calendar-day mr-1"></i>Today
+                    <i class="fas fa-calendar-day mr-1"></i>{{ _('Today') }}
                 </button>
                 <button type="button" onclick="setDateRange('week')" class="date-preset-btn px-4 py-2 rounded-lg text-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                    <i class="fas fa-calendar-week mr-1"></i>This Week
+                    <i class="fas fa-calendar-week mr-1"></i>{{ _('This Week') }}
                 </button>
                 <button type="button" onclick="setDateRange('month')" class="date-preset-btn px-4 py-2 rounded-lg text-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                    <i class="fas fa-calendar-alt mr-1"></i>This Month
+                    <i class="fas fa-calendar-alt mr-1"></i>{{ _('This Month') }}
                 </button>
                 <button type="button" onclick="setDateRange('year')" class="date-preset-btn px-4 py-2 rounded-lg text-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                    <i class="fas fa-calendar mr-1"></i>This Year
+                    <i class="fas fa-calendar mr-1"></i>{{ _('This Year') }}
                 </button>
             </div>
             <div class="mt-3">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Custom Range</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Custom Range') }}</label>
                 <div class="flex gap-2">
                     <input type="date" id="startDate" class="form-input user-date-input flex-1">
                     <input type="date" id="endDate" class="form-input user-date-input flex-1">
                     <button type="button" onclick="applyCustomDateRange()" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
-                        Apply
+                        {{ _('Apply') }}
                     </button>
                 </div>
             </div>
@@ -97,8 +97,8 @@
                 <button type="button" onclick="showComparisonView('month')" class="w-full px-4 py-3 rounded-lg text-left bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <div class="flex items-center justify-between">
                         <div>
-                            <div class="font-medium text-text-light dark:text-text-dark">This Month vs Last Month</div>
-                            <div class="text-xs text-text-muted-light dark:text-text-muted-dark">Compare current month with previous month</div>
+                            <div class="font-medium text-text-light dark:text-text-dark">{{ _('This Month vs Last Month') }}</div>
+                            <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Compare current month with previous month') }}</div>
                         </div>
                         <i class="fas fa-chevron-right text-text-muted-light dark:text-text-muted-dark"></i>
                     </div>
@@ -106,8 +106,8 @@
                 <button type="button" onclick="showComparisonView('year')" class="w-full px-4 py-3 rounded-lg text-left bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <div class="flex items-center justify-between">
                         <div>
-                            <div class="font-medium text-text-light dark:text-text-dark">This Year vs Last Year</div>
-                            <div class="text-xs text-text-muted-light dark:text-text-muted-dark">Compare current year with previous year</div>
+                            <div class="font-medium text-text-light dark:text-text-dark">{{ _('This Year vs Last Year') }}</div>
+                            <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Compare current year with previous year') }}</div>
                         </div>
                         <i class="fas fa-chevron-right text-text-muted-light dark:text-text-muted-dark"></i>
                     </div>
@@ -136,14 +136,14 @@
                 <option value="excel">Excel</option>
             </select>
             <button type="button" onclick="exportReport()" class="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
-                <i class="fas fa-download mr-2"></i>Export Report
+                <i class="fas fa-download mr-2"></i>{{ _('Export Report') }}
             </button>
         </div>
         <div class="p-4 border border-border-light dark:border-border-dark rounded-lg">
             <h3 class="font-medium mb-2">{{ _('Scheduled Reports') }}</h3>
             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">Set up automatic report generation</p>
             <button type="button" onclick="showScheduledReportsModal()" class="w-full bg-secondary text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
-                <i class="fas fa-clock mr-2"></i>Manage Scheduled Reports
+                <i class="fas fa-clock mr-2"></i>{{ _('Manage Scheduled Reports') }}
             </button>
         </div>
         <div class="p-4 border border-border-light dark:border-border-dark rounded-lg">
@@ -206,9 +206,9 @@
     <table class="w-full text-left">
         <thead>
             <tr>
-                <th class="p-2">Project</th>
-                <th class="p-2">Duration</th>
-                <th class="p-2">Date</th>
+                <th class="p-2">{{ _('Project') }}</th>
+                <th class="p-2">{{ _('Duration') }}</th>
+                <th class="p-2">{{ _('Date') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -220,7 +220,18 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="3" class="p-4 text-center">No recent entries.</td>
+                <td colspan="3" class="p-8">
+                    <div class="flex flex-col items-center justify-center text-center py-4">
+                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 mb-3">
+                            <i class="fas fa-inbox text-2xl text-text-muted-light dark:text-text-muted-dark"></i>
+                        </div>
+                        <p class="text-text-muted-light dark:text-text-muted-dark font-medium mb-1">{{ _('No recent entries.') }}</p>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('Start tracking time to see entries here.') }}</p>
+                        <a href="{{ url_for('timer.manual_entry') }}" class="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium">
+                            <i class="fas fa-play"></i>{{ _('Log Time') }}
+                        </a>
+                    </div>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -232,18 +243,18 @@
     <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div class="p-6">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">Scheduled Reports</h3>
+                <h3 class="text-lg font-semibold">{{ _('Scheduled Reports') }}</h3>
                 <button type="button" onclick="hideScheduledReportsModal()" class="text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div id="scheduledReportsList" class="space-y-3">
                 <!-- Scheduled reports will be loaded here -->
-                <p class="text-text-muted-light dark:text-text-muted-dark text-center py-4">No scheduled reports yet.</p>
+                <p class="text-text-muted-light dark:text-text-muted-dark text-center py-4">{{ _('No scheduled reports yet.') }}</p>
             </div>
             <div class="mt-6 pt-4 border-t border-border-light dark:border-border-dark">
                 <button type="button" onclick="showAddScheduledReportForm()" class="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
-                    <i class="fas fa-plus mr-2"></i>Add Scheduled Report
+                    <i class="fas fa-plus mr-2"></i>{{ _('Add Scheduled Report') }}
                 </button>
             </div>
         </div>
@@ -404,7 +415,7 @@ function loadScheduledReports() {
                     `;
                 }).join('');
             } else {
-                listContainer.innerHTML = '<p class="text-text-muted-light dark:text-text-muted-dark text-center py-4">No scheduled reports yet.</p>';
+                listContainer.innerHTML = '<p class="text-text-muted-light dark:text-text-muted-dark text-center py-4">{{ _('No scheduled reports yet.') }}</p>';
             }
         })
         .catch(error => {

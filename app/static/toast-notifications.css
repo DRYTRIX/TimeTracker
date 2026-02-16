@@ -104,4 +104,19 @@
 .toast-notification.toast-warning .toast-progress-bar { background: #F59E0B; }
 .toast-notification.toast-info    .toast-progress-bar { background: #3B82F6; }
 
+/* Reduced motion - instant appearance, no progress animation */
+@media (prefers-reduced-motion: reduce) {
+  .toast-notification {
+    transition: none;
+  }
+  .toast-progress-bar {
+    animation: none;
+  }
+}
 
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .toast-notification {
+    border-width: 2px !important;
+  }
+}

@@ -19,6 +19,9 @@
     <button id="refreshCharts" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
         <i class="fas fa-sync-alt mr-2"></i> {{ _('Refresh') }}
     </button>
+    <button id="exportAllCharts" type="button" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" title="{{ _('Export all charts as PNG') }}">
+        <i class="fas fa-download mr-2"></i> {{ _('Export Charts') }}
+    </button>
 </div>
 {% endset %}
 
@@ -30,167 +33,150 @@
     actions_html=analytics_actions
 ) }}
 
-<div class="container-fluid">
+<div class="w-full max-w-full px-0">
 
     <!-- Summary Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="card text-center h-100">
-                <div class="card-body">
-                    <i class="fas fa-clock fa-2x text-primary mb-2"></i>
-                    <h4 class="text-primary" id="totalHours">-</h4>
-                    <p class="text-muted mb-0">{{ _('Total Hours') }}</p>
-                </div>
-            </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6">
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6 text-center h-full">
+            <i class="fas fa-clock fa-2x text-primary mb-2"></i>
+            <h4 class="text-primary text-xl font-semibold" id="totalHours">-</h4>
+            <p class="text-text-muted-light dark:text-text-muted-dark mb-0">{{ _('Total Hours') }}</p>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card text-center h-100">
-                <div class="card-body">
-                    <i class="fas fa-dollar-sign fa-2x text-success mb-2"></i>
-                    <h4 class="text-success" id="billableHours">-</h4>
-                    <p class="text-muted mb-0">{{ _('Billable Hours') }}</p>
-                </div>
-            </div>
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6 text-center h-full">
+            <i class="fas fa-dollar-sign fa-2x text-green-600 dark:text-green-400 mb-2"></i>
+            <h4 class="text-green-600 dark:text-green-400 text-xl font-semibold" id="billableHours">-</h4>
+            <p class="text-text-muted-light dark:text-text-muted-dark mb-0">{{ _('Billable Hours') }}</p>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card text-center h-100">
-                <div class="card-body">
-                    <i class="fas fa-project-diagram fa-2x text-info mb-2"></i>
-                    <h4 class="text-info" id="activeProjects">-</h4>
-                    <p class="text-muted mb-0">{{ _('Active Projects') }}</p>
-                </div>
-            </div>
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6 text-center h-full">
+            <i class="fas fa-project-diagram fa-2x text-blue-600 dark:text-blue-400 mb-2"></i>
+            <h4 class="text-blue-600 dark:text-blue-400 text-xl font-semibold" id="activeProjects">-</h4>
+            <p class="text-text-muted-light dark:text-text-muted-dark mb-0">{{ _('Active Projects') }}</p>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card text-center h-100">
-                <div class="card-body">
-                    <i class="fas fa-chart-line fa-2x text-warning mb-2"></i>
-                    <h4 class="text-warning" id="avgDailyHours">-</h4>
-                    <p class="text-muted mb-0">{{ _('Avg Daily Hours') }}</p>
-                </div>
-            </div>
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6 text-center h-full">
+            <i class="fas fa-chart-line fa-2x text-amber-600 dark:text-amber-400 mb-2"></i>
+            <h4 class="text-amber-600 dark:text-amber-400 text-xl font-semibold" id="avgDailyHours">-</h4>
+            <p class="text-text-muted-light dark:text-text-muted-dark mb-0">{{ _('Avg Daily Hours') }}</p>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card text-center h-100">
-                <div class="card-body">
-                    <i class="fas fa-business-time fa-2x text-info mb-2"></i>
-                    <h4 class="text-info" id="overtimeSummary">-</h4>
-                    <p class="text-muted mb-0">{{ _('Regular') }} / {{ _('Overtime') }}</p>
-                    <p class="text-muted small mb-0" id="overtimeDaysLabel"></p>
-                </div>
-            </div>
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6 text-center h-full">
+            <i class="fas fa-business-time fa-2x text-blue-600 dark:text-blue-400 mb-2"></i>
+            <h4 class="text-blue-600 dark:text-blue-400 text-xl font-semibold" id="overtimeSummary">-</h4>
+            <p class="text-text-muted-light dark:text-text-muted-dark mb-0">{{ _('Regular') }} / {{ _('Overtime') }}</p>
+            <p class="text-text-muted-light dark:text-text-muted-dark text-sm mb-0" id="overtimeDaysLabel"></p>
         </div>
     </div>
 
     <!-- Charts Row 1 -->
-    <div class="row mb-4">
-        <div class="col-lg-8 mb-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-area"></i> {{ _('Daily Hours Trend') }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
-                        <canvas id="dailyHoursChart"></canvas>
-                    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div class="lg:col-span-2 bg-card-light dark:bg-card-dark rounded-lg shadow h-full">
+            <div class="p-4 border-b border-border-light dark:border-border-dark">
+                <h5 class="mb-0 font-semibold text-text-light dark:text-text-dark">
+                    <i class="fas fa-chart-area mr-2"></i> {{ _('Daily Hours Trend') }}
+                </h5>
+            </div>
+            <div class="p-4">
+                <div class="chart-container relative" style="height: 300px; width: 100%;">
+                    <canvas id="dailyHoursChart"></canvas>
                 </div>
             </div>
         </div>
-        <div class="col-lg-4 mb-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-pie"></i> {{ _('Billable vs Non-Billable') }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
-                        <canvas id="billableChart"></canvas>
-                    </div>
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow h-full">
+            <div class="p-4 border-b border-border-light dark:border-border-dark">
+                <h5 class="mb-0 font-semibold text-text-light dark:text-text-dark">
+                    <i class="fas fa-chart-pie mr-2"></i> {{ _('Billable vs Non-Billable') }}
+                </h5>
+            </div>
+            <div class="p-4">
+                <div class="chart-container relative" style="height: 300px; width: 100%;">
+                    <canvas id="billableChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Charts Row 2 -->
-    <div class="row mb-4">
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-bar"></i> {{ _('Hours by Project') }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
-                        <canvas id="projectChart"></canvas>
-                    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow h-full">
+            <div class="p-4 border-b border-border-light dark:border-border-dark">
+                <h5 class="mb-0 font-semibold text-text-light dark:text-text-dark">
+                    <i class="fas fa-chart-bar mr-2"></i> {{ _('Hours by Project') }}
+                </h5>
+            </div>
+            <div class="p-4">
+                <div class="chart-container relative" style="height: 300px; width: 100%;">
+                    <canvas id="projectChart"></canvas>
                 </div>
             </div>
         </div>
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-line"></i> {{ _('Weekly Trends') }}
-                    </h5>
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow h-full">
+            <div class="p-4 border-b border-border-light dark:border-border-dark">
+                <h5 class="mb-0 font-semibold text-text-light dark:text-text-dark">
+                    <i class="fas fa-chart-line mr-2"></i> {{ _('Weekly Trends') }}
+                </h5>
+            </div>
+            <div class="p-4">
+                <div class="chart-container relative" style="height: 300px; width: 100%;">
+                    <canvas id="weeklyTrendsChart"></canvas>
                 </div>
-                <div class="card-body">
-                    <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
-                        <canvas id="weeklyTrendsChart"></canvas>
-                    </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hours Forecast Chart -->
+    <div class="mb-6">
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow h-full">
+            <div class="p-4 border-b border-border-light dark:border-border-dark">
+                <h5 class="mb-0 font-semibold text-text-light dark:text-text-dark">
+                    <i class="fas fa-project-diagram mr-2"></i> {{ _('Hours Forecast') }}
+                </h5>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Next 7 days based on 7-day average') }}</p>
+            </div>
+            <div class="p-4">
+                <div class="chart-container relative" style="height: 280px; width: 100%;">
+                    <canvas id="forecastChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Overtime Chart -->
-    <div class="row mb-4">
-        <div class="col-12 mb-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-business-time"></i> {{ _('Daily Regular vs Overtime') }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
-                        <canvas id="overtimeChart"></canvas>
-                    </div>
+    <div class="mb-6">
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow h-full">
+            <div class="p-4 border-b border-border-light dark:border-border-dark">
+                <h5 class="mb-0 font-semibold text-text-light dark:text-text-dark">
+                    <i class="fas fa-business-time mr-2"></i> {{ _('Daily Regular vs Overtime') }}
+                </h5>
+            </div>
+            <div class="p-4">
+                <div class="chart-container relative" style="height: 300px; width: 100%;">
+                    <canvas id="overtimeChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Charts Row 3 -->
-    <div class="row mb-4">
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-clock"></i> {{ _('Hours by Time of Day') }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
-                        <canvas id="hourlyChart"></canvas>
-                    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow h-full">
+            <div class="p-4 border-b border-border-light dark:border-border-dark">
+                <h5 class="mb-0 font-semibold text-text-light dark:text-text-dark">
+                    <i class="fas fa-clock mr-2"></i> {{ _('Hours by Time of Day') }}
+                </h5>
+            </div>
+            <div class="p-4">
+                <div class="chart-container relative" style="height: 300px; width: 100%;">
+                    <canvas id="hourlyChart"></canvas>
                 </div>
             </div>
         </div>
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-bar"></i> {{ _('Project Efficiency') }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
-                        <canvas id="efficiencyChart"></canvas>
-                    </div>
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow h-full">
+            <div class="p-4 border-b border-border-light dark:border-border-dark">
+                <h5 class="mb-0 font-semibold text-text-light dark:text-text-dark">
+                    <i class="fas fa-chart-bar mr-2"></i> {{ _('Project Efficiency') }}
+                </h5>
+            </div>
+            <div class="p-4">
+                <div class="chart-container relative" style="height: 300px; width: 100%;">
+                    <canvas id="efficiencyChart"></canvas>
                 </div>
             </div>
         </div>
@@ -198,18 +184,16 @@
 
     <!-- User Performance Chart (Admin Only) -->
     {% if current_user.is_admin %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-users"></i> {{ _('User Performance') }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container" style="position: relative; height: 300px;">
-                        <canvas id="userChart"></canvas>
-                    </div>
+    <div class="mb-6">
+        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow">
+            <div class="p-4 border-b border-border-light dark:border-border-dark">
+                <h5 class="mb-0 font-semibold text-text-light dark:text-text-dark">
+                    <i class="fas fa-users mr-2"></i> {{ _('User Performance') }}
+                </h5>
+            </div>
+            <div class="p-4">
+                <div class="chart-container relative" style="height: 300px;">
+                    <canvas id="userChart"></canvas>
                 </div>
             </div>
         </div>
@@ -218,9 +202,10 @@
 </div>
 
 <!-- Loading Spinner -->
-<div id="loadingSpinner" class="position-fixed top-50 start-50 translate-middle" style="display: none; z-index: 9999;">
-    <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">{{ _('Loading...') }}</span>
+<div id="loadingSpinner" class="fixed inset-0 flex items-center justify-center bg-black/20 z-50" style="display: none;">
+    <div class="flex flex-col items-center gap-3 bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-xl">
+        <i class="fas fa-spinner fa-spin text-3xl text-primary"></i>
+        <span class="sr-only">{{ _('Loading...') }}</span>
     </div>
 </div>
 {% endblock %}
@@ -324,6 +309,7 @@ class AnalyticsDashboard {
                 this.loadBillableChart(),
                 this.loadProjectChart(),
                 this.loadWeeklyTrendsChart(),
+                this.loadForecastChart(),
                 this.loadHourlyChart(),
                 this.loadEfficiencyChart(),
                 this.loadOvertimeChart(),
@@ -348,6 +334,7 @@ class AnalyticsDashboard {
                 this.loadBillableChart(true),
                 this.loadProjectChart(true),
                 this.loadWeeklyTrendsChart(true),
+                this.loadForecastChart(true),
                 this.loadHourlyChart(true),
                 this.loadEfficiencyChart(true),
                 this.loadOvertimeChart(true),
@@ -492,6 +479,38 @@ class AnalyticsDashboard {
                             text: (i18n_analytics.hours_label || 'Hours')
                         }
                     }
+                }
+            }
+        });
+    }
+
+    async loadForecastChart(refresh = false) {
+        const el = document.getElementById('forecastChart');
+        if (!el) return;
+        const response = await fetch(`/api/analytics/hours-forecast?days=${this.timeRange}&forecast_days=7`);
+        const raw = await response.json();
+        const allLabels = (raw.historical?.labels || []).concat(raw.forecast?.labels || []);
+        const histData = (raw.historical?.data || []).concat(new Array((raw.forecast?.labels || []).length).fill(null));
+        const foreData = new Array((raw.historical?.labels || []).length).fill(null).concat(raw.forecast?.data || []);
+        const chartData = {
+            labels: allLabels,
+            datasets: [
+                { label: (i18n_analytics.hours_label || 'Hours') + ' (' + (raw.avg_daily_hours || 0) + 'h avg)', data: histData, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', tension: 0.4, fill: true },
+                { label: '{{ _("Forecast") }}', data: foreData, borderColor: '#f59e0b', borderDash: [5, 5], backgroundColor: 'transparent', tension: 0.4, fill: false }
+            ]
+        };
+        if (refresh && this.charts.forecast) this.charts.forecast.destroy();
+        const ctx = el.getContext('2d');
+        this.charts.forecast = new Chart(ctx, {
+            type: 'line',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: (i18n_analytics.hours_label || 'Hours') } },
+                    x: { ticks: { maxTicksLimit: 12 } }
                 }
             }
         });
@@ -699,11 +718,42 @@ class AnalyticsDashboard {
             console.error('Analytics error:', message);
         }
     }
+
+    exportChartAsPng(chartKey, filename) {
+        const chart = this.charts[chartKey];
+        if (!chart || !chart.canvas) return;
+        const url = chart.toBase64Image('image/png');
+        const link = document.createElement('a');
+        link.download = filename || (chartKey + '-chart.png');
+        link.href = url;
+        link.click();
+    }
+
+    exportAllChartsAsPng() {
+        const chartIds = ['dailyHours', 'billable', 'project', 'weeklyTrends', 'forecast', 'hourly', 'efficiency', 'overtime'];
+        {% if current_user.is_admin %}chartIds.push('user');{% endif %}
+        const prefix = 'analytics-' + new Date().toISOString().slice(0, 10) + '-';
+        chartIds.forEach((key, i) => {
+            const chart = this.charts[key];
+            if (chart && chart.canvas) {
+                setTimeout(() => {
+                    this.exportChartAsPng(key, prefix + key + '.png');
+                }, i * 300);
+            }
+        });
+        if (window.toastManager) {
+            window.toastManager.success('{{ _("Charts exported. Check your downloads.") }}', '{{ _("Export") }}', 3000);
+        }
+    }
 }
 
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new AnalyticsDashboard();
+    const dashboard = new AnalyticsDashboard();
+    const exportBtn = document.getElementById('exportAllCharts');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => dashboard.exportAllChartsAsPng());
+    }
 });
 </script>
 {% endblock %}

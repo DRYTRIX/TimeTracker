@@ -205,6 +205,23 @@ function loadMoreActivities() {
     loadActivities(true);
 }
 
+function getActivitySkeletonHTML(count) {
+    const rows = [];
+    for (let i = 0; i < count; i++) {
+        rows.push(`
+            <div class="skeleton-row flex items-start gap-3 p-3">
+                <div class="skeleton skeleton-avatar flex-shrink-0"></div>
+                <div class="flex-1 min-w-0 space-y-2">
+                    <div class="skeleton skeleton-text medium"></div>
+                    <div class="skeleton skeleton-text short"></div>
+                </div>
+                <div class="skeleton skeleton-text short w-12 flex-shrink-0"></div>
+            </div>
+        `);
+    }
+    return '<div class="space-y-0">' + rows.join('') + '</div>';
+}
+
 async function loadActivities(append = false) {
     const container = document.getElementById('activity-feed-container');
     if (!container) {
@@ -218,6 +235,10 @@ async function loadActivities(append = false) {
     if (loadMoreBtn) {
         loadMoreBtn.disabled = true;
         loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> {{ _('Loading...') }}';
+    }
+    
+    if (!append) {
+        container.innerHTML = getActivitySkeletonHTML(5);
     }
     
     try {
@@ -250,10 +271,6 @@ async function loadActivities(append = false) {
             console.log('Entity types in response:', entityTypes);
         } else {
             console.log('No activities received from API');
-        }
-        
-        if (!append) {
-            container.innerHTML = '';
         }
         
         if (data.activities && data.activities.length > 0) {

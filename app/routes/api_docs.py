@@ -142,7 +142,10 @@ Example: `2024-01-15T14:30:00Z`
             "contact": {"name": "TimeTracker API Support"},
             "license": {"name": "MIT"},
         },
-        "servers": [{"url": "/api/v1", "description": "API v1"}],
+        "servers": [
+            {"url": "/api/v1", "description": "REST API v1"},
+            {"url": "", "description": "App root (for /api/analytics, etc.)"},
+        ],
         "components": {
             "securitySchemes": {
                 "BearerAuth": {
@@ -235,6 +238,8 @@ Example: `2024-01-15T14:30:00Z`
             {"name": "Clients", "description": "Client management operations"},
             {"name": "Reports", "description": "Reporting and analytics"},
             {"name": "Users", "description": "User management operations"},
+            {"name": "Invoices", "description": "Invoice operations"},
+            {"name": "Expenses", "description": "Expense operations"},
         ],
         "paths": {
             "/info": {
@@ -450,6 +455,56 @@ Example: `2024-01-15T14:30:00Z`
                     "summary": "Get current user",
                     "description": "Get information about the authenticated user",
                     "responses": {"200": {"description": "User information"}},
+                }
+            },
+            "/analytics/hours-by-day": {
+                "get": {
+                    "tags": ["Reports"],
+                    "summary": "Hours by day",
+                    "description": "Get hours worked per day for a date range",
+                    "parameters": [{"name": "days", "in": "query", "schema": {"type": "integer", "default": 30}}],
+                    "responses": {"200": {"description": "Chart data with labels and datasets"}},
+                }
+            },
+            "/analytics/hours-forecast": {
+                "get": {
+                    "tags": ["Reports"],
+                    "summary": "Hours forecast",
+                    "description": "Get forecasted hours for the next 7 days based on moving average",
+                    "parameters": [
+                        {"name": "days", "in": "query", "schema": {"type": "integer", "default": 30}},
+                        {"name": "forecast_days", "in": "query", "schema": {"type": "integer", "default": 7, "maximum": 14}},
+                    ],
+                    "responses": {"200": {"description": "Historical and forecast data"}},
+                }
+            },
+            "/analytics/summary-with-comparison": {
+                "get": {
+                    "tags": ["Reports"],
+                    "summary": "Summary with comparison",
+                    "description": "Get summary metrics with comparison to previous period",
+                    "parameters": [{"name": "days", "in": "query", "schema": {"type": "integer", "default": 30}}],
+                    "responses": {"200": {"description": "Summary with total hours, billable, entries, changes"}},
+                }
+            },
+            "/invoices/{invoice_id}": {
+                "get": {
+                    "tags": ["Invoices"],
+                    "summary": "Get invoice",
+                    "parameters": [{"name": "invoice_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                    "responses": {"200": {"description": "Invoice details"}, "404": {"description": "Not found"}},
+                }
+            },
+            "/expenses": {
+                "get": {
+                    "tags": ["Expenses"],
+                    "summary": "List expenses",
+                    "parameters": [
+                        {"name": "project_id", "in": "query", "schema": {"type": "integer"}},
+                        {"name": "page", "in": "query", "schema": {"type": "integer"}},
+                        {"name": "per_page", "in": "query", "schema": {"type": "integer"}},
+                    ],
+                    "responses": {"200": {"description": "List of expenses"}},
                 }
             },
         },

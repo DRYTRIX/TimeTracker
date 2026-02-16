@@ -677,7 +677,127 @@
     }
 }
 
-/* Accessibility */
+/* Loading Skeletons */
+.skeleton {
+    background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    border-radius: 0.25rem;
+}
+
+.dark .skeleton {
+    background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);
+    background-size: 200% 100%;
+}
+
+.skeleton-text {
+    height: 1em;
+    margin-bottom: 0.5rem;
+}
+
+.skeleton-text:last-child {
+    margin-bottom: 0;
+}
+
+.skeleton-text.short { width: 40%; }
+.skeleton-text.medium { width: 70%; }
+.skeleton-text.long { width: 100%; }
+
+.skeleton-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+}
+
+.skeleton-card {
+    padding: 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+}
+
+.dark .skeleton-card {
+    border-color: #334155;
+}
+
+.skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.dark .skeleton-row {
+    border-bottom-color: #334155;
+}
+
+.skeleton-row:last-child {
+    border-bottom: none;
+}
+
+@keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton {
+        animation: none;
+        background: #e2e8f0;
+    }
+    .dark .skeleton {
+        background: #334155;
+    }
+}
+
+/* High Contrast Mode (WCAG 2.1 - prefers-contrast) */
+@media (prefers-contrast: high) {
+    .dashboard-widget,
+    .animated-card {
+        border: 2px solid #1a365d !important;
+    }
+
+    .dark .dashboard-widget,
+    .dark .animated-card {
+        border-color: #e2e8f0 !important;
+    }
+
+    .skeleton-card {
+        border-width: 2px !important;
+    }
+
+    .skeleton-row {
+        border-bottom-width: 2px !important;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    [tabindex]:focus-visible {
+        outline: 3px solid #0066cc !important;
+        outline-offset: 2px !important;
+    }
+
+    .dark button:focus-visible,
+    .dark input:focus-visible,
+    .dark select:focus-visible,
+    .dark textarea:focus-visible,
+    .dark [tabindex]:focus-visible {
+        outline-color: #60a5fa !important;
+    }
+
+    a:focus-visible {
+        outline: 3px solid #0066cc !important;
+        outline-offset: 2px !important;
+    }
+
+    .dark a:focus-visible {
+        outline-color: #60a5fa !important;
+    }
+}
+
+/* Accessibility - Reduced Motion (WCAG 2.1) */
 @media (prefers-reduced-motion: reduce) {
     .btn-press,
     .transition-smooth,
@@ -686,9 +806,22 @@
     .success-checkmark,
     .context-menu,
     .dashboard-widget,
-    .real-time-indicator {
+    .real-time-indicator,
+    .animated-card,
+    .fade-in-up,
+    .fade-in,
+    .animate-float,
+    .animate-slide-in-right,
+    .animate-fade-in,
+    .animate-scale-in,
+    .mobile-fade-in {
         animation: none !important;
         transition: none !important;
+    }
+    /* Simplify hover transitions for reduced motion */
+    .dashboard-widget:hover,
+    .animated-card:hover {
+        transform: none !important;
     }
 }
 

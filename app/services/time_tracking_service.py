@@ -246,6 +246,22 @@ class TimeTrackingService:
         # Validate time range
         if end_time <= start_time:
             return {"success": False, "message": "End time must be after start time", "error": "invalid_time_range"}
+
+        # Check for overlapping entries (unless skipped for imports)
+        if not skip_entry_requirements:
+            overlapping = TimeEntry.query.filter(
+                TimeEntry.user_id == user_id,
+                TimeEntry.start_time < end_time,
+                TimeEntry.end_time > start_time,
+                TimeEntry.end_time.isnot(None),
+            ).first()
+            if overlapping:
+                return {
+                    "success": False,
+                    "message": "This time overlaps with an existing entry. Please choose a different time range or edit the existing entry.",
+                    "error": "overlapping_entry",
+                }
+
         if duration_seconds is not None:
             try:
                 duration_seconds = int(duration_seconds)
@@ -443,6 +459,26 @@ class TimeTrackingService:
             # Rollback uncommitted changes
             db.session.rollback()
             return err
+
+        # Check for overlapping entries (exclude this entry) when times were changed
+        if entry.end_time and (start_time is not None or end_time is not None):
+            overlapping = (
+                TimeEntry.query.filter(
+                    TimeEntry.user_id == entry.user_id,
+                    TimeEntry.id != entry_id,
+                    TimeEntry.start_time < entry.end_time,
+                    TimeEntry.end_time > entry.start_time,
+                    TimeEntry.end_time.isnot(None),
+                )
+                .first()
+            )
+            if overlapping:
+                db.session.rollback()
+                return {
+                    "success": False,
+                    "message": "This time overlaps with an existing entry. Please choose a different time range.",
+                    "error": "overlapping_entry",
+                }
 
         entry.updated_at = local_now()
 
