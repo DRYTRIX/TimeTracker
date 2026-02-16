@@ -602,10 +602,11 @@ def main():
     log("=" * 60, "INFO")
     log("Starting application server", "INFO")
     log("=" * 60, "INFO")
-    # Start gunicorn with access logs
+    # Start gunicorn with access logs (bind to PORT when set, e.g. by Render; default 8080 for docker-compose)
+    port = os.environ.get('PORT', '8080')
     os.execv('/usr/local/bin/gunicorn', [
         'gunicorn',
-        '--bind', '0.0.0.0:8080',
+        '--bind', '0.0.0.0:%s' % port,
         '--worker-class', 'eventlet',
         '--workers', '1',
         '--timeout', '120',
