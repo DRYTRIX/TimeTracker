@@ -552,7 +552,7 @@
                                 </a>
                             </li>
                             {% endif %}
-                            {% if is_module_enabled('payment_gateways') and (current_user.is_admin or has_permission('manage_payment_gateways')) %}
+                            {% if is_module_enabled('payment_gateways') and has_endpoint('payment_gateways.list_gateways') and (current_user.is_admin or has_permission('manage_payment_gateways')) %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_payment_gateways %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('payment_gateways.list_gateways') }}">
                                     <i class="fas fa-credit-card w-4 mr-2"></i>{{ _('Payment Gateways') }}
