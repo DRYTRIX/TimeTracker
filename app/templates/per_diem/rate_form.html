@@ -139,7 +139,7 @@
                     </label>
                     <input type="date" name="effective_from" id="effective_from" required
                            value="{{ rate.effective_from.strftime('%Y-%m-%d') if rate else '' }}"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700 user-date-input">
                 </div>
                 
                 <div>
@@ -148,7 +148,7 @@
                     </label>
                     <input type="date" name="effective_to" id="effective_to"
                            value="{{ rate.effective_to.strftime('%Y-%m-%d') if rate and rate.effective_to else '' }}"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700 user-date-input">
                 </div>
             </div>
         </div>

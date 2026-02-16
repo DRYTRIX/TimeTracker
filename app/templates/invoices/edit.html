@@ -32,7 +32,7 @@
                     </div>
                     <div>
                         <label for="due_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Due Date') }} *</label>
-                        <input type="date" name="due_date" id="due_date" value="{{ invoice.due_date.strftime('%Y-%m-%d') }}" required class="form-input">
+                        <input type="date" name="due_date" id="due_date" value="{{ invoice.due_date.strftime('%Y-%m-%d') }}" required class="form-input user-date-input">
                     </div>
                     <div>
                         <label for="tax_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Tax Rate (%)') }}</label>
@@ -246,7 +246,7 @@
                                 <input type="number" name="expense_amount[]" placeholder="{{ _('Amount') }}" value="{{ expense.total_amount }}" step="0.01" min="0" class="form-input expense-amount" data-calc-trigger readonly title="{{ _('Linked expense - amount cannot be edited') }}">
                             </div>
                             <div class="md:col-span-1 flex flex-col">
-                                <input type="date" name="expense_date[]" value="{{ expense.expense_date.strftime('%Y-%m-%d') if expense.expense_date else '' }}" class="form-input text-xs" readonly title="{{ _('Linked expense - date cannot be edited') }}">
+                                <input type="date" name="expense_date[]" value="{{ expense.expense_date.strftime('%Y-%m-%d') if expense.expense_date else '' }}" class="form-input user-date-input text-xs" readonly title="{{ _('Linked expense - date cannot be edited') }}">
                             </div>
                             <div class="md:col-span-1 flex flex-col">
                                 <button type="button" class="remove-expense bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Unlink expense from invoice') }}">
