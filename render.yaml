@@ -32,10 +32,10 @@ services:
         value: local
       - key: REDIS_ENABLED
         value: "false"
-      # Demo mode: uncomment and set DEMO_PASSWORD in Render Dashboard for a single-user demo
-       - key: DEMO_MODE
-         value: "true"
-       - key: DEMO_USERNAME
-         value: demo
-       - key: DEMO_PASSWORD
-         sync: false
+      # Demo mode: uncomment below and set DEMO_PASSWORD in Render Dashboard for a single-user demo
+      # - key: DEMO_MODE
+      #   value: "true"
+      # - key: DEMO_USERNAME
+      #   value: demo
+      # - key: DEMO_PASSWORD
+      #   sync: false
