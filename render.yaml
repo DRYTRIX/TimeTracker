@@ -1,0 +1,41 @@
+# Render Blueprint: TimeTracker Web Service + PostgreSQL
+# Connect this repo in Render Dashboard (New > Blueprint) for auto-deploy on push.
+
+databases:
+  - name: timetracker-db
+    databaseName: timetracker
+    user: timetracker
+    plan: free
+
+services:
+  - type: web
+    name: timetracker
+    runtime: python
+    region: oregon
+
+    buildCommand: pip install -r requirements.txt && npm ci && npm run build:docker
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --worker-class eventlet --workers 1 --timeout 120 "app:create_app()"
+    releaseCommand: flask db upgrade
+
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_APP
+        value: app:create_app()
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: timetracker-db
+          property: connectionString
+      - key: AUTH_METHOD
+        value: local
+      - key: REDIS_ENABLED
+        value: "false"
+      # Demo mode: uncomment and set DEMO_PASSWORD in Render Dashboard for a single-user demo
+      # - key: DEMO_MODE
+      #   value: "true"
+      # - key: DEMO_USERNAME
+      #   value: demo
+      # - key: DEMO_PASSWORD
+      #   sync: false

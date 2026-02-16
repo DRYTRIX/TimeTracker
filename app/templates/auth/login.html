@@ -39,6 +39,13 @@
             </div>
             <div class="p-8">
                 <h2 class="text-2xl font-bold tracking-tight">{{ _('Sign in to your account') }}</h2>
+                {% if demo_mode %}
+                <div class="mt-4 p-4 rounded-lg bg-primary/10 dark:bg-primary/20 border border-primary/30 dark:border-primary/40">
+                    <p class="text-sm font-medium text-primary dark:text-primary/90 mb-2">{{ _('Demo credentials') }}</p>
+                    <p class="text-sm text-text-light dark:text-text-dark"><span class="font-medium">{{ _('Username') }}:</span> <code class="bg-background-light dark:bg-gray-700 px-1.5 py-0.5 rounded">{{ demo_username }}</code></p>
+                    <p class="text-sm text-text-light dark:text-text-dark mt-1"><span class="font-medium">{{ _('Password') }}:</span> <code class="bg-background-light dark:bg-gray-700 px-1.5 py-0.5 rounded">{{ demo_password }}</code></p>
+                </div>
+                {% endif %}
                 <form class="mt-6" method="POST" action="{{ url_for('auth.login') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <label for="username" class="block mb-2 text-sm font-medium">{{ _('Username') }}</label>
@@ -57,11 +64,13 @@
 
                     <button type="submit" class="btn btn-primary w-full mt-6">{{ _('Sign in') }}</button>
 
-                    {% if allow_self_register %}
+                    {% if demo_mode %}
+                    <p class="mt-3 text-xs text-text-muted-light dark:text-text-muted-dark text-center">{{ _('Use the demo credentials above.') }}</p>
+                    {% elif allow_self_register %}
                     <p class="mt-3 text-xs text-text-muted-light dark:text-text-muted-dark text-center">{{ _('Tip: Enter a new username to create your account.') }}</p>
                     {% endif %}
 
-                    {% if auth_method and auth_method|string|lower == 'both' %}
+                    {% if not demo_mode and auth_method and auth_method|string|lower == 'both' %}
                     <div class="relative my-6">
                         <div class="absolute inset-0 flex items-center" aria-hidden="true">
                             <div class="w-full border-t border-border-light dark:border-border-dark"></div>

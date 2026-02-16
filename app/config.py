@@ -45,6 +45,11 @@ class Config:
     ALLOW_SELF_REGISTER = os.getenv("ALLOW_SELF_REGISTER", "true").lower() == "true"
     ADMIN_USERNAMES = [u.strip() for u in os.getenv("ADMIN_USERNAMES", "admin").split(",") if u.strip()]
 
+    # Demo mode: single fixed user, credentials shown on login, no other account creation
+    DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
+    DEMO_USERNAME = (os.getenv("DEMO_USERNAME", "demo") or "demo").strip().lower()
+    DEMO_PASSWORD = os.getenv("DEMO_PASSWORD", "demo")
+
     # Authentication method: 'none' | 'local' | 'oidc' | 'both'
     # 'none' = no password authentication (username only)
     # 'local' = password authentication required

@@ -1459,22 +1459,38 @@ def create_app(config=None):
             # Check and migrate Issues table if needed
             migrate_issues_table()
 
-            # Create default admin user if it doesn't exist
-            admin_username = app.config.get("ADMIN_USERNAMES", ["admin"])[0]
-            if not User.query.filter_by(username=admin_username).first():
-                from app.models import Role
+            # Create default admin user or demo user if it doesn't exist
+            if app.config.get("DEMO_MODE"):
+                demo_username = (app.config.get("DEMO_USERNAME") or "demo").strip().lower()
+                if not User.query.filter_by(username=demo_username).first():
+                    from app.models import Role
 
-                admin_user = User(username=admin_username, role="admin")
-                admin_user.is_active = True
+                    demo_user = User(username=demo_username, role="admin")
+                    demo_user.is_active = True
+                    demo_user.set_password(app.config.get("DEMO_PASSWORD", "demo"))
 
-                # Assign admin role from the new Role system
-                admin_role = Role.query.filter_by(name="admin").first()
-                if admin_role:
-                    admin_user.roles.append(admin_role)
+                    admin_role = Role.query.filter_by(name="admin").first()
+                    if admin_role:
+                        demo_user.roles.append(admin_role)
 
-                db.session.add(admin_user)
-                db.session.commit()
-                print(f"Created default admin user: {admin_username}")
+                    db.session.add(demo_user)
+                    db.session.commit()
+                    print(f"Created demo user: {demo_username}")
+            else:
+                admin_username = app.config.get("ADMIN_USERNAMES", ["admin"])[0]
+                if not User.query.filter_by(username=admin_username).first():
+                    from app.models import Role
+
+                    admin_user = User(username=admin_username, role="admin")
+                    admin_user.is_active = True
+
+                    admin_role = Role.query.filter_by(name="admin").first()
+                    if admin_role:
+                        admin_user.roles.append(admin_role)
+
+                    db.session.add(admin_user)
+                    db.session.commit()
+                    print(f"Created default admin user: {admin_username}")
 
             print("Database initialized successfully")
         except Exception as e:
@@ -1657,22 +1673,38 @@ def init_database(app):
             # Check and migrate Task Management tables if needed
             migrate_task_management_tables()
 
-            # Create default admin user if it doesn't exist
-            admin_username = app.config.get("ADMIN_USERNAMES", ["admin"])[0]
-            if not User.query.filter_by(username=admin_username).first():
-                from app.models import Role
+            # Create default admin user or demo user if it doesn't exist
+            if app.config.get("DEMO_MODE"):
+                demo_username = (app.config.get("DEMO_USERNAME") or "demo").strip().lower()
+                if not User.query.filter_by(username=demo_username).first():
+                    from app.models import Role
 
-                admin_user = User(username=admin_username, role="admin")
-                admin_user.is_active = True
+                    demo_user = User(username=demo_username, role="admin")
+                    demo_user.is_active = True
+                    demo_user.set_password(app.config.get("DEMO_PASSWORD", "demo"))
 
-                # Assign admin role from the new Role system
-                admin_role = Role.query.filter_by(name="admin").first()
-                if admin_role:
-                    admin_user.roles.append(admin_role)
+                    admin_role = Role.query.filter_by(name="admin").first()
+                    if admin_role:
+                        demo_user.roles.append(admin_role)
 
-                db.session.add(admin_user)
-                db.session.commit()
-                print(f"Created default admin user: {admin_username}")
+                    db.session.add(demo_user)
+                    db.session.commit()
+                    print(f"Created demo user: {demo_username}")
+            else:
+                admin_username = app.config.get("ADMIN_USERNAMES", ["admin"])[0]
+                if not User.query.filter_by(username=admin_username).first():
+                    from app.models import Role
+
+                    admin_user = User(username=admin_username, role="admin")
+                    admin_user.is_active = True
+
+                    admin_role = Role.query.filter_by(name="admin").first()
+                    if admin_role:
+                        admin_user.roles.append(admin_role)
+
+                    db.session.add(admin_user)
+                    db.session.commit()
+                    print(f"Created default admin user: {admin_username}")
 
             print("Database initialized successfully")
         except Exception as e:
