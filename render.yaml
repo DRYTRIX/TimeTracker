@@ -1,6 +1,6 @@
 # Render Blueprint: TimeTracker Web Service + PostgreSQL
-# Connect this repo in Render Dashboard (New > Blueprint) for auto-deploy on push.
-# Python version: set by .python-version (3.11). Build uses npm install (no package-lock.json in repo).
+# Uses the pre-built Docker image from GitHub Container Registry (built by cd-release / cd-development).
+# No build step: deploy the image that already works in GitHub Actions.
 
 databases:
   - name: timetracker-db
@@ -11,11 +11,16 @@ databases:
 services:
   - type: web
     name: timetracker
-    runtime: python
+    runtime: image
     region: oregon
 
-    buildCommand: pip install -r requirements.txt && npm install && npm run build:docker
-    startCommand: gunicorn --bind 0.0.0.0:$PORT --worker-class eventlet --workers 1 --timeout 120 "app:create_app()"
+    image:
+      url: ghcr.io/drytrix/timetracker:latest
+      # If the image is private, add registry credentials in Render Dashboard (Settings > Registry)
+      # and set: creds: fromRegistryCreds: name: your-ghcr-credential
+
+    # Render sets PORT; the default image listens on 8080, so we override to bind to $PORT
+    dockerCommand: gunicorn --bind 0.0.0.0:$PORT --worker-class eventlet --workers 1 --timeout 120 "app:create_app()"
     preDeployCommand: flask db upgrade
 
     envVars:

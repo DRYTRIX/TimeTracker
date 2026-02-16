@@ -2,20 +2,23 @@
 
 This guide explains how to host TimeTracker as a Web Service on [Render](https://render.com) with optional **demo mode** (single user, credentials shown on the login page).
 
+The Blueprint uses the **pre-built Docker image** from GitHub Container Registry (`ghcr.io/drytrix/timetracker:latest`), i.e. the same image built by your GitHub Actions (cd-release / cd-development). No Python or npm build runs on Render.
+
 ## Prerequisites
 
 - A [Render](https://render.com) account
 - This repository connected to your GitHub (or GitLab) account
+- Docker image published to GHCR (e.g. by pushing to `main` or creating a release so the CD workflow builds and pushes the image)
 
 ## Deploy with the Blueprint
 
 1. In the Render Dashboard, click **New** → **Blueprint**.
 2. Connect your Git provider and select the TimeTracker repository.
 3. Render will detect the `render.yaml` in the repository root.
-4. Review the blueprint: it creates one **PostgreSQL** database and one **Web Service**.
+4. Review the blueprint: it creates one **PostgreSQL** database and one **Web Service** that pulls `ghcr.io/drytrix/timetracker:latest`.
 5. Click **Apply** to create the database and deploy the app.
 
-After the first deploy, every push to the connected branch will trigger a new build and deploy (auto-updates on push).
+To deploy a new version, push to `main` or create a release so GitHub Actions builds and pushes a new image, then in Render trigger a **Manual Deploy** (or use a deploy hook) to pull the updated image.
 
 ## Environment variables
 
@@ -53,15 +56,15 @@ In demo mode:
 If you prefer to create the database and web service manually:
 
 1. Create a **PostgreSQL** database and note the **Internal Database URL** (or **External** if your app runs elsewhere).
-2. Create a **Web Service**, connect the repo, and set:
-   - **Build Command**: `pip install -r requirements.txt && npm install && npm run build:docker`
-   - **Start Command**: `gunicorn --bind 0.0.0.0:$PORT --worker-class eventlet --workers 1 --timeout 120 "app:create_app()"`
+2. Create a **Web Service** and choose **Deploy an existing image from a registry**.
+   - **Image URL**: `ghcr.io/drytrix/timetracker:latest`
+   - **Docker Command**: `gunicorn --bind 0.0.0.0:$PORT --worker-class eventlet --workers 1 --timeout 120 "app:create_app()"`
    - **Pre-deploy Command**: `flask db upgrade`
+   - If the image is private, add GHCR registry credentials in Render (Settings → Registry).
 3. In **Environment**, set **FLASK_APP** to `app:create_app()`, **DATABASE_URL** to the Postgres URL, **SECRET_KEY**, and any demo-mode variables as above.
 
 ## Troubleshooting
 
 - **Migrations**: The pre-deploy command runs `flask db upgrade`. If it fails, check that **FLASK_APP** is set to `app:create_app()` and that **DATABASE_URL** is set and reachable from Render.
-- **Build**: The build installs Python dependencies and compiles Tailwind CSS. Use `npm install` (not `npm ci`) in the build command because the repo has no `package-lock.json`. If `npm run build:docker` fails, ensure `package.json` and `app/static/src/input.css` are in the repo.
-- **Python version**: The repo includes a `.python-version` file set to `3.11` so Render does not use a newer Python (e.g. 3.14) that may break some dependencies.
+- **Image**: The Blueprint uses the pre-built image `ghcr.io/drytrix/timetracker:latest`. Ensure that image exists (trigger a build by pushing to `main` or running the release workflow). If the image is private, add GitHub Container Registry credentials in Render Dashboard → Settings → Registry.
 - **Database URL**: Render’s PostgreSQL URL is usually in `postgres://` form; the app uses `postgresql+psycopg2`. If you see connection errors, try setting **DATABASE_URL** to the same URL with the scheme changed to `postgresql://` (Render may also provide a direct URL in the database dashboard).
