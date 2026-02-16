@@ -29,6 +29,10 @@ class ConfigManager:
         Returns:
             Setting value
         """
+        # Demo mode: self-registration is always disabled
+        if key == "allow_self_register" and current_app and current_app.config.get("DEMO_MODE"):
+            return False
+
         # Check Settings model first (WebUI changes have highest priority)
         # Only use values from persisted Settings instances (those with an id)
         # to avoid using fallback instances initialized from .env file

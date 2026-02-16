@@ -41,6 +41,25 @@ def get_avatar_upload_folder() -> str:
     return upload_folder
 
 
+def _login_template_vars():
+    """Common template variables for auth/login.html, including demo mode when enabled."""
+    allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
+    auth_method = (current_app.config.get("AUTH_METHOD", "local") or "local").strip().lower()
+    requires_password = auth_method in ("local", "both")
+    vars = {
+        "allow_self_register": allow_self_register,
+        "auth_method": auth_method,
+        "requires_password": requires_password,
+    }
+    if current_app.config.get("DEMO_MODE"):
+        vars["demo_mode"] = True
+        vars["demo_username"] = (current_app.config.get("DEMO_USERNAME") or "demo").strip().lower()
+        vars["demo_password"] = current_app.config.get("DEMO_PASSWORD", "demo")
+    else:
+        vars["demo_mode"] = False
+    return vars
+
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute", methods=["POST"])  # rate limit login attempts
 def login():
@@ -96,13 +115,15 @@ def login():
             except (ValueError, Exception) as e:
                 log_event("auth.login_failed", reason="invalid_username", auth_method=auth_method)
                 flash(_("Invalid username format"), "error")
-                allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
-                return render_template(
-                    "auth/login.html",
-                    allow_self_register=allow_self_register,
-                    auth_method=auth_method,
-                    requires_password=requires_password,
-                )
+                return render_template("auth/login.html", **_login_template_vars())
+
+            # Demo mode: only the configured demo user can log in; no self-registration
+            if current_app.config.get("DEMO_MODE"):
+                demo_username = (current_app.config.get("DEMO_USERNAME") or "demo").strip().lower()
+                if username != demo_username:
+                    log_event("auth.login_failed", username=username, reason="demo_mode_only_demo_user", auth_method=auth_method)
+                    flash(_("Only the demo account can be used. Please use the credentials shown below."), "error")
+                    return render_template("auth/login.html", **_login_template_vars())
 
             # Normalize admin usernames from config
             try:
@@ -122,20 +143,10 @@ def login():
                     if requires_password:
                         if not password:
                             flash(_("Password is required to create an account."), "error")
-                            return render_template(
-                                "auth/login.html",
-                                allow_self_register=allow_self_register,
-                                auth_method=auth_method,
-                                requires_password=requires_password,
-                            )
+                            return render_template("auth/login.html", **_login_template_vars())
                         if len(password) < 8:
                             flash(_("Password must be at least 8 characters long."), "error")
-                            return render_template(
-                                "auth/login.html",
-                                allow_self_register=allow_self_register,
-                                auth_method=auth_method,
-                                requires_password=requires_password,
-                            )
+                            return render_template("auth/login.html", **_login_template_vars())
 
                     # Create new user, promote to admin if username is configured as admin
                     role_name = "admin" if username in admin_usernames else "user"
@@ -164,12 +175,7 @@ def login():
                         flash(
                             _("Could not create your account due to a database error. Please try again later."), "error"
                         )
-                        return render_template(
-                            "auth/login.html",
-                            allow_self_register=allow_self_register,
-                            auth_method=auth_method,
-                            requires_password=requires_password,
-                        )
+                        return render_template("auth/login.html", **_login_template_vars())
                     current_app.logger.info("Created new user '%s'", username)
 
                     # Track onboarding started for new user
@@ -181,12 +187,7 @@ def login():
                 else:
                     log_event("auth.login_failed", username=username, reason="user_not_found", auth_method=auth_method)
                     flash(_("User not found. Please contact an administrator."), "error")
-                    return render_template(
-                        "auth/login.html",
-                        allow_self_register=allow_self_register,
-                        auth_method=auth_method,
-                        requires_password=requires_password,
-                    )
+                    return render_template("auth/login.html", **_login_template_vars())
             else:
                 # If existing user matches admin usernames, ensure admin role
                 if username in admin_usernames and user.role != "admin":
@@ -194,25 +195,13 @@ def login():
                     if not safe_commit("promote_admin_user", {"username": username}):
                         current_app.logger.error("Failed to promote '%s' to admin due to DB error", username)
                         flash(_("Could not update your account role due to a database error."), "error")
-                        allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
-                        return render_template(
-                            "auth/login.html",
-                            allow_self_register=allow_self_register,
-                            auth_method=auth_method,
-                            requires_password=requires_password,
-                        )
+                        return render_template("auth/login.html", **_login_template_vars())
 
             # Check if user is active
             if not user.is_active:
                 log_event("auth.login_failed", user_id=user.id, reason="account_disabled", auth_method=auth_method)
                 flash(_("Account is disabled. Please contact an administrator."), "error")
-                allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
-                return render_template(
-                    "auth/login.html",
-                    allow_self_register=allow_self_register,
-                    auth_method=auth_method,
-                    requires_password=requires_password,
-                )
+                return render_template("auth/login.html", **_login_template_vars())
 
             # Handle password authentication based on mode
             if requires_password:
@@ -224,26 +213,14 @@ def login():
                             "auth.login_failed", user_id=user.id, reason="password_required", auth_method=auth_method
                         )
                         flash(_("Password is required"), "error")
-                        allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
-                        return render_template(
-                            "auth/login.html",
-                            allow_self_register=allow_self_register,
-                            auth_method=auth_method,
-                            requires_password=requires_password,
-                        )
+                        return render_template("auth/login.html", **_login_template_vars())
 
                     if not user.check_password(password):
                         log_event(
                             "auth.login_failed", user_id=user.id, reason="invalid_password", auth_method=auth_method
                         )
                         flash(_("Invalid username or password"), "error")
-                        allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
-                        return render_template(
-                            "auth/login.html",
-                            allow_self_register=allow_self_register,
-                            auth_method=auth_method,
-                            requires_password=requires_password,
-                        )
+                        return render_template("auth/login.html", **_login_template_vars())
                 else:
                     # User doesn't have password set - require password to be provided
                     if not password:
@@ -253,13 +230,7 @@ def login():
                             _("No password is set for your account. Please enter a password to set one and log in."),
                             "error",
                         )
-                        allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
-                        return render_template(
-                            "auth/login.html",
-                            allow_self_register=allow_self_register,
-                            auth_method=auth_method,
-                            requires_password=requires_password,
-                        )
+                        return render_template("auth/login.html", **_login_template_vars())
                     
                     # Password provided - validate and set it
                     if len(password) < 8:
@@ -267,26 +238,14 @@ def login():
                             "auth.login_failed", user_id=user.id, reason="password_too_short", auth_method=auth_method
                         )
                         flash(_("Password must be at least 8 characters long."), "error")
-                        allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
-                        return render_template(
-                            "auth/login.html",
-                            allow_self_register=allow_self_register,
-                            auth_method=auth_method,
-                            requires_password=requires_password,
-                        )
+                        return render_template("auth/login.html", **_login_template_vars())
                     
                     # Set the password and continue to login
                     user.set_password(password)
                     if not safe_commit("set_initial_password", {"user_id": user.id, "username": user.username}):
                         current_app.logger.error("Failed to set initial password for '%s' due to DB error", user.username)
                         flash(_("Could not set password due to a database error. Please try again."), "error")
-                        allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
-                        return render_template(
-                            "auth/login.html",
-                            allow_self_register=allow_self_register,
-                            auth_method=auth_method,
-                            requires_password=requires_password,
-                        )
+                        return render_template("auth/login.html", **_login_template_vars())
                     current_app.logger.info("User '%s' set initial password during login", user.username)
                     flash(_("Password has been set. You are now logged in."), "success")
             else:
@@ -337,21 +296,9 @@ def login():
         except Exception as e:
             current_app.logger.exception("Login error: %s", e)
             flash(_("Unexpected error during login. Please try again or check server logs."), "error")
-            allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
-            return render_template(
-                "auth/login.html",
-                allow_self_register=allow_self_register,
-                auth_method=auth_method,
-                requires_password=requires_password,
-            )
+            return render_template("auth/login.html", **_login_template_vars())
 
-    allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
-    return render_template(
-        "auth/login.html",
-        allow_self_register=allow_self_register,
-        auth_method=auth_method,
-        requires_password=requires_password,
-    )
+    return render_template("auth/login.html", **_login_template_vars())
 
 
 @auth_bp.route("/logout")
@@ -644,6 +591,10 @@ def update_theme_preference():
 @auth_bp.route("/login/oidc")
 def login_oidc():
     """Start OIDC login using Authlib."""
+    if current_app.config.get("DEMO_MODE"):
+        flash(_("Demo mode: only the demo account can be used. Please use the credentials on the login page."), "warning")
+        return redirect(url_for("auth.login"))
+
     try:
         auth_method = (current_app.config.get("AUTH_METHOD", "local") or "local").strip().lower()
     except Exception:
@@ -980,6 +931,11 @@ def oidc_callback():
             user = User.query.filter_by(username=username).first()
 
         if not user:
+            # Demo mode: do not create users via OIDC
+            if current_app.config.get("DEMO_MODE"):
+                current_app.logger.info("OIDC callback redirect to login: reason=demo_mode_no_oidc_create")
+                flash(_("Demo mode: only the demo account can be used. Please use the credentials on the login page."), "error")
+                return redirect(url_for("auth.login"))
             # Create if allowed (use ConfigManager to respect database settings)
             allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
             if not allow_self_register:

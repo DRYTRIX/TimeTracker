@@ -744,6 +744,9 @@ def list_users():
 def create_user():
     """Create a new user"""
     if request.method == "POST":
+        if current_app.config.get("DEMO_MODE"):
+            flash(_("User creation is disabled in demo mode."), "error")
+            return redirect(url_for("admin.list_users"))
         username = request.form.get("username", "").strip().lower()
         role_name = request.form.get("role", "user")  # This will be a role name from the Role system
         default_password = request.form.get("default_password", "").strip()
