@@ -15,7 +15,7 @@ services:
 
     buildCommand: pip install -r requirements.txt && npm ci && npm run build:docker
     startCommand: gunicorn --bind 0.0.0.0:$PORT --worker-class eventlet --workers 1 --timeout 120 "app:create_app()"
-    releaseCommand: flask db upgrade
+    preDeployCommand: flask db upgrade
 
     envVars:
       - key: FLASK_ENV
@@ -33,9 +33,9 @@ services:
       - key: REDIS_ENABLED
         value: "false"
       # Demo mode: uncomment and set DEMO_PASSWORD in Render Dashboard for a single-user demo
-      # - key: DEMO_MODE
-      #   value: "true"
-      # - key: DEMO_USERNAME
-      #   value: demo
-      # - key: DEMO_PASSWORD
-      #   sync: false
+       - key: DEMO_MODE
+         value: "true"
+       - key: DEMO_USERNAME
+         value: demo
+       - key: DEMO_PASSWORD
+         sync: false
