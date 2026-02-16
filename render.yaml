@@ -19,9 +19,8 @@ services:
       # If the image is private, add registry credentials in Render Dashboard (Settings > Registry)
       # and set: creds: fromRegistryCreds: name: your-ghcr-credential
 
-    # Render sets PORT; the default image listens on 8080, so we override to bind to $PORT
-    dockerCommand: gunicorn --bind 0.0.0.0:$PORT --worker-class eventlet --workers 1 --timeout 120 "app:create_app()"
-    preDeployCommand: flask db upgrade
+    # Same as docker-compose: image default CMD runs python /app/start.py (DB wait, migrate, seed, gunicorn). start.py binds to PORT when set.
+    healthCheckPath: /_health
 
     envVars:
       - key: FLASK_ENV
