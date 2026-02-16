@@ -507,28 +507,43 @@ def ensure_default_data(app):
                     db.session.add(Settings())
                     db.session.commit()
 
-            # Admin users
-            admin_usernames = [u.strip().lower() for u in os.getenv("ADMIN_USERNAMES", "admin").split(",") if u.strip()]
-            for username in admin_usernames[:5]:  # safety cap
-                existing = User.query.filter_by(username=username).first()
+            # Demo user or admin users (same logic as app.initialize_database)
+            if app.config.get("DEMO_MODE"):
+                from app.models import Role
+                demo_username = (app.config.get("DEMO_USERNAME") or "demo").strip().lower()
+                existing = User.query.filter_by(username=demo_username).first()
                 if not existing:
-                    u = User(username=username, role="admin")
-                    try:
-                        u.is_active = True
-                    except Exception:
-                        pass
-                    db.session.add(u)
-                else:
-                    changed = False
-                    if getattr(existing, "role", None) != "admin":
-                        existing.role = "admin"
-                        changed = True
-                    if hasattr(existing, "is_active") and not getattr(existing, "is_active", True):
-                        existing.is_active = True
-                        changed = True
-                    if changed:
-                        db.session.add(existing)
-            db.session.commit()
+                    demo_user = User(username=demo_username, role="admin")
+                    demo_user.is_active = True
+                    demo_user.set_password(app.config.get("DEMO_PASSWORD", "demo"))
+                    admin_role = Role.query.filter_by(name="admin").first()
+                    if admin_role:
+                        demo_user.roles.append(admin_role)
+                    db.session.add(demo_user)
+                    log(f"Created demo user: {demo_username}", "INFO")
+                db.session.commit()
+            else:
+                admin_usernames = [u.strip().lower() for u in os.getenv("ADMIN_USERNAMES", "admin").split(",") if u.strip()]
+                for username in admin_usernames[:5]:  # safety cap
+                    existing = User.query.filter_by(username=username).first()
+                    if not existing:
+                        u = User(username=username, role="admin")
+                        try:
+                            u.is_active = True
+                        except Exception:
+                            pass
+                        db.session.add(u)
+                    else:
+                        changed = False
+                        if getattr(existing, "role", None) != "admin":
+                            existing.role = "admin"
+                            changed = True
+                        if hasattr(existing, "is_active") and not getattr(existing, "is_active", True):
+                            existing.is_active = True
+                            changed = True
+                        if changed:
+                            db.session.add(existing)
+                db.session.commit()
 
         log("Default data ensured", "SUCCESS")
         return True
