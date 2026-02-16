@@ -225,6 +225,7 @@ class ProjectService:
         user_id: Optional[int] = None,
         page: int = 1,
         per_page: int = 20,
+        scope_client_ids: Optional[List[int]] = None,
     ) -> Dict[str, Any]:
         """
         List projects with filtering and pagination.
@@ -269,6 +270,13 @@ class ProjectService:
         # Filter by client ID
         if client_id:
             query = query.filter(Client.id == client_id)
+
+        # Subcontractor scope: restrict to assigned clients
+        if scope_client_ids is not None:
+            if not scope_client_ids:
+                query = query.filter(Project.id.in_([]))  # no access
+            else:
+                query = query.filter(Project.client_id.in_(scope_client_ids))
 
         # Filter by client custom fields
         if client_custom_field:

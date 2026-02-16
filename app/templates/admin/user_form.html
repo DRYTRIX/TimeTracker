@@ -102,6 +102,22 @@
                     </div>
                 </div>
             </div>
+
+            <div class="border border-border-light dark:border-border-dark rounded-lg p-4 bg-bg-secondary-light dark:bg-bg-secondary-dark" id="assigned_clients_section" style="display: none;">
+                <h3 class="font-semibold mb-2">{{ _('Assigned Clients (Subcontractor)') }}</h3>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">
+                    When the role is <strong>Subcontractor</strong>, the user will only see these clients and their projects. Select all clients this user should have access to.
+                </p>
+                <div id="assigned_clients_container">
+                    <label for="assigned_client_ids" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Assigned clients') }}</label>
+                    <select name="assigned_client_ids" id="assigned_client_ids" multiple class="form-input min-h-[120px]">
+                        {% for client in clients %}
+                        <option value="{{ client.id }}" {% if user and assigned_client_ids is defined and client.id in assigned_client_ids %}selected{% endif %}>{{ client.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Hold Ctrl/Cmd to select multiple clients.') }}</p>
+                </div>
+            </div>
             
             <div class="border border-border-light dark:border-border-dark rounded-lg p-4 bg-bg-secondary-light dark:bg-bg-secondary-dark">
                 <h3 class="font-semibold mb-2">{{ _('Roles & Permissions') }}</h3>
@@ -138,5 +154,18 @@ function toggleClientSelect() {
         container.style.display = 'none';
     }
 }
+function toggleAssignedClientsSection() {
+    const roleSelect = document.getElementById('role');
+    const section = document.getElementById('assigned_clients_section');
+    if (!roleSelect || !section) return;
+    section.style.display = roleSelect.value === 'subcontractor' ? 'block' : 'none';
+}
+document.addEventListener('DOMContentLoaded', function() {
+    const roleSelect = document.getElementById('role');
+    if (roleSelect) {
+        toggleAssignedClientsSection();
+        roleSelect.addEventListener('change', toggleAssignedClientsSection);
+    }
+});
 </script>
 {% endblock %}

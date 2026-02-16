@@ -4,6 +4,8 @@
 
 The Client Portal provides a simplified, read-only interface for client users to view their projects, invoices, and time entries. This feature allows you to grant clients access to view their own data without exposing internal system functionality or other clients' information.
 
+**Related:** For internal users (e.g. subcontractors) who should see only certain clients and projects in the **main app**, use the **Subcontractor** role and assigned clients instead. See [SUBCONTRACTOR_ROLE.md](SUBCONTRACTOR_ROLE.md).
+
 ## Features
 
 - **Dashboard**: Overview of projects, invoices, and time entries

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Subcontractor role and assigned clients** — Users with the Subcontractor role can be restricted to specific clients and their projects. Admins assign clients in Admin → Users → Edit user (section "Assigned Clients (Subcontractor)"). Scope is applied to clients, projects, time entries, reports, invoices, timer, and API v1; direct access to other clients/projects returns 403. New table `user_clients`, migration `127_add_user_clients_table`, and docs in [docs/SUBCONTRACTOR_ROLE.md](docs/SUBCONTRACTOR_ROLE.md).
 - Additional features and improvements in development
 
 ## [4.19.0] - 2025-02-13

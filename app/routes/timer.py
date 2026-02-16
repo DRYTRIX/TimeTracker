@@ -761,11 +761,18 @@ def edit_timer(timer_id):
         flash(_("Timer updated successfully"), "success")
         return redirect(url_for("main.dashboard"))
 
-    # Get projects and tasks for admin users
+    # Get projects and tasks for admin (or scoped for subcontractors)
     projects = []
     tasks = []
-    if current_user.is_admin:
-        projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    from app.utils.scope_filter import apply_project_scope_to_model
+    projects_query = Project.query.filter_by(status="active").order_by(Project.name)
+    scope_p = apply_project_scope_to_model(Project, current_user)
+    if scope_p is not None:
+        projects_query = projects_query.filter(scope_p)
+    if current_user.is_admin or scope_p is not None:
+        projects = projects_query.all()
+        if timer.project_id:
+            tasks = Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all()
         if timer.project_id:
             tasks = Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all()
 
@@ -1040,9 +1047,18 @@ def manual_entry():
     from app.services import TimeTrackingService
     from app.utils.client_lock import enforce_locked_client_id, get_locked_client_id
 
-    # Get active projects and clients for dropdown (used for both GET and error re-renders on POST)
-    active_projects = Project.query.filter_by(status="active").order_by(Project.name).all()
-    active_clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+    # Get active projects and clients for dropdown (scoped for subcontractors)
+    from app.utils.scope_filter import apply_client_scope_to_model, apply_project_scope_to_model
+    projects_query = Project.query.filter_by(status="active").order_by(Project.name)
+    scope_p = apply_project_scope_to_model(Project, current_user)
+    if scope_p is not None:
+        projects_query = projects_query.filter(scope_p)
+    active_projects = projects_query.all()
+    clients_query = Client.query.filter_by(status="active").order_by(Client.name)
+    scope_c = apply_client_scope_to_model(Client, current_user)
+    if scope_c is not None:
+        clients_query = clients_query.filter(scope_c)
+    active_clients = clients_query.all()
     only_one_client = len(active_clients) == 1
     single_client = active_clients[0] if only_one_client else None
 

@@ -69,6 +69,7 @@ docs/
 - **[Weekly Time Goals](WEEKLY_TIME_GOALS.md)** — Set and track weekly hour targets
 - **[Time Rounding](TIME_ROUNDING_PREFERENCES.md)** — Configurable time rounding
 - **[Role-Based Permissions](ADVANCED_PERMISSIONS.md)** — Granular access control
+- **[Subcontractor role and assigned clients](SUBCONTRACTOR_ROLE.md)** — Restrict users to specific clients and projects
 
 See [features/](features/) for additional feature documentation.
 

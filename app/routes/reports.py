@@ -118,8 +118,13 @@ def project_report():
     end_date = request.args.get("end_date")
     user_id = request.args.get("user_id", type=int)
 
-    # Get projects for filter
-    projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    # Get projects for filter (scoped for subcontractors)
+    from app.utils.scope_filter import apply_client_scope_to_model, apply_project_scope_to_model
+    projects_query = Project.query.filter_by(status="active").order_by(Project.name)
+    scope_p = apply_project_scope_to_model(Project, current_user)
+    if scope_p is not None:
+        projects_query = projects_query.filter(scope_p)
+    projects = projects_query.all()
     users = User.query.filter_by(is_active=True).order_by(User.username).all()
 
     # Parse dates
@@ -280,7 +285,12 @@ def user_report():
 
     # Get users for filter
     users = User.query.filter_by(is_active=True).order_by(User.username).all()
-    projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    from app.utils.scope_filter import apply_project_scope_to_model
+    projects_query = Project.query.filter_by(status="active").order_by(Project.name)
+    scope_p = apply_project_scope_to_model(Project, current_user)
+    if scope_p is not None:
+        projects_query = projects_query.filter(scope_p)
+    projects = projects_query.all()
 
     # Parse dates
     if not start_date:
@@ -391,11 +401,20 @@ def export_form():
     if current_user.is_admin:
         users = User.query.filter_by(is_active=True).order_by(User.username).all()
 
-    # Get all active projects
-    projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    # Get all active projects (scoped for subcontractors)
+    from app.utils.scope_filter import apply_client_scope_to_model, apply_project_scope_to_model
+    projects_query = Project.query.filter_by(status="active").order_by(Project.name)
+    scope_p = apply_project_scope_to_model(Project, current_user)
+    if scope_p is not None:
+        projects_query = projects_query.filter(scope_p)
+    projects = projects_query.all()
 
-    # Get all active clients
-    clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+    # Get all active clients (scoped for subcontractors)
+    clients_query = Client.query.filter_by(status="active").order_by(Client.name)
+    scope_c = apply_client_scope_to_model(Client, current_user)
+    if scope_c is not None:
+        clients_query = clients_query.filter(scope_c)
+    clients = clients_query.all()
     only_one_client = len(clients) == 1
     single_client = clients[0] if only_one_client else None
 
@@ -628,17 +647,19 @@ def summary_report():
         start_date=start_date.date(), user_id=current_user.id if not current_user.is_admin else None
     )
 
-    # Get top projects
-    if current_user.is_admin:
-        # For admins, show all projects
-        projects = Project.query.filter_by(status="active").all()
-    else:
-        # For users, show only their projects
+    # Get top projects (scoped for subcontractors)
+    from app.utils.scope_filter import apply_project_scope_to_model
+    scope_p = apply_project_scope_to_model(Project, current_user)
+    projects_query = Project.query.filter_by(status="active")
+    if scope_p is not None:
+        projects_query = projects_query.filter(scope_p)
+    elif not current_user.is_admin:
         project_ids = (
             db.session.query(TimeEntry.project_id).filter(TimeEntry.user_id == current_user.id).distinct().all()
         )
         project_ids = [pid[0] for pid in project_ids]
-        projects = Project.query.filter(Project.id.in_(project_ids)).all()
+        projects_query = projects_query.filter(Project.id.in_(project_ids)) if project_ids else projects_query.filter(Project.id.in_([]))
+    projects = projects_query.all()
 
     # Sort projects by total hours
     project_stats = []
@@ -672,8 +693,13 @@ def task_report():
     start_date = request.args.get("start_date")
     end_date = request.args.get("end_date")
 
-    # Filters data
-    projects = Project.query.order_by(Project.name).all()
+    # Filters data (scoped for subcontractors)
+    from app.utils.scope_filter import apply_project_scope_to_model
+    projects_query = Project.query.order_by(Project.name)
+    scope_p = apply_project_scope_to_model(Project, current_user)
+    if scope_p is not None:
+        projects_query = projects_query.filter(scope_p)
+    projects = projects_query.all()
     users = User.query.filter_by(is_active=True).order_by(User.username).all()
 
     # Default date range: last 30 days
@@ -817,6 +843,15 @@ def _time_entries_report_query(request, require_dates=True):
             or_(TimeEntry.client_id == client_id, TimeEntry.project_id.in_(project_ids_for_client))
         )
 
+    # Subcontractor scope: restrict to allowed projects
+    from app.utils.scope_filter import get_allowed_project_ids
+    allowed_project_ids = get_allowed_project_ids(current_user)
+    if allowed_project_ids is not None:
+        if not allowed_project_ids:
+            query = query.filter(TimeEntry.project_id.in_([]))
+        else:
+            query = query.filter(TimeEntry.project_id.in_(allowed_project_ids))
+
     entries = query.options(
         joinedload(TimeEntry.project).joinedload(Project.client_obj),
         joinedload(TimeEntry.user),
@@ -840,9 +875,18 @@ def time_entries_report():
         flash(_("You do not have permission to view other users' time entries"), "error")
         return redirect(url_for("reports.time_entries_report"))
 
-    projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    from app.utils.scope_filter import apply_client_scope_to_model, apply_project_scope_to_model
+    projects_query = Project.query.filter_by(status="active").order_by(Project.name)
+    scope_p = apply_project_scope_to_model(Project, current_user)
+    if scope_p is not None:
+        projects_query = projects_query.filter(scope_p)
+    projects = projects_query.all()
     users = User.query.filter_by(is_active=True).order_by(User.username).all()
-    clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+    clients_query = Client.query.filter_by(status="active").order_by(Client.name)
+    scope_c = apply_client_scope_to_model(Client, current_user)
+    if scope_c is not None:
+        clients_query = clients_query.filter(scope_c)
+    clients = clients_query.all()
     tasks = Task.query.order_by(Task.name).all()
 
     entries, start_dt, end_dt, start_date, end_date = _time_entries_report_query(request, require_dates=True)
@@ -1538,8 +1582,13 @@ def unpaid_hours_report():
     client_id = request.args.get("client_id", type=int)
     client_id = enforce_locked_client_id(client_id)
 
-    # Get clients for filter
-    clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+    # Get clients for filter (scoped for subcontractors)
+    from app.utils.scope_filter import apply_client_scope_to_model
+    clients_query = Client.query.filter_by(status="active").order_by(Client.name)
+    scope_c = apply_client_scope_to_model(Client, current_user)
+    if scope_c is not None:
+        clients_query = clients_query.filter(scope_c)
+    clients = clients_query.all()
     only_one_client = len(clients) == 1
     single_client = clients[0] if only_one_client else None
 

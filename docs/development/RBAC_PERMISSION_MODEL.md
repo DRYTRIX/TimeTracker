@@ -28,9 +28,9 @@ These blueprints protect routes with `@admin_or_permission_required("permission_
 - **link_templates** – permission checks where applied
 - **expense_categories** – permission checks where applied
 
-### 2. All authenticated users
+### 2. All authenticated users (with optional scope)
 
-These blueprints use only `@login_required`. Any logged-in user can access the routes. This is intentional for areas where the default roles (e.g. User, Manager) are expected to have full access within the app.
+These blueprints use only `@login_required`. Any logged-in user can access the routes. **Scope-restricted users** (e.g. users with the **Subcontractor** role) see only data for their assigned clients and projects: list and detail routes for clients, projects, time entries, reports, invoices, and API v1 apply scope filters and return 403 for direct access to out-of-scope resources. See [SUBCONTRACTOR_ROLE.md](../SUBCONTRACTOR_ROLE.md).
 
 **Examples:** deals, leads, invoices (main routes), timer, reports, calendar, expenses (main routes), main dashboard, time_approvals, contacts, tasks, client_notes, budget_alerts, payments, recurring_invoices, etc.
 

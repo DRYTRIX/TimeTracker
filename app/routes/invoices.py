@@ -192,8 +192,13 @@ def create_invoice():
         flash(f"Invoice {invoice_number} created successfully", "success")
         return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
 
-    # GET request - show form
-    projects = Project.query.filter_by(status="active", billable=True).order_by(Project.name).all()
+    # GET request - show form (scoped for subcontractors)
+    from app.utils.scope_filter import apply_project_scope_to_model
+    projects_query = Project.query.filter_by(status="active", billable=True).order_by(Project.name)
+    scope_p = apply_project_scope_to_model(Project, current_user)
+    if scope_p is not None:
+        projects_query = projects_query.filter(scope_p)
+    projects = projects_query.all()
     settings = Settings.get_settings()
 
     # Set default due date to 30 days from now

@@ -299,6 +299,27 @@ DEFAULT_ROLES = {
             "view_stock_levels",
         ],
     },
+    "subcontractor": {
+        "description": "User restricted to assigned clients and their projects",
+        "is_system_role": True,
+        "permissions": [
+            "view_own_time_entries",
+            "create_time_entries",
+            "edit_own_time_entries",
+            "delete_own_time_entries",
+            "view_projects",
+            "view_own_tasks",
+            "create_tasks",
+            "edit_own_tasks",
+            "delete_own_tasks",
+            "view_clients",
+            "view_own_invoices",
+            "view_own_reports",
+            "export_reports",
+            "view_inventory",
+            "view_stock_levels",
+        ],
+    },
 }
 
 

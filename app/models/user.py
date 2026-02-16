@@ -138,6 +138,12 @@ class User(UserMixin, db.Model):
     )
     roles = db.relationship("Role", secondary="user_roles", lazy="joined", backref=db.backref("users", lazy="dynamic"))
     client = db.relationship("Client", backref="portal_users", lazy="joined")
+    assigned_clients = db.relationship(
+        "Client",
+        secondary="user_clients",
+        lazy="dynamic",
+        backref=db.backref("assigned_users", lazy="dynamic"),
+    )
 
     def __init__(self, username, role="user", email=None, full_name=None):
         self.username = username.lower().strip()
@@ -435,6 +441,33 @@ class User(UserMixin, db.Model):
             return self.roles[0].name
         # Fallback to legacy role field for backward compatibility
         return self.role
+
+    # Subcontractor / scope restriction (assigned clients only)
+    @property
+    def is_scope_restricted(self):
+        """True if user is restricted to assigned clients (e.g. subcontractor role)."""
+        return "subcontractor" in self.get_role_names()
+
+    def get_allowed_client_ids(self):
+        """Return list of client IDs this user may access, or None for full access."""
+        if self.is_admin or not self.is_scope_restricted:
+            return None
+        ids = [c.id for c in self.assigned_clients.all()]
+        return ids if ids else []
+
+    def get_allowed_project_ids(self):
+        """Return list of project IDs this user may access, or None for full access."""
+        if self.is_admin or not self.is_scope_restricted:
+            return None
+        from .project import Project
+
+        client_ids = self.get_allowed_client_ids()
+        if client_ids is None:
+            return None
+        if not client_ids:
+            return []
+        rows = db.session.query(Project.id).filter(Project.client_id.in_(client_ids)).all()
+        return [r[0] for r in rows]
 
     # Client portal helpers
     @property
