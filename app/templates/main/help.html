@@ -37,6 +37,7 @@
                 <a class="help-link py-1 hover:text-primary" href="#admin-features"><i class="fas fa-cog mr-2"></i>{{ _('Admin Features') }}</a>
                 {% endif %}
                 <a class="help-link py-1 hover:text-primary" href="#mobile-usage"><i class="fas fa-mobile-alt mr-2"></i>{{ _('Mobile Usage') }}</a>
+                <a class="help-link py-1 hover:text-primary" href="#api-documentation"><i class="fas fa-code mr-2"></i>{{ _('API Documentation') }}</a>
                 <a class="help-link py-1 hover:text-primary" href="#troubleshooting"><i class="fas fa-tools mr-2"></i>{{ _('Troubleshooting') }}</a>
             </nav>
         </div>
@@ -64,6 +65,12 @@
                     <i class="fas fa-cog mr-1"></i>{{ _('System Settings') }}
                     </a>
                     {% endif %}
+                <a href="/api/docs" target="_blank" rel="noopener" class="px-3 py-2 rounded-lg border border-emerald-600 text-emerald-600 text-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
+                    <i class="fas fa-book mr-1"></i>{{ _('API Docs') }}
+                </a>
+                <button type="button" onclick="if(typeof restartTour==='function'){restartTour();window.location.href='{{ url_for('main.dashboard') }}';}else if(window.onboardingManager){window.onboardingManager.reset();window.onboardingManager.init(window.enhancedOnboarding?window.enhancedOnboarding.getEnhancedTourSteps():[]);window.location.href='{{ url_for('main.dashboard') }}';}" class="px-3 py-2 rounded-lg border border-primary text-primary text-sm hover:bg-primary/10">
+                    <i class="fas fa-route mr-1"></i>{{ _('Restart Product Tour') }}
+                </button>
                 </div>
             </div>
 
@@ -113,7 +120,8 @@
                 <div>
                     <h4 class="font-semibold mb-2">{{ _('Starting a Timer') }}</h4>
                     <ol class="list-decimal ml-5 space-y-1 text-text-muted-light dark:text-text-muted-dark">
-                                    <li>{{ _('Navigate to the Timer page or dashboard') }}</li>
+                                    <li>{{ _('Click the timer icon in the header (round button) to start or stop from any page') }}</li>
+                                    <li>{{ _('Or navigate to the Timer page or dashboard') }}</li>
                                     <li>{{ _('Select a project from the dropdown') }}</li>
                                     <li>{{ _('Optionally select a task for more detailed tracking') }}</li>
                                     <li>{{ _('Add notes about what you\'re working on (optional)') }}</li>
@@ -681,6 +689,21 @@
                     </div>
                 </div>
             </section>
+
+            <!-- API Documentation -->
+        <section id="api-documentation" class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold mb-4"><i class="fas fa-code text-emerald-500 mr-2"></i>{{ _('API Documentation') }}</h3>
+            <p class="text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('TimeTracker provides a REST API for integration with other tools, mobile apps, and custom workflows.') }}</p>
+            <ul class="space-y-2 text-sm mb-4">
+                <li><i class="fas fa-check text-emerald-500 mr-2"></i>{{ _('Interactive Swagger UI at') }} <a href="/api/docs" target="_blank" rel="noopener" class="text-primary hover:underline">/api/docs</a></li>
+                <li><i class="fas fa-check text-emerald-500 mr-2"></i>{{ _('OpenAPI 3.0 specification at') }} <a href="/api/openapi.json" target="_blank" rel="noopener" class="text-primary hover:underline">/api/openapi.json</a></li>
+                <li><i class="fas fa-check text-emerald-500 mr-2"></i>{{ _('Bearer token or X-API-Key authentication') }}</li>
+                <li><i class="fas fa-check text-emerald-500 mr-2"></i>{{ _('Projects, time entries, tasks, clients, invoices, and more') }}</li>
+            </ul>
+            <a href="/api/docs" target="_blank" rel="noopener" class="inline-flex items-center px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-sm font-medium">
+                <i class="fas fa-external-link-alt mr-2"></i>{{ _('Open API Documentation') }}
+            </a>
+        </section>
 
             <!-- Troubleshooting -->
         <section id="troubleshooting" class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-6 rounded-lg shadow">

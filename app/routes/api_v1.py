@@ -330,12 +330,14 @@ def list_projects():
         description: List of projects
     """
     from app.services import ProjectService
+    from app.utils.scope_filter import get_allowed_client_ids
 
     # Filter by status
     status = request.args.get("status", "active")
     client_id = request.args.get("client_id", type=int)
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 20, type=int)
+    scope_client_ids = get_allowed_client_ids(g.api_user)
 
     project_service = ProjectService()
     result = project_service.list_projects(
@@ -343,6 +345,7 @@ def list_projects():
         client_id=client_id,
         page=page,
         per_page=per_page,
+        scope_client_ids=scope_client_ids,
     )
     pag = result["pagination"]
     pagination_dict = {
@@ -379,12 +382,15 @@ def get_project(project_id):
         description: Project not found
     """
     from app.services import ProjectService
+    from app.utils.scope_filter import user_can_access_project
 
     project_service = ProjectService()
     result = project_service.get_project_with_details(project_id=project_id, include_time_entries=False)
 
     if not result:
         return not_found_response("Project", project_id)
+    if not user_can_access_project(g.api_user, project_id):
+        return jsonify({"error": "Access denied", "message": "You do not have access to this project"}), 403
 
     return jsonify({"project": result.to_dict()})
 
@@ -1332,9 +1338,13 @@ def list_clients():
 
     # Use repository with eager loading (clients don't have many relations, but good practice)
     from app.repositories import ClientRepository
+    from app.utils.scope_filter import apply_client_scope_to_model
 
     client_repo = ClientRepository()
     query = client_repo.query().order_by(Client.name)
+    scope = apply_client_scope_to_model(Client, g.api_user)
+    if scope is not None:
+        query = query.filter(scope)
 
     # Paginate
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -1376,8 +1386,11 @@ def get_client(client_id):
     if blocked:
         return blocked
     from sqlalchemy.orm import joinedload
+    from app.utils.scope_filter import user_can_access_client
 
     client = Client.query.options(joinedload(Client.projects)).filter_by(id=client_id).first_or_404()
+    if not user_can_access_client(g.api_user, client_id):
+        return jsonify({"error": "Access denied", "message": "You do not have access to this client"}), 403
 
     return jsonify({"client": client.to_dict()})
 
@@ -2765,7 +2778,10 @@ def list_contacts(client_id):
     blocked = _require_module_enabled_for_api("contacts")
     if blocked:
         return blocked
-    Client.query.filter_by(id=client_id).first_or_404()
+    client = Client.query.filter_by(id=client_id).first_or_404()
+    from app.utils.scope_filter import user_can_access_client
+    if not user_can_access_client(g.api_user, client_id):
+        return jsonify({"error": "Access denied", "message": "You do not have access to this client"}), 403
     contacts = Contact.get_active_contacts(client_id)
     return jsonify({"contacts": [c.to_dict() for c in contacts]})
 
@@ -2778,6 +2794,9 @@ def create_contact(client_id):
     if blocked:
         return blocked
     client = Client.query.filter_by(id=client_id).first_or_404()
+    from app.utils.scope_filter import user_can_access_client
+    if not user_can_access_client(g.api_user, client_id):
+        return jsonify({"error": "Access denied", "message": "You do not have access to this client"}), 403
     data = request.get_json() or {}
     first_name = (data.get("first_name") or "").strip()
     last_name = (data.get("last_name") or "").strip()
@@ -6612,17 +6631,18 @@ def search():
     # Get authenticated user from API token
     user = g.api_user
 
-    # Search projects
+    # Search projects (scoped for subcontractors)
     if "project" in search_types:
         try:
-            projects = (
-                Project.query.filter(
-                    Project.status == "active",
-                    or_(Project.name.ilike(search_pattern), Project.description.ilike(search_pattern)),
-                )
-                .limit(limit)
-                .all()
+            from app.utils.scope_filter import apply_project_scope_to_model
+            projects_query = Project.query.filter(
+                Project.status == "active",
+                or_(Project.name.ilike(search_pattern), Project.description.ilike(search_pattern)),
             )
+            scope_p = apply_project_scope_to_model(Project, user)
+            if scope_p is not None:
+                projects_query = projects_query.filter(scope_p)
+            projects = projects_query.limit(limit).all()
 
             for project in projects:
                 results.append(
@@ -6667,20 +6687,21 @@ def search():
         except Exception as e:
             current_app.logger.error(f"Error searching tasks: {e}")
 
-    # Search clients
+    # Search clients (scoped for subcontractors)
     if "client" in search_types:
         try:
-            clients = (
-                Client.query.filter(
-                    or_(
-                        Client.name.ilike(search_pattern),
-                        Client.email.ilike(search_pattern),
-                        Client.company.ilike(search_pattern),
-                    )
+            from app.utils.scope_filter import apply_client_scope_to_model
+            clients_query = Client.query.filter(
+                or_(
+                    Client.name.ilike(search_pattern),
+                    Client.email.ilike(search_pattern),
+                    Client.company.ilike(search_pattern),
                 )
-                .limit(limit)
-                .all()
             )
+            scope_c = apply_client_scope_to_model(Client, user)
+            if scope_c is not None:
+                clients_query = clients_query.filter(scope_c)
+            clients = clients_query.limit(limit).all()
 
             for client in clients:
                 results.append(

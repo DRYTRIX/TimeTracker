@@ -33,13 +33,13 @@
             <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 <i class="fas fa-calendar mr-1"></i>Start Date
             </label>
-            <input type="date" name="start_date" id="start_date" value="{{ start_date }}" class="form-input">
+            <input type="date" name="start_date" id="start_date" value="{{ start_date }}" class="form-input user-date-input">
         </div>
         <div>
             <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 <i class="fas fa-calendar mr-1"></i>End Date
             </label>
-            <input type="date" name="end_date" id="end_date" value="{{ end_date }}" class="form-input">
+            <input type="date" name="end_date" id="end_date" value="{{ end_date }}" class="form-input user-date-input">
         </div>
         <div class="self-end">
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition">
@@ -94,7 +94,15 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="5" class="p-4 text-center">No tasks with logged time for the selected period.</td>
+                <td colspan="5" class="p-8">
+                    <div class="flex flex-col items-center justify-center text-center">
+                        <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 mb-2">
+                            <i class="fas fa-tasks text-xl text-text-muted-light dark:text-text-muted-dark"></i>
+                        </div>
+                        <p class="text-text-muted-light dark:text-text-muted-dark font-medium">{{ _('No tasks with logged time for the selected period.') }}</p>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Try a different date range or log time on tasks.') }}</p>
+                    </div>
+                </td>
             </tr>
             {% endfor %}
         </tbody>

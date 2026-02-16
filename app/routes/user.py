@@ -288,8 +288,8 @@ def set_theme():
         data = request.get_json()
         theme = data.get("theme")
 
-        if theme in ["light", "dark", None, ""]:
-            current_user.theme_preference = theme if theme else None
+        if theme in ["light", "dark", "system", None, ""]:
+            current_user.theme_preference = None if (theme == "system" or not theme) else theme
             db.session.commit()
 
             return jsonify({"success": True, "theme": current_user.theme_preference or "system"})

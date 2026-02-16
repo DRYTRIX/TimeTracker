@@ -1,6 +1,11 @@
-# Peppol e-invoicing (BIS Billing 3.0)
+# Peppol and ZugFerd e-invoicing (EN 16931)
 
-TimeTracker can **send invoices via Peppol** by generating a UBL 2.1 Invoice (Peppol BIS Billing 3.0 profile) and forwarding it to your **Peppol Access Point**.
+TimeTracker supports **both**:
+
+- **Peppol** – send invoices via the Peppol network (UBL 2.1, BIS Billing 3.0) to your **Peppol Access Point**.
+- **ZugFerd / Factur-X** – export invoice PDFs that contain **embedded EN 16931 XML** (one file that is both human-readable and machine-readable). These hybrid PDFs can also be sent via Peppol.
+
+Peppol is the **transport**; ZugFerd is a **format** (PDF + embedded XML). The same UBL used for Peppol is reused when embedding (EN 16931 compliant).
 
 ## What you need
 
@@ -85,6 +90,16 @@ You can optionally set **Buyer reference (PEPPOL BT-10)** on each invoice (creat
 
 When the setting is on **and** the client has Peppol endpoint details, the invoice view shows a **Download UBL** button to save the UBL 2.1 XML file.
 
+## Embed EN 16931 XML in invoice PDFs (ZugFerd / Factur-X)
+
+In **Admin → Settings → Peppol e-Invoicing** you can enable **Embed EN 16931 XML in invoice PDFs (ZugFerd / Factur-X)**. When this is on:
+
+- **Exported invoice PDFs** (Export PDF) contain an embedded file `ZUGFeRD-invoice.xml` with the same EN 16931 UBL as used for Peppol.
+- The PDF remains human-readable; the embedded XML makes it machine-readable (e.g. for automated booking or archiving).
+- These hybrid PDFs can be sent via Peppol or by email; recipients can open the PDF and/or extract the XML.
+
+Party data (seller/customer) is taken from Settings and the invoice’s client (including Peppol endpoint fields). For full EN 16931/ZugFerd compliance, configure sender and client data as for Peppol. If some data is missing, the app still embeds best-effort UBL so the file is usable.
+
 ## Migrations
 
 After pulling these changes, run:
@@ -93,10 +108,11 @@ After pulling these changes, run:
 flask db upgrade
 ```
 
-This applies:
+This applies (among others):
 
 - `112_add_invoices_peppol_compliant` (adds `settings.invoices_peppol_compliant`)
 - `113_add_invoice_buyer_reference` (adds `invoices.buyer_reference`)
+- `128_add_invoices_zugferd_pdf` (adds `settings.invoices_zugferd_pdf` for ZugFerd PDF embedding)
 
 ## Testing
 

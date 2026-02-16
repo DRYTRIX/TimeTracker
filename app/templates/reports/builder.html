@@ -37,13 +37,19 @@
             
             <h3 class="font-semibold mb-4 mt-6">{{ _('Components') }}</h3>
             <div class="space-y-2" id="components">
-                <div class="p-3 border border-border-light dark:border-border-dark rounded-lg cursor-move hover:bg-gray-50 dark:hover:bg-gray-700" draggable="true" data-component="table">
+                <div class="p-3 border border-border-light dark:border-border-dark rounded-lg cursor-move hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-primary/50 transition-all duration-150 active:scale-[0.98]" draggable="true" data-component="table" role="button" tabindex="0" aria-label="{{ _('Add table to report') }}">
                     <i class="fas fa-table mr-2"></i>{{ _('Table') }}
                 </div>
-                <div class="p-3 border border-border-light dark:border-border-dark rounded-lg cursor-move hover:bg-gray-50 dark:hover:bg-gray-700" draggable="true" data-component="chart">
+                <div class="p-3 border border-border-light dark:border-border-dark rounded-lg cursor-move hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-primary/50 transition-all duration-150 active:scale-[0.98]" draggable="true" data-component="chart" role="button" tabindex="0" aria-label="{{ _('Add chart to report') }}">
                     <i class="fas fa-chart-line mr-2"></i>{{ _('Chart') }}
                 </div>
-                <div class="p-3 border border-border-light dark:border-border-dark rounded-lg cursor-move hover:bg-gray-50 dark:hover:bg-gray-700" draggable="true" data-component="summary">
+                <div class="p-3 border border-border-light dark:border-border-dark rounded-lg cursor-move hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-primary/50 transition-all duration-150 active:scale-[0.98]" draggable="true" data-component="chart-doughnut" role="button" tabindex="0" aria-label="{{ _('Add doughnut chart to report') }}">
+                    <i class="fas fa-chart-pie mr-2"></i>{{ _('Doughnut Chart') }}
+                </div>
+                <div class="p-3 border border-border-light dark:border-border-dark rounded-lg cursor-move hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-primary/50 transition-all duration-150 active:scale-[0.98]" draggable="true" data-component="chart-bar" role="button" tabindex="0" aria-label="{{ _('Add bar chart to report') }}">
+                    <i class="fas fa-chart-bar mr-2"></i>{{ _('Bar Chart') }}
+                </div>
+                <div class="p-3 border border-border-light dark:border-border-dark rounded-lg cursor-move hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-primary/50 transition-all duration-150 active:scale-[0.98]" draggable="true" data-component="summary" role="button" tabindex="0" aria-label="{{ _('Add summary to report') }}">
                     <i class="fas fa-calculator mr-2"></i>{{ _('Summary') }}
                 </div>
             </div>
@@ -65,8 +71,8 @@
                 </div>
             </div>
             
-            <div id="reportCanvas" class="min-h-96 border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-4">
-                <p class="text-center text-text-muted-light dark:text-text-muted-dark py-8">
+            <div id="reportCanvas" class="min-h-96 border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-4 transition-colors duration-150" role="region" aria-label="{{ _('Report canvas') }}" aria-describedby="canvasHelp">
+                <p id="canvasHelp" class="text-center text-text-muted-light dark:text-text-muted-dark py-8" data-empty-placeholder>
                     {{ _('Drag data sources and components here to build your report') }}
                 </p>
             </div>
@@ -78,11 +84,11 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Start Date') }}</label>
-                    <input type="date" id="filterStartDate" class="form-input">
+                    <input type="date" id="filterStartDate" class="form-input user-date-input">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('End Date') }}</label>
-                    <input type="date" id="filterEndDate" class="form-input">
+                    <input type="date" id="filterEndDate" class="form-input user-date-input">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Project') }}</label>
@@ -304,21 +310,26 @@ document.querySelectorAll('[draggable="true"]').forEach(item => {
     });
 });
 
-// Click to add (alternative to drag-and-drop)
+// Click and keyboard to add (alternative to drag-and-drop)
+function handleSourceAdd(e) {
+    if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+    if (e.type === 'keydown') e.preventDefault();
+    const sourceId = e.currentTarget.getAttribute('data-source');
+    if (sourceId) { reportConfig.data_source = sourceId; addDataSourceToCanvas(sourceId); }
+}
+function handleComponentAdd(e) {
+    if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+    if (e.type === 'keydown') e.preventDefault();
+    const compId = e.currentTarget.getAttribute('data-component');
+    if (compId) addComponentToCanvas(compId);
+}
 document.querySelectorAll('#dataSources [data-source]').forEach(item => {
-    item.addEventListener('click', (e) => {
-        const sourceId = item.getAttribute('data-source');
-        if (sourceId) {
-            reportConfig.data_source = sourceId;
-            addDataSourceToCanvas(sourceId);
-        }
-    });
+    item.addEventListener('click', handleSourceAdd);
+    item.addEventListener('keydown', handleSourceAdd);
 });
-document.querySelectorAll('[data-component]').forEach(item => {
-    item.addEventListener('click', (e) => {
-        const compId = item.getAttribute('data-component');
-        if (compId) addComponentToCanvas(compId);
-    });
+document.querySelectorAll('#components [data-component]').forEach(item => {
+    item.addEventListener('click', handleComponentAdd);
+    item.addEventListener('keydown', handleComponentAdd);
 });
 
 canvas.addEventListener('dragover', (e) => {
@@ -391,29 +402,35 @@ function removeDataSource() {
     }
 }
 
-function addComponentToCanvas(componentId) {
-    // Check if component already exists
-    const existingComponent = canvas.querySelector(`[data-report-component="${componentId}"]`);
-    if (existingComponent) {
-        return; // Don't add duplicates
-    }
-    
-    const componentNames = {
+function getComponentDisplayName(componentId) {
+    const names = {
         'table': '{{ _("Table") }}',
         'chart': '{{ _("Chart") }}',
+        'chart-doughnut': '{{ _("Doughnut Chart") }}',
+        'chart-bar': '{{ _("Bar Chart") }}',
         'summary': '{{ _("Summary") }}'
     };
-    
+    return names[componentId] || componentId;
+}
+function getComponentIcon(componentId) {
+    const icons = { 'table': 'table', 'chart': 'chart-line', 'chart-doughnut': 'chart-pie', 'chart-bar': 'chart-bar', 'summary': 'calculator' };
+    return icons[componentId] || 'chart-line';
+}
+function addComponentToCanvas(componentId) {
+    const existingComponent = canvas.querySelector(`[data-report-component="${componentId}"]`);
+    if (existingComponent) return;
     const element = document.createElement('div');
     element.className = 'p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg mb-4';
     element.setAttribute('data-report-component', componentId);
+    const name = getComponentDisplayName(componentId);
+    const icon = getComponentIcon(componentId);
     element.innerHTML = `
         <div class="flex justify-between items-center">
             <div>
-                <i class="fas fa-${componentId === 'table' ? 'table' : componentId === 'chart' ? 'chart-line' : 'calculator'} mr-2"></i>
-                <strong>${componentNames[componentId] || componentId}</strong>
+                <i class="fas fa-${icon} mr-2"></i>
+                <strong>${name}</strong>
             </div>
-            <button type="button" onclick="removeComponent('${componentId}')" class="text-red-600 hover:text-red-800">
+            <button type="button" onclick="removeComponent('${componentId}')" class="text-red-600 hover:text-red-800" aria-label="{{ _('Remove') }} ${name}">
                 <i class="fas fa-times"></i>
             </button>
         </div>

@@ -510,3 +510,35 @@
 </div>
 {% endmacro %}
 
+{# ============================================
+   LOADING SKELETONS
+   ============================================ #}
+{% macro skeleton_row() %}
+<div class="skeleton-row flex items-center gap-3 p-4 border-b border-border-light dark:border-border-dark">
+    <div class="skeleton skeleton-avatar flex-shrink-0"></div>
+    <div class="flex-1 min-w-0 space-y-2">
+        <div class="skeleton skeleton-text medium"></div>
+        <div class="skeleton skeleton-text short"></div>
+    </div>
+    <div class="skeleton skeleton-text short w-16 flex-shrink-0"></div>
+</div>
+{% endmacro %}
+
+{% macro skeleton_table_rows(count=5, cols=5) %}
+{% for _ in range(count) %}
+<tr class="border-b border-border-light dark:border-border-dark">
+    {% for _ in range(cols) %}
+    <td class="p-4"><div class="skeleton skeleton-text medium"></div></td>
+    {% endfor %}
+</tr>
+{% endfor %}
+{% endmacro %}
+
+{% macro skeleton_card() %}
+<div class="skeleton-card space-y-3">
+    <div class="skeleton skeleton-text long"></div>
+    <div class="skeleton skeleton-text medium"></div>
+    <div class="skeleton skeleton-text short"></div>
+</div>
+{% endmacro %}
+

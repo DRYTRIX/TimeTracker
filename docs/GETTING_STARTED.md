@@ -122,7 +122,19 @@ python app.py
 
 ## ⚙️ Initial Setup
 
-### Step 1: Configure System Settings
+### Guided setup on first run
+
+The **first time** you open TimeTracker (before setup is complete), you are shown a **guided setup wizard** at `/setup`. It walks you through:
+
+- **Region & time** – Timezone, date/time format, currency
+- **Company** – Company name, address, email (for invoices)
+- **System** – Self-registration, time rounding, single active timer, idle timeout
+- **Integrations (optional)** – Google Calendar OAuth; can be skipped
+- **Privacy** – Opt-in for anonymous telemetry
+
+After you complete the wizard, you can log in and fine-tune anything in **Admin → Settings**. If setup was already completed (e.g. by someone else), you go straight to the login/dashboard.
+
+### Step 1: Configure System Settings (Admin)
 
 > **Important**: You need admin access for this step. Login with a username from `ADMIN_USERNAMES` (default: `admin`).
 

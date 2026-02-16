@@ -95,6 +95,10 @@ def list_projects():
 
     project_service = ProjectService()
 
+    # Subcontractor scope: restrict to assigned clients
+    from app.utils.scope_filter import apply_client_scope_to_model, get_allowed_client_ids
+    scope_client_ids = get_allowed_client_ids(current_user)
+
     # Use service layer to get projects (prevents N+1 queries)
     result = project_service.list_projects(
         status=status_param,
@@ -106,6 +110,7 @@ def list_projects():
         user_id=current_user.id if favorites_only else None,
         page=page,
         per_page=20,
+        scope_client_ids=scope_client_ids,
     )
 
     # Get user's favorite project IDs for quick lookup in template
@@ -114,8 +119,12 @@ def list_projects():
         fav_id for (fav_id,) in db.session.query(UserFavoriteProject.project_id).filter_by(user_id=current_user.id).all()
     )
 
-    # Get clients for filter dropdown
-    clients = Client.get_active_clients()
+    # Get clients for filter dropdown (scoped for subcontractors)
+    clients_query = Client.query.filter_by(status="active").order_by(Client.name)
+    scope = apply_client_scope_to_model(Client, current_user)
+    if scope is not None:
+        clients_query = clients_query.filter(scope)
+    clients = clients_query.all()
     only_one_client = len(clients) == 1
     single_client = clients[0] if only_one_client else None
     client_list = [c.name for c in clients]
@@ -197,6 +206,12 @@ def export_projects():
     if search:
         like = f"%{search}%"
         query = query.filter(db.or_(Project.name.ilike(like), Project.description.ilike(like)))
+
+    # Subcontractor scope
+    from app.utils.scope_filter import apply_project_scope_to_model
+    scope = apply_project_scope_to_model(Project, current_user)
+    if scope is not None:
+        query = query.filter(scope)
 
     projects = query.order_by(Project.name).all()
 
@@ -486,6 +501,12 @@ def create_project():
 @login_required
 def view_project(project_id):
     """View project details and time entries - REFACTORED to use service layer with eager loading"""
+    from app.utils.scope_filter import user_can_access_project
+
+    if not user_can_access_project(current_user, project_id):
+        from flask import abort
+        abort(403)
+
     from app.services import ProjectService
 
     page = request.args.get("page", 1, type=int)
@@ -822,8 +843,18 @@ def project_time_entries_overview(project_id):
 def edit_project(project_id):
     """Edit project details"""
     from app.utils.client_lock import get_locked_client_id
+    from app.utils.scope_filter import user_can_access_project, apply_client_scope_to_model
+    from flask import abort
+
     project = Project.query.get_or_404(project_id)
-    clients = Client.get_active_clients()
+    if not user_can_access_project(current_user, project_id):
+        abort(403)
+
+    clients_query = Client.query.filter_by(status="active").order_by(Client.name)
+    scope = apply_client_scope_to_model(Client, current_user)
+    if scope is not None:
+        clients_query = clients_query.filter(scope)
+    clients = clients_query.all()
     only_one_client = len(clients) == 1
     single_client = clients[0] if only_one_client else None
 
@@ -935,7 +966,7 @@ def edit_project(project_id):
         if not safe_commit("update_project_custom_fields_and_color", {"project_id": project.id}):
             flash(_("Could not update project due to a database error"), "error")
             custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-            return render_template("projects/edit.html", project=project, clients=Client.get_active_clients(), custom_field_definitions=custom_field_definitions)
+            return render_template("projects/edit.html", project=project, clients=clients, custom_field_definitions=custom_field_definitions)
 
         # Log activity
         Activity.log(

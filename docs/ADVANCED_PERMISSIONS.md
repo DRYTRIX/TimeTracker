@@ -75,6 +75,13 @@ The following system roles are created by default:
 - Can view own time entries, tasks, and reports
 - Cannot create or modify anything
 
+#### Subcontractor
+- Same capabilities as User but **restricted to assigned clients and their projects only**
+- Admins assign one or more clients to the user in Admin → Users → Edit user (section "Assigned Clients (Subcontractor)")
+- The user sees only those clients, their projects, and related time entries, invoices, and reports
+- Direct access to other clients or projects returns 403 Forbidden
+- See [Subcontractor role and assigned clients](SUBCONTRACTOR_ROLE.md) for full details
+
 ### Permission Categories
 
 Permissions are organized into the following categories:

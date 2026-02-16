@@ -1480,6 +1480,20 @@
     </p>
 </div>
 
+<!-- Help Section -->
+<details class="mb-4 border border-gray-200 dark:border-gray-600 rounded-lg" style="font-size: 0.875rem;">
+    <summary class="px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-t-lg flex items-center gap-2">
+        <i class="fas fa-question-circle text-gray-500"></i>
+        <span class="font-medium">{{ _('Help: Quote Items Table & Saving') }}</span>
+    </summary>
+    <div class="px-4 py-3 pt-0 text-gray-600 dark:text-gray-400 space-y-2">
+        <p><strong>{{ _('Quote Items Table:') }}</strong> {{ _('Displays quote line items. Add from Invoice Data in the sidebar.') }}</p>
+        <p><strong>{{ _('Saving:') }}</strong> {{ _('Click "Save Design" to persist. If the table disappears after save, try Reset to restore defaults, then re-add the Items Table.') }}</p>
+        <p><strong>{{ _('Preview:') }}</strong> {{ _('Use "Generate Preview" to see how the PDF will look with real quote data.') }}</p>
+        <p>{{ _('See') }} <code>docs/PDF_LAYOUT_CUSTOMIZATION.md</code> {{ _('for full documentation.') }}</p>
+    </div>
+</details>
+
 <!-- Action Bar -->
 <div class="action-bar">
     <button id="btn-clear" type="button" class="btn btn-secondary">
@@ -2187,6 +2201,43 @@ const PAGE_SIZE_DIMENSIONS = {
     'A5': { width: 420, height: 595 },
     'Tabloid': { width: 792, height: 1224 }
 };
+
+// Issue #504: Infer quote items table from group structure (supports localized headers)
+function inferQuoteTableNameFromGroup(child, excludeNode) {
+    if (!child || child === excludeNode || (child.className !== 'Group' && (!child.constructor || child.constructor.name !== 'Group'))) return null;
+    const children = child.getChildren ? child.getChildren() : (child.children || []);
+    if (children.length < 3) return null;
+    const textElements = children.filter(function(c) { return c.className === 'Text'; });
+    const hasLine = children.some(function(c) { return c.className === 'Line'; });
+    if (textElements.length < 2 || !hasLine) return null;
+    const headerText = (textElements[0].attrs && textElements[0].attrs.text) ? textElements[0].attrs.text : '';
+    const h = headerText.toLowerCase();
+    const hasPipeColumns = headerText.indexOf('|') !== -1 && headerText.split('|').length >= 3;
+    const itemsKeywords = ['description', 'qty', 'quantity', 'unit price', 'total', 'beschreibung', 'menge', 'preis', 'betrag', 'gesamt', 'quantité', 'prix', 'descrizione', 'quantità', 'prezzo', 'totale', 'omschrijving', 'aantal', 'eenheidsprijs', 'totaal'];
+    const hasItemsKw = itemsKeywords.some(function(kw) { return h.indexOf(kw) !== -1; });
+    if (hasItemsKw || (hasPipeColumns && (h.indexOf('price') !== -1 || h.indexOf('preis') !== -1 || h.indexOf('prix') !== -1 || h.indexOf('amount') !== -1 || h.indexOf('betrag') !== -1 || h.indexOf('total') !== -1 || h.indexOf('gesamt') !== -1))) {
+        return 'quote-items-table';
+    }
+    if (hasPipeColumns && textElements.length >= 2 && hasLine) return 'quote-items-table';
+    return null;
+}
+
+function ensureQuoteTableGroupNames(layerRef, bgRef) {
+    if (!layerRef || !layerRef.children) return;
+    const bg = bgRef || (typeof background !== 'undefined' ? background : null);
+    layerRef.children.forEach(function(child) {
+        if (!child || child === bg || child.className !== 'Group') return;
+        const currentName = child.getAttr ? child.getAttr('name') : (child.attrs && child.attrs.name);
+        if (currentName === 'quote-items-table') return;
+        const inferred = inferQuoteTableNameFromGroup(child, bg);
+        if (inferred) {
+            if (child.setAttr) child.setAttr('name', inferred);
+            if (child.attrs) child.attrs.name = inferred;
+            if (child.name) child.name(inferred);
+            console.log('[QUOTE_PDF_EDITOR] Ensured quote table group name before save:', inferred);
+        }
+    });
+}
 
 // Overflow and overlap detection functions (same as invoice template)
 function getElementBoundingBox(element) {
@@ -3088,7 +3139,7 @@ function initializePDFEditor() {
             // Properly escape text for HTML and convert \n to actual newlines
             const textContent = (attrs.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/\\n/g, '\n');
             // Use more rows for table items which might be longer
-            const isTableText = node.parent && node.parent.attrs && (node.parent.attrs.name === 'items-table' || node.parent.attrs.name === 'expenses-table');
+            const isTableText = node.parent && node.parent.attrs && (node.parent.attrs.name === 'items-table' || node.parent.attrs.name === 'expenses-table' || node.parent.attrs.name === 'quote-items-table');
             const textareaRows = isTableText ? 8 : 3;
             
             html += '<div class="property-group">';
@@ -3230,7 +3281,7 @@ function initializePDFEditor() {
         // Group-specific properties (for items-table and expenses-table)
         // Check both className and constructor name for Groups
         const isGroup = className === 'Group' || (node.constructor && node.constructor.name === 'Group');
-        const isTableGroup = isGroup && (attrs.name === 'items-table' || attrs.name === 'expenses-table');
+        const isTableGroup = isGroup && (attrs.name === 'items-table' || attrs.name === 'expenses-table' || attrs.name === 'quote-items-table');
         console.log('Group check:', {
             className: className,
             constructorName: node.constructor ? node.constructor.name : 'unknown',
@@ -3356,7 +3407,7 @@ function initializePDFEditor() {
                 html += `<input type="text" value="Unknown" disabled class="property-input bg-gray-100">`;
             }
             html += '</div>';
-            html += '<p class="text-sm text-gray-500 italic mt-2">This is a Group element. If this is a table, make sure it has the name "items-table" or "expenses-table".</p>';
+            html += '<p class="text-sm text-gray-500 italic mt-2">This is a Group element. If this is a table, make sure it has the name "quote-items-table".</p>';
             html += '</div>';
         }
         
@@ -4964,21 +5015,20 @@ function initializePDFEditor() {
                 }
             } else if (child.className === 'Group' || child.constructor.name === 'Group' || child.children) {
                 // It's a Group element (check multiple ways since className might be undefined after JSON restore)
-                // Check if this is a table by looking at the group's name
-                let isItemsTable = child.attrs.name === 'items-table';
+                // Check if this is a table by looking at the group's name (quotes use quote-items-table)
+                let isItemsTable = child.attrs.name === 'items-table' || child.attrs.name === 'quote-items-table';
                 let isExpensesTable = child.attrs.name === 'expenses-table';
                 
                 // CRITICAL FIX: Check if this is a decorative-image group (handle name variations)
                 const groupName = child.attrs.name || '';
                 const isDecorativeImage = groupName && groupName.includes('decorative-image');
                 
-                // Fallback: Check if group has multiple children (header, line, items) - likely a table
+                // Fallback: Check if group has table-like structure but missing name (Issue #504 - i18n-aware)
                 if (!isItemsTable && !isExpensesTable && !isDecorativeImage && child.children && child.children.length >= 3) {
-                    const hasTextChildren = child.children.filter(c => c.className === 'Text').length >= 2;
-                    const hasLine = child.children.some(c => c.className === 'Line');
-                    if (hasTextChildren && hasLine) {
-                        console.log('⚠ Table detected by structure (missing name attribute) - consider re-saving layout');
+                    const inferred = inferQuoteTableNameFromGroup(child, null);
+                    if (inferred === 'quote-items-table') {
                         isItemsTable = true;
+                        console.log('⚠ Quote items table detected by structure (missing name) - using inference');
                     }
                 }
                 
@@ -5023,26 +5073,27 @@ function initializePDFEditor() {
                     
                     console.log('Decorative image dimensions:', actualWidth, 'x', actualHeight, 'URL:', imageUrl);
                     
-                    // Add to ReportLab template JSON
-                    templateJson.elements.push({
-                        type: 'image',
-                        x: pxToPt(x),
-                        y: pxToPt(y),
-                        width: pxToPt(actualWidth),
-                        height: pxToPt(actualHeight),
-                        source: imageUrl || '',  // Store the image URL
-                        opacity: opacity,
-                        decorative: true  // Mark as decorative image
-                    });
+                    // Issue #432: Only add to template JSON when source is non-empty
+                    if (imageUrl && imageUrl.trim() !== '') {
+                        templateJson.elements.push({
+                            type: 'image',
+                            x: pxToPt(x),
+                            y: pxToPt(y),
+                            width: pxToPt(actualWidth),
+                            height: pxToPt(actualHeight),
+                            source: imageUrl,
+                            opacity: opacity,
+                            decorative: true
+                        });
+                    }
                     
-                    // Legacy HTML for preview - only generate image tag, not rectangle
+                    // Legacy HTML for preview
                     if (imageUrl && imageUrl.trim() !== '') {
                         bodyContent += `  <img src="${imageUrl}" style="position:absolute;left:${x}px;top:${y}px;width:${actualWidth}px;height:${actualHeight}px;opacity:${opacity}" alt="Decorative image" class="image-element">\n`;
                     } else {
                         bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;width:${actualWidth}px;height:${actualHeight}px;background:#f0f0f0;border:2px dashed #999;opacity:${opacity};display:flex;align-items:center;justify-content:center;color:#666;font-size:12px;">Decorative Image</div>\n`;
                     }
-                    // Skip processing children of decorative-image groups - they are just placeholders
-                    return; // Use return instead of continue in forEach
+                    return;
                 }
                 
                 if (isItemsTable) {
@@ -5242,19 +5293,21 @@ function initializePDFEditor() {
                     
                     console.log('Decorative image dimensions (fallback):', actualWidth, 'x', actualHeight, 'URL:', imageUrl);
                     
-                    // Add to ReportLab template JSON
-                    templateJson.elements.push({
-                        type: 'image',
-                        x: pxToPt(x),
-                        y: pxToPt(y),
-                        width: pxToPt(actualWidth),
-                        height: pxToPt(actualHeight),
-                        source: imageUrl || '',  // Store the image URL
-                        opacity: opacity,
-                        decorative: true  // Mark as decorative image
-                    });
+                    // Issue #432: Only add to template JSON when source is non-empty
+                    if (imageUrl && imageUrl.trim() !== '') {
+                        templateJson.elements.push({
+                            type: 'image',
+                            x: pxToPt(x),
+                            y: pxToPt(y),
+                            width: pxToPt(actualWidth),
+                            height: pxToPt(actualHeight),
+                            source: imageUrl,
+                            opacity: opacity,
+                            decorative: true
+                        });
+                    }
                     
-                    // Legacy HTML for preview - only generate image tag, not rectangle
+                    // Legacy HTML for preview
                     if (imageUrl && imageUrl.trim() !== '') {
                         bodyContent += `  <img src="${imageUrl}" style="position:absolute;left:${x}px;top:${y}px;width:${actualWidth}px;height:${actualHeight}px;opacity:${opacity}" alt="Decorative image" class="image-element">\n`;
                     } else {
@@ -5545,7 +5598,83 @@ table tr:last-child td {
     document.getElementById('btn-save').addEventListener('click', function() {
         // Clean up unwanted elements before generating code
         cleanupUnwantedElements();
-        
+        // Issue #504: Ensure quote table groups have correct name before generateCode
+        if (typeof ensureQuoteTableGroupNames === 'function' && layer) {
+            ensureQuoteTableGroupNames(layer, background);
+            layer.draw();
+        }
+        // Issue #432: Sync imageUrl onto decorative-image groups BEFORE generateCode() so template_json has correct source
+        layer.find('[name="decorative-image"]').forEach((decorativeImageGroup, idx) => {
+            try {
+                let imageUrl = decorativeImageGroup.getAttr('imageUrl');
+                if (!imageUrl) imageUrl = decorativeImageGroup.attrs.imageUrl;
+                if (!imageUrl) {
+                    const imageNode = decorativeImageGroup.findOne('Image');
+                    if (imageNode) {
+                        const imgAttrs = imageNode.attrs || {};
+                        imageUrl = imgAttrs.src || imgAttrs.url || imgAttrs.imageUrl || '';
+                    }
+                }
+                if (imageUrl) {
+                    decorativeImageGroup.setAttr('imageUrl', imageUrl);
+                    decorativeImageGroup.attrs.imageUrl = imageUrl;
+                }
+            } catch(e) {
+                console.warn('Could not get/set imageUrl for decorative image:', e);
+            }
+        });
+        let allDecorativeGroups = layer.find('[name="decorative-image"]');
+        layer.find('Group').forEach(group => {
+            const name = group.name() || group.getAttr('name') || '';
+            if (name.includes('decorative-image') && !allDecorativeGroups.includes(group)) {
+                allDecorativeGroups = allDecorativeGroups.concat([group]);
+            }
+        });
+        allDecorativeGroups.forEach((decorativeImageGroup, idx) => {
+            try {
+                const currentName = decorativeImageGroup.name() || decorativeImageGroup.getAttr('name') || '';
+                if (!currentName.includes('decorative-image')) {
+                    decorativeImageGroup.setAttr('name', 'decorative-image');
+                    decorativeImageGroup.name('decorative-image');
+                    if (decorativeImageGroup.attrs) decorativeImageGroup.attrs.name = 'decorative-image';
+                }
+                const imageUrl = decorativeImageGroup.getAttr('imageUrl') || decorativeImageGroup.attrs.imageUrl;
+                if (imageUrl) {
+                    decorativeImageGroup.setAttr('imageUrl', imageUrl);
+                    decorativeImageGroup.attrs.imageUrl = imageUrl;
+                }
+            } catch(e) {}
+        });
+        const decorativeImageUrlMap = new Map();
+        let decorativeImageGroups = layer.find('[name="decorative-image"]');
+        layer.find('Group').forEach(group => {
+            const name = group.name() || group.getAttr('name') || '';
+            if (name.includes('decorative-image') && !decorativeImageGroups.includes(group)) {
+                decorativeImageGroups = decorativeImageGroups.concat([group]);
+            }
+        });
+        decorativeImageGroups.forEach((decorativeImageGroup, index) => {
+            const currentPrimaryName = decorativeImageGroup.name();
+            if (currentPrimaryName !== 'decorative-image') {
+                decorativeImageGroup.name('decorative-image');
+                decorativeImageGroup.setAttr('name', 'decorative-image');
+                if (decorativeImageGroup.attrs) decorativeImageGroup.attrs.name = 'decorative-image';
+            }
+            let imageUrl = decorativeImageGroup.getAttr('imageUrl') || decorativeImageGroup.attrs.imageUrl || '';
+            if (!imageUrl) {
+                const imageNode = decorativeImageGroup.findOne('Image');
+                if (imageNode) {
+                    const imgAttrs = imageNode.attrs || {};
+                    imageUrl = imgAttrs.src || imgAttrs.url || imgAttrs.imageUrl || '';
+                }
+            }
+            const x = decorativeImageGroup.x() || 0;
+            const y = decorativeImageGroup.y() || 0;
+            decorativeImageUrlMap.set(`${x}_${y}`, imageUrl || '');
+            decorativeImageUrlMap.set(`${x}_${y}_${index}`, imageUrl || '');
+            decorativeImageUrlMap.set(`index_${index}`, imageUrl || '');
+        });
+
         const { html, css, json } = generateCode();
 
         // Log what we're saving for debugging
@@ -5556,83 +5685,10 @@ table tr:last-child td {
         console.log('Number of elements:', layer.children.length);
         console.log('Page size:', CURRENT_PAGE_SIZE);
 
-        // Log all Groups to see if items-table is there
-        layer.children.forEach((child, idx) => {
-            if (child.className === 'Group') {
-                console.log(`Group ${idx}: name="${child.attrs.name || 'unnamed'}"`, child.attrs);
-                // Check for decorative images
-                if (child.attrs.name === 'decorative-image') {
-                    const imageUrl = child.getAttr('imageUrl') || child.attrs.imageUrl || '';
-                    console.log(`  Decorative image ${idx}: imageUrl="${imageUrl}"`);
-                }
-            }
-        });
-        
-        // Ensure imageUrl is in attrs for all decorative images before serialization
-        layer.find('[name="decorative-image"]').forEach(decorativeImageGroup => {
-            try {
-                // Try multiple methods to get imageUrl
-                let imageUrl = decorativeImageGroup.getAttr('imageUrl');
-                if (!imageUrl) {
-                    imageUrl = decorativeImageGroup.attrs.imageUrl;
-                }
-                if (!imageUrl) {
-                    // Check if there's an Image node with the URL
-                    const imageNode = decorativeImageGroup.findOne('Image');
-                    if (imageNode) {
-                        // Try to get URL from image node's source if available
-                        const imgAttrs = imageNode.attrs || {};
-                        imageUrl = imgAttrs.src || imgAttrs.url || imgAttrs.imageUrl || '';
-                    }
-                }
-                
-                if (imageUrl) {
-                    // Use setAttr to ensure Konva properly serializes it
-                    decorativeImageGroup.setAttr('imageUrl', imageUrl);
-                    // Also set in attrs for redundancy
-                    decorativeImageGroup.attrs.imageUrl = imageUrl;
-                    console.log('Ensured imageUrl in attrs for decorative image:', imageUrl);
-                } else {
-                    console.warn('No imageUrl found for decorative image group');
-                }
-            } catch(e) {
-                console.warn('Could not get/set imageUrl for decorative image:', e);
-            }
-        });
-        
-        // Final check: ensure all decorative images have imageUrl properly set before serialization
-        layer.find('[name="decorative-image"]').forEach(decorativeImageGroup => {
-            try {
-                // Double-check that imageUrl is set via both methods
-                const imageUrl = decorativeImageGroup.getAttr('imageUrl') || decorativeImageGroup.attrs.imageUrl;
-                if (imageUrl) {
-                    decorativeImageGroup.setAttr('imageUrl', imageUrl);
-                    decorativeImageGroup.attrs.imageUrl = imageUrl;
-                    console.log('Final check: imageUrl set for decorative image:', imageUrl);
-                }
-            } catch(e) {
-                console.warn('Final check: Could not set imageUrl:', e);
-            }
-        });
-        
-        // CRITICAL FIX: Get imageUrl from actual nodes before serialization and store in a map
-        // This ensures we can inject imageUrl into JSON after serialization
-        const decorativeImageUrlMap = new Map();
-        layer.find('[name="decorative-image"]').forEach((decorativeImageGroup, index) => {
-            let imageUrl = decorativeImageGroup.getAttr('imageUrl') || decorativeImageGroup.attrs.imageUrl || '';
-            // Use position as key to match nodes after serialization
-            const key = `${decorativeImageGroup.x()}_${decorativeImageGroup.y()}_${index}`;
-            decorativeImageUrlMap.set(key, imageUrl);
-            // Also store by index as fallback
-            decorativeImageUrlMap.set(`index_${index}`, imageUrl);
-            console.log(`Stored imageUrl for decorative image ${index}:`, imageUrl, 'key:', key);
-        });
-        
         // Serialize the stage
         const stageJson = stage.toJSON();
         
-        // CRITICAL FIX: Explicitly inject name and imageUrl into serialized JSON for decorative images
-        // by matching live layer children to JSON by index (Konva may not serialize custom attrs)
+        // Explicitly inject name and imageUrl into serialized JSON (Issue #432)
         const layerJson = stageJson.children && stageJson.children[0];
         if (layer && layerJson && layerJson.children && layer.children) {
             for (let i = 0; i < layer.children.length; i++) {
@@ -5644,46 +5700,25 @@ table tr:last-child td {
                     if (!jsonChild.attrs) jsonChild.attrs = {};
                     jsonChild.attrs.name = 'decorative-image';
                     jsonChild.attrs.imageUrl = (layerChild.getAttr ? layerChild.getAttr('imageUrl') : (layerChild.attrs && layerChild.attrs.imageUrl)) || '';
+                } else if (name === 'quote-items-table') {
+                    if (!jsonChild.attrs) jsonChild.attrs = {};
+                    jsonChild.attrs.name = 'quote-items-table';
                 }
             }
         }
         
-        // Manually inject imageUrl into serialized JSON for decorative images (backup pass)
-        // Konva's toJSON() might not include custom attributes, so we need to add them manually
         let decorativeImageIndex = 0;
         function ensureImageUrlInJson(node, parentKey = '') {
-            if (node.attrs && node.attrs.name === 'decorative-image') {
-                // Try to match by position
+            const nodeName = node.attrs && node.attrs.name ? node.attrs.name : '';
+            if (nodeName && nodeName.includes('decorative-image')) {
                 const x = node.attrs.x || 0;
                 const y = node.attrs.y || 0;
-                const positionKey = `${x}_${y}_${decorativeImageIndex}`;
-                const indexKey = `index_${decorativeImageIndex}`;
-                
-                // Get imageUrl from map
-                let imageUrl = decorativeImageUrlMap.get(positionKey) || 
-                              decorativeImageUrlMap.get(indexKey) || '';
-                
-                // If still not found, try to find by matching all keys
-                if (!imageUrl) {
-                    for (const [key, url] of decorativeImageUrlMap.entries()) {
-                        if (url) {
-                            imageUrl = url;
-                            break;
-                        }
-                    }
-                }
-                
-                if (imageUrl) {
-                    // Ensure imageUrl is in the JSON attrs
-                    if (!node.attrs) {
-                        node.attrs = {};
-                    }
-                    node.attrs.imageUrl = imageUrl;
-                    console.log(`Injected imageUrl into JSON for decorative image ${decorativeImageIndex}:`, imageUrl);
-                } else {
-                    console.warn(`No imageUrl found for decorative image ${decorativeImageIndex} at position (${x}, ${y})`);
-                }
-                
+                let imageUrl = decorativeImageUrlMap.get(`${x}_${y}`) ||
+                              decorativeImageUrlMap.get(`${x}_${y}_${decorativeImageIndex}`) ||
+                              decorativeImageUrlMap.get(`index_${decorativeImageIndex}`) || '';
+                if (!node.attrs) node.attrs = {};
+                node.attrs.name = 'decorative-image';
+                node.attrs.imageUrl = (typeof imageUrl === 'string' ? imageUrl : '');
                 decorativeImageIndex++;
             }
             if (node.children) {
@@ -5691,34 +5726,18 @@ table tr:last-child td {
             }
         }
         
-        // Ensure imageUrl is in JSON for all decorative images
         if (stageJson.children) {
             stageJson.children.forEach((child, idx) => ensureImageUrlInJson(child, `children[${idx}]`));
         }
         
-        // Debug: Log decorative image groups in the JSON
-        function logDecorativeImagesInJson(node, depth = 0) {
-            if (node.attrs && node.attrs.name === 'decorative-image') {
-                console.log('  '.repeat(depth) + 'Found decorative-image in JSON, imageUrl:', node.attrs.imageUrl || 'NOT FOUND');
-            }
-            if (node.children) {
-                node.children.forEach(child => logDecorativeImagesInJson(child, depth + 1));
-            }
-        }
-        console.log('=== Checking decorative images in serialized JSON ===');
-        logDecorativeImagesInJson(stageJson);
-        
         document.getElementById('save-html').value = html;
         document.getElementById('save-css').value = css;
         document.getElementById('save-design-json').value = JSON.stringify(stageJson);
-        // Ensure JSON is always present and valid
         if (!json || !json.trim()) {
             console.error('No JSON generated from template!');
             alert('Error: Could not generate template JSON. Please try again.');
             return;
         }
-        
-        // Validate JSON before saving
         try {
             JSON.parse(json);
         } catch (e) {
@@ -5726,7 +5745,6 @@ table tr:last-child td {
             alert('Error: Generated template JSON is invalid. Please try again.');
             return;
         }
-        
         document.getElementById('save-template-json').value = json;
         // Use page size from selector if available, otherwise use CURRENT_PAGE_SIZE
         const pageSizeForSave = (pageSizeSelector && pageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
@@ -5891,7 +5909,7 @@ table tr:last-child td {
                     if (child !== background && child.className !== 'Transformer') {
                         setupSelection(child);
                         // If it's a table Group, also setup selection on children
-                        if (child.className === 'Group' && (child.attrs.name === 'items-table' || child.attrs.name === 'expenses-table')) {
+                        if (child.className === 'Group' && (child.attrs.name === 'items-table' || child.attrs.name === 'expenses-table' || child.attrs.name === 'quote-items-table')) {
                             child.children.forEach(grandChild => {
                                 setupSelection(grandChild);
                             });
@@ -5963,8 +5981,28 @@ table tr:last-child td {
                 stage = restoredStage;
                 layer = stage.children[0];
                 
-                // Debug: Log the saved JSON to check if imageUrl is there
-                console.log('Saved JSON structure (first 2000 chars):', JSON.stringify(savedJson).substring(0, 2000));
+                // Issue #432: Synchronously restore name and imageUrl from saved JSON onto live nodes
+                const layerJson = savedJson.children && savedJson.children[0];
+                if (layerJson && layerJson.children && layer.children) {
+                    for (let i = 0; i < layer.children.length; i++) {
+                        const liveChild = layer.children[i];
+                        const jsonChild = layerJson.children[i];
+                        if (!liveChild || !jsonChild || liveChild.className !== 'Group') continue;
+                        const savedName = (jsonChild.attrs && jsonChild.attrs.name) ? jsonChild.attrs.name : '';
+                        if (savedName && savedName.includes('decorative-image')) {
+                            const savedImageUrl = (jsonChild.attrs && jsonChild.attrs.imageUrl) ? jsonChild.attrs.imageUrl : '';
+                            if (liveChild.setAttr) {
+                                liveChild.setAttr('name', 'decorative-image');
+                                liveChild.setAttr('imageUrl', savedImageUrl || '');
+                            }
+                            if (liveChild.attrs) {
+                                liveChild.attrs.name = 'decorative-image';
+                                liveChild.attrs.imageUrl = savedImageUrl || '';
+                            }
+                            if (liveChild.name) liveChild.name('decorative-image');
+                        }
+                    }
+                }
                 
                 // Find or create background by name and resize it
                 background = layer.findOne('[name="background"]');
@@ -6009,6 +6047,20 @@ table tr:last-child td {
                     layer.add(newPageBorder);
                     newPageBorder.moveToBottom();
                 }
+                
+                // Defensive fix (Issue #504): Restore quote-items-table group name from structure when missing (i18n-aware)
+                layer.children.forEach((child) => {
+                    if (!child || child === background || child.className !== 'Group') return;
+                    const currentName = child.getAttr ? child.getAttr('name') : (child.attrs && child.attrs.name);
+                    if (currentName === 'quote-items-table') return;
+                    const inferredName = inferQuoteTableNameFromGroup(child, background);
+                    if (inferredName) {
+                        if (child.setAttr) child.setAttr('name', inferredName);
+                        if (child.attrs) child.attrs.name = inferredName;
+                        if (child.name) child.name(inferredName);
+                        console.log('[QUOTE] [LOAD] Restored quote table group name from structure:', inferredName);
+                    }
+                });
                 
                 // Clean up unwanted elements that might have been saved
                 // Remove unwanted full-page rectangle borders
@@ -6742,7 +6794,7 @@ table tr:last-child td {
                         }
                         setupSelection(child);
                         // If it's a table Group, also setup selection on children
-                        if (child.className === 'Group' && (child.attrs.name === 'items-table' || child.attrs.name === 'expenses-table')) {
+                        if (child.className === 'Group' && (child.attrs.name === 'items-table' || child.attrs.name === 'expenses-table' || child.attrs.name === 'quote-items-table')) {
                             child.children.forEach(grandChild => {
                                 setupSelection(grandChild);
                             });

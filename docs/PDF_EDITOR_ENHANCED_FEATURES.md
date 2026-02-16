@@ -16,6 +16,7 @@ The editor now includes a comprehensive set of draggable elements organized into
 - **Line**: Horizontal divider line
 - **Rectangle**: Customizable rectangular shape
 - **Circle**: Customizable circular shape
+- **Decorative Image**: Placeholder that you can assign an uploaded image to; appears in the PDF when an image is set. Supports position, size, and opacity. Save the layout after uploading to persist the image with the design.
 
 #### Company Information Elements
 - **Company Logo**: Displays uploaded company logo
@@ -152,9 +153,11 @@ The editor generates clean HTML and CSS:
 ### State Persistence
 
 Designs are saved as:
-1. **JSON**: Complete Konva.js stage state (for editing)
-2. **HTML**: Generated template markup
-3. **CSS**: Corresponding styles
+1. **design_json**: Complete Konva.js stage state (for re-opening the editor). Custom attributes such as decorative-image `name` and `imageUrl` are injected into the serialized JSON so they survive save/load.
+2. **template_json**: ReportLab template (elements list) used for PDF generation. Decorative image elements are only included when they have a non-empty image source, so the PDF is never broken by missing images.
+3. **HTML/CSS**: Generated template markup and styles (legacy preview).
+
+**Decorative images:** The editor syncs each decorative image’s `imageUrl` onto its group before generating the template and uses position-based matching when injecting URLs into the saved design JSON. On load, `name` and `imageUrl` are restored from the saved JSON onto the live nodes so decorative images appear correctly even if Konva does not persist custom attributes. Placeholders (no image uploaded) remain visible in the editor but are omitted from the PDF.
 
 ## Usage Guide
 
@@ -237,6 +240,9 @@ Add custom properties by:
 3. Attaching listeners in `attachPropertyListeners()`
 
 ## Troubleshooting
+
+### Decorative Image Missing After Save
+If a decorative image disappears when you reopen the layout, ensure you clicked **Save Design** after uploading the image. The editor persists decorative images by syncing the image URL to the design and template before save; if you leave before the save completes or before uploading an image, the placeholder may not be stored correctly. If the PDF preview shows a black or wrong area, the same fix applies: save the layout after assigning the image.
 
 ### Element Not Appearing
 - Check console for errors

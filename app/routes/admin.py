@@ -15,7 +15,7 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 import app as app_module
 from app import db, limiter
-from app.models import User, Project, TimeEntry, Settings, Invoice, Quote, QuoteItem, Role
+from app.models import User, Project, TimeEntry, Settings, Invoice, Quote, QuoteItem, Role, UserClient
 from datetime import datetime
 from sqlalchemy import text
 import os
@@ -812,6 +812,7 @@ def edit_user(user_id):
     user = User.query.get_or_404(user_id)
     clients = Client.query.filter_by(status="active").order_by(Client.name).all()
     all_roles = Role.query.order_by(Role.name).all()
+    assigned_client_ids = [c.id for c in user.assigned_clients.all()]
 
     if request.method == "POST":
         username = request.form.get("username", "").strip().lower()
@@ -822,18 +823,18 @@ def edit_user(user_id):
 
         if not username:
             flash(_("Username is required"), "error")
-            return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles)
+            return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles, assigned_client_ids=assigned_client_ids)
 
         # Check if username is already taken by another user
         existing_user = User.query.filter_by(username=username).first()
         if existing_user and existing_user.id != user.id:
             flash(_("Username already exists"), "error")
-            return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles)
+            return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles, assigned_client_ids=assigned_client_ids)
 
         # Validate client portal settings
         if client_portal_enabled and not client_id:
             flash(_("Please select a client when enabling client portal access."), "error")
-            return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles)
+            return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles, assigned_client_ids=assigned_client_ids)
 
         # Get the Role object from the database
         role_obj = Role.query.filter_by(name=role_name).first()
@@ -842,7 +843,7 @@ def edit_user(user_id):
             role_obj = Role.query.filter_by(name="user").first()
             if not role_obj:
                 flash(_("Default 'user' role not found. Please run 'flask seed_permissions_cmd' first."), "error")
-                return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles)
+                return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles, assigned_client_ids=assigned_client_ids)
 
         # Handle password reset if provided
         new_password = request.form.get("new_password", "").strip()
@@ -853,11 +854,11 @@ def edit_user(user_id):
             # Validate password
             if len(new_password) < 8:
                 flash(_("Password must be at least 8 characters long."), "error")
-                return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles)
+                return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles, assigned_client_ids=assigned_client_ids)
 
             if new_password != password_confirm:
                 flash(_("Passwords do not match."), "error")
-                return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles)
+                return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles, assigned_client_ids=assigned_client_ids)
 
             # Set the new password
             user.set_password(new_password)
@@ -893,9 +894,18 @@ def edit_user(user_id):
         user.client_portal_enabled = client_portal_enabled
         user.client_id = int(client_id) if client_id else None
 
+        # Subcontractor: sync assigned clients (only when role is subcontractor)
+        assigned_client_ids = [int(x) for x in request.form.getlist("assigned_client_ids") if x and x.isdigit()]
+        UserClient.query.filter_by(user_id=user.id).delete()
+        if role_name == "subcontractor":
+            for cid in assigned_client_ids:
+                client_obj = Client.query.get(cid)
+                if client_obj:
+                    db.session.add(UserClient(user_id=user.id, client_id=cid))
+
         if not safe_commit("admin_edit_user", {"user_id": user.id}):
             flash(_("Could not update user due to a database error. Please check server logs."), "error")
-            return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles)
+            return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles, assigned_client_ids=assigned_client_ids)
 
         if new_password:
             flash(_('Password reset successfully for user "%(username)s"', username=username), "success")
@@ -903,7 +913,7 @@ def edit_user(user_id):
             flash(_('User "%(username)s" updated successfully', username=username), "success")
         return redirect(url_for("admin.list_users"))
 
-    return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles)
+    return render_template("admin/user_form.html", user=user, clients=clients, all_roles=all_roles, assigned_client_ids=assigned_client_ids)
 
 
 @admin_bp.route("/admin/users/<int:user_id>/delete", methods=["POST"])
@@ -1236,6 +1246,7 @@ def settings():
 
             settings_obj.peppol_provider = (request.form.get("peppol_provider", "") or "").strip() or "generic"
             settings_obj.invoices_peppol_compliant = request.form.get("invoices_peppol_compliant") == "on"
+            settings_obj.invoices_zugferd_pdf = request.form.get("invoices_zugferd_pdf") == "on"
         except AttributeError:
             # Peppol columns don't exist yet (migration not run)
             pass

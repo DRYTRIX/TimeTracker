@@ -80,7 +80,7 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 > **📋 For complete release history, see [CHANGELOG.md](CHANGELOG.md)**
 
-**Latest Release: v4.19.0** (February 2025). Version is defined in `setup.py` (single source of truth).
+**Latest Release: v4.20.0** (February 2025). Version is defined in `setup.py` (single source of truth).
 - 📱 **Native Mobile & Desktop Apps** — Flutter mobile app (iOS/Android) and Electron desktop app with time tracking, offline support, and API integration ([Build Guide](BUILD.md), [Docs](docs/mobile-desktop-apps/README.md))
 - 📋 **Project Analysis & Documentation** — Comprehensive project analysis and documentation updates
 - 🔧 **Version Consistency** — Fixed version inconsistencies across documentation files
@@ -105,7 +105,7 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 - **Invoice Status Tracking** — Monitor draft, sent, paid, and overdue invoices
 - **Recurring Invoices** — Automate regular billing cycles
 - **Email Integration** — Send invoices directly to clients from the platform
-- **Peppol e-Invoicing (BIS Billing 3.0)** — Send invoices via Peppol through your access point ([setup guide](docs/admin/configuration/PEPPOL_EINVOICING.md))
+- **Peppol & ZugFerd e-Invoicing (EN 16931)** — Send invoices via Peppol; optionally embed EN 16931 XML in invoice PDFs (ZugFerd/Factur-X) for hybrid human- and machine-readable invoices ([setup guide](docs/admin/configuration/PEPPOL_EINVOICING.md))
 
 #### 📋 **Advanced Task Management**
 - **Full Task System** — Create, assign, and track tasks with priorities and due dates
@@ -228,13 +228,14 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 - **Custom Line Items** — Add manual items for expenses or services
 - **Tax Calculation** — Automatic tax calculations with configurable rates
 - **PDF Export** — Professional PDF invoice generation with customizable layouts
+- **PDF Invoice Layout** — Customize invoice and quote PDF layouts via Admin > PDF Layout; Items table includes time entries, extra goods, and expenses ([Guide](docs/PDF_LAYOUT_CUSTOMIZATION.md), [Extra Goods in PDF](docs/INVOICE_EXTRA_GOODS_PDF_EXPORT.md))
 - **Status Tracking** — Track draft, sent, paid, and overdue invoices
 - **Company Branding** — Add logos and custom company information
 - **Expense Integration** — Include tracked expenses in invoices
 - **Recurring Invoices** — Automate recurring billing
 - **Multi-Currency** — Support for multiple currencies with conversion
 - **Invoice Email** — Send invoices directly to clients
-- **Peppol e-Invoicing (BIS Billing 3.0)** — Send invoices electronically via Peppol ([Setup Guide](docs/admin/configuration/PEPPOL_EINVOICING.md))
+- **Peppol & ZugFerd e-Invoicing (EN 16931)** — Send invoices via Peppol; optionally embed EN 16931 XML in PDFs (ZugFerd/Factur-X) ([Setup Guide](docs/admin/configuration/PEPPOL_EINVOICING.md))
 
 ### 💰 **Financial Management**
 - **Expense Tracking** — Track business expenses with receipts and categories ([Guide](docs/EXPENSE_TRACKING.md))
@@ -623,7 +624,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory. See 
 **Integrations & Apps:**
 - **[Mobile & Desktop Apps](docs/mobile-desktop-apps/README.md)** — Flutter mobile and Electron desktop apps
 - **[Build Guide (Mobile & Desktop)](BUILD.md)** — Build scripts for Android, iOS, Windows, macOS, Linux
-- **[Peppol e-Invoicing](docs/admin/configuration/PEPPOL_EINVOICING.md)** — Electronic invoicing
+- **[Peppol & ZugFerd e-Invoicing](docs/admin/configuration/PEPPOL_EINVOICING.md)** — Peppol sending and ZugFerd/Factur-X PDF embedding (EN 16931)
 - **[API Documentation](docs/api/REST_API.md)** — REST API reference
 - **[API Token Scopes](docs/api/API_TOKEN_SCOPES.md)** — Token permissions
 

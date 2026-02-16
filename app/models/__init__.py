@@ -26,6 +26,7 @@ from .kanban_column import KanbanColumn
 from .time_entry_template import TimeEntryTemplate
 from .activity import Activity
 from .user_favorite_project import UserFavoriteProject
+from .user_client import UserClient
 from .client_note import ClientNote
 from .weekly_time_goal import WeeklyTimeGoal
 from .expense import Expense
@@ -117,6 +118,7 @@ __all__ = [
     "TimeEntryTemplate",
     "Activity",
     "UserFavoriteProject",
+    "UserClient",
     "ClientNote",
     "WeeklyTimeGoal",
     "Expense",

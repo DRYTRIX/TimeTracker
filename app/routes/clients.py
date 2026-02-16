@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, Response, make_response
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, Response, make_response, abort
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 import app as app_module
@@ -115,6 +115,12 @@ def list_clients():
                 current_app.logger.warning(f"Could not add JSONB search conditions: {e}")
         
         query = query.filter(db.or_(*search_conditions))
+
+    # Subcontractor scope: restrict to assigned clients
+    from app.utils.scope_filter import apply_client_scope_to_model
+    scope = apply_client_scope_to_model(Client, current_user)
+    if scope is not None:
+        query = query.filter(scope)
 
     clients = query.order_by(Client.name).all()
     
@@ -395,7 +401,13 @@ def create_client():
 @login_required
 def view_client(client_id):
     """View client details and projects"""
+    from app.utils.scope_filter import user_can_access_client
+
     client = Client.query.get_or_404(client_id)
+    if not user_can_access_client(current_user, client_id):
+        if _wants_json_response():
+            return jsonify({"error": "forbidden", "message": _("You do not have access to this client.")}), 403
+        abort(403)
 
     # Get projects for this client
     projects = Project.query.filter_by(client_id=client.id).order_by(Project.name).all()
@@ -520,7 +532,13 @@ def view_client(client_id):
 @login_required
 def edit_client(client_id):
     """Edit client details"""
+    from app.utils.scope_filter import user_can_access_client
+
     client = Client.query.get_or_404(client_id)
+    if not user_can_access_client(current_user, client_id):
+        if _wants_json_response():
+            return jsonify({"error": "forbidden", "message": _("You do not have access to this client.")}), 403
+        abort(403)
 
     # Check permissions
     if not current_user.is_admin and not current_user.has_permission("edit_clients"):

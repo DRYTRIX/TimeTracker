@@ -1,7 +1,7 @@
 # TimeTracker - Complete Features Documentation
 
-**Version:** 4.19.0 (see `setup.py` for single source of truth)  
-**Last Updated:** 2025-02-13
+**Version:** 4.20.0 (see `setup.py` for single source of truth)  
+**Last Updated:** 2025-02-16
 
 ---
 
@@ -38,6 +38,7 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 #### 1. **One-Click Timers**
 - Start tracking time with a single click
 - Quick timer start from dashboard, projects, or tasks
+- **Header timer button** — One-click start/stop from any page (round icon between Chat and Help)
 - Visual timer display with running time
 - Multiple timer support (configurable)
 
@@ -911,13 +912,19 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 
 ### Navigation & Context
 
-#### 101. **Breadcrumb Navigation**
+#### 101. **Header Quick Access**
+- Chat, Timer, and Help buttons grouped in the header
+- Round icon buttons, vertically aligned, evenly spaced
+- One-click timer start/stop from any page
+- Help button links to documentation; Chat opens team chat (when enabled)
+
+#### 102. **Breadcrumb Navigation**
 - Context-aware breadcrumb trails
 - Quick navigation to parent pages
 - Integrated in page headers
 - Responsive breadcrumb layout
 
-#### 102. **Recently Viewed & Favorites**
+#### 103. **Recently Viewed & Favorites**
 - Recently viewed items tracking
 - Favorites system for quick access
 - Quick access dropdowns
@@ -926,21 +933,21 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 
 ### User Feedback & Guidance
 
-#### 103. **Enhanced Empty States**
+#### 104. **Enhanced Empty States**
 - Beautiful, actionable empty states
 - Context-specific guidance
 - Quick action buttons
 - Helpful illustrations
 - Call-to-action messages
 
-#### 104. **Loading States**
+#### 105. **Loading States**
 - Skeleton loading components
 - Progress indicators
 - Loading animations
 - Context-aware loading states
 - Non-blocking loading feedback
 
-#### 105. **Interactive Onboarding**
+#### 106. **Interactive Onboarding**
 - Step-by-step product tours
 - Interactive tutorials
 - Element highlighting
@@ -950,7 +957,7 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 
 ### Progressive Web App (PWA)
 
-#### 106. **PWA Capabilities**
+#### 107. **PWA Capabilities**
 - Install as mobile app
 - Offline support
 - Background sync for time entries
@@ -961,7 +968,7 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 
 ### Accessibility
 
-#### 107. **Accessibility Features**
+#### 108. **Accessibility Features**
 - WCAG 2.1 AA compliant
 - Full keyboard navigation
 - Screen reader support
@@ -977,14 +984,14 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 
 ### System Administration
 
-#### 108. **Admin Dashboard**
+#### 109. **Admin Dashboard**
 - System overview
 - User management
 - System settings
 - Health monitoring
 - Quick statistics
 
-#### 109. **System Settings**
+#### 110. **System Settings**
 - Application configuration
 - Timer settings (idle timeout, rounding)
 - User management settings
@@ -992,55 +999,55 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 - Email configuration
 - Telemetry settings
 
-#### 110. **User Management**
+#### 111. **User Management**
 - Create, edit, delete users
 - User role assignment
 - User activation/deactivation
 - User permission management
 - User activity monitoring
 
-#### 111. **Backup & Restore**
+#### 112. **Backup & Restore**
 - Manual backup creation
 - Scheduled backups
 - Backup download
 - Backup restoration
 - Backup management
 
-#### 112. **Logo & Branding**
+#### 113. **Logo & Branding**
 - Company logo upload
 - Logo management
 - Logo removal
 - Logo in PDF invoices
 - Logo in email templates
 
-#### 113. **PDF Layout Customization**
+#### 114. **PDF Layout Customization**
 - Customizable PDF invoice layout
 - PDF template editor
 - Layout preview
 - Default layout setting
 - Layout reset
 
-#### 114. **Email Configuration**
+#### 115. **Email Configuration**
 - SMTP server configuration
 - Email template management
 - Email sending test
 - Email delivery status
 - Email template editing
 
-#### 115. **Telemetry Management**
+#### 116. **Telemetry Management**
 - Telemetry enable/disable
 - Telemetry data viewing
 - Privacy settings
 - Analytics configuration
 
-#### 116. **Audit Logs**
+#### 117. **Audit Logs**
 - System activity logging
 - User action tracking
 - Entity change history
 - Audit log filtering
 - Audit log export
 
-#### 117. **OIDC/SSO Configuration**
+#### 118. **OIDC/SSO Configuration**
 - OIDC provider setup
 - SSO configuration
 - User mapping
@@ -1053,14 +1060,14 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 
 ### REST API
 
-#### 118. **REST API v1**
+#### 119. **REST API v1**
 - Comprehensive REST API
 - Token-based authentication
 - JSON request/response
 - Pagination support
 - Error handling
 
-#### 119. **API Endpoints**
+#### 120. **API Endpoints**
 - Projects API (CRUD)
 - Time Entries API (CRUD)
 - Tasks API (CRUD)
@@ -1069,14 +1076,14 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 - Users API (read)
 - Reports API
 
-#### 120. **API Authentication**
+#### 121. **API Authentication**
 - API token generation
 - Bearer token authentication
 - API key header authentication
 - Token scopes
 - Token permissions
 
-#### 121. **API Documentation**
+#### 122. **API Documentation**
 - OpenAPI/Swagger specification
 - Interactive API docs
 - Endpoint documentation
@@ -1085,7 +1092,7 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 
 ### Import/Export
 
-#### 122. **Data Import**
+#### 123. **Data Import**
 - CSV import of time entries
 - Project import
 - Client import
@@ -1093,7 +1100,7 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 - Import validation
 - Import error handling
 
-#### 123. **Data Export**
+#### 124. **Data Export**
 - CSV export of all data types
 - Excel export
 - PDF export
@@ -1107,42 +1114,42 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 
 ### Deployment & Infrastructure
 
-#### 124. **Docker Support**
+#### 125. **Docker Support**
 - Docker Compose configuration
 - Multiple deployment profiles
 - Production-ready setup
 - Development setup
 - Local testing setup
 
-#### 125. **Database Support**
+#### 126. **Database Support**
 - PostgreSQL for production
 - SQLite for testing/development
 - Database migrations (Alembic)
 - Migration management
 - Database backup/restore
 
-#### 126. **HTTPS Support**
+#### 127. **HTTPS Support**
 - Automatic HTTPS setup
 - Self-signed certificates
 - mkcert integration
 - Manual certificate setup
 - SSL/TLS configuration
 
-#### 127. **Monitoring Stack**
+#### 128. **Monitoring Stack**
 - Prometheus metrics
 - Grafana dashboards
 - Loki log aggregation
 - Promtail log shipping
 - Health check endpoints
 
-#### 128. **Internationalization (i18n)**
+#### 129. **Internationalization (i18n)**
 - Multiple language support
 - Translation system
 - Language switching
 - Locale-based formatting
 - Timezone handling
 
-#### 129. **Progressive Web App (PWA)**
+#### 130. **Progressive Web App (PWA)**
 - Install as mobile app
 - Offline support
 - App manifest

@@ -92,6 +92,69 @@ def hours_by_day():
     )
 
 
+@analytics_bp.route("/api/analytics/hours-forecast")
+@login_required
+@module_enabled("analytics")
+def hours_forecast():
+    """Get forecasted hours for the next 7 days using moving average (7-day window)"""
+    try:
+        days = int(request.args.get("days", 30))
+        forecast_days = min(int(request.args.get("forecast_days", 7)), 14)
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid parameters"}), 400
+
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days)
+
+    query = db.session.query(
+        func.date(TimeEntry.start_time).label("date"),
+        func.sum(TimeEntry.duration_seconds).label("total_seconds"),
+    ).filter(
+        TimeEntry.end_time.isnot(None),
+        TimeEntry.start_time >= start_date,
+        TimeEntry.start_time <= end_date,
+    )
+
+    if not current_user.is_admin:
+        query = query.filter(TimeEntry.user_id == current_user.id)
+
+    results = query.group_by(func.date(TimeEntry.start_time)).order_by(func.date(TimeEntry.start_time)).all()
+
+    date_data = {}
+    current = start_date
+    while current <= end_date:
+        date_data[current.strftime("%Y-%m-%d")] = 0
+        current += timedelta(days=1)
+
+    for date_str, total_seconds in results:
+        if date_str:
+            fmt = date_str.strftime("%Y-%m-%d") if hasattr(date_str, "strftime") else str(date_str)[:10]
+            date_data[fmt] = round((total_seconds or 0) / 3600, 2)
+
+    values = list(date_data.values())
+    window = 7
+    if len(values) < window:
+        avg = sum(values) / len(values) if values else 0
+    else:
+        avg = sum(values[-window:]) / window
+
+    labels = list(date_data.keys())
+    forecast_labels = []
+    forecast_data = []
+    for i in range(1, forecast_days + 1):
+        d = end_date + timedelta(days=i)
+        forecast_labels.append(d.strftime("%Y-%m-%d"))
+        forecast_data.append(round(avg, 2))
+
+    return jsonify(
+        {
+            "historical": {"labels": labels, "data": list(date_data.values())},
+            "forecast": {"labels": forecast_labels, "data": forecast_data},
+            "avg_daily_hours": round(avg, 2),
+        }
+    )
+
+
 @analytics_bp.route("/api/analytics/hours-by-project")
 @login_required
 @module_enabled("analytics")

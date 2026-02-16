@@ -43,7 +43,7 @@
     PostHog will mask these elements automatically in recordings.
     For more details, see: POSTHOG_SESSION_REPLAY_PRIVACY.md
     -->
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+    <link rel="manifest" href="{{ url_for('main.manifest') }}">
     <meta name="vapid-public-key" content="{{ config.get('VAPID_PUBLIC_KEY', '') }}">
     <script src="{{ url_for('static', filename='pwa-enhancements.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-colors.css') }}">
@@ -153,28 +153,20 @@
     </style>
     <script>
         // Theme init (unchanged)
-        {% if current_user.is_authenticated and current_user.theme %}
-        var userTheme = '{{ current_user.theme }}';
-        if (userTheme === 'dark') {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('color-theme', 'dark');
-        } else if (userTheme === 'light') {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('color-theme', 'light');
-        } else if (userTheme === 'system') {
-            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        (function() {
+            var stored = localStorage.getItem('color-theme');
+            var userPref = {% if current_user.is_authenticated %}{% if current_user.theme_preference %}'{{ current_user.theme_preference }}'{% else %}'system'{% endif %}{% else %}null{% endif %};
+            var effective = userPref || stored || 'system';
+            if (effective === 'system' || !effective) {
+                effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            if (effective === 'dark') {
                 document.documentElement.classList.add('dark');
             } else {
                 document.documentElement.classList.remove('dark');
             }
-        }
-        {% else %}
-        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-        {% endif %}
+            if (userPref) localStorage.setItem('color-theme', userPref === 'system' || !userPref ? 'system' : userPref);
+        })();
         var fpDark = document.getElementById('flatpickr-dark-theme');
         if (fpDark) fpDark.media = document.documentElement.classList.contains('dark') ? 'all' : 'none';
     </script>
@@ -552,7 +544,7 @@
                                 </a>
                             </li>
                             {% endif %}
-                            {% if is_module_enabled('payment_gateways') and (current_user.is_admin or has_permission('manage_payment_gateways')) %}
+                            {% if is_module_enabled('payment_gateways') and has_endpoint('payment_gateways.list_gateways') and (current_user.is_admin or has_permission('manage_payment_gateways')) %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_payment_gateways %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('payment_gateways.list_gateways') }}">
                                     <i class="fas fa-credit-card w-4 mr-2"></i>{{ _('Payment Gateways') }}
@@ -1012,18 +1004,37 @@
                         <span class="hidden lg:inline">{{ _('Support') }}</span>
                     </a>
                     {% endif %}
-                    <button id="theme-toggle" type="button" class="text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5" aria-label="{{ _('Toggle dark mode') }}">
-                        <i id="theme-toggle-dark-icon" class="hidden fa-solid fa-moon w-5 h-5"></i>
-                        <i id="theme-toggle-light-icon" class="hidden fa-solid fa-sun w-5 h-5"></i>
-                    </button>
+                    <div class="relative z-50" id="theme-dropdown-container">
+                        <button id="theme-toggle" type="button" class="flex items-center text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5" aria-label="{{ _('Theme') }}" aria-haspopup="true" aria-expanded="false" aria-controls="themeDropdown">
+                            <i id="theme-toggle-dark-icon" class="hidden fa-solid fa-moon w-5 h-5"></i>
+                            <i id="theme-toggle-light-icon" class="hidden fa-solid fa-sun w-5 h-5"></i>
+                            <i id="theme-toggle-system-icon" class="hidden fa-solid fa-desktop w-5 h-5"></i>
+                        </button>
+                        <ul id="themeDropdown" class="hidden absolute right-0 mt-2 w-40 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg py-1" role="menu" aria-label="{{ _('Theme options') }}">
+                            <li role="none"><button type="button" class="theme-option w-full text-left px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" data-theme="light" role="menuitem"><i class="fas fa-sun w-4" aria-hidden="true"></i>{{ _('Light') }}</button></li>
+                            <li role="none"><button type="button" class="theme-option w-full text-left px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" data-theme="dark" role="menuitem"><i class="fas fa-moon w-4" aria-hidden="true"></i>{{ _('Dark') }}</button></li>
+                            <li role="none"><button type="button" class="theme-option w-full text-left px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" data-theme="system" role="menuitem"><i class="fas fa-desktop w-4" aria-hidden="true"></i>{{ _('System') }}</button></li>
+                        </ul>
+                    </div>
 
-                    <!-- Chat Button -->
-                    {% if is_module_enabled('team_chat') %}
-                    <button onclick="if(typeof toggleChatWidget === 'function') { toggleChatWidget(); } else { openChatUserSelector(); }" class="relative flex items-center text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5" aria-label="{{ _('Open chat') }}" title="{{ _('Open chat') }}">
-                        <i class="fas fa-comments"></i>
-                        <span class="ml-2 hidden lg:inline">{{ _('Chat') }}</span>
-                    </button>
-                    {% endif %}
+                    <!-- Chat, Timer, Help - grouped round buttons -->
+                    <div class="flex items-center justify-center gap-2">
+                        {% if is_module_enabled('team_chat') %}
+                        <button onclick="if(typeof toggleChatWidget === 'function') { toggleChatWidget(); } else { openChatUserSelector(); }" class="flex items-center justify-center w-10 h-10 rounded-full text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 text-sm" aria-label="{{ _('Open chat') }}" title="{{ _('Open chat') }}">
+                            <i class="fas fa-comments"></i>
+                        </button>
+                        {% endif %}
+                        {% if current_user.is_authenticated %}
+                        <div id="floatingTimerBar" class="flex shrink-0 items-center justify-center w-10 h-10"
+                             data-start-label="{{ _('Start Timer') }}"
+                             data-stop-label="{{ _('Stop') }}"
+                             data-manual-url="{{ url_for('timer.manual_entry') }}"
+                             aria-label="{{ _('Timer') }}"></div>
+                        {% endif %}
+                        <a href="{{ url_for('main.help') }}" class="flex items-center justify-center w-10 h-10 rounded-full text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 text-sm" aria-label="{{ _('Help') }}" title="{{ _('Help') }}">
+                            <i class="fas fa-life-ring"></i>
+                        </a>
+                    </div>
 
                     <!-- Language Switcher -->
                     <div class="relative z-50">
@@ -1156,6 +1167,10 @@
             </main>
         </div>
 
+        {% if current_user.is_authenticated %}
+        <meta name="idle-timeout-minutes" content="{{ settings.idle_timeout_minutes if settings else 30 }}">
+        {% endif %}
+
         <!-- Mobile Bottom Navigation -->
         <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark flex justify-around">
             <a href="{{ url_for('main.dashboard') }}" class="flex flex-col items-center p-2 text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
@@ -1192,6 +1207,11 @@
     <script src="{{ url_for('static', filename='interactions.js') }}"></script>
     <script src="{{ url_for('static', filename='offline-sync.js') }}"></script>
     <script src="{{ url_for('static', filename='mentions.js') }}"></script>
+    <!-- Floating timer bar -->
+    {% if current_user.is_authenticated %}
+    <script src="{{ url_for('static', filename='floating-timer-bar.js') }}"></script>
+    <script src="{{ url_for('static', filename='idle.js') }}"></script>
+    {% endif %}
     <!-- Old command palette and keyboard navigation (restored) -->
     <script src="{{ url_for('static', filename='commands.js') }}?v=2.0"></script>
     <script>
@@ -1680,77 +1700,81 @@
     <script>
         var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
         var themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
-
-        // Change the icons inside the button based on previous settings
-        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            themeToggleLightIcon.classList.remove('hidden');
-        } else {
-            themeToggleDarkIcon.classList.remove('hidden');
-        }
-
+        var themeToggleSystemIcon = document.getElementById('theme-toggle-system-icon');
         var themeToggleBtn = document.getElementById('theme-toggle');
+        var themeDropdown = document.getElementById('themeDropdown');
 
-        themeToggleBtn.addEventListener('click', function() {
-            // toggle icons inside button
-            themeToggleDarkIcon.classList.toggle('hidden');
-            themeToggleLightIcon.classList.toggle('hidden');
-
-            var newTheme;
-            // if set via local storage previously
-            if (localStorage.getItem('color-theme')) {
-                if (localStorage.getItem('color-theme') === 'light') {
-                    document.documentElement.classList.add('dark');
-                    localStorage.setItem('color-theme', 'dark');
-                    newTheme = 'dark';
-                } else {
-                    document.documentElement.classList.remove('dark');
-                    localStorage.setItem('color-theme', 'light');
-                    newTheme = 'light';
-                }
-            // if NOT set via local storage previously
+        function getEffectiveTheme() {
+            var stored = localStorage.getItem('color-theme');
+            if (stored === 'system' || !stored) {
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            return stored;
+        }
+        function updateThemeIcon() {
+            var stored = localStorage.getItem('color-theme') || 'system';
+            themeToggleDarkIcon.classList.add('hidden');
+            themeToggleLightIcon.classList.add('hidden');
+            if (themeToggleSystemIcon) themeToggleSystemIcon.classList.add('hidden');
+            if (stored === 'system') {
+                if (themeToggleSystemIcon) themeToggleSystemIcon.classList.remove('hidden');
+                else if (getEffectiveTheme() === 'dark') themeToggleLightIcon.classList.remove('hidden');
+                else themeToggleDarkIcon.classList.remove('hidden');
+            } else if (stored === 'dark') {
+                themeToggleLightIcon.classList.remove('hidden');
             } else {
-                if (document.documentElement.classList.contains('dark')) {
-                    document.documentElement.classList.remove('dark');
-                    localStorage.setItem('color-theme', 'light');
-                    newTheme = 'light';
-                } else {
+                themeToggleDarkIcon.classList.remove('hidden');
+            }
+        }
+        function applyTheme(theme) {
+            if (theme === 'system') {
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
                     document.documentElement.classList.add('dark');
-                    localStorage.setItem('color-theme', 'dark');
-                    newTheme = 'dark';
+                } else {
+                    document.documentElement.classList.remove('dark');
                 }
+            } else if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
             }
             var fpDark = document.getElementById('flatpickr-dark-theme');
             if (fpDark) fpDark.media = document.documentElement.classList.contains('dark') ? 'all' : 'none';
+            updateThemeIcon();
+        }
+        updateThemeIcon();
 
-            // Save to database if user is logged in
-            {% if current_user.is_authenticated %}
-            fetch('/api/theme', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({ theme: newTheme })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(data => {
-                        throw new Error(data.error || 'Failed to save theme preference');
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    console.log('Theme preference saved:', data.theme);
-                }
-            })
-            .catch(err => {
-                console.error('Failed to save theme preference:', err);
-                // Don't show error toast for theme changes - it's not critical
-                // The theme change already worked locally, just didn't persist
+        if (themeToggleBtn && themeDropdown) {
+            themeToggleBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                themeDropdown.classList.toggle('hidden');
+                themeToggleBtn.setAttribute('aria-expanded', themeDropdown.classList.contains('hidden') ? 'false' : 'true');
             });
-            {% endif %}
+            document.addEventListener('click', function() {
+                themeDropdown.classList.add('hidden');
+                themeToggleBtn.setAttribute('aria-expanded', 'false');
+            });
+            themeDropdown.addEventListener('click', function(e) { e.stopPropagation(); });
+        }
+        document.querySelectorAll('.theme-option').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var newTheme = this.getAttribute('data-theme');
+                localStorage.setItem('color-theme', newTheme);
+                applyTheme(newTheme);
+                if (themeDropdown) themeDropdown.classList.add('hidden');
+                {% if current_user.is_authenticated %}
+                fetch('/api/theme', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+                    body: JSON.stringify({ theme: newTheme })
+                }).then(function(r) { return r.ok ? r.json() : r.json().then(function(d) { throw new Error(d.error || 'Failed'); }); })
+                  .then(function(d) { if (d.success) console.log('Theme saved:', d.theme); })
+                  .catch(function(err) { console.error('Theme save failed:', err); });
+                {% endif %}
+            });
+        });
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+            if (localStorage.getItem('color-theme') === 'system') applyTheme('system');
         });
 
         function toggleDropdown(id, event) {

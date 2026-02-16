@@ -401,6 +401,44 @@ def search():
     return render_template("main/search.html", entries=entries, query=query)
 
 
+@main_bp.route("/manifest.webmanifest")
+def manifest():
+    """Serve PWA manifest with theme_color. Prepared for custom themes - extend to use user accent preference when implemented."""
+    theme_color = getattr(current_app.config, "PWA_THEME_COLOR", "#4A90E2")
+    manifest_data = {
+        "name": "TimeTracker - Professional Time Tracking",
+        "short_name": "TimeTracker",
+        "description": "Professional time tracking and project management application",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#ffffff",
+        "theme_color": theme_color,
+        "orientation": "any",
+        "icons": [
+            {"src": url_for("static", filename="images/timetracker-logo.svg"), "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"},
+            {"src": url_for("static", filename="images/android-chrome-192x192.png"), "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+            {"src": url_for("static", filename="images/android-chrome-512x512.png"), "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+            {"src": url_for("static", filename="images/apple-touch-icon.png"), "sizes": "180x180", "type": "image/png", "purpose": "any"},
+        ],
+        "screenshots": [],
+        "categories": ["productivity", "business"],
+        "shortcuts": [
+            {"name": "Start Timer", "short_name": "Timer", "description": "Start tracking time", "url": url_for("timer.manual_entry"), "icons": [{"src": url_for("static", filename="images/timetracker-logo.svg"), "sizes": "96x96"}]},
+            {"name": "Dashboard", "short_name": "Dashboard", "description": "View dashboard", "url": url_for("main.dashboard"), "icons": [{"src": url_for("static", filename="images/timetracker-logo.svg"), "sizes": "96x96"}]},
+            {"name": "Projects", "short_name": "Projects", "description": "Manage projects", "url": url_for("projects.list_projects"), "icons": [{"src": url_for("static", filename="images/timetracker-logo.svg"), "sizes": "96x96"}]},
+            {"name": "Reports", "short_name": "Reports", "description": "View reports", "url": url_for("reports.reports"), "icons": [{"src": url_for("static", filename="images/timetracker-logo.svg"), "sizes": "96x96"}]},
+        ],
+        "share_target": {"action": url_for("timer.manual_entry"), "method": "GET", "params": {"title": "notes", "text": "notes"}},
+        "prefer_related_applications": False,
+        "display_override": ["window-controls-overlay", "standalone"],
+        "edge_side_panel": {"preferred_width": 400},
+        "launch_handler": {"client_mode": "focus-existing"},
+    }
+    resp = make_response(json.dumps(manifest_data, indent=2))
+    resp.headers["Content-Type"] = "application/manifest+json"
+    return resp
+
+
 @main_bp.route("/service-worker.js")
 def service_worker():
     """Serve a minimal service worker for PWA offline caching."""

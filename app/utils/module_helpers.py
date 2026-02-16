@@ -76,6 +76,25 @@ def module_enabled(module_id: str, redirect_to: str = None):
     return decorator
 
 
+def has_endpoint(endpoint: str) -> bool:
+    """
+    Check if a Flask endpoint/route is registered (e.g. blueprint may not be loaded).
+
+    Use when a module is enabled in settings but its blueprint failed to register
+    (e.g. payment_gateways when stripe is not installed).
+
+    Args:
+        endpoint: The full endpoint name (e.g. 'payment_gateways.list_gateways')
+
+    Returns:
+        True if the endpoint exists, False otherwise
+    """
+    try:
+        return endpoint in current_app.view_functions
+    except Exception:
+        return False
+
+
 def is_module_enabled(module_id: str) -> bool:
     """
     Check if a module is enabled for the current user.
@@ -156,6 +175,7 @@ def init_module_helpers(app):
         from app.utils.module_registry import ModuleCategory
         return {
             "is_module_enabled": is_module_enabled,
+            "has_endpoint": has_endpoint,
             "get_enabled_modules": get_enabled_modules,
             "has_enabled_modules": has_enabled_modules,
             "get_modules_by_category": lambda cat: ModuleRegistry.get_by_category(cat),
@@ -163,9 +183,10 @@ def init_module_helpers(app):
             "get_locked_client": get_locked_client,
             "get_locked_client_id": get_locked_client_id,
         }
-    
+
     # Also make it available as a global function
     app.jinja_env.globals['is_module_enabled'] = is_module_enabled
+    app.jinja_env.globals['has_endpoint'] = has_endpoint
     app.jinja_env.globals['get_enabled_modules'] = get_enabled_modules
     app.jinja_env.globals['has_enabled_modules'] = has_enabled_modules
     app.jinja_env.globals['get_locked_client'] = get_locked_client

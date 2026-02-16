@@ -395,7 +395,7 @@
     }
 
     /**
-     * Update sparklines
+     * Update sparklines with real data from API
      */
     async function updateSparklines() {
         try {
@@ -407,14 +407,16 @@
                 throw new Error('Failed to load sparklines');
             }
 
-            const data = await response.json();
+            const json = await response.json();
+            const data = json.success ? json : { today: json.today, week: json.week, month: json.month };
+            const keys = ['today', 'week', 'month'];
 
-            // Update each sparkline
-            Object.keys(data).forEach(key => {
+            keys.forEach(key => {
                 const container = document.querySelector(`[data-sparkline-id="${key}"]`);
-                if (container && data[key]) {
+                const series = data[key];
+                if (container && Array.isArray(series) && series.length > 0) {
                     const color = container.getAttribute('data-color') || '#3b82f6';
-                    createSparkline(container.id || `sparkline-${key}`, data[key], color);
+                    createSparkline(container.id || `sparkline-${key}`, series, color);
                 }
             });
         } catch (error) {
