@@ -1214,12 +1214,41 @@ jobs:
         continue-on-error: false
 
   # ============================================================================
+  # Trigger Demo Site Deploy (Render)
+  # ============================================================================
+  trigger-demo-deploy:
+    name: Trigger Demo Deploy
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    continue-on-error: true
+    timeout-minutes: 2
+    
+    steps:
+      - name: Trigger Render deploy hook
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.TimeTrackerDemoRender }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "⚠️ TimeTrackerDemoRender secret not configured - skipping demo deploy"
+            exit 0
+          fi
+          echo "🚀 Triggering Render deploy hook for demo site..."
+          HTTP_CODE=$(curl -s -o /tmp/render-response.txt -w "%{http_code}" -X POST "$RENDER_DEPLOY_HOOK_URL")
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ Render deploy triggered successfully (HTTP $HTTP_CODE)"
+          else
+            echo "❌ Render deploy hook returned HTTP $HTTP_CODE"
+            cat /tmp/render-response.txt || true
+            exit 1
+          fi
+
+  # ============================================================================
   # Post-Release Summary
   # ============================================================================
   release-summary:
     name: Release Summary
     runs-on: ubuntu-latest
-    needs: [security-audit, build-and-push, determine-version, create-release, build-desktop-windows, build-desktop-linux, build-desktop-macos, build-mobile-android, build-mobile-ios]
+    needs: [security-audit, build-and-push, determine-version, create-release, trigger-demo-deploy, build-desktop-windows, build-desktop-linux, build-desktop-macos, build-mobile-android, build-mobile-ios]
     if: always()
     
     steps:
@@ -1231,6 +1260,7 @@ jobs:
           echo "- ✅ Security: ${{ needs.security-audit.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Docker Build: ${{ needs.build-and-push.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Release: ${{ needs.create-release.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Demo Deploy: ${{ needs.trigger-demo-deploy.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Desktop Applications" >> $GITHUB_STEP_SUMMARY
           if [ "${{ needs.build-desktop-windows.result }}" == "success" ]; then

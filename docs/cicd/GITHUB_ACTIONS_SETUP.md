@@ -113,6 +113,7 @@ on:
 - Determines semantic version
 - Builds multi-platform images
 - Publishes with multiple tags
+- Triggers Render demo deploy (if `TimeTrackerDemoRender` org secret is set)
 - Creates GitHub release
 - Generates changelog
 - Includes deployment manifests (Docker Compose + Kubernetes)
