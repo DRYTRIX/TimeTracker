@@ -128,18 +128,61 @@
                         <p class="text-sm font-semibold text-text-light dark:text-text-dark mt-2">
                             {{ _('Elapsed') }}: <span id="dashboard-timer-elapsed">{{ active_timer.duration_formatted }}</span>
                         </p>
+                        <div class="mt-3 flex flex-wrap items-center gap-2">
+                            <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Adjust time') }}:</span>
+                            <form action="{{ url_for('timer.adjust_timer') }}" method="POST" class="inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="delta_minutes" value="-15">
+                                <button type="submit" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-text-light dark:text-text-dark text-sm font-medium transition-colors" title="{{ _('Subtract 15 min') }}">−15</button>
+                            </form>
+                            <form action="{{ url_for('timer.adjust_timer') }}" method="POST" class="inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="delta_minutes" value="-5">
+                                <button type="submit" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-text-light dark:text-text-dark text-sm font-medium transition-colors" title="{{ _('Subtract 5 min') }}">−5</button>
+                            </form>
+                            <form action="{{ url_for('timer.adjust_timer') }}" method="POST" class="inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="delta_minutes" value="5">
+                                <button type="submit" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-text-light dark:text-text-dark text-sm font-medium transition-colors" title="{{ _('Add 5 min') }}">+5</button>
+                            </form>
+                            <form action="{{ url_for('timer.adjust_timer') }}" method="POST" class="inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="delta_minutes" value="15">
+                                <button type="submit" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-text-light dark:text-text-dark text-sm font-medium transition-colors" title="{{ _('Add 15 min') }}">+15</button>
+                            </form>
+                        </div>
                     </div>
-                    <form action="{{ url_for('timer.stop_timer') }}" method="POST" class="inline">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
-                            <i class="fas fa-stop mr-2"></i>{{ _('Stop Timer') }}
-                        </button>
-                    </form>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <form action="{{ url_for('timer.stop_timer') }}" method="POST" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5" title="{{ _('Pause and save current time; you can resume later') }}">
+                                <i class="fas fa-pause mr-2"></i>{{ _('Pause') }}
+                            </button>
+                        </form>
+                        <form action="{{ url_for('timer.stop_timer') }}" method="POST" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+                                <i class="fas fa-stop mr-2"></i>{{ _('Stop') }}
+                            </button>
+                        </form>
+                    </div>
                 </div>
             {% else %}
                 <div class="text-center py-4">
                     <p class="text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('No active timer.') }}</p>
-                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Click "Start Timer" to begin tracking your time.') }}</p>
+                    {% if recent_entries %}
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('Resume your last session or start a new timer.') }}</p>
+                    <div class="flex flex-wrap justify-center gap-3">
+                        <a href="{{ url_for('timer.resume_timer', timer_id=recent_entries[0].id) }}" class="inline-flex items-center bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+                            <i class="fas fa-play mr-2"></i>{{ _('Resume') }}{% if recent_entries[0].project %} ({{ recent_entries[0].project.name }}){% elif recent_entries[0].client %} ({{ recent_entries[0].client.name }}){% endif %}
+                        </a>
+                        <button type="button" id="openStartTimer" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+                            <i class="fas fa-plus mr-2"></i>{{ _('Start new') }}
+                        </button>
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Click "Start Timer" above to begin tracking your time.') }}</p>
+                    {% endif %}
                 </div>
             {% endif %}
         </div>

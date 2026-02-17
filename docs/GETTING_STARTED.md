@@ -249,7 +249,7 @@ Break your project into manageable tasks:
 2. **Select a project** (and optionally a task)
 3. **Click Start** — the timer begins
 4. **Work on your task** — timer continues even if you close the browser
-5. **Click Stop** when finished — time entry is saved automatically
+5. Use **Pause** to save the segment and resume later, or **Stop** when finished. Use the **−15 / −5 / +5 / +15** buttons to adjust the current session time if needed.
 
 **💡 Tip**: The timer runs on the server, so it keeps going even if you:
 - Close your browser

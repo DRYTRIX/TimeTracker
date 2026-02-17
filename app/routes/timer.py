@@ -538,6 +538,49 @@ def stop_timer():
         return redirect(url_for("main.dashboard"))
 
 
+@timer_bp.route("/timer/adjust", methods=["POST"])
+@login_required
+def adjust_timer():
+    """Adjust the active timer's start time by delta_minutes (positive = add time, negative = subtract)."""
+    active_timer = current_user.active_timer
+    if not active_timer:
+        flash(_("No active timer to adjust"), "error")
+        return redirect(url_for("main.dashboard"))
+
+    try:
+        delta_minutes = int(request.form.get("delta_minutes", 0))
+    except (TypeError, ValueError):
+        flash(_("Invalid adjustment value"), "error")
+        return redirect(url_for("main.dashboard"))
+
+    if delta_minutes == 0:
+        return redirect(url_for("main.dashboard"))
+
+    # Clamp to avoid extreme shifts (e.g. ±4 hours)
+    delta_minutes = max(-240, min(240, delta_minutes))
+    from app.models.time_entry import local_now
+
+    new_start = active_timer.start_time - timedelta(minutes=delta_minutes)
+    # Do not set start_time in the future
+    now_local = local_now()
+    if new_start > now_local:
+        new_start = now_local
+    active_timer.start_time = new_start
+    active_timer.updated_at = now_local
+    db.session.commit()
+
+    try:
+        from app.utils.cache import get_cache
+        cache = get_cache()
+        cache.delete(f"dashboard:{current_user.id}")
+    except Exception:
+        pass
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "start_time": active_timer.start_time.isoformat()})
+    return redirect(url_for("main.dashboard"))
+
+
 @timer_bp.route("/timer/status")
 @login_required
 def timer_status():
