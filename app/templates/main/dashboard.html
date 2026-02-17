@@ -1019,7 +1019,6 @@
                     }
                     
                     // Sync Toast UI Editor notes into hidden textarea (programmatic submit does not fire submit event)
-                    const notesEl = document.getElementById('startTimerNotes');
                     if (notesEl && window.dashboardNotesEditor && typeof window.dashboardNotesEditor.getMarkdown === 'function') {
                         try {
                             notesEl.value = window.dashboardNotesEditor.getMarkdown();
