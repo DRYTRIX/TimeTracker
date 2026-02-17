@@ -257,7 +257,8 @@ ghcr.io/{owner}/{repo}:dev-abc1234
    - Semantic version tags
    - `latest`
    - `stable`
-6. **Create GitHub release** with:
+6. **Trigger demo deploy** (optional): if the `TimeTrackerDemoRender` organization secret is set to a Render deploy hook URL, the workflow POSTs to it so the demo site redeploys with the new image.
+7. **Create GitHub release** with:
    - Changelog
    - Deployment manifests
    - Docker compose files
@@ -412,6 +413,7 @@ Optional secrets:
 - `SLACK_WEBHOOK` - For Slack notifications
 - `DOCKER_HUB_USERNAME` - If publishing to Docker Hub
 - `DOCKER_HUB_TOKEN` - If publishing to Docker Hub
+- `TimeTrackerDemoRender` - (Organization secret) Render deploy hook URL; when set, the release workflow triggers a redeploy of the demo site after pushing the new container
 
 ### Environment Variables
 

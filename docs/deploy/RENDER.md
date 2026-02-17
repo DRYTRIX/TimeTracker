@@ -20,6 +20,16 @@ The Blueprint uses the **pre-built Docker image** from GitHub Container Registry
 
 To deploy a new version, push to `main` or create a release so GitHub Actions builds and pushes a new image, then in Render trigger a **Manual Deploy** (or use a deploy hook) to pull the updated image.
 
+### Automatic demo deploy via release workflow
+
+If you host a demo site on Render, the release workflow can automatically trigger a redeploy when a new container is published. Configure:
+
+1. In Render: open your demo Web Service → **Settings** → **Deploy Hook** and copy the deploy hook URL.
+2. In GitHub: add an **organization secret** named `TimeTrackerDemoRender` with the deploy hook URL as the value. Grant your TimeTracker repository access to this secret (Organization Settings → Secrets and variables → Actions → Repository access).
+3. On each release (push to `main`, tag, or manual dispatch), after the Docker image is built and pushed, the workflow sends a POST request to the deploy hook. Render will pull the new image and redeploy your demo site.
+
+If the secret is not set, the workflow skips the deploy trigger and the release completes normally.
+
 ## Environment variables
 
 The blueprint sets:

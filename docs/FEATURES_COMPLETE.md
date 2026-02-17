@@ -1,7 +1,7 @@
 # TimeTracker - Complete Features Documentation
 
-**Version:** 4.20.0 (see `setup.py` for single source of truth)  
-**Last Updated:** 2025-02-16
+**Version:** 4.20.5 (see `setup.py` for single source of truth)  
+**Last Updated:** 2025-02-17
 
 ---
 
@@ -57,6 +57,7 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 
 #### 4. **Timer Management**
 - Start, stop, pause, and resume timers
+- **Dashboard timer widget**: Pause (saves segment) and Stop; one-click "Resume (project)" to continue with the same project/task/notes; quick time adjustment (−15 / −5 / +5 / +15 min) while running
 - Edit active timers
 - Delete timers
 - Timer history and audit trail
