@@ -17,7 +17,7 @@
 ) }}
 
 {% if is_duplicate and original_entry %}
-<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6 max-w-3xl mx-auto">
+<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6 max-w-3xl mx-auto">
     <div class="flex items-start gap-3">
         <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 mt-1"></i>
         <div>
@@ -37,7 +37,7 @@
 </div>
 {% endif %}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow max-w-3xl mx-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg max-w-3xl mx-auto">
     <form method="POST" action="{{ url_for('timer.manual_entry') }}" autocomplete="off" novalidate data-validate-form id="manualEntryForm"
           data-require-task="{{ 'true' if getattr(settings, 'time_entry_require_task', false) else 'false' }}"
           data-require-description="{{ 'true' if getattr(settings, 'time_entry_require_description', false) else 'false' }}"
@@ -45,88 +45,109 @@
           data-description-min-msg="{{ _('Description must be at least %(min)s characters', min=getattr(settings, 'time_entry_description_min_length', 20))|e }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="worked_time_mode" id="worked_time_mode" value="{{ prefill_worked_time_mode or '' }}">
-        <div class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Project') }}</label>
-                    <select name="project_id" id="project_id" class="form-input">
-                        <option value="">{{ _('Select a project (optional)') }}</option>
-                        {% for project in projects %}
-                        <option value="{{ project.id }}" {% if selected_project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div>
-                    <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client') }}</label>
-                    {# Single client: show as normal dropdown, pre-select only when client_id is in URL (parameter) #}
-                    {{ client_select('client_id', clients, selected_id=selected_client_id, required=False, only_one_client=false, single_client=none) }}
-                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select either a project or a client') }}</p>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="task_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{% if getattr(settings, 'time_entry_require_task', false) %}{{ _('Task') }} *{% else %}{{ _('Task (optional)') }}{% endif %}</label>
-                    <select name="task_id" id="task_id" class="form-input" data-selected-task-id="{{ selected_task_id or '' }}" {% if not selected_project_id %}disabled{% endif %}>
-                        <option value="">{{ _('No task') }}</option>
-                    </select>
-                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Tasks load after selecting a project') }}</p>
-                </div>
-            </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Start Date') }}</label>
-                    <input type="date" name="start_date" id="start_date" class="form-input user-date-input" value="{{ prefill_start_date or '' }}">
-                </div>
-                <div>
-                    <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('End Date') }}</label>
-                    <input type="date" name="end_date" id="end_date" class="form-input user-date-input" value="{{ prefill_end_date or '' }}">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="start_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Start Time') }}</label>
-                    <input type="time" name="start_time" id="start_time" class="form-input" value="{{ prefill_start_time or '' }}">
-                </div>
-                <div>
-                    <label for="end_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('End Time') }}</label>
-                    <input type="time" name="end_time" id="end_time" class="form-input" value="{{ prefill_end_time or '' }}">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="worked_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Worked Time') }}</label>
-                    <input type="text" name="worked_time" id="worked_time" class="form-input" inputmode="numeric" placeholder="HH:MM" autocomplete="off" value="{{ prefill_worked_time or '' }}">
-                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: enter HH:MM for duration. You can combine with Start Date/Time to log time on a specific day.') }}</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="md:col-span-2">
-                    <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{% if getattr(settings, 'time_entry_require_description', false) %}{{ _('Notes') }} *{% else %}{{ _('Notes') }}{% endif %}</label>
-                    <div class="markdown-editor-wrapper">
-                        <textarea name="notes" id="notes" class="hidden">{{ prefill_notes or '' }}</textarea>
-                        <div id="notes_editor"></div>
+        <div class="space-y-8">
+            {# Section: Project & task #}
+            <section class="pb-6 border-b border-border-light dark:border-border-dark">
+                <h2 class="text-sm font-semibold text-text-light dark:text-text-dark uppercase tracking-wide flex items-center gap-2 mb-4">
+                    <i class="fas fa-folder text-primary"></i>{{ _('Project & task') }}
+                </h2>
+                <div class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="project_id" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Project') }}</label>
+                            <select name="project_id" id="project_id" class="form-input">
+                                <option value="">{{ _('Select a project (optional)') }}</option>
+                                {% for project in projects %}
+                                <option value="{{ project.id }}" {% if selected_project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="client_id" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Client') }}</label>
+                            {# Single client: show as normal dropdown, pre-select only when client_id is in URL (parameter) #}
+                            {{ client_select('client_id', clients, selected_id=selected_client_id, required=False, only_one_client=false, single_client=none) }}
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select either a project or a client') }}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="task_id" class="block text-sm font-medium text-text-light dark:text-text-dark">{% if getattr(settings, 'time_entry_require_task', false) %}{{ _('Task') }} *{% else %}{{ _('Task (optional)') }}{% endif %}</label>
+                            <select name="task_id" id="task_id" class="form-input" data-selected-task-id="{{ selected_task_id or '' }}" {% if not selected_project_id %}disabled{% endif %}>
+                                <option value="">{{ _('No task') }}</option>
+                            </select>
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Tasks load after selecting a project') }}</p>
+                        </div>
                     </div>
                 </div>
-                <div class="space-y-4">
-                    <div>
-                        <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Tags') }}</label>
-                        <input type="text" name="tags" id="tags" class="form-input" placeholder="{{ _('tag1, tag2') }}" value="{{ prefill_tags or '' }}">
+            </section>
+
+            {# Section: Date & time #}
+            <section class="pb-6 border-b border-border-light dark:border-border-dark">
+                <h2 class="text-sm font-semibold text-text-light dark:text-text-dark uppercase tracking-wide flex items-center gap-2 mb-4">
+                    <i class="fas fa-calendar-alt text-primary"></i>{{ _('Date & time') }}
+                </h2>
+                <div class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="start_date" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Start Date') }}</label>
+                            <input type="date" name="start_date" id="start_date" class="form-input user-date-input" value="{{ prefill_start_date or '' }}">
+                        </div>
+                        <div>
+                            <label for="end_date" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('End Date') }}</label>
+                            <input type="date" name="end_date" id="end_date" class="form-input user-date-input" value="{{ prefill_end_date or '' }}">
+                        </div>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <input type="checkbox" id="billable" name="billable" class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-0" {% if prefill_billable is not defined or prefill_billable %}checked{% endif %}>
-                        <label for="billable" class="text-sm text-gray-700 dark:text-gray-300">{{ _('Billable') }}</label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="start_time" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Start Time') }}</label>
+                            <input type="time" name="start_time" id="start_time" class="form-input" value="{{ prefill_start_time or '' }}">
+                        </div>
+                        <div>
+                            <label for="end_time" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('End Time') }}</label>
+                            <input type="time" name="end_time" id="end_time" class="form-input" value="{{ prefill_end_time or '' }}">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="worked_time" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Worked Time') }}</label>
+                            <input type="text" name="worked_time" id="worked_time" class="form-input" inputmode="numeric" placeholder="HH:MM" autocomplete="off" value="{{ prefill_worked_time or '' }}">
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: enter HH:MM for duration. You can combine with Start Date/Time to log time on a specific day.') }}</p>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </section>
+
+            {# Section: Details #}
+            <section>
+                <h2 class="text-sm font-semibold text-text-light dark:text-text-dark uppercase tracking-wide flex items-center gap-2 mb-4">
+                    <i class="fas fa-align-left text-primary"></i>{{ _('Details') }}
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-2">
+                        <label for="notes" class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">{% if getattr(settings, 'time_entry_require_description', false) %}{{ _('Notes') }} *{% else %}{{ _('Notes') }}{% endif %}</label>
+                        <div class="markdown-editor-wrapper">
+                            <textarea name="notes" id="notes" class="hidden">{{ prefill_notes or '' }}</textarea>
+                            <div id="notes_editor"></div>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="tags" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Tags') }}</label>
+                            <input type="text" name="tags" id="tags" class="form-input" placeholder="{{ _('tag1, tag2') }}" value="{{ prefill_tags or '' }}">
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" id="billable" name="billable" class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-0" {% if prefill_billable is not defined or prefill_billable %}checked{% endif %}>
+                            <label for="billable" class="text-sm font-medium text-text-light dark:text-text-dark">{{ _('Billable') }}</label>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
 
         <div class="mt-8 border-t border-border-light dark:border-border-dark pt-6 flex justify-end gap-3">
-            <button type="reset" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">{{ _('Clear') }}</button>
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Log Time') }}</button>
+            <button type="reset" class="px-5 py-2.5 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark font-medium transition-all">{{ _('Clear') }}</button>
+            <button type="submit" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200">{{ _('Log Time') }}</button>
         </div>
     </form>
 </div>
