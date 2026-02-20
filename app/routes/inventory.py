@@ -1861,8 +1861,11 @@ def new_purchase_order():
 
     # Get suppliers and warehouses for form
     suppliers = Supplier.query.filter_by(is_active=True).order_by(Supplier.name).all()
-    warehouses = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.code).all()
-    stock_items = StockItem.query.filter_by(is_active=True).order_by(StockItem.name).all()
+    warehouses_q = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.code).all()
+    stock_items_q = StockItem.query.filter_by(is_active=True).order_by(StockItem.name).all()
+    # JSON-serializable dicts for template script
+    warehouses = [{"id": w.id, "code": w.code or "", "name": w.name or ""} for w in warehouses_q]
+    stock_items = [{"id": s.id, "sku": s.sku or "", "name": s.name or "", "unit": s.unit or "pcs"} for s in stock_items_q]
 
     return render_template(
         "inventory/purchase_orders/form.html",
@@ -1975,8 +1978,11 @@ def edit_purchase_order(po_id):
             flash(_("Error updating purchase order: %(error)s", error=str(e)), "error")
 
     suppliers = Supplier.query.filter_by(is_active=True).order_by(Supplier.name).all()
-    warehouses = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.code).all()
-    stock_items = StockItem.query.filter_by(is_active=True).order_by(StockItem.name).all()
+    warehouses_q = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.code).all()
+    stock_items_q = StockItem.query.filter_by(is_active=True).order_by(StockItem.name).all()
+    # JSON-serializable dicts for template script
+    warehouses = [{"id": w.id, "code": w.code or "", "name": w.name or ""} for w in warehouses_q]
+    stock_items = [{"id": s.id, "sku": s.sku or "", "name": s.name or "", "unit": s.unit or "pcs"} for s in stock_items_q]
 
     return render_template(
         "inventory/purchase_orders/form.html",
