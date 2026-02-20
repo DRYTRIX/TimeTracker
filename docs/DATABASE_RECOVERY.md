@@ -73,6 +73,22 @@ scripts/reset-dev-db.sh    # Linux/Mac
 docker compose exec app python3 /app/scripts/reset-dev-db.py
 ```
 
+### Seeding development data (after reset or for a fresh DB)
+
+To fill the database with test data for local development (only when `FLASK_ENV=development`):
+
+```bash
+# From host (Docker): use the wrapper script so FLASK_ENV=development is set in the container
+docker compose exec app /app/docker/seed-dev-data.sh
+
+# Or with flask seed (pass env explicitly)
+docker compose exec -e FLASK_ENV=development app flask seed
+```
+
+For non-Docker usage, set `FLASK_ENV=development` and run `flask seed` or `python scripts/seed-dev-data.py`.
+
+The seed creates users, clients, projects, tasks, time entries, expenses, comments, **inventory** (warehouses, stock items, movements), and **finance** data (currencies, tax rules, invoices, payments). See [Development Data Seeding](development/SEED_DEV_DATA.md) for details and options.
+
 ## Detection Logic
 
 The system detects corrupted states by checking:

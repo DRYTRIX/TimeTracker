@@ -267,3 +267,32 @@ def register_cli_commands(app):
         else:
             click.echo("✗ Failed to update permissions and roles")
             raise SystemExit(1)
+
+    @app.cli.command()
+    @with_appcontext
+    @click.option("--users", default=4, help="Extra dev users to create (default 4)")
+    @click.option("--clients", default=20, help="Number of clients (default 20)")
+    @click.option("--projects-per-client", default=4, help="Projects per client (default 4)")
+    @click.option("--tasks-per-project", default=12, help="Tasks per project (default 12)")
+    @click.option("--days-back", default=120, help="Spread time entries over this many days (default 120)")
+    def seed(users, clients, projects_per_client, tasks_per_project, days_back):
+        """Seed the database with development test data (FLASK_ENV=development only).
+
+        Creates users, clients, projects, tasks, time entries, expenses, and comments.
+        Use for local development only.
+        """
+        try:
+            from app.utils.seed_dev_data import run_seed
+            counts = run_seed(
+                extra_users=users,
+                clients_count=clients,
+                projects_per_client=projects_per_client,
+                tasks_per_project=tasks_per_project,
+                days_back=days_back,
+            )
+            click.echo("✓ Development seed complete:")
+            for key, value in counts.items():
+                click.echo(f"  {key}: {value}")
+        except RuntimeError as e:
+            click.echo(f"✗ {e}")
+            raise SystemExit(1)

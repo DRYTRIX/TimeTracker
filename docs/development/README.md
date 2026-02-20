@@ -9,6 +9,7 @@ Complete documentation for developers contributing to TimeTracker.
 - **[Project Structure](PROJECT_STRUCTURE.md)** - Codebase organization
 - **[Local Testing with SQLite](LOCAL_TESTING_WITH_SQLITE.md)** - Quick local testing setup
 - **[Local Development with Analytics](LOCAL_DEVELOPMENT_WITH_ANALYTICS.md)** - Development setup with analytics
+- **[Development Data Seeding](SEED_DEV_DATA.md)** - Seed test data (users, projects, inventory, finance) for local dev
 
 ## 🏗️ Development Resources
 
