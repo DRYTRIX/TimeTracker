@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Log Time Manually page** — Redesigned for a more professional layout: form grouped into sections (Project & task, Date & time, Details) with clear headings and icons; main card uses rounded-xl and shadow-lg; unified label and helper text styling; primary "Log Time" and secondary "Clear" buttons aligned with dashboard button styles; duplicate-entry banner uses rounded-xl.
 
+## [4.20.6] - 2025-02-20
+
+### Changed
+- **Version Update** — Updated to version 4.20.6.
+
 ## [4.20.5] - 2025-02-17
 
 ### Changed
