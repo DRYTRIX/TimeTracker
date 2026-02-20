@@ -13,6 +13,7 @@ The Task Management feature allows you to break down projects into manageable ta
 Task and project descriptions support Markdown formatting with a rich editor:
 
 - Editing: Task create/edit and Project create/edit pages include a Markdown editor with dark-mode and image uploads
+- Fallback: If the rich editor cannot load (e.g. CDN blocked or offline), a plain textarea is shown so you can still enter a description; saved content is still rendered as Markdown on view pages
 - Rendering: View pages render Markdown via the `markdown` Jinja filter (`app/utils/template_filters.py`), sanitized with Bleach
 - Supported: headings, emphasis, lists, links, code blocks, tables, images
 

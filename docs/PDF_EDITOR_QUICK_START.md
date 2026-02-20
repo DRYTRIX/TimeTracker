@@ -7,7 +7,7 @@ This guide will help you create your first custom invoice layout using the enhan
 ## Step 1: Access the Editor
 
 1. Log in as an admin user
-2. Navigate to **Admin Panel** → **PDF Layout Designer**
+2. Navigate to **Admin → PDF Templates → Invoice PDF**
 3. You'll see three main sections:
    - **Left**: Element library
    - **Center**: Canvas workspace

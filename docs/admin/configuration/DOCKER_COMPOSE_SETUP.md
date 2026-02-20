@@ -197,13 +197,19 @@ For CSRF and cookie issues behind proxies, see `docs/CSRF_CONFIGURATION.md`.
    docker-compose exec app flask db upgrade
    ```
 
-4. For a fresh start with clean volumes:
+4. **Development only – seed test data**: To fill the database with sample data (clients, projects, tasks, time entries, expenses, comments, inventory, invoices, payments; only when `FLASK_ENV=development`), run:
+   ```bash
+   docker compose exec app /app/docker/seed-dev-data.sh
+   ```
+   Or: `docker compose exec -e FLASK_ENV=development app flask seed`. See [Development Data Seeding](../../development/SEED_DEV_DATA.md) for details.
+
+5. For a fresh start with clean volumes:
    ```bash
    docker-compose down -v
    docker-compose up -d
    ```
 
-5. Verify tables were created:
+6. Verify tables were created:
    ```bash
    docker-compose exec db psql -U timetracker -d timetracker -c "\dt"
    ```

@@ -135,6 +135,7 @@ RUN find /app/docker -name "*.sh" -o -name "*.py" | xargs dos2unix 2>/dev/null |
     /app/docker/test_db_connection.py \
     /app/docker/debug_startup.sh \
     /app/docker/simple_test.sh \
+    /app/docker/seed-dev-data.sh \
     /scripts/generate-certs.sh
 
 # Set ownership only for directories that need write access

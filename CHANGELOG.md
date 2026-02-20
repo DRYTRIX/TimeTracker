@@ -7,11 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Task description field (Issue #535)** — When creating or editing a task, the description field could appear missing or broken if the Toast UI Editor (loaded from CDN) failed to load (e.g. reverse proxy, CSP, Firefox, or offline). A fallback now shows a plain textarea so users can always enter a description; Markdown is still supported when the rich editor loads.
+
 ### Added
 - **Dashboard timer widget** — Pause and Stop buttons while a timer is running (Pause saves the segment so you can resume later). When no timer is active, a prominent "Resume (project name)" button restarts tracking with the same project/task/notes as your last entry. Quick time adjustment buttons (−15 / −5 / +5 / +15 minutes) let you correct the current session without leaving the dashboard. New route `POST /timer/adjust` for start-time adjustment.
 
 ### Changed
 - **Log Time Manually page** — Redesigned for a more professional layout: form grouped into sections (Project & task, Date & time, Details) with clear headings and icons; main card uses rounded-xl and shadow-lg; unified label and helper text styling; primary "Log Time" and secondary "Clear" buttons aligned with dashboard button styles; duplicate-entry banner uses rounded-xl.
+
+## [4.20.6] - 2025-02-20
+
+### Changed
+- **Version Update** — Updated to version 4.20.6.
 
 ## [4.20.5] - 2025-02-17
 
