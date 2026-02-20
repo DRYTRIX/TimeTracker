@@ -17,10 +17,12 @@ TimeTracker provides a powerful system-wide PDF layout editor that allows admini
 To access the PDF layout editor:
 
 1. Log in as an administrator
-2. Navigate to **Admin** → **PDF Layout** in the sidebar
+2. In the sidebar, expand **Admin** and open **PDF Templates**, then click **Invoice PDF**
 3. The PDF Layout Editor page will open
 
 **URL:** `/admin/pdf-layout`
+
+The **PDF Templates** submenu appears directly under Admin (same level as System Settings), so you can open it without expanding System Settings.
 
 **Required Permission:** `manage_settings` or admin role
 
@@ -411,13 +413,14 @@ tr, td, th {
 
 ### Items or Expenses Table Disappears After Save
 
-**Issue:** After adding an Items Table or Expenses Table from the Invoice Data section and clicking Save, the tables disappear from the design and are not present in the generated PDF.
+**Issue:** After adding an Items Table or Expenses Table from the Invoice Data section and clicking Save, the tables disappeared from the design and were not present in the generated PDF.
 
-**Solutions:**
-- Ensure you add the **Items Table** or **Expenses Table** elements from the left sidebar (Invoice Data section)
-- Use **Reset** to restore the default layout, then re-add the Items Table and Expenses Table as needed
-- The Items Table uses `invoice.all_line_items` and displays time-based items, extra goods, and expenses in one combined table
-- See [Invoice Extra Goods PDF Export](INVOICE_EXTRA_GOODS_PDF_EXPORT.md) for details on the data sources
+**Fix:** The editor now persists table group names (`items-table`, `expenses-table`) in the saved design JSON and restores them when loading the layout. Tables should remain in the design after save and appear correctly in preview and export.
+
+**If you still see missing tables:**
+- Ensure you add **Items Table** or **Expenses Table** from the left sidebar (Invoice Data section)
+- Use **Reset** to restore the default layout, then re-add the tables and save again
+- The Items Table uses `invoice.all_line_items` (time-based items, extra goods, and expenses in one table); see [Invoice Extra Goods PDF Export](INVOICE_EXTRA_GOODS_PDF_EXPORT.md) for data sources
 
 ## API Endpoints
 

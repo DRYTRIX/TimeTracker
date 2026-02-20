@@ -197,7 +197,7 @@ Content-Disposition: attachment; filename="invoice-{number}.pdf"
 
 ### Custom Templates
 
-**Recommended: use `invoice.all_line_items`** for the items table in custom JSON templates (e.g. in the PDF Designer). The **Items Table** element in the PDF Designer (Admin > PDF Layout) uses this data source by default. This single list contains time-based items, extra goods, and expenses in one combined table, so all line types appear in the PDF. The default template and Items Table element use this.
+**Recommended: use `invoice.all_line_items`** for the items table in custom JSON templates (e.g. in the PDF Designer). The **Items Table** element in the PDF Designer (**Admin → PDF Templates → Invoice PDF**) uses this data source by default. This single list contains time-based items, extra goods, and expenses in one combined table, so all line types appear in the PDF. The default template and Items Table element use this.
 
 **Backward compatibility:** Templates that use `invoice.items` for the table data source are still supported. The PDF generator automatically appends extra goods and expenses to the table when it detects `invoice.items`, so all line types are included in the exported PDF.
 

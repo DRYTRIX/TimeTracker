@@ -2461,7 +2461,8 @@ function ensureTableGroupNames(layerRef, bgRef) {
     if (!layerRef || !layerRef.children) return;
     const bg = bgRef || (typeof background !== 'undefined' ? background : null);
     layerRef.children.forEach(function(child) {
-        if (!child || child === bg || child.className !== 'Group') return;
+        const isGroup = child && (child.className === 'Group' || (child.constructor && child.constructor.name === 'Group'));
+        if (!child || child === bg || !isGroup) return;
         const currentName = child.getAttr ? child.getAttr('name') : (child.attrs && child.attrs.name);
         if (currentName === 'items-table' || currentName === 'expenses-table') return;
         const inferred = inferTableNameFromGroup(child);
@@ -3137,6 +3138,7 @@ function initializePDFEditor() {
             draggable: true,
             name: 'items-table'
         });
+        tableGroup.setAttr('name', 'items-table');
         
         const header = new Konva.Text({
             text: 'Description | Qty | Price | Total',
@@ -3182,6 +3184,7 @@ function initializePDFEditor() {
             draggable: true,
             name: 'expenses-table'
         });
+        tableGroup.setAttr('name', 'expenses-table');
         
         const header = new Konva.Text({
             text: 'Expense | Date | Category | Amount',
@@ -5470,12 +5473,13 @@ function initializePDFEditor() {
                 }
                     } else if (child.className === 'Group' || child.constructor.name === 'Group' || child.children) {
                     // It's a Group element (check multiple ways since className might be undefined after JSON restore)
-                    // Check if this is a table by looking at the group's name
-                    let isItemsTable = child.attrs.name === 'items-table';
-                    let isExpensesTable = child.attrs.name === 'expenses-table';
+                    // Check if this is a table by looking at the group's name (use getAttr too - Konva may store name there after load)
+                    const nameAttr = (child.getAttr && child.getAttr('name')) || (child.attrs && child.attrs.name) || '';
+                    let isItemsTable = nameAttr === 'items-table';
+                    let isExpensesTable = nameAttr === 'expenses-table';
                     
                     // CRITICAL FIX: Check if this is a decorative-image group (handle name variations)
-                    const groupName = child.attrs.name || '';
+                    const groupName = nameAttr;
                     const isDecorativeImage = groupName && groupName.includes('decorative-image');
                     
                     // Fallback: Check if group has table-like structure but missing name (Issue #504 - i18n-aware)
@@ -5951,6 +5955,11 @@ table tr:last-child td {
         
         children.forEach((child) => {
             if (!child || child === background || child.className === 'Transformer') return;
+            // Never remove Groups or named table/decorative nodes (cleanup only touches Rects and Lines)
+            const isGroup = child.className === 'Group' || (child.constructor && child.constructor.name === 'Group');
+            const name = (child.getAttr && child.getAttr('name')) || (child.attrs && child.attrs.name) || '';
+            const isTableOrDecorative = name === 'items-table' || name === 'expenses-table' || (typeof name === 'string' && name.includes('decorative-image'));
+            if (isGroup || isTableOrDecorative) return;
             
             // Remove invisible elements (opacity 0 or not visible)
             if (child.attrs && (child.attrs.opacity === 0 || child.attrs.visible === false)) {
@@ -5960,15 +5969,18 @@ table tr:last-child td {
                 return;
             }
             
-            // Remove zero-sized elements
+            // Remove zero-sized elements (never remove Groups - they have no width/height in attrs, size comes from children; would delete items-table and expenses-table)
             if (child.attrs) {
-                const width = child.attrs.width || 0;
-                const height = child.attrs.height || 0;
-                if (width === 0 && height === 0 && child.className !== 'Line' && child.className !== 'Circle') {
-                    console.log('Removing zero-sized element:', child.className, child.attrs.name || 'unnamed');
-                    child.destroy();
-                    removedCount++;
-                    return;
+                const isGroup = child.className === 'Group' || (child.constructor && child.constructor.name === 'Group');
+                if (isGroup) { /* skip zero-size check for groups */ } else {
+                    const width = child.attrs.width || 0;
+                    const height = child.attrs.height || 0;
+                    if (width === 0 && height === 0 && child.className !== 'Line' && child.className !== 'Circle') {
+                        console.log('Removing zero-sized element:', child.className, child.attrs.name || 'unnamed');
+                        child.destroy();
+                        removedCount++;
+                        return;
+                    }
                 }
             }
             
@@ -6060,13 +6072,13 @@ table tr:last-child td {
     
     // Save
     document.getElementById('btn-save').addEventListener('click', function() {
-        // Clean up unwanted elements before generating code
-        cleanupUnwantedElements();
-        // Issue #504: Ensure table groups have correct name before generateCode (so they are included in template_json)
+        // Issue #504: Ensure table groups have correct name BEFORE any cleanup (so names are set while layer is intact)
         if (typeof ensureTableGroupNames === 'function' && layer) {
             ensureTableGroupNames(layer, background);
             layer.draw();
         }
+        // Clean up only non-Group elements (background rect, border lines, etc.). Tables are Groups and are never touched.
+        cleanupUnwantedElements();
         // Issue #432: Sync imageUrl onto decorative-image groups BEFORE generateCode() so template_json has correct source
         layer.find('[name="decorative-image"]').forEach((decorativeImageGroup, idx) => {
             try {
@@ -6172,8 +6184,9 @@ table tr:last-child td {
         // Serialize the stage
         const stageJson = stage.toJSON();
         
-        // CRITICAL FIX: Explicitly inject name and imageUrl into serialized JSON for decorative images
-        // by matching live layer children to JSON by index (Konva may not serialize custom attrs)
+        // CRITICAL FIX: Explicitly inject name and imageUrl into serialized JSON for decorative images and table groups
+        // (Konva may not serialize custom attrs on Groups). Use index for decorative-image; use position-based
+        // matching for table groups so names are never applied to the wrong node.
         const layerJson = stageJson.children && stageJson.children[0];
         if (layer && layerJson && layerJson.children && layer.children) {
             for (let i = 0; i < layer.children.length; i++) {
@@ -6185,12 +6198,35 @@ table tr:last-child td {
                     if (!jsonChild.attrs) jsonChild.attrs = {};
                     jsonChild.attrs.name = 'decorative-image';
                     jsonChild.attrs.imageUrl = (layerChild.getAttr ? layerChild.getAttr('imageUrl') : (layerChild.attrs && layerChild.attrs.imageUrl)) || '';
-                } else if (name === 'items-table' || name === 'expenses-table') {
-                    // CRITICAL FIX (Issue #504): Inject table group names so design_json persists them; Konva may not serialize custom attrs on Groups
-                    if (!jsonChild.attrs) jsonChild.attrs = {};
-                    jsonChild.attrs.name = name;
                 }
             }
+            // Position-based injection for table groups (Issue #504): match by Group + (x,y) so order mismatch cannot wrong-node
+            const tableGroupsFromLayer = [];
+            layer.children.forEach(function(child) {
+                const isGroup = child && (child.className === 'Group' || (child.constructor && child.constructor.name === 'Group'));
+                if (!child || !isGroup) return;
+                const n = child.getAttr ? child.getAttr('name') : (child.attrs && child.attrs.name);
+                if (n === 'items-table' || n === 'expenses-table') {
+                    const x = Math.round(child.x() || child.attrs.x || 0);
+                    const y = Math.round(child.y() || child.attrs.y || 0);
+                    tableGroupsFromLayer.push({ name: n, x: x, y: y });
+                }
+            });
+            const tolerance = 5;
+            layerJson.children.forEach(function(jsonChild) {
+                if (!jsonChild || jsonChild.className !== 'Group') return;
+                const jx = Math.round((jsonChild.attrs && jsonChild.attrs.x) || 0);
+                const jy = Math.round((jsonChild.attrs && jsonChild.attrs.y) || 0);
+                for (let t = 0; t < tableGroupsFromLayer.length; t++) {
+                    const tg = tableGroupsFromLayer[t];
+                    if (tg && Math.abs(tg.x - jx) <= tolerance && Math.abs(tg.y - jy) <= tolerance) {
+                        if (!jsonChild.attrs) jsonChild.attrs = {};
+                        jsonChild.attrs.name = tg.name;
+                        tableGroupsFromLayer[t] = null;
+                        break;
+                    }
+                }
+            });
         }
         
         // Manually inject imageUrl into serialized JSON for decorative images (backup pass)
@@ -6474,7 +6510,8 @@ table tr:last-child td {
                     for (let i = 0; i < layer.children.length; i++) {
                         const liveChild = layer.children[i];
                         const jsonChild = layerJson.children[i];
-                        if (!liveChild || !jsonChild || liveChild.className !== 'Group') continue;
+                        const isGroup = liveChild && (liveChild.className === 'Group' || (liveChild.constructor && liveChild.constructor.name === 'Group'));
+                        if (!liveChild || !jsonChild || !isGroup) continue;
                         const savedName = (jsonChild.attrs && jsonChild.attrs.name) ? jsonChild.attrs.name : '';
                         if (savedName && savedName.includes('decorative-image')) {
                             const savedImageUrl = (jsonChild.attrs && jsonChild.attrs.imageUrl) ? jsonChild.attrs.imageUrl : '';
@@ -6487,6 +6524,10 @@ table tr:last-child td {
                                 liveChild.attrs.imageUrl = savedImageUrl || '';
                             }
                             if (liveChild.name) liveChild.name('decorative-image');
+                        } else if (savedName === 'items-table' || savedName === 'expenses-table') {
+                            if (liveChild.setAttr) liveChild.setAttr('name', savedName);
+                            if (liveChild.attrs) liveChild.attrs.name = savedName;
+                            if (liveChild.name) liveChild.name(savedName);
                         }
                     }
                 }

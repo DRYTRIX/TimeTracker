@@ -406,3 +406,108 @@ def test_pdf_layout_with_invoice_items_loop(app, sample_invoice):
     assert pdf_bytes is not None
     assert len(pdf_bytes) > 0
     assert pdf_bytes[:4] == b"%PDF"
+
+
+@pytest.mark.smoke
+@pytest.mark.admin
+def test_pdf_layout_save_and_restore_tables(app):
+    """Test that a layout with items table and expenses table in design_json/template_json persists and loads correctly."""
+    import json
+    from app.models import InvoicePDFTemplate
+
+    # Minimal Konva stage design_json with items-table and expenses-table group names (as saved by the editor fix)
+    design_json = {
+        "attrs": {"width": 595, "height": 842},
+        "className": "Stage",
+        "children": [
+            {
+                "attrs": {},
+                "className": "Layer",
+                "children": [
+                    {
+                        "attrs": {"x": 40, "y": 350, "name": "items-table"},
+                        "className": "Group",
+                        "children": [],
+                    },
+                    {
+                        "attrs": {"x": 40, "y": 450, "name": "expenses-table"},
+                        "className": "Group",
+                        "children": [],
+                    },
+                ],
+            }
+        ],
+    }
+
+    # Minimal ReportLab template_json with two table elements
+    template_json = {
+        "page": {"size": "A4", "width": 595, "height": 842, "margin": {"top": 20, "right": 20, "bottom": 20, "left": 20}},
+        "elements": [
+            {
+                "type": "table",
+                "x": 40,
+                "y": 350,
+                "width": 515,
+                "columns": [
+                    {"width": 250, "header": "Description", "field": "description", "align": "left"},
+                    {"width": 70, "header": "Qty", "field": "quantity", "align": "center"},
+                    {"width": 110, "header": "Unit Price", "field": "unit_price", "align": "right"},
+                    {"width": 110, "header": "Total", "field": "total_amount", "align": "right"},
+                ],
+                "data": "{{ invoice.all_line_items }}",
+                "row_template": {
+                    "description": "{{ item.description }}",
+                    "quantity": "{{ item.quantity }}",
+                    "unit_price": "{{ format_money(item.unit_price) }}",
+                    "total_amount": "{{ format_money(item.total_amount) }}",
+                },
+            },
+            {
+                "type": "table",
+                "x": 40,
+                "y": 450,
+                "width": 515,
+                "columns": [
+                    {"width": 200, "header": "Expense", "field": "title", "align": "left"},
+                    {"width": 100, "header": "Date", "field": "expense_date", "align": "center"},
+                    {"width": 105, "header": "Category", "field": "category", "align": "left"},
+                    {"width": 110, "header": "Amount", "field": "total_amount", "align": "right"},
+                ],
+                "data": "{{ invoice.expenses }}",
+                "row_template": {
+                    "title": "{{ expense.title }}",
+                    "expense_date": "{{ expense.expense_date }}",
+                    "category": "{{ expense.category }}",
+                    "total_amount": "{{ format_money(expense.total_amount) }}",
+                },
+            },
+        ],
+        "styles": {"default": {"font": "Helvetica", "size": 10, "color": "#000000"}},
+    }
+
+    # Persist template with table design and template JSON (simulates save)
+    with app.app_context():
+        template = InvoicePDFTemplate.get_template("A4")
+        template.design_json = json.dumps(design_json)
+        template.template_json = json.dumps(template_json)
+        template.template_html = "<div class=\"invoice-wrapper\"><h1>Test</h1></div>"
+        template.template_css = "@page { size: A4; }"
+        db.session.commit()
+
+    # Verify stored template has design_json and template_json with table names / table elements
+    with app.app_context():
+        template = InvoicePDFTemplate.get_template("A4")
+        assert template.design_json, "design_json should be persisted"
+        assert template.template_json, "template_json should be persisted"
+        design = json.loads(template.design_json)
+        layer = design.get("children", [{}])[0] if design.get("children") else {}
+        names = []
+        for c in layer.get("children", []):
+            name = (c.get("attrs") or {}).get("name")
+            if name in ("items-table", "expenses-table"):
+                names.append(name)
+        assert "items-table" in names, "design_json should contain items-table group name for restore"
+        assert "expenses-table" in names, "design_json should contain expenses-table group name for restore"
+        tpl = json.loads(template.template_json)
+        table_elements = [e for e in tpl.get("elements", []) if e.get("type") == "table"]
+        assert len(table_elements) >= 2, "template_json should contain at least two table elements for export"
