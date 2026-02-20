@@ -410,6 +410,14 @@ document.addEventListener('DOMContentLoaded', function() {
         mdEditor.on && mdEditor.on('change', () => {
             try { localStorage.setItem(autosaveKey, mdEditor.getMarkdown()); } catch (e) {}
         });
+    } else {
+        // Fallback when Toast UI Editor fails to load (e.g. CDN blocked, CSP, offline)
+        if (descriptionInput) {
+            descriptionInput.classList.remove('hidden');
+            descriptionInput.style.minHeight = '200px';
+        }
+        const editorEl = document.getElementById('description_editor');
+        if (editorEl) { editorEl.style.display = 'none'; }
     }
     
     // Form submission enhancement
