@@ -57,6 +57,7 @@ class TaskService:
         estimated_hours: Optional[float] = None,
         color: Optional[str] = None,
         status: Optional[str] = None,
+        tags: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create a new task.
@@ -98,6 +99,7 @@ class TaskService:
             estimated_hours=estimated_hours,
             status=task_status,
             created_by=created_by,
+            tags=tags,
         )
         if color:
             task.color = color
@@ -191,6 +193,7 @@ class TaskService:
         assigned_to: Optional[int] = None,
         search: Optional[str] = None,
         overdue: bool = False,
+        tags: Optional[str] = None,
         user_id: Optional[int] = None,
         is_admin: bool = False,
         has_view_all_tasks: bool = False,
@@ -252,6 +255,13 @@ class TaskService:
             like = f"%{search}%"
             query = query.filter(db.or_(Task.name.ilike(like), Task.description.ilike(like)))
 
+        # Tags filter: match tasks that have at least one of the specified tags (comma-separated)
+        if tags:
+            tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+            if tag_list:
+                tag_conditions = [Task.tags.ilike(f"%{tag}%") for tag in tag_list]
+                query = query.filter(db.or_(*tag_conditions))
+
         # Overdue filter
         if overdue:
             today_local = now_in_app_timezone().date()
@@ -298,6 +308,11 @@ class TaskService:
             if search:
                 like = f"%{search}%"
                 count_query = count_query.filter(db.or_(Task.name.ilike(like), Task.description.ilike(like)))
+            if tags:
+                tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+                if tag_list:
+                    tag_conditions = [Task.tags.ilike(f"%{tag}%") for tag in tag_list]
+                    count_query = count_query.filter(db.or_(*tag_conditions))
             if overdue:
                 today_local = now_in_app_timezone().date()
                 count_query = count_query.filter(Task.due_date < today_local, Task.status.in_(["todo", "in_progress", "review"]))

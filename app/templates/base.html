@@ -954,7 +954,7 @@
                     </li>
                     {% if current_user.is_authenticated and (not settings or not getattr(settings, 'donate_ui_hidden', false)) and current_user.ui_show_donate %}
                     <li class="mt-2">
-                        <a href="{{ url_for('main.donate') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg {% if ep == 'main.donate' %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30{% endif %} transition-all duration-200 group">
+                        <a href="{{ url_for('main.donate') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg {% if ep == 'main.donate' %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30{% endif %} transition-all duration-200 group" title="{{ _('Support development — or purchase a key to hide this') }}">
                             <i class="fas fa-mug-saucer w-6 text-center group-hover:scale-110 transition-transform"></i>
                             <span class="ml-3 sidebar-label font-medium">{{ _('Support Development') }}</span>
                             <span class="ml-auto text-xs opacity-70">☕</span>
@@ -1003,7 +1003,7 @@
                        rel="noopener noreferrer"
                        onclick="trackDonationClick('header')"
                        class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30 transition-all duration-200 text-sm font-medium"
-                       title="{{ _('Support TimeTracker development') }}">
+                       title="{{ _('Support development (key available to hide this)') }}">
                         <i class="fas fa-mug-saucer"></i>
                         <span class="hidden lg:inline">{{ _('Support') }}</span>
                     </a>

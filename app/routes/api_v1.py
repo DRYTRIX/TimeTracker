@@ -1087,6 +1087,7 @@ def list_tasks():
     # Filter by project
     project_id = request.args.get("project_id", type=int)
     status = request.args.get("status")
+    tags = request.args.get("tags", "").strip() or None
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
@@ -1095,6 +1096,7 @@ def list_tasks():
     result = task_service.list_tasks(
         project_id=project_id,
         status=status,
+        tags=tags,
         page=page,
         per_page=per_page,
     )
@@ -1203,6 +1205,7 @@ def create_task():
         priority=data.get("priority", "medium"),
         due_date=data.get("due_date"),
         estimated_hours=data.get("estimated_hours"),
+        tags=data.get("tags"),
     )
 
     if not result.get("success"):
@@ -1258,6 +1261,8 @@ def update_task(task_id):
         update_kwargs["due_date"] = data["due_date"]
     if "estimated_hours" in data:
         update_kwargs["estimated_hours"] = data["estimated_hours"]
+    if "tags" in data:
+        update_kwargs["tags"] = data["tags"]
 
     result = task_service.update_task(task_id=task_id, user_id=g.api_user.id, **update_kwargs)
 

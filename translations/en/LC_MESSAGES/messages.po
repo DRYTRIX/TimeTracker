@@ -22210,6 +22210,34 @@ msgstr ""
 msgid "Purchase key to hide"
 msgstr ""
 
+#: app/templates/base.html
+msgid "Support development — or purchase a key to hide this"
+msgstr ""
+
+#: app/templates/base.html
+msgid "Support development (key available to hide this)"
+msgstr ""
+
+#: app/templates/main/donate.html
+msgid "Prefer to remove these prompts?"
+msgstr ""
+
+#: app/templates/main/donate.html
+msgid "Get a one-time key"
+msgstr ""
+
+#: app/templates/main/about.html
+msgid "Admins can purchase a key to hide support prompts for this instance."
+msgstr ""
+
+#: app/templates/main/dashboard.html
+msgid "You can hide this with a one-time key."
+msgstr ""
+
+#: app/templates/main/dashboard.html
+msgid "Get key"
+msgstr ""
+
 #: app/templates/main/dashboard.html
 msgid "Want to hide this widget?"
 msgstr ""

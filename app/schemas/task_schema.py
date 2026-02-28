@@ -17,6 +17,7 @@ class TaskSchema(Schema):
     status = fields.Str(validate=validate.OneOf([s.value for s in TaskStatus]))
     priority = fields.Str(validate=validate.OneOf(["low", "medium", "high", "urgent"]))
     due_date = fields.Date(allow_none=True)
+    tags = fields.Str(allow_none=True)
     created_by = fields.Int(required=True)
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
@@ -35,6 +36,7 @@ class TaskCreateSchema(Schema):
     assignee_id = fields.Int(allow_none=True)
     priority = fields.Str(missing="medium", validate=validate.OneOf(["low", "medium", "high", "urgent"]))
     due_date = fields.Date(allow_none=True)
+    tags = fields.Str(allow_none=True)
 
 
 class TaskUpdateSchema(Schema):
@@ -46,3 +48,4 @@ class TaskUpdateSchema(Schema):
     status = fields.Str(allow_none=True, validate=validate.OneOf([s.value for s in TaskStatus]))
     priority = fields.Str(allow_none=True, validate=validate.OneOf(["low", "medium", "high", "urgent"]))
     due_date = fields.Date(allow_none=True)
+    tags = fields.Str(allow_none=True)

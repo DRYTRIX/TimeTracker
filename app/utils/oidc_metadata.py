@@ -399,7 +399,9 @@ def fetch_oidc_metadata(
         timeout: Request timeout in seconds (default: 10)
         use_dns_test: Whether to test DNS resolution first (default: True)
         dns_strategy: DNS resolution strategy - "auto", "socket", "getaddrinfo", or "both"
-        use_ip_directly: Use IP address directly if DNS resolution succeeds (default: True)
+        use_ip_directly: Use IP address directly for HTTP issuer URLs when DNS resolution
+            succeeds (default: True). For HTTPS, the request is always made to the original
+            issuer hostname to satisfy TLS SNI and virtual hosting requirements.
         use_docker_internal: Try Docker internal names if external DNS fails (default: True)
         
     Returns:
@@ -438,18 +440,12 @@ def fetch_oidc_metadata(
             "error": dns_error,
         }
         
-        if dns_success and resolved_ip and use_ip_directly:
-            # Replace hostname with IP in URL
-            # Note: We need to preserve the original hostname for Host header in HTTPS
-            # For HTTPS, we'll use the IP but set the Host header
-            if parsed.scheme == "https":
-                # For HTTPS, we can't easily use IP directly due to SNI requirements
-                # But we'll try it anyway - some servers accept it
-                metadata_url = original_metadata_url.replace(hostname, resolved_ip)
-                logger.info("Using IP address directly for metadata fetch: %s -> %s", hostname, _ip_cache._mask_ip(resolved_ip))
-            else:
-                metadata_url = original_metadata_url.replace(hostname, resolved_ip)
-                logger.info("Using IP address directly for metadata fetch: %s -> %s", hostname, _ip_cache._mask_ip(resolved_ip))
+        if dns_success and resolved_ip and use_ip_directly and parsed.scheme == "http":
+            # Replace hostname with IP in URL (HTTP only).
+            # For HTTPS, we always use the original issuer hostname - using the IP breaks
+            # TLS SNI and virtual hosting (IDPs typically require the domain in SNI/Host).
+            metadata_url = original_metadata_url.replace(hostname, resolved_ip)
+            logger.info("Using IP address directly for metadata fetch: %s -> %s", hostname, _ip_cache._mask_ip(resolved_ip))
         elif not dns_success:
             logger.warning(
                 "DNS resolution test failed for %s using %s strategy, but will attempt metadata fetch anyway",

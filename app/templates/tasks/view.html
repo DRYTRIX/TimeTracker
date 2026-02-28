@@ -133,6 +133,16 @@
                     <p>{{ task.assigned_user.display_name }}</p>
                 </div>
                 {% endif %}
+                {% if task.tags %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Tags') }}</h3>
+                    <p class="flex flex-wrap gap-1">
+                        {% for tag in task.tag_list %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ tag }}</span>
+                        {% endfor %}
+                    </p>
+                </div>
+                {% endif %}
                 {% if task.due_date %}
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Due Date</h3>

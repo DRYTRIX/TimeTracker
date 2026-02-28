@@ -41,6 +41,10 @@
             <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
             <input type="text" name="search" id="search" value="{{ search or '' }}" class="form-input">
         </div>
+        <div class="lg:col-span-1">
+            <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Tags') }}</label>
+            <input type="text" name="tags" id="tags" value="{{ tags or '' }}" class="form-input" placeholder="{{ _('e.g. bug, frontend') }}">
+        </div>
         <div>
             <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
             <select name="status" id="status" class="form-input">
@@ -646,6 +650,23 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Submit on Enter
             searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (searchTimeout) {
+                        clearTimeout(searchTimeout);
+                    }
+                    applyFilters();
+                }
+            });
+        }
+        
+        // Auto-submit on tags input (debounced)
+        const tagsInput = form.querySelector('input[name="tags"], input#tags');
+        if (tagsInput) {
+            tagsInput.addEventListener('input', () => {
+                debouncedSearch(500);
+            });
+            tagsInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     if (searchTimeout) {

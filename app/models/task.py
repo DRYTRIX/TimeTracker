@@ -26,6 +26,8 @@ class Task(db.Model):
     completed_at = db.Column(db.DateTime, nullable=True)
     # Gantt chart bar color (hex e.g. #3b82f6). Overrides project color when set.
     color = db.Column(db.String(7), nullable=True)
+    # Comma-separated tags for categorization
+    tags = db.Column(db.String(500), nullable=True)
 
     # Relationships
     # project relationship is defined via backref in Project model
@@ -45,6 +47,7 @@ class Task(db.Model):
         assigned_to=None,
         created_by=None,
         status="todo",
+        tags=None,
     ):
         self.project_id = project_id
         self.name = name.strip()
@@ -55,6 +58,7 @@ class Task(db.Model):
         self.assigned_to = assigned_to
         self.created_by = created_by
         self.status = status
+        self.tags = (tags.strip() or None) if tags else None
 
     def __repr__(self):
         return f"<Task {self.name} ({self.status})>"
@@ -161,6 +165,13 @@ class Task(db.Model):
         }
         return priority_classes.get(self.priority, "priority-medium")
 
+    @property
+    def tag_list(self):
+        """Get list of tags from comma-separated string"""
+        if not self.tags:
+            return []
+        return [t.strip() for t in self.tags.split(",") if t.strip()]
+
     def start_task(self):
         """Mark task as in progress"""
         if self.status == "done":
@@ -257,6 +268,8 @@ class Task(db.Model):
             "progress_percentage": self.progress_percentage,
             "is_active": self.is_active,
             "is_overdue": self.is_overdue,
+            "tags": self.tags,
+            "tag_list": self.tag_list,
         }
 
     @classmethod
