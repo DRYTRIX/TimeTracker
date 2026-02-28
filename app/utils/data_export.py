@@ -443,6 +443,7 @@ def _task_to_dict(task):
         "status": task.status,
         "priority": task.priority,
         "due_date": task.due_date.isoformat() if task.due_date else None,
+        "tags": task.tags,
         "created_at": task.created_at.isoformat() if task.created_at else None,
     }
 

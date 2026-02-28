@@ -59,6 +59,7 @@ def list_tasks():
     project_ids = parse_ids('project_id')
     assigned_to_ids = parse_ids('assigned_to')
     search = request.args.get("search", "").strip()
+    tags = request.args.get("tags", "").strip()
     overdue_param = request.args.get("overdue", "").strip().lower()
     overdue = overdue_param in ["1", "true", "on", "yes"]
 
@@ -80,6 +81,7 @@ def list_tasks():
         project_ids=project_ids if project_ids else None,
         assigned_to_ids=assigned_to_ids if assigned_to_ids else None,
         search=search if search else None,
+        tags=tags if tags else None,
         overdue=overdue,
         user_id=current_user.id,
         is_admin=current_user.is_admin,
@@ -103,6 +105,7 @@ def list_tasks():
             project_id=project_ids[0] if len(project_ids) == 1 else None,
             assigned_to=assigned_to_ids[0] if len(assigned_to_ids) == 1 else None,
             search=search,
+            tags=tags,
             overdue=overdue,
         ))
         response.headers["Content-Type"] = "text/html; charset=utf-8"
@@ -145,6 +148,7 @@ def list_tasks():
         project_id=project_ids[0] if len(project_ids) == 1 else None,
         assigned_to=assigned_to_ids[0] if len(assigned_to_ids) == 1 else None,
         search=search,
+        tags=tags,
         overdue=overdue,
         task_counts=task_counts,
     )
@@ -232,6 +236,9 @@ def create_task():
         if color_val == "":
             color_val = None
 
+        # Tags (comma-separated, max 500 chars)
+        tags_val = request.form.get("tags", "").strip()[:500] or None
+
         # Use service layer to create task
         from app.services import TaskService
 
@@ -248,6 +255,7 @@ def create_task():
             created_by=current_user.id,
             color=color_val,
             status=status,
+            tags=tags_val,
         )
 
         if not result["success"]:
@@ -469,6 +477,9 @@ def edit_task(task_id):
         task.estimated_hours = estimated_hours
         task.due_date = due_date
         task.assigned_to = assigned_to
+        # Tags (comma-separated, max 500 chars)
+        tags_val = request.form.get("tags", "").strip()[:500]
+        task.tags = tags_val or None
         # Gantt color (hex e.g. #3b82f6)
         color_val = request.form.get("color", "").strip()
         if color_val and re.match(r"^#[0-9A-Fa-f]{6}$", color_val):
@@ -1160,6 +1171,7 @@ def export_tasks():
     project_ids = parse_ids("project_id")
     assigned_to_ids = parse_ids("assigned_to")
     search = request.args.get("search", "").strip()
+    tags = request.args.get("tags", "").strip()
     overdue_param = request.args.get("overdue", "").strip().lower()
     overdue = overdue_param in ["1", "true", "on", "yes"]
 
@@ -1181,6 +1193,12 @@ def export_tasks():
     if search:
         like = f"%{search}%"
         query = query.filter(db.or_(Task.name.ilike(like), Task.description.ilike(like)))
+
+    if tags:
+        tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+        if tag_list:
+            tag_conditions = [Task.tags.ilike(f"%{tag}%") for tag in tag_list]
+            query = query.filter(db.or_(*tag_conditions))
 
     # Overdue filter
     if overdue:
@@ -1207,6 +1225,7 @@ def export_tasks():
             "Project",
             "Status",
             "Priority",
+            "Tags",
             "Assigned To",
             "Created By",
             "Due Date",
@@ -1226,6 +1245,7 @@ def export_tasks():
                 task.project.name if task.project else "",
                 task.status,
                 task.priority,
+                task.tags or "",
                 task.assigned_user.display_name if task.assigned_user else "",
                 task.creator.display_name if task.creator else "",
                 task.due_date.strftime("%Y-%m-%d") if task.due_date else "",
@@ -1263,6 +1283,7 @@ def my_tasks():
     priority = request.args.get("priority", "")
     project_id = request.args.get("project_id", type=int)
     search = request.args.get("search", "").strip()
+    tags = request.args.get("tags", "").strip()
     task_type = request.args.get("task_type", "")  # '', 'assigned', 'created'
     overdue_param = request.args.get("overdue", "").strip().lower()
     overdue = overdue_param in ["1", "true", "on", "yes"]
@@ -1291,6 +1312,12 @@ def my_tasks():
         like = f"%{search}%"
         query = query.filter(db.or_(Task.name.ilike(like), Task.description.ilike(like)))
 
+    if tags:
+        tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+        if tag_list:
+            tag_conditions = [Task.tags.ilike(f"%{tag}%") for tag in tag_list]
+            query = query.filter(db.or_(*tag_conditions))
+
     # Overdue filter (uses application's local date)
     if overdue:
         today_local = now_in_app_timezone().date()
@@ -1317,6 +1344,7 @@ def my_tasks():
         priority=priority,
         project_id=project_id,
         search=search,
+        tags=tags,
         task_type=task_type,
         overdue=overdue,
     )

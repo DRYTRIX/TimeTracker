@@ -4,7 +4,7 @@
             {{ tasks|length }} task{{ 's' if tasks|length != 1 else '' }} found
         </h3>
         <div class="flex items-center gap-2">
-            <a href="{{ url_for('tasks.export_tasks', status=status, priority=priority, project_ids=project_ids|join(',') if project_ids else '', assigned_to_ids=assigned_to_ids|join(',') if assigned_to_ids else '', search=search, overdue=overdue) }}" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center" title="{{ _('Export to CSV') }}">
+            <a href="{{ url_for('tasks.export_tasks', status=status, priority=priority, project_ids=project_ids|join(',') if project_ids else '', assigned_to_ids=assigned_to_ids|join(',') if assigned_to_ids else '', search=search, tags=tags or '', overdue=overdue) }}" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center" title="{{ _('Export to CSV') }}">
                 <i class="fas fa-download mr-1"></i> Export
             </a>
             <div class="relative">
@@ -29,6 +29,7 @@
                 </th>
                 <th class="p-4" data-sortable>Name</th>
                 <th class="p-4" data-sortable>Project</th>
+                <th class="p-4">{{ _('Tags') }}</th>
                 <th class="p-4" data-sortable>Priority</th>
                 <th class="p-4" data-sortable>Status</th>
                 <th class="p-4 table-number" data-sortable>Due</th>
@@ -44,6 +45,17 @@
                 </td>
                 <td class="p-4"><a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="text-primary hover:underline">{{ task.name }}</a></td>
                 <td class="p-4"><a href="{{ url_for('projects.view_project', project_id=task.project_id) }}" class="text-primary hover:underline">{{ task.project.name }}</a></td>
+                <td class="p-4">
+                    {% if task.tag_list %}
+                    <div class="flex flex-wrap gap-1">
+                        {% for tag in task.tag_list %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
+                    {% endif %}
+                </td>
                 <td class="p-4">
                     {% set p = task.priority %}
                     {% set pcls = {'low':'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
@@ -94,7 +106,7 @@
             <i class="fas fa-question-circle mr-2"></i>Learn More
         </a>
     {% endset %}
-    {% if search or status or priority or project_id or assigned_to %}
+    {% if search or status or priority or project_id or assigned_to or tags %}
         {{ empty_state('fas fa-search', 'No Tasks Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new task that matches your criteria.', actions, type='no-results') }}
     {% else %}
         {{ empty_state('fas fa-tasks', 'No Tasks Yet', 'Tasks help you break down projects into manageable pieces. Create your first task to get started organizing your work!', actions, type='no-data') }}

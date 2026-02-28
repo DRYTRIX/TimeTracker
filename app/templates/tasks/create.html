@@ -115,6 +115,16 @@
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Assign this task to a team member') }}</p>
                         </div>
 
+                        <!-- Tags -->
+                        <div class="mb-4">
+                            <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <i class="fas fa-tags mr-2 text-primary"></i>{{ _('Tags') }}
+                            </label>
+                            <input type="text" class="form-input" id="tags" name="tags"
+                                   value="{{ request.form.get('tags', '') }}" placeholder="{{ _('e.g. bug, frontend, urgent') }}" maxlength="500">
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Comma-separated tags for categorization') }}</p>
+                        </div>
+
                         <!-- Gantt color -->
                         <div class="mb-4">
                             <label for="color" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Gantt color') }}</label>

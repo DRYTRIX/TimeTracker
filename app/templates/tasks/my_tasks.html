@@ -120,6 +120,11 @@
                     </div>
                 </div>
                 <div class="col-md-2 col-sm-6">
+                    <label for="tags" class="form-label">{{ _('Tags') }}</label>
+                    <input type="text" class="form-control" id="tags" name="tags" 
+                           value="{{ tags }}" placeholder="{{ _('e.g. bug, frontend') }}">
+                </div>
+                <div class="col-md-2 col-sm-6">
                     <label for="status" class="form-label">{{ _('Status') }}</label>
                     <select class="form-select" id="status" name="status">
                         <option value="">{{ _('All Statuses') }}</option>
@@ -226,6 +231,14 @@
                     <p class="card-text text-muted small mb-3">
                         {{ task.description[:120] }}{% if task.description|length > 120 %}...{% endif %}
                     </p>
+                    {% endif %}
+                    
+                    {% if task.tag_list %}
+                    <div class="d-flex flex-wrap gap-1 mb-3">
+                        {% for tag in task.tag_list %}
+                        <span class="badge bg-secondary bg-opacity-25 text-secondary">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
                     {% endif %}
                     
                     <!-- Project Info -->
