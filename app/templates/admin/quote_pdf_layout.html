@@ -5059,19 +5059,22 @@ function initializePDFEditor() {
                     const children = child.getChildren ? child.getChildren() : (child.children || []);
                     const imageElement = children.find(c => c.className === 'Image');
                     
+                    // Issue #537: Use group's visual bounding box so resized (scaled) dimensions persist
+                    let actualX = Math.round(attrs.x || 0);
+                    let actualY = Math.round(attrs.y || 0);
                     let actualWidth = 100;
                     let actualHeight = 100;
-                    
-                    if (imageElement) {
-                        actualWidth = Math.round(imageElement.width() || imageElement.attrs.width || 100);
-                        actualHeight = Math.round(imageElement.height() || imageElement.attrs.height || 100);
-                    } else {
-                        // Use group dimensions if available
-                        const groupBox = child.getClientRect();
-                        if (groupBox && groupBox.width > 0 && groupBox.height > 0) {
-                            actualWidth = Math.round(groupBox.width);
-                            actualHeight = Math.round(groupBox.height);
-                        }
+                    const groupBox = child.getClientRect ? child.getClientRect() : null;
+                    if (groupBox && groupBox.width > 0 && groupBox.height > 0) {
+                        actualX = Math.round(groupBox.x);
+                        actualY = Math.round(groupBox.y);
+                        actualWidth = Math.round(groupBox.width);
+                        actualHeight = Math.round(groupBox.height);
+                    } else if (imageElement) {
+                        const sx = (imageElement.scaleX && imageElement.scaleX()) || 1;
+                        const sy = (imageElement.scaleY && imageElement.scaleY()) || 1;
+                        actualWidth = Math.round((imageElement.width() || imageElement.attrs.width || 100) * sx);
+                        actualHeight = Math.round((imageElement.height() || imageElement.attrs.height || 100) * sy);
                     }
                     
                     console.log('Decorative image dimensions:', actualWidth, 'x', actualHeight, 'URL:', imageUrl);
@@ -5080,8 +5083,8 @@ function initializePDFEditor() {
                     if (imageUrl && imageUrl.trim() !== '') {
                         templateJson.elements.push({
                             type: 'image',
-                            x: pxToPt(x),
-                            y: pxToPt(y),
+                            x: pxToPt(actualX),
+                            y: pxToPt(actualY),
                             width: pxToPt(actualWidth),
                             height: pxToPt(actualHeight),
                             source: imageUrl,
@@ -5092,9 +5095,9 @@ function initializePDFEditor() {
                     
                     // Legacy HTML for preview
                     if (imageUrl && imageUrl.trim() !== '') {
-                        bodyContent += `  <img src="${imageUrl}" style="position:absolute;left:${x}px;top:${y}px;width:${actualWidth}px;height:${actualHeight}px;opacity:${opacity}" alt="Decorative image" class="image-element">\n`;
+                        bodyContent += `  <img src="${imageUrl}" style="position:absolute;left:${actualX}px;top:${actualY}px;width:${actualWidth}px;height:${actualHeight}px;opacity:${opacity}" alt="Decorative image" class="image-element">\n`;
                     } else {
-                        bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;width:${actualWidth}px;height:${actualHeight}px;background:#f0f0f0;border:2px dashed #999;opacity:${opacity};display:flex;align-items:center;justify-content:center;color:#666;font-size:12px;">Decorative Image</div>\n`;
+                        bodyContent += `  <div style="position:absolute;left:${actualX}px;top:${actualY}px;width:${actualWidth}px;height:${actualHeight}px;background:#f0f0f0;border:2px dashed #999;opacity:${opacity};display:flex;align-items:center;justify-content:center;color:#666;font-size:12px;">Decorative Image</div>\n`;
                     }
                     return;
                 }
@@ -5279,19 +5282,22 @@ function initializePDFEditor() {
                     const children = child.getChildren ? child.getChildren() : (child.children || []);
                     const imageElement = children.find(c => c.className === 'Image');
                     
+                    // Issue #537: Use group's visual bounding box so resized (scaled) dimensions persist
+                    let actualX = Math.round(attrs.x || 0);
+                    let actualY = Math.round(attrs.y || 0);
                     let actualWidth = 100;
                     let actualHeight = 100;
-                    
-                    if (imageElement) {
-                        actualWidth = Math.round(imageElement.width() || imageElement.attrs.width || 100);
-                        actualHeight = Math.round(imageElement.height() || imageElement.attrs.height || 100);
-                    } else {
-                        // Use group dimensions if available
-                        const groupBox = child.getClientRect();
-                        if (groupBox && groupBox.width > 0 && groupBox.height > 0) {
-                            actualWidth = Math.round(groupBox.width);
-                            actualHeight = Math.round(groupBox.height);
-                        }
+                    const groupBox = child.getClientRect ? child.getClientRect() : null;
+                    if (groupBox && groupBox.width > 0 && groupBox.height > 0) {
+                        actualX = Math.round(groupBox.x);
+                        actualY = Math.round(groupBox.y);
+                        actualWidth = Math.round(groupBox.width);
+                        actualHeight = Math.round(groupBox.height);
+                    } else if (imageElement) {
+                        const sx = (imageElement.scaleX && imageElement.scaleX()) || 1;
+                        const sy = (imageElement.scaleY && imageElement.scaleY()) || 1;
+                        actualWidth = Math.round((imageElement.width() || imageElement.attrs.width || 100) * sx);
+                        actualHeight = Math.round((imageElement.height() || imageElement.attrs.height || 100) * sy);
                     }
                     
                     console.log('Decorative image dimensions (fallback):', actualWidth, 'x', actualHeight, 'URL:', imageUrl);
@@ -5300,8 +5306,8 @@ function initializePDFEditor() {
                     if (imageUrl && imageUrl.trim() !== '') {
                         templateJson.elements.push({
                             type: 'image',
-                            x: pxToPt(x),
-                            y: pxToPt(y),
+                            x: pxToPt(actualX),
+                            y: pxToPt(actualY),
                             width: pxToPt(actualWidth),
                             height: pxToPt(actualHeight),
                             source: imageUrl,
@@ -5312,9 +5318,9 @@ function initializePDFEditor() {
                     
                     // Legacy HTML for preview
                     if (imageUrl && imageUrl.trim() !== '') {
-                        bodyContent += `  <img src="${imageUrl}" style="position:absolute;left:${x}px;top:${y}px;width:${actualWidth}px;height:${actualHeight}px;opacity:${opacity}" alt="Decorative image" class="image-element">\n`;
+                        bodyContent += `  <img src="${imageUrl}" style="position:absolute;left:${actualX}px;top:${actualY}px;width:${actualWidth}px;height:${actualHeight}px;opacity:${opacity}" alt="Decorative image" class="image-element">\n`;
                     } else {
-                        bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;width:${actualWidth}px;height:${actualHeight}px;background:#f0f0f0;border:2px dashed #999;opacity:${opacity};display:flex;align-items:center;justify-content:center;color:#666;font-size:12px;">Decorative Image</div>\n`;
+                        bodyContent += `  <div style="position:absolute;left:${actualX}px;top:${actualY}px;width:${actualWidth}px;height:${actualHeight}px;background:#f0f0f0;border:2px dashed #999;opacity:${opacity};display:flex;align-items:center;justify-content:center;color:#666;font-size:12px;">Decorative Image</div>\n`;
                     }
                 } else {
                         // Regular group (not a table)
