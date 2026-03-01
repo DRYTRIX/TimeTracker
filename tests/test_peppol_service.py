@@ -138,4 +138,6 @@ def test_peppol_service_success_creates_transmission(app, monkeypatch):
         # UBL must include PEPPOL mandatory elements (InvoiceTypeCode 380, BuyerReference)
         assert "InvoiceTypeCode" in tx.ubl_xml and "380" in tx.ubl_xml
         assert "BuyerReference" in tx.ubl_xml
+        # EN 16931 requires unitCode on InvoicedQuantity (e.g. C62 = unit/each)
+        assert "InvoicedQuantity" in tx.ubl_xml and 'unitCode="C62"' in tx.ubl_xml
 

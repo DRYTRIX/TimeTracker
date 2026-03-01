@@ -4,12 +4,15 @@ ZugFerd / Factur-X: embed EN 16931 UBL XML into invoice PDFs.
 When enabled, exported invoice PDFs contain an embedded XML file (ZUGFeRD-invoice.xml)
 so the file is both human-readable (PDF) and machine-readable (EN 16931). The same
 UBL used for Peppol is reused; embedding is done with pikepdf.
+The attachment is added as an Associated File with relationship "Alternative" and
+ZUGFeRD XMP RDF is written so validators recognize the document.
 """
 
 from __future__ import annotations
 
 import io
 import os
+import tempfile
 from typing import Any, Optional, Tuple
 
 from app.integrations.peppol import PeppolParty, build_peppol_ubl_invoice_xml
@@ -17,6 +20,9 @@ from app.integrations.peppol import PeppolParty, build_peppol_ubl_invoice_xml
 
 # Standard embedded filename for ZUGFeRD/Factur-X (EN 16931)
 ZUGFERD_EMBEDDED_FILENAME = "ZUGFeRD-invoice.xml"
+
+# ZUGFeRD/Factur-X XMP namespace (PDF/A-3 Associated Files)
+ZUGFERD_XMP_NS = "urn:ferd:pdfa:CrossIndustryDocument:invoice:1p0#"
 
 
 def _get_sender_party_for_zugferd(settings: Any) -> PeppolParty:
@@ -79,12 +85,41 @@ def _get_customer_party_for_zugferd(invoice: Any) -> PeppolParty:
     )
 
 
+def _add_zugferd_xmp(pdf: Any) -> None:
+    """Add ZUGFeRD/Factur-X XMP RDF to the PDF so validators recognize the embedded invoice XML."""
+    zugferd_rdf = (
+        f'<rdf:Description rdf:about="" xmlns:zf="{ZUGFERD_XMP_NS}">'
+        "<zf:DocumentType>INVOICE</zf:DocumentType>"
+        f"<zf:DocumentFileName>{ZUGFERD_EMBEDDED_FILENAME}</zf:DocumentFileName>"
+        "<zf:Version>2.1</zf:Version>"
+        "<zf:ConformanceLevel>EN 16931</zf:ConformanceLevel>"
+        "</rdf:Description>"
+    )
+    if not hasattr(pdf, "Root") or not hasattr(pdf.Root, "Metadata"):
+        return
+    try:
+        xmp_bytes = pdf.Root.Metadata.read_bytes()
+    except Exception:
+        return
+    xmp_str = xmp_bytes.decode("utf-8", errors="replace")
+    # Insert our rdf:Description before the closing </rdf:RDF>
+    marker = "</rdf:RDF>"
+    if marker in xmp_str and "zf:DocumentType" not in xmp_str:
+        try:
+            insert_pos = xmp_str.rfind(marker)
+            new_xmp = xmp_str[:insert_pos] + zugferd_rdf + "\n    " + xmp_str[insert_pos:]
+            pdf.Root.Metadata = pdf.make_stream(new_xmp.encode("utf-8"))
+        except Exception:
+            pass
+
+
 def embed_zugferd_xml_in_pdf(pdf_bytes: bytes, invoice: Any, settings: Any) -> Tuple[bytes, Optional[str]]:
     """
     Embed EN 16931 UBL XML into the given invoice PDF bytes (ZugFerd/Factur-X).
 
     Builds supplier/customer from settings and invoice (best-effort), generates UBL,
-    attaches it as ZUGFeRD-invoice.xml, and returns the new PDF bytes.
+    attaches it as ZUGFeRD-invoice.xml with AF relationship "Alternative", adds
+    ZUGFeRD XMP RDF, and returns the new PDF bytes.
 
     Returns:
         (new_pdf_bytes, None) on success, or (original_pdf_bytes, error_message) on failure.
@@ -104,8 +139,25 @@ def embed_zugferd_xml_in_pdf(pdf_bytes: bytes, invoice: Any, settings: Any) -> T
 
     try:
         pdf = pikepdf.open(io.BytesIO(pdf_bytes))
-        filespec = AttachedFileSpec(pdf, ubl_xml.encode("utf-8"), mime_type="application/xml")
-        pdf.attachments[ZUGFERD_EMBEDDED_FILENAME] = filespec
+        # Use temp file so we can use from_filepath with relationship='/Alternative' (ZUGFeRD)
+        with tempfile.NamedTemporaryFile(
+            mode="wb", suffix=".xml", delete=False, prefix="zugferd_"
+        ) as tmp:
+            tmp.write(ubl_xml.encode("utf-8"))
+            tmp_path = tmp.name
+        try:
+            filespec = AttachedFileSpec.from_filepath(
+                pdf,
+                tmp_path,
+                relationship="/Alternative",
+            )
+            pdf.attachments[ZUGFERD_EMBEDDED_FILENAME] = filespec
+        finally:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+        _add_zugferd_xmp(pdf)
         out = io.BytesIO()
         pdf.save(out, min_version="1.7")
         pdf.close()
