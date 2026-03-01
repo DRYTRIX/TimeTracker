@@ -95,10 +95,17 @@ When the setting is on **and** the client has Peppol endpoint details, the invoi
 In **Admin → Settings → Peppol e-Invoicing** you can enable **Embed EN 16931 XML in invoice PDFs (ZugFerd / Factur-X)**. When this is on:
 
 - **Exported invoice PDFs** (Export PDF) contain an embedded file `ZUGFeRD-invoice.xml` with the same EN 16931 UBL as used for Peppol.
+- The embedded XML is attached as an **Associated File** with relationship **Alternative**, and ZUGFeRD XMP RDF (DocumentType, DocumentFileName, Version, ConformanceLevel) is written so validators recognize the document.
 - The PDF remains human-readable; the embedded XML makes it machine-readable (e.g. for automated booking or archiving).
 - These hybrid PDFs can be sent via Peppol or by email; recipients can open the PDF and/or extract the XML.
 
-Party data (seller/customer) is taken from Settings and the invoice’s client (including Peppol endpoint fields). For full EN 16931/ZugFerd compliance, configure sender and client data as for Peppol. If some data is missing, the app still embeds best-effort UBL so the file is usable.
+Party data (seller/customer) is taken from Settings and the invoice’s client (including Peppol endpoint fields). For full EN 16931/ZugFerd compliance, configure sender and client data as for Peppol (including company and client addresses and country codes). If some data is missing, the app still embeds best-effort UBL so the file is usable.
+
+**Validation:** We recommend validating the embedded XML (and, if needed, the whole file) with [b2brouter](https://app.b2brouter.net/de/validation) or [portinvoice.com](https://www.portinvoice.com/). Ensure company and client Peppol and address data are complete to avoid validation errors.
+
+### ZUGFeRD and PDF/A-3
+
+The app produces a PDF with correctly embedded EN 16931 XML, AF relationship, and ZUGFeRD XMP. The file is **not** converted to **PDF/A-3** format. For strict PDF/A-3 compliance (e.g. for archival or validators that require it), run the exported PDF through an external PDF/A-3 converter such as Ghostscript, Adobe Acrobat, or an online PDF/A conversion service.
 
 ## Migrations
 

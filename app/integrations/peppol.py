@@ -236,6 +236,7 @@ def build_peppol_ubl_invoice_xml(invoice: Any, supplier: PeppolParty, customer: 
         il = ET.SubElement(inv_el, cac + "InvoiceLine")
         _text(il, cbc + "ID", str(line_id))
         qty_el = ET.SubElement(il, cbc + "InvoicedQuantity")
+        qty_el.set("unitCode", "C62")  # C62 = unit/each (UN/ECE Rec 21), required by EN 16931
         qty_el.text = _qty(quantity)
         lea = ET.SubElement(il, cbc + "LineExtensionAmount")
         lea.set("currencyID", currency)

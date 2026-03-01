@@ -97,6 +97,8 @@ def test_embed_zugferd_xml_in_pdf_adds_attachment_and_xml_content(app):
         assert "<Invoice" in xml_content or "Invoice" in xml_content
         assert "INV-ZUG-001" in xml_content
         assert "120" in xml_content
+        # EN 16931 requires unitCode on InvoicedQuantity (e.g. C62 = unit/each)
+        assert "InvoicedQuantity" in xml_content and 'unitCode="C62"' in xml_content
 
 
 @pytest.mark.unit
