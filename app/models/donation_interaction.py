@@ -1,4 +1,17 @@
-"""Model to track donation banner interactions and user engagement metrics"""
+"""Model to track donation banner interactions and user engagement metrics.
+
+Canonical interaction_type values (funnel):
+  - page_viewed: user viewed the support/donate page
+  - banner_impression: support banner was shown (measured client-side)
+  - banner_dismissed: user dismissed the banner
+  - link_clicked: user clicked a support CTA (donate or key; segment by source)
+
+Canonical source values for CTR per placement:
+  - header, banner, banner_bmc, banner_paypal, banner_key
+  - dashboard_widget, donate_page_hero, donate_page_button, donate_page_key
+  - about_page, help_page
+Sources ending with _key are key-purchase clicks; others are donate/learn-more.
+"""
 
 from datetime import datetime, timedelta
 from app import db
@@ -11,14 +24,15 @@ class DonationInteraction(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
-    
-    # Interaction type
-    interaction_type = db.Column(
-        db.String(50), nullable=False
-    )  # 'banner_dismissed', 'banner_clicked', 'link_clicked', 'page_viewed'
-    
-    # Context
-    source = db.Column(db.String(100), nullable=True)  # 'dashboard', 'banner', 'menu', 'footer', etc.
+
+    # Interaction type: page_viewed | banner_impression | banner_dismissed | link_clicked
+    interaction_type = db.Column(db.String(50), nullable=False)
+
+    # Placement/source: header | banner | banner_bmc | banner_paypal | banner_key | dashboard_widget | donate_page_* | about_page | help_page
+    source = db.Column(db.String(100), nullable=True)
+
+    # A/B test variant for experiments (e.g. control | key_first | cta_alt)
+    variant = db.Column(db.String(50), nullable=True)
     
     # User metrics at time of interaction (for smart prompts)
     time_entries_count = db.Column(db.Integer, nullable=True)  # Total time entries
@@ -35,14 +49,21 @@ class DonationInteraction(db.Model):
         return f"<DonationInteraction {self.interaction_type} by user {self.user_id}>"
 
     @staticmethod
-    def record_interaction(user_id: int, interaction_type: str, source: str = None, user_metrics: dict = None):
-        """Record a donation interaction"""
+    def record_interaction(
+        user_id: int,
+        interaction_type: str,
+        source: str = None,
+        user_metrics: dict = None,
+        variant: str = None,
+    ):
+        """Record a donation interaction (optionally with A/B variant)."""
         interaction = DonationInteraction(
             user_id=user_id,
             interaction_type=interaction_type,
             source=source,
+            variant=variant,
         )
-        
+
         if user_metrics:
             interaction.time_entries_count = user_metrics.get("time_entries_count")
             interaction.days_since_signup = user_metrics.get("days_since_signup")

@@ -85,8 +85,40 @@ def _get_customer_party_for_zugferd(invoice: Any) -> PeppolParty:
     )
 
 
+# Minimal XMP with rdf:RDF for ZUGFeRD extension (PDF/A-3 style)
+_ZUGFERD_XMP_TEMPLATE = """<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    {rdf_description}
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end="w"?>"""
+
+
+def _ensure_metadata_stream(pdf: Any) -> None:
+    """Ensure PDF has a Root/Metadata stream; create minimal XMP if missing."""
+    if not hasattr(pdf, "Root"):
+        return
+    if hasattr(pdf.Root, "Metadata") and pdf.Root.Metadata is not None:
+        return
+    try:
+        minimal_xmp = _ZUGFERD_XMP_TEMPLATE.format(
+            rdf_description=(
+                f'<rdf:Description rdf:about="" xmlns:zf="{ZUGFERD_XMP_NS}">'
+                "<zf:DocumentType>INVOICE</zf:DocumentType>"
+                f"<zf:DocumentFileName>{ZUGFERD_EMBEDDED_FILENAME}</zf:DocumentFileName>"
+                "<zf:Version>2.1</zf:Version>"
+                "<zf:ConformanceLevel>EN 16931</zf:ConformanceLevel>"
+                "</rdf:Description>"
+            )
+        )
+        pdf.Root.Metadata = pdf.make_stream(minimal_xmp.encode("utf-8"))
+    except Exception:
+        pass
+
+
 def _add_zugferd_xmp(pdf: Any) -> None:
-    """Add ZUGFeRD/Factur-X XMP RDF to the PDF so validators recognize the embedded invoice XML."""
+    """Add or ensure ZUGFeRD/Factur-X XMP RDF so validators recognize the embedded invoice XML."""
     zugferd_rdf = (
         f'<rdf:Description rdf:about="" xmlns:zf="{ZUGFERD_XMP_NS}">'
         "<zf:DocumentType>INVOICE</zf:DocumentType>"
@@ -95,6 +127,7 @@ def _add_zugferd_xmp(pdf: Any) -> None:
         "<zf:ConformanceLevel>EN 16931</zf:ConformanceLevel>"
         "</rdf:Description>"
     )
+    _ensure_metadata_stream(pdf)
     if not hasattr(pdf, "Root") or not hasattr(pdf.Root, "Metadata"):
         return
     try:
@@ -102,13 +135,20 @@ def _add_zugferd_xmp(pdf: Any) -> None:
     except Exception:
         return
     xmp_str = xmp_bytes.decode("utf-8", errors="replace")
-    # Insert our rdf:Description before the closing </rdf:RDF>
+    if "zf:DocumentType" in xmp_str:
+        return
     marker = "</rdf:RDF>"
-    if marker in xmp_str and "zf:DocumentType" not in xmp_str:
+    if marker in xmp_str:
         try:
             insert_pos = xmp_str.rfind(marker)
             new_xmp = xmp_str[:insert_pos] + zugferd_rdf + "\n    " + xmp_str[insert_pos:]
             pdf.Root.Metadata = pdf.make_stream(new_xmp.encode("utf-8"))
+        except Exception:
+            pass
+    else:
+        try:
+            minimal_xmp = _ZUGFERD_XMP_TEMPLATE.format(rdf_description=zugferd_rdf)
+            pdf.Root.Metadata = pdf.make_stream(minimal_xmp.encode("utf-8"))
         except Exception:
             pass
 
@@ -139,27 +179,43 @@ def embed_zugferd_xml_in_pdf(pdf_bytes: bytes, invoice: Any, settings: Any) -> T
 
     try:
         pdf = pikepdf.open(io.BytesIO(pdf_bytes))
-        # Use temp file so we can use from_filepath with relationship='/Alternative' (ZUGFeRD)
-        with tempfile.NamedTemporaryFile(
-            mode="wb", suffix=".xml", delete=False, prefix="zugferd_"
-        ) as tmp:
-            tmp.write(ubl_xml.encode("utf-8"))
-            tmp_path = tmp.name
+        ubl_bytes = ubl_xml.encode("utf-8")
+        # AttachedFileSpec(pdf, data, ...) - relationship must be Name for ZUGFeRD /Alternative
         try:
-            filespec = AttachedFileSpec.from_filepath(
+            from pikepdf import Name
+            relationship = Name("/Alternative")
+        except ImportError:
+            relationship = "/Alternative"
+        try:
+            filespec = AttachedFileSpec(
                 pdf,
-                tmp_path,
-                relationship="/Alternative",
+                ubl_bytes,
+                filename=ZUGFERD_EMBEDDED_FILENAME,
+                mime_type="application/xml",
+                relationship=relationship,
             )
-            pdf.attachments[ZUGFERD_EMBEDDED_FILENAME] = filespec
-        finally:
+        except TypeError:
+            # Older pikepdf: from_filepath(path, relationship=...) or different constructor
+            with tempfile.NamedTemporaryFile(
+                mode="wb", suffix=".xml", delete=False, prefix="zugferd_"
+            ) as tmp:
+                tmp.write(ubl_bytes)
+                tmp_path = tmp.name
             try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
+                filespec = AttachedFileSpec.from_filepath(pdf, tmp_path, relationship="/Alternative")
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+        pdf.attachments[ZUGFERD_EMBEDDED_FILENAME] = filespec
         _add_zugferd_xmp(pdf)
         out = io.BytesIO()
-        pdf.save(out, min_version="1.7")
+        # pikepdf may require version as (str, int) for PDF 1.7
+        try:
+            pdf.save(out, min_version=("1", 7))
+        except TypeError:
+            pdf.save(out, min_version="1.7")
         pdf.close()
         return out.getvalue(), None
     except Exception as e:

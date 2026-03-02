@@ -833,7 +833,7 @@
                 </a>
                 {% if current_user.is_authenticated and (not settings or not getattr(settings, 'donate_ui_hidden', false)) and current_user.ui_show_donate %}
                 <a href="{{ url_for('main.donate') }}" class="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-md hover:shadow-lg transition-all">
-                    <i class="fas fa-heart mr-1"></i>{{ _('Support Development') }}
+                    <i class="fas fa-heart mr-1"></i>{{ _('Support updates') }}
                 </a>
                 {% endif %}
             </div>

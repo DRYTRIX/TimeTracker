@@ -240,16 +240,18 @@ def track_donation_click():
         
         data = request.get_json() or {}
         source = data.get("source", "unknown")
-        
+        variant = data.get("variant")
+
         # Get user metrics
         metrics = DonationInteraction.get_user_engagement_metrics(current_user.id)
-        
-        # Record click
+
+        # Record click (variant for A/B segmentation)
         DonationInteraction.record_interaction(
             user_id=current_user.id,
             interaction_type="link_clicked",
             source=source,
             user_metrics=metrics,
+            variant=variant,
         )
         
         return jsonify({"success": True})
@@ -264,21 +266,49 @@ def track_banner_dismissal():
     """Track banner dismissals"""
     try:
         from app.models import DonationInteraction
-        
+
+        data = request.get_json() or {}
+        variant = data.get("variant")
+
         # Get user metrics
         metrics = DonationInteraction.get_user_engagement_metrics(current_user.id)
-        
-        # Record dismissal
+
+        # Record dismissal (variant for A/B segmentation)
         DonationInteraction.record_interaction(
             user_id=current_user.id,
             interaction_type="banner_dismissed",
             source="banner",
             user_metrics=metrics,
+            variant=variant,
         )
-        
+
         return jsonify({"success": True})
     except Exception as e:
         # Return success even if tracking fails (e.g., table doesn't exist yet)
+        return jsonify({"success": True, "note": "Tracking unavailable"})
+
+
+@main_bp.route("/donate/track-impression", methods=["POST"])
+@login_required
+def track_support_impression():
+    """Track support banner impression (banner_impression -> cta_click funnel)."""
+    try:
+        from app.models import DonationInteraction
+
+        data = request.get_json() or {}
+        source = data.get("source", "banner")
+        variant = data.get("variant")
+
+        metrics = DonationInteraction.get_user_engagement_metrics(current_user.id)
+        DonationInteraction.record_interaction(
+            user_id=current_user.id,
+            interaction_type="banner_impression",
+            source=source,
+            user_metrics=metrics,
+            variant=variant,
+        )
+        return jsonify({"success": True})
+    except Exception:
         return jsonify({"success": True, "note": "Tracking unavailable"})
 
 

@@ -13,7 +13,12 @@ Peppol is the **transport**; ZugFerd is a **format** (PDF + embedded XML). The s
 - Your **sender identifiers** (how your company is identified in Peppol)
 - Your customers’ **recipient endpoint identifiers**
 
-TimeTracker intentionally ships with a **provider-agnostic HTTP adapter**, so you can connect to any access point by exposing (or configuring) an HTTP endpoint that accepts the JSON contract described below.
+TimeTracker supports two **transport modes**:
+
+- **Generic** – provider-agnostic HTTP adapter: you configure an access point URL that accepts the JSON contract below. No SML/SMP or AS4 required.
+- **Native** – SML/SMP participant discovery and AS4 message send. Requires `PEPPOL_SML_URL` (and optionally client certificate paths for mTLS). Use when you want to send directly via the PEPPOL network without a third-party AP adapter.
+
+Sender and recipient identifiers are validated (scheme and endpoint ID format) before send in both modes.
 
 ## Enable Peppol
 
@@ -31,6 +36,9 @@ Environment variables:
 - **`PEPPOL_ACCESS_POINT_TOKEN`** (optional): bearer token used by the adapter
 - **`PEPPOL_ACCESS_POINT_TIMEOUT`** (optional): request timeout seconds (default: 30)
 - **`PEPPOL_PROVIDER`** (optional): label stored in send history (default: `generic`)
+- **`PEPPOL_TRANSPORT_MODE`** (optional): `generic` or `native` (default: `generic`)
+- **`PEPPOL_SML_URL`** (required for native): SML directory URL (e.g. EU directory)
+- **`PEPPOL_NATIVE_CERT_PATH`** / **`PEPPOL_NATIVE_KEY_PATH`** (optional): client certificate and key for AS4 mTLS
 
 ## Set recipient Peppol endpoint on a client
 
@@ -95,17 +103,18 @@ When the setting is on **and** the client has Peppol endpoint details, the invoi
 In **Admin → Settings → Peppol e-Invoicing** you can enable **Embed EN 16931 XML in invoice PDFs (ZugFerd / Factur-X)**. When this is on:
 
 - **Exported invoice PDFs** (Export PDF) contain an embedded file `ZUGFeRD-invoice.xml` with the same EN 16931 UBL as used for Peppol.
-- The embedded XML is attached as an **Associated File** with relationship **Alternative**, and ZUGFeRD XMP RDF (DocumentType, DocumentFileName, Version, ConformanceLevel) is written so validators recognize the document.
+- The embedded XML is attached as an **Associated File** with relationship **Alternative**, and ZUGFeRD XMP RDF is written (metadata is created if missing so validators recognize the document).
 - The PDF remains human-readable; the embedded XML makes it machine-readable (e.g. for automated booking or archiving).
 - These hybrid PDFs can be sent via Peppol or by email; recipients can open the PDF and/or extract the XML.
+- **Strict behaviour:** If ZUGFeRD embedding is enabled and the embed step fails (e.g. missing pikepdf, invalid PDF), the export is **aborted** and the user sees an error; the PDF is not returned without the XML.
 
-Party data (seller/customer) is taken from Settings and the invoice’s client (including Peppol endpoint fields). For full EN 16931/ZugFerd compliance, configure sender and client data as for Peppol (including company and client addresses and country codes). If some data is missing, the app still embeds best-effort UBL so the file is usable.
+Party data (seller/customer) is taken from Settings and the invoice’s client (including Peppol endpoint fields). For full EN 16931/ZugFerd compliance, configure sender and client data as for Peppol (including company and client addresses and country codes).
 
-**Validation:** We recommend validating the embedded XML (and, if needed, the whole file) with [b2brouter](https://app.b2brouter.net/de/validation) or [portinvoice.com](https://www.portinvoice.com/). Ensure company and client Peppol and address data are complete to avoid validation errors.
+**Validation:** Validate the embedded XML with [b2brouter](https://app.b2brouter.net/de/validation) or [portinvoice.com](https://www.portinvoice.com/). You can optionally enable **Run veraPDF after export** in Admin → Peppol e-Invoicing and set the veraPDF executable path to get a validation summary after each export (does not block the download).
 
 ### ZUGFeRD and PDF/A-3
 
-The app produces a PDF with correctly embedded EN 16931 XML, AF relationship, and ZUGFeRD XMP. The file is **not** converted to **PDF/A-3** format. For strict PDF/A-3 compliance (e.g. for archival or validators that require it), run the exported PDF through an external PDF/A-3 converter such as Ghostscript, Adobe Acrobat, or an online PDF/A conversion service.
+You can enable **Normalize ZUGFeRD PDFs to PDF/A-3** in Admin → Peppol e-Invoicing. When this is on (and ZUGFeRD embedding is enabled), exported PDFs are normalized to PDF/A-3: XMP identification (pdfaid part 3, conformance B) and an sRGB output intent are added so the file passes validators such as veraPDF. If conversion fails, export is aborted and the user sees an error.
 
 ## Migrations
 
@@ -120,12 +129,13 @@ This applies (among others):
 - `112_add_invoices_peppol_compliant` (adds `settings.invoices_peppol_compliant`)
 - `113_add_invoice_buyer_reference` (adds `invoices.buyer_reference`)
 - `128_add_invoices_zugferd_pdf` (adds `settings.invoices_zugferd_pdf` for ZugFerd PDF embedding)
+- `130_add_peppol_transport_mode_and_native` (adds `peppol_transport_mode`, `peppol_sml_url`, `peppol_native_cert_path`, `peppol_native_key_path`, `invoices_pdfa3_compliant`, `invoices_validate_export`, `invoices_verapdf_path`)
 
 ## Testing
 
 With your virtual environment activated:
 
 ```bash
-pytest tests/test_peppol_service.py -v
+pytest tests/test_peppol_service.py tests/test_peppol_identifiers.py tests/test_zugferd.py tests/test_pdfa3.py tests/test_invoice_validators.py -v
 ```
 

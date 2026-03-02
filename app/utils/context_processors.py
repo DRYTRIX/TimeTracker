@@ -153,6 +153,21 @@ def register_context_processors(app):
             "SUPPORT_PURCHASE_URL", "https://timetracker.drytrix.com/support.html"
         )
 
+        # User stats and support banner suppression for smart prompts (authenticated users only)
+        user_stats = None
+        support_banner_suppressed = False
+        support_ab_variant = "control"
+        if getattr(current_user, "is_authenticated", False):
+            try:
+                from app.models import DonationInteraction
+                user_stats = DonationInteraction.get_user_engagement_metrics(current_user.id)
+                support_banner_suppressed = DonationInteraction.has_recent_donation_click(current_user.id, days=30)
+                # Stable A/B variant per user for support CTA experiments (control | key_first | cta_alt)
+                support_ab_variant = ("control", "key_first", "cta_alt")[current_user.id % 3]
+            except Exception:
+                user_stats = {}
+                support_banner_suppressed = False
+
         return {
             "app_name": "Time Tracker",
             "app_version": version_value,
@@ -166,6 +181,9 @@ def register_context_processors(app):
             "available_languages": available_languages,
             "config": current_app.config,
             "support_purchase_url": support_purchase_url,
+            "user_stats": user_stats,
+            "support_banner_suppressed": support_banner_suppressed,
+            "support_ab_variant": support_ab_variant,
         }
 
     @app.before_request

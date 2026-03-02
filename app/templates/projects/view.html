@@ -400,6 +400,7 @@
                         <th class="p-3">{{ _('Priority') }}</th>
                         <th class="p-3">{{ _('Status') }}</th>
                         <th class="p-3">{{ _('Due') }}</th>
+                        <th class="p-3">{{ _('Estimated') }}</th>
                         <th class="p-3">{{ _('Progress') }}</th>
                         <th class="p-3">{{ _('Actions') }}</th>
                     </tr>
@@ -434,6 +435,13 @@
                             {% endif %}
                         </td>
                         <td class="p-3">
+                            {% if task.estimated_hours %}
+                                {{ task.estimated_hours }} {{ _('h') }}
+                            {% else %}
+                                <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="p-3">
                             {% set pct = task.progress_percentage or 0 %}
                             <div class="w-28 h-2 bg-gray-200 dark:bg-gray-700 rounded">
                                 <div class="h-2 rounded {{ 'bg-emerald-500' if pct>=100 else 'bg-primary' }}" style="width: {{ [pct,100]|min }}%"></div>
@@ -445,7 +453,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="p-3 text-center text-text-muted-light dark:text-text-muted-dark">{{ _('No tasks for this project.') }}</td>
+                        <td colspan="7" class="p-3 text-center text-text-muted-light dark:text-text-muted-dark">{{ _('No tasks for this project.') }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

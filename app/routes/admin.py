@@ -1248,8 +1248,18 @@ def settings():
                 settings_obj.peppol_access_point_timeout = 30
 
             settings_obj.peppol_provider = (request.form.get("peppol_provider", "") or "").strip() or "generic"
+            transport_mode = (request.form.get("peppol_transport_mode", "") or "generic").strip().lower()
+            if transport_mode not in ("generic", "native"):
+                transport_mode = "generic"
+            settings_obj.peppol_transport_mode = transport_mode
+            settings_obj.peppol_sml_url = (request.form.get("peppol_sml_url", "") or "").strip()
+            settings_obj.peppol_native_cert_path = (request.form.get("peppol_native_cert_path", "") or "").strip()
+            settings_obj.peppol_native_key_path = (request.form.get("peppol_native_key_path", "") or "").strip()
             settings_obj.invoices_peppol_compliant = request.form.get("invoices_peppol_compliant") == "on"
             settings_obj.invoices_zugferd_pdf = request.form.get("invoices_zugferd_pdf") == "on"
+            settings_obj.invoices_pdfa3_compliant = request.form.get("invoices_pdfa3_compliant") == "on"
+            settings_obj.invoices_validate_export = request.form.get("invoices_validate_export") == "on"
+            settings_obj.invoices_verapdf_path = (request.form.get("invoices_verapdf_path", "") or "").strip()
         except AttributeError:
             # Peppol columns don't exist yet (migration not run)
             pass

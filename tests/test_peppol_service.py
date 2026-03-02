@@ -141,3 +141,21 @@ def test_peppol_service_success_creates_transmission(app, monkeypatch):
         # EN 16931 requires unitCode on InvoicedQuantity (e.g. C62 = unit/each)
         assert "InvoicedQuantity" in tx.ubl_xml and 'unitCode="C62"' in tx.ubl_xml
 
+
+@pytest.mark.unit
+def test_peppol_service_generic_transport_uses_identifier_validation(app, monkeypatch):
+    """Generic transport validates sender/recipient identifiers before send."""
+    from app.integrations.peppol_transport import GenericTransport, PeppolTransportError
+
+    transport = GenericTransport(access_point_url="https://ap.example.com/send")
+    with pytest.raises(PeppolTransportError) as exc:
+        transport.send(
+            ubl_xml="<Invoice/>",
+            sender_endpoint_id="",
+            sender_scheme_id="9915",
+            recipient_endpoint_id="0088:123",
+            recipient_scheme_id="0088",
+            document_id="INV-1",
+        )
+    assert "required" in str(exc.value).lower() or "invalid" in str(exc.value).lower()
+
