@@ -105,7 +105,7 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 - **Invoice Status Tracking** — Monitor draft, sent, paid, and overdue invoices
 - **Recurring Invoices** — Automate regular billing cycles
 - **Email Integration** — Send invoices directly to clients from the platform
-- **Peppol & ZugFerd e-Invoicing (EN 16931)** — Send invoices via Peppol; optionally embed EN 16931 XML in invoice PDFs (ZugFerd/Factur-X) for hybrid human- and machine-readable invoices ([setup guide](docs/admin/configuration/PEPPOL_EINVOICING.md))
+- **Peppol & ZugFerd e-Invoicing (EN 16931)** — Send invoices via Peppol (generic HTTP AP or native SML/SMP + AS4); embed EN 16931 XML in invoice PDFs (ZugFerd/Factur-X); optional PDF/A-3 normalization and veraPDF validation ([setup guide](docs/admin/configuration/PEPPOL_EINVOICING.md))
 
 #### 📋 **Advanced Task Management**
 - **Full Task System** — Create, assign, and track tasks with priorities and due dates
@@ -235,7 +235,7 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 - **Recurring Invoices** — Automate recurring billing
 - **Multi-Currency** — Support for multiple currencies with conversion
 - **Invoice Email** — Send invoices directly to clients
-- **Peppol & ZugFerd e-Invoicing (EN 16931)** — Send invoices via Peppol; optionally embed EN 16931 XML in PDFs (ZugFerd/Factur-X) ([Setup Guide](docs/admin/configuration/PEPPOL_EINVOICING.md))
+- **Peppol & ZugFerd e-Invoicing (EN 16931)** — Send via Peppol (generic or native); embed EN 16931 XML in PDFs (ZugFerd/Factur-X); optional PDF/A-3 and veraPDF ([Setup Guide](docs/admin/configuration/PEPPOL_EINVOICING.md))
 
 ### 💰 **Financial Management**
 - **Expense Tracking** — Track business expenses with receipts and categories ([Guide](docs/EXPENSE_TRACKING.md))

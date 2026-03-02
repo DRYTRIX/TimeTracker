@@ -181,7 +181,7 @@
         </a>
         {% if current_user.is_authenticated and (not settings or not getattr(settings, 'donate_ui_hidden', false)) and current_user.ui_show_donate %}
         <a href="{{ url_for('main.donate') }}" class="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-md hover:shadow-lg transition-all">
-            <i class="fas fa-heart mr-2"></i>{{ _('Support Development') }}
+            <i class="fas fa-heart mr-2"></i>{{ _('Support updates') }}
         </a>
         {% endif %}
     </div>
@@ -198,19 +198,19 @@
                     {{ _('Support TimeTracker Development') }}
                 </h3>
                 <p class="text-sm text-amber-800 dark:text-amber-200 mb-4">
-                    {{ _('TimeTracker is free and open-source. Your support helps fund server costs, new features, security updates, and keeps the project alive. Every contribution makes a difference!') }}
+                    {{ _('TimeTracker is free and open-source. Support updates and new features — or remove prompts with a one-time key.') }}
                 </p>
                 <div class="flex flex-wrap gap-2">
                     <a href="{{ url_for('main.donate') }}" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors">
-                        <i class="fas fa-info-circle mr-2"></i>{{ _('Learn More') }}
+                        <i class="fas fa-info-circle mr-2"></i>{{ _('Support / Get key') }}
                     </a>
                     <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=about_page&utm_campaign=support" target="_blank" rel="noopener" onclick="trackDonationClick('about_page')" class="px-4 py-2 bg-white hover:bg-amber-50 text-amber-600 rounded-lg font-medium transition-colors border border-amber-600">
-                        <i class="fas fa-mug-saucer mr-2"></i>{{ _('Donate Now') }}
+                        <i class="fas fa-mug-saucer mr-2"></i>{{ _('Donate') }}
                     </a>
                 </div>
                 <p class="mt-3 text-xs text-amber-700 dark:text-amber-300">
-                    {{ _('Admins can purchase a key to hide support prompts for this instance.') }}
-                    <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="underline hover:no-underline">{{ _('Purchase a key') }}</a>.
+                    {{ _('Remove prompts with a one-time key.') }}
+                    <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="underline hover:no-underline">{{ _('Get key') }}</a>
                 </p>
             </div>
         </div>

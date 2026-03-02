@@ -7,11 +7,11 @@ from app import db
 from app.models import InvoicePeppolTransmission, Settings
 from app.utils.db import safe_commit
 
-from app.integrations.peppol import (
-    PeppolParty,
-    build_peppol_ubl_invoice_xml,
-    peppol_enabled,
-    send_ubl_via_access_point,
+from app.integrations.peppol import PeppolParty, build_peppol_ubl_invoice_xml, peppol_enabled
+from app.integrations.peppol_transport import (
+    GenericTransport,
+    NativePeppolTransport,
+    PeppolTransportError,
 )
 
 
@@ -107,27 +107,35 @@ class PeppolService:
 
         try:
             settings = Settings.get_settings()
-            ap_url = (getattr(settings, "peppol_access_point_url", "") or os.getenv("PEPPOL_ACCESS_POINT_URL") or "").strip()
-            ap_token_raw = getattr(settings, "peppol_access_point_token", None)
-            ap_token = (ap_token_raw or "").strip() if ap_token_raw is not None else (os.getenv("PEPPOL_ACCESS_POINT_TOKEN") or "").strip()
-            try:
-                ap_timeout = int(getattr(settings, "peppol_access_point_timeout", 0) or 0) or None
-            except Exception:
-                ap_timeout = None
+            transport_mode = (getattr(settings, "peppol_transport_mode", None) or os.getenv("PEPPOL_TRANSPORT_MODE") or "generic").strip().lower()
+            if transport_mode == "native":
+                sml_url = (getattr(settings, "peppol_sml_url", "") or os.getenv("PEPPOL_SML_URL") or "").strip() or None
+                cert_path = (getattr(settings, "peppol_native_cert_path", "") or os.getenv("PEPPOL_NATIVE_CERT_PATH") or "").strip() or None
+                key_path = (getattr(settings, "peppol_native_key_path", "") or os.getenv("PEPPOL_NATIVE_KEY_PATH") or "").strip() or None
+                try:
+                    ap_timeout = int(getattr(settings, "peppol_access_point_timeout", 0) or 0) or 60
+                except Exception:
+                    ap_timeout = 60
+                transport = NativePeppolTransport(sml_url=sml_url, timeout_s=float(ap_timeout), cert_path=cert_path, key_path=key_path)
+            else:
+                ap_url = (getattr(settings, "peppol_access_point_url", "") or os.getenv("PEPPOL_ACCESS_POINT_URL") or "").strip()
+                ap_token_raw = getattr(settings, "peppol_access_point_token", None)
+                ap_token = (ap_token_raw or "").strip() if ap_token_raw is not None else (os.getenv("PEPPOL_ACCESS_POINT_TOKEN") or "").strip()
+                try:
+                    ap_timeout = int(getattr(settings, "peppol_access_point_timeout", 0) or 0) or 30
+                except Exception:
+                    ap_timeout = 30
+                transport = GenericTransport(access_point_url=ap_url, access_point_token=ap_token or None, timeout_s=float(ap_timeout))
 
-            resp = send_ubl_via_access_point(
+            resp = transport.send(
                 ubl_xml=ubl_xml,
                 recipient_endpoint_id=recipient_endpoint_id,
                 recipient_scheme_id=recipient_scheme_id,
                 sender_endpoint_id=sender.endpoint_id,
                 sender_scheme_id=sender.endpoint_scheme_id,
                 document_id=tx.document_id,
-                access_point_url=ap_url or None,
-                access_point_token=ap_token,
-                access_point_timeout_s=float(ap_timeout) if ap_timeout is not None else None,
             )
 
-            # Try to extract a message id in a flexible way
             message_id = None
             data = (resp or {}).get("data") or {}
             if isinstance(data, dict):
@@ -138,6 +146,11 @@ class PeppolService:
                 return True, tx, "Sent via Peppol, but failed to persist send status"
 
             return True, tx, "Invoice sent via Peppol"
+        except PeppolTransportError as e:
+            tx.mark_failed(str(e))
+            safe_commit("peppol_mark_failed", {"invoice_id": invoice.id, "tx_id": tx.id})
+            current_app.logger.exception("Peppol send failed")
+            return False, tx, f"Peppol send failed: {e}"
         except Exception as e:
             tx.mark_failed(str(e))
             safe_commit("peppol_mark_failed", {"invoice_id": invoice.id, "tx_id": tx.id})

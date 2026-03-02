@@ -1116,10 +1116,10 @@ def export_invoice_pdf(invoice_id):
     invoice = Invoice.query.get_or_404(invoice_id)
     # Eager-load line item relationships so PDF generator has items, extra_goods, and expenses in session
     # (Invoice uses lazy="dynamic" so joinedload isn't applicable; trigger loads explicitly)
-    _ = invoice.items.all() if hasattr(invoice.items, "all") else list(invoice.items) if invoice.items else []
-    _ = invoice.extra_goods.all() if hasattr(invoice.extra_goods, "all") else list(invoice.extra_goods) if invoice.extra_goods else []
+    _eager = invoice.items.all() if hasattr(invoice.items, "all") else list(invoice.items) if invoice.items else []
+    _eager = invoice.extra_goods.all() if hasattr(invoice.extra_goods, "all") else list(invoice.extra_goods) if invoice.extra_goods else []
     if hasattr(invoice, "expenses"):
-        _ = invoice.expenses.all() if hasattr(invoice.expenses, "all") else list(invoice.expenses) if invoice.expenses else []
+        _eager = invoice.expenses.all() if hasattr(invoice.expenses, "all") else list(invoice.expenses) if invoice.expenses else []
     current_app.logger.info(f"[PDF_EXPORT] Invoice found: {invoice.invoice_number}, Status: {invoice.status}")
 
     if not current_user.is_admin and invoice.created_by != current_user.id:
@@ -1149,13 +1149,38 @@ def export_invoice_pdf(invoice_id):
         pdf_generator = InvoicePDFGenerator(invoice, settings=settings, page_size=page_size)
         current_app.logger.info(f"[PDF_EXPORT] Starting PDF generation - PageSize: '{page_size}', InvoiceID: {invoice_id}")
         pdf_bytes = pdf_generator.generate_pdf()
-        # Optionally embed ZugFerd/Factur-X EN 16931 XML in PDF
+        # Optionally embed ZugFerd/Factur-X EN 16931 XML in PDF (strict: fail export if embed fails)
         if getattr(settings, "invoices_zugferd_pdf", False):
             from app.utils.zugferd import embed_zugferd_xml_in_pdf
             pdf_bytes, embed_err = embed_zugferd_xml_in_pdf(pdf_bytes, invoice, settings)
             if embed_err:
-                current_app.logger.warning(f"[PDF_EXPORT] ZugFerd embed skipped - InvoiceID: {invoice_id}, Error: {embed_err}")
+                current_app.logger.warning(f"[PDF_EXPORT] ZugFerd embed failed - InvoiceID: {invoice_id}, Error: {embed_err}")
+                flash(
+                    _("ZUGFeRD embedding is enabled but failed: %(err)s. Export aborted so the PDF does not ship without embedded XML.", err=embed_err),
+                    "error",
+                )
+                return redirect(request.referrer or url_for("invoices.view_invoice", invoice_id=invoice.id))
+            if getattr(settings, "invoices_pdfa3_compliant", False):
+                from app.utils.pdfa3 import convert_to_pdfa3
+                pdf_bytes, pdfa_err = convert_to_pdfa3(pdf_bytes)
+                if pdfa_err:
+                    current_app.logger.warning(f"[PDF_EXPORT] PDF/A-3 conversion failed - InvoiceID: {invoice_id}, Error: {pdfa_err}")
+                    flash(
+                        _("PDF/A-3 normalization failed: %(err)s. Export aborted.", err=pdfa_err),
+                        "error",
+                    )
+                    return redirect(request.referrer or url_for("invoices.view_invoice", invoice_id=invoice.id))
         pdf_size_bytes = len(pdf_bytes)
+        # Optional: run veraPDF and surface summary (does not block)
+        if getattr(settings, "invoices_validate_export", False):
+            verapdf_path = (getattr(settings, "invoices_verapdf_path", "") or "").strip()
+            if verapdf_path:
+                from app.utils.invoice_validators import validate_pdfa_verapdf
+                passed, msgs = validate_pdfa_verapdf(pdf_bytes, verapdf_path=verapdf_path)
+                if not passed and msgs:
+                    flash(_("veraPDF validation reported issues: %(summary)s", summary="; ".join(msgs[:3])), "warning")
+                elif passed and msgs:
+                    flash(_("veraPDF: %(summary)s", summary=msgs[0] if msgs else "check completed"), "info")
         current_app.logger.info(f"[PDF_EXPORT] PDF generation completed successfully - PageSize: '{page_size}', InvoiceID: {invoice_id}, PDFSize: {pdf_size_bytes} bytes")
         # Filename should be template+date+number (invoice number format)
         filename = f"{invoice.invoice_number}.pdf"
@@ -1176,7 +1201,18 @@ def export_invoice_pdf(invoice_id):
                 from app.utils.zugferd import embed_zugferd_xml_in_pdf
                 pdf_bytes, embed_err = embed_zugferd_xml_in_pdf(pdf_bytes, invoice, settings)
                 if embed_err:
-                    current_app.logger.warning(f"[PDF_EXPORT] ZugFerd embed skipped (fallback path) - InvoiceID: {invoice_id}, Error: {embed_err}")
+                    current_app.logger.warning(f"[PDF_EXPORT] ZugFerd embed failed (fallback path) - InvoiceID: {invoice_id}, Error: {embed_err}")
+                    flash(
+                        _("ZUGFeRD embedding is enabled but failed: %(err)s. Export aborted.", err=embed_err),
+                        "error",
+                    )
+                    return redirect(request.referrer or url_for("invoices.view_invoice", invoice_id=invoice.id))
+                if getattr(settings, "invoices_pdfa3_compliant", False):
+                    from app.utils.pdfa3 import convert_to_pdfa3
+                    pdf_bytes, pdfa_err = convert_to_pdfa3(pdf_bytes)
+                    if pdfa_err:
+                        flash(_("PDF/A-3 normalization failed: %(err)s. Export aborted.", err=pdfa_err), "error")
+                        return redirect(request.referrer or url_for("invoices.view_invoice", invoice_id=invoice.id))
             pdf_size_bytes = len(pdf_bytes)
             current_app.logger.info(f"[PDF_EXPORT] Fallback PDF generated successfully - PageSize: '{page_size}', InvoiceID: {invoice_id}, PDFSize: {pdf_size_bytes} bytes")
             # Filename should be template+date+number (invoice number format)

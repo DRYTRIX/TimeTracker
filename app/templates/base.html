@@ -954,7 +954,7 @@
                     </li>
                     {% if current_user.is_authenticated and (not settings or not getattr(settings, 'donate_ui_hidden', false)) and current_user.ui_show_donate %}
                     <li class="mt-2">
-                        <a href="{{ url_for('main.donate') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg {% if ep == 'main.donate' %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30{% endif %} transition-all duration-200 group" title="{{ _('Support development — or purchase a key to hide this') }}">
+                        <a href="{{ url_for('main.donate') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg {% if ep == 'main.donate' %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30{% endif %} transition-all duration-200 group" title="{{ _('Support updates — or remove prompts with a key') }}">
                             <i class="fas fa-mug-saucer w-6 text-center group-hover:scale-110 transition-transform"></i>
                             <span class="ml-3 sidebar-label font-medium">{{ _('Support Development') }}</span>
                             <span class="ml-auto text-xs opacity-70">☕</span>
@@ -1003,9 +1003,9 @@
                        rel="noopener noreferrer"
                        onclick="trackDonationClick('header')"
                        class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30 transition-all duration-200 text-sm font-medium"
-                       title="{{ _('Support development (key available to hide this)') }}">
+                       title="{{ _('Support updates — or get key to remove prompts') }}">
                         <i class="fas fa-mug-saucer"></i>
-                        <span class="hidden lg:inline">{{ _('Support') }}</span>
+                        <span class="hidden lg:inline">{{ _('Support updates') }}</span>
                     </a>
                     {% endif %}
                     <div class="relative z-50" id="theme-dropdown-container">
@@ -1091,7 +1091,7 @@
                             </li>
                             <li><a href="{{ url_for('auth.profile') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-user w-4"></i> {{ _('My Profile') }}</a></li>
                             <li><a href="{{ url_for('user.settings') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-cog w-4"></i> {{ _('My Settings') }}</a></li>
-                            {% if (not settings or not getattr(settings, 'donate_ui_hidden', false)) and current_user.ui_show_donate %}<li><a href="{{ url_for('main.donate') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-mug-saucer w-4"></i> {{ _('Support Development') }}</a></li>{% endif %}
+                            {% if (not settings or not getattr(settings, 'donate_ui_hidden', false)) and current_user.ui_show_donate %}<li><a href="{{ url_for('main.donate') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-mug-saucer w-4"></i> {{ _('Support updates') }}</a></li>{% endif %}
                             <li class="border-t border-border-light dark:border-border-dark"><a href="{{ url_for('auth.logout') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-sign-out-alt w-4"></i> {{ _('Logout') }}</a></li>
                         </ul>
                     </div>
@@ -1129,14 +1129,14 @@
                                 {{ _('Enjoying TimeTracker?') }}
                             </p>
                             <p class="text-xs text-amber-700 dark:text-amber-300" id="bannerMessage">
-                                {{ _('Your support helps fund server costs and new features') }} ☕
+                                {{ _('Support updates and new features — or remove prompts with a key') }} ☕
                             </p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 flex-wrap">
                         <a href="{{ url_for('main.donate') }}" 
                            class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors">
-                            {{ _('Learn More') }}
+                            {{ _('Support / Get key') }}
                         </a>
                         <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=banner&utm_campaign=support" 
                            target="_blank" 
@@ -1152,8 +1152,8 @@
                            class="px-3 py-1.5 text-white text-sm font-medium rounded-lg transition-colors border border-blue-600 hover:opacity-90" style="background: linear-gradient(to right, #0070ba, #003087);">
                             <i class="fab fa-paypal mr-1"></i>{{ _('PayPal') }}
                         </a>
-                        <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="text-xs text-amber-700 dark:text-amber-300 hover:underline self-center">
-                            {{ _('Purchase key to hide') }}
+                        <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" onclick="trackDonationClick('banner_key')" class="text-xs text-amber-700 dark:text-amber-300 hover:underline self-center">
+                            {{ _('Remove prompts with key') }}
                         </a>
                         <button onclick="dismissSupportBanner()" 
                                 class="p-1.5 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded transition-colors"
@@ -2243,10 +2243,20 @@
             }
         }
         
+function trackBannerImpression(source) {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+            fetch('{{ url_for("main.track_support_impression") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                credentials: 'same-origin',
+                body: JSON.stringify({ source: source || 'banner', variant: window.supportAbVariant || 'control' })
+            }).catch(function() {});
+        }
+
         function trackBannerDismissal() {
             // Get CSRF token from meta tag
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-            
+
             fetch('{{ url_for("main.track_banner_dismissal") }}', {
                 method: 'POST',
                 headers: {
@@ -2254,7 +2264,7 @@
                     'X-CSRFToken': csrfToken
                 },
                 credentials: 'same-origin',
-                body: JSON.stringify({})
+                body: JSON.stringify({ variant: window.supportAbVariant || 'control' })
             }).catch(() => {
                 // Silently fail if tracking doesn't work
             });
@@ -2323,26 +2333,27 @@
             // Smart messaging based on milestones
             if (totalHours >= 100) {
                 bannerTitle.textContent = '{{ _("Amazing! You\'ve tracked over 100 hours") }}';
-                bannerMessage.textContent = '{{ _("Your support helps us keep TimeTracker free and improving") }} ☕';
+                bannerMessage.textContent = '{{ _("Support updates and new features — or remove prompts with a key") }} ☕';
             } else if (timeEntriesCount >= 50) {
                 bannerTitle.textContent = '{{ _("Great progress! You\'ve logged 50+ entries") }}';
-                bannerMessage.textContent = '{{ _("Help us continue developing features you love") }} ☕';
+                bannerMessage.textContent = '{{ _("Support updates and new features — or remove prompts with a key") }} ☕';
             } else if (daysSinceSignup >= 7) {
                 bannerTitle.textContent = '{{ _("Thanks for using TimeTracker!") }}';
-                bannerMessage.textContent = '{{ _("Your support helps fund server costs and new features") }} ☕';
+                bannerMessage.textContent = '{{ _("Support updates and new features — or remove prompts with a key") }} ☕';
             } else {
-                // Default message
                 bannerTitle.textContent = '{{ _("Enjoying TimeTracker?") }}';
-                bannerMessage.textContent = '{{ _("Your support helps fund server costs and new features") }} ☕';
+                bannerMessage.textContent = '{{ _("Support updates and new features — or remove prompts with a key") }} ☕';
             }
         }
         
-        // Show support banner if conditions are met
+// Show support banner if conditions are met
         // Check immediately to reserve space and prevent layout shift
         (function() {
             const banner = document.getElementById('supportBanner');
             if (!banner) return;
-            
+            // Server-side suppression: don't show if user clicked a support CTA in last 30 days
+            if ({{ 'true' if support_banner_suppressed else 'false' }}) { return; }
+
             if (shouldShowSupportBanner()) {
                 // Update banner message based on user stats
                 updateBannerMessage();
@@ -2356,6 +2367,11 @@
                 setTimeout(() => {
                     banner.classList.remove('opacity-0', 'invisible');
                     banner.classList.add('opacity-100', 'visible');
+                    // Track banner impression once per page load (for funnel metrics)
+                    if (!window._supportBannerImpressionTracked) {
+                        window._supportBannerImpressionTracked = true;
+                        trackBannerImpression('banner');
+                    }
                 }, 2000); // Show after 2 seconds
             } else {
                 // Keep it hidden and collapsed - no space reserved
@@ -2388,26 +2404,18 @@
     {% endif %}
     
     
-    <!-- Global donation tracking function -->
+<!-- Global donation tracking and A/B variant -->
     <script>
+        window.supportAbVariant = {{ (support_ab_variant or 'control')|tojson }};
         function trackDonationClick(source) {
             {% if current_user.is_authenticated %}
-            // Get CSRF token from meta tag
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-            
             fetch('{{ url_for("main.track_donation_click") }}', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
-                },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
                 credentials: 'same-origin',
-                body: JSON.stringify({
-                    source: source
-                })
-            }).catch(() => {
-                // Silently fail if tracking doesn't work
-            });
+                body: JSON.stringify({ source: source, variant: window.supportAbVariant || 'control' })
+            }).catch(function() {});
             {% endif %}
         }
     </script>

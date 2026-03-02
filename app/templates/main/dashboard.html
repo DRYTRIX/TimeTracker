@@ -479,7 +479,7 @@
             </div>
             <div class="mb-4">
                 <p class="text-sm opacity-90 mb-4">
-                    {{ _('Your support helps fund server costs, new features, and keeps TimeTracker free for everyone.') }}
+                    {{ _('Support updates and new features. One-time key removes prompts for this instance.') }}
                 </p>
                 {% if time_entries_count > 0 or total_hours > 0 %}
                 <div class="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/10 mb-4">
@@ -504,7 +504,7 @@
                 <a href="{{ url_for('main.donate') }}" 
                    class="inline-flex items-center justify-center flex-1 bg-white text-amber-600 px-4 py-3 rounded-lg font-semibold hover:bg-amber-50 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
                     <i class="fas fa-heart mr-2"></i>
-                    {{ _('Learn More') }}
+                    {{ _('Support / Get key') }}
                 </a>
                 <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=dashboard&utm_campaign=support" 
                    target="_blank" 
@@ -512,13 +512,13 @@
                    onclick="trackDonationClick('dashboard_widget')"
                    class="inline-flex items-center justify-center flex-1 bg-amber-700 hover:bg-amber-800 text-white px-4 py-3 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
                     <i class="fas fa-mug-saucer mr-2"></i>
-                    {{ _('Donate Now') }}
+                    {{ _('Donate') }}
                     <i class="fas fa-external-link-alt ml-2 text-xs"></i>
                 </a>
             </div>
             <p class="mt-3 text-xs opacity-90">
-                {{ _('You can hide this with a one-time key.') }}
-                <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="underline hover:no-underline font-medium">{{ _('Get key') }}</a>
+                {{ _('Remove prompts with a one-time key.') }}
+                <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" onclick="trackDonationClick('dashboard_widget_key')" class="underline hover:no-underline font-medium">{{ _('Get key') }}</a>
             </p>
         </div>
         {% endif %}

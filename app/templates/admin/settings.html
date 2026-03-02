@@ -141,24 +141,29 @@
             <div class="border-b border-border-light dark:border-border-dark pb-6" id="donateVisibilitySection">
                 <h2 class="text-lg font-semibold mb-4"><i class="fas fa-eye-slash mr-2"></i>{{ _('Support visibility') }}</h2>
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
-                    {{ _('Hide donate and support UI for all users by entering a code. Get your code by purchasing a key at the link below (one key per instance).') }}
+                    {{ _('Remove donate and support prompts for all users with a one-time key (€25, one key per instance).') }}
                 </p>
+                <ol class="list-decimal list-inside space-y-2 mb-4 text-sm text-text-light dark:text-text-dark">
+                    <li>{{ _('Copy your System ID below and use it when buying the key.') }}</li>
+                    <li><a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline">{{ _('Buy key') }} <i class="fas fa-external-link-alt text-xs"></i></a> {{ _('— key sent by email.') }}</li>
+                    <li>{{ _('Paste the code below and click Verify.') }}</li>
+                </ol>
                 <p class="mb-4">
                     <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition">
-                        <i class="fas fa-key mr-1"></i>{{ _('Get key at Support & Purchase') }}
+                        <i class="fas fa-key mr-1"></i>{{ _('Get key') }}
                         <i class="fas fa-external-link-alt text-xs"></i>
                     </a>
                 </p>
                 {% if system_instance_id %}
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('System ID') }}</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Step 1: System ID') }}</label>
                     <div class="flex items-center gap-2">
                         <input type="text" id="adminSystemInstanceId" value="{{ system_instance_id }}" readonly class="flex-1 form-input font-mono text-sm bg-gray-100 dark:bg-gray-700">
                         <button type="button" onclick="copyAdminSystemId(this)" class="px-3 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded-md text-sm font-medium transition">
                             <i class="fas fa-copy mr-1"></i>{{ _('Copy') }}
                         </button>
                     </div>
-                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Use this ID when requesting your key at the support page above.') }}</p>
+                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Use this ID when purchasing your key.') }}</p>
                 </div>
                 {% endif %}
                 {% if settings.donate_ui_hidden %}
@@ -170,8 +175,8 @@
                 {% else %}
                 <div class="flex flex-wrap items-end gap-2">
                     <div class="flex-1 min-w-[200px]">
-                        <label for="adminDonateHideCode" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Code') }}</label>
-                        <input type="text" id="adminDonateHideCode" placeholder="{{ _('Enter code') }}" class="form-input w-full">
+                        <label for="adminDonateHideCode" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Step 3: Paste code') }}</label>
+                        <input type="text" id="adminDonateHideCode" placeholder="{{ _('Enter code from email') }}" class="form-input w-full">
                     </div>
                     <button type="button" id="adminVerifyDonateHideCodeBtn" onclick="verifyAdminDonateHideCode()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition">
                         {{ _('Verify and hide for everyone') }}
@@ -276,6 +281,28 @@
                             </p>
                         </div>
                     </div>
+                    <div class="md:col-span-2 flex items-start">
+                        <input type="checkbox" name="invoices_pdfa3_compliant" id="invoices_pdfa3_compliant" {% if getattr(settings, 'invoices_pdfa3_compliant', false) %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 mt-1">
+                        <div class="ml-2">
+                            <label for="invoices_pdfa3_compliant" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Normalize ZUGFeRD PDFs to PDF/A-3</label>
+                            <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                                When enabled with ZUGFeRD embedding, exported PDFs are normalized to PDF/A-3 (XMP identification and output intent) for veraPDF and other validators.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2 flex items-start">
+                        <input type="checkbox" name="invoices_validate_export" id="invoices_validate_export" {% if getattr(settings, 'invoices_validate_export', false) %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 mt-1">
+                        <div class="ml-2">
+                            <label for="invoices_validate_export" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Run veraPDF after export (optional)</label>
+                            <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                                When enabled, runs veraPDF on exported ZUGFeRD PDFs and shows a summary. Does not block download. Set path below.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="invoices_verapdf_path" class="block text-sm font-medium text-gray-700 dark:text-gray-300">veraPDF executable path</label>
+                        <input type="text" name="invoices_verapdf_path" id="invoices_verapdf_path" value="{{ getattr(settings, 'invoices_verapdf_path', '') or '' }}" class="form-input" placeholder="e.g. /usr/bin/verapdf or C:\verapdf\verapdf.exe">
+                    </div>
 
                     <div>
                         <label for="peppol_sender_endpoint_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Sender Endpoint ID</label>
@@ -293,9 +320,32 @@
                         <label for="peppol_provider" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Provider label</label>
                         <input type="text" name="peppol_provider" id="peppol_provider" value="{{ settings.peppol_provider or 'generic' }}" class="form-input">
                     </div>
-
                     <div class="md:col-span-2">
-                        <label for="peppol_access_point_url" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Access Point URL</label>
+                        <label for="peppol_transport_mode" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Transport mode</label>
+                        <select name="peppol_transport_mode" id="peppol_transport_mode" class="form-input">
+                            <option value="generic" {% if (getattr(settings, 'peppol_transport_mode', '') or 'generic') == 'generic' %}selected{% endif %}>Generic (HTTP JSON access point)</option>
+                            <option value="native" {% if getattr(settings, 'peppol_transport_mode', '') == 'native' %}selected{% endif %}>Native (SML/SMP + AS4)</option>
+                        </select>
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            Generic: use your access point adapter URL. Native: discover recipient via SML/SMP and send AS4 message.
+                        </p>
+                    </div>
+                    <div id="peppol_native_fields" class="md:col-span-2 space-y-4 {% if getattr(settings, 'peppol_transport_mode', '') != 'native' %}hidden{% endif %}">
+                        <div>
+                            <label for="peppol_sml_url" class="block text-sm font-medium text-gray-700 dark:text-gray-300">SML URL (required for native)</label>
+                            <input type="text" name="peppol_sml_url" id="peppol_sml_url" value="{{ getattr(settings, 'peppol_sml_url', '') or '' }}" class="form-input" placeholder="https://edelivery.tech.ec.europa.eu/edelivery-sml">
+                        </div>
+                        <div>
+                            <label for="peppol_native_cert_path" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client certificate path (optional)</label>
+                            <input type="text" name="peppol_native_cert_path" id="peppol_native_cert_path" value="{{ getattr(settings, 'peppol_native_cert_path', '') or '' }}" class="form-input" placeholder="/path/to/cert.pem">
+                        </div>
+                        <div>
+                            <label for="peppol_native_key_path" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client key path (optional)</label>
+                            <input type="text" name="peppol_native_key_path" id="peppol_native_key_path" value="{{ getattr(settings, 'peppol_native_key_path', '') or '' }}" class="form-input" placeholder="/path/to/key.pem">
+                        </div>
+                    </div>
+                    <div class="md:col-span-2 peppol-generic-url">
+                        <label for="peppol_access_point_url" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Access Point URL (generic mode)</label>
                         <input type="text" name="peppol_access_point_url" id="peppol_access_point_url" value="{{ settings.peppol_access_point_url or '' }}" class="form-input" placeholder="https://your-access-point-adapter.example.com/send">
                     </div>
                     <div>
@@ -604,6 +654,17 @@ document.addEventListener('DOMContentLoaded', function() {
         descCheck.addEventListener('change', function() {
             minLenRow.classList.toggle('hidden', !descCheck.checked);
         });
+    }
+
+    const transportMode = document.getElementById('peppol_transport_mode');
+    const nativeFields = document.getElementById('peppol_native_fields');
+    if (transportMode && nativeFields) {
+        function togglePeppolTransport() {
+            const isNative = transportMode.value === 'native';
+            nativeFields.classList.toggle('hidden', !isNative);
+        }
+        transportMode.addEventListener('change', togglePeppolTransport);
+        togglePeppolTransport();
     }
 });
 </script>
