@@ -33,6 +33,7 @@
                 <th class="p-4" data-sortable>Priority</th>
                 <th class="p-4" data-sortable>Status</th>
                 <th class="p-4 table-number" data-sortable>Due</th>
+                <th class="p-4 table-number" data-sortable>{{ _('Estimated') }}</th>
                 <th class="p-4 table-number" data-sortable>Progress</th>
                 <th class="p-4">Actions</th>
             </tr>
@@ -78,6 +79,13 @@
                     {% if task.due_date %}
                         {% set overdue = task.is_overdue %}
                         <span class="chip whitespace-nowrap {{ 'status-overdue' if overdue else 'chip-neutral' }}">{{ task.due_date|format_date }}</span>
+                    {% else %}
+                        <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
+                    {% endif %}
+                </td>
+                <td class="p-4 table-number">
+                    {% if task.estimated_hours %}
+                        {{ task.estimated_hours }} {{ _('h') }}
                     {% else %}
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}
