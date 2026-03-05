@@ -1291,10 +1291,11 @@
             let flyout;
 
             function applyCollapsed(isCollapsed){
-                // Toggle a class on the shell to let Tailwind width utilities react
+                // Toggle a class on the shell and documentElement (early script uses documentElement) so both stay in sync
                 const icon = document.getElementById('sidebarCollapseIcon');
                 if (isCollapsed){
                     appShell.classList.add('sidebar-collapsed');
+                    document.documentElement.classList.add('sidebar-collapsed');
                     sidebar.classList.add('w-16');
                     sidebar.classList.remove('w-64');
                     // Adjust main content margin for collapsed sidebar
@@ -1304,6 +1305,7 @@
                     icon && icon.classList.add('fa-angles-right');
                 } else {
                     appShell.classList.remove('sidebar-collapsed');
+                    document.documentElement.classList.remove('sidebar-collapsed');
                     sidebar.classList.remove('w-16');
                     sidebar.classList.add('w-64');
                     // Adjust main content margin for expanded sidebar
