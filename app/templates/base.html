@@ -1638,8 +1638,8 @@
                 flyout.appendChild(ul);
                 const rect = triggerBtn.getBoundingClientRect();
                 const sbRect = sidebar.getBoundingClientRect();
-                const left = sbRect.right + 8 + window.scrollX;
-                const top = rect.top + window.scrollY;
+                const left = sbRect.right + 8;
+                const top = rect.top;
                 flyout.style.left = left + 'px';
                 flyout.style.top = top + 'px';
                 flyout.classList.remove('hidden');
