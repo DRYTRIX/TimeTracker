@@ -183,6 +183,20 @@ class ApiClient {
     return response.data as Map<String, dynamic>;
   }
 
+  /// Get clients
+  Future<Map<String, dynamic>> getClients({
+    String? status,
+    int? page,
+    int? perPage,
+  }) async {
+    final queryParams = <String, dynamic>{};
+    if (status != null) queryParams['status'] = status;
+    if (page != null) queryParams['page'] = page;
+    if (perPage != null) queryParams['per_page'] = perPage;
+    final response = await _dio.get('/api/v1/clients', queryParameters: queryParams);
+    return response.data as Map<String, dynamic>;
+  }
+
   // ==================== Task Operations ====================
 
   /// Get tasks
@@ -205,6 +219,162 @@ class ApiClient {
   /// Get a specific task
   Future<Map<String, dynamic>> getTask(int taskId) async {
     final response = await _dio.get('/api/v1/tasks/$taskId');
+    return response.data as Map<String, dynamic>;
+  }
+
+  // ==================== Freelancer Cashflow Parity ====================
+
+  Future<Map<String, dynamic>> getInvoices({
+    String? status,
+    int? clientId,
+    int? projectId,
+    int? page,
+    int? perPage,
+  }) async {
+    final queryParams = <String, dynamic>{};
+    if (status != null) queryParams['status'] = status;
+    if (clientId != null) queryParams['client_id'] = clientId;
+    if (projectId != null) queryParams['project_id'] = projectId;
+    if (page != null) queryParams['page'] = page;
+    if (perPage != null) queryParams['per_page'] = perPage;
+    final response = await _dio.get('/api/v1/invoices', queryParameters: queryParams);
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getInvoice(int invoiceId) async {
+    final response = await _dio.get('/api/v1/invoices/$invoiceId');
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> createInvoice(Map<String, dynamic> data) async {
+    final response = await _dio.post('/api/v1/invoices', data: data);
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateInvoice(int invoiceId, Map<String, dynamic> data) async {
+    final response = await _dio.put('/api/v1/invoices/$invoiceId', data: data);
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getExpenses({
+    int? projectId,
+    String? category,
+    String? startDate,
+    String? endDate,
+    int? page,
+    int? perPage,
+  }) async {
+    final queryParams = <String, dynamic>{};
+    if (projectId != null) queryParams['project_id'] = projectId;
+    if (category != null) queryParams['category'] = category;
+    if (startDate != null) queryParams['start_date'] = startDate;
+    if (endDate != null) queryParams['end_date'] = endDate;
+    if (page != null) queryParams['page'] = page;
+    if (perPage != null) queryParams['per_page'] = perPage;
+    final response = await _dio.get('/api/v1/expenses', queryParameters: queryParams);
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> createExpense(Map<String, dynamic> data) async {
+    final response = await _dio.post('/api/v1/expenses', data: data);
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getCapacityReport({required String startDate, required String endDate}) async {
+    final response = await _dio.get(
+      '/api/v1/reports/capacity',
+      queryParameters: {
+        'start_date': startDate,
+        'end_date': endDate,
+      },
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getTimesheetPeriods({String? status, String? startDate, String? endDate}) async {
+    final queryParams = <String, dynamic>{};
+    if (status != null) queryParams['status'] = status;
+    if (startDate != null) queryParams['start_date'] = startDate;
+    if (endDate != null) queryParams['end_date'] = endDate;
+    final response = await _dio.get('/api/v1/timesheet-periods', queryParameters: queryParams);
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> submitTimesheetPeriod(int periodId) async {
+    final response = await _dio.post('/api/v1/timesheet-periods/$periodId/submit');
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> approveTimesheetPeriod(int periodId, {String? comment}) async {
+    final data = <String, dynamic>{};
+    if (comment != null && comment.trim().isNotEmpty) data['comment'] = comment.trim();
+    final response = await _dio.post('/api/v1/timesheet-periods/$periodId/approve', data: data);
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> rejectTimesheetPeriod(int periodId, {String? reason}) async {
+    final data = <String, dynamic>{};
+    if (reason != null && reason.trim().isNotEmpty) data['reason'] = reason.trim();
+    final response = await _dio.post('/api/v1/timesheet-periods/$periodId/reject', data: data);
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getLeaveTypes() async {
+    final response = await _dio.get('/api/v1/time-off/leave-types');
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getTimeOffRequests({
+    String? status,
+    String? startDate,
+    String? endDate,
+  }) async {
+    final queryParams = <String, dynamic>{};
+    if (status != null) queryParams['status'] = status;
+    if (startDate != null) queryParams['start_date'] = startDate;
+    if (endDate != null) queryParams['end_date'] = endDate;
+    final response = await _dio.get('/api/v1/time-off/requests', queryParameters: queryParams);
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> createTimeOffRequest({
+    required int leaveTypeId,
+    required String startDate,
+    required String endDate,
+    double? requestedHours,
+    String? comment,
+    bool submit = true,
+  }) async {
+    final data = <String, dynamic>{
+      'leave_type_id': leaveTypeId,
+      'start_date': startDate,
+      'end_date': endDate,
+      'submit': submit,
+    };
+    if (requestedHours != null) data['requested_hours'] = requestedHours;
+    if (comment != null && comment.trim().isNotEmpty) data['comment'] = comment.trim();
+    final response = await _dio.post('/api/v1/time-off/requests', data: data);
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getTimeOffBalances({int? userId}) async {
+    final queryParams = <String, dynamic>{};
+    if (userId != null) queryParams['user_id'] = userId;
+    final response = await _dio.get('/api/v1/time-off/balances', queryParameters: queryParams);
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> approveTimeOffRequest(int requestId, {String? comment}) async {
+    final data = <String, dynamic>{};
+    if (comment != null && comment.trim().isNotEmpty) data['comment'] = comment.trim();
+    final response = await _dio.post('/api/v1/time-off/requests/$requestId/approve', data: data);
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> rejectTimeOffRequest(int requestId, {String? comment}) async {
+    final data = <String, dynamic>{};
+    if (comment != null && comment.trim().isNotEmpty) data['comment'] = comment.trim();
+    final response = await _dio.post('/api/v1/time-off/requests/$requestId/reject', data: data);
     return response.data as Map<String, dynamic>;
   }
 }
