@@ -25,6 +25,15 @@ class TimeTrackingService:
         self.time_entry_repo = TimeEntryRepository()
         self.project_repo = ProjectRepository()
 
+    def _is_locked_period(self, user_id: int, start_time: datetime, end_time: Optional[datetime] = None) -> bool:
+        from app.services.workforce_governance_service import WorkforceGovernanceService
+
+        return WorkforceGovernanceService().is_time_entry_locked(
+            user_id=user_id,
+            start_time=start_time,
+            end_time=end_time,
+        )
+
     def start_timer(
         self,
         user_id: int,
@@ -62,6 +71,13 @@ class TimeTrackingService:
             dict with 'success', 'message', and 'timer' keys
         """
         # Check if user already has an active timer
+        if self._is_locked_period(user_id, local_now()):
+            return {
+                "success": False,
+                "message": "Timesheet period is closed for this date",
+                "error": "timesheet_period_locked",
+            }
+
         active_timer = self.time_entry_repo.get_active_timer(user_id)
         if active_timer:
             return {
@@ -244,6 +260,13 @@ class TimeTrackingService:
                 return err
 
         # Validate time range
+        if self._is_locked_period(user_id, start_time, end_time):
+            return {
+                "success": False,
+                "message": "Timesheet period is closed for the selected date range",
+                "error": "timesheet_period_locked",
+            }
+
         if end_time <= start_time:
             return {"success": False, "message": "End time must be after start time", "error": "invalid_time_range"}
 
@@ -379,6 +402,14 @@ class TimeTrackingService:
         # Check permissions
         if not is_admin and entry.user_id != user_id:
             return {"success": False, "message": "Access denied", "error": "access_denied"}
+
+        # Block non-admin edits in closed periods
+        if (not is_admin) and self._is_locked_period(entry.user_id, entry.start_time, entry.end_time or entry.start_time):
+            return {
+                "success": False,
+                "message": "Timesheet period is closed for this entry",
+                "error": "timesheet_period_locked",
+            }
 
         # Don't allow updating active entries to have end_time
         if entry.is_active and end_time is not None:
@@ -546,6 +577,14 @@ class TimeTrackingService:
         # Check permissions
         if not is_admin and entry.user_id != user_id:
             return {"success": False, "message": "Access denied", "error": "access_denied"}
+
+        # Block non-admin deletes in closed periods
+        if (not is_admin) and self._is_locked_period(entry.user_id, entry.start_time, entry.end_time or entry.start_time):
+            return {
+                "success": False,
+                "message": "Timesheet period is closed for this entry",
+                "error": "timesheet_period_locked",
+            }
 
         # Don't allow deletion of active entries
         if entry.is_active:
