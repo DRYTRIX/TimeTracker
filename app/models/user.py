@@ -266,9 +266,10 @@ class User(UserMixin, db.Model):
         else:
             return "offline"
 
-    def to_dict(self):
+    def to_dict(self, total_hours_override=None):
         """Convert user to dictionary for API responses.
         Includes resolved date_format and time_format (user override or system default) for clients (e.g. mobile).
+        total_hours_override: optional precomputed total hours (avoids N+1 when serializing many users).
         """
         from app.utils.timezone import (
             get_resolved_date_format_key,
@@ -284,6 +285,7 @@ class User(UserMixin, db.Model):
             resolved_date = "YYYY-MM-DD"
             resolved_time = "24h"
             resolved_timezone = "Europe/Rome"
+        total_hours = total_hours_override if total_hours_override is not None else self.total_hours
         return {
             "id": self.id,
             "username": self.username,
@@ -294,7 +296,7 @@ class User(UserMixin, db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "last_login": self.last_login.isoformat() if self.last_login else None,
             "is_active": self.is_active,
-            "total_hours": self.total_hours,
+            "total_hours": total_hours,
             "avatar_url": self.get_avatar_url(),
             "status": self.get_status(),
             "date_format": resolved_date,

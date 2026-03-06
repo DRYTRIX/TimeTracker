@@ -75,6 +75,9 @@ from .integration import Integration, IntegrationCredential, IntegrationEvent
 from .integration_external_event_link import IntegrationExternalEventLink
 from .workflow import WorkflowRule, WorkflowExecution
 from .time_entry_approval import TimeEntryApproval, ApprovalPolicy, ApprovalStatus
+from .timesheet_period import TimesheetPeriod, TimesheetPeriodStatus
+from .timesheet_policy import TimesheetPolicy
+from .time_off import LeaveType, TimeOffRequest, TimeOffRequestStatus, CompanyHoliday
 from .recurring_task import RecurringTask
 from .client_portal_customization import ClientPortalCustomization
 from .team_chat import ChatChannel, ChatMessage, ChatChannelMember, ChatReadReceipt
@@ -181,6 +184,13 @@ __all__ = [
     "TimeEntryApproval",
     "ApprovalPolicy",
     "ApprovalStatus",
+    "TimesheetPeriod",
+    "TimesheetPeriodStatus",
+    "TimesheetPolicy",
+    "LeaveType",
+    "TimeOffRequest",
+    "TimeOffRequestStatus",
+    "CompanyHoliday",
     "RecurringTask",
     "ClientPortalCustomization",
     "ChatChannel",
