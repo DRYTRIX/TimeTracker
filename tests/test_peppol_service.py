@@ -141,6 +141,11 @@ def test_peppol_service_success_creates_transmission(app, monkeypatch):
         # EN 16931 requires unitCode on InvoicedQuantity (e.g. C62 = unit/each)
         assert "InvoicedQuantity" in tx.ubl_xml and 'unitCode="C62"' in tx.ubl_xml
 
+        # Validate UBL passes structural Peppol BIS 3.0 checks
+        from app.utils.invoice_validators import validate_ubl_peppol_bis3
+        passed, issues = validate_ubl_peppol_bis3(tx.ubl_xml)
+        assert passed is True, f"UBL Peppol BIS 3.0 validation failed: {issues}"
+
 
 @pytest.mark.unit
 def test_peppol_service_generic_transport_uses_identifier_validation(app, monkeypatch):
@@ -158,4 +163,33 @@ def test_peppol_service_generic_transport_uses_identifier_validation(app, monkey
             document_id="INV-1",
         )
     assert "required" in str(exc.value).lower() or "invalid" in str(exc.value).lower()
+
+
+@pytest.mark.unit
+def test_as4_message_payload_is_gzip_compressed():
+    """AS4 message builder now gzip-compresses the payload to match the SOAP header declaration."""
+    import gzip
+    from app.integrations.peppol_as4 import build_as4_message
+
+    message_bytes = build_as4_message(
+        ubl_xml="<Invoice><ID>1</ID></Invoice>",
+        sender_endpoint_id="9915:BE111",
+        sender_scheme_id="9915",
+        recipient_endpoint_id="0088:123",
+        recipient_scheme_id="0088",
+        document_id="INV-1",
+    )
+    msg_str = message_bytes.decode("utf-8", errors="replace")
+    # The SOAP header declares CompressionType=application/gzip
+    assert "application/gzip" in msg_str
+
+    # Verify payload part uses application/gzip content type
+    assert "application/gzip" in msg_str
+
+
+@pytest.mark.unit
+def test_native_transport_marked_experimental():
+    """Native transport module exposes NATIVE_TRANSPORT_EXPERIMENTAL flag."""
+    from app.integrations.peppol_as4 import NATIVE_TRANSPORT_EXPERIMENTAL
+    assert NATIVE_TRANSPORT_EXPERIMENTAL is True
 

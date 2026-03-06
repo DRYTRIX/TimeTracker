@@ -1,8 +1,10 @@
 """
 PEPPOL SML/SMP participant discovery.
 
-Resolves recipient access point URL from the Service Metadata Locator (SML)
-and Service Metadata Provider (SMP) for native PEPPOL transport.
+EXPERIMENTAL: Resolves recipient access point URL from the Service Metadata
+Locator (SML) and Service Metadata Provider (SMP) for native PEPPOL
+transport. This implementation supports basic HTTP-based SML/SMP lookup
+only (no DNS-based NAPTR/SRV resolution, no DNSSEC verification).
 """
 
 from __future__ import annotations

@@ -1149,14 +1149,14 @@ def export_invoice_pdf(invoice_id):
         pdf_generator = InvoicePDFGenerator(invoice, settings=settings, page_size=page_size)
         current_app.logger.info(f"[PDF_EXPORT] Starting PDF generation - PageSize: '{page_size}', InvoiceID: {invoice_id}")
         pdf_bytes = pdf_generator.generate_pdf()
-        # Optionally embed ZugFerd/Factur-X EN 16931 XML in PDF (strict: fail export if embed fails)
+        # Optionally embed Factur-X CII XML in PDF (strict: fail export if embed fails)
         if getattr(settings, "invoices_zugferd_pdf", False):
             from app.utils.zugferd import embed_zugferd_xml_in_pdf
             pdf_bytes, embed_err = embed_zugferd_xml_in_pdf(pdf_bytes, invoice, settings)
             if embed_err:
-                current_app.logger.warning(f"[PDF_EXPORT] ZugFerd embed failed - InvoiceID: {invoice_id}, Error: {embed_err}")
+                current_app.logger.warning(f"[PDF_EXPORT] Factur-X embed failed - InvoiceID: {invoice_id}, Error: {embed_err}")
                 flash(
-                    _("ZUGFeRD embedding is enabled but failed: %(err)s. Export aborted so the PDF does not ship without embedded XML.", err=embed_err),
+                    _("Factur-X embedding is enabled but failed: %(err)s. Export aborted so the PDF does not ship without embedded XML.", err=embed_err),
                     "error",
                 )
                 return redirect(request.referrer or url_for("invoices.view_invoice", invoice_id=invoice.id))
@@ -1201,9 +1201,9 @@ def export_invoice_pdf(invoice_id):
                 from app.utils.zugferd import embed_zugferd_xml_in_pdf
                 pdf_bytes, embed_err = embed_zugferd_xml_in_pdf(pdf_bytes, invoice, settings)
                 if embed_err:
-                    current_app.logger.warning(f"[PDF_EXPORT] ZugFerd embed failed (fallback path) - InvoiceID: {invoice_id}, Error: {embed_err}")
+                    current_app.logger.warning(f"[PDF_EXPORT] Factur-X embed failed (fallback path) - InvoiceID: {invoice_id}, Error: {embed_err}")
                     flash(
-                        _("ZUGFeRD embedding is enabled but failed: %(err)s. Export aborted.", err=embed_err),
+                        _("Factur-X embedding is enabled but failed: %(err)s. Export aborted.", err=embed_err),
                         "error",
                     )
                     return redirect(request.referrer or url_for("invoices.view_invoice", invoice_id=invoice.id))
