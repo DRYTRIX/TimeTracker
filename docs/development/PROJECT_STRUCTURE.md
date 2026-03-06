@@ -7,13 +7,19 @@ This document provides an overview of the cleaned up TimeTracker project structu
 ```
 TimeTracker/
 ├── 📁 app/                    # Main Flask application
+│   ├── blueprint_registry.py  # Centralized blueprint registration
+│   ├── routes/                # Route blueprints (auth, api, tasks, workforce, etc.)
+│   ├── templates/            # Jinja2 HTML templates
+│   ├── models/                # SQLAlchemy models
+│   ├── services/              # Business logic layer
+│   └── utils/                 # Utilities (timezone, validation, etc.)
+├── 📁 desktop/                # Desktop app (Electron/Tauri-style wrapper, esbuild bundle)
+├── 📁 mobile/                 # Flutter mobile app
 ├── 📁 assets/                 # Static assets (images, screenshots)
 ├── 📁 docker/                 # Docker configuration files
-├── 📁 templates/              # Additional template files
 ├── 📁 tests/                  # Test suite
 ├── 📁 .github/                # GitHub workflows and configurations
 ├── 📁 logs/                   # Application logs (with .gitkeep)
-├── 🐳 Dockerfile              # Main Dockerfile
 ├── 🐳 Dockerfile              # Main Dockerfile
 ├── 📄 docker-compose.yml          # Local development compose
 ├── 📄 docker-compose.remote.yml   # Remote/production compose (ghcr.io)
@@ -49,31 +55,27 @@ TimeTracker/
 - `.pytest_cache/` - Python test cache directory
 
 ### Files Consolidated
-- **Dockerfiles**: Now only `Dockerfile` and `Dockerfile.simple`
-- **Docker Compose**: Now only `docker-compose.simple.yml` and `docker-compose.public.yml`
-- **Deployment**: Now only `deploy-public.bat` and `deploy-public.sh`
+- **Dockerfiles**: Primary `Dockerfile` at repo root; additional Dockerfiles in `docker/` as needed
+- **Docker Compose**: `docker-compose.yml` (local), `docker-compose.remote.yml`, `docker-compose.remote-dev.yml`
+- **Deployment**: `deploy-public.bat`, `deploy-public.sh`
 
 ## 🏗️ Core Components
 
 ### Application (`app/`)
+- **blueprint_registry.py**: Centralized registration of all route blueprints (reduces `__init__.py` size)
 - **Models**: Database models for users, projects, time entries, tasks, and settings
-- **Routes**: API endpoints and web routes including task management
-- **Templates**: Jinja2 HTML templates including task management views
-- **Utils**: Utility functions including timezone management
-- **Config**: Application configuration
+- **Routes**: API endpoints and web routes (auth, api, api_v1, tasks, admin, etc.)
+- **Templates**: Jinja2 HTML templates under `app/templates/` (task management, reports, timer, etc.)
+- **Utils**: Utility functions including timezone management, validation, cache
+- **Config**: Application configuration (`app/config.py`)
 
 ### Docker Configuration (`docker/`)
 - **Startup scripts**: Container initialization and database setup
 - **Database scripts**: SQL-based database initialization
 - **Configuration files**: Docker-specific configurations
 
-### Templates (`templates/`)
-- **Admin templates**: User management and system settings
-- **Error templates**: Error page templates
-- **Main templates**: Core application templates
-- **Project templates**: Project management templates
-- **Report templates**: Reporting and analytics templates
-- **Timer templates**: Time tracking interface templates
+### Templates (`app/templates/`)
+- All Jinja2 templates live under `app/templates/` (admin, main, projects, reports, tasks, timer, workforce, mileage, etc.)
 
 ### Assets (`assets/`)
 - **Screenshots**: Application screenshots for documentation
@@ -103,6 +105,16 @@ TimeTracker/
 - **TASK_MANAGEMENT_README.md**: Detailed Task Management feature documentation
 - **CONTRIBUTING.md**: How to contribute to the project
 - **CODE_OF_CONDUCT.md**: Community behavior guidelines
+
+## ✅ Workforce & Timesheet Governance
+
+Timesheet periods, policies, and time-off tracking for payroll and compliance:
+
+- **Models**: `TimesheetPeriod`, `TimesheetPolicy`, `TimeOff` (in `app/models/`)
+- **Routes**: `workforce` blueprint — dashboard, period close, policies, time-off
+- **Services**: `workforce_governance_service.py` — period close, policy checks, time-off logic
+- **Templates**: `app/templates/workforce/` (e.g. dashboard)
+- **Migration**: `132_add_timesheet_governance_and_time_off.py`
 
 ## ✅ Task Management Feature
 
@@ -143,6 +155,13 @@ The Task Management feature is fully integrated into the application with automa
 2. **Follow README.md**: Complete setup instructions
 3. **Use appropriate compose file**: `docker-compose.yml`, `docker-compose.remote.yml`, or `docker-compose.remote-dev.yml`
 4. **Configure timezone**: Access admin settings to set your local timezone
+
+## Versioning
+
+- **Canonical app version**: Defined in `setup.py` (`version='4.20.9'`). Use this as the single source of truth for the web app release.
+- **Desktop**: `desktop/package.json` version should align with the app version when the desktop client ships with that release.
+- **Frontend build**: Root `package.json` is for Tailwind/build tooling and may use a separate semver (e.g. 1.0.0).
+- **API docs**: OpenAPI info version in `app/routes/api_docs.py` can match the app version for consistency.
 
 ## 🔍 File Purposes
 

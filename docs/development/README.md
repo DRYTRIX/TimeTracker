@@ -22,6 +22,12 @@ Complete documentation for developers contributing to TimeTracker.
 ### Architecture
 - See [implementation-notes/](../implementation-notes/) for architecture decisions and notes
 
+### Frontend & Quality
+- **[Frontend Quality Gates](FRONTEND_QUALITY_GATES.md)** — Accessibility, performance, and modernization milestones (web, desktop, mobile)
+
+### Product & Roadmap
+- **[Competitive Analysis](../competitive-analysis/README.md)** — Gap analysis and phase PRDs (timesheet close, PTO, payroll exports, etc.)
+
 ## 📚 Related Documentation
 
 - **[Main Documentation Index](../README.md)** - Complete documentation overview
