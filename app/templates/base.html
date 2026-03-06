@@ -284,7 +284,7 @@
             </div>
             <nav class="flex-1">
                 {% set ep = request.endpoint or '' %}
-                {% set work_open = ep.startswith('projects.') or ep.startswith('tasks.') or ep.startswith('issues.') or ep.startswith('timer.') or ep.startswith('time_approvals.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') or ep.startswith('project_templates.') or ep.startswith('gantt.') %}
+                {% set work_open = ep.startswith('projects.') or ep.startswith('tasks.') or ep.startswith('issues.') or ep.startswith('timer.') or ep.startswith('time_approvals.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') or ep.startswith('project_templates.') or ep.startswith('gantt.') or ep.startswith('workforce.') %}
                 {% set calendar_open = ep.startswith('calendar.') %}
                 {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('recurring_invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('mileage.') or ep.startswith('per_diem.') or ep.startswith('budget_alerts.') or ep.startswith('invoice_approvals.') or ep.startswith('payment_gateways.') or ep.startswith('scheduled_reports.') or ep.startswith('custom_reports.') %}
                 {% set crm_open = ep.startswith('clients.') or ep.startswith('quotes.') or ep.startswith('contacts.') or ep.startswith('deals.') or ep.startswith('leads.') %}
@@ -353,6 +353,7 @@
                             {% set nav_active_templates = ep.startswith('time_entry_templates.') %}
                             {% set nav_active_goals = ep.startswith('weekly_goals.') %}
                             {% set nav_active_project_templates = ep.startswith('project_templates.') %}
+                            {% set nav_active_workforce = ep.startswith('workforce.') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_timer %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timer.manual_entry') }}">
                                     <i class="fas fa-clock w-4 mr-2"></i>{{ _('Log Time') }}
@@ -415,6 +416,11 @@
                                 </a>
                             </li>
                             {% endif %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_workforce %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('workforce.dashboard') }}">
+                                    <i class="fas fa-user-clock w-4 mr-2"></i>{{ _('Workforce') }}
+                                </a>
+                            </li>
                             {% if is_module_enabled('time_entry_templates') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_templates %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('time_entry_templates.list_templates') }}">
@@ -972,12 +978,12 @@
             </div>
         </aside>
 
-        <!-- Main content -->
-        <div id="mainContent" class="flex-1 flex flex-col min-h-screen transition-all duration-200 ease-in-out lg:ml-64">
+        <!-- Main content: pb for mobile bottom nav + safe-area -->
+        <div id="mainContent" class="flex-1 flex flex-col min-h-screen transition-all duration-200 ease-in-out lg:ml-64 lg:pb-0 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
             <!-- Header -->
             <header class="bg-card-light dark:bg-card-dark p-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
                 <!-- Mobile menu button -->
-                <button id="mobileSidebarBtn" class="lg:hidden" aria-label="Open sidebar">
+                <button id="mobileSidebarBtn" class="lg:hidden" aria-label="{{ _('Open sidebar') }}" type="button">
                     <i class="fas fa-bars"></i>
                 </button>
 
@@ -985,8 +991,8 @@
                 <div class="hidden sm:flex items-center gap-2">
                     <div class="w-96">
                         <form class="navbar-search" role="search" action="{{ url_for('main.search') }}" method="get" autocomplete="off">
-                            <label for="search" class="sr-only">{{ _('Search') }}</label>
-                            <input id="search" name="q" type="search" placeholder="{{ _('Search') }}" aria-label="{{ _('Search') }}" data-enhanced-search='{"endpoint": "/api/search", "minChars": 2, "maxResults": 10}' class="w-full bg-background-light dark:bg-gray-700 border border-transparent dark:border-transparent rounded-lg py-2 pl-10 pr-14 text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+                            <label for="header-search" class="sr-only">{{ _('Search') }}</label>
+                            <input id="header-search" name="q" type="search" placeholder="{{ _('Search') }}" aria-label="{{ _('Search') }}" data-enhanced-search='{"endpoint": "/api/search", "minChars": 2, "maxResults": 10}' class="w-full bg-background-light dark:bg-gray-700 border border-transparent dark:border-transparent rounded-lg py-2 pl-10 pr-14 text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
                         </form>
                     </div>
                     <button type="button" class="text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5" aria-label="Open command palette" onclick="window.openCommandPalette && window.openCommandPalette();">
@@ -1176,24 +1182,24 @@
         {% endif %}
 
         <!-- Mobile Bottom Navigation -->
-        <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark flex justify-around">
-            <a href="{{ url_for('main.dashboard') }}" class="flex flex-col items-center p-2 text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
-                <i class="fas fa-tachometer-alt"></i>
+        <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark flex justify-around pb-[env(safe-area-inset-bottom)]" role="navigation" aria-label="{{ _('Main') }}">
+            <a href="{{ url_for('main.dashboard') }}" class="flex flex-col items-center p-2 text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Dashboard') }}">
+                <i class="fas fa-tachometer-alt" aria-hidden="true"></i>
                 <span class="text-xs">{{ _('Dashboard') }}</span>
             </a>
-            <a href="{{ url_for('projects.list_projects') }}" class="flex flex-col items-center p-2 text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
-                <i class="fas fa-briefcase"></i>
+            <a href="{{ url_for('projects.list_projects') }}" class="flex flex-col items-center p-2 text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Projects') }}">
+                <i class="fas fa-briefcase" aria-hidden="true"></i>
                 <span class="text-xs">{{ _('Projects') }}</span>
             </a>
-            <a href="{{ url_for('timer.manual_entry') }}" class="flex flex-col items-center p-2 text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
-                <i class="fas fa-plus-circle text-2xl"></i>
+            <a href="{{ url_for('timer.manual_entry') }}" class="flex flex-col items-center p-2 text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('New time entry') }}">
+                <i class="fas fa-plus-circle text-2xl" aria-hidden="true"></i>
             </a>
-            <a href="{{ url_for('reports.reports') }}" class="flex flex-col items-center p-2 text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
-                <i class="fas fa-chart-line"></i>
+            <a href="{{ url_for('reports.reports') }}" class="flex flex-col items-center p-2 text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Reports') }}">
+                <i class="fas fa-chart-line" aria-hidden="true"></i>
                 <span class="text-xs">{{ _('Reports') }}</span>
             </a>
-            <a href="{{ url_for('auth.profile') }}" class="flex flex-col items-center p-2 text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
-                <i class="fas fa-user-circle"></i>
+            <a href="{{ url_for('auth.profile') }}" class="flex flex-col items-center p-2 text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Profile') }}">
+                <i class="fas fa-user-circle" aria-hidden="true"></i>
                 <span class="text-xs">{{ _('Profile') }}</span>
             </a>
         </nav>
@@ -1218,68 +1224,8 @@
     {% endif %}
     <!-- Old command palette and keyboard navigation (restored) -->
     <script src="{{ url_for('static', filename='commands.js') }}?v=2.0"></script>
-    <script>
-        // Minimal global shortcuts: Ctrl+/ (focus search), Ctrl+Shift+L (toggle theme), 't' (toggle timer)
-        // Note: Ctrl+K is handled by keyboard-shortcuts-advanced.js for command palette
-        (function(){
-            function isTyping(e){
-                const t = e.target; 
-                const tag = (t && t.tagName || '').toLowerCase();
-                
-                // Check standard inputs
-                if (tag === 'input' || tag === 'textarea' || tag === 'select' || (t && t.isContentEditable)) {
-                    return true;
-                }
-                
-                // Check for rich text editors (Toast UI Editor, etc.)
-                const editorSelectors = ['.toastui-editor', '.toastui-editor-contents', '.ProseMirror', '.CodeMirror', '.ql-editor', '.tox-edit-area', '.note-editable', '[contenteditable="true"]', '.toastui-editor-ww-container', '.toastui-editor-md-container'];
-                for (let i = 0; i < editorSelectors.length; i++) {
-                    if (t.closest && t.closest(editorSelectors[i])) return true;
-                }
-                
-                return false;
-            }
-            document.addEventListener('keydown', (e) => {
-                // Ctrl/Cmd + / -> focus search (removed Ctrl+K to avoid conflict with command palette)
-                if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === '/') {
-                    e.preventDefault();
-                    const search = document.getElementById('search');
-                    if (search) { 
-                        search.focus(); 
-                        if (search.select) search.select(); 
-                    }
-                }
-            });
-            document.addEventListener('keydown', (e) => {
-                // Ctrl/Cmd + Shift + L -> toggle theme
-                if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'l' || e.key === 'L')) {
-                    e.preventDefault();
-                    document.getElementById('theme-toggle')?.click();
-                }
-            });
-            async function toggleTimer(){
-                try {
-                    const statusRes = await fetch("{{ url_for('timer.timer_status') }}", { credentials: 'same-origin' });
-                    const status = await statusRes.json();
-                    if (status && status.active) {
-                        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-                        const stopRes = await fetch("{{ url_for('timer.stop_timer') }}", { method: 'POST', headers: { 'X-CSRF-Token': token }, credentials: 'same-origin' });
-                        if (stopRes.ok) { window.toastManager && window.toastManager.info('Timer stopped'); }
-                        window.location.href = "{{ url_for('main.dashboard') }}";
-                    } else {
-                        window.location.href = "{{ url_for('timer.manual_entry') }}";
-                    }
-                } catch (_) { window.location.href = "{{ url_for('timer.manual_entry') }}"; }
-            }
-            document.addEventListener('keydown', (e) => {
-                if (isTyping(e)) return;
-                if (!e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 't' || e.key === 'T')) {
-                    e.preventDefault();
-                    toggleTimer();
-                }
-            });
-        })();
-    </script>
+    <script>window.__BASE_INIT__={timerStatus:"{{ url_for('timer.timer_status') }}",stopTimer:"{{ url_for('timer.stop_timer') }}",dashboard:"{{ url_for('main.dashboard') }}",manualEntry:"{{ url_for('timer.manual_entry') }}"};</script>
+    <script src="{{ url_for('static', filename='base-init.js') }}"></script>
     <script>
         // Sidebar collapse logic with persisted state
         (function(){
@@ -1996,139 +1942,6 @@
     <script src="{{ url_for('static', filename='dashboard-widgets.js') }}"></script>
     <script src="{{ url_for('static', filename='dashboard-enhancements.js') }}"></script>
     <script src="{{ url_for('static', filename='activity-feed.js') }}"></script>
-    
-    <!-- PWA Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/static/service-worker.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registered:', registration);
-                        
-                        // Check for updates
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // New version available
-                                    if (window.toastManager) {
-                                        const toast = window.toastManager.info('New version available!', 0);
-                                        const btn = document.createElement('button');
-                                        btn.textContent = 'Reload';
-                                        btn.className = 'ml-2 px-3 py-1 bg-primary text-white rounded hover:bg-primary/90';
-                                        btn.onclick = () => window.location.reload();
-                                        toast.appendChild(btn);
-                                    }
-                                }
-                            });
-                        });
-                    })
-                    .catch(err => console.log('ServiceWorker registration failed:', err));
-            });
-        }
-        
-        // Install prompt
-        let deferredPrompt;
-        
-        // Check if user has previously dismissed the install prompt or app is already installed
-        const installPromptDismissed = localStorage.getItem('pwa-install-dismissed');
-        const isAppInstalled = window.matchMedia('(display-mode: standalone)').matches || 
-                               window.navigator.standalone === true ||
-                               document.referrer.includes('android-app://');
-        
-        // Only register the event listener if prompt hasn't been dismissed and app isn't installed
-        if (installPromptDismissed !== 'true' && !isAppInstalled) {
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                
-                // Double-check dismissal status when event fires
-                const stillDismissed = localStorage.getItem('pwa-install-dismissed');
-                if (stillDismissed === 'true') {
-                    return; // Don't show the prompt if it was dismissed
-                }
-                
-                deferredPrompt = e;
-                
-                // Show install button in UI
-                if (window.toastManager && typeof window.toastManager.show === 'function') {
-                    // Create a non-dismissible toast so we can add custom buttons
-                    const toastId = window.toastManager.show({
-                        message: 'Install TimeTracker as an app!',
-                        type: 'info',
-                        duration: 0,
-                        dismissible: false
-                    });
-                    
-                    // Check if toast was created successfully
-                    if (!toastId) {
-                        console.warn('Failed to create PWA install toast');
-                        return;
-                    }
-                    
-                    // Get the toast element after it's added to DOM
-                    // Use setTimeout to ensure DOM is updated after requestAnimationFrame in show()
-                    setTimeout(() => {
-                        const toastElement = document.querySelector(`[data-toast-id="${toastId}"]`);
-                        if (!toastElement) {
-                            console.warn('PWA install toast element not found');
-                            return;
-                        }
-                        
-                        const btn = document.createElement('button');
-                        btn.textContent = 'Install';
-                        btn.className = 'ml-2 px-3 py-1 bg-primary text-white rounded hover:bg-primary/90';
-                        btn.onclick = async () => {
-                            if (!deferredPrompt) return;
-                            deferredPrompt.prompt();
-                            const { outcome } = await deferredPrompt.userChoice;
-                            if (outcome === 'accepted') {
-                                if (window.toastManager && typeof window.toastManager.success === 'function') {
-                                    window.toastManager.success('App installed successfully!');
-                                }
-                            }
-                            // Always mark as dismissed after user interaction
-                            localStorage.setItem('pwa-install-dismissed', 'true');
-                            deferredPrompt = null;
-                            if (window.toastManager && typeof window.toastManager.dismiss === 'function') {
-                                window.toastManager.dismiss(toastId);
-                            }
-                        };
-                        
-                        // Add a dismiss button
-                        const dismissBtn = document.createElement('button');
-                        dismissBtn.textContent = '×';
-                        dismissBtn.className = 'ml-2 px-2 py-1 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded';
-                        dismissBtn.title = 'Dismiss permanently';
-                        dismissBtn.onclick = () => {
-                            localStorage.setItem('pwa-install-dismissed', 'true');
-                            deferredPrompt = null;
-                            if (window.toastManager && typeof window.toastManager.dismiss === 'function') {
-                                window.toastManager.dismiss(toastId);
-                            }
-                        };
-                        
-                        // Insert buttons in the toast content area
-                        const content = toastElement.querySelector('.toast-content');
-                        if (content) {
-                            content.appendChild(btn);
-                            content.appendChild(dismissBtn);
-                        } else {
-                            // Fallback: append to toast element directly if content not found
-                            console.warn('Toast content element not found, appending buttons to toast element');
-                            toastElement.appendChild(btn);
-                            toastElement.appendChild(dismissBtn);
-                        }
-                    }, 100); // Small delay to ensure DOM is ready
-                }
-            });
-            
-            // Also listen for app installation to mark as dismissed
-            window.addEventListener('appinstalled', () => {
-                localStorage.setItem('pwa-install-dismissed', 'true');
-                deferredPrompt = null;
-            });
-        }
-    </script>
     
     <script>
         // Global helpers for bulk menus and confirmation using custom modal (no native confirm)

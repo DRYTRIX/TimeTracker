@@ -99,7 +99,7 @@
                     <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Timer') }}</h2>
                 </div>
                 {% if not active_timer %}
-                <button type="button" id="openStartTimer" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+                <button type="button" class="js-open-start-timer bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
                     <i class="fas fa-play mr-2"></i>{{ _('Start Timer') }}
                 </button>
                 {% endif %}
@@ -155,14 +155,8 @@
                     <div class="flex flex-col sm:flex-row gap-2">
                         <form action="{{ url_for('timer.stop_timer') }}" method="POST" class="inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5" title="{{ _('Pause and save current time; you can resume later') }}">
-                                <i class="fas fa-pause mr-2"></i>{{ _('Pause') }}
-                            </button>
-                        </form>
-                        <form action="{{ url_for('timer.stop_timer') }}" method="POST" class="inline">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
-                                <i class="fas fa-stop mr-2"></i>{{ _('Stop') }}
+                            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5" title="{{ _('Stop and save current time') }}">
+                                <i class="fas fa-stop mr-2"></i>{{ _('Stop & save') }}
                             </button>
                         </form>
                     </div>
@@ -176,7 +170,7 @@
                         <a href="{{ url_for('timer.resume_timer', timer_id=recent_entries[0].id) }}" class="inline-flex items-center bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
                             <i class="fas fa-play mr-2"></i>{{ _('Resume') }}{% if recent_entries[0].project %} ({{ recent_entries[0].project.name }}){% elif recent_entries[0].client %} ({{ recent_entries[0].client.name }}){% endif %}
                         </a>
-                        <button type="button" id="openStartTimer" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+                        <button type="button" class="js-open-start-timer bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
                             <i class="fas fa-plus mr-2"></i>{{ _('Start new') }}
                         </button>
                     </div>
@@ -731,10 +725,9 @@
                 } catch (_) {}
             }
         }
-        const openBtn = document.getElementById('openStartTimer');
-        if (openBtn && modal) {
-            openBtn.addEventListener('click', openStartTimerModal);
-        }
+        document.querySelectorAll('.js-open-start-timer').forEach(function(openBtn) {
+            if (openBtn && modal) openBtn.addEventListener('click', openStartTimerModal);
+        });
         if (modal) {
             const closeBtn = modal.querySelector('[data-close]');
             if (closeBtn) {

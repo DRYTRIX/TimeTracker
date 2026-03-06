@@ -68,8 +68,8 @@
             </select>
         </div>
         <div>
-            <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
-            <input type="text" name="search" id="search" value="{{ request.args.get('search', '') }}" class="form-input" placeholder="{{ _('Invoice number or client') }}">
+            <label for="invoices-filter-search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
+            <input type="text" name="search" id="invoices-filter-search" value="{{ request.args.get('search', '') }}" class="form-input" placeholder="{{ _('Invoice number or client') }}">
         </div>
     </form>
     </div>
@@ -349,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const params = {};
         
         // Get search input value directly
-        const searchInput = form.querySelector('input[name="search"], input#search');
+        const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
             const searchValue = searchInput.value.trim();
             if (searchValue) {
@@ -477,7 +477,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Auto-submit on search input (debounced)
-        const searchInput = form.querySelector('input[name="search"], input#search');
+        const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
             searchInput.addEventListener('input', () => {
                 debouncedSearch(500);

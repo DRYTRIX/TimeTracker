@@ -460,7 +460,7 @@
         // Global hook: ensure Ctrl+/ focuses the main search input and opens recent suggestions when empty
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === '/') {
-                const search = document.getElementById('search') || document.querySelector('[data-enhanced-search]');
+                const search = document.getElementById('header-search') || document.querySelector('[data-enhanced-search]');
                 if (search) {
                     e.preventDefault();
                     search.focus();

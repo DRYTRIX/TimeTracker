@@ -38,8 +38,8 @@
     <div id="filterBody">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="tasksFilterForm" data-filter-form>
         <div class="lg:col-span-1">
-            <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
-            <input type="text" name="search" id="search" value="{{ search or '' }}" class="form-input">
+            <label for="tasks-filter-search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
+            <input type="text" name="search" id="tasks-filter-search" value="{{ search or '' }}" class="form-input">
         </div>
         <div class="lg:col-span-1">
             <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Tags') }}</label>
@@ -496,7 +496,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const params = {};
         
         // Get search input value directly
-        const searchInput = form.querySelector('input[name="search"], input#search');
+        const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
             const searchValue = searchInput.value.trim();
             if (searchValue) {
@@ -642,7 +642,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Auto-submit on search input (debounced)
-        const searchInput = form.querySelector('input[name="search"], input#search');
+        const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
             searchInput.addEventListener('input', () => {
                 debouncedSearch(500);

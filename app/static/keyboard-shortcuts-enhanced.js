@@ -640,7 +640,7 @@
         }
 
         focusSearch() {
-            const searchInput = document.getElementById('search') || 
+            const searchInput = document.getElementById('header-search') || 
                               document.querySelector('input[type="search"]') ||
                               document.querySelector('input[name="q"]');
             if (searchInput) {

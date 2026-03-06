@@ -107,8 +107,8 @@
                 </select>
             </div>
             <div>
-                <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Search') }}</label>
-                <input type="text" name="search" id="search" value="{{ filters.search or '' }}" placeholder="{{ _('Search in notes and tags...') }}" class="form-input">
+                <label for="time-entries-filter-search" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Search') }}</label>
+                <input type="text" name="search" id="time-entries-filter-search" value="{{ filters.search or '' }}" placeholder="{{ _('Search in notes and tags...') }}" class="form-input">
             </div>
             {% if custom_field_definitions %}
             {% for definition in custom_field_definitions %}
@@ -430,7 +430,7 @@ function confirmBulkDelete() {
         const params = {};
         
         // Get search input value directly (more reliable than FormData for text inputs) (Issue #489)
-        const searchInput = form.querySelector('input[name="search"], input#search');
+        const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
             const searchValue = searchInput.value.trim();
             if (searchValue) {
@@ -637,7 +637,7 @@ function confirmBulkDelete() {
         form.addEventListener('input', (e) => {
             const t = e.target;
             if (!t || !(t instanceof Element)) return;
-            if (t.matches('input[name="search"], input#search')) {
+            if (t.matches('input[name="search"]')) {
                 debouncedSearch(500);
             }
         });
@@ -646,7 +646,7 @@ function confirmBulkDelete() {
         form.addEventListener('keydown', (e) => {
             const t = e.target;
             if (!t || !(t instanceof Element)) return;
-            if (e.key === 'Enter' && t.matches('input[name="search"], input#search')) {
+            if (e.key === 'Enter' && t.matches('input[name="search"]')) {
                 e.preventDefault();
                 if (searchTimeout) clearTimeout(searchTimeout);
                 applyFilters();

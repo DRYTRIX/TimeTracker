@@ -603,7 +603,7 @@ class EnhancedOnboardingManager {
                 position: 'right'
             },
             {
-                target: '#search',
+                target: '#header-search',
                 title: 'Global Search',
                 content: 'Quickly find anything! Search across projects, tasks, clients, and time entries. <strong>Keyboard shortcut:</strong> Press <kbd>Ctrl+/</kbd> (or <kbd>Cmd+/</kbd> on Mac) to focus the search bar instantly.',
                 position: 'bottom'

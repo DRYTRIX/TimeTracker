@@ -464,7 +464,7 @@ class KeyboardShortcutManager {
 
     toggleSearch() {
         // Prefer the main header search input
-        let searchInput = document.getElementById('search');
+        let searchInput = document.getElementById('header-search');
         if (!searchInput) {
             searchInput = document.querySelector('form.navbar-search input[type="search"], input[type="search"], input[name="q"], .search-enhanced input');
         }

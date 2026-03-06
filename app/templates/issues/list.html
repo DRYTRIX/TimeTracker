@@ -28,8 +28,8 @@
     <h2 class="text-lg font-semibold mb-4">{{ _('Filter Issues') }}</h2>
     <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
-            <label for="search" class="block text-sm font-medium mb-1">{{ _('Search') }}</label>
-            <input type="text" name="search" id="search" value="{{ search or '' }}" 
+            <label for="issues-filter-search" class="block text-sm font-medium mb-1">{{ _('Search') }}</label>
+            <input type="text" name="search" id="issues-filter-search" value="{{ search or '' }}" 
                    class="form-input" placeholder="{{ _('Search by title or description') }}">
         </div>
         <div>

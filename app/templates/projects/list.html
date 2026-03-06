@@ -24,8 +24,8 @@
     <div id="filterBody">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4" id="projectsFilterForm" data-filter-form>
         <div>
-            <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
-            <input type="text" name="search" id="search" value="{{ search or '' }}" class="form-input">
+            <label for="projects-filter-search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
+            <input type="text" name="search" id="projects-filter-search" value="{{ search or '' }}" class="form-input">
         </div>
         <div>
             <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
@@ -771,7 +771,7 @@ function toggleFavorite(projectId, button) {
         const params = {};
         
         // Get search input value directly (more reliable than FormData for text inputs)
-        const searchInput = form.querySelector('input[name="search"], input#search');
+        const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
             const searchValue = searchInput.value.trim();
             if (searchValue) {
@@ -1024,7 +1024,7 @@ function toggleFavorite(projectId, button) {
         });
         
         // Auto-submit on search input (debounced)
-        const searchInput = form.querySelector('input[name="search"], input#search');
+        const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 debouncedSearch(500);
