@@ -2,7 +2,7 @@
 # Common development and testing tasks
 
 .PHONY: help install test test-smoke test-unit test-integration test-security test-coverage \
-        test-fast test-parallel lint format clean docker-build docker-run setup dev
+        test-fast test-parallel lint format clean docker-build docker-run setup dev security-scan frontend-a11y
 
 # Default target
 help:
@@ -34,6 +34,7 @@ help:
 	@echo "  make format         - Format code (black + isort)"
 	@echo "  make format-check   - Check code formatting"
 	@echo "  make security-scan  - Run security scanners"
+	@echo "  make frontend-a11y  - Run accessibility check on web app (requires app running; set FRONTEND_URL)"
 	@echo ""
 	@echo "Docker:"
 	@echo "  make docker-build   - Build Docker image"
@@ -109,7 +110,7 @@ test-debug:
 lint:
 	@echo "Running flake8..."
 	flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
-	flake8 app/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+	flake8 app/ --count --max-complexity=10 --max-line-length=120 --statistics
 
 format:
 	@echo "Running black..."
@@ -125,9 +126,16 @@ format-check:
 
 security-scan:
 	@echo "Running bandit..."
-	bandit -r app/ || true
+	bandit -r app/
 	@echo "Running safety..."
-	safety check --file requirements.txt || true
+	safety check --file requirements.txt
+
+# Frontend quality: accessibility check (requires app running at FRONTEND_URL, default http://localhost:3000)
+FRONTEND_URL ?= http://localhost:3000
+frontend-a11y:
+	@echo "Accessibility check: $(FRONTEND_URL)"
+	@command -v npx >/dev/null 2>&1 || { echo "npx not found; install Node.js or run: npx pa11y $(FRONTEND_URL)"; exit 0; }
+	npx --yes pa11y "$(FRONTEND_URL)" 2>/dev/null || echo "Run: npx pa11y $(FRONTEND_URL) (start app first). See docs/development/FRONTEND_QUALITY_GATES.md"
 
 # Docker targets
 docker-build:
