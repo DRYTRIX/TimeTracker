@@ -16,7 +16,7 @@
 ) }}
 
 <div class="max-w-4xl mx-auto">
-    <form method="POST" class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow" novalidate data-validate-form>
+    <form method="POST" class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm" novalidate data-validate-form>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
         <!-- Trip Information -->
@@ -27,7 +27,7 @@
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="md:col-span-2">
-                    <label for="trip_purpose" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="trip_purpose" class="form-label">
                         Trip Purpose <span class="text-red-500">*</span>
                     </label>
                     <input type="text" name="trip_purpose" id="trip_purpose" required
@@ -37,7 +37,7 @@
                 </div>
                 
                 <div>
-                    <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="start_date" class="form-label">
                         Start Date <span class="text-red-500">*</span>
                     </label>
                     <input type="date" name="start_date" id="start_date" required
@@ -46,7 +46,7 @@
                 </div>
                 
                 <div>
-                    <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="end_date" class="form-label">
                         End Date <span class="text-red-500">*</span>
                     </label>
                     <input type="date" name="end_date" id="end_date" required
@@ -55,7 +55,7 @@
                 </div>
                 
                 <div>
-                    <label for="country" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="country" class="form-label">
                         Country <span class="text-red-500">*</span>
                     </label>
                     <input type="text" name="country" id="country" required
@@ -66,7 +66,7 @@
                 </div>
                 
                 <div>
-                    <label for="city" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="city" class="form-label">
                         City
                     </label>
                     <input type="text" name="city" id="city"
@@ -95,7 +95,7 @@
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label for="full_days" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="full_days" class="form-label">
                         Full Days
                     </label>
                     <input type="number" name="full_days" id="full_days" min="0"
@@ -104,7 +104,7 @@
                 </div>
                 
                 <div>
-                    <label for="half_days" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="half_days" class="form-label">
                         Half Days
                     </label>
                     <input type="number" name="half_days" id="half_days" min="0"
@@ -122,7 +122,7 @@
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label for="breakfast_provided" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="breakfast_provided" class="form-label">
                         Breakfasts Provided
                     </label>
                     <input type="number" name="breakfast_provided" id="breakfast_provided" min="0"
@@ -131,7 +131,7 @@
                 </div>
                 
                 <div>
-                    <label for="lunch_provided" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="lunch_provided" class="form-label">
                         Lunches Provided
                     </label>
                     <input type="number" name="lunch_provided" id="lunch_provided" min="0"
@@ -140,7 +140,7 @@
                 </div>
                 
                 <div>
-                    <label for="dinner_provided" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="dinner_provided" class="form-label">
                         Dinners Provided
                     </label>
                     <input type="number" name="dinner_provided" id="dinner_provided" min="0"
@@ -158,7 +158,7 @@
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="project_id" class="form-label">
                         Project
                     </label>
                     <select name="project_id" id="project_id"
@@ -173,7 +173,7 @@
                 </div>
                 
                 <div>
-                    <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="client_id" class="form-label">
                         Client
                     </label>
                     {{ client_select('client_id', clients, selected_id=per_diem.client_id if per_diem else none, required=False, only_one_client=only_one_client|default(false), single_client=single_client) }}
@@ -183,7 +183,7 @@
         
         <!-- Notes -->
         <div class="mb-6">
-            <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="notes" class="form-label">
                 Notes
             </label>
             <textarea name="notes" id="notes" rows="3"

@@ -15,7 +15,7 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow max-w-2xl mx-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm max-w-2xl mx-auto">
     <form method="POST" action="{{ url_for('inventory.new_movement') }}" id="movement_form"
           data-hint-return="{{ _('Use a positive quantity (items coming back)') }}"
           data-hint-waste="{{ _('Use a negative quantity (items written off)') }}"
@@ -26,7 +26,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="space-y-6">
             <div>
-                <label for="movement_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Movement Type') }} *</label>
+                <label for="movement_type" class="form-label">{{ _('Movement Type') }} *</label>
                 <select name="movement_type" id="movement_type" class="form-input" required>
                     <option value="adjustment">{{ _('Adjustment') }}</option>
                     <option value="transfer">{{ _('Transfer') }}</option>
@@ -40,7 +40,7 @@
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 hidden" id="devaluation_discovery_hint">{{ _('You can apply devaluation below to record returned or wasted items at a reduced cost.') }}</p>
             </div>
             <div>
-                <label for="stock_item_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Stock Item') }} *</label>
+                <label for="stock_item_id" class="form-label">{{ _('Stock Item') }} *</label>
                 <select name="stock_item_id" id="stock_item_id" class="form-input" required>
                     <option value="">{{ _('Select Item') }}</option>
                     {% for item in stock_items %}
@@ -49,7 +49,7 @@
                 </select>
             </div>
             <div>
-                <label for="warehouse_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Warehouse') }} *</label>
+                <label for="warehouse_id" class="form-label">{{ _('Warehouse') }} *</label>
                 <select name="warehouse_id" id="warehouse_id" class="form-input" required>
                     <option value="">{{ _('Select Warehouse') }}</option>
                     {% for warehouse in warehouses %}
@@ -58,7 +58,7 @@
                 </select>
             </div>
             <div>
-                <label for="quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Quantity') }} *</label>
+                <label for="quantity" class="form-label">{{ _('Quantity') }} *</label>
                 <input type="number" name="quantity" id="quantity" step="0.01" class="form-input" required>
                 <p class="mt-1 text-sm text-gray-500" id="quantity_hint">{{ _('Use positive values for additions, negative for removals') }}</p>
                 <p class="mt-1 text-sm text-red-600 dark:text-red-400 hidden" id="quantity_error" role="alert"></p>
@@ -79,7 +79,7 @@
 
                 <div id="devaluation_fields" class="mt-4 space-y-4 hidden">
                     <div>
-                        <label for="devalue_method" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Method') }}</label>
+                        <label for="devalue_method" class="form-label">{{ _('Method') }}</label>
                         <select name="devalue_method" id="devalue_method" class="form-input">
                             <option value="percent">{{ _('Percent off default cost') }}</option>
                             <option value="fixed">{{ _('Fixed new unit cost') }}</option>
@@ -87,28 +87,28 @@
                     </div>
 
                     <div id="devalue_percent_row">
-                        <label for="devalue_percent" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Percent') }}</label>
+                        <label for="devalue_percent" class="form-label">{{ _('Percent') }}</label>
                         <input type="number" name="devalue_percent" id="devalue_percent" step="0.01" min="0" max="100" class="form-input" placeholder="e.g. 30">
                         <p class="mt-1 text-sm text-gray-500">{{ _('Example: 30 = reduce cost by 30%') }}</p>
                     </div>
 
                     <div id="devalue_fixed_row" class="hidden">
-                        <label for="devalue_unit_cost" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('New Unit Cost') }}</label>
+                        <label for="devalue_unit_cost" class="form-label">{{ _('New Unit Cost') }}</label>
                         <input type="number" name="devalue_unit_cost" id="devalue_unit_cost" step="0.01" min="0" class="form-input" placeholder="e.g. 2.50">
                     </div>
                 </div>
             </div>
             <div>
-                <label for="reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Reason') }}</label>
+                <label for="reason" class="form-label">{{ _('Reason') }}</label>
                 <input type="text" name="reason" id="reason" class="form-input" placeholder="{{ _('e.g., Physical count correction') }}">
             </div>
             <div>
-                <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Notes') }}</label>
+                <label for="notes" class="form-label">{{ _('Notes') }}</label>
                 <textarea name="notes" id="notes" rows="3" class="form-input"></textarea>
             </div>
         </div>
-        <div class="mt-6 flex justify-end gap-3">
-            <a href="{{ url_for('inventory.list_movements') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+        <div class="mt-6 flex flex-col sm:flex-row justify-end gap-3">
+            <a href="{{ url_for('inventory.list_movements') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-center">
                 {{ _('Cancel') }}
             </a>
             <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">

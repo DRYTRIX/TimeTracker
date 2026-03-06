@@ -15,10 +15,10 @@
     actions_html='<a href="' + url_for("inventory.new_movement") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Record Movement</a>' if (current_user.is_admin or has_permission('manage_stock_movements')) else None
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-            <label for="type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Movement Type') }}</label>
+            <label for="type" class="form-label">{{ _('Movement Type') }}</label>
             <select name="type" id="type" class="form-input">
                 <option value="">{{ _('All Types') }}</option>
                 <option value="adjustment" {% if movement_type == 'adjustment' %}selected{% endif %}>{{ _('Adjustment') }}</option>
@@ -32,7 +32,7 @@
             </select>
         </div>
         <div>
-            <label for="reference_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Reference Type') }}</label>
+            <label for="reference_type" class="form-label">{{ _('Reference Type') }}</label>
             <select name="reference_type" id="reference_type" class="form-input">
                 <option value="">{{ _('All') }}</option>
                 <option value="invoice" {% if reference_type == 'invoice' %}selected{% endif %}>{{ _('Invoice') }}</option>
@@ -47,8 +47,8 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
-    <table class="table table-zebra w-full text-left">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+    <table class="table table-zebra w-full text-left responsive-cards">
         <thead>
             <tr>
                 <th class="p-4">{{ _('Date') }}</th>
@@ -65,18 +65,18 @@
         <tbody>
             {% for movement in movements %}
             <tr>
-                <td class="p-4">{{ movement.moved_at|user_datetime if movement.moved_at else '—' }}</td>
-                <td class="p-4">
+                <td class="p-4 mobile-card-header" data-label="{{ _('Date') }}">{{ movement.moved_at|user_datetime if movement.moved_at else '—' }}</td>
+                <td class="p-4" data-label="{{ _('Item') }}">
                     <a href="{{ url_for('inventory.view_stock_item', item_id=movement.stock_item_id) }}" class="text-primary hover:underline">
                         {{ movement.stock_item.name }} ({{ movement.stock_item.sku }})
                     </a>
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Warehouse') }}">
                     <a href="{{ url_for('inventory.view_warehouse', warehouse_id=movement.warehouse_id) }}" class="text-primary hover:underline">
                         {{ movement.warehouse.code }}
                     </a>
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Type') }}">
                     {% set ns = namespace(is_devalued=false) %}
                     {% if movement.movement_type == 'devaluation' %}
                         {% set ns.is_devalued = true %}
@@ -99,10 +99,10 @@
                         {% endif %}
                     </div>
                 </td>
-                <td class="p-4 {% if movement.quantity > 0 %}text-green-600{% else %}text-red-600{% endif %} font-semibold">
+                <td class="p-4 {% if movement.quantity > 0 %}text-green-600{% else %}text-red-600{% endif %} font-semibold" data-label="{{ _('Quantity') }}">
                     {{ '+' if movement.quantity > 0 else '' }}{{ movement.quantity }}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Unit Cost') }}">
                     {% if movement.unit_cost is not none %}
                         {{ movement.unit_cost }}
                     {% elif movement.lot_allocations %}
@@ -124,7 +124,7 @@
                         —
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Reference') }}">
                     {% if movement.reference_type and movement.reference_id %}
                         {% if movement.reference_type == 'invoice' %}
                             <a href="{{ url_for('invoices.view_invoice', invoice_id=movement.reference_id) }}" class="text-primary hover:underline">
@@ -141,8 +141,8 @@
                         —
                     {% endif %}
                 </td>
-                <td class="p-4">{{ movement.reason or '—' }}</td>
-                <td class="p-4">{{ movement.moved_by_user.username if movement.moved_by_user else '—' }}</td>
+                <td class="p-4" data-label="{{ _('Reason') }}">{{ movement.reason or '—' }}</td>
+                <td class="p-4" data-label="{{ _('User') }}">{{ movement.moved_by_user.username if movement.moved_by_user else '—' }}</td>
             </tr>
             {% else %}
             <tr>

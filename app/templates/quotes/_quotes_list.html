@@ -22,21 +22,21 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="action" id="bulkActionValue" value="">
     </form>
-    <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
-        <thead class="border-b border-border-light dark:border-border-dark">
+    <table class="table table-zebra w-full text-left enhanced-table responsive-cards" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
+        <thead class="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
             <tr>
                 {% if current_user.is_admin or has_permission('create_quotes') %}
-                <th class="p-4 w-12">
+                <th class="px-4 py-3 w-12">
                     <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllQuotes()">
                 </th>
                 {% endif %}
-                <th class="p-4" data-sortable>{{ _('Quote Number') }}</th>
-                <th class="p-4" data-sortable>{{ _('Title') }}</th>
-                <th class="p-4" data-sortable>{{ _('Client') }}</th>
-                <th class="p-4" data-sortable>{{ _('Amount') }}</th>
-                <th class="p-4" data-sortable>{{ _('Status') }}</th>
-                <th class="p-4" data-sortable>{{ _('Created') }}</th>
-                <th class="p-4">{{ _('Actions') }}</th>
+                <th class="px-4 py-3" data-sortable>{{ _('Quote Number') }}</th>
+                <th class="px-4 py-3" data-sortable>{{ _('Title') }}</th>
+                <th class="px-4 py-3" data-sortable>{{ _('Client') }}</th>
+                <th class="px-4 py-3" data-sortable>{{ _('Amount') }}</th>
+                <th class="px-4 py-3" data-sortable>{{ _('Status') }}</th>
+                <th class="px-4 py-3" data-sortable>{{ _('Created') }}</th>
+                <th class="px-4 py-3">{{ _('Actions') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -47,17 +47,17 @@
                     <input type="checkbox" class="quote-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ quote.id }}" onchange="updateQuotesBulkState()">
                 </td>
                 {% endif %}
-                <td class="p-4 font-medium"><a href="{{ url_for('quotes.view_quote', quote_id=quote.id) }}" class="text-primary hover:underline">{{ quote.quote_number }}</a></td>
-                <td class="p-4"><a href="{{ url_for('quotes.view_quote', quote_id=quote.id) }}" class="text-primary hover:underline">{{ quote.title }}</a></td>
-                <td class="p-4">{{ quote.client.name }}</td>
-                <td class="p-4">
+                <td class="p-4 font-medium mobile-card-header" data-label="{{ _('Quote Number') }}"><a href="{{ url_for('quotes.view_quote', quote_id=quote.id) }}" class="text-primary hover:underline">{{ quote.quote_number }}</a></td>
+                <td class="p-4" data-label="{{ _('Title') }}"><a href="{{ url_for('quotes.view_quote', quote_id=quote.id) }}" class="text-primary hover:underline">{{ quote.title }}</a></td>
+                <td class="p-4" data-label="{{ _('Client') }}">{{ quote.client.name }}</td>
+                <td class="p-4" data-label="{{ _('Amount') }}">
                     {% if quote.total_amount %}
                         <span class="px-2 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary">{{ "%.2f"|format(quote.total_amount) }} {{ quote.currency_code }}</span>
                     {% else %}
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Status') }}">
                     {% if quote.status == 'draft' %}
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{{ _('Draft') }}</span>
                     {% elif quote.status == 'sent' %}
@@ -70,10 +70,10 @@
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">{{ _('Expired') }}</span>
                     {% endif %}
                 </td>
-                <td class="p-4 text-sm text-text-muted-light dark:text-text-muted-dark">
+                <td class="p-4 text-sm text-text-muted-light dark:text-text-muted-dark" data-label="{{ _('Created') }}">
                     {{ quote.created_at|user_date if quote.created_at else '' }}
                 </td>
-                <td class="p-4">
+                <td class="p-4 mobile-actions" data-label="{{ _('Actions') }}">
                     <a href="{{ url_for('quotes.view_quote', quote_id=quote.id) }}" class="text-primary hover:underline">{{ _('View') }}</a>
                 </td>
             </tr>

@@ -11,9 +11,9 @@
     <a href="{{ url_for('quotes.view_quote', quote_id=quote.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Quote') }}</a>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <h2 class="text-lg font-semibold mb-4">{{ _('Quote Details') }}</h2>
-    <dl class="grid grid-cols-2 gap-4">
+    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
             <dt class="font-medium text-gray-700 dark:text-gray-300">{{ _('Title') }}</dt>
             <dd class="text-gray-600 dark:text-gray-400">{{ quote.title }}</dd>
@@ -37,7 +37,7 @@
     </dl>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h2 class="text-lg font-semibold mb-4">{{ _('Create Project') }}</h2>
     <p class="text-gray-600 dark:text-gray-400 mb-4">{{ _('Accepting this quote will create a new project with the budget from the quote.') }}</p>
     
@@ -45,7 +45,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
         <div class="mb-4">
-            <label for="project_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Project Name') }} *</label>
+            <label for="project_name" class="form-label">{{ _('Project Name') }} *</label>
             <input type="text" id="project_name" name="project_name" required value="{{ quote.title }}" placeholder="{{ _('Project name') }}" class="form-input">
             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('The project will be created with the budget from the quote') }}</p>
         </div>

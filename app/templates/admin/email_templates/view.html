@@ -17,7 +17,7 @@
         '<a href="' + url_for("admin.edit_email_template", template_id=template.id) + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-edit mr-2"></i>Edit</a>'
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <h2 class="text-lg font-semibold mb-4">{{ _('Template Information') }}</h2>
     <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
@@ -52,14 +52,14 @@
 </div>
 
 {% if template.html %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <h2 class="text-lg font-semibold mb-4">{{ _('HTML Template') }}</h2>
     <pre class="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto text-sm"><code>{{ template.html }}</code></pre>
 </div>
 {% endif %}
 
 {% if template.css %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h2 class="text-lg font-semibold mb-4">CSS Styles</h2>
     <pre class="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto text-sm"><code>{{ template.css }}</code></pre>
 </div>

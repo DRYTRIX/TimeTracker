@@ -15,10 +15,10 @@
     actions_html='<a href="' + url_for("inventory.new_adjustment") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Adjustment</a>' if (current_user.is_admin or has_permission('manage_stock_movements')) else None
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-            <label for="warehouse_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Warehouse') }}</label>
+            <label for="warehouse_id" class="form-label">{{ _('Warehouse') }}</label>
             <select name="warehouse_id" id="warehouse_id" class="form-input">
                 <option value="">{{ _('All Warehouses') }}</option>
                 {% for warehouse in warehouses %}
@@ -27,7 +27,7 @@
             </select>
         </div>
         <div>
-            <label for="stock_item_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Stock Item') }}</label>
+            <label for="stock_item_id" class="form-label">{{ _('Stock Item') }}</label>
             <select name="stock_item_id" id="stock_item_id" class="form-input">
                 <option value="">{{ _('All Items') }}</option>
                 {% for item in stock_items %}
@@ -36,21 +36,21 @@
             </select>
         </div>
         <div>
-            <label for="date_from" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Date From') }}</label>
+            <label for="date_from" class="form-label">{{ _('Date From') }}</label>
             <input type="date" name="date_from" id="date_from" value="{{ date_from or '' }}" class="form-input">
         </div>
         <div class="flex items-end">
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors w-full">{{ _('Filter') }}</button>
         </div>
         <div>
-            <label for="date_to" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Date To') }}</label>
+            <label for="date_to" class="form-label">{{ _('Date To') }}</label>
             <input type="date" name="date_to" id="date_to" value="{{ date_to or '' }}" class="form-input">
         </div>
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
-    <table class="table table-zebra w-full text-left">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+    <table class="table table-zebra w-full text-left responsive-cards">
         <thead>
             <tr>
                 <th class="p-4">{{ _('Date') }}</th>
@@ -64,22 +64,22 @@
         <tbody>
             {% for adjustment in adjustments %}
             <tr>
-                <td class="p-4">{{ adjustment.moved_at|user_datetime if adjustment.moved_at else '—' }}</td>
-                <td class="p-4">
+                <td class="p-4 mobile-card-header" data-label="{{ _('Date') }}">{{ adjustment.moved_at|user_datetime if adjustment.moved_at else '—' }}</td>
+                <td class="p-4" data-label="{{ _('Item') }}">
                     <a href="{{ url_for('inventory.view_stock_item', item_id=adjustment.stock_item_id) }}" class="text-primary hover:underline">
                         {{ adjustment.stock_item.name }} ({{ adjustment.stock_item.sku }})
                     </a>
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Warehouse') }}">
                     <a href="{{ url_for('inventory.view_warehouse', warehouse_id=adjustment.warehouse_id) }}" class="text-primary hover:underline">
                         {{ adjustment.warehouse.code }}
                     </a>
                 </td>
-                <td class="p-4 {% if adjustment.quantity > 0 %}text-green-600{% else %}text-red-600{% endif %} font-semibold">
+                <td class="p-4 {% if adjustment.quantity > 0 %}text-green-600{% else %}text-red-600{% endif %} font-semibold" data-label="{{ _('Quantity') }}">
                     {{ '+' if adjustment.quantity > 0 else '' }}{{ adjustment.quantity }}
                 </td>
-                <td class="p-4">{{ adjustment.reason or '—' }}</td>
-                <td class="p-4">{{ adjustment.moved_by_user.username if adjustment.moved_by_user else '—' }}</td>
+                <td class="p-4" data-label="{{ _('Reason') }}">{{ adjustment.reason or '—' }}</td>
+                <td class="p-4" data-label="{{ _('User') }}">{{ adjustment.moved_by_user.username if adjustment.moved_by_user else '—' }}</td>
             </tr>
             {% else %}
             <tr>

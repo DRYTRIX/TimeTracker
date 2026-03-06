@@ -21,9 +21,9 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 space-y-6">
         <!-- Item Details -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Item Details') }}</h2>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('SKU') }}</label>
                     <p class="mt-1 font-mono">{{ item.sku }}</p>
@@ -41,7 +41,7 @@
                     <p class="mt-1 font-mono">{{ item.barcode or '—' }}</p>
                 </div>
                 {% if item.description %}
-                <div class="col-span-2">
+                <div class="sm:col-span-2">
                     <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Description') }}</label>
                     <p class="mt-1">{{ item.description }}</p>
                 </div>
@@ -56,12 +56,12 @@
                 </div>
                 <!-- Suppliers -->
                 {% if item.supplier_items.filter_by(is_active=True).count() > 0 %}
-                <div class="col-span-2">
+                <div class="sm:col-span-2">
                     <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Suppliers') }}</label>
                     <div class="mt-2 space-y-2">
                         {% for supplier_item in item.supplier_items.filter_by(is_active=True).all() %}
                         <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                            <div class="flex items-center justify-between">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                                 <div>
                                     <a href="{{ url_for('inventory.view_supplier', supplier_id=supplier_item.supplier_id) }}" class="text-primary hover:underline font-medium">
                                         {{ supplier_item.supplier.name }}
@@ -121,9 +121,9 @@
 
         <!-- Stock Levels by Warehouse -->
         {% if item.is_trackable and stock_levels %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Stock Levels by Warehouse') }}</h2>
-            <table class="table table-zebra w-full text-left">
+            <table class="table table-zebra w-full text-left responsive-cards">
                 <thead>
                     <tr>
                         <th class="p-4">{{ _('Warehouse') }}</th>
@@ -136,20 +136,20 @@
                 <tbody>
                     {% for stock in stock_levels %}
                     <tr>
-                        <td class="p-4 font-medium">
+                        <td class="p-4 font-medium mobile-card-header" data-label="{{ _('Warehouse') }}">
                             <a href="{{ url_for('inventory.view_warehouse', warehouse_id=stock.warehouse_id) }}" class="text-primary hover:underline">
                                 {{ stock.warehouse.code }} - {{ stock.warehouse.name }}
                             </a>
                         </td>
-                        <td class="p-4">{{ stock.quantity_on_hand }}</td>
-                        <td class="p-4">{{ stock.quantity_reserved }}</td>
-                        <td class="p-4">
+                        <td class="p-4" data-label="{{ _('On Hand') }}">{{ stock.quantity_on_hand }}</td>
+                        <td class="p-4" data-label="{{ _('Reserved') }}">{{ stock.quantity_reserved }}</td>
+                        <td class="p-4" data-label="{{ _('Available') }}">
                             {{ stock.quantity_available }}
                             {% if item.reorder_point and stock.quantity_on_hand < item.reorder_point %}
                                 <span class="ml-2 text-amber-500" title="{{ _('Low Stock') }}"><i class="fas fa-exclamation-triangle"></i></span>
                             {% endif %}
                         </td>
-                        <td class="p-4">{{ stock.location or '—' }}</td>
+                        <td class="p-4" data-label="{{ _('Location') }}">{{ stock.location or '—' }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -159,7 +159,7 @@
 
         <!-- Stock Lots Breakdown (Devaluation Details) -->
         {% if item.is_trackable and stock_lots_by_warehouse %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Stock Breakdown by Valuation') }}</h2>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ _('Detailed breakdown showing remaining stock with different devaluation rates') }}</p>
             
@@ -172,7 +172,7 @@
                         {{ warehouse.code }} - {{ warehouse.name }}
                     </a>
                 </h3>
-                <table class="table table-zebra w-full text-left text-sm">
+                <table class="table table-zebra w-full text-left text-sm responsive-cards">
                     <thead>
                         <tr>
                             <th class="p-3">{{ _('Quantity') }}</th>
@@ -186,9 +186,9 @@
                         {% for lot_data in lots %}
                         {% set lot = lot_data.lot %}
                         <tr>
-                            <td class="p-3 font-semibold">{{ lot_data.quantity }} {{ item.unit }}</td>
-                            <td class="p-3">{{ "%.2f"|format(lot_data.unit_cost) }} {{ item.currency_code }}</td>
-                            <td class="p-3">
+                            <td class="p-3 font-semibold mobile-card-header" data-label="{{ _('Quantity') }}">{{ lot_data.quantity }} {{ item.unit }}</td>
+                            <td class="p-3" data-label="{{ _('Unit Cost') }}">{{ "%.2f"|format(lot_data.unit_cost) }} {{ item.currency_code }}</td>
+                            <td class="p-3" data-label="{{ _('Devaluation') }}">
                                 {% if lot_data.is_devalued and lot_data.devaluation_percentage is not none %}
                                     <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
                                         {{ "%.2f"|format(lot_data.devaluation_percentage) }}%
@@ -199,7 +199,7 @@
                                     </span>
                                 {% endif %}
                             </td>
-                            <td class="p-3">
+                            <td class="p-3" data-label="{{ _('Status') }}">
                                 {% if lot_data.lot_type == 'devalued' %}
                                     <span class="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
                                         {{ _('Devalued') }}
@@ -210,7 +210,7 @@
                                     </span>
                                 {% endif %}
                             </td>
-                            <td class="p-3 text-gray-600 dark:text-gray-400">
+                            <td class="p-3 text-gray-600 dark:text-gray-400" data-label="{{ _('Created') }}">
                                 {{ lot.created_at|user_date if lot.created_at else '—' }}
                             </td>
                         </tr>
@@ -231,9 +231,9 @@
 
         <!-- Recent Movements -->
         {% if recent_movements %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Recent Stock Movements') }}</h2>
-            <table class="table table-zebra w-full text-left">
+            <table class="table table-zebra w-full text-left responsive-cards">
                 <thead>
                     <tr>
                         <th class="p-4">{{ _('Date') }}</th>
@@ -246,17 +246,17 @@
                 <tbody>
                     {% for movement in recent_movements %}
                     <tr>
-                        <td class="p-4">{{ movement.moved_at|user_datetime if movement.moved_at else '—' }}</td>
-                        <td class="p-4">
+                        <td class="p-4 mobile-card-header" data-label="{{ _('Date') }}">{{ movement.moved_at|user_datetime if movement.moved_at else '—' }}</td>
+                        <td class="p-4" data-label="{{ _('Type') }}">
                             <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 capitalize">
                                 {{ movement.movement_type }}
                             </span>
                         </td>
-                        <td class="p-4">{{ movement.warehouse.code }}</td>
-                        <td class="p-4 {% if movement.quantity > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                        <td class="p-4" data-label="{{ _('Warehouse') }}">{{ movement.warehouse.code }}</td>
+                        <td class="p-4 {% if movement.quantity > 0 %}text-green-600{% else %}text-red-600{% endif %}" data-label="{{ _('Quantity') }}">
                             {{ '+' if movement.quantity > 0 else '' }}{{ movement.quantity }}
                         </td>
-                        <td class="p-4">{{ movement.reason or '—' }}</td>
+                        <td class="p-4" data-label="{{ _('Reason') }}">{{ movement.reason or '—' }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -267,7 +267,7 @@
 
     <div class="space-y-6">
         <!-- Summary Card -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-4">{{ _('Summary') }}</h3>
             {% if item.is_trackable %}
             <div class="space-y-3">
@@ -298,7 +298,7 @@
 
         <!-- Active Reservations -->
         {% if active_reservations %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-4">{{ _('Active Reservations') }}</h3>
             <div class="space-y-2">
                 {% for reservation in active_reservations %}

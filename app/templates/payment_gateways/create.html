@@ -11,19 +11,19 @@
     <a href="{{ url_for('payment_gateways.list_gateways') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Gateways') }}</a>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST" action="{{ url_for('payment_gateways.create_gateway') }}" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
-                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Gateway Name') }} *</label>
+                <label for="name" class="form-label">{{ _('Gateway Name') }} *</label>
                 <input type="text" id="name" name="name" required class="form-input" placeholder="{{ _('e.g., Stripe Production') }}">
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('A descriptive name for this gateway configuration') }}</p>
             </div>
             
             <div>
-                <label for="provider" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Provider') }} *</label>
+                <label for="provider" class="form-label">{{ _('Provider') }} *</label>
                 <select id="provider" name="provider" required class="form-input" onchange="updateProviderFields()">
                     <option value="">{{ _('Select provider...') }}</option>
                     <option value="stripe">Stripe</option>
@@ -36,17 +36,17 @@
             <h3 class="text-lg font-semibold mb-4">{{ _('Stripe Configuration') }}</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label for="api_key" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('API Key') }} *</label>
+                    <label for="api_key" class="form-label">{{ _('API Key') }} *</label>
                     <input type="password" id="api_key" name="api_key" class="form-input" placeholder="sk_test_...">
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Your Stripe secret key') }}</p>
                 </div>
                 <div>
-                    <label for="publishable_key" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Publishable Key') }} *</label>
+                    <label for="publishable_key" class="form-label">{{ _('Publishable Key') }} *</label>
                     <input type="text" id="publishable_key" name="publishable_key" class="form-input" placeholder="pk_test_...">
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Your Stripe publishable key') }}</p>
                 </div>
                 <div class="md:col-span-2">
-                    <label for="webhook_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Webhook Secret') }}</label>
+                    <label for="webhook_secret" class="form-label">{{ _('Webhook Secret') }}</label>
                     <input type="password" id="webhook_secret" name="webhook_secret" class="form-input" placeholder="whsec_...">
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Webhook signing secret for verifying webhook events') }}</p>
                 </div>
@@ -57,11 +57,11 @@
             <h3 class="text-lg font-semibold mb-4">{{ _('PayPal Configuration') }}</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client ID') }} *</label>
+                    <label for="client_id" class="form-label">{{ _('Client ID') }} *</label>
                     <input type="text" id="client_id" name="client_id" class="form-input">
                 </div>
                 <div>
-                    <label for="client_secret" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client Secret') }} *</label>
+                    <label for="client_secret" class="form-label">{{ _('Client Secret') }} *</label>
                     <input type="password" id="client_secret" name="client_secret" class="form-input">
                 </div>
             </div>

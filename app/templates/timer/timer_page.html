@@ -23,8 +23,8 @@
             {% if active_timer %}
             <div class="flex flex-col items-center justify-center">
                 <!-- Progress Ring -->
-                <div class="relative w-64 h-64 mb-6">
-                    <svg class="w-64 h-64 transform -rotate-90" viewBox="0 0 100 100">
+                <div class="relative w-48 h-48 lg:w-64 lg:h-64 mb-6">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                         <!-- Background circle -->
                         <circle cx="50" cy="50" r="45" stroke="currentColor" 
                                 class="text-gray-200 dark:text-gray-700" 
@@ -91,8 +91,8 @@
             {% else %}
             <!-- No Active Timer -->
             <div class="flex flex-col items-center justify-center py-12">
-                <div class="w-64 h-64 mb-6 flex items-center justify-center">
-                    <svg class="w-64 h-64 transform -rotate-90" viewBox="0 0 100 100">
+                <div class="w-48 h-48 lg:w-64 lg:h-64 mb-6 flex items-center justify-center">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                         <circle cx="50" cy="50" r="45" stroke="currentColor" 
                                 class="text-gray-200 dark:text-gray-700" 
                                 stroke-width="8" fill="none" />
@@ -116,7 +116,7 @@
                 <div class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <label for="project_id" class="form-label">
                                 {{ _('Project') }}
                             </label>
                             <select name="project_id" id="project_id" class="form-input w-full">
@@ -127,7 +127,7 @@
                             </select>
                         </div>
                         <div>
-                            <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <label for="client_id" class="form-label">
                                 {{ _('Client') }}
                             </label>
                             {{ client_select('client_id', clients, required=False, only_one_client=only_one_client|default(false), single_client=single_client) }}
@@ -138,7 +138,7 @@
                     </div>
                     
                     <div>
-                        <label for="task_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label for="task_id" class="form-label">
                             {{ _('Task') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('Optional') }})</span>
                         </label>
                         <select name="task_id" id="task_id" class="form-input w-full">
@@ -147,7 +147,7 @@
                     </div>
                     
                     <div>
-                        <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label for="notes" class="form-label">
                             {{ _('Notes') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('Optional') }})</span>
                         </label>
                         <textarea name="notes" id="notes" rows="3" class="form-input w-full" placeholder="{{ _('Add notes about what you\'re working on...') }}"></textarea>
@@ -155,7 +155,7 @@
                     
                     {% if templates %}
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label class="form-label">
                             {{ _('Or use a template') }}
                         </label>
                         <div class="space-y-2">

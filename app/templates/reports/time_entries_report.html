@@ -5,22 +5,22 @@
     <h1 class="text-2xl font-bold">{{ _('Time Entries Report') }}</h1>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
-    <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+    <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
         <div>
-            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="start_date" class="form-label">
                 <i class="fas fa-calendar mr-1"></i>{{ _('Start Date') }}
             </label>
             <input type="date" name="start_date" id="start_date" value="{{ start_date }}" class="form-input user-date-input">
         </div>
         <div>
-            <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="end_date" class="form-label">
                 <i class="fas fa-calendar mr-1"></i>{{ _('End Date') }}
             </label>
             <input type="date" name="end_date" id="end_date" value="{{ end_date }}" class="form-input user-date-input">
         </div>
         <div>
-            <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="user_id" class="form-label">
                 <i class="fas fa-user mr-1"></i>{{ _('User') }}
             </label>
             <select name="user_id" id="user_id" class="form-input">
@@ -31,7 +31,7 @@
             </select>
         </div>
         <div>
-            <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="project_id" class="form-label">
                 <i class="fas fa-project-diagram mr-1"></i>{{ _('Project') }}
             </label>
             <select name="project_id" id="project_id" class="form-input">
@@ -42,7 +42,7 @@
             </select>
         </div>
         <div>
-            <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="client_id" class="form-label">
                 <i class="fas fa-building mr-1"></i>{{ _('Client') }}
             </label>
             <select name="client_id" id="client_id" class="form-input">
@@ -53,7 +53,7 @@
             </select>
         </div>
         <div>
-            <label for="task_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="task_id" class="form-label">
                 <i class="fas fa-tasks mr-1"></i>{{ _('Task') }}
             </label>
             <select name="task_id" id="task_id" class="form-input">
@@ -64,7 +64,7 @@
             </select>
         </div>
         <div>
-            <label for="billed" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="billed" class="form-label">
                 <i class="fas fa-money-bill mr-1"></i>{{ _('Billed') }}
             </label>
             <select name="billed" id="billed" class="form-input">
@@ -95,8 +95,8 @@
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
-    <table class="w-full text-left">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+    <table class="w-full text-left responsive-cards">
         <thead>
             <tr>
                 <th class="p-2">{{ _('Date') }}</th>
@@ -113,15 +113,15 @@
         <tbody>
             {% for entry in entries %}
             <tr class="border-b border-border-light dark:border-border-dark">
-                <td class="p-2">{{ entry.start_time|user_date if entry.start_time else '-' }}</td>
-                <td class="p-2">{{ entry.start_time|user_datetime if entry.start_time else '-' }}</td>
-                <td class="p-2">{{ entry.end_time|user_datetime if entry.end_time else '-' }}</td>
-                <td class="p-2">{{ entry.duration_formatted if entry.end_time else '-' }}</td>
-                <td class="p-2">{{ entry.project.name if entry.project else '-' }}</td>
-                <td class="p-2">{{ entry.task.name if entry.task else '-' }}</td>
-                <td class="p-2 max-w-xs truncate" title="{{ entry.notes or '' }}">{{ entry.notes or '-' }}</td>
-                <td class="p-2">{{ _('Yes') if entry.paid else _('No') }}</td>
-                <td class="p-2">
+                <td class="p-2" data-label="{{ _('Date') }}">{{ entry.start_time|user_date if entry.start_time else '-' }}</td>
+                <td class="p-2" data-label="{{ _('Start') }}">{{ entry.start_time|user_datetime if entry.start_time else '-' }}</td>
+                <td class="p-2" data-label="{{ _('Stop') }}">{{ entry.end_time|user_datetime if entry.end_time else '-' }}</td>
+                <td class="p-2" data-label="{{ _('Duration') }}">{{ entry.duration_formatted if entry.end_time else '-' }}</td>
+                <td class="p-2" data-label="{{ _('Project') }}">{{ entry.project.name if entry.project else '-' }}</td>
+                <td class="p-2" data-label="{{ _('Task') }}">{{ entry.task.name if entry.task else '-' }}</td>
+                <td class="p-2 max-w-xs truncate" title="{{ entry.notes or '' }}" data-label="{{ _('Notes') }}">{{ entry.notes or '-' }}</td>
+                <td class="p-2" data-label="{{ _('Billed') }}">{{ _('Yes') if entry.paid else _('No') }}</td>
+                <td class="p-2" data-label="{{ _('Client') }}">
                     {% if entry.client %}
                         {{ entry.client.name }}
                     {% elif entry.project and entry.project.client_obj %}

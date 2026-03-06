@@ -16,7 +16,7 @@
 ) }}
 
 <div class="max-w-4xl mx-auto">
-    <form method="POST" class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow" novalidate data-validate-form>
+    <form method="POST" class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm" novalidate data-validate-form>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
         <!-- Trip Information -->
@@ -27,7 +27,7 @@
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label for="trip_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="trip_date" class="form-label">
                         Trip Date <span class="text-red-500">*</span>
                     </label>
                     <input type="date" name="trip_date" id="trip_date" required
@@ -36,7 +36,7 @@
                 </div>
                 
                 <div>
-                    <label for="currency_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="currency_code" class="form-label">
                         Currency
                     </label>
                     <select name="currency_code" id="currency_code"
@@ -48,7 +48,7 @@
                 </div>
                 
                 <div class="md:col-span-2">
-                    <label for="purpose" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="purpose" class="form-label">
                         Purpose <span class="text-red-500">*</span>
                     </label>
                     <input type="text" name="purpose" id="purpose" required
@@ -58,7 +58,7 @@
                 </div>
                 
                 <div class="md:col-span-2">
-                    <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="description" class="form-label">
                         Description
                     </label>
                     <textarea name="description" id="description" rows="2"
@@ -76,7 +76,7 @@
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label for="start_location" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="start_location" class="form-label">
                         Start Location <span class="text-red-500">*</span>
                     </label>
                     <input type="text" name="start_location" id="start_location" required
@@ -86,7 +86,7 @@
                 </div>
                 
                 <div>
-                    <label for="end_location" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="end_location" class="form-label">
                         End Location <span class="text-red-500">*</span>
                     </label>
                     <input type="text" name="end_location" id="end_location" required
@@ -96,7 +96,7 @@
                 </div>
                 
                 <div>
-                    <label for="distance_km" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="distance_km" class="form-label">
                         Distance (km) <span class="text-red-500">*</span>
                     </label>
                     <input type="number" name="distance_km" id="distance_km" step="0.01" required
@@ -106,7 +106,7 @@
                 </div>
                 
                 <div>
-                    <label for="rate_per_km" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="rate_per_km" class="form-label">
                         Rate per km <span class="text-red-500">*</span>
                     </label>
                     <input type="number" name="rate_per_km" id="rate_per_km" step="0.01" required
@@ -117,7 +117,7 @@
                 </div>
                 
                 <div>
-                    <label for="start_odometer" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="start_odometer" class="form-label">
                         Start Odometer (optional)
                     </label>
                     <input type="number" name="start_odometer" id="start_odometer" step="1"
@@ -127,7 +127,7 @@
                 </div>
                 
                 <div>
-                    <label for="end_odometer" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="end_odometer" class="form-label">
                         End Odometer (optional)
                     </label>
                     <input type="number" name="end_odometer" id="end_odometer" step="1"
@@ -163,7 +163,7 @@
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label for="vehicle_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="vehicle_type" class="form-label">
                         Vehicle Type
                     </label>
                     <select name="vehicle_type" id="vehicle_type"
@@ -177,7 +177,7 @@
                 </div>
                 
                 <div>
-                    <label for="vehicle_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="vehicle_description" class="form-label">
                         Vehicle Make/Model
                     </label>
                     <input type="text" name="vehicle_description" id="vehicle_description"
@@ -187,7 +187,7 @@
                 </div>
                 
                 <div>
-                    <label for="license_plate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="license_plate" class="form-label">
                         License Plate
                     </label>
                     <input type="text" name="license_plate" id="license_plate"
@@ -206,7 +206,7 @@
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="project_id" class="form-label">
                         Project
                     </label>
                     <select name="project_id" id="project_id"
@@ -221,7 +221,7 @@
                 </div>
                 
                 <div>
-                    <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="client_id" class="form-label">
                         Client
                     </label>
                     {{ client_select('client_id', clients, selected_id=mileage.client_id if mileage else none, required=False, only_one_client=only_one_client|default(false), single_client=single_client) }}
@@ -231,7 +231,7 @@
         
         <!-- Notes -->
         <div class="mb-6">
-            <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="notes" class="form-label">
                 Notes
             </label>
             <textarea name="notes" id="notes" rows="3"

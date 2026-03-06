@@ -15,10 +15,10 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-            <label for="warehouse_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Warehouse') }}</label>
+            <label for="warehouse_id" class="form-label">{{ _('Warehouse') }}</label>
             <select name="warehouse_id" id="warehouse_id" class="form-input">
                 <option value="">{{ _('All Warehouses') }}</option>
                 {% for warehouse in warehouses %}
@@ -27,7 +27,7 @@
             </select>
         </div>
         <div>
-            <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Category') }}</label>
+            <label for="category" class="form-label">{{ _('Category') }}</label>
             <select name="category" id="category" class="form-input">
                 <option value="">{{ _('All Categories') }}</option>
                 {% for cat in categories %}
@@ -41,7 +41,7 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold">{{ _('Inventory Valuation') }}</h2>
         <div class="text-right">
@@ -51,7 +51,7 @@
     </div>
     
     <div class="overflow-x-auto">
-        <table class="table table-zebra w-full text-left">
+        <table class="table table-zebra w-full text-left responsive-cards">
             <thead>
                 <tr>
                     <th class="p-4">{{ _('Warehouse') }}</th>
@@ -66,21 +66,21 @@
             <tbody>
                 {% for item_data in items_with_value %}
                 <tr>
-                    <td class="p-4">
+                    <td class="p-4" data-label="{{ _('Warehouse') }}">
                         <a href="{{ url_for('inventory.view_warehouse', warehouse_id=item_data.stock.warehouse_id) }}" class="text-primary hover:underline">
                             {{ item_data.stock.warehouse.code }}
                         </a>
                     </td>
-                    <td class="p-4">
+                    <td class="p-4 mobile-card-header" data-label="{{ _('Item') }}">
                         <a href="{{ url_for('inventory.view_stock_item', item_id=item_data.stock.stock_item_id) }}" class="text-primary hover:underline">
                             {{ item_data.stock.stock_item.name }}
                         </a>
                     </td>
-                    <td class="p-4 font-mono text-sm">{{ item_data.stock.stock_item.sku }}</td>
-                    <td class="p-4">{{ item_data.stock.stock_item.category or '—' }}</td>
-                    <td class="p-4">{{ "%.2f"|format(item_data.quantity) if item_data.quantity is not none else item_data.stock.quantity_on_hand }}</td>
-                    <td class="p-4">{{ (item_data.cost if item_data.cost is not none else (item_data.stock.stock_item.default_cost or 0))|format_currency(item_data.stock.stock_item.currency_code) }}</td>
-                    <td class="p-4 font-semibold">{{ item_data.value|format_currency(item_data.stock.stock_item.currency_code) }}</td>
+                    <td class="p-4 font-mono text-sm" data-label="{{ _('SKU') }}">{{ item_data.stock.stock_item.sku }}</td>
+                    <td class="p-4" data-label="{{ _('Category') }}">{{ item_data.stock.stock_item.category or '—' }}</td>
+                    <td class="p-4" data-label="{{ _('Quantity') }}">{{ "%.2f"|format(item_data.quantity) if item_data.quantity is not none else item_data.stock.quantity_on_hand }}</td>
+                    <td class="p-4" data-label="{{ _('Unit Cost') }}">{{ (item_data.cost if item_data.cost is not none else (item_data.stock.stock_item.default_cost or 0))|format_currency(item_data.stock.stock_item.currency_code) }}</td>
+                    <td class="p-4 font-semibold" data-label="{{ _('Total Value') }}">{{ item_data.value|format_currency(item_data.stock.stock_item.currency_code) }}</td>
                 </tr>
                 {% else %}
                 <tr>

@@ -2,10 +2,10 @@
 {% from "components/cards.html" import info_card %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
     <h1 class="text-2xl font-bold">{{ _('Summary Report') }}</h1>
     <a href="{{ url_for('reports.export_excel') }}" 
-       class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 inline-flex items-center">
+       class="bg-green-600 text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-green-700 inline-flex items-center">
         <i class="fas fa-file-excel mr-2"></i>{{ _('Export to Excel') }}
     </a>
 </div>
@@ -16,9 +16,9 @@
     {{ info_card("Month's Hours", "%.2f"|format(month_hours), "Logged this month") }}
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h2 class="text-lg font-semibold mb-4">Top Projects (Last 30 Days)</h2>
-    <table class="w-full text-left">
+    <table class="w-full text-left responsive-cards">
         <thead>
             <tr>
                 <th class="p-2">Project</th>
@@ -28,8 +28,8 @@
         <tbody>
             {% for stat in project_stats %}
             <tr class="border-b border-border-light dark:border-border-dark">
-                <td class="p-2">{{ stat.project.name }}</td>
-                <td class="p-2">{{ "%.2f"|format(stat.hours) }}</td>
+                <td class="p-2" data-label="Project">{{ stat.project.name }}</td>
+                <td class="p-2" data-label="Total Hours">{{ "%.2f"|format(stat.hours) }}</td>
             </tr>
             {% else %}
             <tr>

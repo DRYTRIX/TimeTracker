@@ -15,10 +15,10 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-            <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Category') }}</label>
+            <label for="category" class="form-label">{{ _('Category') }}</label>
             <select name="category" id="category" class="form-input">
                 <option value="">{{ _('All Categories') }}</option>
                 {% for cat in categories %}
@@ -38,8 +38,8 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
-    <table class="table table-zebra w-full text-left">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+    <table class="table table-zebra w-full text-left responsive-cards">
         <thead>
             <tr>
                 <th class="p-4">{{ _('Item') }}</th>
@@ -55,20 +55,20 @@
         <tbody>
             {% for stock in stock_levels %}
             <tr>
-                <td class="p-4">
+                <td class="p-4 mobile-card-header" data-label="{{ _('Item') }}">
                     <a href="{{ url_for('inventory.view_stock_item', item_id=stock.stock_item_id) }}" class="text-primary hover:underline font-medium">
                         {{ stock.stock_item.name }}
                     </a>
                 </td>
-                <td class="p-4 font-mono text-sm">{{ stock.stock_item.sku }}</td>
-                <td class="p-4">{{ stock.stock_item.category or '—' }}</td>
-                <td class="p-4 font-semibold">{{ stock.quantity_on_hand }}</td>
-                <td class="p-4">{{ stock.quantity_reserved }}</td>
-                <td class="p-4 {% if stock.quantity_available < 0 %}text-red-600{% elif stock.quantity_available == 0 %}text-amber-600{% else %}text-green-600{% endif %} font-semibold">
+                <td class="p-4 font-mono text-sm" data-label="{{ _('SKU') }}">{{ stock.stock_item.sku }}</td>
+                <td class="p-4" data-label="{{ _('Category') }}">{{ stock.stock_item.category or '—' }}</td>
+                <td class="p-4 font-semibold" data-label="{{ _('Quantity On Hand') }}">{{ stock.quantity_on_hand }}</td>
+                <td class="p-4" data-label="{{ _('Quantity Reserved') }}">{{ stock.quantity_reserved }}</td>
+                <td class="p-4 {% if stock.quantity_available < 0 %}text-red-600{% elif stock.quantity_available == 0 %}text-amber-600{% else %}text-green-600{% endif %} font-semibold" data-label="{{ _('Available') }}">
                     {{ stock.quantity_available }}
                 </td>
-                <td class="p-4">{{ stock.stock_item.reorder_point or '—' }}</td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Reorder Point') }}">{{ stock.stock_item.reorder_point or '—' }}</td>
+                <td class="p-4" data-label="{{ _('Status') }}">
                     {% if stock.stock_item.reorder_point and stock.quantity_on_hand < stock.stock_item.reorder_point %}
                         <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">{{ _('Low Stock') }}</span>
                     {% elif stock.quantity_available < 0 %}

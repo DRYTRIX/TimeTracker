@@ -16,7 +16,7 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST" id="recurringTaskForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
@@ -124,8 +124,8 @@
             </div>
         </div>
 
-        <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-border-light dark:border-border-dark">
-            <a href="{{ url_for('recurring_tasks.list_recurring_tasks') }}" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">{{ _('Cancel') }}</a>
+        <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6 pt-6 border-t border-border-light dark:border-border-dark">
+            <a href="{{ url_for('recurring_tasks.list_recurring_tasks') }}" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark text-center">{{ _('Cancel') }}</a>
             <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary-dark transition-colors">
                 <i class="fas fa-save mr-1"></i>{{ _('Save') }}
             </button>

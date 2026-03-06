@@ -3,55 +3,53 @@
 {% from "components/client_select.html" import client_select %}
 
 {% block content %}
-{% set breadcrumbs = [
-    {'text': 'Expenses', 'url': url_for('expenses.list_expenses')},
-    {'text': 'Edit' if expense else 'New'}
-] %}
-
 {{ page_header(
     icon_class='fas fa-receipt',
-    title_text=('Edit Expense' if expense else 'New Expense'),
+    title_text=('Edit Expense' if expense else 'Create Expense'),
     subtitle_text=('Update expense details' if expense else 'Create a new expense record'),
-    breadcrumbs=breadcrumbs
+    breadcrumbs=[
+        {'text': 'Expenses', 'url': url_for('expenses.list_expenses')},
+        {'text': 'Edit Expense' if expense else 'Create Expense'}
+    ]
 ) }}
 
 <div class="max-w-4xl mx-auto">
-    <form method="POST" enctype="multipart/form-data" class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow" novalidate data-validate-form>
+    <form method="POST" enctype="multipart/form-data" class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm" novalidate data-validate-form>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
         <!-- Basic Information -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-                <i class="fas fa-info-circle mr-2"></i>Basic Information
+                <i class="fas fa-info-circle mr-2"></i>{{ _('Basic Information') }}
             </h3>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="md:col-span-2">
-                    <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="title" class="form-label">
                         Title <span class="text-red-500">*</span>
                     </label>
                     <input type="text" name="title" id="title" required
                            value="{{ expense.title if expense else '' }}"
                            placeholder="{{ _('e.g., Flight to Berlin') }}"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                           class="form-input">
                 </div>
                 
                 <div class="md:col-span-2">
-                    <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="description" class="form-label">
                         Description
                     </label>
                     <textarea name="description" id="description" rows="3"
                               placeholder="{{ _('Additional details about the expense...') }}"
-                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">{{ expense.description if expense else '' }}</textarea>
+                              class="form-input">{{ expense.description if expense else '' }}</textarea>
                 </div>
                 
                 <div>
-                    <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="category" class="form-label">
                         Category <span class="text-red-500">*</span>
                     </label>
                     <select name="category" id="category" required
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
-                        <option value="">Select Category</option>
+                            class="form-input">
+                        <option value="">{{ _('Select Category') }}</option>
                         {% for cat in categories %}
                         <option value="{{ cat }}" {% if expense and expense.category == cat %}selected{% endif %}>
                             {{ cat|title }}
@@ -61,12 +59,12 @@
                 </div>
                 
                 <div>
-                    <label for="expense_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="expense_date" class="form-label">
                         Expense Date <span class="text-red-500">*</span>
                     </label>
                     <input type="date" name="expense_date" id="expense_date" required
                            value="{{ expense.expense_date.strftime('%Y-%m-%d') if expense else '' }}"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700 user-date-input">
+                           class="form-input user-date-input">
                 </div>
             </div>
         </div>
@@ -74,36 +72,36 @@
         <!-- Amount Information -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-                <i class="fas fa-euro-sign mr-2"></i>Amount Details
+                <i class="fas fa-euro-sign mr-2"></i>{{ _('Amount Details') }}
             </h3>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label for="amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="amount" class="form-label">
                         Amount <span class="text-red-500">*</span>
                     </label>
                     <input type="number" name="amount" id="amount" step="0.01" required
                            value="{{ expense.amount if expense else '' }}"
                            placeholder="0.00"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                           class="form-input">
                 </div>
                 
                 <div>
-                    <label for="tax_amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="tax_amount" class="form-label">
                         Tax Amount
                     </label>
                     <input type="number" name="tax_amount" id="tax_amount" step="0.01"
                            value="{{ expense.tax_amount if expense else '0.00' }}"
                            placeholder="0.00"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                           class="form-input">
                 </div>
                 
                 <div>
-                    <label for="currency_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="currency_code" class="form-label">
                         Currency
                     </label>
                     <select name="currency_code" id="currency_code"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                            class="form-input">
                         <option value="EUR" {% if not expense or expense.currency_code == 'EUR' %}selected{% endif %}>EUR</option>
                         <option value="USD" {% if expense and expense.currency_code == 'USD' %}selected{% endif %}>USD</option>
                         <option value="GBP" {% if expense and expense.currency_code == 'GBP' %}selected{% endif %}>GBP</option>
@@ -123,16 +121,16 @@
         <!-- Project & Client -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-                <i class="fas fa-project-diagram mr-2"></i>Association
+                <i class="fas fa-project-diagram mr-2"></i>{{ _('Association') }}
             </h3>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="project_id" class="form-label">
                         Project
                     </label>
                     <select name="project_id" id="project_id"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                            class="form-input">
                         <option value="">No Project</option>
                         {% for project in projects %}
                         <option value="{{ project.id }}" 
@@ -146,7 +144,7 @@
                 </div>
                 
                 <div>
-                    <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="client_id" class="form-label">
                         Client
                     </label>
                     {{ client_select('client_id', clients, selected_id=expense.client_id if expense else none, required=False, only_one_client=only_one_client|default(false), single_client=single_client) }}
@@ -157,16 +155,16 @@
         <!-- Payment Information -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-                <i class="fas fa-credit-card mr-2"></i>Payment Details
+                <i class="fas fa-credit-card mr-2"></i>{{ _('Payment Details') }}
             </h3>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label for="payment_method" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="payment_method" class="form-label">
                         Payment Method
                     </label>
                     <select name="payment_method" id="payment_method"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                            class="form-input">
                         <option value="">Select Method</option>
                         {% for method in payment_methods %}
                         <option value="{{ method }}" {% if expense and expense.payment_method == method %}selected{% endif %}>
@@ -177,22 +175,22 @@
                 </div>
                 
                 <div>
-                    <label for="payment_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="payment_date" class="form-label">
                         Payment Date
                     </label>
                     <input type="date" name="payment_date" id="payment_date"
                            value="{{ expense.payment_date.strftime('%Y-%m-%d') if expense and expense.payment_date else '' }}"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700 user-date-input">
+                           class="form-input user-date-input">
                 </div>
                 
                 <div>
-                    <label for="vendor" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="vendor" class="form-label">
                         Vendor
                     </label>
                     <input type="text" name="vendor" id="vendor"
                            value="{{ expense.vendor if expense else '' }}"
                            placeholder="{{ _('e.g., Lufthansa') }}"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                           class="form-input">
                 </div>
             </div>
         </div>
@@ -200,17 +198,17 @@
         <!-- Receipt & Additional Info -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-                <i class="fas fa-file-alt mr-2"></i>Receipt & Additional Information
+                <i class="fas fa-file-alt mr-2"></i>{{ _('Receipt & Additional Information') }}
             </h3>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                    <label for="receipt_file" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="receipt_file" class="form-label">
                         Receipt File
                     </label>
                     <input type="file" name="receipt_file" id="receipt_file"
                            accept=".png,.jpg,.jpeg,.gif,.pdf"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                           class="form-input">
                     <p class="text-xs text-gray-500 mt-1">Allowed: PNG, JPG, GIF, PDF (Max 10MB)</p>
                     {% if expense and expense.receipt_path %}
                     <p class="text-xs text-green-600 mt-1">
@@ -220,40 +218,40 @@
                 </div>
                 
                 <div>
-                    <label for="receipt_number" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="receipt_number" class="form-label">
                         {{ _('Receipt/Invoice Number') }}
                     </label>
                     <input type="text" name="receipt_number" id="receipt_number"
                            value="{{ expense.receipt_number if expense else '' }}"
                            placeholder="{{ _('e.g., INV-2024-001') }}"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                           class="form-input">
                 </div>
             </div>
             
             <div class="mb-4">
-                <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label for="tags" class="form-label">
                     Tags (comma-separated)
                 </label>
                 <input type="text" name="tags" id="tags"
                        value="{{ expense.tags if expense else '' }}"
                        placeholder="{{ _('e.g., conference, client-meeting, urgent') }}"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                       class="form-input">
             </div>
             
             <div>
-                <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label for="notes" class="form-label">
                     Notes
                 </label>
                 <textarea name="notes" id="notes" rows="3"
                           placeholder="{{ _('Additional notes...') }}"
-                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">{{ expense.notes if expense else '' }}</textarea>
+                          class="form-input">{{ expense.notes if expense else '' }}</textarea>
             </div>
         </div>
         
         <!-- Flags -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-                <i class="fas fa-toggle-on mr-2"></i>Options
+                <i class="fas fa-toggle-on mr-2"></i>{{ _('Options') }}
             </h3>
             
             <div class="space-y-3">
@@ -282,11 +280,11 @@
         <!-- Actions -->
         <div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
             <a href="{{ url_for('expenses.view_expense', expense_id=expense.id) if expense else url_for('expenses.list_expenses') }}" 
-               class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+               class="btn btn-secondary">
                 <i class="fas fa-times mr-2"></i>Cancel
             </a>
             
-            <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <button type="submit" class="btn btn-primary">
                 <i class="fas fa-save mr-2"></i>{{ 'Update Expense' if expense else 'Create Expense' }}
             </button>
         </div>
@@ -318,10 +316,9 @@ document.getElementById('project_id').addEventListener('change', function() {
         clientSelect.value = clientId;
         
         // Visual feedback
-        clientSelect.style.transition = 'all 0.3s ease';
-        clientSelect.style.backgroundColor = '#d1fae5'; // Light green flash
+        clientSelect.classList.add('bg-green-100', 'dark:bg-green-900/30', 'transition-colors', 'duration-300');
         setTimeout(() => {
-            clientSelect.style.backgroundColor = '';
+            clientSelect.classList.remove('bg-green-100', 'dark:bg-green-900/30');
         }, 1000);
     } else {
         // If project has no client or "No Project" is selected, clear client selection

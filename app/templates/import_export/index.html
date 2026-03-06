@@ -29,7 +29,7 @@
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('CSV Import - Time Entries') }}</h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Import time entries from a CSV file') }}</p>
                     
-                    <div class="flex items-center space-x-3">
+                    <div class="flex flex-wrap items-center gap-3">
                         <label for="csv-file" class="cursor-pointer bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
                             <i class="fas fa-upload mr-2"></i>{{ _('Choose CSV File') }}
                         </label>
@@ -48,7 +48,7 @@
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('CSV Import - Clients') }}</h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Import clients with custom fields and multiple contacts from a CSV file') }}</p>
                     
-                    <div class="flex items-center space-x-3">
+                    <div class="flex flex-wrap items-center gap-3">
                         <label for="csv-clients-file" class="cursor-pointer bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">
                             <i class="fas fa-upload mr-2"></i>{{ _('Choose CSV File') }}
                         </label>
@@ -142,7 +142,7 @@
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Full Data Export (GDPR)') }}</h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Export all your personal data') }}</p>
                     
-                    <div class="flex space-x-3">
+                    <div class="flex flex-wrap gap-3">
                         <button onclick="exportGdpr('json')" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
                             <i class="fas fa-file-code mr-2"></i>{{ _('Export as JSON') }}
                         </button>
@@ -213,22 +213,22 @@
         
         <form id="toggl-form" onsubmit="submitTogglImport(event)" class="space-y-4">
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('API Token') }}</label>
+                <label class="form-label">{{ _('API Token') }}</label>
                 <input type="text" name="api_token" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
             </div>
             
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Workspace ID') }}</label>
+                <label class="form-label">{{ _('Workspace ID') }}</label>
                 <input type="text" name="workspace_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
             </div>
             
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Start Date') }}</label>
+                <label class="form-label">{{ _('Start Date') }}</label>
                 <input type="date" name="start_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
             </div>
             
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('End Date') }}</label>
+                <label class="form-label">{{ _('End Date') }}</label>
                 <input type="date" name="end_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
             </div>
             
@@ -251,22 +251,22 @@
         
         <form id="harvest-form" onsubmit="submitHarvestImport(event)" class="space-y-4">
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Account ID') }}</label>
+                <label class="form-label">{{ _('Account ID') }}</label>
                 <input type="text" name="account_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
             </div>
             
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('API Token') }}</label>
+                <label class="form-label">{{ _('API Token') }}</label>
                 <input type="text" name="api_token" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
             </div>
             
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Start Date') }}</label>
+                <label class="form-label">{{ _('Start Date') }}</label>
                 <input type="date" name="start_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
             </div>
             
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('End Date') }}</label>
+                <label class="form-label">{{ _('End Date') }}</label>
                 <input type="date" name="end_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
             </div>
             

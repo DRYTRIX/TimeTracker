@@ -3,12 +3,12 @@
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
             <i class="fas fa-file-export mr-2"></i>
             {{ _('Export Time Entries') }}
         </h1>
-        <a href="{{ url_for('reports.reports') }}" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition inline-block">
+        <a href="{{ url_for('reports.reports') }}" class="bg-gray-600 text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-gray-700 transition inline-flex items-center">
             <i class="fas fa-arrow-left mr-2"></i>Back to Reports
         </a>
     </div>
@@ -32,7 +32,7 @@
         <form id="exportForm" method="GET" action="{{ url_for('reports.export_csv') }}" class="space-y-6">
             <!-- Format selector: same form supports CSV and Excel -->
             <div>
-                <label for="export_format" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label for="export_format" class="form-label">
                     <i class="fas fa-file-alt mr-1"></i> {{ _('Export format') }}
                 </label>
                 <select id="export_format" class="form-input w-full max-w-xs" aria-label="{{ _('Export format') }}">
@@ -49,7 +49,7 @@
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="start_date" class="form-label">
                             Start Date <span class="text-red-500">*</span>
                         </label>
                         <input type="date" 
@@ -60,7 +60,7 @@
                                class="form-input user-date-input">
                     </div>
                     <div>
-                        <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="end_date" class="form-label">
                             End Date <span class="text-red-500">*</span>
                         </label>
                         <input type="date" 
@@ -86,7 +86,7 @@
                     {% if current_user.is_admin %}
                     <!-- User Filter (Admin Only) -->
                     <div>
-                        <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="user_id" class="form-label">
                             <i class="fas fa-user mr-1"></i> User
                         </label>
                         <select name="user_id" 
@@ -102,7 +102,7 @@
 
                     <!-- Client Filter -->
                     <div>
-                        <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="client_id" class="form-label">
                             <i class="fas fa-building mr-1"></i> Client
                         </label>
                         {{ client_select('client_id', clients, selected_id=request.args.get('client_id')|int, required=False, only_one_client=only_one_client|default(false), single_client=single_client) }}
@@ -110,7 +110,7 @@
 
                     <!-- Project Filter -->
                     <div>
-                        <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="project_id" class="form-label">
                             <i class="fas fa-project-diagram mr-1"></i> Project
                         </label>
                         <select name="project_id" 
@@ -125,7 +125,7 @@
 
                     <!-- Task Filter -->
                     <div>
-                        <label for="task_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="task_id" class="form-label">
                             <i class="fas fa-tasks mr-1"></i> Task
                         </label>
                         <select name="task_id" 
@@ -138,7 +138,7 @@
 
                     <!-- Billable Filter -->
                     <div>
-                        <label for="billable" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="billable" class="form-label">
                             <i class="fas fa-dollar-sign mr-1"></i> Billable Status
                         </label>
                         <select name="billable" 
@@ -152,7 +152,7 @@
 
                     <!-- Source Filter -->
                     <div>
-                        <label for="source" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="source" class="form-label">
                             <i class="fas fa-compass mr-1"></i> Entry Source
                         </label>
                         <select name="source" 
@@ -166,7 +166,7 @@
 
                     <!-- Tags Filter -->
                     <div class="md:col-span-2 lg:col-span-3">
-                        <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="tags" class="form-label">
                             <i class="fas fa-tags mr-1"></i> Tags (comma-separated)
                         </label>
                         <input type="text" 
@@ -184,15 +184,15 @@
             <hr class="border-gray-200 dark:border-gray-700">
 
             <!-- Action Buttons -->
-            <div class="flex justify-end space-x-4">
+            <div class="flex flex-col sm:flex-row justify-end gap-3">
                 <button type="button" 
                         id="resetBtn"
-                        class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition">
+                        class="bg-gray-600 text-white px-6 py-2 min-h-[44px] rounded-lg hover:bg-gray-700 transition">
                     <i class="fas fa-undo mr-2"></i>{{ _('Reset Filters') }}
                 </button>
                 <button type="submit" 
                         id="exportSubmitBtn"
-                        class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition">
+                        class="bg-primary text-white px-6 py-2 min-h-[44px] rounded-lg hover:bg-primary/90 transition">
                     <i class="fas fa-download mr-2"></i><span id="exportSubmitLabel">{{ _('Export to CSV') if export_format == 'csv' else _('Export to Excel') }}</span>
                 </button>
             </div>
@@ -200,7 +200,7 @@
     </div>
 
     <!-- Preview Section -->
-    <div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
             <i class="fas fa-eye mr-2 text-indigo-500"></i>
             Export Preview

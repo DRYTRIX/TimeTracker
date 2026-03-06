@@ -16,7 +16,7 @@
     actions_html='<a href="' + url_for("deals.create_deal") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Deal</a> <a href="' + url_for("deals.pipeline_view") + '" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-columns mr-2"></i>Pipeline View</a>'
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
             <label for="status" class="block text-sm font-medium mb-2">{{ _('Status') }}</label>
@@ -41,43 +41,43 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     {% if deals %}
     <div class="overflow-x-auto">
-        <table class="w-full text-left">
-            <thead class="border-b border-border-light dark:border-border-dark">
+        <table class="w-full text-left enhanced-table responsive-cards">
+            <thead class="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
                 <tr>
-                    <th class="pb-3 text-sm font-medium">{{ _('Deal Name') }}</th>
-                    <th class="pb-3 text-sm font-medium">{{ _('Client') }}</th>
-                    <th class="pb-3 text-sm font-medium">{{ _('Stage') }}</th>
-                    <th class="pb-3 text-sm font-medium">{{ _('Value') }}</th>
-                    <th class="pb-3 text-sm font-medium">{{ _('Probability') }}</th>
-                    <th class="pb-3 text-sm font-medium">{{ _('Expected Close') }}</th>
-                    <th class="pb-3 text-sm font-medium">{{ _('Actions') }}</th>
+                    <th class="px-4 py-3 text-sm font-medium">{{ _('Deal Name') }}</th>
+                    <th class="px-4 py-3 text-sm font-medium">{{ _('Client') }}</th>
+                    <th class="px-4 py-3 text-sm font-medium">{{ _('Stage') }}</th>
+                    <th class="px-4 py-3 text-sm font-medium">{{ _('Value') }}</th>
+                    <th class="px-4 py-3 text-sm font-medium">{{ _('Probability') }}</th>
+                    <th class="px-4 py-3 text-sm font-medium">{{ _('Expected Close') }}</th>
+                    <th class="px-4 py-3 text-sm font-medium">{{ _('Actions') }}</th>
                 </tr>
             </thead>
             <tbody>
                 {% for deal in deals %}
                 <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td class="py-3">
+                    <td class="py-3 mobile-card-header" data-label="{{ _('Deal Name') }}">
                         <a href="{{ url_for('deals.view_deal', deal_id=deal.id) }}" class="text-primary hover:underline font-medium">{{ deal.name }}</a>
                     </td>
-                    <td class="py-3">{{ deal.client.name if deal.client else 'N/A' }}</td>
-                    <td class="py-3">
+                    <td class="py-3" data-label="{{ _('Client') }}">{{ deal.client.name if deal.client else 'N/A' }}</td>
+                    <td class="py-3" data-label="{{ _('Stage') }}">
                         <span class="px-2 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                             {{ deal.stage|replace('_', ' ')|title }}
                         </span>
                     </td>
-                    <td class="py-3">
+                    <td class="py-3" data-label="{{ _('Value') }}">
                         {% if deal.value %}
                         {{ deal.currency_code }} {{ '%.2f'|format(deal.value) }}
                         {% else %}
                         N/A
                         {% endif %}
                     </td>
-                    <td class="py-3">{{ deal.probability }}%</td>
-                    <td class="py-3">{{ deal.expected_close_date|format_date if deal.expected_close_date else 'N/A' }}</td>
-                    <td class="py-3">
+                    <td class="py-3" data-label="{{ _('Probability') }}">{{ deal.probability }}%</td>
+                    <td class="py-3" data-label="{{ _('Expected Close') }}">{{ deal.expected_close_date|format_date if deal.expected_close_date else 'N/A' }}</td>
+                    <td class="py-3 mobile-actions" data-label="{{ _('Actions') }}">
                         <a href="{{ url_for('deals.view_deal', deal_id=deal.id) }}" class="text-primary hover:underline text-sm">{{ _('View') }}</a>
                     </td>
                 </tr>

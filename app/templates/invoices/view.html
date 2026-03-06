@@ -1,68 +1,66 @@
 {% extends "base.html" %}
+{% from 'components/ui.html' import page_header %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold">Invoice {{ invoice.invoice_number }}</h1>
-    <div class="flex gap-2 items-center">
-        <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark">Edit</a>
-        <div class="flex gap-2 items-center">
-            <select id="pdf-size-selector" class="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
-                <option value="A4">A4</option>
-                <option value="Letter">Letter</option>
-                <option value="Legal">Legal</option>
-                <option value="A3">A3</option>
-                <option value="A5">A5</option>
-                <option value="Tabloid">Tabloid</option>
-            </select>
-            <a id="export-pdf-link" href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary-dark">{{ _('Export PDF') }}</a>
-        </div>
-        <button type="button" onclick="showSendEmailModal()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
-            <i class="fas fa-envelope mr-1"></i>Send Email
-        </button>
-        {% if peppol_enabled %}
-        <button type="button"
-                onclick="sendInvoicePeppol()"
-                class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 {% if not peppol_recipient_ready %}opacity-50 cursor-not-allowed{% endif %}"
-                {% if not peppol_recipient_ready %}disabled title="Client is missing Peppol endpoint details (peppol_endpoint_id / peppol_scheme_id)"{% endif %}>
-            <i class="fas fa-paper-plane mr-1"></i>Send via Peppol
-        </button>
-        {% endif %}
-        {% if peppol_recipient_ready and (invoices_peppol_compliant or peppol_enabled) %}
-        <a href="{{ url_for('invoices.export_invoice_ubl', invoice_id=invoice.id) }}" class="bg-slate-600 text-white px-4 py-2 rounded-lg hover:bg-slate-700">
-            <i class="fas fa-file-code mr-1"></i>{{ _('Download UBL') }}
-        </a>
-        {% endif %}
-        {% if invoice.status != 'paid' and invoice.status != 'cancelled' %}
-        <a href="{{ url_for('payment_gateways.pay_invoice', invoice_id=invoice.id) }}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
-            <i class="fas fa-credit-card mr-1"></i>{{ _('Pay Online') }}
-        </a>
-        {% endif %}
-        <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">{{ _('Record Payment') }}</a>
-        <button type="button" onclick="showDeleteModal('{{ invoice.id }}', '{{ invoice.invoice_number }}')" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
-            <i class="fas fa-trash mr-1"></i>Delete
-        </button>
-    </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const sizeSelector = document.getElementById('pdf-size-selector');
-            const exportLink = document.getElementById('export-pdf-link');
-            if (sizeSelector && exportLink) {
-                // Initialize export link with default size (A4)
-                const defaultSize = sizeSelector.value || 'A4';
-                const baseUrl = "{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}";
-                exportLink.href = baseUrl + '?size=' + defaultSize;
-                
-                // Update export link when size changes
-                sizeSelector.addEventListener('change', function() {
-                    const size = this.value;
-                    exportLink.href = baseUrl + '?size=' + size;
-                });
-            }
-        });
-    </script>
+{% set actions %}
+<div class="flex flex-wrap gap-2 items-center">
+<a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="btn btn-primary">Edit</a>
+<div class="flex flex-wrap gap-2 items-center">
+    <select id="pdf-size-selector" class="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+        <option value="A4">A4</option>
+        <option value="Letter">Letter</option>
+        <option value="Legal">Legal</option>
+        <option value="A3">A3</option>
+        <option value="A5">A5</option>
+        <option value="Tabloid">Tabloid</option>
+    </select>
+    <a id="export-pdf-link" href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="btn bg-secondary text-white hover:bg-secondary-dark">{{ _('Export PDF') }}</a>
 </div>
+<button type="button" onclick="showSendEmailModal()" class="btn bg-blue-500 text-white hover:bg-blue-600">
+    <i class="fas fa-envelope mr-1"></i>Send Email
+</button>
+{% if peppol_enabled %}
+<button type="button"
+        onclick="sendInvoicePeppol()"
+        class="btn bg-indigo-600 text-white hover:bg-indigo-700 {% if not peppol_recipient_ready %}opacity-50 cursor-not-allowed{% endif %}"
+        {% if not peppol_recipient_ready %}disabled title="Client is missing Peppol endpoint details (peppol_endpoint_id / peppol_scheme_id)"{% endif %}>
+    <i class="fas fa-paper-plane mr-1"></i>Send via Peppol
+</button>
+{% endif %}
+{% if peppol_recipient_ready and (invoices_peppol_compliant or peppol_enabled) %}
+<a href="{{ url_for('invoices.export_invoice_ubl', invoice_id=invoice.id) }}" class="btn bg-slate-600 text-white hover:bg-slate-700">
+    <i class="fas fa-file-code mr-1"></i>{{ _('Download UBL') }}
+</a>
+{% endif %}
+{% if invoice.status != 'paid' and invoice.status != 'cancelled' %}
+<a href="{{ url_for('payment_gateways.pay_invoice', invoice_id=invoice.id) }}" class="btn bg-blue-500 text-white hover:bg-blue-600">
+    <i class="fas fa-credit-card mr-1"></i>{{ _('Pay Online') }}
+</a>
+{% endif %}
+<a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="btn bg-green-500 text-white hover:bg-green-600">{{ _('Record Payment') }}</a>
+<button type="button" onclick="showDeleteModal('{{ invoice.id }}', '{{ invoice.invoice_number }}')" class="btn btn-danger">
+    <i class="fas fa-trash mr-1"></i>Delete
+</button>
+</div>
+{% endset %}
+{{ page_header('fas fa-file-invoice', 'Invoice ' ~ invoice.invoice_number, actions_html=actions, breadcrumbs=[{'text': _('Invoices'), 'url': url_for('invoices.list_invoices')}, {'text': invoice.invoice_number or _('View Invoice')}]) }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const sizeSelector = document.getElementById('pdf-size-selector');
+        const exportLink = document.getElementById('export-pdf-link');
+        if (sizeSelector && exportLink) {
+            const defaultSize = sizeSelector.value || 'A4';
+            const baseUrl = "{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}";
+            exportLink.href = baseUrl + '?size=' + defaultSize;
+            sizeSelector.addEventListener('change', function() {
+                const size = this.value;
+                exportLink.href = baseUrl + '?size=' + size;
+            });
+        }
+    });
+</script>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
             <h2 class="text-lg font-semibold">Client</h2>
@@ -138,7 +136,7 @@
                 <p class="text-sm text-blue-800 dark:text-blue-200">{{ _('Request approval before sending this invoice to the client.') }}</p>
             </div>
             {% if not invoice.approvals or (invoice.approvals|selectattr('status', 'equalto', 'pending')|list|length == 0) %}
-            <a href="{{ url_for('invoice_approvals.request_approval', invoice_id=invoice.id) }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+            <a href="{{ url_for('invoice_approvals.request_approval', invoice_id=invoice.id) }}" class="btn bg-blue-600 text-white hover:bg-blue-700">
                 <i class="fas fa-check-circle mr-2"></i>{{ _('Request Approval') }}
             </a>
             {% endif %}
@@ -260,7 +258,7 @@
     <div class="mt-8 border-t border-gray-300 dark:border-gray-600 pt-6">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold">{{ _('Payment History') }}</h2>
-            <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm">
+            <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="btn bg-green-500 text-white hover:bg-green-600">
                 <i class="fas fa-plus mr-2"></i>Add Payment
             </a>
         </div>
@@ -349,7 +347,7 @@
     <div class="mt-8 border-t border-gray-300 dark:border-gray-600 pt-6">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold">{{ _('Payment History') }}</h2>
-            <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm">
+            <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="btn bg-green-500 text-white hover:bg-green-600">
                 <i class="fas fa-plus mr-2"></i>Record First Payment
             </a>
         </div>
@@ -361,7 +359,7 @@
 <!-- Delete Invoice Modal -->
 <div id="deleteInvoiceModal" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
   <div class="absolute inset-0 bg-black/50" onclick="hideDeleteModal()"></div>
-  <div class="relative max-w-lg mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-xl ring-1 ring-border-light/60 dark:ring-border-dark/60">
+  <div class="relative max-w-lg mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark">
     <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
       <h5 id="deleteModalTitle" class="text-lg font-semibold flex items-center gap-2">
         <i class="fas fa-trash text-red-500"></i> {{ _('Delete Invoice') }}
@@ -381,12 +379,12 @@
       </p>
     </div>
     <div class="p-4 border-t border-border-light dark:border-border-dark flex items-center justify-between">
-      <button type="button" class="inline-flex items-center gap-2 px-3 py-2 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark" onclick="hideDeleteModal()">
+      <button type="button" class="btn btn-secondary" onclick="hideDeleteModal()">
         <i class="fas fa-times"></i> {{ _('Cancel') }}
       </button>
       <form method="POST" id="deleteInvoiceForm" class="inline">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="inline-flex items-center gap-2 px-3 py-2 rounded bg-red-500 text-white hover:bg-red-600">
+        <button type="submit" class="btn btn-danger">
           <i class="fas fa-trash"></i> {{ _('Delete Invoice') }}
         </button>
       </form>
@@ -396,7 +394,7 @@
 
 <!-- Email History Section -->
 {% if email_history|length > 0 %}
-<div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h2 class="text-lg font-semibold mb-4 flex items-center">
         <i class="fas fa-envelope mr-2"></i>Email History
     </h2>
@@ -454,7 +452,7 @@
 
 <!-- Peppol History Section -->
 {% if peppol_history is defined and peppol_history|length > 0 %}
-<div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h2 class="text-lg font-semibold mb-4 flex items-center">
         <i class="fas fa-paper-plane mr-2"></i>Peppol History
     </h2>
@@ -493,18 +491,18 @@
 {% endif %}
 
 <!-- Send Email Modal -->
-<div id="sendEmailModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-  <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-card-light dark:bg-card-dark">
+<div id="sendEmailModal" class="hidden fixed inset-0 bg-black/50 overflow-y-auto h-full w-full z-50">
+  <div class="relative top-20 mx-auto p-5 max-w-sm w-full sm:w-96 bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark mx-4 sm:mx-auto">
     <div class="mt-3">
       <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">{{ _('Send Invoice via Email') }}</h3>
       <form id="sendEmailForm" onsubmit="sendInvoiceEmail(event)">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="mb-4">
-          <label for="recipient_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Recipient Email *</label>
+          <label for="recipient_email" class="form-label">Recipient Email *</label>
           <input type="email" id="recipient_email" name="recipient_email" value="{{ invoice.client_email }}" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
         </div>
         <div class="mb-4">
-          <label for="email_template_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email Template (Optional)</label>
+          <label for="email_template_id" class="form-label">Email Template (Optional)</label>
           <select id="email_template_id" name="email_template_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
             <option value="">Default Template</option>
             {% for template in email_templates %}
@@ -513,12 +511,12 @@
           </select>
         </div>
         <div class="mb-4">
-          <label for="custom_message" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Custom Message') }} ({{ _('Optional') }})</label>
+          <label for="custom_message" class="form-label">{{ _('Custom Message') }} ({{ _('Optional') }})</label>
           <textarea id="custom_message" name="custom_message" rows="4" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"></textarea>
         </div>
-        <div class="flex justify-end space-x-3">
-          <button type="button" onclick="hideSendEmailModal()" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500">Cancel</button>
-          <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">{{ _('Send Email') }}</button>
+        <div class="flex flex-wrap justify-end gap-3">
+          <button type="button" onclick="hideSendEmailModal()" class="btn btn-secondary">Cancel</button>
+          <button type="submit" class="btn bg-blue-500 text-white hover:bg-blue-600">{{ _('Send Email') }}</button>
         </div>
       </form>
     </div>

@@ -53,7 +53,7 @@
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
             <h2 class="text-lg font-semibold mb-4">{{ _('Quote Details') }}</h2>
             
             {% if quote.description %}
@@ -63,7 +63,7 @@
             </div>
             {% endif %}
 
-            <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
                     <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Status') }}</h3>
                     <p>
@@ -166,7 +166,7 @@
         </div>
 
         {% if quote.has_project %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
             <h2 class="text-lg font-semibold mb-4">{{ _('Related Project') }}</h2>
             <p class="mb-2">
                 <a href="{{ url_for('projects.view_project', project_id=quote.project_id) }}" class="text-primary hover:underline">
@@ -178,7 +178,7 @@
     </div>
 
     <div>
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Actions') }}</h3>
             <div class="space-y-3">
                 <!-- Approval Workflow Actions -->
@@ -259,7 +259,7 @@
         </div>
     
     <!-- Comments Section -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-semibold">
                 <i class="fas fa-comments mr-2"></i>{{ _('Comments') }}
@@ -278,7 +278,7 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="quote_id" value="{{ quote.id }}">
                 <div>
-                    <label for="comment-content" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Your Comment') }}</label>
+                    <label for="comment-content" class="form-label">{{ _('Your Comment') }}</label>
                     <textarea name="content" id="comment-content" rows="4" class="w-full form-input" placeholder="{{ _('Share your thoughts, updates, or questions...') }}" required></textarea>
                 </div>
                 <div class="flex items-center">
@@ -390,7 +390,7 @@
     </div>
 </div>
 
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
             <h3 class="text-lg font-semibold mb-4 flex items-center">
                 <i class="fas fa-info-circle mr-2 text-primary"></i>{{ _('Information') }}
             </h3>
@@ -534,7 +534,7 @@ function hideRejectApprovalModal() {
         <form method="POST" action="{{ url_for('quotes.approve_quote', quote_id=quote.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-4">
-                <label for="approval-notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Notes (Optional)') }}</label>
+                <label for="approval-notes" class="form-label">{{ _('Notes (Optional)') }}</label>
                 <textarea id="approval-notes" name="notes" rows="3" class="w-full form-input" placeholder="{{ _('Add approval notes...') }}"></textarea>
             </div>
             <div class="flex gap-2">
@@ -552,7 +552,7 @@ function hideRejectApprovalModal() {
         <form method="POST" action="{{ url_for('quotes.reject_approval', quote_id=quote.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-4">
-                <label for="rejection-reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Rejection Reason') }} <span class="text-red-500">*</span></label>
+                <label for="rejection-reason" class="form-label">{{ _('Rejection Reason') }} <span class="text-red-500">*</span></label>
                 <textarea id="rejection-reason" name="reason" rows="4" class="w-full form-input" placeholder="{{ _('Please provide a reason for rejection...') }}" required></textarea>
             </div>
             <div class="flex gap-2">

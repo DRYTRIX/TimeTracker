@@ -15,24 +15,24 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow max-w-4xl mx-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm max-w-4xl mx-auto">
     <form method="POST" action="{% if item %}{{ url_for('inventory.edit_stock_item', item_id=item.id) }}{% else %}{{ url_for('inventory.new_stock_item') }}{% endif %}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-                <label for="sku" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('SKU') }} *</label>
+                <label for="sku" class="form-label">{{ _('SKU') }} *</label>
                 <input type="text" name="sku" id="sku" value="{{ item.sku if item else '' }}" class="form-input" required>
             </div>
             <div>
-                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Name') }} *</label>
+                <label for="name" class="form-label">{{ _('Name') }} *</label>
                 <input type="text" name="name" id="name" value="{{ item.name if item else '' }}" class="form-input" required>
             </div>
             <div class="md:col-span-2">
-                <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Description') }}</label>
+                <label for="description" class="form-label">{{ _('Description') }}</label>
                 <textarea name="description" id="description" rows="3" class="form-input">{{ item.description or '' if item else '' }}</textarea>
             </div>
             <div>
-                <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Category') }}</label>
+                <label for="category" class="form-label">{{ _('Category') }}</label>
                 <input type="text" name="category" id="category" value="{{ item.category or '' if item else '' }}" class="form-input" list="categories">
                 <datalist id="categories">
                     <option value="Electronics">
@@ -42,15 +42,15 @@
                 </datalist>
             </div>
             <div>
-                <label for="unit" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Unit') }}</label>
+                <label for="unit" class="form-label">{{ _('Unit') }}</label>
                 <input type="text" name="unit" id="unit" value="{{ item.unit if item else 'pcs' }}" class="form-input">
             </div>
             <div>
-                <label for="barcode" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Barcode') }}</label>
+                <label for="barcode" class="form-label">{{ _('Barcode') }}</label>
                 <input type="text" name="barcode" id="barcode" value="{{ item.barcode or '' if item else '' }}" class="form-input">
             </div>
             <div>
-                <label for="currency_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Currency') }}</label>
+                <label for="currency_code" class="form-label">{{ _('Currency') }}</label>
                 <select name="currency_code" id="currency_code" class="form-input">
                     <option value="EUR" {% if not item or item.currency_code == 'EUR' %}selected{% endif %}>EUR</option>
                     <option value="USD" {% if item and item.currency_code == 'USD' %}selected{% endif %}>USD</option>
@@ -58,27 +58,27 @@
                 </select>
             </div>
             <div>
-                <label for="default_cost" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Default Cost') }}</label>
+                <label for="default_cost" class="form-label">{{ _('Default Cost') }}</label>
                 <input type="number" name="default_cost" id="default_cost" value="{{ item.default_cost if item else '' }}" step="0.01" class="form-input">
             </div>
             <div>
-                <label for="default_price" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Default Price') }}</label>
+                <label for="default_price" class="form-label">{{ _('Default Price') }}</label>
                 <input type="number" name="default_price" id="default_price" value="{{ item.default_price if item else '' }}" step="0.01" class="form-input">
             </div>
             <div>
-                <label for="reorder_point" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Reorder Point') }}</label>
+                <label for="reorder_point" class="form-label">{{ _('Reorder Point') }}</label>
                 <input type="number" name="reorder_point" id="reorder_point" value="{{ item.reorder_point if item else '' }}" step="0.01" class="form-input">
             </div>
             <div>
-                <label for="reorder_quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Reorder Quantity') }}</label>
+                <label for="reorder_quantity" class="form-label">{{ _('Reorder Quantity') }}</label>
                 <input type="number" name="reorder_quantity" id="reorder_quantity" value="{{ item.reorder_quantity if item else '' }}" step="0.01" class="form-input">
             </div>
             <div class="md:col-span-2">
-                <label for="image_url" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Image URL') }}</label>
+                <label for="image_url" class="form-label">{{ _('Image URL') }}</label>
                 <input type="url" name="image_url" id="image_url" value="{{ item.image_url or '' if item else '' }}" class="form-input">
             </div>
             <div class="md:col-span-2">
-                <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Notes') }}</label>
+                <label for="notes" class="form-label">{{ _('Notes') }}</label>
                 <textarea name="notes" id="notes" rows="3" class="form-input">{{ item.notes or '' if item else '' }}</textarea>
             </div>
             <div class="md:col-span-2 space-y-2">
@@ -129,8 +129,8 @@
                 <i class="fas fa-plus mr-2"></i>{{ _('Add Supplier') }}
             </button>
         </div>
-        <div class="mt-6 flex justify-end gap-3">
-            <a href="{{ url_for('inventory.list_stock_items') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+        <div class="mt-6 flex flex-col sm:flex-row justify-end gap-3">
+            <a href="{{ url_for('inventory.list_stock_items') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-center">
                 {{ _('Cancel') }}
             </a>
             <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">

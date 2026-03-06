@@ -15,10 +15,10 @@
 ) }}
 
 <!-- Date Range Filter -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <form method="GET" class="flex flex-wrap items-end gap-4">
         <div class="flex-1 min-w-[200px]">
-            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="start_date" class="form-label">
                 Start Date
             </label>
             <input type="date" name="start_date" id="start_date" value="{{ start_date }}"
@@ -26,7 +26,7 @@
         </div>
         
         <div class="flex-1 min-w-[200px]">
-            <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="end_date" class="form-label">
                 End Date
             </label>
             <input type="date" name="end_date" id="end_date" value="{{ end_date }}"
@@ -41,49 +41,49 @@
 
 <!-- Statistics Cards -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Total Expenses</p>
-                <p class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ total_expenses }}</p>
+                <p class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">{{ total_expenses }}</p>
             </div>
-            <div class="text-primary text-4xl">
+            <div class="text-primary text-3xl sm:text-4xl">
                 <i class="fas fa-file-invoice-dollar"></i>
             </div>
         </div>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Total Amount</p>
-                <p class="text-3xl font-bold text-green-600">{{ total_amount|format_currency(currency) }}</p>
+                <p class="text-2xl sm:text-3xl font-bold text-green-600">{{ total_amount|format_currency(currency) }}</p>
             </div>
-            <div class="text-green-500 text-4xl">
+            <div class="text-green-500 text-3xl sm:text-4xl">
                 <i class="fas {{ currency|currency_icon }}"></i>
             </div>
         </div>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Pending Approval</p>
-                <p class="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{{ pending_count }}</p>
+                <p class="text-2xl sm:text-3xl font-bold text-yellow-600 dark:text-yellow-400">{{ pending_count }}</p>
             </div>
-            <div class="text-yellow-500 dark:text-yellow-400 text-4xl">
+            <div class="text-yellow-500 dark:text-yellow-400 text-3xl sm:text-4xl">
                 <i class="fas fa-clock"></i>
             </div>
         </div>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Pending Reimbursement</p>
-                <p class="text-3xl font-bold text-blue-600">{{ pending_reimbursement }}</p>
+                <p class="text-2xl sm:text-3xl font-bold text-blue-600">{{ pending_reimbursement }}</p>
             </div>
-            <div class="text-blue-500 text-4xl">
+            <div class="text-blue-500 text-3xl sm:text-4xl">
                 <i class="fas fa-money-check-alt"></i>
             </div>
         </div>
@@ -93,7 +93,7 @@
 <!-- Status & Category Breakdown -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
     <!-- Status Breakdown -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
             <i class="fas fa-check-circle mr-2"></i>By Status
         </h3>
@@ -134,7 +134,7 @@
     </div>
     
     <!-- Category Breakdown -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
             <i class="fas fa-tags mr-2"></i>By Category
         </h3>
@@ -161,7 +161,7 @@
 </div>
 
 <!-- Recent Expenses -->
-<div class="bg-card-light dark:bg-card-dark rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <div class="p-6 border-b border-gray-200 dark:border-gray-700">
         <h3 class="text-lg font-semibold">
             <i class="fas fa-history mr-2"></i>Recent Expenses
@@ -169,7 +169,7 @@
     </div>
     
     <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 responsive-cards">
             <thead class="bg-gray-50 dark:bg-gray-800">
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
@@ -184,23 +184,23 @@
                 {% if recent_expenses %}
                     {% for expense in recent_expenses %}
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm" data-label="{{ _('Date') }}">
                             {{ expense.expense_date|format_date }}
                         </td>
-                        <td class="px-6 py-4 text-sm">
+                        <td class="px-6 py-4 text-sm" data-label="{{ _('Title') }}">
                             <a href="{{ url_for('expenses.view_expense', expense_id=expense.id) }}" class="text-primary hover:underline font-medium">
                                 {{ expense.title }}
                             </a>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm" data-label="{{ _('Category') }}">
                             <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                                 {{ expense.category|title }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" data-label="{{ _('Amount') }}">
                             {{ expense.total_amount|format_currency(expense.currency_code) }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm" data-label="{{ _('Status') }}">
                             {% if expense.status == 'pending' %}
                             <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
                                 Pending
@@ -219,7 +219,7 @@
                             </span>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" data-label="{{ _('Actions') }}">
                             <a href="{{ url_for('expenses.view_expense', expense_id=expense.id) }}" class="text-primary hover:text-primary/80" title="View">
                                 <i class="fas fa-eye"></i>
                             </a>

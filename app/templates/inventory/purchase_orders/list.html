@@ -15,10 +15,10 @@
     actions_html='<a href="' + url_for("inventory.new_purchase_order") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Purchase Order</a>' if (current_user.is_admin or has_permission('manage_purchase_orders')) else None
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-            <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Status') }}</label>
+            <label for="status" class="form-label">{{ _('Status') }}</label>
             <select name="status" id="status" class="form-input">
                 <option value="">{{ _('All') }}</option>
                 <option value="draft" {% if selected_status == 'draft' %}selected{% endif %}>{{ _('Draft') }}</option>
@@ -29,7 +29,7 @@
             </select>
         </div>
         <div>
-            <label for="supplier_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Supplier') }}</label>
+            <label for="supplier_id" class="form-label">{{ _('Supplier') }}</label>
             <select name="supplier_id" id="supplier_id" class="form-input">
                 <option value="">{{ _('All Suppliers') }}</option>
                 {% for supplier in suppliers %}
@@ -43,35 +43,35 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
-    <table class="table table-zebra w-full text-left">
-        <thead>
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+    <table class="table table-zebra w-full text-left enhanced-table responsive-cards">
+        <thead class="bg-background-light dark:bg-background-dark">
             <tr>
-                <th class="p-4">{{ _('PO Number') }}</th>
-                <th class="p-4">{{ _('Supplier') }}</th>
-                <th class="p-4">{{ _('Order Date') }}</th>
-                <th class="p-4">{{ _('Expected Delivery') }}</th>
-                <th class="p-4">{{ _('Status') }}</th>
-                <th class="p-4">{{ _('Total Amount') }}</th>
-                <th class="p-4">{{ _('Actions') }}</th>
+                <th class="px-4 py-3">{{ _('PO Number') }}</th>
+                <th class="px-4 py-3">{{ _('Supplier') }}</th>
+                <th class="px-4 py-3">{{ _('Order Date') }}</th>
+                <th class="px-4 py-3">{{ _('Expected Delivery') }}</th>
+                <th class="px-4 py-3">{{ _('Status') }}</th>
+                <th class="px-4 py-3">{{ _('Total Amount') }}</th>
+                <th class="px-4 py-3">{{ _('Actions') }}</th>
             </tr>
         </thead>
         <tbody>
             {% for po in purchase_orders %}
             <tr>
-                <td class="p-4 font-mono text-sm font-medium">
+                <td class="p-4 font-mono text-sm font-medium mobile-card-header" data-label="{{ _('PO Number') }}">
                     <a href="{{ url_for('inventory.view_purchase_order', po_id=po.id) }}" class="text-primary hover:underline">
                         {{ po.po_number }}
                     </a>
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Supplier') }}">
                     <a href="{{ url_for('inventory.view_supplier', supplier_id=po.supplier_id) }}" class="text-primary hover:underline">
                         {{ po.supplier.name }}
                     </a>
                 </td>
-                <td class="p-4">{{ po.order_date|format_date if po.order_date else '—' }}</td>
-                <td class="p-4">{{ po.expected_delivery_date|format_date if po.expected_delivery_date else '—' }}</td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Order Date') }}">{{ po.order_date|format_date if po.order_date else '—' }}</td>
+                <td class="p-4" data-label="{{ _('Expected Delivery') }}">{{ po.expected_delivery_date|format_date if po.expected_delivery_date else '—' }}</td>
+                <td class="p-4" data-label="{{ _('Status') }}">
                     {% if po.status == 'draft' %}
                         <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ _('Draft') }}</span>
                     {% elif po.status == 'sent' %}
@@ -84,10 +84,10 @@
                         <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">{{ _('Cancelled') }}</span>
                     {% endif %}
                 </td>
-                <td class="p-4 font-medium">
+                <td class="p-4 font-medium" data-label="{{ _('Total Amount') }}">
                     {{ "%.2f"|format(po.total_amount) }} {{ po.currency_code }}
                 </td>
-                <td class="p-4">
+                <td class="p-4 mobile-actions" data-label="{{ _('Actions') }}">
                     <a href="{{ url_for('inventory.view_purchase_order', po_id=po.id) }}" class="text-primary hover:underline mr-3">
                         <i class="fas fa-eye"></i>
                     </a>

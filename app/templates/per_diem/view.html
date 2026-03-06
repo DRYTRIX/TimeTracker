@@ -19,12 +19,12 @@
     <!-- Main Content -->
     <div class="lg:col-span-2 space-y-6">
         <!-- Claim Details -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-info-circle mr-2"></i>Claim Details
             </h3>
             
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Period</p>
                     <p class="font-semibold">{{ per_diem.start_date|format_date }} to {{ per_diem.end_date|format_date }}</p>
@@ -58,7 +58,7 @@
     <!-- Sidebar -->
     <div class="space-y-6">
         <!-- Status -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-info-circle mr-2"></i>Status
             </h3>
@@ -86,7 +86,7 @@
         
         <!-- Admin Actions -->
         {% if current_user.is_admin and per_diem.status == 'pending' %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-gavel mr-2"></i>Admin Actions
             </h3>

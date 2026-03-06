@@ -1,12 +1,12 @@
 {% macro stat_card(title, value, change, change_color) %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm animated-card">
     <h3 class="text-text-muted-light dark:text-text-muted-dark">{{ title }}</h3>
     <p class="text-2xl font-bold">{{ value }} <span class="text-sm text-{{ change_color }}">{{ change }}</span></p>
 </div>
 {% endmacro %}
 
 {% macro info_card(title, value, subtext) %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm animated-card">
     <h3 class="text-text-muted-light dark:text-text-muted-dark">{{ title }}</h3>
     <p class="text-3xl font-bold">{{ value }}</p>
     <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ subtext }}</p>

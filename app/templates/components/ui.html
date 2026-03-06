@@ -79,7 +79,7 @@
     <div class="flex items-start justify-between">
         <div class="flex-1">
             <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _(title) }}</p>
-            <h3 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2" data-count-up="{{ value }}">{{ value }}</h3>
+            <h3 class="text-2xl lg:text-3xl font-bold text-text-light dark:text-text-dark mb-2" data-count-up="{{ value }}">{{ value }}</h3>
             {% if subtitle %}
             <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _(subtitle) }}</p>
             {% endif %}
@@ -371,7 +371,7 @@
 } %}
 <div id="{{ id }}" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="{{ id }}-title" role="dialog" aria-modal="true">
     <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75" aria-hidden="true" onclick="document.getElementById('{{ id }}').classList.add('hidden')"></div>
+        <div class="fixed inset-0 transition-opacity bg-black/50 dark:bg-gray-900 dark:bg-opacity-75" aria-hidden="true" onclick="document.getElementById('{{ id }}').classList.add('hidden')"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
         <div class="inline-block align-bottom bg-card-light dark:bg-card-dark rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle {{ size_classes.get(size, size_classes['md']) }} w-full">
             <div class="bg-card-light dark:bg-card-dark px-6 pt-5 pb-4">
@@ -401,7 +401,7 @@
 {% macro confirm_dialog(id, title, message, confirm_text="Confirm", cancel_text="Cancel", confirm_class="danger") %}
 <div id="{{ id }}" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
     <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75" onclick="document.getElementById('{{ id }}').classList.add('hidden')"></div>
+        <div class="fixed inset-0 transition-opacity bg-black/50 dark:bg-gray-900 dark:bg-opacity-75" onclick="document.getElementById('{{ id }}').classList.add('hidden')"></div>
         <div class="relative bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full p-6 zoom-in">
             <div class="flex items-start mb-4">
                 <div class="flex-shrink-0">
@@ -507,6 +507,271 @@
         <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">{{ _(description) }}</p>
         <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ time }}</span>
     </div>
+</div>
+{% endmacro %}
+
+{# ============================================
+   FORM COMPONENTS
+   Reusable form macros for consistent, accessible,
+   mobile-friendly data entry across the app
+   ============================================ #}
+
+{% macro form_group(name, label, type="text", value="", required=False, help_text=None, error=None, placeholder="", icon=None, attrs="", disabled=False, readonly=False, min=None, max=None, step=None, pattern=None, autocomplete=None) %}
+<div class="form-group-wrapper">
+    <label for="{{ name }}" class="form-label">
+        {% if icon %}<i class="{{ icon }} mr-1.5 text-text-muted-light dark:text-text-muted-dark"></i>{% endif %}
+        {{ _(label) }}
+        {% if required %}<span class="text-red-500 ml-0.5" aria-hidden="true">*</span>{% endif %}
+    </label>
+    <div class="relative">
+        <input
+            type="{{ type }}"
+            id="{{ name }}"
+            name="{{ name }}"
+            value="{{ value }}"
+            class="form-input {% if error %}border-red-500 focus:border-red-500 focus:ring-red-500/30{% endif %}"
+            {% if placeholder %}placeholder="{{ _(placeholder) }}"{% endif %}
+            {% if required %}required aria-required="true"{% endif %}
+            {% if disabled %}disabled{% endif %}
+            {% if readonly %}readonly{% endif %}
+            {% if min is not none %}min="{{ min }}"{% endif %}
+            {% if max is not none %}max="{{ max }}"{% endif %}
+            {% if step is not none %}step="{{ step }}"{% endif %}
+            {% if pattern %}pattern="{{ pattern }}"{% endif %}
+            {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
+            {% if error %}aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}
+            {% if help_text and not error %}aria-describedby="{{ name }}-help"{% endif %}
+            {{ attrs|safe }}
+        >
+    </div>
+    {% if error %}
+    <p id="{{ name }}-error" class="mt-1.5 text-sm text-red-600 dark:text-red-400 flex items-center gap-1" role="alert">
+        <i class="fas fa-exclamation-circle text-xs"></i> {{ _(error) }}
+    </p>
+    {% endif %}
+    {% if help_text %}
+    <p id="{{ name }}-help" class="mt-1.5 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _(help_text) }}</p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro form_select(name, label, options, selected=None, required=False, help_text=None, error=None, placeholder="", icon=None, attrs="", disabled=False, multiple=False) %}
+<div class="form-group-wrapper">
+    <label for="{{ name }}" class="form-label">
+        {% if icon %}<i class="{{ icon }} mr-1.5 text-text-muted-light dark:text-text-muted-dark"></i>{% endif %}
+        {{ _(label) }}
+        {% if required %}<span class="text-red-500 ml-0.5" aria-hidden="true">*</span>{% endif %}
+    </label>
+    <select
+        id="{{ name }}"
+        name="{{ name }}"
+        class="form-input {% if error %}border-red-500 focus:border-red-500 focus:ring-red-500/30{% endif %}"
+        {% if required %}required aria-required="true"{% endif %}
+        {% if disabled %}disabled{% endif %}
+        {% if multiple %}multiple{% endif %}
+        {% if error %}aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}
+        {% if help_text and not error %}aria-describedby="{{ name }}-help"{% endif %}
+        {{ attrs|safe }}
+    >
+        {% if placeholder %}
+        <option value="" {% if not selected %}selected{% endif %} disabled>{{ _(placeholder) }}</option>
+        {% endif %}
+        {% for opt in options %}
+            {% if opt is mapping %}
+            <option value="{{ opt.value }}" {% if selected is not none and opt.value|string == selected|string %}selected{% endif %} {% if opt.disabled %}disabled{% endif %}>{{ opt.label }}</option>
+            {% else %}
+            <option value="{{ opt[0] }}" {% if selected is not none and opt[0]|string == selected|string %}selected{% endif %}>{{ opt[1] if opt is iterable and opt|length > 1 else opt }}</option>
+            {% endif %}
+        {% endfor %}
+    </select>
+    {% if error %}
+    <p id="{{ name }}-error" class="mt-1.5 text-sm text-red-600 dark:text-red-400 flex items-center gap-1" role="alert">
+        <i class="fas fa-exclamation-circle text-xs"></i> {{ _(error) }}
+    </p>
+    {% endif %}
+    {% if help_text %}
+    <p id="{{ name }}-help" class="mt-1.5 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _(help_text) }}</p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro form_textarea(name, label, value="", rows=4, required=False, help_text=None, error=None, placeholder="", icon=None, attrs="", disabled=False, maxlength=None) %}
+<div class="form-group-wrapper">
+    <label for="{{ name }}" class="form-label">
+        {% if icon %}<i class="{{ icon }} mr-1.5 text-text-muted-light dark:text-text-muted-dark"></i>{% endif %}
+        {{ _(label) }}
+        {% if required %}<span class="text-red-500 ml-0.5" aria-hidden="true">*</span>{% endif %}
+    </label>
+    <textarea
+        id="{{ name }}"
+        name="{{ name }}"
+        rows="{{ rows }}"
+        class="form-input resize-y {% if error %}border-red-500 focus:border-red-500 focus:ring-red-500/30{% endif %}"
+        {% if placeholder %}placeholder="{{ _(placeholder) }}"{% endif %}
+        {% if required %}required aria-required="true"{% endif %}
+        {% if disabled %}disabled{% endif %}
+        {% if maxlength %}maxlength="{{ maxlength }}"{% endif %}
+        {% if error %}aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}
+        {% if help_text and not error %}aria-describedby="{{ name }}-help"{% endif %}
+        {{ attrs|safe }}
+    >{{ value }}</textarea>
+    {% if maxlength %}
+    <div class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark text-right">
+        <span class="char-counter" data-for="{{ name }}">{{ value|length }}</span> / {{ maxlength }}
+    </div>
+    {% endif %}
+    {% if error %}
+    <p id="{{ name }}-error" class="mt-1.5 text-sm text-red-600 dark:text-red-400 flex items-center gap-1" role="alert">
+        <i class="fas fa-exclamation-circle text-xs"></i> {{ _(error) }}
+    </p>
+    {% endif %}
+    {% if help_text %}
+    <p id="{{ name }}-help" class="mt-1.5 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _(help_text) }}</p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro form_checkbox(name, label, checked=False, help_text=None, error=None, attrs="", disabled=False, value="1") %}
+<div class="form-group-wrapper">
+    <label for="{{ name }}" class="relative flex items-start gap-3 cursor-pointer group min-h-[44px] py-2">
+        <div class="flex items-center h-5 mt-0.5">
+            <input
+                type="checkbox"
+                id="{{ name }}"
+                name="{{ name }}"
+                value="{{ value }}"
+                class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary focus:ring-2 dark:bg-gray-700 transition-colors cursor-pointer"
+                {% if checked %}checked{% endif %}
+                {% if disabled %}disabled{% endif %}
+                {% if error %}aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}
+                {{ attrs|safe }}
+            >
+        </div>
+        <div class="flex-1 min-w-0">
+            <span class="text-sm font-medium text-text-light dark:text-text-dark group-hover:text-primary transition-colors">{{ _(label) }}</span>
+            {% if help_text %}
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">{{ _(help_text) }}</p>
+            {% endif %}
+        </div>
+    </label>
+    {% if error %}
+    <p id="{{ name }}-error" class="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center gap-1" role="alert">
+        <i class="fas fa-exclamation-circle text-xs"></i> {{ _(error) }}
+    </p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro form_file(name, label, accept="", help_text=None, error=None, required=False, multiple=False, attrs="") %}
+<div class="form-group-wrapper">
+    <label for="{{ name }}" class="form-label">
+        {{ _(label) }}
+        {% if required %}<span class="text-red-500 ml-0.5" aria-hidden="true">*</span>{% endif %}
+    </label>
+    <div class="mt-1">
+        <label for="{{ name }}" class="flex flex-col items-center justify-center w-full min-h-[120px] px-4 py-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors border-gray-300 dark:border-gray-600 hover:border-primary dark:hover:border-primary bg-background-light/50 dark:bg-gray-800/50 hover:bg-primary/5 dark:hover:bg-primary/10 {% if error %}border-red-500{% endif %}">
+            <div class="flex flex-col items-center text-center">
+                <i class="fas fa-cloud-upload-alt text-2xl text-text-muted-light dark:text-text-muted-dark mb-2"></i>
+                <p class="text-sm text-text-light dark:text-text-dark font-medium">{{ _('Click to upload or drag and drop') }}</p>
+                {% if accept %}
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ accept }}</p>
+                {% endif %}
+            </div>
+            <input
+                type="file"
+                id="{{ name }}"
+                name="{{ name }}"
+                class="hidden"
+                {% if accept %}accept="{{ accept }}"{% endif %}
+                {% if required %}required{% endif %}
+                {% if multiple %}multiple{% endif %}
+                {% if error %}aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}
+                {{ attrs|safe }}
+            >
+        </label>
+        <div id="{{ name }}-preview" class="mt-2 hidden">
+            <div class="flex items-center gap-2 p-2 bg-background-light dark:bg-gray-800 rounded-lg">
+                <i class="fas fa-file text-primary"></i>
+                <span class="text-sm text-text-light dark:text-text-dark truncate" id="{{ name }}-filename"></span>
+                <button type="button" class="ml-auto text-text-muted-light hover:text-red-500 transition-colors" onclick="document.getElementById('{{ name }}').value=''; document.getElementById('{{ name }}-preview').classList.add('hidden');">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% if error %}
+    <p id="{{ name }}-error" class="mt-1.5 text-sm text-red-600 dark:text-red-400 flex items-center gap-1" role="alert">
+        <i class="fas fa-exclamation-circle text-xs"></i> {{ _(error) }}
+    </p>
+    {% endif %}
+    {% if help_text %}
+    <p id="{{ name }}-help" class="mt-1.5 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _(help_text) }}</p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro form_date(name, label, value="", required=False, help_text=None, error=None, placeholder="", icon="fas fa-calendar", attrs="", disabled=False, min_date=None, max_date=None, enable_time=False) %}
+<div class="form-group-wrapper">
+    <label for="{{ name }}" class="form-label">
+        {% if icon %}<i class="{{ icon }} mr-1.5 text-text-muted-light dark:text-text-muted-dark"></i>{% endif %}
+        {{ _(label) }}
+        {% if required %}<span class="text-red-500 ml-0.5" aria-hidden="true">*</span>{% endif %}
+    </label>
+    <input
+        type="text"
+        id="{{ name }}"
+        name="{{ name }}"
+        value="{{ value }}"
+        class="form-input flatpickr-input {% if error %}border-red-500 focus:border-red-500 focus:ring-red-500/30{% endif %}"
+        {% if placeholder %}placeholder="{{ _(placeholder) }}"{% endif %}
+        {% if required %}required aria-required="true"{% endif %}
+        {% if disabled %}disabled{% endif %}
+        {% if error %}aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}
+        data-flatpickr
+        {% if enable_time %}data-enable-time="true"{% endif %}
+        {% if min_date %}data-min-date="{{ min_date }}"{% endif %}
+        {% if max_date %}data-max-date="{{ max_date }}"{% endif %}
+        {{ attrs|safe }}
+    >
+    {% if error %}
+    <p id="{{ name }}-error" class="mt-1.5 text-sm text-red-600 dark:text-red-400 flex items-center gap-1" role="alert">
+        <i class="fas fa-exclamation-circle text-xs"></i> {{ _(error) }}
+    </p>
+    {% endif %}
+    {% if help_text %}
+    <p id="{{ name }}-help" class="mt-1.5 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _(help_text) }}</p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro form_section(title, icon=None, description=None) %}
+<div class="form-section-divider pt-6 pb-2 mb-4 border-b border-border-light dark:border-border-dark">
+    <h3 class="form-section-title">
+        {% if icon %}<i class="{{ icon }} text-primary"></i>{% endif %}
+        {{ _(title) }}
+    </h3>
+    {% if description %}
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark -mt-2 mb-2">{{ _(description) }}</p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro form_actions(submit_text="Save", cancel_url=None, cancel_text="Cancel", show_reset=False, submit_icon="fas fa-check", loading_text=None) %}
+<div class="form-actions-bar sticky bottom-0 z-10 bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark -mx-6 -mb-6 px-6 py-4 mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 rounded-b-lg">
+    {% if show_reset %}
+    <button type="reset" class="btn btn-ghost w-full sm:w-auto">
+        <i class="fas fa-undo mr-1.5"></i>{{ _('Reset') }}
+    </button>
+    {% endif %}
+    {% if cancel_url %}
+    <a href="{{ cancel_url }}" class="btn btn-secondary w-full sm:w-auto text-center">
+        {{ _(cancel_text) }}
+    </a>
+    {% endif %}
+    <button type="submit" class="btn btn-primary w-full sm:w-auto" {% if loading_text %}data-loading-text="{{ _(loading_text) }}"{% endif %}>
+        {% if submit_icon %}<i class="{{ submit_icon }} mr-1.5"></i>{% endif %}
+        {{ _(submit_text) }}
+    </button>
 </div>
 {% endmacro %}
 

@@ -12,7 +12,7 @@
     title_text='Tasks',
     subtitle_text='Manage your tasks here',
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("tasks.create_task") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors btn-press shadow-md"><i class="fas fa-plus mr-2"></i>Create Task</a>'
+    actions_html='<a href="' + url_for("tasks.create_task") + '" class="btn btn-primary btn-press shadow-md"><i class="fas fa-plus mr-2"></i>Create Task</a>'
 ) }}
 
 <!-- Task Summary Cards -->
@@ -28,7 +28,7 @@
     {{ stat_card('Completed', done_count, 'fas fa-check-circle', 'green-500') }}
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold">{{ _('Filter Tasks') }}</h2>
         <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
@@ -38,15 +38,15 @@
     <div id="filterBody">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="tasksFilterForm" data-filter-form>
         <div class="lg:col-span-1">
-            <label for="tasks-filter-search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
+            <label for="tasks-filter-search" class="form-label">Search</label>
             <input type="text" name="search" id="tasks-filter-search" value="{{ search or '' }}" class="form-input">
         </div>
         <div class="lg:col-span-1">
-            <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Tags') }}</label>
+            <label for="tags" class="form-label">{{ _('Tags') }}</label>
             <input type="text" name="tags" id="tags" value="{{ tags or '' }}" class="form-input" placeholder="{{ _('e.g. bug, frontend') }}">
         </div>
         <div>
-            <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+            <label for="status" class="form-label">Status</label>
             <select name="status" id="status" class="form-input">
                 <option value="">All</option>
                 <option value="todo" {% if status == 'todo' %}selected{% endif %}>To Do</option>
@@ -57,7 +57,7 @@
             </select>
         </div>
         <div>
-            <label for="priority" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Priority</label>
+            <label for="priority" class="form-label">Priority</label>
             <select name="priority" id="priority" class="form-input">
                 <option value="">All</option>
                 <option value="low" {% if priority == 'low' %}selected{% endif %}>Low</option>
@@ -100,7 +100,7 @@
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-visible" id="tasksContainer">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-visible" id="tasksContainer">
     {% include 'tasks/_tasks_list.html' %}
 </div>
 
@@ -127,8 +127,8 @@
 <!-- Bulk Delete Confirmation Dialog -->
 <div id="confirmBulkDelete" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
     <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75" onclick="closeBulkDeleteDialog()"></div>
-        <div class="relative bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full p-6 zoom-in">
+        <div class="fixed inset-0 transition-opacity bg-black/50 dark:bg-gray-900 dark:bg-opacity-75" onclick="closeBulkDeleteDialog()"></div>
+        <div class="relative bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark max-w-md w-full p-6 zoom-in">
             <div class="flex items-start mb-4">
                 <div class="flex-shrink-0">
                     <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
@@ -141,10 +141,10 @@
                 </div>
             </div>
             <div class="flex justify-end gap-3 mt-6">
-                <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" onclick="closeBulkDeleteDialog()">
+                <button type="button" class="btn btn-secondary" onclick="closeBulkDeleteDialog()">
                     Cancel
                 </button>
-                <button type="button" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors" onclick="submitBulkDelete()">
+                <button type="button" class="btn btn-danger" onclick="submitBulkDelete()">
                     Delete
                 </button>
             </div>
@@ -154,10 +154,10 @@
 
 <!-- Bulk Status Change Dialog -->
 <div id="bulkStatusDialog" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark max-w-md w-full mx-4">
         <div class="p-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Change Status for Selected Tasks') }}</h3>
-            <label for="bulkStatusSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Status</label>
+            <label for="bulkStatusSelect" class="form-label">Select Status</label>
             <select id="bulkStatusSelect" class="form-input w-full mb-4">
                 <option value="">-- Select Status --</option>
                 {% if kanban_columns %}
@@ -173,8 +173,8 @@
                 {% endif %}
             </select>
             <div class="flex justify-end gap-2">
-                <button type="button" onclick="closeBulkStatusDialog()" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Cancel</button>
-                <button type="button" onclick="submitBulkStatus()" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90">{{ _('Update Status') }}</button>
+                <button type="button" onclick="closeBulkStatusDialog()" class="btn btn-secondary">Cancel</button>
+                <button type="button" onclick="submitBulkStatus()" class="btn btn-primary">{{ _('Update Status') }}</button>
             </div>
         </div>
     </div>
@@ -182,10 +182,10 @@
 
 <!-- Bulk Assign Dialog -->
 <div id="bulkAssignDialog" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark max-w-md w-full mx-4">
         <div class="p-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Assign Selected Tasks') }}</h3>
-            <label for="bulkAssignSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select User</label>
+            <label for="bulkAssignSelect" class="form-label">Select User</label>
             <select id="bulkAssignSelect" class="form-input w-full mb-4">
                 <option value="">-- Select User --</option>
                 {% for user in users %}
@@ -193,8 +193,8 @@
                 {% endfor %}
             </select>
             <div class="flex justify-end gap-2">
-                <button type="button" onclick="closeBulkAssignDialog()" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Cancel</button>
-                <button type="button" onclick="submitBulkAssign()" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90">{{ _('Assign Tasks') }}</button>
+                <button type="button" onclick="closeBulkAssignDialog()" class="btn btn-secondary">Cancel</button>
+                <button type="button" onclick="submitBulkAssign()" class="btn btn-primary">{{ _('Assign Tasks') }}</button>
             </div>
         </div>
     </div>
@@ -202,10 +202,10 @@
 
 <!-- Bulk Move to Project Dialog -->
 <div id="bulkProjectDialog" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark max-w-md w-full mx-4">
         <div class="p-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Move Selected Tasks to Project') }}</h3>
-            <label for="bulkProjectSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Select Project') }}</label>
+            <label for="bulkProjectSelect" class="form-label">{{ _('Select Project') }}</label>
             <select id="bulkProjectSelect" class="form-input w-full mb-4">
                 <option value="">-- {{ _('Select Project') }} --</option>
                 {% for project in projects %}
@@ -213,8 +213,8 @@
                 {% endfor %}
             </select>
             <div class="flex justify-end gap-2">
-                <button type="button" onclick="closeBulkProjectDialog()" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">{{ _('Cancel') }}</button>
-                <button type="button" onclick="submitBulkProject()" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90">{{ _('Move Tasks') }}</button>
+                <button type="button" onclick="closeBulkProjectDialog()" class="btn btn-secondary">{{ _('Cancel') }}</button>
+                <button type="button" onclick="submitBulkProject()" class="btn btn-primary">{{ _('Move Tasks') }}</button>
             </div>
         </div>
     </div>
@@ -226,6 +226,11 @@
 <style>
 .filter-collapsed { display: none !important; }
 .filter-toggle-transition { transition: all 0.3s ease-in-out; }
+@media (max-width: 640px) {
+    .stagger-animation [data-count-up] {
+        font-size: 1.5rem;
+    }
+}
 </style>
 <script type="application/json" id="i18n-json-tasks-list">
 {

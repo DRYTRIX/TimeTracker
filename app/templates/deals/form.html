@@ -16,7 +16,7 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
@@ -104,7 +104,7 @@
             </div>
         </div>
         
-        <div class="mt-6 flex gap-2">
+        <div class="mt-6 flex flex-wrap gap-2">
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                 {{ _('Save Deal') }}
             </button>

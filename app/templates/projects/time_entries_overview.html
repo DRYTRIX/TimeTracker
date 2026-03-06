@@ -24,15 +24,15 @@
     {{ stat_card(_('Days'), grouped|length, 'fas fa-calendar-day', 'emerald-500') }}
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <h2 class="text-lg font-semibold mb-4">{{ _('Filters') }}</h2>
     <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="start_date">{{ _('Start Date') }}</label>
+            <label class="form-label" for="start_date">{{ _('Start Date') }}</label>
             <input type="date" class="form-input" id="start_date" name="start_date" value="{{ start_date }}">
         </div>
         <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="end_date">{{ _('End Date') }}</label>
+            <label class="form-label" for="end_date">{{ _('End Date') }}</label>
             <input type="date" class="form-input" id="end_date" name="end_date" value="{{ end_date }}">
         </div>
         <div class="flex items-end gap-2">
@@ -43,14 +43,14 @@
 </div>
 
 {% if not grouped %}
-<div class="bg-card-light dark:bg-card-dark p-8 rounded-lg shadow text-center text-text-muted-light dark:text-text-muted-dark">
+<div class="bg-card-light dark:bg-card-dark p-8 rounded-xl border border-border-light dark:border-border-dark shadow-sm text-center text-text-muted-light dark:text-text-muted-dark">
     <i class="fas fa-clock text-4xl mb-4"></i>
     <p>{{ _('No time entries found for this project in the selected period.') }}</p>
 </div>
 {% else %}
 <div class="space-y-6">
     {% for day in grouped %}
-    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-hidden">
+    <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
         <div class="flex items-center justify-between px-6 py-4 border-b border-border-light dark:border-border-dark">
             <div class="font-semibold flex items-center gap-2">
                 <i class="fas fa-calendar-day text-primary"></i>
@@ -62,32 +62,32 @@
             </div>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-                <thead class="bg-gray-50 dark:bg-gray-800">
+            <table class="w-full text-left text-sm enhanced-table responsive-cards">
+                <thead class="bg-background-light dark:bg-background-dark">
                     <tr>
-                        <th class="p-3">{{ _('Start') }}</th>
-                        <th class="p-3">{{ _('End') }}</th>
-                        <th class="p-3">{{ _('Hours') }}</th>
-                        <th class="p-3">{{ _('Task') }}</th>
-                        <th class="p-3">{{ _('Description') }}</th>
-                        <th class="p-3">{{ _('User') }}</th>
+                        <th class="px-4 py-3">{{ _('Start') }}</th>
+                        <th class="px-4 py-3">{{ _('End') }}</th>
+                        <th class="px-4 py-3">{{ _('Hours') }}</th>
+                        <th class="px-4 py-3">{{ _('Task') }}</th>
+                        <th class="px-4 py-3">{{ _('Description') }}</th>
+                        <th class="px-4 py-3">{{ _('User') }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for entry in day.entries %}
                     <tr class="border-t border-border-light dark:border-border-dark">
-                        <td class="p-3 whitespace-nowrap">{{ entry.start_time|user_time if entry.start_time else '-' }}</td>
-                        <td class="p-3 whitespace-nowrap">{{ entry.end_time|user_time if entry.end_time else '-' }}</td>
-                        <td class="p-3 whitespace-nowrap font-medium">{{ '%.2f'|format(entry.duration_hours) }}</td>
-                        <td class="p-3">{{ entry.task.name if entry.task else '—' }}</td>
-                        <td class="p-3">
+                        <td class="p-3 whitespace-nowrap" data-label="{{ _('Start') }}">{{ entry.start_time|user_time if entry.start_time else '-' }}</td>
+                        <td class="p-3 whitespace-nowrap" data-label="{{ _('End') }}">{{ entry.end_time|user_time if entry.end_time else '-' }}</td>
+                        <td class="p-3 whitespace-nowrap font-medium mobile-card-header" data-label="{{ _('Hours') }}">{{ '%.2f'|format(entry.duration_hours) }}</td>
+                        <td class="p-3" data-label="{{ _('Task') }}">{{ entry.task.name if entry.task else '—' }}</td>
+                        <td class="p-3" data-label="{{ _('Description') }}">
                             {% if entry.notes %}
                                 <div class="prose prose-sm dark:prose-invert max-w-none">{{ entry.notes | markdown | safe }}</div>
                             {% else %}
                                 <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                             {% endif %}
                         </td>
-                        <td class="p-3">{{ entry.user.display_name if entry.user and entry.user.display_name else (entry.user.username if entry.user else '—') }}</td>
+                        <td class="p-3" data-label="{{ _('User') }}">{{ entry.user.display_name if entry.user and entry.user.display_name else (entry.user.username if entry.user else '—') }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

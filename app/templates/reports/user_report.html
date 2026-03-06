@@ -5,10 +5,10 @@
     <h1 class="text-2xl font-bold">{{ _('User Report') }}</h1>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
-    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+    <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <div>
-            <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="user_id" class="form-label">
                 <i class="fas fa-user mr-1"></i>User
             </label>
             <select name="user_id" id="user_id" class="form-input">
@@ -19,7 +19,7 @@
             </select>
         </div>
         <div>
-            <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="project_id" class="form-label">
                 <i class="fas fa-project-diagram mr-1"></i>Project
             </label>
             <select name="project_id" id="project_id" class="form-input">
@@ -30,13 +30,13 @@
             </select>
         </div>
         <div>
-            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="start_date" class="form-label">
                 <i class="fas fa-calendar mr-1"></i>Start Date
             </label>
             <input type="date" name="start_date" id="start_date" value="{{ start_date }}" class="form-input user-date-input">
         </div>
         <div>
-            <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="end_date" class="form-label">
                 <i class="fas fa-calendar mr-1"></i>End Date
             </label>
             <input type="date" name="end_date" id="end_date" value="{{ end_date }}" class="form-input user-date-input">
@@ -99,8 +99,8 @@
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-    <table class="w-full text-left">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    <table class="w-full text-left responsive-cards">
         <thead>
             <tr>
                 <th class="p-2">User</th>
@@ -115,12 +115,12 @@
         <tbody>
             {% for username, totals in user_totals.items() %}
             <tr class="border-b border-border-light dark:border-border-dark">
-                <td class="p-2">{{ username }}</td>
-                <td class="p-2 font-semibold">{{ "%.2f"|format(totals.hours) }}</td>
-                <td class="p-2 text-green-600 dark:text-green-400">
+                <td class="p-2" data-label="User">{{ username }}</td>
+                <td class="p-2 font-semibold" data-label="Total Hours">{{ "%.2f"|format(totals.hours) }}</td>
+                <td class="p-2 text-green-600 dark:text-green-400" data-label="Regular Hours">
                     {{ "%.2f"|format(totals.regular_hours) if totals.regular_hours is defined else "%.2f"|format(totals.hours) }}
                 </td>
-                <td class="p-2">
+                <td class="p-2" data-label="Overtime Hours">
                     {% if totals.overtime_hours is defined and totals.overtime_hours > 0 %}
                         <span class="text-orange-600 dark:text-orange-400 font-semibold">
                             <i class="fas fa-business-time mr-1"></i>{{ "%.2f"|format(totals.overtime_hours) }}
@@ -129,15 +129,15 @@
                         <span class="text-gray-400">0.00</span>
                     {% endif %}
                 </td>
-                <td class="p-2">
+                <td class="p-2" data-label="Undertime Hours">
                     {% if totals.undertime_hours is defined and totals.undertime_hours > 0 %}
                         <span class="text-amber-600 dark:text-amber-400 font-medium">{{ "%.2f"|format(totals.undertime_hours) }}</span>
                     {% else %}
                         <span class="text-gray-400">0.00</span>
                     {% endif %}
                 </td>
-                <td class="p-2">{{ "%.2f"|format(totals.billable_hours) }}</td>
-                <td class="p-2 text-center">
+                <td class="p-2" data-label="Billable Hours">{{ "%.2f"|format(totals.billable_hours) }}</td>
+                <td class="p-2 text-center" data-label="Days with Overtime">
                     {% if totals.days_with_overtime is defined and totals.days_with_overtime > 0 %}
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
                             {{ totals.days_with_overtime }}

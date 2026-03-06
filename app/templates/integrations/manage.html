@@ -19,8 +19,8 @@
 <div class="space-y-6">
     <!-- Setup Wizard Button -->
     {% if has_setup_wizard(provider) %}
-    <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow border-2 border-primary/20">
-        <div class="flex items-center justify-between">
+    <div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm border-2 border-primary/20">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
                 <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-1">
                     <i class="fas fa-magic mr-2 text-primary"></i>{{ _('Guided Setup Wizard') }}
@@ -30,7 +30,7 @@
                 </p>
             </div>
             <a href="{{ url_for('integrations.setup_wizard', provider=provider) }}" 
-               class="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-lg transition-colors font-medium whitespace-nowrap">
+               class="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 min-h-[44px] rounded-lg transition-colors font-medium whitespace-nowrap inline-flex items-center">
                 <i class="fas fa-magic mr-2"></i>{{ _('Launch Setup Wizard') }}
             </a>
         </div>
@@ -38,7 +38,7 @@
     {% endif %}
     <!-- OAuth Credentials Setup Section (Admin only, not for CalDAV or ActivityWatch) -->
     {% if current_user.is_admin and provider not in ('caldav_calendar', 'activitywatch') %}
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h2 class="text-lg font-semibold mb-4">
             <i class="fas fa-key mr-2"></i>{{ _('OAuth Credentials Setup') }}
         </h2>
@@ -192,7 +192,7 @@
 
     <!-- CalDAV Credentials Section (non-OAuth, uses username/password) -->
     {% if provider == 'caldav_calendar' and active_integration %}
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h2 class="text-lg font-semibold mb-4">
             <i class="fas fa-key mr-2"></i>{{ _('CalDAV Authentication') }}
         </h2>
@@ -250,7 +250,7 @@
 
     <!-- Integration Configuration Section (if connector provides config schema) -->
     {% if active_integration and config_schema and config_schema.get('fields') %}
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h2 class="text-lg font-semibold mb-4">
             <i class="fas fa-cog mr-2"></i>{{ _('Integration Configuration') }}
         </h2>
@@ -499,7 +499,7 @@
     {% endif %}
 
     <!-- Connection Management Section -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h2 class="text-lg font-semibold mb-4">
             <i class="fas fa-link mr-2"></i>{{ _('Connection Management') }}
         </h2>
@@ -591,20 +591,20 @@
             </div>
 
             {% if connector %}
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-2">
                 <form method="POST" action="{{ url_for('integrations.test_integration', integration_id=active_integration.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-blue-700 transition-colors">
                         <i class="fas fa-vial mr-2"></i>{{ _('Test Connection') }}
                     </button>
                 </form>
                 <form method="POST" action="{{ url_for('integrations.sync_integration', integration_id=active_integration.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                    <button type="submit" class="bg-green-600 text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-green-700 transition-colors">
                         <i class="fas fa-sync mr-2"></i>{{ _('Sync Now') }}
                     </button>
                 </form>
-                <a href="{{ url_for('integrations.view_integration', integration_id=active_integration.id) }}" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors inline-block">
+                <a href="{{ url_for('integrations.view_integration', integration_id=active_integration.id) }}" class="bg-gray-600 text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-gray-700 transition-colors inline-flex items-center">
                     <i class="fas fa-eye mr-2"></i>{{ _('View Details') }}
                 </a>
             </div>

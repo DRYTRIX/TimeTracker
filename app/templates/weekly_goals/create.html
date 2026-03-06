@@ -22,7 +22,7 @@
             
             <!-- Target Hours -->
             <div class="mb-6">
-                <label for="target_hours" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label for="target_hours" class="form-label">
                     {{ _('Target Hours') }} <span class="text-red-500">*</span>
                 </label>
                 <div class="relative">
@@ -44,7 +44,7 @@
 
             <!-- Week Start Date -->
             <div class="mb-6">
-                <label for="week_start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label for="week_start_date" class="form-label">
                     {{ _('Week Start Date') }}
                 </label>
                 <input type="date" 
@@ -79,7 +79,7 @@
 
             <!-- Notes -->
             <div class="mb-6">
-                <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label for="notes" class="form-label">
                     {{ _('Notes') }}
                 </label>
                 <textarea id="notes" 
@@ -91,7 +91,7 @@
 
             <!-- Quick Presets -->
             <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label class="form-label">
                     {{ _('Quick Presets') }}
                 </label>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -119,9 +119,9 @@
             </div>
 
             <!-- Actions -->
-            <div class="flex justify-between space-x-4">
+            <div class="flex flex-col-reverse sm:flex-row justify-between gap-3">
                 <a href="{{ url_for('weekly_goals.index') }}" 
-                   class="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                   class="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition text-center">
                     <i class="fas fa-times mr-2"></i> {{ _('Cancel') }}
                 </a>
                 <button type="submit" 

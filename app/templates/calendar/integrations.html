@@ -17,7 +17,7 @@
     actions_html='<a href="' + url_for("calendar.connect_google") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Connect Google Calendar</a>'
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     {% if integrations %}
     <div class="space-y-4">
         {% for integration in integrations %}
@@ -68,15 +68,15 @@
                 
                 <div class="flex gap-2">
                     {% if integration.provider in ['google_calendar', 'outlook_calendar'] %}
-                    <a href="{{ url_for('integrations.view_integration', integration_id=integration.id) }}" class="text-blue-600 hover:text-blue-800" title="{{ _('Manage Integration') }}">
-                        <i class="fas fa-cog"></i>
+                    <a href="{{ url_for('integrations.view_integration', integration_id=integration.id) }}" class="inline-flex items-center justify-center min-w-[44px] min-h-[44px] text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20" title="{{ _('Manage Integration') }}">
+                        <i class="fas fa-cog text-lg"></i>
                     </a>
                     {% endif %}
                     {% if integration.is_active %}
                     <form method="POST" action="{{ url_for('calendar.disconnect_integration', integration_id=integration.id) }}" class="inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('{{ _('Are you sure you want to disconnect this integration?') }}')" title="{{ _('Disconnect') }}">
-                            <i class="fas fa-unlink"></i>
+                        <button type="submit" class="inline-flex items-center justify-center min-w-[44px] min-h-[44px] text-red-600 hover:text-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20" onclick="return confirm('{{ _('Are you sure you want to disconnect this integration?') }}')" title="{{ _('Disconnect') }}">
+                            <i class="fas fa-unlink text-lg"></i>
                         </button>
                     </form>
                     {% endif %}

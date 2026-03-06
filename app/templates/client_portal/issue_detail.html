@@ -17,9 +17,9 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
     <div class="lg:col-span-2">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+        <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-4 sm:mb-6">
             <h2 class="text-lg font-semibold mb-4">{{ _('Description') }}</h2>
             {% if issue.description %}
             <div class="prose prose-sm dark:prose-invert max-w-none">
@@ -32,7 +32,7 @@
     </div>
     
     <div>
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+        <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-4 sm:mb-6">
             <h2 class="text-lg font-semibold mb-4">{{ _('Details') }}</h2>
             <div class="space-y-3">
                 <div>

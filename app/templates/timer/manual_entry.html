@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge, form_group, form_select, form_textarea, form_checkbox, form_date, form_section, form_actions %}
 {% from "components/client_select.html" import client_select %}
 
 {% block content %}
@@ -49,7 +49,7 @@
         <div class="space-y-8">
             {# Section: Project & task #}
             <section class="pb-6 border-b border-border-light dark:border-border-dark">
-                <h2 class="text-sm font-semibold text-text-light dark:text-text-dark uppercase tracking-wide flex items-center gap-2 mb-4">
+                <h2 class="form-section-title">
                     <i class="fas fa-folder text-primary"></i>{{ _('Project & task') }}
                 </h2>
                 <div class="space-y-6">
@@ -84,7 +84,7 @@
 
             {# Section: Date & time #}
             <section class="pb-6 border-b border-border-light dark:border-border-dark">
-                <h2 class="text-sm font-semibold text-text-light dark:text-text-dark uppercase tracking-wide flex items-center gap-2 mb-4">
+                <h2 class="form-section-title">
                     <i class="fas fa-calendar-alt text-primary"></i>{{ _('Date & time') }}
                 </h2>
                 <div class="space-y-6">
@@ -145,9 +145,9 @@
             </section>
         </div>
 
-        <div class="mt-8 border-t border-border-light dark:border-border-dark pt-6 flex justify-end gap-3">
-            <button type="reset" class="px-5 py-2.5 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark font-medium transition-all">{{ _('Clear') }}</button>
-            <button type="submit" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200">{{ _('Log Time') }}</button>
+        <div class="mt-8 border-t border-border-light dark:border-border-dark pt-6 flex flex-col sm:flex-row justify-end gap-3">
+            <button type="reset" class="w-full sm:w-auto px-5 py-2.5 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark font-medium transition-all">{{ _('Clear') }}</button>
+            <button type="submit" class="w-full sm:w-auto bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200">{{ _('Log Time') }}</button>
         </div>
     </form>
 </div>

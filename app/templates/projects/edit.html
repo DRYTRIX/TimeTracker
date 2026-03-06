@@ -13,21 +13,21 @@
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <form method="POST" action="{{ url_for('projects.edit_project', project_id=project.id) }}" novalidate data-validate-form>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div class="md:col-span-2">
-                        <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Project Name') }} *</label>
+                        <label for="name" class="form-label">{{ _('Project Name') }} *</label>
                         <input type="text" id="name" name="name" required value="{{ request.form.get('name', project.name) }}" class="form-input">
                     </div>
                     <div>
-                        <label for="code" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Project Code') }}</label>
+                        <label for="code" class="form-label">{{ _('Project Code') }}</label>
                         <input type="text" id="code" name="code" value="{{ request.form.get('code', project.code or '') }}" placeholder="{{ _('Short code, e.g., ABC') }}" class="form-input" maxlength="20">
                     </div>
                     <div>
-                        <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client') }} *</label>
+                        <label for="client_id" class="form-label">{{ _('Client') }} *</label>
                         {% if only_one_client and single_client %}
                         <input type="hidden" name="client_id" id="client_id" value="{{ single_client.id }}" data-default-rate="{{ single_client.default_hourly_rate or '' }}">
                         <input type="text" class="form-input bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-75" value="{{ single_client.name }}" disabled readonly aria-label="{{ _('Client (auto-selected)') }}">
@@ -45,7 +45,7 @@
 
                 <div>
                     <div class="flex items-center justify-between">
-                        <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Description') }}</label>
+                        <label for="description" class="form-label">{{ _('Description') }}</label>
                         <small class="text-text-muted-light dark:text-text-muted-dark">{{ _('Supports Markdown') }}</small>
                     </div>
                     <div class="markdown-editor-wrapper">
@@ -62,30 +62,30 @@
                         </label>
                     </div>
                     <div>
-                        <label for="hourly_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Hourly Rate') }}</label>
+                        <label for="hourly_rate" class="form-label">{{ _('Hourly Rate') }}</label>
                         <input type="number" step="0.01" min="0" id="hourly_rate" name="hourly_rate" value="{{ request.form.get('hourly_rate', project.hourly_rate or '') }}" placeholder="e.g. 75.00" class="form-input">
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Leave empty for non-billable projects') }}</p>
                     </div>
                 </div>
 
                 <div>
-                    <label for="billing_ref" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Billing Reference') }}</label>
+                    <label for="billing_ref" class="form-label">{{ _('Billing Reference') }}</label>
                     <input type="text" id="billing_ref" name="billing_ref" value="{{ request.form.get('billing_ref', project.billing_ref or '') }}" placeholder="Optional" class="form-input">
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="budget_amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Budget Amount') }}</label>
+                        <label for="budget_amount" class="form-label">{{ _('Budget Amount') }}</label>
                         <input type="number" step="0.01" min="0" id="budget_amount" name="budget_amount" value="{{ request.form.get('budget_amount', project.budget_amount or '') }}" placeholder="{{ _('e.g. 10000.00') }}" class="form-input">
                     </div>
                     <div>
-                        <label for="budget_threshold_percent" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Alert Threshold (%)') }}</label>
+                        <label for="budget_threshold_percent" class="form-label">{{ _('Alert Threshold (%)') }}</label>
                         <input type="number" step="1" min="0" max="100" id="budget_threshold_percent" name="budget_threshold_percent" value="{{ request.form.get('budget_threshold_percent', project.budget_threshold_percent or 80) }}" placeholder="80" class="form-input">
                     </div>
                 </div>
 
                 <div>
-                    <label for="color" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Gantt color') }}</label>
+                    <label for="color" class="form-label">{{ _('Gantt color') }}</label>
                     <div class="gantt-color-picker flex items-center gap-3 mt-1">
                         <div class="gantt-color-picker-swatch rounded border border-gray-300 dark:border-gray-600 overflow-hidden flex-shrink-0" style="width:2.5rem;height:2.5rem;min-width:2.5rem;min-height:2.5rem;"></div>
                         <input type="text" name="color" id="color" value="{{ request.form.get('color', project.color or '#3b82f6') }}" class="form-input w-28 font-mono text-sm" maxlength="7" placeholder="#3b82f6" data-color-input>
@@ -102,7 +102,7 @@
                     <div class="space-y-4">
                         {% for definition in custom_field_definitions %}
                         <div>
-                            <label for="custom_field_{{ definition.field_key }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <label for="custom_field_{{ definition.field_key }}" class="form-label">
                                 {{ definition.label }}
                                 {% if definition.is_mandatory %}<span class="text-red-600 dark:text-red-400">*</span>{% endif %}
                             </label>
@@ -139,6 +139,11 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css">
 {% endblock %}
 
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
+<script src="{{ url_for('static', filename='js/gantt-color-picker.js') }}"></script>
 <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -160,7 +165,6 @@ document.addEventListener('DOMContentLoaded', function() {
     clientSelect.addEventListener('change', applyClientDefaultRate);
     applyClientDefaultRate();
 
-    // Initialize Markdown editor
     let mdEditor = null;
     if (descriptionInput && window.toastui && window.toastui.Editor) {
         const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
@@ -192,7 +196,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
-        // Image upload
         mdEditor.removeHook && mdEditor.removeHook('addImageBlobHook');
         mdEditor.addHook && mdEditor.addHook('addImageBlobHook', async (blob, callback) => {
             try {
@@ -205,7 +208,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Sync markdown on form submit
     const form = document.querySelector('form[action*="/edit"]') || document.querySelector('form');
     if (form) {
         form.addEventListener('submit', function(){
@@ -220,11 +222,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-{% endblock %}
-
-{% block scripts_extra %}
-<script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
-<script src="{{ url_for('static', filename='js/gantt-color-picker.js') }}"></script>
 {% endblock %}
 
 

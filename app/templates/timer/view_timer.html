@@ -14,16 +14,16 @@
     title_text=_('Time Entry'),
     subtitle_text=_('View time entry details'),
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("timer.edit_timer", timer_id=timer.id) + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-edit mr-2"></i>' + _('Edit') + '</a>'
+    actions_html='<div class="flex flex-col sm:flex-row gap-2"><a href="' + url_for("timer.edit_timer", timer_id=timer.id) + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors text-center"><i class="fas fa-edit mr-2"></i>' + _('Edit') + '</a></div>'
 ) }}
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Main Content -->
     <div class="lg:col-span-2 space-y-6">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Entry Details') }}</h2>
             <div class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Start Time') }}</h3>
                         <p class="text-text-light dark:text-text-dark">
@@ -63,7 +63,7 @@
 
     <!-- Sidebar -->
     <div class="lg:col-span-1 space-y-6">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Project & Client') }}</h2>
             <div class="space-y-4">
                 {% if timer.project %}
@@ -100,7 +100,7 @@
         </div>
 
         {% if time_approvals_enabled|default(false) and can_request_approval|default(false) %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Approval') }}</h2>
             <form method="POST" action="{{ url_for('time_approvals.request_approval', entry_id=timer.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -111,7 +111,7 @@
         </div>
         {% endif %}
 
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Status & Billing') }}</h2>
             <div class="space-y-4">
                 <div>

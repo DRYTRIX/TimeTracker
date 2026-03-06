@@ -17,26 +17,26 @@
 {% if show_analytics and analytics %}
 <!-- Analytics Dashboard -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{{ _('Total Quotes') }}</h3>
         <p class="text-2xl font-bold">{{ analytics.total_quotes }}</p>
     </div>
-    <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{{ _('Total Value') }}</h3>
         <p class="text-2xl font-bold">{{ "%.2f"|format(analytics.total_value) }} EUR</p>
     </div>
-    <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{{ _('Acceptance Rate') }}</h3>
         <p class="text-2xl font-bold">{{ analytics.acceptance_rate }}%</p>
     </div>
-    <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{{ _('Avg Quote Value') }}</h3>
         <p class="text-2xl font-bold">{{ "%.2f"|format(analytics.avg_value) }} EUR</p>
     </div>
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-    <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-lg font-semibold mb-4">{{ _('Quotes by Status') }}</h3>
         <div class="space-y-2">
             {% for status, count in analytics.quotes_by_status.items() %}
@@ -47,7 +47,7 @@
             {% endfor %}
         </div>
     </div>
-    <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-lg font-semibold mb-4">{{ _('Top Clients by Quotes') }}</h3>
         <div class="space-y-2">
             {% for client_data in analytics.quotes_by_client %}
@@ -61,7 +61,7 @@
 </div>
 {% endif %}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold">{{ _('Filter Quotes') }}</h2>
         <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
@@ -71,11 +71,11 @@
     <div id="filterBody">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4" id="quotesFilterForm" data-filter-form>
         <div>
-            <label for="quotes-filter-search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Search') }}</label>
+            <label for="quotes-filter-search" class="form-label">{{ _('Search') }}</label>
             <input type="text" name="search" id="quotes-filter-search" value="{{ search or '' }}" class="form-input" placeholder="{{ _('Search quotes...') }}">
         </div>
         <div>
-            <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Status') }}</label>
+            <label for="status" class="form-label">{{ _('Status') }}</label>
             <select name="status" id="status" class="form-input">
                 <option value="all" {% if status == 'all' %}selected{% endif %}>{{ _('All') }}</option>
                 <option value="draft" {% if status == 'draft' %}selected{% endif %}>{{ _('Draft') }}</option>
@@ -89,7 +89,7 @@
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-visible" id="quotesContainer">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-visible" id="quotesContainer">
     {% include 'quotes/_quotes_list.html' %}
 </div>
 

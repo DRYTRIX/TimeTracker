@@ -3,33 +3,28 @@
 {% block title %}{{ _('400 Bad Request') }} - {{ app_name }}{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-warning text-dark">
-                    <h4 class="mb-0">
-                        <i class="fas fa-exclamation-triangle"></i> {{ _('400 Bad Request') }}
-                    </h4>
-                </div>
-                <div class="card-body text-center">
-                    <h5 class="card-title">{{ _('Invalid Request') }}</h5>
-                    <p class="card-text">
-                        {{ _('The request you made is invalid or contains errors. This could be due to:') }}
-                    </p>
-                    <ul class="list-unstyled text-start">
-                        <li><i class="fas fa-check text-success"></i> {{ _('Missing or invalid form data') }}</li>
-                        <li><i class="fas fa-check text-success"></i> {{ _('Malformed request parameters') }}</li>
-                    </ul>
-                    <div class="mt-4">
-                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">
-                            <i class="fas fa-home"></i> {{ _('Go to Dashboard') }}
-                        </a>
-                        <button onclick="history.back()" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> {{ _('Go Back') }}
-                        </button>
-                    </div>
-                </div>
+<div class="flex items-center justify-center min-h-[60vh] px-4 py-8">
+    <div class="w-full max-w-md text-center">
+        <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-6 sm:p-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-4">
+                <i class="fas fa-exclamation-triangle text-2xl sm:text-3xl text-amber-500"></i>
+            </div>
+            <h1 class="text-5xl font-bold text-text-light/20 dark:text-text-dark/20 mb-2">400</h1>
+            <h2 class="text-lg font-semibold text-text-light dark:text-text-dark mb-2">{{ _('Invalid Request') }}</h2>
+            <p class="text-sm text-text-light/60 dark:text-text-dark/60 mb-6">
+                {{ _('The request you made is invalid or contains errors. This could be due to:') }}
+            </p>
+            <ul class="text-sm text-text-light/70 dark:text-text-dark/70 space-y-1 mb-6">
+                <li><i class="fas fa-circle text-[5px] mr-2 align-middle"></i>{{ _('Missing or invalid form data') }}</li>
+                <li><i class="fas fa-circle text-[5px] mr-2 align-middle"></i>{{ _('Malformed request parameters') }}</li>
+            </ul>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">
+                    <i class="fas fa-home"></i> {{ _('Go to Dashboard') }}
+                </a>
+                <button onclick="history.back()" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> {{ _('Go Back') }}
+                </button>
             </div>
         </div>
     </div>

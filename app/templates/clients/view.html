@@ -1,45 +1,42 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import confirm_dialog %}
+{% from "components/ui.html" import confirm_dialog, page_header %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">{{ client.name }}</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">Client details and associated projects.</p>
-    </div>
-    {% if current_user.is_admin or has_any_permission('edit_clients', 'delete_clients') %}
-    <div class="flex gap-2">
-        {% if current_user.is_admin or has_permission('edit_clients') %}
-        <a href="{{ url_for('clients.edit_client', client_id=client.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Edit Client') }}</a>
-        {% if client.status == 'active' %}
-        <form method="POST" action="{{ url_for('clients.archive_client', client_id=client.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Mark client as Inactive?')|e }}', { title: '{{ _('Change Client Status')|e }}', confirmText: '{{ _('Change')|e }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="px-4 py-2 rounded-lg bg-amber-500 text-white mt-4 md:mt-0">{{ _('Mark Inactive') }}</button>
-        </form>
-        {% else %}
-        <form method="POST" action="{{ url_for('clients.activate_client', client_id=client.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Activate client?')|e }}', { title: '{{ _('Activate Client')|e }}', confirmText: '{{ _('Activate')|e }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 text-white mt-4 md:mt-0">{{ _('Activate') }}</button>
-        </form>
-        {% endif %}
-        {% endif %}
-        {% if (current_user.is_admin or has_permission('delete_clients')) and client.total_projects == 0 %}
-        <button type="button" class="bg-red-600 text-white px-4 py-2 rounded-lg mt-4 md:mt-0"
-                onclick="document.getElementById('confirmDeleteClient-{{ client.id }}').classList.remove('hidden')">
-            {{ _('Delete Client') }}
-        </button>
-        <form id="confirmDeleteClient-{{ client.id }}-form" method="POST" action="{{ url_for('clients.delete_client', client_id=client.id) }}" class="hidden">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        </form>
-        {% endif %}
-    </div>
+{% set actions %}
+{% if current_user.is_admin or has_any_permission('edit_clients', 'delete_clients') %}
+<div class="flex flex-wrap gap-2">
+    {% if current_user.is_admin or has_permission('edit_clients') %}
+    <a href="{{ url_for('clients.edit_client', client_id=client.id) }}" class="btn btn-primary">{{ _('Edit Client') }}</a>
+    {% if client.status == 'active' %}
+    <form method="POST" action="{{ url_for('clients.archive_client', client_id=client.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Mark client as Inactive?')|e }}', { title: '{{ _('Change Client Status')|e }}', confirmText: '{{ _('Change')|e }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="px-4 py-2 rounded-lg bg-amber-500 text-white">{{ _('Mark Inactive') }}</button>
+    </form>
+    {% else %}
+    <form method="POST" action="{{ url_for('clients.activate_client', client_id=client.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Activate client?')|e }}', { title: '{{ _('Activate Client')|e }}', confirmText: '{{ _('Activate')|e }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 text-white">{{ _('Activate') }}</button>
+    </form>
+    {% endif %}
+    {% endif %}
+    {% if (current_user.is_admin or has_permission('delete_clients')) and client.total_projects == 0 %}
+    <button type="button" class="btn btn-danger"
+            onclick="document.getElementById('confirmDeleteClient-{{ client.id }}').classList.remove('hidden')">
+        {{ _('Delete Client') }}
+    </button>
+    <form id="confirmDeleteClient-{{ client.id }}-form" method="POST" action="{{ url_for('clients.delete_client', client_id=client.id) }}" class="hidden">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    </form>
     {% endif %}
 </div>
+{% endif %}
+{% endset %}
+{{ page_header('fas fa-user', client.name, subtitle_text=_('Client details and associated projects.'), actions_html=actions, breadcrumbs=[{'text': _('Clients'), 'url': url_for('clients.list_clients')}, {'text': client.name}]) }}
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Left Column: Client Details -->
     <div class="lg:col-span-1 space-y-6">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold">Contacts</h2>
                 <a href="{{ url_for('contacts.list_contacts', client_id=client.id) }}" class="text-primary hover:underline text-sm">
@@ -80,7 +77,7 @@
             {% endif %}
         </div>
         {% if client.contact_person or client.email or client.phone or client.address %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Legacy Contact Info') }}</h2>
             <div class="space-y-4">
                 {% if client.contact_person %}
@@ -113,7 +110,7 @@
         </div>
         {% endif %}
         {% if client.custom_fields %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Custom Fields') }}</h2>
             <div class="space-y-3">
                 {% for key, value in client.custom_fields.items() %}
@@ -156,7 +153,7 @@
         {% endif %}
 
         {% if prepaid_overview %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Prepaid Hours') }}</h2>
             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">
                 {{ _('Plan includes %(hours)s hours per cycle. Resets on day %(day)s.', hours='%.2f'|format(prepaid_overview.plan_hours), day=client.prepaid_reset_day) }}
@@ -179,7 +176,7 @@
         {% endif %}
 
         <!-- Attachments Section -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold">
                     <i class="fas fa-paperclip mr-2"></i>{{ _('Attachments') }}
@@ -188,7 +185,7 @@
                     {% endif %}
                 </h2>
                 {% if current_user.is_admin or has_permission('edit_clients') %}
-                <button type="button" onclick="document.getElementById('upload-attachment-form').classList.toggle('hidden')" class="bg-primary text-white px-3 py-1.5 rounded-lg hover:bg-primary-dark text-sm">
+                <button type="button" onclick="document.getElementById('upload-attachment-form').classList.toggle('hidden')" class="btn btn-primary btn-sm">
                     <i class="fas fa-plus mr-1"></i>{{ _('Upload') }}
                 </button>
                 {% endif %}
@@ -200,12 +197,12 @@
                 <form method="POST" action="{{ url_for('clients.upload_client_attachment', client_id=client.id) }}" enctype="multipart/form-data" class="space-y-3">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div>
-                        <label for="attachment-file" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('File') }}</label>
+                        <label for="attachment-file" class="form-label">{{ _('File') }}</label>
                         <input type="file" name="file" id="attachment-file" class="w-full form-input" required>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Max size: 10 MB. Allowed: images, PDFs, documents, spreadsheets, archives') }}</p>
                     </div>
                     <div>
-                        <label for="attachment-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Description (optional)') }}</label>
+                        <label for="attachment-description" class="form-label">{{ _('Description (optional)') }}</label>
                         <input type="text" name="description" id="attachment-description" class="w-full form-input" placeholder="{{ _('e.g., Contract, Agreement, etc.') }}">
                     </div>
                     <div class="flex items-center">
@@ -215,10 +212,10 @@
                         </label>
                     </div>
                     <div class="flex gap-2">
-                        <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark text-sm">
+                        <button type="submit" class="btn btn-primary">
                             <i class="fas fa-upload mr-1"></i>{{ _('Upload') }}
                         </button>
-                        <button type="button" onclick="document.getElementById('upload-attachment-form').classList.add('hidden')" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">
+                        <button type="button" onclick="document.getElementById('upload-attachment-form').classList.add('hidden')" class="btn btn-secondary">
                             {{ _('Cancel') }}
                         </button>
                     </div>
@@ -277,7 +274,7 @@
 
     <!-- Right Column: Projects -->
     <div class="lg:col-span-2">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">Projects</h2>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
@@ -323,7 +320,7 @@
         </div>
         
         <!-- Recent Hours History -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mt-6">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mt-6">
             <h2 class="text-lg font-semibold mb-4">{{ _('Recent Hours History') }}</h2>
             {% if recent_time_entries %}
             <div class="overflow-x-auto">
@@ -403,10 +400,10 @@
 
 <!-- Client Notes Section -->
 <div class="mt-6">
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold">{{ _('Internal Notes') }}</h2>
-            <button type="button" id="addNoteBtn" class="bg-primary text-white px-4 py-2 rounded-lg text-sm hover:bg-opacity-90 transition">
+            <button type="button" id="addNoteBtn" class="btn btn-primary">
                 {{ _('Add Note') }}
             </button>
         </div>
@@ -438,10 +435,10 @@
                     </label>
                 </div>
                 <div class="flex gap-2">
-                    <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-opacity-90 transition">
+                    <button type="submit" class="btn btn-primary">
                         {{ _('Save Note') }}
                     </button>
-                    <button type="button" id="cancelNoteBtn" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-sm hover:bg-opacity-90 transition">
+                    <button type="button" id="cancelNoteBtn" class="btn btn-secondary">
                         {{ _('Cancel') }}
                     </button>
                 </div>

@@ -2,7 +2,7 @@
 <html lang="{{ current_language_code or 'en' }}" dir="{{ 'rtl' if is_rtl else 'ltr' }}">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="Professional time tracking and project management">
@@ -46,17 +46,15 @@
     <link rel="manifest" href="{{ url_for('main.manifest') }}">
     <meta name="vapid-public-key" content="{{ config.get('VAPID_PUBLIC_KEY', '') }}">
     <script src="{{ url_for('static', filename='pwa-enhancements.js') }}"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/brand-colors.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
+    <!-- Inter font (Bunny Fonts, GDPR-friendly) -->
+    <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
+    <link href="https://fonts.bunny.net/css?family=Inter:400,500,600,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}?v={{ app_version }}-toastfix1">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='form-bridge.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='form-validation.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='enhanced-ui.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='data-tables-enhanced.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='keyboard-shortcuts.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='ui-enhancements.css') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
     <link id="flatpickr-dark-theme" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/dark.css" media="none">
     <style>
@@ -96,8 +94,66 @@
         /* Sidebar collapsed helpers */
         .sidebar-collapsed .sidebar-label { display: none; }
         .sidebar-collapsed .sidebar-header-title { display: none; }
-        .sidebar-collapsed #workDropdown, .sidebar-collapsed #insightsDropdown { display: none; }
-        .sidebar-collapsed #sidebar { width: 4rem !important; overflow-x: hidden; }
+        .sidebar-collapsed #sidebar { width: 4.5rem !important; overflow-x: hidden; }
+        .sidebar-collapsed #sidebar ul[id$="Dropdown"] { display: none !important; }
+        .sidebar-collapsed #sidebar .sidebar-nav-item {
+            justify-content: center;
+            padding-left: 0.625rem;
+            padding-right: 0.625rem;
+        }
+        .sidebar-collapsed #sidebar .sidebar-nav-item > i:first-child {
+            margin-right: 0 !important;
+        }
+        .sidebar-collapsed #sidebar .sidebar-nav-item .fa-chevron-down {
+            display: none;
+        }
+        #sidebarFlyout {
+            min-width: 14rem;
+            max-width: 18rem;
+            max-height: min(70vh, 32rem);
+            overflow-y: auto;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+        #sidebarFlyout .flyout-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #718096;
+            padding: 0.375rem 0.75rem 0.5rem;
+        }
+        .dark #sidebarFlyout .flyout-title {
+            color: #A0AEC0;
+        }
+        #sidebarFlyout .flyout-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+            padding: 0.65rem 0.75rem;
+            border-radius: 0.875rem;
+            color: inherit;
+            text-decoration: none;
+            transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+        }
+        #sidebarFlyout .flyout-link:hover {
+            background: #F7F9FB;
+            transform: translateX(2px);
+        }
+        .dark #sidebarFlyout .flyout-link:hover {
+            background: #1A202C;
+        }
+        #sidebarFlyout .flyout-link i {
+            width: 1rem;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        #sidebarFlyout .flyout-link.is-active {
+            background: rgba(74, 144, 226, 0.12);
+            color: #4A90E2;
+            font-weight: 600;
+        }
         /* Multi-line sidebar labels: left-align wrapped text, allow flex shrink for wrapping, keep icons/chevron centered */
         #sidebar .sidebar-nav-item span.sidebar-label { text-align: start; min-width: 0; flex: 1 1 0%; }
         #sidebar .sidebar-nav-item > i { flex-shrink: 0; }
@@ -269,7 +325,7 @@
     
     {% block extra_css %}{% endblock %}
 </head>
-<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+<body class="font-sans antialiased bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
     <script>
         // Sidebar collapsed ASAP
         (function(){ try { if (localStorage.getItem('sidebar-collapsed') === 'true') { document.documentElement.classList.add('sidebar-collapsed'); } } catch(_) {} })();
@@ -277,7 +333,7 @@
     <a href="#mainContentAnchor" class="sr-only focus:not-sr-only focus-ring absolute left-2 top-2 z-[1000] px-3 py-2 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded">{{ _('Skip to content') }}</a>
     <div id="appShell" class="flex min-h-screen">
         <!-- Sidebar -->
-        <aside id="sidebar" class="w-64 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark p-4 flex-col hidden lg:flex transition-all duration-200 ease-in-out fixed top-0 left-0 h-screen overflow-y-auto z-10">
+        <aside id="sidebar" class="sidebar-scrollbar-hover w-64 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark p-4 flex-col hidden lg:flex transition-all duration-200 ease-in-out fixed top-0 left-0 h-screen overflow-y-auto z-10">
             <div class="flex items-center mb-8">
                 <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="Logo" class="h-10 w-10 mr-2">
                 <h1 class="text-2xl font-bold text-primary sidebar-header-title"><a href="{{ url_for('main.dashboard') }}" class="no-underline">TimeTracker</a></h1>
@@ -306,14 +362,14 @@
                 </div>
                 <ul>
                     <li>
-                        <a href="{{ url_for('main.dashboard') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg {% if ep == 'main.dashboard' %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                        <a href="{{ url_for('main.dashboard') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg border-l-4 {% if ep == 'main.dashboard' %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" title="{{ _('Dashboard') }}">
                             <i class="fas fa-tachometer-alt w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Dashboard') }}</span>
                         </a>
                     </li>
                     {% if is_module_enabled('calendar') %}
-                    <li class="mt-2">
-                        <button data-dropdown="calendarDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if calendar_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                    <li class="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
+                        <button data-dropdown="calendarDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg border-l-4 {% if calendar_open %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" title="{{ _('Calendar') }}">
                             <i class="fas fa-calendar-alt w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Calendar') }}</span>
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
@@ -334,8 +390,8 @@
                         </ul>
                     </li>
                     {% endif %}
-                    <li class="mt-2">
-                        <button data-dropdown="workDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if work_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                    <li class="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
+                        <button data-dropdown="workDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg border-l-4 {% if work_open %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" title="{{ _('Time Tracking') }}">
                             <i class="fas fa-briefcase w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Time Tracking') }}</span>
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
@@ -355,12 +411,12 @@
                             {% set nav_active_project_templates = ep.startswith('project_templates.') %}
                             {% set nav_active_workforce = ep.startswith('workforce.') %}
                             <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_timer %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timer.manual_entry') }}">
+                                <a class="block px-2 py-1 rounded border-l-4 ml-2 pl-2 {% if nav_active_timer %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timer.manual_entry') }}">
                                     <i class="fas fa-clock w-4 mr-2"></i>{{ _('Log Time') }}
                                 </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_time_entries %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timer.time_entries_overview') }}">
+                                <a class="block px-2 py-1 rounded border-l-4 ml-2 pl-2 {% if nav_active_time_entries %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timer.time_entries_overview') }}">
                                     <i class="fas fa-list-alt w-4 mr-2"></i>{{ _('Time Entries') }}
                                 </a>
                             </li>
@@ -431,8 +487,8 @@
                         </ul>
                     </li>
                     {% if has_enabled_modules(ModuleCategory.CRM) %}
-                    <li class="mt-2">
-                        <button data-dropdown="crmDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if crm_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
+                    <li class="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
+                        <button data-dropdown="crmDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg border-l-4 {% if crm_open %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" title="{{ _('CRM') }}">
                             <i class="fas fa-handshake w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('CRM') }}</span>
                             <i class="fas fa-chevron-down ml-auto sidebar-label"></i>
@@ -483,7 +539,7 @@
                     </li>
                     {% endif %}
                     {% if has_enabled_modules(ModuleCategory.FINANCE) %}
-                    <li class="mt-2">
+                    <li class="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
                         <button data-dropdown="financeDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if finance_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-dollar-sign w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Finance & Expenses') }}</span>
@@ -603,7 +659,7 @@
                     </li>
                     {% endif %}
                     {% if is_module_enabled('inventory') and (current_user.is_admin or has_permission('view_inventory')) %}
-                    <li class="mt-2">
+                    <li class="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
                         <button data-dropdown="inventoryDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if inventory_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-boxes w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Inventory') }}</span>
@@ -680,7 +736,7 @@
                     </li>
                     {% endif %}
                     {% if is_module_enabled('analytics') %}
-                    <li class="mt-2">
+                    <li class="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
                         <a href="{{ url_for('analytics.analytics_dashboard') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg {% if analytics_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-chart-line w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Analytics') }}</span>
@@ -688,7 +744,7 @@
                     </li>
                     {% endif %}
                     {% if is_module_enabled('integrations') or is_module_enabled('import_export') or is_module_enabled('saved_filters') %}
-                    <li class="mt-2">
+                    <li class="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
                         <button data-dropdown="toolsDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if tools_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-tools w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Tools & Data') }}</span>
@@ -723,7 +779,7 @@
                     </li>
                     {% endif %}
                     {% if current_user.is_admin or has_any_permission('view_users', 'manage_settings', 'view_system_info', 'manage_backups') %}
-                    <li class="mt-2">
+                    <li class="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
                         <button data-dropdown="adminDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg {% if admin_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
                             <i class="fas fa-cog w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Admin') }}</span>
@@ -981,41 +1037,27 @@
         <!-- Main content: pb for mobile bottom nav + safe-area -->
         <div id="mainContent" class="flex-1 flex flex-col min-h-screen transition-all duration-200 ease-in-out lg:ml-64 lg:pb-0 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
             <!-- Header -->
-            <header class="bg-card-light dark:bg-card-dark p-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
+            <header class="bg-card-light dark:bg-card-dark p-4 border-b border-border-light dark:border-border-dark flex justify-between items-center shadow-sm">
                 <!-- Mobile menu button -->
                 <button id="mobileSidebarBtn" class="lg:hidden" aria-label="{{ _('Open sidebar') }}" type="button">
                     <i class="fas fa-bars"></i>
                 </button>
 
-                <!-- Search + Command button -->
+                <!-- Search (Ctrl+K opens command palette) -->
                 <div class="hidden sm:flex items-center gap-2">
-                    <div class="w-96">
+                    <div class="w-96 relative">
                         <form class="navbar-search" role="search" action="{{ url_for('main.search') }}" method="get" autocomplete="off">
                             <label for="header-search" class="sr-only">{{ _('Search') }}</label>
-                            <input id="header-search" name="q" type="search" placeholder="{{ _('Search') }}" aria-label="{{ _('Search') }}" data-enhanced-search='{"endpoint": "/api/search", "minChars": 2, "maxResults": 10}' class="w-full bg-background-light dark:bg-gray-700 border border-transparent dark:border-transparent rounded-lg py-2 pl-10 pr-14 text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+                            <input id="header-search" name="q" type="search" placeholder="{{ _('Search') }}" aria-label="{{ _('Search') }}" data-enhanced-search='{"endpoint": "/api/search", "minChars": 2, "maxResults": 10}' class="w-full bg-background-light dark:bg-gray-700 border border-transparent dark:border-transparent rounded-lg py-2 pl-10 pr-20 text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
                         </form>
+                        <kbd class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-600 text-text-muted-light dark:text-text-muted-dark border border-gray-200 dark:border-gray-500" title="{{ _('Open command palette') }}">Ctrl+K</kbd>
                     </div>
-                    <button type="button" class="text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5" aria-label="Open command palette" onclick="window.openCommandPalette && window.openCommandPalette();">
-                        <i class="fa-solid fa-terminal"></i>
-                    </button>
                 </div>
 
                 <!-- Right side controls -->
-                <div class="flex items-center space-x-4">
-                    {% if current_user.is_authenticated and (not settings or not getattr(settings, 'donate_ui_hidden', false)) and current_user.ui_show_donate %}
-                    <!-- BuyMeACoffee Button -->
-                    <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=header&utm_campaign=support" 
-                       target="_blank" 
-                       rel="noopener noreferrer"
-                       onclick="trackDonationClick('header')"
-                       class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30 transition-all duration-200 text-sm font-medium"
-                       title="{{ _('Support updates — or get key to remove prompts') }}">
-                        <i class="fas fa-mug-saucer"></i>
-                        <span class="hidden lg:inline">{{ _('Support updates') }}</span>
-                    </a>
-                    {% endif %}
+                <div class="flex items-center gap-2">
                     <div class="relative z-50" id="theme-dropdown-container">
-                        <button id="theme-toggle" type="button" class="flex items-center text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5" aria-label="{{ _('Theme') }}" aria-haspopup="true" aria-expanded="false" aria-controls="themeDropdown">
+                        <button id="theme-toggle" type="button" class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50" aria-label="{{ _('Theme') }}" aria-haspopup="true" aria-expanded="false" aria-controls="themeDropdown">
                             <i id="theme-toggle-dark-icon" class="hidden fa-solid fa-moon w-5 h-5"></i>
                             <i id="theme-toggle-light-icon" class="hidden fa-solid fa-sun w-5 h-5"></i>
                             <i id="theme-toggle-system-icon" class="hidden fa-solid fa-desktop w-5 h-5"></i>
@@ -1027,28 +1069,28 @@
                         </ul>
                     </div>
 
-                    <!-- Chat, Timer, Help - grouped round buttons -->
-                    <div class="flex items-center justify-center gap-2">
+                    <!-- Chat, Timer, Help - icon buttons -->
+                    <div class="flex items-center gap-1">
                         {% if is_module_enabled('team_chat') %}
-                        <button onclick="if(typeof toggleChatWidget === 'function') { toggleChatWidget(); } else { openChatUserSelector(); }" class="flex items-center justify-center w-10 h-10 rounded-full text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 text-sm" aria-label="{{ _('Open chat') }}" title="{{ _('Open chat') }}">
+                        <button onclick="if(typeof toggleChatWidget === 'function') { toggleChatWidget(); } else { openChatUserSelector(); }" class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50" aria-label="{{ _('Open chat') }}" title="{{ _('Open chat') }}">
                             <i class="fas fa-comments"></i>
                         </button>
                         {% endif %}
                         {% if current_user.is_authenticated %}
-                        <div id="floatingTimerBar" class="flex shrink-0 items-center justify-center w-10 h-10"
+                        <div id="floatingTimerBar" class="flex shrink-0 items-center justify-center w-9 h-9"
                              data-start-label="{{ _('Start Timer') }}"
                              data-stop-label="{{ _('Stop') }}"
                              data-manual-url="{{ url_for('timer.manual_entry') }}"
                              aria-label="{{ _('Timer') }}"></div>
                         {% endif %}
-                        <a href="{{ url_for('main.help') }}" class="flex items-center justify-center w-10 h-10 rounded-full text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 text-sm" aria-label="{{ _('Help') }}" title="{{ _('Help') }}">
+                        <a href="{{ url_for('main.help') }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50" aria-label="{{ _('Help') }}" title="{{ _('Help') }}">
                             <i class="fas fa-life-ring"></i>
                         </a>
                     </div>
 
                     <!-- Language Switcher -->
                     <div class="relative z-50">
-                        <button data-dropdown="langDropdown" class="flex items-center text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5" aria-label="{{ _('Change language') }}" aria-haspopup="true" aria-expanded="false" aria-controls="langDropdown" title="{{ _('Change language') }}">
+                        <button data-dropdown="langDropdown" class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50 lg:w-auto lg:px-2.5" aria-label="{{ _('Change language') }}" aria-haspopup="true" aria-expanded="false" aria-controls="langDropdown" title="{{ _('Change language') }}">
                             <i class="fas fa-globe"></i>
                             <span class="ml-2 hidden lg:inline">{{ current_language_label }}</span>
                         </button>
@@ -1182,25 +1224,26 @@
         {% endif %}
 
         <!-- Mobile Bottom Navigation -->
-        <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark flex justify-around pb-[env(safe-area-inset-bottom)]" role="navigation" aria-label="{{ _('Main') }}">
-            <a href="{{ url_for('main.dashboard') }}" class="flex flex-col items-center p-2 text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Dashboard') }}">
-                <i class="fas fa-tachometer-alt" aria-hidden="true"></i>
-                <span class="text-xs">{{ _('Dashboard') }}</span>
+        {% set _nav_ep = request.endpoint or '' %}
+        <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark flex justify-around items-stretch pb-[env(safe-area-inset-bottom)] shadow-[0_-2px_10px_rgba(0,0,0,0.06)] dark:shadow-[0_-2px_10px_rgba(0,0,0,0.2)]" role="navigation" aria-label="{{ _('Main') }}">
+            <a href="{{ url_for('main.dashboard') }}" class="flex flex-col items-center justify-center min-h-[48px] flex-1 py-2 rounded-t-lg transition-colors {% if _nav_ep == 'main.dashboard' %}text-primary bg-primary/10 dark:bg-primary/20 font-medium{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" aria-label="{{ _('Dashboard') }}" aria-current="{% if _nav_ep == 'main.dashboard' %}page{% endif %}">
+                <i class="fas fa-tachometer-alt text-lg" aria-hidden="true"></i>
+                <span class="text-xs mt-0.5">{{ _('Dashboard') }}</span>
             </a>
-            <a href="{{ url_for('projects.list_projects') }}" class="flex flex-col items-center p-2 text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Projects') }}">
-                <i class="fas fa-briefcase" aria-hidden="true"></i>
-                <span class="text-xs">{{ _('Projects') }}</span>
+            <a href="{{ url_for('projects.list_projects') }}" class="flex flex-col items-center justify-center min-h-[48px] flex-1 py-2 rounded-t-lg transition-colors {% if _nav_ep and _nav_ep.startswith('projects.') %}text-primary bg-primary/10 dark:bg-primary/20 font-medium{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" aria-label="{{ _('Projects') }}" aria-current="{% if _nav_ep and _nav_ep.startswith('projects.') %}page{% endif %}">
+                <i class="fas fa-briefcase text-lg" aria-hidden="true"></i>
+                <span class="text-xs mt-0.5">{{ _('Projects') }}</span>
             </a>
-            <a href="{{ url_for('timer.manual_entry') }}" class="flex flex-col items-center p-2 text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('New time entry') }}">
-                <i class="fas fa-plus-circle text-2xl" aria-hidden="true"></i>
+            <a href="{{ url_for('timer.manual_entry') }}" class="flex items-center justify-center flex-shrink-0 w-14 h-14 -mt-5 rounded-full bg-primary text-white hover:bg-primary-dark shadow-lg active:scale-95 transition-all border-4 border-card-light dark:border-card-dark" aria-label="{{ _('New time entry') }}">
+                <i class="fas fa-plus text-xl" aria-hidden="true"></i>
             </a>
-            <a href="{{ url_for('reports.reports') }}" class="flex flex-col items-center p-2 text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Reports') }}">
-                <i class="fas fa-chart-line" aria-hidden="true"></i>
-                <span class="text-xs">{{ _('Reports') }}</span>
+            <a href="{{ url_for('reports.reports') }}" class="flex flex-col items-center justify-center min-h-[48px] flex-1 py-2 rounded-t-lg transition-colors {% if _nav_ep and _nav_ep.startswith('reports.') %}text-primary bg-primary/10 dark:bg-primary/20 font-medium{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" aria-label="{{ _('Reports') }}" aria-current="{% if _nav_ep and _nav_ep.startswith('reports.') %}page{% endif %}">
+                <i class="fas fa-chart-line text-lg" aria-hidden="true"></i>
+                <span class="text-xs mt-0.5">{{ _('Reports') }}</span>
             </a>
-            <a href="{{ url_for('auth.profile') }}" class="flex flex-col items-center p-2 text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Profile') }}">
-                <i class="fas fa-user-circle" aria-hidden="true"></i>
-                <span class="text-xs">{{ _('Profile') }}</span>
+            <a href="{{ url_for('auth.profile') }}" class="flex flex-col items-center justify-center min-h-[48px] flex-1 py-2 rounded-t-lg transition-colors {% if _nav_ep and _nav_ep.startswith('auth.profile') %}text-primary bg-primary/10 dark:bg-primary/20 font-medium{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" aria-label="{{ _('Profile') }}" aria-current="{% if _nav_ep and _nav_ep.startswith('auth.profile') %}page{% endif %}">
+                <i class="fas fa-user-circle text-lg" aria-hidden="true"></i>
+                <span class="text-xs mt-0.5">{{ _('Profile') }}</span>
             </a>
         </nav>
 
@@ -1212,7 +1255,7 @@
     <!-- Enhanced UI scripts -->
     <script src="{{ url_for('static', filename='enhanced-search.js') }}"></script>
     <script src="{{ url_for('static', filename='form-validation.js') }}"></script>
-    <script src="{{ url_for('static', filename='toast-notifications.js') }}"></script>
+    <script src="{{ url_for('static', filename='toast-notifications.js') }}?v={{ app_version }}-toastfix1"></script>
     <script src="{{ url_for('static', filename='enhanced-tables.js') }}"></script>
     <script src="{{ url_for('static', filename='interactions.js') }}"></script>
     <script src="{{ url_for('static', filename='offline-sync.js') }}"></script>
@@ -1226,6 +1269,7 @@
     <script src="{{ url_for('static', filename='commands.js') }}?v=2.0"></script>
     <script>window.__BASE_INIT__={timerStatus:"{{ url_for('timer.timer_status') }}",stopTimer:"{{ url_for('timer.stop_timer') }}",dashboard:"{{ url_for('main.dashboard') }}",manualEntry:"{{ url_for('timer.manual_entry') }}"};</script>
     <script src="{{ url_for('static', filename='base-init.js') }}"></script>
+    <script src="{{ url_for('static', filename='mobile.js') }}"></script>
     <script>
         // Sidebar collapse logic with persisted state
         (function(){
@@ -1557,7 +1601,7 @@
                 if (!flyout){
                     flyout = document.createElement('div');
                     flyout.id = 'sidebarFlyout';
-                    flyout.className = 'hidden fixed z-50 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg p-2';
+                    flyout.className = 'hidden fixed z-50 bg-card-light/95 dark:bg-card-dark/95 border border-border-light dark:border-border-dark rounded-2xl shadow-2xl p-2';
                     document.body.appendChild(flyout);
                     document.addEventListener('click', (e) => {
                         if (!flyout || flyout.classList.contains('hidden')) return;
@@ -1574,20 +1618,26 @@
                 const list = document.getElementById(listId);
                 if (!list) return;
                 flyout.innerHTML = '';
+                const title = document.createElement('div');
+                title.className = 'flyout-title';
+                title.textContent = (triggerBtn.getAttribute('title') || triggerBtn.textContent || '').trim();
+                flyout.appendChild(title);
                 const ul = document.createElement('ul');
-                ul.className = 'min-w-[12rem] space-y-1';
+                ul.className = 'space-y-1';
                 list.querySelectorAll('a').forEach((a) => {
                     const li = document.createElement('li');
                     const link = a.cloneNode(true);
-                    link.classList.add('block','px-3','py-2','rounded','hover:bg-background-light','dark:hover:bg-background-dark');
+                    const isActive = a.classList.contains('text-primary') || a.classList.contains('font-semibold') || a.getAttribute('aria-current') === 'page';
+                    link.className = 'flyout-link text-text-light dark:text-text-dark';
+                    if (isActive) link.classList.add('is-active');
                     li.appendChild(link);
                     ul.appendChild(li);
                 });
                 flyout.appendChild(ul);
                 const rect = triggerBtn.getBoundingClientRect();
                 const sbRect = sidebar.getBoundingClientRect();
-                const left = sbRect.right + 8;
-                const top = rect.top;
+                const left = Math.min(sbRect.right + 12, window.innerWidth - flyout.offsetWidth - 12);
+                const top = Math.min(Math.max(12, rect.top), window.innerHeight - flyout.offsetHeight - 12);
                 flyout.style.left = left + 'px';
                 flyout.style.top = top + 'px';
                 flyout.classList.remove('hidden');

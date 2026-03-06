@@ -11,28 +11,28 @@
     <a href="{{ url_for('project_templates.list_templates') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Templates') }}</a>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST" action="{{ url_for('project_templates.create_template') }}" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div class="md:col-span-2">
-                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Template Name') }} *</label>
+                <label for="name" class="form-label">{{ _('Template Name') }} *</label>
                 <input type="text" id="name" name="name" required class="form-input" placeholder="{{ _('e.g., Web Development Project') }}">
             </div>
             
             <div class="md:col-span-2">
-                <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Description') }}</label>
+                <label for="description" class="form-label">{{ _('Description') }}</label>
                 <textarea id="description" name="description" rows="3" class="form-input" placeholder="{{ _('Describe what this template is used for...') }}"></textarea>
             </div>
             
             <div>
-                <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Category') }}</label>
+                <label for="category" class="form-label">{{ _('Category') }}</label>
                 <input type="text" id="category" name="category" class="form-input" placeholder="{{ _('e.g., Web Development, Marketing') }}">
             </div>
             
             <div>
-                <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Tags') }}</label>
+                <label for="tags" class="form-label">{{ _('Tags') }}</label>
                 <input type="text" id="tags" name="tags" class="form-input" placeholder="{{ _('Comma-separated tags') }}">
             </div>
         </div>
@@ -49,17 +49,17 @@
                 </div>
                 
                 <div>
-                    <label for="hourly_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Default Hourly Rate') }}</label>
+                    <label for="hourly_rate" class="form-label">{{ _('Default Hourly Rate') }}</label>
                     <input type="number" step="0.01" id="hourly_rate" name="hourly_rate" class="form-input" placeholder="75.00">
                 </div>
                 
                 <div>
-                    <label for="estimated_hours" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Estimated Hours') }}</label>
+                    <label for="estimated_hours" class="form-label">{{ _('Estimated Hours') }}</label>
                     <input type="number" step="0.1" id="estimated_hours" name="estimated_hours" class="form-input">
                 </div>
                 
                 <div>
-                    <label for="budget_amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Budget Amount') }}</label>
+                    <label for="budget_amount" class="form-label">{{ _('Budget Amount') }}</label>
                     <input type="number" step="0.01" id="budget_amount" name="budget_amount" class="form-input">
                 </div>
             </div>
@@ -72,11 +72,11 @@
                 <div class="task-item border border-border-light dark:border-border-dark rounded-lg p-4 mb-2">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Task Name') }}</label>
+                            <label class="form-label">{{ _('Task Name') }}</label>
                             <input type="text" name="task_names[]" class="form-input" placeholder="{{ _('Task name') }}">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Priority') }}</label>
+                            <label class="form-label">{{ _('Priority') }}</label>
                             <select name="task_priorities[]" class="form-input">
                                 <option value="low">{{ _('Low') }}</option>
                                 <option value="medium" selected>{{ _('Medium') }}</option>
@@ -84,7 +84,7 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Estimated Hours') }}</label>
+                            <label class="form-label">{{ _('Estimated Hours') }}</label>
                             <input type="number" step="0.1" name="task_hours[]" class="form-input">
                         </div>
                     </div>
@@ -102,8 +102,8 @@
             </label>
         </div>
         
-        <div class="flex justify-end gap-4">
-            <a href="{{ url_for('project_templates.list_templates') }}" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Cancel') }}</a>
+        <div class="flex flex-col-reverse sm:flex-row justify-end gap-4">
+            <a href="{{ url_for('project_templates.list_templates') }}" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-center">{{ _('Cancel') }}</a>
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">{{ _('Create Template') }}</button>
         </div>
     </form>

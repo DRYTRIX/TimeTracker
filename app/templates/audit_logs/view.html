@@ -18,7 +18,7 @@
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- Main Details -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h2 class="text-xl font-semibold mb-4">{{ _('Change Information') }}</h2>
         <dl class="space-y-4">
             <div>
@@ -115,7 +115,7 @@
     
     <!-- Change Details -->
     {% if audit_log.field_name %}
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h2 class="text-xl font-semibold mb-4">{{ _('Field Change Details') }}</h2>
         <div class="space-y-4">
             {% if audit_log.old_value %}
@@ -140,7 +140,7 @@
     
     <!-- Full Entity State -->
     {% if audit_log.get_full_old_state() or audit_log.get_full_new_state() %}
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow lg:col-span-2">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm lg:col-span-2">
         <h2 class="text-xl font-semibold mb-4">{{ _('Full Entity State') }}</h2>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {% if audit_log.get_full_old_state() %}
@@ -174,7 +174,7 @@
     {% endif %}
     
     <!-- Request Information -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow lg:col-span-2">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm lg:col-span-2">
         <h2 class="text-xl font-semibold mb-4">{{ _('Request Information') }}</h2>
         <dl class="grid grid-cols-1 md:grid-cols-3 gap-4">
             {% if audit_log.ip_address %}
@@ -199,13 +199,13 @@
     </div>
 </div>
 
-<div class="mt-6 flex gap-4">
+<div class="mt-6 flex flex-col sm:flex-row gap-4">
     <a href="{{ url_for('audit_logs.list_audit_logs') }}" 
-       class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+       class="px-4 py-2 min-h-[44px] bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors inline-flex items-center justify-center">
         <i class="fas fa-arrow-left mr-2"></i>Back to List
     </a>
     <a href="{{ url_for('audit_logs.entity_history', entity_type=audit_log.entity_type, entity_id=audit_log.entity_id) }}" 
-       class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+       class="px-4 py-2 min-h-[44px] bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors inline-flex items-center justify-center">
         <i class="fas fa-history mr-2"></i>View Entity History
     </a>
 </div>

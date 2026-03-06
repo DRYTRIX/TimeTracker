@@ -22,29 +22,29 @@
 </div>
 
 {% if recurring_tasks %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <div class="overflow-x-auto">
-        <table class="w-full">
-            <thead>
+        <table class="w-full enhanced-table responsive-cards">
+            <thead class="bg-background-light dark:bg-background-dark">
                 <tr class="border-b border-border-light dark:border-border-dark">
-                    <th class="text-left p-3 text-sm font-semibold">{{ _('Name') }}</th>
-                    <th class="text-left p-3 text-sm font-semibold">{{ _('Project') }}</th>
-                    <th class="text-left p-3 text-sm font-semibold">{{ _('Frequency') }}</th>
-                    <th class="text-left p-3 text-sm font-semibold">{{ _('Next Run') }}</th>
-                    <th class="text-left p-3 text-sm font-semibold">{{ _('Status') }}</th>
-                    <th class="text-left p-3 text-sm font-semibold">{{ _('Actions') }}</th>
+                    <th class="text-left px-3 py-3 text-sm font-semibold">{{ _('Name') }}</th>
+                    <th class="text-left px-3 py-3 text-sm font-semibold">{{ _('Project') }}</th>
+                    <th class="text-left px-3 py-3 text-sm font-semibold">{{ _('Frequency') }}</th>
+                    <th class="text-left px-3 py-3 text-sm font-semibold">{{ _('Next Run') }}</th>
+                    <th class="text-left px-3 py-3 text-sm font-semibold">{{ _('Status') }}</th>
+                    <th class="text-left px-3 py-3 text-sm font-semibold">{{ _('Actions') }}</th>
                 </tr>
             </thead>
             <tbody>
                 {% for task in recurring_tasks %}
                 <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
-                    <td class="p-3">
+                    <td class="p-3" data-label="{{ _('Name') }}">
                         <div class="font-medium">{{ task.name }}</div>
                         {% if task.description %}
                         <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ task.description[:50] }}{% if task.description|length > 50 %}...{% endif %}</div>
                         {% endif %}
                     </td>
-                    <td class="p-3">
+                    <td class="p-3" data-label="{{ _('Project') }}">
                         {% if task.project %}
                         <a href="{{ url_for('projects.view_project', project_id=task.project.id) }}" class="text-primary hover:underline">
                             {{ task.project.name }}
@@ -53,7 +53,7 @@
                         <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('No project') }}</span>
                         {% endif %}
                     </td>
-                    <td class="p-3">
+                    <td class="p-3" data-label="{{ _('Frequency') }}">
                         <span class="px-2 py-1 rounded text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                             {{ task.frequency|title }}
                             {% if task.interval > 1 %}
@@ -61,14 +61,14 @@
                             {% endif %}
                         </span>
                     </td>
-                    <td class="p-3">
+                    <td class="p-3" data-label="{{ _('Next Run') }}">
                         {% if task.next_run_date %}
                         <span class="text-sm">{{ task.next_run_date|local_date }}</span>
                         {% else %}
                         <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Not scheduled') }}</span>
                         {% endif %}
                     </td>
-                    <td class="p-3">
+                    <td class="p-3" data-label="{{ _('Status') }}">
                         <span class="px-2 py-1 rounded text-xs font-medium
                             {% if task.is_active %}bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200
                             {% else %}bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200
@@ -76,7 +76,7 @@
                             {% if task.is_active %}{{ _('Active') }}{% else %}{{ _('Inactive') }}{% endif %}
                         </span>
                     </td>
-                    <td class="p-3">
+                    <td class="p-3" data-label="{{ _('Actions') }}">
                         <div class="flex gap-2">
                             <a href="{{ url_for('recurring_tasks.edit_recurring_task', task_id=task.id) }}" class="text-primary hover:text-primary-dark">
                                 <i class="fas fa-edit"></i>

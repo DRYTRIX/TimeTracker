@@ -15,11 +15,11 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
         <h2 class="text-lg font-semibold mb-4">{{ _('Filters') }}</h2>
     <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div>
-            <label for="entity_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Entity Type') }}</label>
+            <label for="entity_type" class="form-label">{{ _('Entity Type') }}</label>
             <select name="entity_type" id="entity_type" class="form-input">
                 <option value="">{{ _('All Types') }}</option>
                 {% for et in entity_types %}
@@ -28,11 +28,11 @@
             </select>
         </div>
         <div>
-            <label for="entity_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Entity ID') }}</label>
+            <label for="entity_id" class="form-label">{{ _('Entity ID') }}</label>
             <input type="number" name="entity_id" id="entity_id" value="{{ entity_id or '' }}" class="form-input" placeholder="{{ _('Entity ID') }}">
         </div>
         <div>
-            <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('User') }}</label>
+            <label for="user_id" class="form-label">{{ _('User') }}</label>
             <select name="user_id" id="user_id" class="form-input">
                 <option value="">{{ _('All Users') }}</option>
                 {% for user in users %}
@@ -41,7 +41,7 @@
             </select>
         </div>
         <div>
-            <label for="action" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Action') }}</label>
+            <label for="action" class="form-label">{{ _('Action') }}</label>
             <select name="action" id="action" class="form-input">
                 <option value="">{{ _('All Actions') }}</option>
                 <option value="created" {% if action == 'created' %}selected{% endif %}>{{ _('Created') }}</option>
@@ -50,7 +50,7 @@
             </select>
         </div>
         <div>
-            <label for="days" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Time Range') }}</label>
+            <label for="days" class="form-label">{{ _('Time Range') }}</label>
             <select name="days" id="days" class="form-input">
                 <option value="7" {% if days == 7 %}selected{% endif %}>{{ _('Last 7 days') }}</option>
                 <option value="30" {% if days == 30 %}selected{% endif %}>{{ _('Last 30 days') }}</option>
@@ -66,38 +66,38 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-hidden">
+<div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
     {% if audit_logs %}
     <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-800">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 enhanced-table responsive-cards">
+            <thead class="bg-background-light dark:bg-background-dark">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Timestamp') }}</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('User') }}</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Action') }}</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Entity') }}</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Field') }}</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Change') }}</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Actions') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Timestamp') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('User') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Action') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Entity') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Field') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Change') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Actions') }}</th>
                 </tr>
             </thead>
             <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                 {% for log in audit_logs %}
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100" data-label="{{ _('Timestamp') }}">
                         {{ log.created_at|user_datetime }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100" data-label="{{ _('User') }}">
                         {% if log.user %}
                             {{ log.user.display_name }}
                         {% else %}
                             <span class="text-gray-400">System</span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
+                    <td class="px-6 py-4 whitespace-nowrap" data-label="{{ _('Action') }}">
                         {{ badge(log.action, log.get_color()) }}
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100" data-label="{{ _('Entity') }}">
                         <a href="{{ url_for('audit_logs.entity_history', entity_type=log.entity_type, entity_id=log.entity_id) }}" 
                            class="text-primary hover:underline">
                             {{ log.entity_type }}#{{ log.entity_id }}
@@ -130,14 +130,14 @@
                         </div>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100" data-label="{{ _('Field') }}">
                         {% if log.field_name %}
                             <code class="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{{ log.field_name }}</code>
                         {% else %}
                             <span class="text-gray-400">—</span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
+                    <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100" data-label="{{ _('Change') }}">
                         {% if log.field_name %}
                             <div class="space-y-1">
                                 {% if log.old_value %}
@@ -157,9 +157,9 @@
                             <span class="text-gray-400">{{ log.change_description or '—' }}</span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm">
-                        <a href="{{ url_for('audit_logs.view_audit_log', log_id=log.id) }}" 
-                           class="text-primary hover:underline">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm" data-label="{{ _('Actions') }}">
+                        <a href="{{ url_for('audit_logs.view_audit_log', log_id=log.id) }}"
+                           class="text-primary hover:underline inline-flex items-center min-h-[44px]">
                             <i class="fas fa-eye"></i> View
                         </a>
                     </td>

@@ -12,28 +12,28 @@
     </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Total Goods') }}</h3>
         <p class="text-2xl font-bold mt-2">{{ goods|length }}</p>
     </div>
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Total Amount') }}</h3>
         <p class="text-2xl font-bold mt-2">{{ '%.2f'|format(total_amount) }}</p>
     </div>
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Billable Amount') }}</h3>
         <p class="text-2xl font-bold mt-2">{{ '%.2f'|format(billable_amount) }}</p>
     </div>
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Categories') }}</h3>
         <p class="text-2xl font-bold mt-2">{{ category_breakdown|length }}</p>
     </div>
 </div>
 
 {% if goods %}
-<div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-hidden">
-    <table class="w-full">
+<div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
+    <table class="w-full responsive-cards">
         <thead class="bg-background-light dark:bg-background-dark">
             <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider">{{ _('Name') }}</th>
@@ -48,7 +48,7 @@
         <tbody class="divide-y divide-border-light dark:divide-border-dark">
             {% for good in goods %}
             <tr class="hover:bg-background-light dark:hover:bg-background-dark">
-                <td class="px-6 py-4">
+                <td class="px-6 py-4 mobile-card-header" data-label="{{ _('Name') }}">
                     <div class="font-medium">{{ good.name }}</div>
                     {% if good.description %}
                     <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ good.description[:80] }}{% if good.description|length > 80 %}...{% endif %}</div>
@@ -57,13 +57,13 @@
                     <div class="text-xs text-text-muted-light dark:text-text-muted-dark">SKU: {{ good.sku }}</div>
                     {% endif %}
                 </td>
-                <td class="px-6 py-4">
+                <td class="px-6 py-4" data-label="{{ _('Category') }}">
                     <span class="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800">{{ good.category|capitalize }}</span>
                 </td>
-                <td class="px-6 py-4">{{ '%.2f'|format(good.quantity) }}</td>
-                <td class="px-6 py-4">{{ '%.2f'|format(good.unit_price) }} {{ good.currency_code }}</td>
-                <td class="px-6 py-4 font-medium">{{ '%.2f'|format(good.total_amount) }} {{ good.currency_code }}</td>
-                <td class="px-6 py-4">
+                <td class="px-6 py-4" data-label="{{ _('Quantity') }}">{{ '%.2f'|format(good.quantity) }}</td>
+                <td class="px-6 py-4" data-label="{{ _('Unit Price') }}">{{ '%.2f'|format(good.unit_price) }} {{ good.currency_code }}</td>
+                <td class="px-6 py-4 font-medium" data-label="{{ _('Total') }}">{{ '%.2f'|format(good.total_amount) }} {{ good.currency_code }}</td>
+                <td class="px-6 py-4" data-label="{{ _('Status') }}">
                     {% if good.invoice_id %}
                     <span class="px-2 py-1 text-xs rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">{{ _('Invoiced') }}</span>
                     {% elif good.billable %}
@@ -72,7 +72,7 @@
                     <span class="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">{{ _('Non-billable') }}</span>
                     {% endif %}
                 </td>
-                <td class="px-6 py-4 text-right">
+                <td class="px-6 py-4 text-right mobile-actions" data-label="{{ _('Actions') }}">
                     <div class="flex justify-end gap-2">
                         <a href="{{ url_for('projects.edit_good', project_id=project.id, good_id=good.id) }}" class="text-primary hover:text-primary/80">
                             <i class="fas fa-edit"></i>
@@ -93,7 +93,7 @@
     </table>
 </div>
 {% else %}
-<div class="bg-card-light dark:bg-card-dark p-12 rounded-lg shadow text-center">
+<div class="bg-card-light dark:bg-card-dark p-12 rounded-xl border border-border-light dark:border-border-dark shadow-sm text-center">
     <i class="fas fa-box-open text-4xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
     <p class="text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('No extra goods found for this project') }}</p>
     <a href="{{ url_for('projects.add_good', project_id=project.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg inline-block">{{ _('Add Your First Good') }}</a>
@@ -101,7 +101,7 @@
 {% endif %}
 
 {% if category_breakdown %}
-<div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h2 class="text-lg font-semibold mb-4">{{ _('Breakdown by Category') }}</h2>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         {% for item in category_breakdown %}

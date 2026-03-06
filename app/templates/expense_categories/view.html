@@ -19,12 +19,12 @@
     <!-- Category Details -->
     <div class="lg:col-span-2 space-y-6">
         <!-- Basic Information -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-info-circle mr-2"></i>Basic Information
             </h3>
             
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Category Name</p>
                     <div class="flex items-center">
@@ -69,7 +69,7 @@
         
         <!-- Budget Information -->
         {% if category.monthly_budget or category.quarterly_budget or category.yearly_budget %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-chart-pie mr-2"></i>Budget & Utilization
             </h3>
@@ -137,7 +137,7 @@
     <!-- Sidebar -->
     <div class="space-y-6">
         <!-- Settings -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-cog mr-2"></i>Settings
             </h3>
@@ -164,7 +164,7 @@
         </div>
         
         <!-- Metadata -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-clock mr-2"></i>Metadata
             </h3>
@@ -183,7 +183,7 @@
         </div>
         
         <!-- Actions -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-tools mr-2"></i>Actions
             </h3>

@@ -11,10 +11,10 @@
     </nav>
     
     <!-- Hero Section (A/B: control | key_first | cta_alt) -->
-    <div class="bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-8 rounded-lg shadow-lg text-white mb-6">
+    <div class="bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-5 sm:p-8 rounded-lg shadow-lg text-white mb-6">
         <div class="text-center">
-            <i class="fas fa-mug-saucer text-6xl mb-4"></i>
-            <h1 class="text-4xl font-bold mb-4">{{ _('Support TimeTracker Development') }}</h1>
+            <i class="fas fa-mug-saucer text-4xl sm:text-6xl mb-4"></i>
+            <h1 class="text-2xl sm:text-4xl font-bold mb-4">{{ _('Support TimeTracker Development') }}</h1>
             <p class="text-xl opacity-90 mb-6">
                 {% if (support_ab_variant|default('control')) == 'cta_alt' %}
                 {{ _('Donate to support development — or get a key to remove prompts') }}
@@ -53,8 +53,8 @@
     </div>
 
     <!-- Why Donations Matter -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark mb-6">
-        <h2 class="text-2xl font-semibold mb-4">
+    <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+        <h2 class="text-xl sm:text-2xl font-semibold mb-4">
             <i class="fas fa-heart text-rose-500 mr-2"></i>
             {{ _('Why Your Support Matters') }}
         </h2>
@@ -108,8 +108,8 @@
     </div>
 
     <!-- Remove prompts with key: 3-step flow -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark mb-6 border-l-4 border-l-blue-500">
-        <h2 class="text-2xl font-semibold mb-4">
+    <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6 border-l-4 border-l-blue-500">
+        <h2 class="text-xl sm:text-2xl font-semibold mb-4">
             <i class="fas fa-key text-blue-500 mr-2"></i>
             {{ _('Remove prompts with key') }}
         </h2>
@@ -142,8 +142,8 @@
 
     <!-- Your Usage Stats -->
     {% if time_entries_count > 0 or total_hours > 0 %}
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark mb-6">
-        <h2 class="text-2xl font-semibold mb-4">
+    <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+        <h2 class="text-xl sm:text-2xl font-semibold mb-4">
             <i class="fas fa-chart-line text-primary mr-2"></i>
             {{ _('Your TimeTracker Journey') }}
         </h2>
@@ -182,8 +182,8 @@
     {% endif %}
 
     <!-- Donation Options -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark mb-6">
-        <h2 class="text-2xl font-semibold mb-4">
+    <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+        <h2 class="text-xl sm:text-2xl font-semibold mb-4">
             <i class="fas fa-hand-holding-heart text-amber-500 mr-2"></i>
             {{ _('How to Support') }}
         </h2>
@@ -209,8 +209,8 @@
     </div>
 
     <!-- Impact -->
-    <div class="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-lg border border-green-200 dark:border-green-800">
-        <h2 class="text-2xl font-semibold mb-4 text-green-900 dark:text-green-100">
+    <div class="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-4 sm:p-6 rounded-lg border border-green-200 dark:border-green-800">
+        <h2 class="text-xl sm:text-2xl font-semibold mb-4 text-green-900 dark:text-green-100">
             <i class="fas fa-seedling mr-2"></i>
             {{ _('The Impact of Your Support') }}
         </h2>
@@ -235,8 +235,8 @@
     </div>
 
     <!-- Alternative Ways to Help -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark mt-6">
-        <h2 class="text-2xl font-semibold mb-4">
+    <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mt-6">
+        <h2 class="text-xl sm:text-2xl font-semibold mb-4">
             <i class="fas fa-users text-primary mr-2"></i>
             {{ _('Other Ways to Help') }}
         </h2>

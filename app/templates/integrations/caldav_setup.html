@@ -16,7 +16,7 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
@@ -193,12 +193,12 @@
             </div>
         </div>
         
-        <div class="mt-6 flex gap-4">
+        <div class="mt-6 flex flex-col sm:flex-row gap-3">
             <button type="submit" 
-                    class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                    class="bg-primary text-white px-6 py-2 min-h-[44px] rounded-lg hover:bg-primary/90 transition-colors">
                 <i class="fas fa-save mr-2"></i>{{ _('Save Configuration') }}
             </button>
-            <a href="{{ url_for('integrations.list_integrations') }}" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+            <a href="{{ url_for('integrations.list_integrations') }}" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 min-h-[44px] rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors inline-flex items-center justify-center">
                 {{ _('Cancel') }}
             </a>
         </div>
@@ -206,7 +206,7 @@
 </div>
 
 {% if integration.credentials %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h3 class="text-lg font-semibold mb-4">{{ _('Test Connection') }}</h3>
     <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
         {{ _('After saving, you can test the connection and discover available calendars.') }}

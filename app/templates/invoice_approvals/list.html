@@ -15,7 +15,7 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     {% if approvals %}
     <div class="space-y-4">
         {% for approval in approvals %}
@@ -78,7 +78,7 @@
         <form id="rejectForm" method="POST">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-4">
-                <label for="reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Reason for Rejection') }} *</label>
+                <label for="reason" class="form-label">{{ _('Reason for Rejection') }} *</label>
                 <textarea id="reason" name="reason" required rows="4" class="form-input" placeholder="{{ _('Please provide a reason for rejecting this invoice...') }}"></textarea>
             </div>
             <div class="flex justify-end gap-4">

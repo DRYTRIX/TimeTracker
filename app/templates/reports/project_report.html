@@ -5,10 +5,10 @@
     <h1 class="text-2xl font-bold">{{ _('Project Report') }}</h1>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
-    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+    <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <div>
-            <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="project_id" class="form-label">
                 <i class="fas fa-project-diagram mr-1"></i>Project
             </label>
             <select name="project_id" id="project_id" class="form-input">
@@ -19,7 +19,7 @@
             </select>
         </div>
         <div>
-            <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="user_id" class="form-label">
                 <i class="fas fa-user mr-1"></i>User
             </label>
             <select name="user_id" id="user_id" class="form-input">
@@ -30,26 +30,26 @@
             </select>
         </div>
         <div>
-            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="start_date" class="form-label">
                 <i class="fas fa-calendar mr-1"></i>Start Date
             </label>
             <input type="date" name="start_date" id="start_date" value="{{ start_date }}" class="form-input user-date-input">
         </div>
         <div>
-            <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="end_date" class="form-label">
                 <i class="fas fa-calendar mr-1"></i>End Date
             </label>
             <input type="date" name="end_date" id="end_date" value="{{ end_date }}" class="form-input user-date-input">
         </div>
         <div class="self-end">
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition">
+            <button type="submit" class="bg-primary text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-primary/90 transition">
                 <i class="fas fa-filter mr-2"></i>Filter
             </button>
         </div>
     </form>
     
     <!-- Export Buttons -->
-    <div class="mt-4 flex gap-2">
+    <div class="mt-4 flex flex-wrap gap-2">
         <a href="{{ url_for('reports.export_project_excel', project_id=selected_project or '', user_id=selected_user or '', start_date=start_date, end_date=end_date) }}" 
            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 inline-flex items-center">
             <i class="fas fa-file-excel mr-2"></i>Export to Excel
@@ -57,8 +57,8 @@
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-    <table class="w-full text-left">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    <table class="w-full text-left responsive-cards">
         <thead>
             <tr>
                 <th class="p-2">Project</th>
@@ -70,10 +70,10 @@
         <tbody>
             {% for project in projects_data %}
             <tr class="border-b border-border-light dark:border-border-dark">
-                <td class="p-2">{{ project.name }}</td>
-                <td class="p-2">{{ "%.2f"|format(project.total_hours) }}</td>
-                <td class="p-2">{{ "%.2f"|format(project.billable_hours) }}</td>
-                <td class="p-2">{{ "%.2f"|format(project.billable_amount) }}</td>
+                <td class="p-2" data-label="Project">{{ project.name }}</td>
+                <td class="p-2" data-label="Total Hours">{{ "%.2f"|format(project.total_hours) }}</td>
+                <td class="p-2" data-label="Billable Hours">{{ "%.2f"|format(project.billable_hours) }}</td>
+                <td class="p-2" data-label="Billable Amount">{{ "%.2f"|format(project.billable_amount) }}</td>
             </tr>
             {% else %}
             <tr>

@@ -206,11 +206,17 @@
     /**
      * Initialize bulk selection with visual feedback
      */
-    function initBulkSelection() {
-        // Create bulk actions bar
-        bulkActionsBar = document.createElement('div');
-        bulkActionsBar.className = 'bulk-actions-bar-enhanced';
-        bulkActionsBar.innerHTML = `
+    function createBulkActionsBar() {
+        const existingBar = document.querySelector('.bulk-actions-bar-enhanced');
+        if (existingBar) {
+            bulkActionsBar = existingBar;
+            return existingBar;
+        }
+
+        const bar = document.createElement('div');
+        bar.className = 'bulk-actions-bar-enhanced';
+        bar.setAttribute('aria-hidden', 'true');
+        bar.innerHTML = `
             <span class="bulk-actions-count" id="bulkActionsCount">0</span>
             <span>items selected</span>
             <div class="flex gap-2 ml-auto">
@@ -218,7 +224,23 @@
                 <button class="px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" id="bulkActionCancel">Cancel</button>
             </div>
         `;
-        document.body.appendChild(bulkActionsBar);
+        document.body.appendChild(bar);
+
+        const cancelBtn = bar.querySelector('#bulkActionCancel');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function() {
+                clearBulkSelection();
+            });
+        }
+
+        bulkActionsBar = bar;
+        return bar;
+    }
+
+    function initBulkSelection() {
+        if (!document.querySelector('.task-checkbox') && !document.getElementById('selectAll')) {
+            return;
+        }
 
         // Listen for checkbox changes
         document.addEventListener('change', function(e) {
@@ -237,14 +259,6 @@
                 });
             }
         });
-
-        // Bulk action cancel
-        const cancelBtn = document.getElementById('bulkActionCancel');
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', function() {
-                clearBulkSelection();
-            });
-        }
 
         // Keyboard shortcuts for bulk selection
         document.addEventListener('keydown', function(e) {
@@ -294,6 +308,10 @@
      */
     function updateBulkActionsBar() {
         const count = selectedItems.size;
+        if (count > 0 && !bulkActionsBar) {
+            createBulkActionsBar();
+        }
+
         const countEl = document.getElementById('bulkActionsCount');
         
         if (countEl) {
@@ -303,8 +321,10 @@
         if (bulkActionsBar) {
             if (count > 0) {
                 bulkActionsBar.classList.add('show');
+                bulkActionsBar.setAttribute('aria-hidden', 'false');
             } else {
                 bulkActionsBar.classList.remove('show');
+                bulkActionsBar.setAttribute('aria-hidden', 'true');
             }
         }
 
@@ -350,39 +370,9 @@
      * Initialize keyboard shortcuts help indicator
      */
     function initKeyboardShortcutsIndicator() {
-        // Check if indicator already exists
-        let indicator = document.getElementById('keyboardShortcutsIndicator');
-        
-        if (!indicator) {
-            indicator = document.createElement('div');
-            indicator.id = 'keyboardShortcutsIndicator';
-            indicator.className = 'keyboard-shortcuts-indicator';
-            indicator.innerHTML = '<i class="fas fa-question"></i>';
-            indicator.title = 'Keyboard Shortcuts (Shift+?)';
-            indicator.setAttribute('aria-label', 'Keyboard Shortcuts');
-            document.body.appendChild(indicator);
-
-            indicator.addEventListener('click', function() {
-                openKeyboardShortcutsModal();
-            });
-
-            // Add tooltip on hover
-            indicator.addEventListener('mouseenter', function() {
-                this.style.transform = 'scale(1.1)';
-            });
-
-            indicator.addEventListener('mouseleave', function() {
-                this.style.transform = 'scale(1)';
-            });
-        }
-
-        // Show keyboard shortcut hint on first visit
-        const hasSeenHint = localStorage.getItem('keyboardShortcutsHintShown');
-        if (!hasSeenHint) {
-            setTimeout(() => {
-                showKeyboardShortcutsHint();
-                localStorage.setItem('keyboardShortcutsHintShown', 'true');
-            }, 3000);
+        const indicator = document.getElementById('keyboardShortcutsIndicator');
+        if (indicator) {
+            indicator.remove();
         }
     }
 

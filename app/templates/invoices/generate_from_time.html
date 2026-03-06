@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
     <div>
         <h1 class="text-2xl font-bold">{{ _('Generate from Time, Costs & Goods') }}</h1>
         <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Select unbilled time entries, project costs, and extra goods to add to this invoice') }}</p>
     </div>
-    <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Edit') }}</a>
-    </div>
+    <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary shrink-0">{{ _('Back to Edit') }}</a>
+</div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <form method="POST" id="generateFromTimeForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -132,16 +132,16 @@
                     {% endif %}
                 </div>
 
-                <div class="mt-6 flex justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
-                    <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">{{ _('Cancel') }}</a>
-                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Add Selected to Invoice') }}</button>
+                <div class="mt-6 flex flex-wrap justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
+                    <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+                    <button type="submit" class="btn btn-primary">{{ _('Add Selected to Invoice') }}</button>
                 </div>
             </form>
         </div>
     </div>
 
     <div class="space-y-4">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-3">{{ _('Selection Summary') }}</h3>
             <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total available hours') }}: <span class="font-semibold text-text-light dark:text-text-dark">{{ '%.2f'|format(total_available_hours) }}</span></div>
             <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total available costs') }}: <span class="font-semibold text-text-light dark:text-text-dark">{{ '%.2f'|format(total_available_costs) }} {{ currency }}</span></div>
@@ -169,7 +169,7 @@
             {% endif %}
         </div>
 
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-3">{{ _('Tips') }}</h3>
             <ul class="list-disc pl-5 text-sm text-text-muted-light dark:text-text-muted-dark space-y-2">
                 <li>{{ _('You can select multiple time entries, costs, expenses, and extra goods.') }}</li>

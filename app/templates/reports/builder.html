@@ -18,9 +18,9 @@
 ) }}
 
 <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-    <!-- Sidebar: Data Sources & Components -->
-    <div class="lg:col-span-1">
-        <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow sticky top-4">
+    <!-- Sidebar: Data Sources & Components (shown above canvas on mobile) -->
+    <div class="lg:col-span-1 order-first">
+        <div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm sticky top-4">
             <h3 class="font-semibold mb-2">{{ _('Quick start') }}</h3>
             <button type="button" onclick="applyUnpaidPreset()" class="w-full mb-4 p-3 text-left border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 <i class="fas fa-exclamation-triangle text-orange-500 mr-2"></i>{{ _('Unpaid time entries') }}
@@ -58,14 +58,14 @@
     
     <!-- Main Canvas -->
     <div class="lg:col-span-3">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-            <div class="flex justify-between items-center mb-4">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                 <h3 class="text-lg font-semibold">{{ _('Report Canvas') }}</h3>
                 <div class="flex gap-2">
-                    <button onclick="previewReport()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    <button onclick="previewReport()" class="bg-blue-600 text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-blue-700">
                         <i class="fas fa-eye mr-2"></i>{{ _('Preview') }}
                     </button>
-                    <button onclick="saveReport()" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90">
+                    <button onclick="saveReport()" class="bg-primary text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-primary/90">
                         <i class="fas fa-save mr-2"></i>{{ _('Save') }}
                     </button>
                 </div>
@@ -79,19 +79,19 @@
         </div>
         
         <!-- Filters Panel -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mt-6">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mt-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Filters') }}</h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Start Date') }}</label>
+                    <label class="form-label">{{ _('Start Date') }}</label>
                     <input type="date" id="filterStartDate" class="form-input user-date-input">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('End Date') }}</label>
+                    <label class="form-label">{{ _('End Date') }}</label>
                     <input type="date" id="filterEndDate" class="form-input user-date-input">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Project') }}</label>
+                    <label class="form-label">{{ _('Project') }}</label>
                     <select id="filterProject" class="form-input">
                         <option value="">{{ _('All Projects') }}</option>
                     </select>
@@ -120,7 +120,7 @@
                 {% if custom_field_keys %}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label class="form-label">
                             {{ _('Custom Field') }}
                         </label>
                         <select id="filterCustomFieldName" class="form-input">
@@ -131,7 +131,7 @@
                         </select>
                     </div>
                     <div id="filterCustomFieldValueContainer" class="hidden">
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label class="form-label">
                             {{ _('Field Value') }}
                         </label>
                         <input type="text" id="filterCustomFieldValue" class="form-input" 
@@ -178,11 +178,11 @@
         <h3 class="text-lg font-semibold mb-4">{{ _('Save Report') }}</h3>
         <form id="saveForm">
             <div class="mb-4">
-                <label for="reportName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Report Name') }} *</label>
+                <label for="reportName" class="form-label">{{ _('Report Name') }} *</label>
                 <input type="text" id="reportName" required class="form-input" placeholder="{{ _('My Custom Report') }}" value="{% if saved_view %}{{ saved_view.name }}{% endif %}">
             </div>
             <div class="mb-4">
-                <label for="reportScope" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Scope') }}</label>
+                <label for="reportScope" class="form-label">{{ _('Scope') }}</label>
                 <select id="reportScope" class="form-input">
                     <option value="private" {% if saved_view and saved_view.scope == 'private' %}selected{% endif %}>{{ _('Private') }}</option>
                     <option value="team" {% if saved_view and saved_view.scope == 'team' %}selected{% endif %}>{{ _('Team') }}</option>
@@ -203,7 +203,7 @@
                     {{ _('Generate one report per custom field value (e.g., one report per salesman)') }}
                 </p>
                 <div id="iterativeFieldContainer" class="ml-6 {% if not saved_view or not saved_view.iterative_report_generation %}hidden{% endif %}">
-                    <label for="iterativeCustomFieldName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Custom Field Name') }}</label>
+                    <label for="iterativeCustomFieldName" class="form-label">{{ _('Custom Field Name') }}</label>
                     <select id="iterativeCustomFieldName" class="form-input">
                         <option value="">{{ _('Select Field') }}</option>
                         {% for field_key in custom_field_keys %}

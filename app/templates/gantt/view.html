@@ -22,10 +22,10 @@
     actions_html=gantt_actions
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <div>
-            <label for="projectFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Project') }}</label>
+            <label for="projectFilter" class="form-label">{{ _('Project') }}</label>
             <select id="projectFilter" class="form-input" onchange="loadGanttChart()">
                 <option value="">{{ _('All Projects') }}</option>
                 {% for project in projects %}
@@ -34,11 +34,11 @@
             </select>
         </div>
         <div>
-            <label for="startDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Start Date') }}</label>
+            <label for="startDate" class="form-label">{{ _('Start Date') }}</label>
             <input type="date" id="startDate" class="form-input user-date-input" onchange="loadGanttChart()">
         </div>
         <div>
-            <label for="endDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('End Date') }}</label>
+            <label for="endDate" class="form-label">{{ _('End Date') }}</label>
             <input type="date" id="endDate" class="form-input user-date-input" onchange="loadGanttChart()">
         </div>
         <div class="flex items-end">
@@ -49,9 +49,9 @@
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-    <div id="gantt-container">
-        <div id="gantt-chart" style="min-height: 500px;"></div>
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    <div id="gantt-container" class="overflow-x-auto -mx-6 px-6" style="-webkit-overflow-scrolling: touch;">
+        <div id="gantt-chart" style="min-height: 500px; min-width: 600px;"></div>
     </div>
 </div>
 

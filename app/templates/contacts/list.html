@@ -18,24 +18,24 @@
     actions_html='<a href="' + url_for("contacts.create_contact", client_id=client.id) + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Add Contact</a>'
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     {% if contacts %}
     <div class="overflow-x-auto">
-        <table class="w-full text-left">
-            <thead class="border-b border-border-light dark:border-border-dark">
+        <table class="w-full text-left enhanced-table responsive-cards">
+            <thead class="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
                 <tr>
-                    <th class="pb-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Name') }}</th>
-                    <th class="pb-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Title') }}</th>
-                    <th class="pb-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Email') }}</th>
-                    <th class="pb-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Phone') }}</th>
-                    <th class="pb-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Role') }}</th>
-                    <th class="pb-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Actions') }}</th>
+                    <th class="px-4 py-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Name') }}</th>
+                    <th class="px-4 py-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Title') }}</th>
+                    <th class="px-4 py-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Email') }}</th>
+                    <th class="px-4 py-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Phone') }}</th>
+                    <th class="px-4 py-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Role') }}</th>
+                    <th class="px-4 py-3 text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Actions') }}</th>
                 </tr>
             </thead>
             <tbody>
                 {% for contact in contacts %}
                 <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td class="py-3">
+                    <td class="py-3 mobile-card-header" data-label="{{ _('Name') }}">
                         <div class="flex items-center">
                             {{ contact.full_name }}
                             {% if contact.is_primary %}
@@ -43,18 +43,18 @@
                             {% endif %}
                         </div>
                     </td>
-                    <td class="py-3">{{ contact.title or 'N/A' }}</td>
-                    <td class="py-3">
+                    <td class="py-3" data-label="{{ _('Title') }}">{{ contact.title or 'N/A' }}</td>
+                    <td class="py-3" data-label="{{ _('Email') }}">
                         {% if contact.email %}
                         <a href="mailto:{{ contact.email }}" class="text-primary hover:underline">{{ contact.email }}</a>
                         {% else %}
                         N/A
                         {% endif %}
                     </td>
-                    <td class="py-3">{{ contact.phone or 'N/A' }}</td>
-                    <td class="py-3">{{ contact.role|title }}</td>
-                    <td class="py-3">
-                        <div class="flex gap-2">
+                    <td class="py-3" data-label="{{ _('Phone') }}">{{ contact.phone or 'N/A' }}</td>
+                    <td class="py-3" data-label="{{ _('Role') }}">{{ contact.role|title }}</td>
+                    <td class="py-3 mobile-actions" data-label="{{ _('Actions') }}">
+                        <div class="flex flex-wrap gap-2">
                             <a href="{{ url_for('contacts.view_contact', contact_id=contact.id) }}" class="text-primary hover:underline text-sm">{{ _('View') }}</a>
                             <a href="{{ url_for('contacts.edit_contact', contact_id=contact.id) }}" class="text-primary hover:underline text-sm">{{ _('Edit') }}</a>
                             {% if not contact.is_primary %}

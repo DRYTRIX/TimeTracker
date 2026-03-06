@@ -17,7 +17,7 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -55,7 +55,7 @@
                 <textarea name="description" id="description" rows="4" class="form-input"></textarea>
             </div>
         </div>
-        <div class="mt-6 flex gap-2">
+        <div class="mt-6 flex flex-wrap gap-2">
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                 <i class="fas fa-plus mr-2"></i>{{ _('Add Activity') }}
             </button>
@@ -65,6 +65,9 @@
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block scripts_extra %}
 <script>
 document.getElementById('activity_date').value = new Date().toISOString().slice(0, 16);
 </script>

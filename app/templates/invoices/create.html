@@ -1,22 +1,20 @@
 {% extends "base.html" %}
+{% from 'components/ui.html' import page_header %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">{{ _('Create Invoice') }}</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Generate a new invoice for a project and client') }}</p>
-    </div>
-    <a href="{{ url_for('invoices.list_invoices') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Invoices') }}</a>
-    </div>
+{% set actions %}
+<a href="{{ url_for('invoices.list_invoices') }}" class="btn btn-secondary">{{ _('Back to Invoices') }}</a>
+{% endset %}
+{{ page_header('fas fa-file-invoice', _('Create Invoice'), subtitle_text=_('Generate a new invoice for a project and client'), actions_html=actions, breadcrumbs=[{'text': _('Invoices'), 'url': url_for('invoices.list_invoices')}, {'text': _('Create Invoice')}]) }}
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <form method="POST" id="createInvoiceForm" novalidate data-validate-form>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Project') }} *</label>
+                        <label for="project_id" class="form-label">{{ _('Project') }} *</label>
                         <select name="project_id" id="project_id" required class="form-input">
                             <option value="">{{ _('Select a project') }}</option>
                             {% for project in projects %}
@@ -26,46 +24,46 @@
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Selecting a project will auto-fill client details') }}</p>
                     </div>
                     <div>
-                        <label for="client_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client Name') }} *</label>
+                        <label for="client_name" class="form-label">{{ _('Client Name') }} *</label>
                         <input type="text" name="client_name" id="client_name" value="{{ request.form.get('client_name','') }}" required class="form-input">
                     </div>
                     <div>
-                        <label for="client_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client Email') }}</label>
+                        <label for="client_email" class="form-label">{{ _('Client Email') }}</label>
                         <input type="email" name="client_email" id="client_email" value="{{ request.form.get('client_email','') }}" class="form-input">
                     </div>
                     <div>
-                        <label for="due_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Due Date') }} *</label>
+                        <label for="due_date" class="form-label">{{ _('Due Date') }} *</label>
                         <input type="date" name="due_date" id="due_date" value="{{ default_due_date }}" required class="form-input">
                     </div>
                     <div class="md:col-span-2">
-                        <label for="client_address" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client Address') }}</label>
+                        <label for="client_address" class="form-label">{{ _('Client Address') }}</label>
                         <textarea name="client_address" id="client_address" rows="3" class="form-input">{{ request.form.get('client_address','') }}</textarea>
                     </div>
                     <div class="md:col-span-2">
-                        <label for="buyer_reference" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Buyer reference (PEPPOL BT-10)') }}</label>
+                        <label for="buyer_reference" class="form-label">{{ _('Buyer reference (PEPPOL BT-10)') }}</label>
                         <input type="text" name="buyer_reference" id="buyer_reference" value="{{ request.form.get('buyer_reference','') }}" class="form-input" placeholder="{{ _('Optional; used in PEPPOL UBL') }}">
                     </div>
                     <div>
-                        <label for="tax_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Tax Rate (%)') }}</label>
+                        <label for="tax_rate" class="form-label">{{ _('Tax Rate (%)') }}</label>
                         <input type="number" name="tax_rate" id="tax_rate" value="{{ settings.tax_rate or 0 }}" step="0.01" class="form-input">
                     </div>
                     <div class="md:col-span-2">
-                        <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Notes') }}</label>
+                        <label for="notes" class="form-label">{{ _('Notes') }}</label>
                         <textarea name="notes" id="notes" rows="3" class="form-input">{{ request.form.get('notes','') }}</textarea>
                     </div>
                     <div class="md:col-span-2">
-                        <label for="terms" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Terms') }}</label>
+                        <label for="terms" class="form-label">{{ _('Terms') }}</label>
                         <textarea name="terms" id="terms" rows="3" class="form-input">{{ request.form.get('terms','') }}</textarea>
                     </div>
                 </div>
                 <div class="mt-6">
-                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Create Invoice') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ _('Create Invoice') }}</button>
                 </div>
             </form>
         </div>
     </div>
     <div>
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Tips') }}</h2>
             <ul class="list-disc pl-5 text-sm text-text-muted-light dark:text-text-muted-dark space-y-2">
                 <li>{{ _('Choose the correct project to auto-fill client details.') }}</li>
@@ -77,6 +75,16 @@
 {% endblock %}
 
 {% block scripts_extra %}
+<style>
+@keyframes field-flash {
+    0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.5); }
+    50% { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3); }
+    100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+}
+.field-autofilled {
+    animation: field-flash 0.6s ease-out;
+}
+</style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var projectSelect = document.getElementById('project_id');
@@ -84,7 +92,14 @@ document.addEventListener('DOMContentLoaded', function() {
     var clientEmail = document.getElementById('client_email');
     var clientAddress = document.getElementById('client_address');
 
-    function applyFromSelected() {
+    function flashField(el) {
+        if (!el) return;
+        el.classList.remove('field-autofilled');
+        void el.offsetWidth;
+        el.classList.add('field-autofilled');
+    }
+
+    function applyFromSelected(isUserAction) {
         var opt = projectSelect.options[projectSelect.selectedIndex];
         if (!opt) return;
         var name = opt.getAttribute('data-client-name') || '';
@@ -93,11 +108,15 @@ document.addEventListener('DOMContentLoaded', function() {
         clientName.value = name || clientName.value;
         clientEmail.value = email || '';
         clientAddress.value = address || '';
+        if (isUserAction) {
+            flashField(clientName);
+            flashField(clientEmail);
+            flashField(clientAddress);
+        }
     }
 
-    projectSelect.addEventListener('change', applyFromSelected);
-    // Apply on first load if query param preselects a project
-    applyFromSelected();
+    projectSelect.addEventListener('change', function() { applyFromSelected(true); });
+    applyFromSelected(false);
 });
 </script>
 {% endblock %}

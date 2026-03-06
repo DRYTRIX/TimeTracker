@@ -15,8 +15,8 @@
 ) }}
 
 <!-- Summary Stats -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Total Distance</p>
@@ -28,7 +28,7 @@
         </div>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Total Amount</p>
@@ -40,7 +40,7 @@
         </div>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Total Entries</p>
@@ -54,7 +54,7 @@
 </div>
 
 <!-- Filter Form -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold">{{ _('Filter Mileage') }}</h2>
         <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
@@ -64,14 +64,14 @@
     <div id="filterBody">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-filter-form>
         <div>
-            <label for="mileage-filter-search" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
+            <label for="mileage-filter-search" class="form-label">Search</label>
             <input type="text" name="search" id="mileage-filter-search" value="{{ search or '' }}" 
                    placeholder="{{ _('Purpose, location...') }}" 
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
         </div>
         
         <div>
-            <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+            <label for="status" class="form-label">Status</label>
             <select name="status" id="status" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 <option value="">All Statuses</option>
                 <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
@@ -82,7 +82,7 @@
         </div>
         
         <div>
-            <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project</label>
+            <label for="project_id" class="form-label">Project</label>
             <select name="project_id" id="project_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 <option value="">All Projects</option>
                 {% for project in projects %}
@@ -92,7 +92,7 @@
         </div>
         
         <div>
-            <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client</label>
+            <label for="client_id" class="form-label">Client</label>
             {% set locked_client = get_locked_client() %}
             {% if locked_client %}
                 <input type="hidden" name="client_id" id="client_id" value="{{ locked_client.id }}">
@@ -113,13 +113,13 @@
         </div>
         
         <div>
-            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+            <label for="start_date" class="form-label">Start Date</label>
             <input type="date" name="start_date" id="start_date" value="{{ start_date or '' }}" 
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700 user-date-input">
         </div>
         
         <div>
-            <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+            <label for="end_date" class="form-label">End Date</label>
             <input type="date" name="end_date" id="end_date" value="{{ end_date or '' }}" 
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700 user-date-input">
         </div>
@@ -137,7 +137,7 @@
 </div>
 
 <!-- Mileage Table -->
-<div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-visible">
+<div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-visible">
     <div class="flex justify-between items-center mb-4 p-6 pb-0">
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
             {{ mileage_entries|length }} entr{{ 'ies' if mileage_entries|length != 1 else 'y' }} found
@@ -158,21 +158,21 @@
         </div>
     </div>
     <div class="overflow-x-auto p-6 pt-4">
-        <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
-            <thead class="border-b border-border-light dark:border-border-dark">
+        <table class="table table-zebra w-full text-left enhanced-table responsive-cards" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
+            <thead class="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
                 <tr>
                     {% if current_user.is_admin %}
-                    <th class="p-4 w-12">
+                    <th class="px-4 py-3 w-12">
                         <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllMileage()">
                     </th>
                     {% endif %}
-                    <th class="p-4" data-sortable>Date</th>
-                    <th class="p-4" data-sortable>Purpose</th>
-                    <th class="p-4" data-sortable>Route</th>
-                    <th class="p-4 table-number" data-sortable>Distance</th>
-                    <th class="p-4 table-number" data-sortable>Amount</th>
-                    <th class="p-4" data-sortable>Status</th>
-                    <th class="p-4">Actions</th>
+                    <th class="px-4 py-3" data-sortable>Date</th>
+                    <th class="px-4 py-3" data-sortable>Purpose</th>
+                    <th class="px-4 py-3" data-sortable>Route</th>
+                    <th class="px-4 py-3 table-number" data-sortable>Distance</th>
+                    <th class="px-4 py-3 table-number" data-sortable>Amount</th>
+                    <th class="px-4 py-3" data-sortable>Status</th>
+                    <th class="px-4 py-3">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -184,8 +184,8 @@
                             <input type="checkbox" class="mileage-entry-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ entry.id }}" onchange="updateBulkDeleteButton()">
                         </td>
                         {% endif %}
-                        <td class="p-4 whitespace-nowrap">{{ entry.date|format_date if entry.date else (entry.trip_date|format_date if entry.trip_date else '—') }}</td>
-                        <td class="p-4">
+                        <td class="p-4 whitespace-nowrap" data-label="Date">{{ entry.date|format_date if entry.date else (entry.trip_date|format_date if entry.trip_date else '—') }}</td>
+                        <td class="p-4" data-label="Purpose">
                             <a href="{{ url_for('mileage.view_mileage', mileage_id=entry.id) }}" class="text-primary hover:underline font-medium">
                                 {{ entry.purpose }}
                             </a>
@@ -193,16 +193,16 @@
                             <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ entry.project.name }}</div>
                             {% endif %}
                         </td>
-                        <td class="p-4">
+                        <td class="p-4" data-label="Route">
                             <div class="flex flex-col">
                                 <span class="text-gray-600 dark:text-gray-400">{{ entry.start_location }}</span>
                                 <i class="fas fa-arrow-down text-xs text-gray-400 dark:text-gray-500 my-1"></i>
                                 <span class="text-gray-600 dark:text-gray-400">{{ entry.end_location }}</span>
                             </div>
                         </td>
-                        <td class="p-4 table-number font-medium">{{ '%.2f'|format(entry.distance_km) }} km</td>
-                        <td class="p-4 table-number font-medium">{{ (entry.total_amount or entry.calculated_amount or 0)|format_currency(entry.currency_code) }}</td>
-                        <td class="p-4">
+                        <td class="p-4 table-number font-medium" data-label="Distance">{{ '%.2f'|format(entry.distance_km) }} km</td>
+                        <td class="p-4 table-number font-medium" data-label="Amount">{{ (entry.total_amount or entry.calculated_amount or 0)|format_currency(entry.currency_code) }}</td>
+                        <td class="p-4" data-label="Status">
                             {% if entry.status == 'pending' %}
                             <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Pending</span>
                             {% elif entry.status == 'approved' %}
@@ -215,7 +215,7 @@
                             <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ entry.status|title }}</span>
                             {% endif %}
                         </td>
-                        <td class="p-4">
+                        <td class="p-4" data-label="Actions">
                             <a href="{{ url_for('mileage.view_mileage', mileage_id=entry.id) }}" class="text-primary hover:underline">View</a>
                         </td>
                     </tr>

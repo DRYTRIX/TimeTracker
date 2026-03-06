@@ -12,14 +12,18 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         
         <!-- Profile Information -->
-        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                <i class="fas fa-user mr-2"></i>{{ _('Profile Information') }}
-            </h2>
+        <details class="bg-card-light dark:bg-card-dark rounded-lg shadow-md group" open>
+            <summary class="flex items-center justify-between p-6 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                    <i class="fas fa-user mr-2"></i>{{ _('Profile Information') }}
+                </h2>
+                <i class="fas fa-chevron-down text-gray-400 transition-transform group-open:rotate-180 md:hidden"></i>
+            </summary>
+            <div class="px-6 pb-6">
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label class="form-label">
                         {{ _('Username') }}
                     </label>
                     <input type="text" value="{{ user.username }}" disabled
@@ -28,7 +32,7 @@
                 </div>
                 
                 <div>
-                    <label for="full_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label for="full_name" class="form-label">
                         {{ _('Full Name') }}
                     </label>
                     <input type="text" id="full_name" name="full_name" value="{{ user.full_name or '' }}"
@@ -36,7 +40,7 @@
                 </div>
                 
                 <div class="md:col-span-2">
-                    <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label for="email" class="form-label">
                         {{ _('Email Address') }}
                     </label>
                     <input type="email" id="email" name="email" value="{{ user.email or '' }}"
@@ -45,74 +49,83 @@
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Required for email notifications') }}</p>
                 </div>
             </div>
-        </div>
+            </div>
+        </details>
 
         <!-- Notification Preferences -->
-        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                <i class="fas fa-bell mr-2"></i>{{ _('Notification Preferences') }}
-            </h2>
+        <details class="bg-card-light dark:bg-card-dark rounded-lg shadow-md group" open>
+            <summary class="flex items-center justify-between p-6 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                    <i class="fas fa-bell mr-2"></i>{{ _('Notification Preferences') }}
+                </h2>
+                <i class="fas fa-chevron-down text-gray-400 transition-transform group-open:rotate-180 md:hidden"></i>
+            </summary>
+            <div class="px-6 pb-6">
             
-            <div class="space-y-4">
-                <div class="flex items-center">
+            <div class="space-y-2">
+                <label for="email_notifications" class="flex items-center min-h-[44px] cursor-pointer rounded-lg px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <input type="checkbox" id="email_notifications" name="email_notifications" 
                            {% if user.email_notifications %}checked{% endif %}
-                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                    <label for="email_notifications" class="ml-3 block text-sm text-gray-700 dark:text-gray-300">
+                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0">
+                    <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
                         <span class="font-medium">{{ _('Enable Email Notifications') }}</span>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ _('Master switch for all email notifications') }}</p>
-                    </label>
-                </div>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400">{{ _('Master switch for all email notifications') }}</span>
+                    </span>
+                </label>
                 
-                <div class="ml-8 space-y-3 border-l-2 border-gray-200 dark:border-gray-700 pl-4">
-                    <div class="flex items-center">
+                <div class="ml-4 sm:ml-8 space-y-1 border-l-2 border-gray-200 dark:border-gray-700 pl-4">
+                    <label for="notification_overdue_invoices" class="flex items-center min-h-[44px] cursor-pointer rounded-lg px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <input type="checkbox" id="notification_overdue_invoices" name="notification_overdue_invoices"
                                {% if user.notification_overdue_invoices %}checked{% endif %}
-                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                        <label for="notification_overdue_invoices" class="ml-3 block text-sm text-gray-700 dark:text-gray-300">
+                               class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0">
+                        <span class="ml-3 block text-sm text-gray-700 dark:text-gray-300">
                             {{ _('Overdue Invoice Notifications') }}
-                        </label>
-                    </div>
+                        </span>
+                    </label>
                     
-                    <div class="flex items-center">
+                    <label for="notification_task_assigned" class="flex items-center min-h-[44px] cursor-pointer rounded-lg px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <input type="checkbox" id="notification_task_assigned" name="notification_task_assigned"
                                {% if user.notification_task_assigned %}checked{% endif %}
-                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                        <label for="notification_task_assigned" class="ml-3 block text-sm text-gray-700 dark:text-gray-300">
+                               class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0">
+                        <span class="ml-3 block text-sm text-gray-700 dark:text-gray-300">
                             {{ _('Task Assignment Notifications') }}
-                        </label>
-                    </div>
+                        </span>
+                    </label>
                     
-                    <div class="flex items-center">
+                    <label for="notification_task_comments" class="flex items-center min-h-[44px] cursor-pointer rounded-lg px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <input type="checkbox" id="notification_task_comments" name="notification_task_comments"
                                {% if user.notification_task_comments %}checked{% endif %}
-                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                        <label for="notification_task_comments" class="ml-3 block text-sm text-gray-700 dark:text-gray-300">
+                               class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0">
+                        <span class="ml-3 block text-sm text-gray-700 dark:text-gray-300">
                             {{ _('Comment & Mention Notifications') }}
-                        </label>
-                    </div>
+                        </span>
+                    </label>
                     
-                    <div class="flex items-center">
+                    <label for="notification_weekly_summary" class="flex items-center min-h-[44px] cursor-pointer rounded-lg px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <input type="checkbox" id="notification_weekly_summary" name="notification_weekly_summary"
                                {% if user.notification_weekly_summary %}checked{% endif %}
-                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                        <label for="notification_weekly_summary" class="ml-3 block text-sm text-gray-700 dark:text-gray-300">
+                               class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0">
+                        <span class="ml-3 block text-sm text-gray-700 dark:text-gray-300">
                             {{ _('Weekly Time Summary Email') }}
-                        </label>
-                    </div>
+                        </span>
+                    </label>
                 </div>
             </div>
-        </div>
+            </div>
+        </details>
 
         <!-- Display Preferences -->
-        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                <i class="fas fa-palette mr-2"></i>{{ _('Display Preferences') }}
-            </h2>
-            
+        <details class="bg-card-light dark:bg-card-dark rounded-lg shadow-md group" open>
+            <summary class="flex items-center justify-between p-6 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                    <i class="fas fa-palette mr-2"></i>{{ _('Display Preferences') }}
+                </h2>
+                <i class="fas fa-chevron-down text-gray-400 transition-transform group-open:rotate-180 md:hidden"></i>
+            </summary>
+            <div class="px-6 pb-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label for="theme_preference" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label for="theme_preference" class="form-label">
                         {{ _('Theme') }}
                     </label>
                     <select id="theme_preference" name="theme_preference"
@@ -124,7 +137,7 @@
                 </div>
                 
                 <div>
-                    <label for="preferred_language" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label for="preferred_language" class="form-label">
                         {{ _('Language') }}
                     </label>
                     <select id="preferred_language" name="preferred_language"
@@ -136,32 +149,37 @@
                     </select>
                 </div>
             </div>
-        </div>
+            </div>
+        </details>
 
         <!-- Time Rounding Preferences -->
-        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                <i class="fas fa-clock mr-2"></i>{{ _('Time Rounding Preferences') }}
-            </h2>
+        <details class="bg-card-light dark:bg-card-dark rounded-lg shadow-md group" open>
+            <summary class="flex items-center justify-between p-6 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                    <i class="fas fa-clock mr-2"></i>{{ _('Time Rounding Preferences') }}
+                </h2>
+                <i class="fas fa-chevron-down text-gray-400 transition-transform group-open:rotate-180 md:hidden"></i>
+            </summary>
+            <div class="px-6 pb-6">
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 {{ _('Configure how your time entries are rounded. This affects how durations are calculated when you stop timers.') }}
             </p>
             
             <div class="space-y-4">
-                <div class="flex items-center">
+                <label for="time_rounding_enabled" class="flex items-center min-h-[44px] cursor-pointer rounded-lg px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <input type="checkbox" id="time_rounding_enabled" name="time_rounding_enabled" 
                            {% if user.time_rounding_enabled %}checked{% endif %}
-                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0"
                            onchange="toggleRoundingOptions()">
-                    <label for="time_rounding_enabled" class="ml-3 block text-sm text-gray-700 dark:text-gray-300">
+                    <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
                         <span class="font-medium">{{ _('Enable Time Rounding') }}</span>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ _('Round time entries to configured intervals') }}</p>
-                    </label>
-                </div>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400">{{ _('Round time entries to configured intervals') }}</span>
+                    </span>
+                </label>
                 
                 <div id="rounding-options" class="ml-8 space-y-4 border-l-2 border-gray-200 dark:border-gray-700 pl-4">
                     <div>
-                        <label for="time_rounding_minutes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label for="time_rounding_minutes" class="form-label">
                             {{ _('Rounding Interval') }}
                         </label>
                         <select id="time_rounding_minutes" name="time_rounding_minutes"
@@ -174,7 +192,7 @@
                     </div>
                     
                     <div>
-                        <label for="time_rounding_method" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label for="time_rounding_method" class="form-label">
                             {{ _('Rounding Method') }}
                         </label>
                         <select id="time_rounding_method" name="time_rounding_method"
@@ -198,20 +216,25 @@
                     </div>
                 </div>
             </div>
-        </div>
+            </div>
+        </details>
 
         <!-- Overtime Settings -->
-        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                <i class="fas fa-business-time mr-2"></i>{{ _('Overtime Settings') }}
-            </h2>
+        <details class="bg-card-light dark:bg-card-dark rounded-lg shadow-md group" open>
+            <summary class="flex items-center justify-between p-6 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                    <i class="fas fa-business-time mr-2"></i>{{ _('Overtime Settings') }}
+                </h2>
+                <i class="fas fa-chevron-down text-gray-400 transition-transform group-open:rotate-180 md:hidden"></i>
+            </summary>
+            <div class="px-6 pb-6">
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 {{ _('Set your standard working hours per day. Any time worked beyond this will be counted as overtime.') }}
             </p>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label for="standard_hours_per_day" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label for="standard_hours_per_day" class="form-label">
                         {{ _('Standard Hours Per Day') }}
                     </label>
                     <div class="relative">
@@ -236,29 +259,34 @@
                 </div>
             </div>
             <div class="mt-4">
-                <div class="flex items-center">
+                <label for="overtime_include_weekends" class="flex items-center min-h-[44px] cursor-pointer rounded-lg px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <input type="checkbox" id="overtime_include_weekends" name="overtime_include_weekends"
                            {% if getattr(user, 'overtime_include_weekends', true) %}checked{% endif %}
-                           class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600">
-                    <label for="overtime_include_weekends" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                           class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600 flex-shrink-0">
+                    <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
                         {{ _('Count weekend hours in overtime') }}
-                    </label>
-                </div>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
-                    {{ _('When unchecked, any hours worked on Saturday or Sunday are always counted as overtime.') }}
-                </p>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            {{ _('When unchecked, any hours worked on Saturday or Sunday are always counted as overtime.') }}
+                        </span>
+                    </span>
+                </label>
             </div>
-        </div>
+            </div>
+        </details>
 
         <!-- Regional Settings -->
-        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                <i class="fas fa-globe mr-2"></i>{{ _('Regional Settings') }}
-            </h2>
+        <details class="bg-card-light dark:bg-card-dark rounded-lg shadow-md group" open>
+            <summary class="flex items-center justify-between p-6 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                    <i class="fas fa-globe mr-2"></i>{{ _('Regional Settings') }}
+                </h2>
+                <i class="fas fa-chevron-down text-gray-400 transition-transform group-open:rotate-180 md:hidden"></i>
+            </summary>
+            <div class="px-6 pb-6">
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label for="timezone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label for="timezone" class="form-label">
                         {{ _('Timezone') }}
                     </label>
                     <select id="timezone" name="timezone"
@@ -271,7 +299,7 @@
                 </div>
                 
                 <div>
-                    <label for="date_format" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label for="date_format" class="form-label">
                         {{ _('Date Format') }}
                     </label>
                     <select id="date_format" name="date_format"
@@ -285,7 +313,7 @@
                 </div>
                 
                 <div>
-                    <label for="time_format" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label for="time_format" class="form-label">
                         {{ _('Time Format') }}
                     </label>
                     <select id="time_format" name="time_format"
@@ -297,7 +325,7 @@
                 </div>
                 
                 <div>
-                    <label for="week_start_day" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label for="week_start_day" class="form-label">
                         {{ _('Week Starts On') }}
                     </label>
                     <select id="week_start_day" name="week_start_day"
@@ -309,7 +337,7 @@
                 </div>
 
                 <div>
-                    <label for="calendar_default_view" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label for="calendar_default_view" class="form-label">
                         {{ _('Calendar default view') }}
                     </label>
                     <select id="calendar_default_view" name="calendar_default_view"
@@ -321,7 +349,8 @@
                     </select>
                 </div>
             </div>
-        </div>
+            </div>
+        </details>
 
         <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
             {{ _('Support visibility (hiding donate/support UI) is configured system-wide by administrators in Admin → Settings.') }}
@@ -329,14 +358,16 @@
             <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">{{ _('Support & Purchase Key') }}</a>.
         </p>
 
-        <!-- Save Button -->
-        <div class="flex justify-end space-x-4">
-            <a href="{{ url_for('main.dashboard') }}" class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                {{ _('Cancel') }}
-            </a>
-            <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition">
-                <i class="fas fa-save mr-2"></i>{{ _('Save Settings') }}
-            </button>
+        <!-- Save Button - Sticky on mobile -->
+        <div class="sticky bottom-0 z-10 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm border-t border-border-light dark:border-border-dark -mx-4 px-4 py-3 sm:static sm:bg-transparent sm:dark:bg-transparent sm:backdrop-blur-none sm:border-0 sm:mx-0 sm:px-0 sm:py-0">
+            <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 sm:space-x-4 sm:gap-0">
+                <a href="{{ url_for('main.dashboard') }}" class="px-6 py-2.5 border border-gray-300 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition text-center">
+                    {{ _('Cancel') }}
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition">
+                    <i class="fas fa-save mr-2"></i>{{ _('Save Settings') }}
+                </button>
+            </div>
         </div>
     </form>
 </div>

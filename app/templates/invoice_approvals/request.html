@@ -11,7 +11,7 @@
     <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Invoice') }}</a>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST" action="{{ url_for('invoice_approvals.request_approval', invoice_id=invoice.id) }}" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         

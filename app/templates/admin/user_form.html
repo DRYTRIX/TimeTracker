@@ -10,16 +10,16 @@
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="space-y-6">
             <div>
-                <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
+                <label for="username" class="form-label">Username</label>
                 <input type="text" name="username" id="username" value="{{ user.username if user else '' }}" required class="form-input">
             </div>
             <div>
-                <label for="role" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
+                <label for="role" class="form-label">Role</label>
                 <select name="role" id="role" class="form-input">
                     {% if all_roles %}
                         {% for role in all_roles %}
@@ -39,7 +39,7 @@
             </div>
             {% if not user %}
             <div>
-                <label for="default_password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Default Password</label>
+                <label for="default_password" class="form-label">Default Password</label>
                 <input type="password" name="default_password" id="default_password" class="form-input" placeholder="Leave empty for no password">
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
                     Set an initial password for this user. If set, you can require them to change it on first login.
@@ -63,14 +63,14 @@
                 </p>
                 <div class="space-y-3">
                     <div>
-                        <label for="new_password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
+                        <label for="new_password" class="form-label">New Password</label>
                         <input type="password" name="new_password" id="new_password" class="form-input" placeholder="{{ _('Leave blank to keep current password') }}">
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
                             Password must be at least 8 characters long.
                         </p>
                     </div>
                     <div>
-                        <label for="password_confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
+                        <label for="password_confirm" class="form-label">Confirm New Password</label>
                         <input type="password" name="password_confirm" id="password_confirm" class="form-input">
                     </div>
                     <div class="flex items-center">
@@ -91,7 +91,7 @@
                         <label for="client_portal_enabled" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">Enable Client Portal</label>
                     </div>
                     <div id="client_select_container" style="display: {% if user.client_portal_enabled %}block{% else %}none{% endif %};">
-                        <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assign Client</label>
+                        <label for="client_id" class="form-label">Assign Client</label>
                         <select name="client_id" id="client_id" class="form-input">
                             <option value="">-- Select Client --</option>
                             {% for client in clients %}
@@ -109,7 +109,7 @@
                     When the role is <strong>Subcontractor</strong>, the user will only see these clients and their projects. Select all clients this user should have access to.
                 </p>
                 <div id="assigned_clients_container">
-                    <label for="assigned_client_ids" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Assigned clients') }}</label>
+                    <label for="assigned_client_ids" class="form-label">{{ _('Assigned clients') }}</label>
                     <select name="assigned_client_ids" id="assigned_client_ids" multiple class="form-input min-h-[120px]">
                         {% for client in clients %}
                         <option value="{{ client.id }}" {% if user and assigned_client_ids is defined and client.id in assigned_client_ids %}selected{% endif %}>{{ client.name }}</option>
@@ -137,8 +137,8 @@
             </div>
             {% endif %}
         </div>
-        <div class="mt-8 border-t border-border-light dark:border-border-dark pt-6 flex justify-end">
-            <a href="{{ url_for('admin.list_users') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mr-4">Cancel</a>
+        <div class="mt-8 border-t border-border-light dark:border-border-dark pt-6 flex flex-col sm:flex-row justify-end gap-3">
+            <a href="{{ url_for('admin.list_users') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg text-center">Cancel</a>
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">Save</button>
         </div>
     </form>

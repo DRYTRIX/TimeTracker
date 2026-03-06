@@ -17,27 +17,27 @@
     actions_html='<a href="' + url_for("time_entry_templates.edit_template", template_id=template.id) + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors mr-2"><i class="fas fa-edit mr-2"></i>Edit</a>'
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow max-w-3xl mx-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm max-w-3xl mx-auto">
     <div class="space-y-6">
         <!-- Template Details -->
         <div>
             <h2 class="text-lg font-semibold mb-4">{{ _('Template Details') }}</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+                    <label class="form-label">Name</label>
                     <p class="text-text-light dark:text-text-dark">{{ template.name }}</p>
                 </div>
                 
                 {% if template.description %}
                 <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                    <label class="form-label">Description</label>
                     <p class="text-text-light dark:text-text-dark">{{ template.description }}</p>
                 </div>
                 {% endif %}
                 
                 {% if template.project %}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project</label>
+                    <label class="form-label">Project</label>
                     <p class="text-text-light dark:text-text-dark">
                         <i class="fas fa-folder mr-2"></i>{{ template.project.name }}
                     </p>
@@ -46,7 +46,7 @@
                 
                 {% if template.task %}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Task</label>
+                    <label class="form-label">Task</label>
                     <p class="text-text-light dark:text-text-dark">
                         <i class="fas fa-tasks mr-2"></i>{{ template.task.name }}
                     </p>
@@ -55,7 +55,7 @@
                 
                 {% if template.default_duration %}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Duration</label>
+                    <label class="form-label">Default Duration</label>
                     <p class="text-text-light dark:text-text-dark">
                         <i class="fas fa-clock mr-2"></i>{{ template.default_duration }} hours
                     </p>
@@ -64,7 +64,7 @@
                 
                 {% if template.tags %}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tags</label>
+                    <label class="form-label">Tags</label>
                     <p class="text-text-light dark:text-text-dark">
                         <i class="fas fa-tags mr-2"></i>{{ template.tags }}
                     </p>
@@ -72,7 +72,7 @@
                 {% endif %}
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Billable</label>
+                    <label class="form-label">Billable</label>
                     <p class="text-text-light dark:text-text-dark">
                         {% if template.billable %}
                         <i class="fas fa-check-circle text-green-500 mr-2"></i>Yes
@@ -85,7 +85,7 @@
             
             {% if template.default_notes %}
             <div class="mt-4">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Notes</label>
+                <label class="form-label">Default Notes</label>
                 <p class="text-text-light dark:text-text-dark whitespace-pre-wrap">{{ template.default_notes }}</p>
             </div>
             {% endif %}
@@ -96,7 +96,7 @@
             <h2 class="text-lg font-semibold mb-4">{{ _('Usage Statistics') }}</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Times Used</label>
+                    <label class="form-label">Times Used</label>
                     <p class="text-2xl font-bold text-text-light dark:text-text-dark">
                         <i class="fas fa-chart-line mr-2"></i>{{ template.usage_count }}
                     </p>
@@ -104,7 +104,7 @@
                 
                 {% if template.last_used_at %}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Used</label>
+                    <label class="form-label">Last Used</label>
                     <p class="text-text-light dark:text-text-dark">
                         <i class="fas fa-clock mr-2"></i>{{ template.last_used_at|user_datetime }}
                         <span class="text-sm text-text-muted-light dark:text-text-muted-dark">
@@ -115,14 +115,14 @@
                 {% endif %}
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Created</label>
+                    <label class="form-label">Created</label>
                     <p class="text-text-light dark:text-text-dark">
                         <i class="fas fa-calendar mr-2"></i>{{ template.created_at|user_datetime }}
                     </p>
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Updated</label>
+                    <label class="form-label">Last Updated</label>
                     <p class="text-text-light dark:text-text-dark">
                         <i class="fas fa-edit mr-2"></i>{{ template.updated_at|user_datetime }}
                     </p>
@@ -131,7 +131,7 @@
         </div>
         
         <!-- Actions -->
-        <div class="border-t border-border-light dark:border-border-dark pt-6 flex gap-3">
+        <div class="border-t border-border-light dark:border-border-dark pt-6 flex flex-wrap gap-3">
             <button onclick="useTemplate({{ template.id }})" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                 <i class="fas fa-play mr-2"></i>Use Template
             </button>

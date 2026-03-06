@@ -17,7 +17,7 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div>
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Client') }}</h3>
@@ -63,7 +63,7 @@
     <div class="mb-6">
         <h3 class="text-lg font-semibold mb-4">{{ _('Quote Items') }}</h3>
         <div class="overflow-x-auto">
-            <table class="w-full text-left">
+            <table class="w-full text-left responsive-cards">
                 <thead class="border-b border-border-light dark:border-border-dark">
                     <tr>
                         <th class="p-3">{{ _('Description') }}</th>
@@ -75,10 +75,10 @@
                 <tbody>
                     {% for item in quote.items %}
                     <tr class="border-b border-border-light dark:border-border-dark">
-                        <td class="p-3">{{ item.description }}</td>
-                        <td class="p-3">{{ "%.2f"|format(item.quantity) }} {% if item.unit %}{{ item.unit }}{% endif %}</td>
-                        <td class="p-3">{{ "%.2f"|format(item.unit_price) }} {{ quote.currency_code }}</td>
-                        <td class="p-3 font-medium">{{ "%.2f"|format(item.total_amount) }} {{ quote.currency_code }}</td>
+                        <td class="p-3" data-label="{{ _('Description') }}">{{ item.description }}</td>
+                        <td class="p-3" data-label="{{ _('Quantity') }}">{{ "%.2f"|format(item.quantity) }} {% if item.unit %}{{ item.unit }}{% endif %}</td>
+                        <td class="p-3" data-label="{{ _('Unit Price') }}">{{ "%.2f"|format(item.unit_price) }} {{ quote.currency_code }}</td>
+                        <td class="p-3 font-medium" data-label="{{ _('Total') }}">{{ "%.2f"|format(item.total_amount) }} {{ quote.currency_code }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -88,7 +88,7 @@
     {% endif %}
     
     <div class="flex justify-end">
-        <div class="w-full md:w-1/3">
+        <div class="w-full sm:w-1/2 md:w-1/3">
             <div class="space-y-2">
                 <div class="flex justify-between">
                     <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Subtotal') }}:</span>

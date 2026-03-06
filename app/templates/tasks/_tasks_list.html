@@ -21,21 +21,21 @@
             </div>
         </div>
     </div>
-    <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
-        <thead class="border-b border-border-light dark:border-border-dark">
+    <table class="table table-zebra w-full text-left enhanced-table responsive-cards" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
+        <thead class="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
             <tr>
-                <th class="p-4 w-12">
+                <th class="px-4 py-3 w-12">
                     <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllTasks()">
                 </th>
-                <th class="p-4" data-sortable>Name</th>
-                <th class="p-4" data-sortable>Project</th>
-                <th class="p-4">{{ _('Tags') }}</th>
-                <th class="p-4" data-sortable>Priority</th>
-                <th class="p-4" data-sortable>Status</th>
-                <th class="p-4 table-number" data-sortable>Due</th>
-                <th class="p-4 table-number" data-sortable>{{ _('Estimated') }}</th>
-                <th class="p-4 table-number" data-sortable>Progress</th>
-                <th class="p-4">Actions</th>
+                <th class="px-4 py-3" data-sortable>Name</th>
+                <th class="px-4 py-3" data-sortable>Project</th>
+                <th class="px-4 py-3">{{ _('Tags') }}</th>
+                <th class="px-4 py-3" data-sortable>Priority</th>
+                <th class="px-4 py-3" data-sortable>Status</th>
+                <th class="px-4 py-3 table-number" data-sortable>Due</th>
+                <th class="px-4 py-3 table-number" data-sortable>{{ _('Estimated') }}</th>
+                <th class="px-4 py-3 table-number" data-sortable>Progress</th>
+                <th class="px-4 py-3">Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -44,9 +44,9 @@
                 <td class="p-4">
                     <input type="checkbox" class="task-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary transition-all" value="{{ task.id }}" onchange="updateBulkDeleteButton()">
                 </td>
-                <td class="p-4"><a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="text-primary hover:underline">{{ task.name }}</a></td>
-                <td class="p-4"><a href="{{ url_for('projects.view_project', project_id=task.project_id) }}" class="text-primary hover:underline">{{ task.project.name }}</a></td>
-                <td class="p-4">
+                <td class="p-4 mobile-card-header" data-label="{{ _('Name') }}"><a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="text-primary hover:underline">{{ task.name }}</a></td>
+                <td class="p-4" data-label="{{ _('Project') }}"><a href="{{ url_for('projects.view_project', project_id=task.project_id) }}" class="text-primary hover:underline">{{ task.project.name }}</a></td>
+                <td class="p-4" data-label="{{ _('Tags') }}">
                     {% if task.tag_list %}
                     <div class="flex flex-wrap gap-1">
                         {% for tag in task.tag_list %}
@@ -57,7 +57,7 @@
                     <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Priority') }}">
                     {% set p = task.priority %}
                     {% set pcls = {'low':'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
                                    'medium':'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
@@ -65,7 +65,7 @@
                                    'urgent':'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'}[p] if p in ['low','medium','high','urgent'] else 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' %}
                     <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ pcls }}">{{ task.priority_display }}</span>
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Status') }}">
                     {% set s = task.status %}
                     {% set statusColors = {'todo': 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
                                            'in_progress': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
@@ -75,7 +75,7 @@
                     {% set scls = statusColors.get(s, 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300') %}
                     <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ scls }}">{{ task.status_display }}</span>
                 </td>
-                <td class="p-4 table-number">
+                <td class="p-4 table-number" data-label="{{ _('Due Date') }}">
                     {% if task.due_date %}
                         {% set overdue = task.is_overdue %}
                         <span class="chip whitespace-nowrap {{ 'status-overdue' if overdue else 'chip-neutral' }}">{{ task.due_date|format_date }}</span>
@@ -83,20 +83,20 @@
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}
                 </td>
-                <td class="p-4 table-number">
+                <td class="p-4 table-number" data-label="{{ _('Estimated') }}">
                     {% if task.estimated_hours %}
                         {{ task.estimated_hours }} {{ _('h') }}
                     {% else %}
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}
                 </td>
-                <td class="p-4 table-number">
+                <td class="p-4 table-number" data-label="{{ _('Progress') }}">
                     {% set pct = task.progress_percentage or 0 %}
                     <div class="w-28 h-2 bg-gray-200 dark:bg-gray-700 rounded">
                         <div class="h-2 rounded {{ 'bg-emerald-500' if pct>=100 else 'bg-primary' }}" style="width: {{ [pct,100]|min }}%"></div>
                     </div>
                 </td>
-                <td class="p-4">
+                <td class="p-4 mobile-actions" data-label="{{ _('Actions') }}">
                     <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="text-primary hover:underline">View</a>
                 </td>
             </tr>
@@ -107,10 +107,10 @@
     {% if not tasks %}
     {% from "components/ui.html" import empty_state %}
     {% set actions %}
-                    <a href="{{ url_for('tasks.create_task') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors btn-press shadow-md">
+                    <a href="{{ url_for('tasks.create_task') }}" class="btn btn-primary btn-press shadow-md">
                         <i class="fas fa-plus mr-2"></i>Create Your First Task
                     </a>
-        <a href="{{ url_for('main.help') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+        <a href="{{ url_for('main.help') }}" class="btn btn-secondary">
             <i class="fas fa-question-circle mr-2"></i>Learn More
         </a>
     {% endset %}

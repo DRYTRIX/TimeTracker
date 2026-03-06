@@ -11,7 +11,7 @@
     title_text='Clients',
     subtitle_text='Manage your clients here',
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("clients.create_client") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Client</a>' if (current_user.is_admin or has_permission('create_clients')) else None
+    actions_html='<a href="' + url_for("clients.create_client") + '" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>Create Client</a>' if (current_user.is_admin or has_permission('create_clients')) else None
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
@@ -24,11 +24,11 @@
     <div id="filterBody">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4" id="clientsFilterForm" data-filter-form>
         <div>
-            <label for="clients-filter-search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
+            <label for="clients-filter-search" class="form-label">Search</label>
             <input type="text" name="search" id="clients-filter-search" value="{{ search or '' }}" class="form-input">
         </div>
         <div>
-            <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+            <label for="status" class="form-label">Status</label>
             <select name="status" id="status" class="form-input">
                 <option value="all" {% if status == 'all' %}selected{% endif %}>All</option>
                 <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>

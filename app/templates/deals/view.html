@@ -10,9 +10,11 @@
 ] %}
 
 {% set actions_html %}
+<div class="flex flex-wrap gap-2">
 <a href="{{ url_for('deals.edit_deal', deal_id=deal.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-edit mr-2"></i>{{ _('Edit') }}</a>
 <a href="{{ url_for('deals.create_activity', deal_id=deal.id) }}" class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors"><i class="fas fa-plus mr-2"></i>{{ _('Add Activity') }}</a>
 <a href="{{ url_for('deals.pipeline_view') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-columns mr-2"></i>{{ _('Pipeline') }}</a>
+</div>
 {% endset %}
 
 {{ page_header(
@@ -26,7 +28,7 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Left Column: Deal Details -->
     <div class="lg:col-span-1 space-y-6">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Deal Information') }}</h2>
             <div class="space-y-4">
                 {% if deal.client %}
@@ -99,35 +101,35 @@
         </div>
 
         {% if deal.description %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Description') }}</h2>
             <p class="text-sm whitespace-pre-wrap">{{ deal.description }}</p>
         </div>
         {% endif %}
 
         {% if deal.notes %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Notes') }}</h2>
             <p class="text-sm whitespace-pre-wrap">{{ deal.notes }}</p>
         </div>
         {% endif %}
 
         {% if deal.status == 'lost' and deal.loss_reason %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Loss Reason') }}</h2>
             <p class="text-sm">{{ deal.loss_reason }}</p>
         </div>
         {% endif %}
 
         {% if deal.related_quote %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Related Quote') }}</h2>
             <p class="text-sm">{{ deal.related_quote.quote_number }}{% if deal.related_quote.title %} - {{ deal.related_quote.title }}{% endif %}</p>
         </div>
         {% endif %}
 
         {% if deal.related_project %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Related Project') }}</h2>
             <p class="text-sm">{{ deal.related_project.name }}</p>
         </div>
@@ -136,7 +138,7 @@
 
     <!-- Right Column: Activities -->
     <div class="lg:col-span-2">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold">{{ _('Activity') }}</h2>
                 <a href="{{ url_for('deals.create_activity', deal_id=deal.id) }}" class="bg-primary text-white px-3 py-1.5 rounded-lg hover:bg-primary/90 transition-colors text-sm">
@@ -173,7 +175,7 @@
             {% endif %}
         </div>
 
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mt-6">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mt-6">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold">{{ _('History') }}</h2>
                 {% if current_user.is_admin or has_permission('view_audit_logs') %}
@@ -184,7 +186,7 @@
             </div>
             {% if audit_logs %}
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 responsive-cards">
                     <thead class="bg-gray-50 dark:bg-gray-800">
                         <tr>
                             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Timestamp') }}</th>
@@ -197,15 +199,15 @@
                     <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                         {% for log in audit_logs %}
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{{ log.created_at|user_datetime }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100" data-label="{{ _('Timestamp') }}">{{ log.created_at|user_datetime }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100" data-label="{{ _('User') }}">
                                 {% if log.user %}{{ log.user.display_name }}{% else %}<span class="text-gray-400">{{ _('System') }}</span>{% endif %}
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap">{{ badge(log.action, log.get_color()) }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                            <td class="px-4 py-3 whitespace-nowrap" data-label="{{ _('Action') }}">{{ badge(log.action, log.get_color()) }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100" data-label="{{ _('Field') }}">
                                 {% if log.field_name %}<code class="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{{ log.field_name }}</code>{% else %}<span class="text-gray-400">—</span>{% endif %}
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
+                            <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100" data-label="{{ _('Change') }}">
                                 {% if log.field_name %}
                                 <div class="space-y-1">
                                     {% if log.old_value %}<div class="text-xs"><span class="text-red-600 dark:text-red-400">−</span> <span class="line-through">{{ log.get_old_value() }}</span></div>{% endif %}
