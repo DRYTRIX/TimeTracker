@@ -1,8 +1,9 @@
 """
 Test suite for bulk task operations.
-Tests bulk delete, bulk status change, bulk assignment, and bulk move to project.
+Tests bulk delete, bulk status change, bulk assignment, bulk due date, bulk priority, and bulk move to project.
 """
 
+import json
 import pytest
 from flask import url_for
 from app.models import Task, Project, User, TaskActivity
@@ -468,6 +469,50 @@ def test_bulk_operations_routes_exist(authenticated_client):
     # Test bulk move project route
     response = authenticated_client.post("/tasks/bulk-move-project", data={"task_ids[]": []}, follow_redirects=True)
     assert response.status_code == 200
+
+    # Test bulk due date route (form: no tasks -> redirect with flash)
+    response = authenticated_client.post(
+        "/tasks/bulk-update-due-date",
+        data={"task_ids[]": [], "due_date": "2025-12-31"},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+
+    # Test bulk priority route (form: no tasks -> redirect with flash)
+    response = authenticated_client.post(
+        "/tasks/bulk-priority",
+        data={"task_ids[]": [], "priority": "high"},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+
+
+@pytest.mark.integration
+@pytest.mark.routes
+def test_bulk_update_due_date_route(authenticated_client, app, tasks_for_bulk):
+    """Smoke test: bulk due date update route is callable (form data)."""
+    with app.app_context():
+        task_ids = [str(t.id) for t in tasks_for_bulk[:2]]
+        response = authenticated_client.post(
+            "/tasks/bulk-update-due-date",
+            data={"task_ids[]": task_ids, "due_date": "2025-12-31"},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+
+
+@pytest.mark.integration
+@pytest.mark.routes
+def test_bulk_update_priority_route(authenticated_client, app, tasks_for_bulk):
+    """Smoke test: bulk priority update route is callable (form data)."""
+    with app.app_context():
+        task_ids = [str(t.id) for t in tasks_for_bulk[:2]]
+        response = authenticated_client.post(
+            "/tasks/bulk-priority",
+            data={"task_ids[]": task_ids, "priority": "high"},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
 
 
 @pytest.mark.smoke
