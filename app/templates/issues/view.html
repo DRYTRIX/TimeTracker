@@ -7,15 +7,15 @@
         <h1 class="text-2xl font-bold">{{ issue.title }}</h1>
         <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Issue #%(id)s', id=issue.id) }}</p>
     </div>
-    <div class="flex gap-2">
-        <a href="{{ url_for('issues.edit_issue', issue_id=issue.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">
+    <div class="flex flex-wrap gap-2">
+        <a href="{{ url_for('issues.edit_issue', issue_id=issue.id) }}" class="bg-primary text-white px-4 py-2 min-h-[44px] rounded-lg inline-flex items-center">
             <i class="fas fa-edit mr-2"></i>{{ _('Edit Issue') }}
         </a>
         {% if current_user.is_admin %}
         <form method="POST" action="{{ url_for('issues.delete_issue', issue_id=issue.id) }}" 
               onsubmit="event.preventDefault(); window.showConfirm('{{ _('Are you sure you want to delete this issue?') }}', { title: '{{ _('Delete Issue') }}', confirmText: '{{ _('Delete') }}' }).then(ok=>{ if(ok){ this.submit(); } });" class="inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg mt-4 md:mt-0">
+            <button type="submit" class="bg-red-600 text-white px-4 py-2 min-h-[44px] rounded-lg inline-flex items-center">
                 <i class="fas fa-trash mr-2"></i>{{ _('Delete') }}
             </button>
         </form>
@@ -27,14 +27,14 @@
     <!-- Left Column: Issue Details -->
     <div class="lg:col-span-2 space-y-6">
         {% if issue.description %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Description') }}</h2>
             <div class="prose prose-sm dark:prose-invert max-w-none">{{ issue.description | markdown | safe }}</div>
         </div>
         {% endif %}
 
         <!-- Link to Task or Create Task -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Task Management') }}</h2>
             {% if issue.task %}
             <div class="mb-4">
@@ -88,7 +88,7 @@
 
     <!-- Right Column: Issue Info -->
     <div class="space-y-6">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Details') }}</h2>
             <div class="space-y-3">
                 <div>

@@ -13,7 +13,7 @@
     breadcrumbs=breadcrumbs,
     actions_html=''
         + '<div class="flex gap-2">'
-        +   '<a href="' + url_for("expenses.create_expense") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Expense</a>'
+        +   '<a href="' + url_for("expenses.create_expense") + '" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>New Expense</a>'
         +   '<a href="' + url_for("mileage.create_mileage") + '" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-car mr-2"></i>New Mileage</a>'
         +   '<a href="' + url_for("per_diem.create_per_diem") + '" class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors"><i class="fas fa-money-bill-alt mr-2"></i>New Per Diem</a>'
         + '</div>'
@@ -21,7 +21,7 @@
 
 <!-- Summary Stats -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Total Expenses</p>
@@ -33,7 +33,7 @@
         </div>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Total Amount</p>
@@ -45,7 +45,7 @@
         </div>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
                 <a href="{{ url_for('expenses.dashboard') }}" class="text-sm text-primary hover:underline">
@@ -60,7 +60,7 @@
 </div>
 
 <!-- Filter Form -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold">{{ _('Filter Expenses') }}</h2>
         <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
@@ -70,14 +70,14 @@
     <div id="filterBody">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-filter-form>
         <div>
-            <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
-            <input type="text" name="search" id="search" value="{{ search or '' }}" 
+            <label for="expenses-filter-search" class="form-label">Search</label>
+            <input type="text" name="search" id="expenses-filter-search" value="{{ search or '' }}" 
                    placeholder="Title, vendor, notes..." 
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
         </div>
         
         <div>
-            <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+            <label for="status" class="form-label">Status</label>
             <select name="status" id="status" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 <option value="">All Statuses</option>
                 <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
@@ -88,7 +88,7 @@
         </div>
         
         <div>
-            <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+            <label for="category" class="form-label">Category</label>
             <select name="category" id="category" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 <option value="">All Categories</option>
                 {% for cat in categories %}
@@ -98,7 +98,7 @@
         </div>
         
         <div>
-            <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project</label>
+            <label for="project_id" class="form-label">Project</label>
             <select name="project_id" id="project_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 <option value="">All Projects</option>
                 {% for project in projects %}
@@ -108,7 +108,7 @@
         </div>
         
         <div>
-            <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client</label>
+            <label for="client_id" class="form-label">Client</label>
             {% set locked_client = get_locked_client() %}
             {% if locked_client %}
                 <input type="hidden" name="client_id" id="client_id" value="{{ locked_client.id }}">
@@ -130,7 +130,7 @@
         
         {% if current_user.is_admin and users %}
         <div>
-            <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">User</label>
+            <label for="user_id" class="form-label">User</label>
             <select name="user_id" id="user_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 <option value="">All Users</option>
                 {% for user in users %}
@@ -141,19 +141,19 @@
         {% endif %}
         
         <div>
-            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+            <label for="start_date" class="form-label">Start Date</label>
             <input type="date" name="start_date" id="start_date" value="{{ start_date or '' }}" 
                    class="form-input user-date-input">
         </div>
         
         <div>
-            <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+            <label for="end_date" class="form-label">End Date</label>
             <input type="date" name="end_date" id="end_date" value="{{ end_date or '' }}" 
                    class="form-input user-date-input">
         </div>
         
         <div>
-            <label for="billable" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Billable</label>
+            <label for="billable" class="form-label">Billable</label>
             <select name="billable" id="billable" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 <option value="">All</option>
                 <option value="true" {% if billable == 'true' %}selected{% endif %}>Billable Only</option>
@@ -162,10 +162,10 @@
         </div>
         
         <div class="flex items-end gap-2 col-span-full">
-            <button type="submit" class="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <button type="submit" class="btn btn-primary flex-1">
                 <i class="fas fa-filter mr-2"></i>Filter
             </button>
-            <a href="{{ url_for('expenses.list_expenses') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+            <a href="{{ url_for('expenses.list_expenses') }}" class="btn btn-secondary">
                 <i class="fas fa-times"></i>
             </a>
             <a href="{{ url_for('expenses.export_expenses', **request.args) }}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors" title="{{ _('Export to CSV') }}">
@@ -191,7 +191,7 @@
 <!-- Bulk Delete Confirmation Dialog -->
 <div id="confirmBulkDelete" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
     <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75" onclick="closeBulkDeleteDialog()"></div>
+        <div class="fixed inset-0 transition-opacity bg-black/50 dark:bg-gray-900 dark:bg-opacity-75" onclick="closeBulkDeleteDialog()"></div>
         <div class="relative bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full p-6 zoom-in">
             <div class="flex items-start mb-4">
                 <div class="flex-shrink-0">
@@ -205,10 +205,10 @@
                 </div>
             </div>
             <div class="flex justify-end gap-3 mt-6">
-                <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" onclick="closeBulkDeleteDialog()">
+                <button type="button" class="btn btn-secondary" onclick="closeBulkDeleteDialog()">
                     Cancel
                 </button>
-                <button type="button" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors" onclick="submitBulkDelete()">
+                <button type="button" class="btn btn-danger" onclick="submitBulkDelete()">
                     Delete
                 </button>
             </div>
@@ -221,7 +221,7 @@
     <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="p-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Change Status for Selected Expenses') }}</h3>
-            <label for="bulkStatusSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Status</label>
+            <label for="bulkStatusSelect" class="form-label">Select Status</label>
             <select id="bulkStatusSelect" class="form-input w-full mb-4">
                 <option value="">-- Select Status --</option>
                 <option value="pending">Pending</option>
@@ -230,8 +230,8 @@
                 <option value="reimbursed">Reimbursed</option>
             </select>
             <div class="flex justify-end gap-2">
-                <button type="button" onclick="closeBulkStatusDialog()" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Cancel</button>
-                <button type="button" onclick="submitBulkStatus()" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90">{{ _('Update Status') }}</button>
+                <button type="button" onclick="closeBulkStatusDialog()" class="btn btn-secondary">Cancel</button>
+                <button type="button" onclick="submitBulkStatus()" class="btn btn-primary">{{ _('Update Status') }}</button>
             </div>
         </div>
     </div>
@@ -239,7 +239,7 @@
 {% endif %}
 
 <!-- Expenses Table -->
-<div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-visible">
+<div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-visible">
     <div class="flex justify-between items-center mb-4 p-6 pb-0">
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
             {{ expenses|length }} expense{{ 's' if expenses|length != 1 else '' }} found
@@ -266,22 +266,22 @@
         </div>
     </div>
     <div class="overflow-x-auto p-6 pt-4">
-        <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
-            <thead class="border-b border-border-light dark:border-border-dark">
+        <table class="table table-zebra w-full text-left enhanced-table responsive-cards" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
+            <thead class="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
                 <tr>
                     {% if current_user.is_admin %}
-                    <th class="p-4 w-12">
+                    <th class="px-4 py-3 w-12">
                         <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllExpenses()">
                     </th>
                     {% endif %}
-                    <th class="p-4" data-sortable>Date</th>
-                    <th class="p-4" data-sortable>Title</th>
-                    <th class="p-4" data-sortable>Category</th>
-                    <th class="p-4 table-number" data-sortable>Amount</th>
-                    <th class="p-4" data-sortable>Status</th>
-                    <th class="p-4" data-sortable>User</th>
-                    <th class="p-4" data-sortable>Project</th>
-                    <th class="p-4">Actions</th>
+                    <th class="px-4 py-3" data-sortable>Date</th>
+                    <th class="px-4 py-3" data-sortable>Title</th>
+                    <th class="px-4 py-3" data-sortable>Category</th>
+                    <th class="px-4 py-3 table-number" data-sortable>Amount</th>
+                    <th class="px-4 py-3" data-sortable>Status</th>
+                    <th class="px-4 py-3" data-sortable>User</th>
+                    <th class="px-4 py-3" data-sortable>Project</th>
+                    <th class="px-4 py-3">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -293,8 +293,8 @@
                             <input type="checkbox" class="expense-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ expense.id }}" onchange="updateBulkDeleteButton()">
                         </td>
                         {% endif %}
-                        <td class="p-4 whitespace-nowrap">{{ expense.expense_date|format_date }}</td>
-                        <td class="p-4">
+                        <td class="p-4 whitespace-nowrap" data-label="{{ _('Date') }}">{{ expense.expense_date|format_date }}</td>
+                        <td class="p-4" data-label="{{ _('Title') }}">
                             <a href="{{ url_for('expenses.view_expense', expense_id=expense.id) }}" class="text-primary hover:underline font-medium">
                                 {{ expense.title }}
                             </a>
@@ -302,18 +302,18 @@
                             <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ expense.vendor }}</div>
                             {% endif %}
                         </td>
-                        <td class="p-4">
+                        <td class="p-4" data-label="{{ _('Category') }}">
                             <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                                 {{ expense.category|title }}
                             </span>
                         </td>
-                        <td class="p-4 table-number font-medium">
+                        <td class="p-4 table-number font-medium" data-label="{{ _('Amount') }}">
                             {{ expense.total_amount|format_currency(expense.currency_code) }}
                             {% if expense.billable %}
                             <span class="ml-1 text-xs text-green-600 dark:text-green-400" title="Billable"><i class="fas fa-check-circle"></i></span>
                             {% endif %}
                         </td>
-                        <td class="p-4">
+                        <td class="p-4" data-label="{{ _('Status') }}">
                             {% if expense.status == 'pending' %}
                             <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Pending</span>
                             {% elif expense.status == 'approved' %}
@@ -326,15 +326,15 @@
                             <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ expense.status|title }}</span>
                             {% endif %}
                         </td>
-                        <td class="p-4">{{ expense.user.username if expense.user else '—' }}</td>
-                        <td class="p-4">
+                        <td class="p-4" data-label="{{ _('User') }}">{{ expense.user.username if expense.user else '—' }}</td>
+                        <td class="p-4" data-label="{{ _('Project') }}">
                             {% if expense.project %}
                             <a href="{{ url_for('projects.view_project', project_id=expense.project.id) }}" class="text-primary hover:underline">{{ expense.project.name }}</a>
                             {% else %}
                             <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                             {% endif %}
                         </td>
-                        <td class="p-4">
+                        <td class="p-4" data-label="{{ _('Actions') }}">
                             <a href="{{ url_for('expenses.view_expense', expense_id=expense.id) }}" class="text-primary hover:underline">View</a>
                         </td>
                     </tr>
@@ -345,10 +345,10 @@
         {% if not expenses %}
         {% from "components/ui.html" import empty_state %}
         {% set actions %}
-            <a href="{{ url_for('expenses.create_expense') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <a href="{{ url_for('expenses.create_expense') }}" class="btn btn-primary">
                 <i class="fas fa-plus mr-2"></i>Create Your First Expense
             </a>
-            <a href="{{ url_for('main.help') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+            <a href="{{ url_for('main.help') }}" class="btn btn-secondary">
                 <i class="fas fa-question-circle mr-2"></i>Learn More
             </a>
         {% endset %}

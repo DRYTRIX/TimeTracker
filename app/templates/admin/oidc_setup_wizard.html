@@ -17,33 +17,33 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <!-- Progress Indicator -->
     <div class="mb-8">
-        <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center space-x-2">
+        <div class="flex items-center justify-between mb-4 overflow-x-auto pb-2 min-w-0">
+            <div class="flex items-center space-x-2 shrink-0">
                 <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-semibold step-indicator" data-step="1">1</div>
-                <span class="text-sm font-medium step-label" data-step="1">{{ _('Basic Config') }}</span>
+                <span class="text-sm font-medium step-label hidden sm:inline" data-step="1">{{ _('Basic Config') }}</span>
             </div>
-            <div class="flex-1 h-1 mx-4 bg-gray-200 dark:bg-gray-700 step-connector" data-step="1"></div>
-            <div class="flex items-center space-x-2">
+            <div class="flex-1 h-1 mx-2 sm:mx-4 bg-gray-200 dark:bg-gray-700 step-connector shrink-0 min-w-[1rem]" data-step="1"></div>
+            <div class="flex items-center space-x-2 shrink-0">
                 <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 flex items-center justify-center text-sm font-semibold step-indicator" data-step="2">2</div>
-                <span class="text-sm font-medium step-label" data-step="2">{{ _('Test Connection') }}</span>
+                <span class="text-sm font-medium step-label hidden sm:inline" data-step="2">{{ _('Test Connection') }}</span>
             </div>
-            <div class="flex-1 h-1 mx-4 bg-gray-200 dark:bg-gray-700 step-connector" data-step="2"></div>
-            <div class="flex items-center space-x-2">
+            <div class="flex-1 h-1 mx-2 sm:mx-4 bg-gray-200 dark:bg-gray-700 step-connector shrink-0 min-w-[1rem]" data-step="2"></div>
+            <div class="flex items-center space-x-2 shrink-0">
                 <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 flex items-center justify-center text-sm font-semibold step-indicator" data-step="3">3</div>
-                <span class="text-sm font-medium step-label" data-step="3">{{ _('Claims') }}</span>
+                <span class="text-sm font-medium step-label hidden sm:inline" data-step="3">{{ _('Claims') }}</span>
             </div>
-            <div class="flex-1 h-1 mx-4 bg-gray-200 dark:bg-gray-700 step-connector" data-step="3"></div>
-            <div class="flex items-center space-x-2">
+            <div class="flex-1 h-1 mx-2 sm:mx-4 bg-gray-200 dark:bg-gray-700 step-connector shrink-0 min-w-[1rem]" data-step="3"></div>
+            <div class="flex items-center space-x-2 shrink-0">
                 <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 flex items-center justify-center text-sm font-semibold step-indicator" data-step="4">4</div>
-                <span class="text-sm font-medium step-label" data-step="4">{{ _('Advanced') }}</span>
+                <span class="text-sm font-medium step-label hidden sm:inline" data-step="4">{{ _('Advanced') }}</span>
             </div>
-            <div class="flex-1 h-1 mx-4 bg-gray-200 dark:bg-gray-700 step-connector" data-step="4"></div>
-            <div class="flex items-center space-x-2">
+            <div class="flex-1 h-1 mx-2 sm:mx-4 bg-gray-200 dark:bg-gray-700 step-connector shrink-0 min-w-[1rem]" data-step="4"></div>
+            <div class="flex items-center space-x-2 shrink-0">
                 <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 flex items-center justify-center text-sm font-semibold step-indicator" data-step="5">5</div>
-                <span class="text-sm font-medium step-label" data-step="5">{{ _('Finalize') }}</span>
+                <span class="text-sm font-medium step-label hidden sm:inline" data-step="5">{{ _('Finalize') }}</span>
             </div>
         </div>
     </div>
@@ -304,15 +304,15 @@
     </div>
 
     <!-- Navigation Buttons -->
-    <div class="flex justify-between mt-8 pt-6 border-t border-border-light dark:border-border-dark">
+    <div class="flex flex-col sm:flex-row justify-between mt-8 pt-6 border-t border-border-light dark:border-border-dark gap-3">
         <button type="button" id="prev-btn" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors hidden">
             <i class="fas fa-arrow-left mr-2"></i>{{ _('Previous') }}
         </button>
-        <div class="ml-auto">
+        <div class="flex flex-col sm:flex-row sm:ml-auto gap-3">
             <button type="button" id="next-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                 {{ _('Next') }}<i class="fas fa-arrow-right ml-2"></i>
             </button>
-            <a href="{{ url_for('admin.oidc_debug') }}" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors ml-2">
+            <a href="{{ url_for('admin.oidc_debug') }}" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-center">
                 {{ _('Cancel') }}
             </a>
         </div>

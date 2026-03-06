@@ -236,6 +236,13 @@ def create_app(config=None):
     if config:
         app.config.update(config)
 
+    # Production safety: refuse to start with default SECRET_KEY
+    if app.config.get("FLASK_ENV") == "production" and app.config.get("SECRET_KEY") == "dev-secret-key-change-in-production":
+        raise ValueError(
+            "SECRET_KEY must be set explicitly in production. "
+            "Set the SECRET_KEY environment variable to a secure random value."
+        )
+
     # Special handling for SQLite in-memory DB during tests:
     # ensure a single shared connection so objects don't disappear after commit.
     try:
@@ -976,216 +983,22 @@ def create_app(config=None):
         return resp
 
 
-    # Register blueprints
-    from app.routes.auth import auth_bp
-    from app.routes.main import main_bp
-    from app.routes.projects import projects_bp
-    from app.routes.timer import timer_bp
-    from app.routes.reports import reports_bp
-    from app.routes.admin import admin_bp
-    from app.routes.api import api_bp
-    from app.routes.api_v1 import api_v1_bp
-    from app.routes.api_docs import api_docs_bp, swaggerui_blueprint
-    from app.routes.analytics import analytics_bp
-    from app.routes.tasks import tasks_bp
-    from app.routes.issues import issues_bp
-    from app.routes.invoices import invoices_bp
-    from app.routes.recurring_invoices import recurring_invoices_bp
-    from app.routes.payments import payments_bp
-    from app.routes.clients import clients_bp
-    from app.routes.client_notes import client_notes_bp
-    from app.routes.comments import comments_bp
-    from app.routes.kanban import kanban_bp
-    from app.routes.setup import setup_bp
-    from app.routes.user import user_bp
-    from app.routes.time_entry_templates import time_entry_templates_bp
-    from app.routes.saved_filters import saved_filters_bp
-    from app.routes.settings import settings_bp
-    from app.routes.weekly_goals import weekly_goals_bp
-    from app.routes.expenses import expenses_bp
-    from app.routes.permissions import permissions_bp
-    from app.routes.calendar import calendar_bp
-    from app.routes.expense_categories import expense_categories_bp
-    from app.routes.mileage import mileage_bp
-    from app.routes.per_diem import per_diem_bp
-    from app.routes.budget_alerts import budget_alerts_bp
-    from app.routes.import_export import import_export_bp
-    from app.routes.webhooks import webhooks_bp
-    from app.routes.client_portal import client_portal_bp
-    from app.routes.quotes import quotes_bp
-    from app.routes.inventory import inventory_bp
-    from app.routes.contacts import contacts_bp
-    from app.routes.deals import deals_bp
-    from app.routes.leads import leads_bp
-    from app.routes.kiosk import kiosk_bp
-    from app.routes.link_templates import link_templates_bp
-    from app.routes.custom_field_definitions import custom_field_definitions_bp
-    from app.routes.custom_reports import custom_reports_bp
-    from app.routes.salesman_reports import salesman_reports_bp
-
-    try:
-        from app.routes.audit_logs import audit_logs_bp
-
-        app.register_blueprint(audit_logs_bp)
-    except Exception as e:
-        # Log error but don't fail app startup
-        logger.warning(f"Could not register audit_logs blueprint: {e}")
-        # Try to continue without audit logs if there's an issue
-
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(main_bp)
-    app.register_blueprint(projects_bp)
-    app.register_blueprint(timer_bp)
-    app.register_blueprint(reports_bp)
-    app.register_blueprint(admin_bp)
-    app.register_blueprint(api_bp)
-    app.register_blueprint(api_v1_bp)
-    app.register_blueprint(api_docs_bp)
-    app.register_blueprint(swaggerui_blueprint)
-    app.register_blueprint(analytics_bp)
-    app.register_blueprint(tasks_bp)
-    app.register_blueprint(issues_bp)
-    app.register_blueprint(invoices_bp)
-    app.register_blueprint(recurring_invoices_bp)
-    app.register_blueprint(payments_bp)
-    app.register_blueprint(clients_bp)
-    app.register_blueprint(client_notes_bp)
-    app.register_blueprint(client_portal_bp)
-    app.register_blueprint(comments_bp)
-    app.register_blueprint(kanban_bp)
-    app.register_blueprint(setup_bp)
-    app.register_blueprint(user_bp)
-    app.register_blueprint(time_entry_templates_bp)
-    app.register_blueprint(saved_filters_bp)
-    app.register_blueprint(settings_bp)
-    app.register_blueprint(weekly_goals_bp)
-    app.register_blueprint(expenses_bp)
-    app.register_blueprint(permissions_bp)
-    app.register_blueprint(calendar_bp)
-    app.register_blueprint(expense_categories_bp)
-    app.register_blueprint(mileage_bp)
-    app.register_blueprint(per_diem_bp)
-    app.register_blueprint(budget_alerts_bp)
-    app.register_blueprint(import_export_bp)
-    app.register_blueprint(webhooks_bp)
-    app.register_blueprint(quotes_bp)
-    app.register_blueprint(inventory_bp)
-    app.register_blueprint(kiosk_bp)
-    app.register_blueprint(contacts_bp)
-    app.register_blueprint(deals_bp)
-    app.register_blueprint(leads_bp)
-    app.register_blueprint(link_templates_bp)
-    app.register_blueprint(custom_field_definitions_bp)
-    app.register_blueprint(custom_reports_bp)
-    app.register_blueprint(salesman_reports_bp)
-    # audit_logs_bp is registered above with error handling
+    # Register blueprints (centralized in blueprint_registry)
+    from app.blueprint_registry import register_all_blueprints
+    register_all_blueprints(app, logger)
 
     # Register integration connectors
     try:
         from app.integrations import registry
-
-        # Connectors are auto-registered on import
         logger.info("Integration connectors registered")
     except Exception as e:
         logger.warning(f"Could not register integration connectors: {e}")
 
-    # Register new feature blueprints
-    try:
-        from app.routes.project_templates import project_templates_bp
-
-        app.register_blueprint(project_templates_bp)
-    except Exception as e:
-        logger.warning(f"Could not register project_templates blueprint: {e}")
-
-    try:
-        from app.routes.invoice_approvals import invoice_approvals_bp
-
-        app.register_blueprint(invoice_approvals_bp)
-    except Exception as e:
-        logger.warning(f"Could not register invoice_approvals blueprint: {e}")
-
-    try:
-        from app.routes.payment_gateways import payment_gateways_bp
-
-        app.register_blueprint(payment_gateways_bp)
-    except Exception as e:
-        logger.warning(f"Could not register payment_gateways blueprint: {e}")
-
-    try:
-        from app.routes.scheduled_reports import scheduled_reports_bp
-
-        app.register_blueprint(scheduled_reports_bp)
-    except Exception as e:
-        logger.warning(f"Could not register scheduled_reports blueprint: {e}")
-
-    try:
-        from app.routes.integrations import integrations_bp
-
-        app.register_blueprint(integrations_bp)
-    except Exception as e:
-        logger.warning(f"Could not register integrations blueprint: {e}")
-
-    try:
-        from app.routes.push_notifications import push_bp
-
-        app.register_blueprint(push_bp)
-    except Exception as e:
-        logger.warning(f"Could not register push_notifications blueprint: {e}")
-
-    # custom_reports_bp is already registered above (line 1045)
-
-    try:
-        from app.routes.gantt import gantt_bp
-
-        app.register_blueprint(gantt_bp)
-    except Exception as e:
-        logger.warning(f"Could not register gantt blueprint: {e}")
-
-    # Register new feature blueprints (workflows, approvals, chat, etc.)
-    try:
-        from app.routes.workflows import workflows_bp
-
-        app.register_blueprint(workflows_bp)
-    except Exception as e:
-        logger.warning(f"Could not register workflows blueprint: {e}")
-
-    try:
-        from app.routes.time_approvals import time_approvals_bp
-
-        app.register_blueprint(time_approvals_bp)
-    except Exception as e:
-        logger.warning(f"Could not register time_approvals blueprint: {e}")
-
-    try:
-        from app.routes.activity_feed import activity_feed_bp
-
-        app.register_blueprint(activity_feed_bp)
-    except Exception as e:
-        logger.warning(f"Could not register activity_feed blueprint: {e}")
-
-    try:
-        from app.routes.recurring_tasks import recurring_tasks_bp
-
-        app.register_blueprint(recurring_tasks_bp)
-    except Exception as e:
-        logger.warning(f"Could not register recurring_tasks blueprint: {e}")
-
-    try:
-        from app.routes.team_chat import team_chat_bp
-
-        app.register_blueprint(team_chat_bp)
-    except Exception as e:
-        logger.warning(f"Could not register team_chat blueprint: {e}")
-
-    try:
-        from app.routes.client_portal_customization import client_portal_customization_bp
-
-        app.register_blueprint(client_portal_customization_bp)
-    except Exception as e:
-        logger.warning(f"Could not register client_portal_customization blueprint: {e}")
-
-    # Exempt API blueprints from CSRF protection (JSON API uses token authentication, not CSRF tokens)
-    # Only if CSRF is enabled
+    # Exempt API blueprints from CSRF protection (requires api_bp, api_v1_bp, api_docs_bp)
+    from app.routes.api import api_bp
+    from app.routes.api_v1 import api_v1_bp
+    from app.routes.api_docs import api_docs_bp
+    # Only if CSRF is enabled (JSON API uses token authentication, not CSRF tokens)
     if app.config.get("WTF_CSRF_ENABLED"):
         csrf.exempt(api_bp)
         csrf.exempt(api_v1_bp)

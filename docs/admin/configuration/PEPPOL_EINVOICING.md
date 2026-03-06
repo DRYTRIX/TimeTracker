@@ -1,22 +1,31 @@
-# Peppol and ZugFerd e-invoicing (EN 16931)
+# Peppol and Factur-X / ZUGFeRD e-invoicing (EN 16931)
 
 TimeTracker supports **both**:
 
 - **Peppol** – send invoices via the Peppol network (UBL 2.1, BIS Billing 3.0) to your **Peppol Access Point**.
-- **ZugFerd / Factur-X** – export invoice PDFs that contain **embedded EN 16931 XML** (one file that is both human-readable and machine-readable). These hybrid PDFs can also be sent via Peppol.
+- **Factur-X / ZUGFeRD** – export invoice PDFs that contain **embedded CII XML** (Cross-Industry Invoice, EN 16931 profile). These hybrid PDFs are both human-readable and machine-readable.
 
-Peppol is the **transport**; ZugFerd is a **format** (PDF + embedded XML). The same UBL used for Peppol is reused when embedding (EN 16931 compliant).
+### Supported standards
+
+| Standard | Format | Status |
+|---|---|---|
+| Peppol BIS Billing 3.0 | UBL 2.1 | Supported (transport + export) |
+| Factur-X / ZUGFeRD 2.x | CII (EN 16931 profile) | Supported (embedded in PDF) |
+| PDF/A-3b | PDF archival | Supported (with ICC profile) |
+| XRechnung | CII / UBL (German CIUS) | Not supported |
+
+Peppol is the **transport**; Factur-X / ZUGFeRD is a **format** (PDF + embedded CII XML). Each uses its own XML payload — UBL for Peppol, CII for Factur-X.
 
 ## What you need
 
-- **A Peppol Access Point provider** (e.g. your accountant’s solution or a commercial AP)
+- **A Peppol Access Point provider** (e.g. your accountant's solution or a commercial AP)
 - Your **sender identifiers** (how your company is identified in Peppol)
-- Your customers’ **recipient endpoint identifiers**
+- Your customers' **recipient endpoint identifiers**
 
 TimeTracker supports two **transport modes**:
 
-- **Generic** – provider-agnostic HTTP adapter: you configure an access point URL that accepts the JSON contract below. No SML/SMP or AS4 required.
-- **Native** – SML/SMP participant discovery and AS4 message send. Requires `PEPPOL_SML_URL` (and optionally client certificate paths for mTLS). Use when you want to send directly via the PEPPOL network without a third-party AP adapter.
+- **Generic** – provider-agnostic HTTP adapter: you configure an access point URL that accepts the JSON contract below. No SML/SMP or AS4 required. **Recommended for production.**
+- **Native (experimental)** – SML/SMP participant discovery and AS4 message send. Lacks WS-Security, digital signatures, and receipt handling. Use only for testing or when you have a compatible receiving AP.
 
 Sender and recipient identifiers are validated (scheme and endpoint ID format) before send in both modes.
 
@@ -98,23 +107,36 @@ You can optionally set **Buyer reference (PEPPOL BT-10)** on each invoice (creat
 
 When the setting is on **and** the client has Peppol endpoint details, the invoice view shows a **Download UBL** button to save the UBL 2.1 XML file.
 
-## Embed EN 16931 XML in invoice PDFs (ZugFerd / Factur-X)
+## Embed Factur-X / ZUGFeRD CII XML in invoice PDFs
 
-In **Admin → Settings → Peppol e-Invoicing** you can enable **Embed EN 16931 XML in invoice PDFs (ZugFerd / Factur-X)**. When this is on:
+In **Admin → Settings → Peppol e-Invoicing** you can enable **Embed Factur-X / ZUGFeRD CII XML in invoice PDFs (EN 16931)**. When this is on:
 
-- **Exported invoice PDFs** (Export PDF) contain an embedded file `ZUGFeRD-invoice.xml` with the same EN 16931 UBL as used for Peppol.
-- The embedded XML is attached as an **Associated File** with relationship **Alternative**, and ZUGFeRD XMP RDF is written (metadata is created if missing so validators recognize the document).
+- **Exported invoice PDFs** (Export PDF) contain an embedded file `factur-x.xml` with a CII (Cross-Industry Invoice) XML conforming to the Factur-X EN 16931 profile.
+- The embedded XML is attached as an **Associated File** with relationship **Alternative**, and Factur-X XMP metadata is written so validators recognize the document.
 - The PDF remains human-readable; the embedded XML makes it machine-readable (e.g. for automated booking or archiving).
-- These hybrid PDFs can be sent via Peppol or by email; recipients can open the PDF and/or extract the XML.
-- **Strict behaviour:** If ZUGFeRD embedding is enabled and the embed step fails (e.g. missing pikepdf, invalid PDF), the export is **aborted** and the user sees an error; the PDF is not returned without the XML.
+- **Strict behaviour:** If embedding is enabled and the embed step fails (e.g. missing pikepdf, invalid PDF), the export is **aborted** and the user sees an error; the PDF is not returned without the XML.
 
-Party data (seller/customer) is taken from Settings and the invoice’s client (including Peppol endpoint fields). For full EN 16931/ZugFerd compliance, configure sender and client data as for Peppol (including company and client addresses and country codes).
+Party data (seller/buyer) is taken from Settings and the invoice's client (including endpoint fields and VAT). For full EN 16931 compliance, configure seller and client data including addresses and country codes.
 
 **Validation:** Validate the embedded XML with [b2brouter](https://app.b2brouter.net/de/validation) or [portinvoice.com](https://www.portinvoice.com/). You can optionally enable **Run veraPDF after export** in Admin → Peppol e-Invoicing and set the veraPDF executable path to get a validation summary after each export (does not block the download).
 
-### ZUGFeRD and PDF/A-3
+### Factur-X and PDF/A-3
 
-You can enable **Normalize ZUGFeRD PDFs to PDF/A-3** in Admin → Peppol e-Invoicing. When this is on (and ZUGFeRD embedding is enabled), exported PDFs are normalized to PDF/A-3: XMP identification (pdfaid part 3, conformance B) and an sRGB output intent are added so the file passes validators such as veraPDF. If conversion fails, export is aborted and the user sees an error.
+You can enable **Normalize Factur-X PDFs to PDF/A-3b** in Admin → Peppol e-Invoicing. When this is on (and Factur-X embedding is enabled), exported PDFs are normalized to PDF/A-3b:
+
+- XMP identification (`pdfaid:part=3`, `pdfaid:conformance=B`)
+- Embedded sRGB ICC color profile (DestOutputProfile)
+- GTS_PDFA1 output intent
+
+If conversion fails, export is aborted and the user sees an error.
+
+### UBL validation
+
+When exporting or sending UBL via Peppol, the generated XML is checked for structural compliance with Peppol BIS Billing 3.0 requirements (required elements, identifiers, line items). Full Schematron validation is not performed in-app; use your Access Point provider's validator or [ecosio](https://ecosio.com/en/peppol-and-xml-document-validator/) for deep validation.
+
+### CII validation
+
+When embedding Factur-X CII XML, the generated XML is checked for EN 16931 structural requirements (required elements, party data, line items, monetary totals).
 
 ## Migrations
 
@@ -128,7 +150,7 @@ This applies (among others):
 
 - `112_add_invoices_peppol_compliant` (adds `settings.invoices_peppol_compliant`)
 - `113_add_invoice_buyer_reference` (adds `invoices.buyer_reference`)
-- `128_add_invoices_zugferd_pdf` (adds `settings.invoices_zugferd_pdf` for ZugFerd PDF embedding)
+- `128_add_invoices_zugferd_pdf` (adds `settings.invoices_zugferd_pdf` for Factur-X PDF embedding)
 - `130_add_peppol_transport_mode_and_native` (adds `peppol_transport_mode`, `peppol_sml_url`, `peppol_native_cert_path`, `peppol_native_key_path`, `invoices_pdfa3_compliant`, `invoices_validate_export`, `invoices_verapdf_path`)
 
 ## Testing
@@ -138,4 +160,3 @@ With your virtual environment activated:
 ```bash
 pytest tests/test_peppol_service.py tests/test_peppol_identifiers.py tests/test_zugferd.py tests/test_pdfa3.py tests/test_invoice_validators.py -v
 ```
-

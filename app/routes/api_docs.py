@@ -33,7 +33,7 @@ def openapi_spec():
         "openapi": "3.0.0",
         "info": {
             "title": "TimeTracker REST API",
-            "version": "1.0.0",
+            "version": "4.20.9",
             "description": """
 # TimeTracker REST API
 

@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="max-w-3xl mx-auto px-4 py-6">
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
         <h1 class="text-2xl font-bold">
             {{ _('Edit Client Note') }}
         </h1>
@@ -13,7 +13,7 @@
         </a>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <!-- Note context -->
         <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-6">
             <div class="flex items-center">
@@ -78,13 +78,13 @@
                 </label>
             </div>
             
-            <div class="flex gap-3">
+            <div class="flex flex-col-reverse sm:flex-row gap-3">
+                <a href="{{ url_for('clients.view_client', client_id=client_id) }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-opacity-90 transition text-center">
+                    {{ _('Cancel') }}
+                </a>
                 <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-90 transition">
                     {{ _('Save Changes') }}
                 </button>
-                <a href="{{ url_for('clients.view_client', client_id=client_id) }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-opacity-90 transition">
-                    {{ _('Cancel') }}
-                </a>
             </div>
         </form>
     </div>

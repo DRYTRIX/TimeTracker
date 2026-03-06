@@ -27,7 +27,7 @@
    - form_id: Optional form ID for auto-submit
 #}
 <div class="multi-select-wrapper relative" data-field-name="{{ field_name }}">
-    <label for="{{ field_name }}_button" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+    <label for="{{ field_name }}_button" class="form-label">
         {{ _(label) }}
     </label>
     
@@ -73,13 +73,13 @@
         {# Options list #}
         <div class="multi-select-options max-h-60 overflow-y-auto p-2">
             {# "All" option #}
-            <label class="multi-select-option flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer transition-colors">
+            <label class="multi-select-option flex items-center px-3 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer transition-colors min-h-[44px]">
                 <input 
                     type="checkbox" 
-                    class="multi-select-all h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    class="multi-select-all h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
                     aria-label="{{ _('Select all') }}"
                 >
-                <span class="ml-2 text-sm text-gray-700 dark:text-gray-300 font-medium">{{ _('All') }}</span>
+                <span class="ml-3 text-sm text-gray-700 dark:text-gray-300 font-medium">{{ _('All') }}</span>
             </label>
             
             <div class="border-t border-gray-200 dark:border-gray-700 my-2"></div>
@@ -88,15 +88,15 @@
             {% for item in items %}
             {% set item_id = item.get(item_id_attr) if item is mapping else getattr(item, item_id_attr, None) %}
             {% set item_label = (item.get(item_label_attr, item.get('display_name', item_id)) if item is mapping else getattr(item, item_label_attr, getattr(item, 'display_name', item_id))) %}
-            <label class="multi-select-option flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer transition-colors" data-search-text="{{ item_label|lower }}">
+            <label class="multi-select-option flex items-center px-3 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer transition-colors min-h-[44px]" data-search-text="{{ item_label|lower }}">
                 <input 
                     type="checkbox" 
-                    class="multi-select-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    class="multi-select-checkbox h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
                     value="{{ item_id }}"
                     {% if item_id in selected_ids %}checked{% endif %}
                     aria-label="{{ item_label }}"
                 >
-                <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ item_label }}</span>
+                <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">{{ item_label }}</span>
             </label>
             {% endfor %}
             
@@ -111,13 +111,13 @@
         <div class="p-2 border-t border-gray-200 dark:border-gray-700 flex gap-2">
             <button 
                 type="button" 
-                class="multi-select-clear flex-1 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                class="multi-select-clear flex-1 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors min-h-[44px]"
             >
                 {{ _('Clear') }}
             </button>
             <button 
                 type="button" 
-                class="multi-select-apply flex-1 px-3 py-1.5 text-xs text-white bg-primary hover:bg-primary/90 rounded transition-colors"
+                class="multi-select-apply flex-1 px-3 py-2.5 text-sm text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors min-h-[44px]"
             >
                 {{ _('Apply') }}
             </button>

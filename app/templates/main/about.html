@@ -14,13 +14,13 @@
 </div>
 
 <!-- Hero -->
-<div class="bg-gradient-to-br from-primary/10 via-secondary/10 to-primary/5 dark:from-primary/20 dark:via-secondary/20 dark:to-primary/10 border border-border-light dark:border-border-dark p-8 rounded-lg shadow-lg mb-8 text-center relative overflow-hidden">
+<div class="bg-gradient-to-br from-primary/10 via-secondary/10 to-primary/5 dark:from-primary/20 dark:via-secondary/20 dark:to-primary/10 border border-border-light dark:border-border-dark p-4 sm:p-8 rounded-lg shadow-lg mb-6 sm:mb-8 text-center relative overflow-hidden">
     <div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
     <div class="absolute bottom-0 left-0 w-64 h-64 bg-secondary/5 rounded-full blur-3xl -ml-32 -mb-32"></div>
     <div class="relative z-10">
-        <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="TimeTracker Logo" class="w-32 h-32 mx-auto mb-6 drop-shadow-lg">
-        <h2 class="text-3xl font-bold mb-3 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">TimeTracker</h2>
-        <p class="text-text-muted-light dark:text-text-muted-dark max-w-2xl mx-auto text-lg">
+        <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="TimeTracker Logo" class="w-20 h-20 sm:w-32 sm:h-32 mx-auto mb-4 sm:mb-6 drop-shadow-lg">
+        <h2 class="text-2xl sm:text-3xl font-bold mb-3 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">TimeTracker</h2>
+        <p class="text-text-muted-light dark:text-text-muted-dark max-w-2xl mx-auto text-sm sm:text-lg">
             {{ _('A comprehensive web-based time tracking application built with Flask, featuring project management, client organization, task management, invoicing, and advanced analytics.') }}
         </p>
 
@@ -41,29 +41,29 @@
 </div>
 
 <!-- Highlights -->
-<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark">
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center gap-3 mb-2">
             <i class="fas fa-stopwatch text-primary"></i>
             <h3 class="font-semibold">{{ _('Smart Timers') }}</h3>
         </div>
         <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Real-time tracking with idle detection and live updates') }}</p>
     </div>
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center gap-3 mb-2">
             <i class="fas fa-building text-green-600"></i>
             <h3 class="font-semibold">{{ _('Client Management') }}</h3>
         </div>
         <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Organize clients with contacts, rates, and project relations') }}</p>
     </div>
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center gap-3 mb-2">
             <i class="fas fa-tasks text-sky-600"></i>
             <h3 class="font-semibold">{{ _('Task System') }}</h3>
         </div>
         <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Break down projects into tasks with progress tracking') }}</p>
     </div>
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center gap-3 mb-2">
             <i class="fas fa-file-pdf text-amber-600"></i>
             <h3 class="font-semibold">{{ _('PDF Invoices') }}</h3>
@@ -73,8 +73,8 @@
 </div>
 
 <!-- Core vs Advanced -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-lg font-semibold mb-4"><i class="fas fa-star text-amber-500 mr-2"></i>{{ _('Core Features') }}</h3>
         <ul class="space-y-2 text-text-muted-light dark:text-text-muted-dark">
             <li class="flex items-start gap-2"><i class="fas fa-check text-green-600 mt-1"></i><span>{{ _('Start/stop timers with project and task association') }}</span></li>
@@ -83,7 +83,7 @@
             <li class="flex items-start gap-2"><i class="fas fa-check text-green-600 mt-1"></i><span>{{ _('Role-based access and user profiles') }}</span></li>
         </ul>
     </div>
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-lg font-semibold mb-4"><i class="fas fa-rocket text-primary mr-2"></i>{{ _('Advanced Features') }}</h3>
         <ul class="space-y-2 text-text-muted-light dark:text-text-muted-dark">
             <li class="flex items-start gap-2"><i class="fas fa-check text-green-600 mt-1"></i><span>{{ _('Branded PDF invoicing with tax and payment tracking') }}</span></li>
@@ -95,7 +95,7 @@
 </div>
 
 <!-- Platform Support -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark mb-8">
+<div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6 sm:mb-8">
     <h3 class="text-lg font-semibold mb-4"><i class="fas fa-globe mr-2"></i>{{ _('Platform Support') }}</h3>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
         <div>
@@ -129,7 +129,7 @@
 </div>
 
 <!-- Technical Specifications -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark mb-8">
+<div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6 sm:mb-8">
     <h3 class="text-lg font-semibold mb-4"><i class="fas fa-cogs mr-2"></i>{{ _('Technical Specifications') }}</h3>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
         <div>
@@ -154,7 +154,7 @@
 </div>
 
 <!-- Open Source & Community -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark mb-8">
+<div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6 sm:mb-8">
     <h3 class="text-lg font-semibold mb-4"><i class="fas fa-code-branch mr-2"></i>{{ _('Open Source & Community') }}</h3>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-text-muted-light dark:text-text-muted-dark">
         <div>
@@ -219,9 +219,9 @@
 </div>
 
 <!-- Getting Help -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow border border-border-light dark:border-border-dark">
+<div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h3 class="text-lg font-semibold mb-4"><i class="fas fa-question-circle mr-2"></i>{{ _('Getting Help & Resources') }}</h3>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
         <div class="text-center p-4 rounded-lg border border-border-light dark:border-border-dark">
             <div class="mx-auto mb-3 w-14 h-14 rounded-full flex items-center justify-center bg-primary/10">
                 <i class="fas fa-book text-primary"></i>

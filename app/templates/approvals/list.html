@@ -17,7 +17,7 @@
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- Pending Approvals -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h2 class="text-xl font-semibold mb-4">
             <i class="fas fa-clock text-yellow-500 mr-2"></i>
             {{ _('Pending Approvals') }}
@@ -26,7 +26,7 @@
         <div class="space-y-4">
             {% for approval in pending_approvals %}
             <div class="border border-border-light dark:border-border-dark rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div class="flex justify-between items-start mb-3">
+                <div class="flex flex-col sm:flex-row justify-between items-start gap-3 mb-3">
                     <div class="flex-1">
                         <h3 class="text-lg font-semibold mb-1">
                             <a href="{{ url_for('time_approvals.view_approval', approval_id=approval.id) }}" class="hover:text-primary transition-colors">
@@ -50,11 +50,11 @@
                     <div class="flex gap-2">
                         <form method="POST" action="{{ url_for('time_approvals.approve_entry', approval_id=approval.id) }}" class="inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                            <button type="submit" class="bg-green-600 text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-green-700 transition-colors">
                                 <i class="fas fa-check mr-1"></i>{{ _('Approve') }}
                             </button>
                         </form>
-                        <button onclick="showRejectModal({{ approval.id }})" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                        <button onclick="showRejectModal({{ approval.id }})" class="bg-red-600 text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-red-700 transition-colors">
                             <i class="fas fa-times mr-1"></i>{{ _('Reject') }}
                         </button>
                     </div>
@@ -79,7 +79,7 @@
     </div>
 
     <!-- My Requests -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h2 class="text-xl font-semibold mb-4">
             <i class="fas fa-paper-plane text-blue-500 mr-2"></i>
             {{ _('My Requests') }}

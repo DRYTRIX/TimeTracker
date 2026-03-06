@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="max-w-2xl mx-auto">
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
         <h1 class="text-2xl font-bold mb-4">{{ _('Pay Invoice') }}</h1>
         <div class="space-y-2 mb-6">
             <div class="flex justify-between">
@@ -23,7 +23,7 @@
     </div>
     
     {% if gateway.provider == 'stripe' %}
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <form method="POST" action="{{ url_for('payment_gateways.pay_invoice', invoice_id=invoice.id) }}" novalidate>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             

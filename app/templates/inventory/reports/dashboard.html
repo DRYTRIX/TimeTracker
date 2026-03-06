@@ -15,7 +15,7 @@
 ) }}
 
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ _('Total Items') }}</p>
@@ -27,7 +27,7 @@
         </div>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ _('Total Warehouses') }}</p>
@@ -39,7 +39,7 @@
         </div>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ _('Total Inventory Value') }}</p>
@@ -51,7 +51,7 @@
         </div>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ _('Low Stock Items') }}</p>
@@ -64,9 +64,9 @@
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h2 class="text-lg font-semibold mb-4">{{ _('Available Reports') }}</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <a href="{{ url_for('inventory.reports_valuation') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
             <i class="fas fa-coins text-2xl mb-2"></i>
             <p class="font-semibold">{{ _('Stock Valuation') }}</p>

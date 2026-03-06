@@ -1,5 +1,8 @@
 const axios = require('axios');
-const { storeGet, storeSet } = require('../../../../shared/config');
+// In renderer, config is provided by shared/config.js (loaded before bundle). In Node (tests), use require.
+const cfg = (typeof window !== 'undefined' && window.config) ? window.config : (function() { try { return require('../../../shared/config'); } catch (_) { return {}; } })();
+const storeGet = cfg.storeGet || (async (k) => null);
+const storeSet = cfg.storeSet || (async (k, v) => {});
 
 class ApiClient {
   constructor(baseUrl) {
@@ -131,6 +134,14 @@ class ApiClient {
   async getProject(id) {
     return await this.client.get(`/api/v1/projects/${id}`);
   }
+
+  async getClients({ status, page, perPage }) {
+    const params = {};
+    if (status) params.status = status;
+    if (page) params.page = page;
+    if (perPage) params.per_page = perPage;
+    return await this.client.get('/api/v1/clients', { params });
+  }
   
   // Tasks endpoints
   async getTasks({ projectId, status, page, perPage }) {
@@ -150,6 +161,119 @@ class ApiClient {
   // Get time entry by ID
   async getTimeEntry(id) {
     return await this.client.get(`/api/v1/time-entries/${id}`);
+  }
+
+  // Invoices endpoints
+  async getInvoices({ status, clientId, projectId, page, perPage }) {
+    const params = {};
+    if (status) params.status = status;
+    if (clientId) params.client_id = clientId;
+    if (projectId) params.project_id = projectId;
+    if (page) params.page = page;
+    if (perPage) params.per_page = perPage;
+
+    return await this.client.get('/api/v1/invoices', { params });
+  }
+
+  async getInvoice(id) {
+    return await this.client.get(`/api/v1/invoices/${id}`);
+  }
+
+  async createInvoice(data) {
+    return await this.client.post('/api/v1/invoices', data);
+  }
+
+  async updateInvoice(id, data) {
+    return await this.client.put(`/api/v1/invoices/${id}`, data);
+  }
+
+  // Expenses endpoints
+  async getExpenses({ projectId, category, startDate, endDate, page, perPage }) {
+    const params = {};
+    if (projectId) params.project_id = projectId;
+    if (category) params.category = category;
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    if (page) params.page = page;
+    if (perPage) params.per_page = perPage;
+
+    return await this.client.get('/api/v1/expenses', { params });
+  }
+
+  async createExpense(data) {
+    return await this.client.post('/api/v1/expenses', data);
+  }
+
+  async getCapacityReport({ startDate, endDate }) {
+    return await this.client.get('/api/v1/reports/capacity', {
+      params: { start_date: startDate, end_date: endDate },
+    });
+  }
+
+  async getTimesheetPeriods({ status, startDate, endDate }) {
+    const params = {};
+    if (status) params.status = status;
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    return await this.client.get('/api/v1/timesheet-periods', { params });
+  }
+
+  async submitTimesheetPeriod(periodId) {
+    return await this.client.post(`/api/v1/timesheet-periods/${periodId}/submit`);
+  }
+
+  async approveTimesheetPeriod(periodId, { comment } = {}) {
+    const data = {};
+    if (comment) data.comment = comment;
+    return await this.client.post(`/api/v1/timesheet-periods/${periodId}/approve`, data);
+  }
+
+  async rejectTimesheetPeriod(periodId, { reason } = {}) {
+    const data = {};
+    if (reason) data.reason = reason;
+    return await this.client.post(`/api/v1/timesheet-periods/${periodId}/reject`, data);
+  }
+
+  async getLeaveTypes() {
+    return await this.client.get('/api/v1/time-off/leave-types');
+  }
+
+  async getTimeOffRequests({ status, startDate, endDate }) {
+    const params = {};
+    if (status) params.status = status;
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    return await this.client.get('/api/v1/time-off/requests', { params });
+  }
+
+  async createTimeOffRequest({ leaveTypeId, startDate, endDate, requestedHours, comment, submit }) {
+    const data = {
+      leave_type_id: leaveTypeId,
+      start_date: startDate,
+      end_date: endDate,
+      submit: submit !== undefined ? submit : true,
+    };
+    if (requestedHours !== undefined && requestedHours !== null) data.requested_hours = requestedHours;
+    if (comment) data.comment = comment;
+    return await this.client.post('/api/v1/time-off/requests', data);
+  }
+
+  async getTimeOffBalances({ userId } = {}) {
+    const params = {};
+    if (userId) params.user_id = userId;
+    return await this.client.get('/api/v1/time-off/balances', { params });
+  }
+
+  async approveTimeOffRequest(requestId, { comment } = {}) {
+    const data = {};
+    if (comment) data.comment = comment;
+    return await this.client.post(`/api/v1/time-off/requests/${requestId}/approve`, data);
+  }
+
+  async rejectTimeOffRequest(requestId, { comment } = {}) {
+    const data = {};
+    if (comment) data.comment = comment;
+    return await this.client.post(`/api/v1/time-off/requests/${requestId}/reject`, data);
   }
 }
 

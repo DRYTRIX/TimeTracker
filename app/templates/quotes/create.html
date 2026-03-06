@@ -18,7 +18,7 @@
     actions_html='<a href="' + url_for("quotes.list_quotes") + '" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"><i class="fas fa-arrow-left mr-2"></i>Back</a>'
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST" action="{{ url_for('quotes.create_quote') }}" novalidate id="quote-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -29,16 +29,16 @@
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Client') }} <span class="text-red-500">*</span></label>
+                    <label for="client_id" class="form-label">{{ _('Client') }} <span class="text-red-500">*</span></label>
                     {{ client_select('client_id', clients, required=True, only_one_client=only_one_client|default(false), single_client=single_client) }}
                 </div>
                 <div>
-                    <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Title') }} <span class="text-red-500">*</span></label>
+                    <label for="title" class="form-label">{{ _('Title') }} <span class="text-red-500">*</span></label>
                     <input type="text" id="title" name="title" required value="{{ request.form.get('title','') }}" placeholder="{{ _('Quote title') }}" class="form-input">
                 </div>
             </div>
             <div class="mt-4">
-                <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Description') }}</label>
+                <label for="description" class="form-label">{{ _('Description') }}</label>
                 <textarea id="description" name="description" rows="4" placeholder="{{ _('Quote description') }}" class="form-input">{{ request.form.get('description','') }}</textarea>
             </div>
         </div>
@@ -86,11 +86,11 @@
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                    <label for="tax_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Tax Rate (%)') }}</label>
+                    <label for="tax_rate" class="form-label">{{ _('Tax Rate (%)') }}</label>
                     <input type="number" step="0.01" min="0" max="100" id="tax_rate" name="tax_rate" value="{{ request.form.get('tax_rate','0') }}" class="form-input" data-calc-trigger>
                 </div>
                 <div>
-                    <label for="currency_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Currency') }}</label>
+                    <label for="currency_code" class="form-label">{{ _('Currency') }}</label>
                     <select id="currency_code" name="currency_code" class="form-input">
                         <option value="EUR" {% if request.form.get('currency_code','EUR') == 'EUR' %}selected{% endif %}>EUR</option>
                         <option value="USD" {% if request.form.get('currency_code') == 'USD' %}selected{% endif %}>USD</option>
@@ -98,7 +98,7 @@
                     </select>
                 </div>
                 <div>
-                    <label for="valid_until" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Valid Until') }}</label>
+                    <label for="valid_until" class="form-label">{{ _('Valid Until') }}</label>
                     <input type="date" id="valid_until" name="valid_until" value="{{ request.form.get('valid_until','') }}" class="form-input">
                 </div>
             </div>
@@ -110,7 +110,7 @@
                 <i class="fas fa-calendar-alt mr-2 text-primary"></i>{{ _('Payment Terms') }}
             </h2>
             <div>
-                <label for="payment_terms" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Payment Terms') }}</label>
+                <label for="payment_terms" class="form-label">{{ _('Payment Terms') }}</label>
                 <select id="payment_terms" name="payment_terms" class="form-input">
                     <option value="">{{ _('Select payment terms') }}</option>
                     <option value="Due on Receipt" {% if request.form.get('payment_terms') == 'Due on Receipt' %}selected{% endif %}>{{ _('Due on Receipt') }}</option>
@@ -135,7 +135,7 @@
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                 <div>
-                    <label for="discount_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Discount Type') }}</label>
+                    <label for="discount_type" class="form-label">{{ _('Discount Type') }}</label>
                     <select id="discount_type" name="discount_type" class="form-input">
                         <option value="">{{ _('No Discount') }}</option>
                         <option value="percentage" {% if request.form.get('discount_type') == 'percentage' %}selected{% endif %}>{{ _('Percentage (%)') }}</option>
@@ -143,17 +143,17 @@
                     </select>
                 </div>
                 <div>
-                    <label for="discount_amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Discount Amount') }}</label>
+                    <label for="discount_amount" class="form-label">{{ _('Discount Amount') }}</label>
                     <input type="number" step="0.01" min="0" id="discount_amount" name="discount_amount" value="{{ request.form.get('discount_amount','') }}" placeholder="{{ _('0.00') }}" class="form-input">
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label for="coupon_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Coupon Code') }}</label>
+                    <label for="coupon_code" class="form-label">{{ _('Coupon Code') }}</label>
                     <input type="text" id="coupon_code" name="coupon_code" value="{{ request.form.get('coupon_code','') }}" placeholder="{{ _('Optional coupon code') }}" class="form-input" style="text-transform: uppercase;">
                 </div>
                 <div>
-                    <label for="discount_reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Discount Reason') }}</label>
+                    <label for="discount_reason" class="form-label">{{ _('Discount Reason') }}</label>
                     <input type="text" id="discount_reason" name="discount_reason" value="{{ request.form.get('discount_reason','') }}" placeholder="{{ _('Reason for discount') }}" class="form-input">
                 </div>
             </div>
@@ -178,12 +178,12 @@
                 <i class="fas fa-file-alt mr-2 text-primary"></i>{{ _('Additional Information') }}
             </h2>
             <div class="mb-4">
-                <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Internal Notes') }}</label>
+                <label for="notes" class="form-label">{{ _('Internal Notes') }}</label>
                 <textarea id="notes" name="notes" rows="3" placeholder="{{ _('Internal notes (not visible to client)') }}" class="form-input">{{ request.form.get('notes','') }}</textarea>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('These notes are only visible to your team') }}</p>
             </div>
             <div>
-                <label for="terms" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Terms and Conditions') }}</label>
+                <label for="terms" class="form-label">{{ _('Terms and Conditions') }}</label>
                 <textarea id="terms" name="terms" rows="4" placeholder="{{ _('Terms and conditions') }}" class="form-input">{{ request.form.get('terms','') }}</textarea>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('These terms will be visible to the client') }}</p>
             </div>

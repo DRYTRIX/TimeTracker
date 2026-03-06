@@ -18,7 +18,7 @@
 ) }}
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-lg font-semibold mb-4">{{ _('Template Details') }}</h3>
         <dl class="space-y-2">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Project</dt>
@@ -49,7 +49,7 @@
         </dl>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-lg font-semibold mb-4">{{ _('Invoice Settings') }}</h3>
         <dl class="space-y-2">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Due Date (Days)</dt>
@@ -88,10 +88,10 @@
 </div>
 
 {% if generated_invoices %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h3 class="text-lg font-semibold mb-4">{{ _('Recently Generated Invoices') }}</h3>
     <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 responsive-cards">
             <thead class="bg-gray-50 dark:bg-gray-800">
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{{ _('Invoice Number') }}</th>
@@ -104,13 +104,13 @@
             <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                 {% for invoice in generated_invoices %}
                 <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{{ invoice.invoice_number }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ invoice.issue_date|format_date if invoice.issue_date else 'N/A' }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ invoice.currency_code }} {{ invoice.total_amount }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100" data-label="{{ _('Invoice Number') }}">{{ invoice.invoice_number }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400" data-label="{{ _('Issue Date') }}">{{ invoice.issue_date|format_date if invoice.issue_date else 'N/A' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400" data-label="{{ _('Amount') }}">{{ invoice.currency_code }} {{ invoice.total_amount }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm" data-label="{{ _('Status') }}">
                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ invoice.status }}</span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" data-label="{{ _('Actions') }}">
                         <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="text-primary hover:text-primary/80">View</a>
                     </td>
                 </tr>

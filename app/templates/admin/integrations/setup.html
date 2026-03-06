@@ -17,7 +17,7 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
@@ -154,11 +154,11 @@
         </div>
         {% endif %}
         
-        <div class="mt-6 flex gap-4">
+        <div class="mt-6 flex flex-col sm:flex-row gap-3">
             <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                 <i class="fas fa-save mr-2"></i>{{ _('Save Credentials') }}
             </button>
-            <a href="{{ url_for('admin.list_integrations_admin') }}" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+            <a href="{{ url_for('admin.list_integrations_admin') }}" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-center">
                 {{ _('Cancel') }}
             </a>
         </div>
@@ -166,7 +166,7 @@
 </div>
 
 {% if provider == 'google_calendar' %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mt-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mt-6">
     <h3 class="text-lg font-semibold mb-4">{{ _('How Google Calendar Works') }}</h3>
     <div class="space-y-3 text-sm text-text-muted-light dark:text-text-muted-dark">
         <p>
@@ -184,7 +184,7 @@
     </div>
 </div>
 {% elif integration and integration.is_active %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mt-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mt-6">
     <h3 class="text-lg font-semibold mb-4">{{ _('Connection Status') }}</h3>
     <div class="flex items-center gap-4">
         <span class="px-3 py-1 rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
@@ -196,7 +196,7 @@
     </div>
 </div>
 {% elif integration %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mt-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mt-6">
     <h3 class="text-lg font-semibold mb-4">{{ _('Next Steps') }}</h3>
     <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
         {{ _('After saving credentials, connect the integration:') }}

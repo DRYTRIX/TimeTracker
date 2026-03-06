@@ -1,30 +1,38 @@
 """
 PEPPOL AS4 message packaging and transmission.
 
-Builds AS4 (ebMS 3.0 / PEPPOL AS4 profile) messages and sends to recipient
-access point. Optional signing when certificate is configured.
+EXPERIMENTAL: This native AS4 implementation provides basic message
+packaging and HTTP POST to a recipient access point. It does NOT
+implement full Peppol AS4 compliance:
+- No WS-Security / XML digital signatures
+- No AS4 receipt handling / reliability
+- Payload is gzip-compressed as declared in the SOAP header
+
+For production use, prefer the Generic transport with a standards-compliant
+Peppol Access Point provider.
 """
 
 from __future__ import annotations
 
-import email.generator
-import email.policy
+import gzip
 import os
 import uuid
 from datetime import datetime, timezone
-from email.message import EmailMessage
-from io import BytesIO
 from typing import Any, Dict, Optional
 
 import requests
 
 from app.integrations.peppol import PEPPOL_BIS3_PROFILE_ID
 
-# PEPPOL AS4 profile: invoice document type URN
 PEPPOL_INVOICE_DOCUMENT_TYPE = (
     "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice"
     "##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1"
 )
+
+# Flag surfaced in settings UI so users know this is not production-grade
+NATIVE_TRANSPORT_EXPERIMENTAL = True
+
+_BOUNDARY = "as4boundary"
 
 
 class PeppolAS4Error(RuntimeError):
@@ -71,7 +79,7 @@ def _soap_envelope(
           <eb3:ConversationId>{document_id}</eb3:ConversationId>
         </eb3:CollaborationInfo>
         <eb3:PayloadInfo>
-          <eb3:PartInfo href="cid:payload@europe.eu">
+          <eb3:PartInfo href="cid:payload@peppol.eu">
             <eb3:Schema location="{document_type_id}"/>
             <eb3:PartProperties>
               <eb3:Property name="MimeType">application/xml</eb3:Property>
@@ -97,8 +105,11 @@ def build_as4_message(
     document_type_id: str = PEPPOL_INVOICE_DOCUMENT_TYPE,
 ) -> bytes:
     """
-    Build AS4 multipart message (SOAP + payload).
+    Build AS4 multipart/related message (SOAP + gzip-compressed payload).
     Returns raw bytes suitable for POST to recipient AP.
+
+    The payload is gzip-compressed to match the CompressionType declared
+    in the SOAP header (application/gzip).
     """
     message_id = f"<{uuid.uuid4().hex}@peppol>"
     soap = _soap_envelope(
@@ -111,33 +122,32 @@ def build_as4_message(
         process_id=process_id,
         document_type_id=document_type_id,
     )
-    payload_bytes = ubl_xml.encode("utf-8")
+    payload_bytes = gzip.compress(ubl_xml.encode("utf-8"))
 
-    # Build MIME multipart/related: root SOAP + payload part
-    policy = email.policy.EmailPolicy(line_max=0)
-    msg = EmailMessage(policy=policy)
-    msg["Content-Type"] = "multipart/related; boundary=as4boundary; type=application/soap+xml"
-    msg.set_boundary("as4boundary")
-
-    msg.add_attachment(
-        soap.encode("utf-8"),
-        maintype="application",
-        subtype="soap+xml",
-        disposition="inline",
-        headers={"Content-ID": "<root.message@europe.eu>"},
+    # Build MIME multipart/related manually for cross-Python-version compatibility
+    parts = []
+    parts.append(
+        f"--{_BOUNDARY}\r\n"
+        f"Content-Type: application/soap+xml; charset=utf-8\r\n"
+        f"Content-ID: <root.message@peppol.eu>\r\n"
+        f"\r\n"
     )
-    msg.add_attachment(
-        payload_bytes,
-        maintype="application",
-        subtype="xml",
-        disposition="attachment",
-        headers={"Content-ID": "<payload@europe.eu>"},
+    parts.append(soap)
+    parts.append(
+        f"\r\n--{_BOUNDARY}\r\n"
+        f"Content-Type: application/gzip\r\n"
+        f"Content-ID: <payload@peppol.eu>\r\n"
+        f"Content-Transfer-Encoding: binary\r\n"
+        f"\r\n"
     )
 
-    buf = BytesIO()
-    gen = email.generator.BytesGenerator(buf, policy=policy)
-    gen.flatten(msg)
-    return buf.getvalue()
+    result = b""
+    for p in parts:
+        result += p.encode("utf-8") if isinstance(p, str) else p
+    result += payload_bytes
+    result += f"\r\n--{_BOUNDARY}--\r\n".encode("utf-8")
+
+    return result
 
 
 def send_as4_message(
@@ -157,7 +167,7 @@ def send_as4_message(
         raise PeppolAS4Error("Recipient AP URL must be HTTP or HTTPS")
 
     headers = {
-        "Content-Type": "multipart/related; boundary=as4boundary; type=application/soap+xml",
+        "Content-Type": f"multipart/related; boundary={_BOUNDARY}; type=application/soap+xml",
         "Accept": "application/xml",
     }
     cert = None
@@ -180,7 +190,6 @@ def send_as4_message(
         result["error"] = resp.text[:2000] if resp.text else f"HTTP {resp.status_code}"
         raise PeppolAS4Error(f"Recipient AP returned {resp.status_code}: {result.get('error', '')}")
 
-    # Try to parse SOAP response for MessageId or receipt
     if resp.text and "MessageId" in resp.text:
-        result["message_id"] = resp.text  # Caller can parse if needed
+        result["message_id"] = resp.text
     return result

@@ -11,13 +11,13 @@
     <a href="{{ url_for('scheduled_reports.list_scheduled') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Scheduled Reports') }}</a>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST" action="{{ url_for('scheduled_reports.create_scheduled') }}" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div class="md:col-span-2">
-                <label for="saved_view_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Report View') }} *</label>
+                <label for="saved_view_id" class="form-label">{{ _('Report View') }} *</label>
                 <select id="saved_view_id" name="saved_view_id" required class="form-input">
                     <option value="">{{ _('Select a saved report view...') }}</option>
                     {% for view in saved_views %}
@@ -28,7 +28,7 @@
             </div>
             
             <div class="md:col-span-2">
-                <label for="recipients" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label for="recipients" class="form-label">
                     <i class="fas fa-envelope mr-2"></i>{{ _('Email Recipients') }} *
                 </label>
                 <input type="text" id="recipients" name="recipients" required class="form-input" placeholder="{{ _('email1@example.com, email2@example.com') }}">
@@ -41,7 +41,7 @@
             </div>
             
             <div>
-                <label for="cadence" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Frequency') }} *</label>
+                <label for="cadence" class="form-label">{{ _('Frequency') }} *</label>
                 <select id="cadence" name="cadence" required class="form-input" onchange="toggleCronField()">
                     <option value="">{{ _('Select frequency...') }}</option>
                     <option value="daily">{{ _('Daily') }}</option>
@@ -60,7 +60,7 @@
             </div>
             
             <div id="cronField" class="hidden">
-                <label for="cron" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Cron Expression') }}</label>
+                <label for="cron" class="form-label">{{ _('Cron Expression') }}</label>
                 <input type="text" id="cron" name="cron" class="form-input" placeholder="0 8 * * *">
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Cron format: minute hour day month weekday') }}</p>
             </div>
@@ -75,12 +75,12 @@
                 </div>
                 <div id="customFieldInput" class="hidden space-y-4 mt-3">
                     <div>
-                        <label for="custom_field_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Custom Field Name') }}</label>
+                        <label for="custom_field_name" class="form-label">{{ _('Custom Field Name') }}</label>
                         <input type="text" id="custom_field_name" name="custom_field_name" class="form-input" placeholder="salesman">
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('The custom field name to iterate over (e.g., "salesman"). A separate report will be generated for each unique value.') }}</p>
                     </div>
                     <div>
-                        <label for="email_distribution_mode" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Email distribution') }}</label>
+                        <label for="email_distribution_mode" class="form-label">{{ _('Email distribution') }}</label>
                         <select id="email_distribution_mode" name="email_distribution_mode" class="form-input" onchange="toggleRecipientTemplateInput()">
                             <option value="single">{{ _('All reports to recipients below') }}</option>
                             <option value="mapping">{{ _('Per value: SalesmanEmailMapping table') }}</option>
@@ -88,7 +88,7 @@
                         </select>
                     </div>
                     <div id="recipientTemplateInput" class="hidden">
-                        <label for="recipient_email_template" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Recipient email template') }}</label>
+                        <label for="recipient_email_template" class="form-label">{{ _('Recipient email template') }}</label>
                         <input type="text" id="recipient_email_template" name="recipient_email_template" class="form-input" placeholder="{value}@test.de">
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Use {value} for the value (e.g. KF); {value}@test.de yields KF@test.de. Use {value_lower} for lowercase, e.g. {value_lower}@test.de yields kf@test.de.') }}</p>
                     </div>
@@ -96,9 +96,9 @@
             </div>
         </div>
         
-        <div class="flex justify-end gap-4">
-            <a href="{{ url_for('scheduled_reports.list_scheduled') }}" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Cancel') }}</a>
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">{{ _('Create Schedule') }}</button>
+        <div class="flex flex-col sm:flex-row justify-end gap-3">
+            <a href="{{ url_for('scheduled_reports.list_scheduled') }}" class="px-4 py-2 min-h-[44px] inline-flex items-center justify-center border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Cancel') }}</a>
+            <button type="submit" class="bg-primary text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-primary/90 transition-colors">{{ _('Create Schedule') }}</button>
         </div>
     </form>
 </div>

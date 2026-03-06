@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             {% if current_user.is_admin %}
             <!-- Admin notification -->
             <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- Project and Task Selection -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
-                        <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="project_id" class="form-label">
                             <i class="fas fa-project-diagram mr-1"></i>{{ _('Project') }}
                         </label>
                         <select class="form-input" id="project_id" name="project_id" required>
@@ -226,7 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select the project this time entry belongs to') }}</p>
                     </div>
                     <div>
-                        <label for="task_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="task_id" class="form-label">
                             <i class="fas fa-tasks mr-1"></i>{{ _('Task (Optional)') }}
                         </label>
                         <select class="form-input" id="task_id" name="task_id">
@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- Start Date/Time -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
-                        <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="start_date" class="form-label">
                             <i class="fas fa-clock mr-1"></i>{{ _('Start Date') }}
                         </label>
                         <input type="date" class="form-input" id="start_date" name="start_date" 
@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('When the work started') }}</p>
                     </div>
                     <div>
-                        <label for="start_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="start_time" class="form-label">
                             <i class="fas fa-clock mr-1"></i>{{ _('Start Time') }}
                         </label>
                         <input type="time" class="form-input" id="start_time" name="start_time" 
@@ -264,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- End Date/Time -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
-                        <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="end_date" class="form-label">
                             <i class="fas fa-stop-circle mr-1"></i>{{ _('End Date') }}
                         </label>
                         <input type="date" class="form-input" id="end_date" name="end_date" 
@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('When the work ended (leave empty if still running)') }}</p>
                     </div>
                     <div>
-                        <label for="end_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="end_time" class="form-label">
                             <i class="fas fa-stop-circle mr-1"></i>{{ _('End Time') }}
                         </label>
                         <input type="time" class="form-input" id="end_time" name="end_time" 
@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- Source, Billable, Duration -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div>
-                        <label for="source" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="source" class="form-label">
                             <i class="fas fa-tag mr-1"></i>{{ _('Source') }}
                         </label>
                         <select class="form-input" id="source" name="source">
@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 <!-- Notes -->
                 <div class="mb-6">
-                    <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="notes" class="form-label">
                         <i class="fas fa-sticky-note mr-1"></i>{{ _('Notes') }}
                     </label>
                     <div class="markdown-editor-wrapper">
@@ -322,7 +322,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 <!-- Tags -->
                 <div class="mb-6">
-                    <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="tags" class="form-label">
                         <i class="fas fa-tags mr-1"></i>{{ _('Tags') }}
                     </label>
                     <input type="text" class="form-input" id="tags" name="tags" placeholder="{{ _('tag1, tag2') }}" value="{{ timer.tags or '' }}">
@@ -340,7 +340,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
                     <div>
-                        <label for="invoice_number" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="invoice_number" class="form-label">
                             <i class="fas fa-file-invoice mr-1"></i>{{ _('Invoice Number') }}
                         </label>
                         <input type="text" class="form-input" id="invoice_number" name="invoice_number" placeholder="{{ _('Internal invoice reference') }}" value="{{ timer.invoice_number or '' }}" maxlength="100">
@@ -350,7 +350,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 <!-- Reason for Change -->
                 <div class="mb-6">
-                    <label for="reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="reason" class="form-label">
                         <i class="fas fa-comment-alt mr-1"></i>{{ _('Reason for Change') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs">({{ _('Optional but recommended') }})</span>
                     </label>
                     <textarea class="form-input" id="reason" name="reason" rows="3" placeholder="{{ _('e.g., Corrected duration, updated project assignment, etc.') }}"></textarea>
@@ -359,7 +359,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 <!-- Action Buttons -->
                 <div class="flex flex-col sm:flex-row justify-between gap-3 mt-8 pt-6 border-t border-border-light dark:border-border-dark">
-                    <div class="flex gap-2">
+                    <div class="flex flex-col sm:flex-row gap-2">
                         <a href="{{ url_for('main.dashboard') }}" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
                             <i class="fas fa-arrow-left mr-1"></i>{{ _('Back') }}
                         </a>
@@ -367,7 +367,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <i class="fas fa-copy mr-1"></i>{{ _('Duplicate') }}
                         </a>
                     </div>
-                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors" id="adminEditSaveBtn">
+                    <button type="submit" class="w-full sm:w-auto bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors" id="adminEditSaveBtn">
                         <i class="fas fa-save mr-2"></i>{{ _('Save Changes') }}
                     </button>
                 </div>
@@ -422,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 <!-- Notes -->
                 <div class="mb-6">
-                    <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="notes" class="form-label">
                         <i class="fas fa-sticky-note mr-1"></i>{{ _('Notes') }}
                     </label>
                     <div class="markdown-editor-wrapper">
@@ -434,7 +434,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- Tags and Billable -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div class="md:col-span-2">
-                        <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="tags" class="form-label">
                             <i class="fas fa-tags mr-1"></i>{{ _('Tags') }}
                         </label>
                         <input type="text" class="form-input" id="tags" name="tags" placeholder="{{ _('tag1, tag2') }}" value="{{ timer.tags or '' }}">
@@ -461,7 +461,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
                     <div>
-                        <label for="invoice_number" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="invoice_number" class="form-label">
                             <i class="fas fa-file-invoice mr-1"></i>{{ _('Invoice Number') }}
                         </label>
                         <input type="text" class="form-input" id="invoice_number" name="invoice_number" placeholder="{{ _('Internal invoice reference') }}" value="{{ timer.invoice_number or '' }}" maxlength="100">
@@ -471,7 +471,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 <!-- Reason for Change -->
                 <div class="mb-6">
-                    <label for="reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label for="reason" class="form-label">
                         <i class="fas fa-comment-alt mr-1"></i>{{ _('Reason for Change') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs">({{ _('Optional but recommended') }})</span>
                     </label>
                     <textarea class="form-input" id="reason" name="reason" rows="3" placeholder="{{ _('e.g., Corrected duration, updated project assignment, etc.') }}"></textarea>
@@ -480,7 +480,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 <!-- Action Buttons -->
                 <div class="flex flex-col sm:flex-row justify-between gap-3 mt-8 pt-6 border-t border-border-light dark:border-border-dark">
-                    <div class="flex gap-2">
+                    <div class="flex flex-col sm:flex-row gap-2">
                         <a href="{{ url_for('main.dashboard') }}" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
                             <i class="fas fa-arrow-left mr-1"></i>{{ _('Back') }}
                         </a>
@@ -488,7 +488,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <i class="fas fa-copy mr-1"></i>{{ _('Duplicate') }}
                         </a>
                     </div>
-                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">
+                    <button type="submit" class="w-full sm:w-auto bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">
                         <i class="fas fa-save mr-2"></i>{{ _('Save Changes') }}
                     </button>
                 </div>
@@ -499,7 +499,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <!-- Sidebar with additional info -->
     <div class="lg:col-span-1 space-y-6">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Entry Details') }}</h2>
             <div class="space-y-3 text-sm">
                 <div>

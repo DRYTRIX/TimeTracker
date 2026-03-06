@@ -1,0 +1,173 @@
+﻿{% extends "base.html" %}
+{% block title %}{{ _('GPS Mileage Tracking') }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-6 space-y-6">
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-text-light dark:text-text-dark">{{ _('GPS Mileage Tracking') }}</h1>
+        <a class="btn btn-secondary" href="{{ url_for('mileage.list_mileage') }}">{{ _('Back to Mileage') }}</a>
+    </div>
+
+    <div class="card p-4 space-y-4">
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+            {{ _('Use your device GPS to record route points, calculate distance, and convert the track into an expense.') }}
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+                <label class="text-xs">{{ _('Project') }}</label>
+                <select id="gpsProjectId" class="form-select">
+                    <option value="">{{ _('None') }}</option>
+                    {% for p in projects %}
+                    <option value="{{ p.id }}">{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="text-xs">{{ _('Rate per km') }}</label>
+                <input id="gpsRatePerKm" type="number" step="0.0001" class="form-input" placeholder="0.50">
+            </div>
+            <div class="flex items-end gap-2">
+                <button id="gpsStartBtn" class="btn btn-primary" type="button">{{ _('Start') }}</button>
+                <button id="gpsStopBtn" class="btn btn-danger" type="button" disabled>{{ _('Stop') }}</button>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+            <button id="gpsAddPointBtn" class="btn btn-secondary" type="button" disabled>{{ _('Add Point') }}</button>
+            <button id="gpsCreateExpenseBtn" class="btn btn-secondary" type="button" disabled>{{ _('Create Expense from Track') }}</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            <div class="p-3 rounded bg-background-light dark:bg-background-dark">
+                <div>{{ _('Track ID') }}: <span id="gpsTrackId">-</span></div>
+                <div>{{ _('Status') }}: <span id="gpsStatus">{{ _('Idle') }}</span></div>
+            </div>
+            <div class="p-3 rounded bg-background-light dark:bg-background-dark">
+                <div>{{ _('Distance (km)') }}: <span id="gpsDistanceKm">-</span></div>
+                <div>{{ _('Distance (miles)') }}: <span id="gpsDistanceMiles">-</span></div>
+            </div>
+        </div>
+
+        <div id="gpsMessages" class="text-sm"></div>
+    </div>
+</div>
+
+<script>
+(() => {
+  const startBtn = document.getElementById('gpsStartBtn');
+  const stopBtn = document.getElementById('gpsStopBtn');
+  const addPointBtn = document.getElementById('gpsAddPointBtn');
+  const createExpenseBtn = document.getElementById('gpsCreateExpenseBtn');
+  const trackIdEl = document.getElementById('gpsTrackId');
+  const statusEl = document.getElementById('gpsStatus');
+  const distanceKmEl = document.getElementById('gpsDistanceKm');
+  const distanceMilesEl = document.getElementById('gpsDistanceMiles');
+  const messagesEl = document.getElementById('gpsMessages');
+
+  let currentTrackId = null;
+
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+  function setMessage(msg, isError = false) {
+    messagesEl.textContent = msg;
+    messagesEl.className = isError ? 'text-sm text-red-500' : 'text-sm text-green-600';
+  }
+
+  function setActive(active) {
+    startBtn.disabled = active;
+    stopBtn.disabled = !active;
+    addPointBtn.disabled = !active;
+    createExpenseBtn.disabled = active;
+    statusEl.textContent = active ? '{{ _('Tracking') }}' : '{{ _('Idle') }}';
+  }
+
+  function getLocation() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocation not supported'));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        }),
+        (err) => reject(err),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    });
+  }
+
+  async function postJson(url, payload) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify(payload || {}),
+    });
+    const data = await res.json();
+    if (!res.ok || data.success === false) {
+      throw new Error(data.message || data.error || 'Request failed');
+    }
+    return data;
+  }
+
+  startBtn.addEventListener('click', async () => {
+    try {
+      const loc = await getLocation();
+      const data = await postJson('{{ url_for('mileage.web_gps_start') }}', loc);
+      currentTrackId = data.track_id;
+      trackIdEl.textContent = String(currentTrackId);
+      setActive(true);
+      setMessage('{{ _('GPS tracking started') }}');
+    } catch (e) {
+      setMessage(e.message, true);
+    }
+  });
+
+  addPointBtn.addEventListener('click', async () => {
+    if (!currentTrackId) return;
+    try {
+      const loc = await getLocation();
+      await postJson(`/api/mileage/gps/${currentTrackId}/point`, loc);
+      setMessage('{{ _('Track point added') }}');
+    } catch (e) {
+      setMessage(e.message, true);
+    }
+  });
+
+  stopBtn.addEventListener('click', async () => {
+    if (!currentTrackId) return;
+    try {
+      const loc = await getLocation();
+      const data = await postJson(`/api/mileage/gps/${currentTrackId}/stop`, loc);
+      distanceKmEl.textContent = data.distance_km ?? '-';
+      distanceMilesEl.textContent = data.distance_miles ?? '-';
+      setActive(false);
+      createExpenseBtn.disabled = false;
+      setMessage('{{ _('GPS tracking stopped') }}');
+    } catch (e) {
+      setMessage(e.message, true);
+    }
+  });
+
+  createExpenseBtn.addEventListener('click', async () => {
+    if (!currentTrackId) return;
+    try {
+      const payload = {
+        project_id: Number(document.getElementById('gpsProjectId').value) || null,
+        rate_per_km: Number(document.getElementById('gpsRatePerKm').value) || null,
+      };
+      const data = await postJson(`/api/mileage/gps/${currentTrackId}/expense`, payload);
+      setMessage(`{{ _('Expense created') }}: #${data.expense?.id || ''}`);
+      createExpenseBtn.disabled = true;
+    } catch (e) {
+      setMessage(e.message, true);
+    }
+  });
+})();
+</script>
+{% endblock %}

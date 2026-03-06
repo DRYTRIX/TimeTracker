@@ -60,7 +60,7 @@
 
 <!-- Active Alerts Section -->
 {% if active_alerts %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm animated-card mb-6">
     <h2 class="text-lg font-semibold mb-4 flex items-center">
         <i class="fas fa-bell mr-2 text-primary"></i>
         {{ _('Active Alerts') }}
@@ -68,7 +68,7 @@
     <div class="space-y-3">
         {% for alert in active_alerts %}
         <div id="alert-{{ alert.id }}" class="p-4 rounded-lg border {% if alert.alert_level == 'critical' %}bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700{% elif alert.alert_level == 'warning' %}bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700{% else %}bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700{% endif %}">
-            <div class="flex items-start justify-between gap-4">
+            <div class="flex flex-col sm:flex-row items-start justify-between gap-4">
                 <div class="flex-grow">
                     <div class="flex items-center mb-1">
                         {% if alert.alert_level == 'critical' %}
@@ -86,7 +86,7 @@
                         {{ _('Created') }}: {{ alert.created_at|user_datetime }}
                     </p>
                 </div>
-                <div class="flex gap-2 flex-shrink-0">
+                <div class="flex flex-col sm:flex-row gap-2 flex-shrink-0">
                     <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=alert.project_id) }}" 
                        class="bg-primary text-white px-3 py-2 rounded text-sm hover:bg-primary-dark transition">
                         <i class="fas fa-eye"></i> {{ _('View') }}
@@ -104,13 +104,13 @@
 {% endif %}
 
 <!-- Project Budget Status -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm animated-card">
     <h2 class="text-lg font-semibold mb-4 flex items-center">
         <i class="fas fa-tasks mr-2 text-primary"></i>
         {{ _('Project Budget Status') }}
     </h2>
     <div class="overflow-x-auto">
-        <table class="w-full text-left" id="projectBudgetTable">
+        <table class="w-full text-left responsive-cards" id="projectBudgetTable">
             <thead class="border-b border-border-light dark:border-border-dark">
                 <tr>
                     <th class="p-4">{{ _('Project') }}</th>
@@ -125,19 +125,19 @@
             <tbody>
                 {% for project in projects %}
                 <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                    <td class="p-4">
+                    <td class="p-4" data-label="Project">
                         <strong>{{ project.project_name }}</strong>
                     </td>
-                    <td class="p-4">{{ project.budget_amount|format_currency }}</td>
-                    <td class="p-4">{{ project.consumed_amount|format_currency }}</td>
-                    <td class="p-4">
+                    <td class="p-4" data-label="Budget">{{ project.budget_amount|format_currency }}</td>
+                    <td class="p-4" data-label="Consumed">{{ project.consumed_amount|format_currency }}</td>
+                    <td class="p-4" data-label="Remaining">
                         {% if project.remaining_amount >= 0 %}
                         <span class="text-green-600 dark:text-green-400">{{ project.remaining_amount|format_currency }}</span>
                         {% else %}
                         <span class="text-red-600 dark:text-red-400">{{ project.remaining_amount|abs|format_currency }} {{ _('over') }}</span>
                         {% endif %}
                     </td>
-                    <td class="p-4">
+                    <td class="p-4" data-label="Progress">
                         <div class="flex items-center gap-2">
                             <div class="flex-grow bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden" style="min-width: 150px;">
                                 <div class="h-full {% if project.consumed_percentage >= 100 %}bg-red-500{% elif project.consumed_percentage >= project.threshold_percent %}bg-yellow-500{% else %}bg-green-500{% endif %} rounded-full transition-all duration-300 flex items-center justify-center text-xs text-white font-semibold"
@@ -147,7 +147,7 @@
                             </div>
                         </div>
                     </td>
-                    <td class="p-4">
+                    <td class="p-4" data-label="Status">
                         {% if project.status == 'over_budget' %}
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
                             <i class="fas fa-exclamation-circle mr-1"></i>{{ _('Over Budget') }}
@@ -166,7 +166,7 @@
                         </span>
                         {% endif %}
                     </td>
-                    <td class="p-4">
+                    <td class="p-4" data-label="Actions">
                         <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.project_id) }}" 
                            class="bg-primary text-white px-3 py-1.5 rounded text-sm hover:bg-primary-dark transition">
                             <i class="fas fa-chart-line"></i> {{ _('Details') }}

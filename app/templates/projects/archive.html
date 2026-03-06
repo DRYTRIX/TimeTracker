@@ -16,7 +16,7 @@
 ) }}
 
 <div class="max-w-2xl mx-auto">
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="mb-6">
             <div class="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                 <i class="fas fa-info-circle text-amber-600 dark:text-amber-400 text-xl"></i>
@@ -37,7 +37,7 @@
             
             <div class="space-y-4">
                 <div>
-                    <label for="reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label for="reason" class="form-label">
                         {{ _('Reason for Archiving') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('Optional') }})</span>
                     </label>
                     <textarea 
@@ -54,10 +54,10 @@
 
                 <!-- Common reasons as quick select buttons -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label class="form-label">
                         {{ _('Quick Select') }}
                     </label>
-                    <div class="flex flex-wrap gap-2">
+                    <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
                         <button type="button" onclick="setReason('{{ _('Project completed successfully') }}')" class="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                             {{ _('Project Completed') }}
                         </button>

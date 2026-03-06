@@ -10,6 +10,7 @@
 ] %}
 
 {% set actions_html %}
+<div class="flex flex-wrap gap-2">
 <a href="{{ url_for('leads.edit_lead', lead_id=lead.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-edit mr-2"></i>{{ _('Edit') }}</a>
 <a href="{{ url_for('leads.create_activity', lead_id=lead.id) }}" class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors"><i class="fas fa-plus mr-2"></i>{{ _('Add Activity') }}</a>
 {% if not lead.is_converted and not lead.is_lost %}
@@ -20,6 +21,7 @@
     <button type="submit" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"><i class="fas fa-times mr-2"></i>{{ _('Mark Lost') }}</button>
 </form>
 {% endif %}
+</div>
 {% endset %}
 
 {{ page_header(
@@ -33,7 +35,7 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Left Column: Lead Details -->
     <div class="lg:col-span-1 space-y-6">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Contact Information') }}</h2>
             <div class="space-y-4">
                 {% if lead.company_name %}
@@ -72,7 +74,7 @@
             </div>
         </div>
 
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Lead Details') }}</h2>
             <div class="space-y-4">
                 <div>
@@ -109,14 +111,14 @@
         </div>
 
         {% if lead.notes %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Notes') }}</h2>
             <p class="text-sm whitespace-pre-wrap">{{ lead.notes }}</p>
         </div>
         {% endif %}
 
         {% if lead.tags %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Tags') }}</h2>
             <div class="flex flex-wrap gap-2">
                 {% for tag in lead.tags.split(',') if tag.strip() %}
@@ -129,7 +131,7 @@
 
     <!-- Right Column: Activities -->
     <div class="lg:col-span-2">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold">{{ _('Activity') }}</h2>
                 <a href="{{ url_for('leads.create_activity', lead_id=lead.id) }}" class="bg-primary text-white px-3 py-1.5 rounded-lg hover:bg-primary/90 transition-colors text-sm">

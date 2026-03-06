@@ -21,7 +21,7 @@
             
             <!-- Template Name -->
             <div class="mb-6">
-                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label for="name" class="form-label">
                     Template Name <span class="text-red-500">*</span>
                 </label>
                 <input type="text" 
@@ -35,7 +35,7 @@
 
             <!-- Project -->
             <div class="mb-6">
-                <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label for="project_id" class="form-label">
                     Project
                 </label>
                 <select id="project_id" 
@@ -54,7 +54,7 @@
 
             <!-- Task -->
             <div class="mb-6">
-                <label for="task_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label for="task_id" class="form-label">
                     Task
                 </label>
                 <select id="task_id" 
@@ -73,7 +73,7 @@
 
             <!-- Default Duration -->
             <div class="mb-6">
-                <label for="default_duration" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label for="default_duration" class="form-label">
                     Default Duration (hours)
                 </label>
                 <input type="number" 
@@ -91,7 +91,7 @@
 
             <!-- Default Notes -->
             <div class="mb-6">
-                <label for="default_notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label for="default_notes" class="form-label">
                     Default Notes
                 </label>
                 <textarea id="default_notes" 
@@ -103,7 +103,7 @@
 
             <!-- Tags -->
             <div class="mb-6">
-                <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label for="tags" class="form-label">
                     Tags
                 </label>
                 <input type="text" 
@@ -118,9 +118,9 @@
             </div>
 
             <!-- Actions -->
-            <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <a href="{{ url_for('time_entry_templates.list_templates') }}" 
-                   class="btn btn-secondary">
+                   class="btn btn-secondary text-center">
                     Cancel
                 </a>
                 <button type="submit" class="btn btn-primary">

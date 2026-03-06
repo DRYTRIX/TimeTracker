@@ -15,14 +15,14 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-            <label for="date_from" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Date From') }}</label>
+            <label for="date_from" class="form-label">{{ _('Date From') }}</label>
             <input type="date" name="date_from" id="date_from" value="{{ date_from or '' }}" class="form-input">
         </div>
         <div>
-            <label for="date_to" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Date To') }}</label>
+            <label for="date_to" class="form-label">{{ _('Date To') }}</label>
             <input type="date" name="date_to" id="date_to" value="{{ date_to or '' }}" class="form-input">
         </div>
         <div class="flex items-end">
@@ -31,14 +31,14 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
     <div class="mb-4">
         <p class="text-sm text-gray-500 dark:text-gray-400">
             {{ _('Turnover rate indicates how many times inventory is sold and replaced in a year. Higher rates indicate faster-moving items.') }}
         </p>
     </div>
     
-    <table class="table table-zebra w-full text-left">
+    <table class="table table-zebra w-full text-left responsive-cards">
         <thead>
             <tr>
                 <th class="p-4">{{ _('Item') }}</th>
@@ -52,16 +52,16 @@
         <tbody>
             {% for data in turnover_data %}
             <tr>
-                <td class="p-4">
+                <td class="p-4 mobile-card-header" data-label="{{ _('Item') }}">
                     <a href="{{ url_for('inventory.view_stock_item', item_id=data.item.id) }}" class="text-primary hover:underline">
                         {{ data.item.name }}
                     </a>
                 </td>
-                <td class="p-4 font-mono text-sm">{{ data.item.sku }}</td>
-                <td class="p-4">{{ "%.2f"|format(data.total_sold) }}</td>
-                <td class="p-4">{{ "%.2f"|format(data.avg_stock) }}</td>
-                <td class="p-4 font-semibold">{{ "%.2f"|format(data.turnover_rate) }}</td>
-                <td class="p-4">
+                <td class="p-4 font-mono text-sm" data-label="{{ _('SKU') }}">{{ data.item.sku }}</td>
+                <td class="p-4" data-label="{{ _('Total Sold') }}">{{ "%.2f"|format(data.total_sold) }}</td>
+                <td class="p-4" data-label="{{ _('Avg Stock Level') }}">{{ "%.2f"|format(data.avg_stock) }}</td>
+                <td class="p-4 font-semibold" data-label="{{ _('Turnover Rate') }}">{{ "%.2f"|format(data.turnover_rate) }}</td>
+                <td class="p-4" data-label="{{ _('Status') }}">
                     {% if data.turnover_rate >= 4 %}
                         <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Fast Moving') }}</span>
                     {% elif data.turnover_rate >= 2 %}

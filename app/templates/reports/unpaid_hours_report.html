@@ -6,22 +6,22 @@
     <h1 class="text-2xl font-bold">{{ _('Unpaid Hours Report') }}</h1>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
-    <form id="filterForm" method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+    <form id="filterForm" method="GET" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <div>
-            <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="client_id" class="form-label">
                 <i class="fas fa-building mr-1"></i>Client
             </label>
             {{ client_select('client_id', clients, selected_id=selected_client, required=False, only_one_client=only_one_client|default(false), single_client=single_client) }}
         </div>
         <div>
-            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="start_date" class="form-label">
                 <i class="fas fa-calendar mr-1"></i>Start Date
             </label>
             <input type="date" name="start_date" id="start_date" value="{{ start_date }}" class="form-input user-date-input">
         </div>
         <div>
-            <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label for="end_date" class="form-label">
                 <i class="fas fa-calendar mr-1"></i>End Date
             </label>
             <input type="date" name="end_date" id="end_date" value="{{ end_date }}" class="form-input user-date-input">
@@ -38,7 +38,7 @@
 </div>
 
 <!-- Summary -->
-<div id="summarySection" class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div id="summarySection" class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <h2 class="text-xl font-semibold mb-4">{{ _('Summary') }}</h2>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
@@ -57,7 +57,7 @@
 </div>
 
 <!-- Client Data Table -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h2 class="text-xl font-semibold mb-4">{{ _('Unpaid Hours by Client') }}</h2>
     <div id="loadingIndicator" class="hidden text-center py-8">
         <i class="fas fa-spinner fa-spin text-4xl mb-4 text-primary"></i>
@@ -66,7 +66,7 @@
     <div id="clientDataContainer">
         {% if client_data %}
         <div class="overflow-x-auto">
-            <table class="w-full text-left">
+            <table class="w-full text-left responsive-cards">
                 <thead>
                     <tr class="border-b border-border-light dark:border-border-dark">
                         <th class="p-3 font-semibold w-8"></th>
@@ -79,22 +79,22 @@
                 <tbody id="clientTableBody">
                     {% for data in client_data %}
                     <tr class="client-row border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer" data-client-id="{{ data.client.id }}">
-                        <td class="p-3">
+                        <td class="p-3" data-label="">
                             <i class="fas fa-chevron-right expand-icon text-gray-400"></i>
                         </td>
-                        <td class="p-3">
+                        <td class="p-3" data-label="{{ _('Client') }}">
                             <div class="font-medium">{{ data.client.name }}</div>
                             {% if data.client.email %}
                             <div class="text-sm text-gray-600 dark:text-gray-400">{{ data.client.email }}</div>
                             {% endif %}
                         </td>
-                        <td class="p-3">
+                        <td class="p-3" data-label="{{ _('Total Hours') }}">
                             <span class="font-semibold">{{ "%.2f"|format(data.total_hours) }}</span> {{ _('hours') }}
                         </td>
-                        <td class="p-3">
+                        <td class="p-3" data-label="{{ _('Estimated Amount') }}">
                             <span class="font-semibold text-green-600 dark:text-green-400">{{ "%.2f"|format(data.estimated_amount) }}</span>
                         </td>
-                        <td class="p-3">
+                        <td class="p-3" data-label="{{ _('Projects') }}"
                             <div class="space-y-1">
                                 {% for project in data.projects %}
                                 <div class="text-sm">

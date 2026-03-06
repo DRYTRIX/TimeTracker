@@ -131,8 +131,12 @@ See [features/](features/) for additional feature documentation.
 
 ### Technical Documentation
 - **[Solution Guide](SOLUTION_GUIDE.md)** — Technical solutions and patterns
+- **[Frontend Quality Gates](development/FRONTEND_QUALITY_GATES.md)** — Accessibility, performance, and modernization (web, desktop, mobile)
 - **[Database Migrations](../migrations/README.md)** — Database schema management
 - **[Implementation Notes](implementation-notes/)** — Development notes and summaries
+
+### Product & Roadmap
+- **[Competitive Analysis](competitive-analysis/README.md)** — Feature gap analysis and phase PRDs
 
 **📖 See [development/README.md](development/README.md) for complete developer documentation**
 

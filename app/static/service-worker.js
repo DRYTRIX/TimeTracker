@@ -6,25 +6,14 @@
 const CACHE_VERSION = 'v1.0.1';
 const CACHE_NAME = `timetracker-${CACHE_VERSION}`;
 
-// Resources to cache immediately
-// Note: External CDN resources are excluded due to CSP restrictions
-// They will be cached on-demand when fetched by the browser
+// Resources to cache immediately (static assets only; never HTML or API)
 const PRECACHE_URLS = [
-    '/',
     '/static/dist/output.css',
     '/static/enhanced-ui.css',
     '/static/enhanced-ui.js',
     '/static/charts.js',
     '/static/interactions.js',
     '/static/images/timetracker-logo.svg'
-];
-
-// Resources to cache on first use
-const RUNTIME_CACHE_URLS = [
-    '/main/dashboard',
-    '/projects/',
-    '/tasks/',
-    '/timer/manual_entry'
 ];
 
 // Install event - precache critical resources
@@ -68,6 +57,16 @@ self.addEventListener('activate', event => {
     );
 });
 
+// Paths that must never be cached (authenticated or sensitive)
+function shouldNotCache(url) {
+    const path = url.pathname;
+    return path.startsWith('/api/') ||
+        path.startsWith('/auth/') ||
+        path === '/login' || path === '/logout' ||
+        path.startsWith('/setup') ||
+        path.startsWith('/admin/');
+}
+
 // Fetch event - serve from cache when offline
 self.addEventListener('fetch', event => {
     const { request } = event;
@@ -78,15 +77,9 @@ self.addEventListener('fetch', event => {
         return;
     }
     
-    // Skip caching for uploads directory (user-uploaded content that changes)
-    if (url.pathname.startsWith('/uploads/')) {
-        event.respondWith(fetch(request)); // Always fetch fresh
-        return;
-    }
-    
-    // API requests - network first, cache fallback
-    if (url.pathname.startsWith('/api/')) {
-        event.respondWith(networkFirst(request));
+    // Never cache uploads, API, auth, or admin
+    if (url.pathname.startsWith('/uploads/') || shouldNotCache(url)) {
+        event.respondWith(networkOnly(request));
         return;
     }
     
@@ -99,30 +92,30 @@ self.addEventListener('fetch', event => {
         return;
     }
     
-    // HTML pages - network first, cache fallback
+    // HTML/document - never cache (may be user-specific); network only with offline fallback
     if (request.mode === 'navigate' || request.destination === 'document') {
-        event.respondWith(networkFirst(request));
+        event.respondWith(networkOnly(request));
         return;
     }
     
-    // Default: network first
-    event.respondWith(networkFirst(request));
+    // Default: network only (do not cache unknown types)
+    event.respondWith(networkOnly(request));
 });
 
-// Cache first strategy
+// Cache first strategy (only for static assets; never used for API/auth)
 async function cacheFirst(request) {
     const cache = await caches.open(CACHE_NAME);
     const cached = await cache.match(request);
     
     if (cached) {
-        // Return cached and update in background
         updateCache(request);
         return cached;
     }
     
     try {
         const response = await fetch(request);
-        if (response.ok) {
+        const cacheControl = response.headers.get('Cache-Control') || '';
+        if (response.ok && !cacheControl.includes('no-store') && !cacheControl.includes('no-cache')) {
             cache.put(request, response.clone());
         }
         return response;
@@ -132,46 +125,33 @@ async function cacheFirst(request) {
     }
 }
 
-// Network first strategy
-async function networkFirst(request) {
-    const cache = await caches.open(CACHE_NAME);
-    
+// Network only - never cache; for navigate return offline page when unreachable
+async function networkOnly(request) {
     try {
         const response = await fetch(request);
-        
-        if (response.ok) {
-            // Cache successful responses
-            cache.put(request, response.clone());
+        if (response.headers.get('Cache-Control') && response.headers.get('Cache-Control').includes('no-store')) {
+            return response;
         }
-        
         return response;
     } catch (error) {
-        const cached = await cache.match(request);
-        
-        if (cached) {
-            return cached;
-        }
-        
-        // Return offline page for navigation requests
         if (request.mode === 'navigate') {
             return createOfflinePage();
         }
-        
-        return new Response('Offline', { 
-            status: 503, 
+        return new Response('Offline', {
+            status: 503,
             statusText: 'Service Unavailable',
             headers: new Headers({ 'Content-Type': 'text/plain' })
         });
     }
 }
 
-// Update cache in background
+// Update cache in background (only for static assets)
 async function updateCache(request) {
     const cache = await caches.open(CACHE_NAME);
-    
     try {
         const response = await fetch(request);
-        if (response.ok) {
+        const cacheControl = response.headers.get('Cache-Control') || '';
+        if (response.ok && !cacheControl.includes('no-store') && !cacheControl.includes('no-cache')) {
             await cache.put(request, response);
         }
     } catch (error) {

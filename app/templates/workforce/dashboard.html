@@ -1,0 +1,258 @@
+﻿{% extends "base.html" %}
+{% block title %}{{ _('Workforce Governance') }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-6 space-y-6">
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-text-light dark:text-text-dark">{{ _('Workforce Governance') }}</h1>
+        <form method="post" action="{{ url_for('workforce.create_period') }}" class="flex items-end gap-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div>
+                <label class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Reference date') }}</label>
+                <input type="date" name="reference_date" class="form-input" />
+            </div>
+            <button class="btn btn-primary" type="submit">{{ _('Create/Get Period') }}</button>
+        </form>
+    </div>
+
+    {% if users %}
+    <form method="get" class="card p-4 flex gap-2 items-end">
+        <div>
+            <label class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('User') }}</label>
+            <select name="user_id" class="form-select">
+                {% for u in users %}
+                    <option value="{{ u.id }}" {% if u.id == selected_user_id %}selected{% endif %}>{{ u.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Start date') }}</label>
+            <input type="date" name="start_date" class="form-input" />
+        </div>
+        <div>
+            <label class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('End date') }}</label>
+            <input type="date" name="end_date" class="form-input" />
+        </div>
+        <button class="btn btn-secondary" type="submit">{{ _('Filter') }}</button>
+    </form>
+    {% endif %}
+
+    <div class="card p-4 flex flex-wrap gap-2 items-center justify-between">
+    <div>
+        <h2 class="text-lg font-semibold">{{ _('Exports') }}</h2>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Download payroll, capacity, and compliance exports') }}</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+        <a class="btn btn-secondary" href="{{ url_for('workforce.payroll_export_csv', start_date=cap_start.isoformat(), end_date=cap_end.isoformat(), user_id=selected_user_id) }}">{{ _('Payroll CSV') }}</a>
+        <a class="btn btn-secondary" href="{{ url_for('workforce.capacity_export_csv', start_date=cap_start.isoformat(), end_date=cap_end.isoformat()) }}">{{ _('Capacity CSV') }}</a>
+        {% if can_approve %}
+        <a class="btn btn-secondary" href="{{ url_for('workforce.locked_periods_export_csv', start_date=cap_start.isoformat(), end_date=cap_end.isoformat()) }}">{{ _('Locked Periods CSV') }}</a>
+        <a class="btn btn-secondary" href="{{ url_for('workforce.audit_events_export_csv', start_date=cap_start.isoformat(), end_date=cap_end.isoformat(), user_id=selected_user_id if current_user.is_admin else current_user.id) }}">{{ _('Audit Events CSV') }}</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <section class="card p-4">
+            <h2 class="text-lg font-semibold mb-3">{{ _('Timesheet Periods') }}</h2>
+            <div class="space-y-3">
+                {% for p in periods %}
+                <div class="border border-border-light dark:border-border-dark rounded p-3">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="font-medium">{{ p.period_start }} - {{ p.period_end }}</div>
+                            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Status') }}: {{ p.status }}</div>
+                        </div>
+                        <div class="flex gap-2 flex-wrap justify-end">
+                            {% if p.status != 'closed' and p.user_id == current_user.id %}
+                            <form method="post" action="{{ url_for('workforce.submit_period', period_id=p.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-secondary" type="submit">{{ _('Submit') }}</button>
+                            </form>
+                            {% endif %}
+                            {% if can_approve and p.status in ['submitted', 'rejected'] %}
+                            <form method="post" action="{{ url_for('workforce.approve_period', period_id=p.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-primary" type="submit">{{ _('Approve') }}</button>
+                            </form>
+                            <form method="post" action="{{ url_for('workforce.reject_period', period_id=p.id) }}" class="flex gap-2">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="text" name="reason" class="form-input form-input-sm" placeholder="{{ _('Reason') }}" required>
+                                <button class="btn btn-sm btn-danger" type="submit">{{ _('Reject') }}</button>
+                            </form>
+                            {% endif %}
+                            {% if current_user.is_admin and p.status != 'closed' %}
+                            <form method="post" action="{{ url_for('workforce.close_period', period_id=p.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-danger" type="submit">{{ _('Close') }}</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No timesheet periods yet.') }}</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="card p-4">
+            <h2 class="text-lg font-semibold mb-3">{{ _('Leave Balances') }}</h2>
+            <div class="overflow-auto">
+                <table class="table w-full">
+                    <thead>
+                        <tr>
+                            <th>{{ _('Type') }}</th>
+                            <th>{{ _('Allowance') }}</th>
+                            <th>{{ _('Used') }}</th>
+                            <th>{{ _('Remaining') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in balances %}
+                        <tr>
+                            <td>{{ b.leave_type_name }}</td>
+                            <td>{{ b.allowance_hours if b.allowance_hours is not none else '-' }}</td>
+                            <td>{{ b.used_hours }}</td>
+                            <td>{{ b.remaining_hours if b.remaining_hours is not none else '-' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No leave types configured.') }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <section class="card p-4 space-y-3">
+            <h2 class="text-lg font-semibold">{{ _('Time-Off Requests') }}</h2>
+            <form method="post" action="{{ url_for('workforce.create_time_off_request') }}" class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select name="leave_type_id" class="form-select" required>
+                    <option value="">{{ _('Select leave type') }}</option>
+                    {% for lt in leave_types %}
+                        {% if lt.enabled %}
+                        <option value="{{ lt.id }}">{{ lt.name }} ({{ lt.code }})</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <input type="number" step="0.25" name="requested_hours" class="form-input" placeholder="{{ _('Requested hours') }}">
+                <input type="date" name="start_date" class="form-input" required>
+                <input type="date" name="end_date" class="form-input" required>
+                <input type="text" name="comment" class="form-input md:col-span-2" placeholder="{{ _('Comment') }}">
+                <button class="btn btn-primary md:col-span-2" type="submit">{{ _('Submit time-off request') }}</button>
+            </form>
+
+            <div class="space-y-2">
+                {% for r in leave_requests %}
+                {% set r_status = r.status.value if r.status.value is defined else r.status %}
+                <div class="border border-border-light dark:border-border-dark rounded p-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <div class="font-medium">{{ r.leave_type.name if r.leave_type else r.leave_type_id }}: {{ r.start_date }} - {{ r.end_date }}</div>
+                            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Status') }}: {{ r_status }}</div>
+                        </div>
+                        {% if can_approve and r_status in ['submitted', 'draft'] %}
+                        <div class="flex gap-2">
+                            <form method="post" action="{{ url_for('workforce.approve_time_off_request', request_id=r.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-primary" type="submit">{{ _('Approve') }}</button>
+                            </form>
+                            <form method="post" action="{{ url_for('workforce.reject_time_off_request', request_id=r.id) }}" class="flex gap-1">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="text" name="comment" class="form-input form-input-sm" placeholder="{{ _('Reason') }}">
+                                <button class="btn btn-sm btn-danger" type="submit">{{ _('Reject') }}</button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="card p-4 space-y-3">
+            <h2 class="text-lg font-semibold">{{ _('Capacity') }} ({{ cap_start.isoformat() }} - {{ cap_end.isoformat() }})</h2>
+            <div class="overflow-auto">
+                <table class="table w-full">
+                    <thead>
+                        <tr>
+                            <th>{{ _('User') }}</th>
+                            <th>{{ _('Expected') }}</th>
+                            <th>{{ _('Allocated') }}</th>
+                            <th>{{ _('Time Off') }}</th>
+                            <th>{{ _('Available') }}</th>
+                            <th>{{ _('Utilization %') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in capacity %}
+                        <tr>
+                            <td>{{ row.username }}</td>
+                            <td>{{ row.expected_hours }}</td>
+                            <td>{{ row.allocated_hours }}</td>
+                            <td>{{ row.time_off_hours }}</td>
+                            <td>{{ row.available_hours }}</td>
+                            <td>{{ row.utilization_pct }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6">{{ _('No capacity data available.') }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    {% if current_user.is_admin %}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section class="card p-4 space-y-2">
+            <h3 class="font-semibold">{{ _('Timesheet Policy') }}</h3>
+            <form method="post" action="{{ url_for('workforce.update_policy') }}" class="space-y-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="number" name="auto_lock_days" class="form-input" value="{{ policy.auto_lock_days if policy else '' }}" placeholder="{{ _('Auto lock days') }}">
+                <input type="text" name="approver_user_ids" class="form-input" value="{{ policy.approver_user_ids if policy else '' }}" placeholder="{{ _('Approver user IDs (comma separated)') }}">
+                <label class="flex items-center gap-2"><input type="checkbox" name="enable_multi_level_approval" {% if policy and policy.enable_multi_level_approval %}checked{% endif %}> {{ _('Enable multi-level approval') }}</label>
+                <label class="flex items-center gap-2"><input type="checkbox" name="require_rejection_comment" {% if not policy or policy.require_rejection_comment %}checked{% endif %}> {{ _('Require rejection comment') }}</label>
+                <label class="flex items-center gap-2"><input type="checkbox" name="enable_admin_override" {% if not policy or policy.enable_admin_override %}checked{% endif %}> {{ _('Enable admin override') }}</label>
+                <button class="btn btn-primary" type="submit">{{ _('Save policy') }}</button>
+            </form>
+        </section>
+
+        <section class="card p-4 space-y-2">
+            <h3 class="font-semibold">{{ _('Leave Types') }}</h3>
+            <form method="post" action="{{ url_for('workforce.create_leave_type') }}" class="space-y-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="text" name="name" class="form-input" placeholder="{{ _('Name') }}" required>
+                <input type="text" name="code" class="form-input" placeholder="{{ _('Code') }}" required>
+                <input type="number" step="0.25" name="annual_allowance_hours" class="form-input" placeholder="{{ _('Annual allowance (hours)') }}">
+                <input type="number" step="0.25" name="accrual_hours_per_month" class="form-input" placeholder="{{ _('Accrual hours per month') }}">
+                <label class="flex items-center gap-2"><input type="checkbox" name="is_paid" checked> {{ _('Paid leave') }}</label>
+                <button class="btn btn-secondary" type="submit">{{ _('Add leave type') }}</button>
+            </form>
+        </section>
+
+        <section class="card p-4 space-y-2">
+            <h3 class="font-semibold">{{ _('Company Holidays') }}</h3>
+            <form method="post" action="{{ url_for('workforce.create_holiday') }}" class="space-y-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="text" name="name" class="form-input" placeholder="{{ _('Holiday name') }}" required>
+                <input type="date" name="start_date" class="form-input" required>
+                <input type="date" name="end_date" class="form-input" required>
+                <input type="text" name="region" class="form-input" placeholder="{{ _('Region (optional)') }}">
+                <button class="btn btn-secondary" type="submit">{{ _('Add holiday') }}</button>
+            </form>
+            <div class="max-h-40 overflow-auto text-sm">
+                {% for h in holidays %}
+                    <div>{{ h.start_date }} - {{ h.end_date }}: {{ h.name }}{% if h.region %} ({{ h.region }}){% endif %}</div>
+                {% else %}
+                    <div>{{ _('No holidays configured.') }}</div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

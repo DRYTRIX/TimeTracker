@@ -38,22 +38,22 @@
     
     <!-- List View -->
     <div id="listView" class="view-container">
-    <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
-        <thead class="border-b border-border-light dark:border-border-dark">
+    <table class="table table-zebra w-full text-left enhanced-table responsive-cards" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
+        <thead class="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
             <tr>
                 {% if current_user.is_admin %}
-                <th class="p-4 w-12">
+                <th class="px-4 py-3 w-12">
                     <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllProjects()">
                 </th>
                 {% endif %}
-                <th class="p-4 w-10"></th>
-                <th class="p-4" data-sortable>Name</th>
-                <th class="p-4" data-sortable>Client</th>
-                <th class="p-4" data-sortable>Status</th>
-                <th class="p-4" data-sortable>Billable</th>
-                <th class="p-4" data-sortable>Rate</th>
-                <th class="p-4" data-sortable>Budget</th>
-                <th class="p-4">Actions</th>
+                <th class="px-4 py-3 w-10"></th>
+                <th class="px-4 py-3" data-sortable>Name</th>
+                <th class="px-4 py-3" data-sortable>Client</th>
+                <th class="px-4 py-3" data-sortable>Status</th>
+                <th class="px-4 py-3" data-sortable>Billable</th>
+                <th class="px-4 py-3" data-sortable>Rate</th>
+                <th class="px-4 py-3" data-sortable>Budget</th>
+                <th class="px-4 py-3">Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -75,15 +75,15 @@
                         <i class="{{ 'fas fa-star text-yellow-500' if is_fav else 'far fa-star text-gray-400' }}"></i>
                     </button>
                 </td>
-                <td class="p-4 font-medium"><a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="text-primary hover:underline">{{ project.name }}</a></td>
-                <td class="p-4">
+                <td class="p-4 font-medium mobile-card-header" data-label="{{ _('Name') }}"><a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="text-primary hover:underline">{{ project.name }}</a></td>
+                <td class="p-4" data-label="{{ _('Client') }}">
                     {% if project.client_id %}
                         <a href="{{ url_for('clients.view_client', client_id=project.client_id) }}" class="text-primary hover:underline">{{ project.client }}</a>
                     {% else %}
                         {{ project.client }}
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Status') }}">
                     {% if project.status == 'active' %}
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Active</span>
                     {% elif project.status == 'inactive' %}
@@ -92,21 +92,21 @@
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">Archived</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Billable') }}">
                     {% if project.billable %}
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Billable</span>
                     {% else %}
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">Non-billable</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Rate') }}">
                     {% if project.hourly_rate %}
                         <span class="px-2 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary">{{ '%.2f'|format(project.hourly_rate|float) }}/h</span>
                     {% else %}
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Budget') }}">
                     {% if project.budget_amount %}
                         {% set consumed = (project.budget_consumed_amount or 0.0) %}
                         {% set total = project.budget_amount|float %}
@@ -123,7 +123,7 @@
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4 mobile-actions" data-label="{{ _('Actions') }}">
                     <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="text-primary hover:underline">View</a>
                 </td>
             </tr>

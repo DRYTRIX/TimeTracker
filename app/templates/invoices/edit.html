@@ -1,57 +1,53 @@
 {% extends "base.html" %}
+{% from 'components/ui.html' import page_header %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">{{ _('Edit Invoice') }} <span class="text-primary">{{ invoice.invoice_number }}</span></h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Update invoice details, items, and terms') }}</p>
-    </div>
-    <div class="flex gap-2 mt-4 md:mt-0">
-        <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">
-            <i class="fas fa-arrow-left mr-2"></i>{{ _('Back') }}
-        </a>
-        <button type="button" onclick="showSendEmailModal()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
-            <i class="fas fa-envelope mr-1"></i>{{ _('Send Email') }}
-        </button>
-    </div>
-</div>
+{% set actions %}
+<a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary">
+    <i class="fas fa-arrow-left mr-2"></i>{{ _('Back') }}
+</a>
+<button type="button" onclick="showSendEmailModal()" class="btn bg-blue-500 text-white hover:bg-blue-600">
+    <i class="fas fa-envelope mr-1"></i>{{ _('Send Email') }}
+</button>
+{% endset %}
+{{ page_header('fas fa-file-invoice', _('Edit Invoice') ~ ' ' ~ invoice.invoice_number, subtitle_text=_('Update invoice details, items, and terms'), actions_html=actions, breadcrumbs=[{'text': _('Invoices'), 'url': url_for('invoices.list_invoices')}, {'text': _('Edit Invoice')}]) }}
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <form method="POST" id="editInvoiceForm" novalidate data-validate-form>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label for="client_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client Name') }} *</label>
+                        <label for="client_name" class="form-label">{{ _('Client Name') }} *</label>
                         <input type="text" name="client_name" id="client_name" value="{{ invoice.client_name }}" required class="form-input">
                     </div>
                     <div>
-                        <label for="client_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client Email') }}</label>
+                        <label for="client_email" class="form-label">{{ _('Client Email') }}</label>
                         <input type="email" name="client_email" id="client_email" value="{{ invoice.client_email }}" class="form-input">
                     </div>
                     <div>
-                        <label for="due_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Due Date') }} *</label>
+                        <label for="due_date" class="form-label">{{ _('Due Date') }} *</label>
                         <input type="date" name="due_date" id="due_date" value="{{ invoice.due_date.strftime('%Y-%m-%d') }}" required class="form-input user-date-input">
                     </div>
                     <div>
-                        <label for="tax_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Tax Rate (%)') }}</label>
+                        <label for="tax_rate" class="form-label">{{ _('Tax Rate (%)') }}</label>
                         <input type="number" name="tax_rate" id="tax_rate" value="{{ invoice.tax_rate }}" step="0.01" class="form-input">
                     </div>
                     <div class="md:col-span-2">
-                        <label for="client_address" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client Address') }}</label>
+                        <label for="client_address" class="form-label">{{ _('Client Address') }}</label>
                         <textarea name="client_address" id="client_address" rows="3" class="form-input">{{ invoice.client_address }}</textarea>
                     </div>
                     <div class="md:col-span-2">
-                        <label for="buyer_reference" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Buyer reference (PEPPOL BT-10)') }}</label>
+                        <label for="buyer_reference" class="form-label">{{ _('Buyer reference (PEPPOL BT-10)') }}</label>
                         <input type="text" name="buyer_reference" id="buyer_reference" value="{{ invoice.buyer_reference or '' }}" class="form-input" placeholder="{{ _('Optional; used in PEPPOL UBL') }}">
                     </div>
                     <div class="md:col-span-2">
-                        <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Notes') }}</label>
+                        <label for="notes" class="form-label">{{ _('Notes') }}</label>
                         <textarea name="notes" id="notes" rows="3" class="form-input">{{ invoice.notes or '' }}</textarea>
                     </div>
                     <div class="md:col-span-2">
-                        <label for="terms" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Terms') }}</label>
+                        <label for="terms" class="form-label">{{ _('Terms') }}</label>
                         <textarea name="terms" id="terms" rows="3" class="form-input">{{ invoice.terms or '' }}</textarea>
                     </div>
                 </div>
@@ -66,7 +62,7 @@
                             </h2>
                             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Time-based services and hourly work') }}</p>
                         </div>
-                        <button type="button" id="add-item" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition shadow-sm">
+                        <button type="button" id="add-item" class="btn btn-primary shadow-sm">
                             <i class="fas fa-plus mr-2"></i>{{ _('Add Item') }}
                         </button>
                     </div>
@@ -154,7 +150,7 @@
                             </h2>
                             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Billable expenses such as travel, meals, and materials') }}</p>
                         </div>
-                        <button type="button" id="add-expense" class="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition shadow-sm">
+                        <button type="button" id="add-expense" class="btn bg-amber-600 text-white hover:bg-amber-700 shadow-sm">
                             <i class="fas fa-plus mr-2"></i>{{ _('Add Expense') }}
                         </button>
                     </div>
@@ -226,7 +222,7 @@
                             </h2>
                             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Products, materials, licenses, and other goods') }}</p>
                         </div>
-                        <button type="button" id="add-good" class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition shadow-sm">
+                        <button type="button" id="add-good" class="btn bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm">
                             <i class="fas fa-plus mr-2"></i>{{ _('Add Good') }}
                         </button>
                     </div>
@@ -286,16 +282,16 @@
                     </div>
                 </div>
 
-                <div class="mt-6 flex justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
-                    <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">{{ _('Cancel') }}</a>
-                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Save Changes') }}</button>
+                <div class="mt-6 flex flex-wrap justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
+                    <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+                    <button type="submit" class="btn btn-primary">{{ _('Save Changes') }}</button>
                 </div>
             </form>
         </div>
     </div>
 
     <div class="space-y-4">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow sticky top-4">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm sticky top-4">
             <h3 class="text-lg font-semibold mb-4 flex items-center">
                 <i class="fas fa-calculator mr-2 text-primary"></i>
                 {{ _('Live Preview') }}
@@ -376,14 +372,14 @@
             </div>
         </div>
 
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-3">{{ _('Quick Actions') }}</h3>
             <div class="grid grid-cols-1 gap-2">
-                <a href="{{ url_for('invoices.generate_from_time', invoice_id=invoice.id) }}" class="inline-flex items-center justify-center px-3 py-2 text-sm rounded-md border border-primary text-primary hover:bg-primary/10"><i class="fas fa-clock mr-2"></i>{{ _('Generate from Time/Costs') }}</a>
-                <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="inline-flex items-center justify-center px-3 py-2 text-sm rounded-md bg-emerald-600 text-white hover:bg-emerald-700"><i class="fas fa-cash-register mr-2"></i>{{ _('Record Payment') }}</a>
-                <a href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="inline-flex items-center justify-center px-3 py-2 text-sm rounded-md border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark"><i class="fas fa-file-pdf mr-2"></i>{{ _('Export PDF') }}</a>
-                <a href="{{ url_for('invoices.export_invoice_csv', invoice_id=invoice.id) }}" class="inline-flex items-center justify-center px-3 py-2 text-sm rounded-md border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark"><i class="fas fa-file-csv mr-2"></i>{{ _('Export CSV') }}</a>
-                <a href="{{ url_for('invoices.duplicate_invoice', invoice_id=invoice.id) }}" class="inline-flex items-center justify-center px-3 py-2 text-sm rounded-md border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark"><i class="fas fa-clone mr-2"></i>{{ _('Duplicate Invoice') }}</a>
+                <a href="{{ url_for('invoices.generate_from_time', invoice_id=invoice.id) }}" class="btn btn-sm border border-primary text-primary hover:bg-primary/10"><i class="fas fa-clock mr-2"></i>{{ _('Generate from Time/Costs') }}</a>
+                <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="btn btn-sm bg-emerald-600 text-white hover:bg-emerald-700"><i class="fas fa-cash-register mr-2"></i>{{ _('Record Payment') }}</a>
+                <a href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="btn btn-sm btn-secondary"><i class="fas fa-file-pdf mr-2"></i>{{ _('Export PDF') }}</a>
+                <a href="{{ url_for('invoices.export_invoice_csv', invoice_id=invoice.id) }}" class="btn btn-sm btn-secondary"><i class="fas fa-file-csv mr-2"></i>{{ _('Export CSV') }}</a>
+                <a href="{{ url_for('invoices.duplicate_invoice', invoice_id=invoice.id) }}" class="btn btn-sm btn-secondary"><i class="fas fa-clone mr-2"></i>{{ _('Duplicate Invoice') }}</a>
             </div>
         </div>
     </div>
@@ -729,18 +725,18 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <!-- Send Email Modal -->
-<div id="sendEmailModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-  <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-card-light dark:bg-card-dark">
+<div id="sendEmailModal" class="hidden fixed inset-0 bg-black/50 overflow-y-auto h-full w-full z-50">
+  <div class="relative top-20 mx-auto p-5 max-w-sm w-full sm:w-96 bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark mx-4 sm:mx-auto">
     <div class="mt-3">
       <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Send Invoice via Email</h3>
       <form id="sendEmailForm" onsubmit="sendInvoiceEmail(event)">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="mb-4">
-          <label for="recipient_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Recipient Email *</label>
+          <label for="recipient_email" class="form-label">Recipient Email *</label>
           <input type="email" id="recipient_email" name="recipient_email" value="{{ invoice.client_email }}" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
         </div>
         <div class="mb-4">
-          <label for="email_template_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email Template (Optional)</label>
+          <label for="email_template_id" class="form-label">Email Template (Optional)</label>
           <select id="email_template_id" name="email_template_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
             <option value="">Default Template</option>
             {% for template in email_templates %}
@@ -749,12 +745,12 @@ document.addEventListener('DOMContentLoaded', function() {
           </select>
         </div>
         <div class="mb-4">
-          <label for="custom_message" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Custom Message') }} ({{ _('Optional') }})</label>
+          <label for="custom_message" class="form-label">{{ _('Custom Message') }} ({{ _('Optional') }})</label>
           <textarea id="custom_message" name="custom_message" rows="4" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"></textarea>
         </div>
-        <div class="flex justify-end space-x-3">
-          <button type="button" onclick="hideSendEmailModal()" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500">Cancel</button>
-          <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Send Email</button>
+        <div class="flex flex-wrap justify-end gap-3">
+          <button type="button" onclick="hideSendEmailModal()" class="btn btn-secondary">Cancel</button>
+          <button type="submit" class="btn bg-blue-500 text-white hover:bg-blue-600">Send Email</button>
         </div>
       </form>
     </div>

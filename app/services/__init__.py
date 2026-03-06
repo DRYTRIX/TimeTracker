@@ -23,6 +23,7 @@ from .peppol_service import PeppolService
 from .permission_service import PermissionService
 from .backup_service import BackupService
 from .health_service import HealthService
+from .workforce_governance_service import WorkforceGovernanceService
 
 __all__ = [
     "TimeTrackingService",
@@ -45,4 +46,5 @@ __all__ = [
     "PermissionService",
     "BackupService",
     "HealthService",
+    "WorkforceGovernanceService",
 ]

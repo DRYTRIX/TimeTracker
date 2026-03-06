@@ -1429,12 +1429,28 @@ def get_entry(entry_id):
 @api_bp.route("/api/users")
 @login_required
 def get_users():
-    """Get active users (admin only)"""
+    """Get active users (admin only). Uses a single aggregate query for total_hours to avoid N+1."""
     if not current_user.is_admin:
         return jsonify({"error": "Access denied"}), 403
 
     users = User.query.filter_by(is_active=True).order_by(User.username).all()
-    return jsonify({"users": [user.to_dict() for user in users]})
+    if not users:
+        return jsonify({"users": []})
+
+    user_ids = [u.id for u in users]
+    rows = (
+        db.session.query(TimeEntry.user_id, db.func.sum(TimeEntry.duration_seconds))
+        .filter(
+            TimeEntry.user_id.in_(user_ids),
+            TimeEntry.end_time.isnot(None),
+        )
+        .group_by(TimeEntry.user_id)
+        .all()
+    )
+    total_hours_by_user = {uid: round((total_seconds or 0) / 3600, 2) for uid, total_seconds in rows}
+    return jsonify({
+        "users": [user.to_dict(total_hours_override=total_hours_by_user.get(user.id)) for user in users]
+    })
 
 
 @api_bp.route("/api/stats")

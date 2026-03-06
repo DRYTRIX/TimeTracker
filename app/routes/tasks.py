@@ -960,18 +960,101 @@ def bulk_update_status():
     return redirect(url_for("tasks.list_tasks"))
 
 
+@tasks_bp.route("/tasks/bulk-update-due-date", methods=["POST"])
+@login_required
+def bulk_update_due_date():
+    """Update due date for multiple tasks at once (e.g. from overdue page). Accepts JSON or form."""
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        task_ids = [str(x) for x in data.get("task_ids") or []]
+        due_date_str = (data.get("due_date") or "").strip()
+    else:
+        task_ids = request.form.getlist("task_ids[]")
+        due_date_str = (request.form.get("due_date") or "").strip()
+
+    if not task_ids:
+        if request.is_json:
+            return jsonify({"success": False, "message": _("No tasks selected")}), 400
+        flash(_("No tasks selected"), "warning")
+        return redirect(url_for("tasks.list_tasks"))
+
+    if not due_date_str:
+        if request.is_json:
+            return jsonify({"success": False, "message": _("Due date is required (YYYY-MM-DD)")}), 400
+        flash(_("Due date is required"), "error")
+        return redirect(url_for("tasks.list_tasks"))
+
+    try:
+        from datetime import datetime as dt
+        due_date = dt.strptime(due_date_str, "%Y-%m-%d").date()
+    except ValueError:
+        if request.is_json:
+            return jsonify({"success": False, "message": _("Invalid date format. Use YYYY-MM-DD")}), 400
+        flash(_("Invalid date format. Use YYYY-MM-DD"), "error")
+        return redirect(url_for("tasks.list_tasks"))
+
+    updated_count = 0
+    skipped_count = 0
+
+    for task_id_str in task_ids:
+        try:
+            task_id = int(task_id_str)
+            task = Task.query.get(task_id)
+            if not task:
+                continue
+            if not current_user.is_admin and task.created_by != current_user.id:
+                skipped_count += 1
+                continue
+            task.update_due_date(due_date)
+            updated_count += 1
+        except Exception:
+            skipped_count += 1
+
+    if updated_count > 0:
+        if not safe_commit("bulk_update_task_due_date", {"count": updated_count, "due_date": due_date_str}):
+            if request.is_json:
+                return jsonify({"success": False, "message": _("Database error")}), 500
+            flash(_("Could not update tasks due to a database error"), "error")
+            return redirect(url_for("tasks.list_tasks"))
+
+    if request.is_json:
+        return jsonify({
+            "success": True,
+            "updated": updated_count,
+            "skipped": skipped_count,
+            "message": _("Updated %(count)s task(s)", count=updated_count) if updated_count else _("No tasks updated"),
+        })
+    if updated_count > 0:
+        flash(
+            _("Successfully updated %(count)s task(s) due date to %(date)s", count=updated_count, date=due_date_str),
+            "success",
+        )
+    if skipped_count > 0:
+        flash(_("Skipped %(count)s task(s) (no permission)", count=skipped_count), "warning")
+    return redirect(url_for("tasks.list_tasks"))
+
+
 @tasks_bp.route("/tasks/bulk-priority", methods=["POST"])
 @login_required
 def bulk_update_priority():
     """Update priority for multiple tasks at once"""
-    task_ids = request.form.getlist("task_ids[]")
-    new_priority = request.form.get("priority", "").strip()
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        task_ids = [str(x) for x in data.get("task_ids") or []]
+        new_priority = (data.get("priority") or "").strip()
+    else:
+        task_ids = request.form.getlist("task_ids[]")
+        new_priority = (request.form.get("priority") or "").strip()
 
     if not task_ids:
+        if request.is_json:
+            return jsonify({"success": False, "message": _("No tasks selected")}), 400
         flash(_("No tasks selected"), "warning")
         return redirect(url_for("tasks.list_tasks"))
 
     if not new_priority or new_priority not in ["low", "medium", "high", "urgent"]:
+        if request.is_json:
+            return jsonify({"success": False, "message": _("Invalid priority value")}), 400
         flash(_("Invalid priority value"), "error")
         return redirect(url_for("tasks.list_tasks"))
 
@@ -992,6 +1075,7 @@ def bulk_update_priority():
                 continue
 
             task.priority = new_priority
+            task.updated_at = now_in_app_timezone()
             updated_count += 1
 
         except Exception:
@@ -999,17 +1083,25 @@ def bulk_update_priority():
 
     if updated_count > 0:
         if not safe_commit("bulk_update_task_priority", {"count": updated_count, "priority": new_priority}):
+            if request.is_json:
+                return jsonify({"success": False, "message": _("Database error")}), 500
             flash(_("Could not update tasks due to a database error"), "error")
             return redirect(url_for("tasks.list_tasks"))
 
+    if request.is_json:
+        return jsonify({
+            "success": True,
+            "updated": updated_count,
+            "skipped": skipped_count,
+            "message": _("Updated %(count)s task(s)", count=updated_count) if updated_count else _("No tasks updated"),
+        })
+    if updated_count > 0:
         flash(
             f'Successfully updated {updated_count} task{"s" if updated_count != 1 else ""} to {new_priority} priority',
             "success",
         )
-
     if skipped_count > 0:
         flash(f'Skipped {skipped_count} task{"s" if skipped_count != 1 else ""} (no permission)', "warning")
-
     return redirect(url_for("tasks.list_tasks"))
 
 

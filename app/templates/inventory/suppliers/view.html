@@ -19,9 +19,9 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 space-y-6">
         <!-- Supplier Details -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Supplier Details') }}</h2>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Code') }}</label>
                     <p class="mt-1 font-mono">{{ supplier.code }}</p>
@@ -37,7 +37,7 @@
                     </p>
                 </div>
                 {% if supplier.description %}
-                <div class="col-span-2">
+                <div class="sm:col-span-2">
                     <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Description') }}</label>
                     <p class="mt-1">{{ supplier.description }}</p>
                 </div>
@@ -65,7 +65,7 @@
                 </div>
                 {% endif %}
                 {% if supplier.address %}
-                <div class="col-span-2">
+                <div class="sm:col-span-2">
                     <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Address') }}</label>
                     <p class="mt-1">{{ supplier.address }}</p>
                 </div>
@@ -95,7 +95,7 @@
                     <p class="mt-1">{{ supplier.currency_code }}</p>
                 </div>
                 {% if supplier.notes %}
-                <div class="col-span-2">
+                <div class="sm:col-span-2">
                     <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Notes') }}</label>
                     <p class="mt-1">{{ supplier.notes }}</p>
                 </div>
@@ -105,10 +105,10 @@
 
         <!-- Stock Items from this Supplier -->
         {% if supplier_items %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Stock Items from this Supplier') }}</h2>
             <div class="overflow-x-auto">
-                <table class="table table-zebra w-full text-left">
+                <table class="table table-zebra w-full text-left responsive-cards">
                     <thead>
                         <tr>
                             <th class="p-4">{{ _('Item') }}</th>
@@ -122,28 +122,28 @@
                     <tbody>
                         {% for supplier_item in supplier_items %}
                         <tr>
-                            <td class="p-4 font-medium">
+                            <td class="p-4 font-medium mobile-card-header" data-label="{{ _('Item') }}">
                                 <a href="{{ url_for('inventory.view_stock_item', item_id=supplier_item.stock_item_id) }}" class="text-primary hover:underline">
                                     {{ supplier_item.stock_item.name }} ({{ supplier_item.stock_item.sku }})
                                 </a>
                             </td>
-                            <td class="p-4 font-mono text-sm">{{ supplier_item.supplier_sku or '—' }}</td>
-                            <td class="p-4">
+                            <td class="p-4 font-mono text-sm" data-label="{{ _('Supplier SKU') }}">{{ supplier_item.supplier_sku or '—' }}</td>
+                            <td class="p-4" data-label="{{ _('Unit Cost') }}">
                                 {% if supplier_item.unit_cost %}
                                     {{ "%.2f"|format(supplier_item.unit_cost) }} {{ supplier_item.currency_code }}
                                 {% else %}
                                     —
                                 {% endif %}
                             </td>
-                            <td class="p-4">{{ supplier_item.minimum_order_quantity or '—' }}</td>
-                            <td class="p-4">
+                            <td class="p-4" data-label="{{ _('MOQ') }}">{{ supplier_item.minimum_order_quantity or '—' }}</td>
+                            <td class="p-4" data-label="{{ _('Lead Time') }}">
                                 {% if supplier_item.lead_time_days %}
                                     {{ supplier_item.lead_time_days }} {{ _('days') }}
                                 {% else %}
                                     —
                                 {% endif %}
                             </td>
-                            <td class="p-4">
+                            <td class="p-4" data-label="{{ _('Preferred') }}">
                                 {% if supplier_item.is_preferred %}
                                     <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                                         <i class="fas fa-star"></i> {{ _('Preferred') }}
@@ -159,7 +159,7 @@
             </div>
         </div>
         {% else %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <p class="text-gray-500 text-center">{{ _('No stock items associated with this supplier.') }}</p>
         </div>
         {% endif %}
@@ -167,7 +167,7 @@
 
     <div>
         <!-- Summary -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-4">{{ _('Summary') }}</h3>
             <div class="space-y-3">
                 <div>

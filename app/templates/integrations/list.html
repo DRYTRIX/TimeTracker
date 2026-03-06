@@ -15,7 +15,7 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
         {{ _('Connect your Time Tracker with external services. Configure integrations below to sync data, automate workflows, and enhance productivity.') }}
     </p>
@@ -23,21 +23,21 @@
 
 {% if current_user.is_admin or current_user.has_permission('manage_oidc') %}
 <!-- OIDC Authentication Setup -->
-<div class="bg-card-light dark:bg-card-dark rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden mb-6 border-2 border-primary/20">
+<div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm hover:shadow-lg transition-shadow overflow-hidden mb-6 border-2 border-primary/20">
     <div class="p-6">
-        <div class="flex items-start justify-between mb-4">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-shield-alt text-primary text-xl"></i>
-                </div>
-                <div class="min-w-0 flex-1">
-                    <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('OIDC / Single Sign-On') }}</h3>
-                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
-                        {{ _('Configure OpenID Connect authentication for Single Sign-On (SSO) with your identity provider') }}
-                    </p>
+            <div class="flex flex-col sm:flex-row items-start justify-between gap-3 mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-shield-alt text-primary text-xl"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('OIDC / Single Sign-On') }}</h3>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
+                            {{ _('Configure OpenID Connect authentication for Single Sign-On (SSO) with your identity provider') }}
+                        </p>
+                    </div>
                 </div>
             </div>
-        </div>
         
         <div class="flex items-center gap-2 mb-4">
             {% set auth_method = config.get('AUTH_METHOD', 'local') or 'local' %}
@@ -54,7 +54,7 @@
         </div>
         
         <a href="{{ url_for('admin.oidc_setup_wizard') }}" 
-           class="block w-full bg-primary hover:bg-primary/90 text-white px-4 py-2.5 rounded-lg transition-colors text-center font-medium">
+           class="block w-full bg-primary hover:bg-primary/90 text-white px-4 py-2.5 min-h-[44px] rounded-lg transition-colors text-center font-medium inline-flex items-center justify-center">
             <i class="fas fa-magic mr-2"></i>{{ _('Setup Wizard') }}
         </a>
     </div>
@@ -64,7 +64,7 @@
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
     {% for provider in available_providers %}
     {% set existing_integration = integrations|selectattr('provider', 'equalto', provider.provider)|first if integrations else none %}
-    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden">
+    <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm hover:shadow-lg transition-shadow overflow-hidden">
         <div class="p-6">
             <div class="flex items-start justify-between mb-4">
                 <div class="flex items-center gap-3">

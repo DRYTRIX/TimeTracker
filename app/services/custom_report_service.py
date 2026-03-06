@@ -12,6 +12,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Max rows for report data to avoid unbounded in-memory processing
+REPORT_QUERY_LIMIT = 2000
+
 
 class CustomReportService:
     """Service for building and executing custom reports"""
@@ -56,8 +59,8 @@ class CustomReportService:
         if filters.get("project_id"):
             query = query.filter(TimeEntry.project_id == filters["project_id"])
 
-        # Get data
-        entries = query.all()
+        # Get data with limit to avoid loading unbounded rows
+        entries = query.order_by(TimeEntry.start_time.desc()).limit(REPORT_QUERY_LIMIT).all()
 
         # Apply groupings
         grouped_data = self._apply_groupings(entries, groupings)
@@ -79,7 +82,7 @@ class CustomReportService:
         if filters.get("client_id"):
             query = query.filter(Project.client_id == filters["client_id"])
 
-        projects = query.all()
+        projects = query.order_by(Project.name).limit(REPORT_QUERY_LIMIT).all()
 
         return {"data": [p.to_dict() for p in projects], "summary": {"total_projects": len(projects)}}
 
@@ -92,7 +95,7 @@ class CustomReportService:
         if filters.get("end_date"):
             query = query.filter(Invoice.issue_date <= filters["end_date"])
 
-        invoices = query.all()
+        invoices = query.order_by(Invoice.issue_date.desc()).limit(REPORT_QUERY_LIMIT).all()
 
         return {
             "data": [i.to_dict() for i in invoices],
@@ -108,7 +111,7 @@ class CustomReportService:
         if filters.get("end_date"):
             query = query.filter(Expense.expense_date <= filters["end_date"])
 
-        expenses = query.all()
+        expenses = query.order_by(Expense.expense_date.desc()).limit(REPORT_QUERY_LIMIT).all()
 
         return {
             "data": [e.to_dict() for e in expenses],

@@ -74,13 +74,13 @@
 <!-- Burn Rate & Completion Estimate -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
     <!-- Burn Rate Analysis -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm animated-card">
         <h2 class="text-lg font-semibold mb-4 flex items-center">
             <i class="fas fa-fire mr-2 text-orange-500"></i>
             {{ _('Burn Rate Analysis') }}
         </h2>
         {% if burn_rate %}
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                 <h6 class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Daily Burn Rate') }}</h6>
                 <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ burn_rate.daily_burn_rate|format_currency }}</p>
@@ -111,7 +111,7 @@
     </div>
     
     <!-- Completion Estimate -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm animated-card">
         <h2 class="text-lg font-semibold mb-4 flex items-center">
             <i class="fas fa-calendar-check mr-2 text-green-500"></i>
             {{ _('Completion Estimate') }}
@@ -154,7 +154,7 @@
 
 <!-- Cost Trends Chart -->
 {% if cost_trends and cost_trends.periods %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm animated-card mb-6">
     <h2 class="text-lg font-semibold mb-4 flex items-center">
         <i class="fas fa-chart-area mr-2 text-purple-500"></i>
         {{ _('Cost Trend Analysis') }}
@@ -179,7 +179,7 @@
 
 <!-- Resource Allocation -->
 {% if resource_allocation and resource_allocation.users %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm animated-card mb-6">
     <h2 class="text-lg font-semibold mb-4 flex items-center">
         <i class="fas fa-users mr-2 text-cyan-500"></i>
         {{ _('Resource Allocation') }}
@@ -199,7 +199,7 @@
         </div>
     </div>
     <div class="overflow-x-auto">
-        <table class="w-full text-left">
+        <table class="w-full text-left responsive-cards">
             <thead class="border-b border-border-light dark:border-border-dark">
                 <tr>
                     <th class="p-4">{{ _('Team Member') }}</th>
@@ -213,12 +213,12 @@
             <tbody>
                 {% for user in resource_allocation.users %}
                 <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                    <td class="p-4">
+                    <td class="p-4" data-label="Team Member">
                         <strong>{{ user.username }}</strong>
                     </td>
-                    <td class="p-4">{{ "%.2f"|format(user.hours) }}</td>
-                    <td class="p-4">{{ user.cost|format_currency }}</td>
-                    <td class="p-4">
+                    <td class="p-4" data-label="Hours">{{ "%.2f"|format(user.hours) }}</td>
+                    <td class="p-4" data-label="Cost">{{ user.cost|format_currency }}</td>
+                    <td class="p-4" data-label="Hours %">
                         <div class="flex items-center gap-2">
                             <div class="flex-grow bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden" style="min-width: 100px;">
                                 <div class="h-full bg-cyan-500 rounded-full transition-all duration-300 flex items-center justify-center text-xs text-white font-semibold"
@@ -228,7 +228,7 @@
                             </div>
                         </div>
                     </td>
-                    <td class="p-4">
+                    <td class="p-4" data-label="Cost %">
                         <div class="flex items-center gap-2">
                             <div class="flex-grow bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden" style="min-width: 100px;">
                                 <div class="h-full bg-green-500 rounded-full transition-all duration-300 flex items-center justify-center text-xs text-white font-semibold"
@@ -238,7 +238,7 @@
                             </div>
                         </div>
                     </td>
-                    <td class="p-4">
+                    <td class="p-4" data-label="Entries">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
                             {{ user.entry_count }}
                         </span>
@@ -253,7 +253,7 @@
 
 <!-- Active Alerts for this Project -->
 {% if alerts %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm animated-card">
     <h2 class="text-lg font-semibold mb-4 flex items-center">
         <i class="fas fa-bell mr-2 text-red-500"></i>
         {{ _('Active Alerts') }}

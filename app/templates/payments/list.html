@@ -20,27 +20,27 @@
 
     <!-- Summary Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Total Payments') }}</h3>
             <p class="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">{{ summary.total_payments }}</p>
         </div>
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Total Amount') }}</h3>
             <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-2">{{ currency|currency_symbol }}{{ "%.2f"|format(summary.total_amount) }}</p>
         </div>
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Completed</h3>
             <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-2">{{ summary.completed_count }}</p>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ currency|currency_symbol }}{{ "%.2f"|format(summary.completed_amount) }}</p>
         </div>
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Gateway Fees') }}</h3>
             <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-2">{{ currency|currency_symbol }}{{ "%.2f"|format(summary.total_fees) }}</p>
         </div>
     </div>
 
     <!-- Filters -->
-    <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow mb-6">
+    <div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold">{{ _('Filter Payments') }}</h2>
             <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
@@ -50,7 +50,7 @@
         <div id="filterBody">
         <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4" data-filter-form>
             <div>
-                <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                <label for="status" class="form-label">Status</label>
                 <select name="status" id="status" class="form-input">
                     <option value="">All</option>
                     <option value="completed" {% if filters.status == 'completed' %}selected{% endif %}>Completed</option>
@@ -60,7 +60,7 @@
                 </select>
             </div>
             <div>
-                <label for="method" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Method</label>
+                <label for="method" class="form-label">Payment Method</label>
                 <select name="method" id="method" class="form-input">
                     <option value="">All</option>
                     {% for method in payment_methods %}
@@ -69,11 +69,11 @@
                 </select>
             </div>
             <div>
-                <label for="date_from" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">From Date</label>
+                <label for="date_from" class="form-label">From Date</label>
                 <input type="date" name="date_from" id="date_from" value="{{ filters.date_from }}" class="form-input user-date-input">
             </div>
             <div>
-                <label for="date_to" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">To Date</label>
+                <label for="date_to" class="form-label">To Date</label>
                 <input type="date" name="date_to" id="date_to" value="{{ filters.date_to }}" class="form-input user-date-input">
             </div>
             <div class="flex items-end col-span-full justify-end gap-2">
@@ -85,7 +85,7 @@
     </div>
 
     <!-- Payments Table -->
-    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-visible">
+    <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-visible">
         <div class="flex justify-between items-center mb-4 p-6 pb-0">
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
                 {{ payments|length }} payment{{ 's' if payments|length != 1 else '' }} found
@@ -112,21 +112,21 @@
             </div>
         </div>
         <div class="overflow-x-auto p-6 pt-4">
-            <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
-                <thead class="border-b border-border-light dark:border-border-dark">
+            <table class="table table-zebra w-full text-left enhanced-table responsive-cards" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
+                <thead class="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
                     <tr>
                         {% if current_user.is_admin %}
-                        <th class="p-4 w-12">
+                        <th class="px-4 py-3 w-12">
                             <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllPayments()">
                         </th>
                         {% endif %}
-                        <th class="p-4" data-sortable>ID</th>
-                        <th class="p-4" data-sortable>Invoice</th>
-                        <th class="p-4 table-number" data-sortable>Amount</th>
-                        <th class="p-4" data-sortable>Date</th>
-                        <th class="p-4" data-sortable>Method</th>
-                        <th class="p-4" data-sortable>Status</th>
-                        <th class="p-4">Actions</th>
+                        <th class="px-4 py-3" data-sortable>ID</th>
+                        <th class="px-4 py-3" data-sortable>Invoice</th>
+                        <th class="px-4 py-3 table-number" data-sortable>Amount</th>
+                        <th class="px-4 py-3" data-sortable>Date</th>
+                        <th class="px-4 py-3" data-sortable>Method</th>
+                        <th class="px-4 py-3" data-sortable>Status</th>
+                        <th class="px-4 py-3">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -138,13 +138,13 @@
                                 <input type="checkbox" class="payment-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ payment.id }}" onchange="updateBulkDeleteButton()">
                             </td>
                             {% endif %}
-                            <td class="p-4 font-medium">#{{ payment.id }}</td>
-                            <td class="p-4">
+                            <td class="p-4 font-medium" data-label="{{ _('ID') }}">#{{ payment.id }}</td>
+                            <td class="p-4" data-label="{{ _('Invoice') }}">
                                 <a href="{{ url_for('invoices.view_invoice', invoice_id=payment.invoice_id) }}" class="text-primary hover:underline">
                                     {{ payment.invoice.invoice_number }}
                                 </a>
                             </td>
-                            <td class="p-4 table-number">
+                            <td class="p-4 table-number" data-label="{{ _('Amount') }}">
                                 <span class="font-semibold text-green-600 dark:text-green-400">
                                     {{ payment.amount }} {{ payment.currency or 'EUR' }}
                                 </span>
@@ -154,9 +154,9 @@
                                 </div>
                                 {% endif %}
                             </td>
-                            <td class="p-4">{{ payment.payment_date|format_date if payment.payment_date else '—' }}</td>
-                            <td class="p-4">{{ payment.method or '—' }}</td>
-                            <td class="p-4">
+                            <td class="p-4" data-label="{{ _('Date') }}">{{ payment.payment_date|format_date if payment.payment_date else '—' }}</td>
+                            <td class="p-4" data-label="{{ _('Method') }}">{{ payment.method or '—' }}</td>
+                            <td class="p-4" data-label="{{ _('Status') }}">
                                 {% if payment.status == 'completed' %}
                                 <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">Completed</span>
                                 {% elif payment.status == 'pending' %}
@@ -169,7 +169,7 @@
                                 <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ payment.status|title }}</span>
                                 {% endif %}
                             </td>
-                            <td class="p-4">
+                            <td class="p-4" data-label="{{ _('Actions') }}">
                                 <a href="{{ url_for('payments.view_payment', payment_id=payment.id) }}" class="text-primary hover:underline">View</a>
                             </td>
                         </tr>
@@ -210,7 +210,7 @@
  <!-- Bulk Delete Confirmation Dialog -->
  <div id="confirmBulkDelete" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
      <div class="flex items-center justify-center min-h-screen px-4">
-         <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75" onclick="closeBulkDeleteDialog()"></div>
+         <div class="fixed inset-0 transition-opacity bg-black/50 dark:bg-gray-900 dark:bg-opacity-75" onclick="closeBulkDeleteDialog()"></div>
          <div class="relative bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full p-6 zoom-in">
              <div class="flex items-start mb-4">
                  <div class="flex-shrink-0">
@@ -240,7 +240,7 @@
      <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
          <div class="p-6">
              <h3 class="text-lg font-semibold mb-4">{{ _('Change Status for Selected Payments') }}</h3>
-             <label for="bulkStatusSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Status</label>
+             <label for="bulkStatusSelect" class="form-label">Select Status</label>
              <select id="bulkStatusSelect" class="form-input w-full mb-4">
                  <option value="">-- Select Status --</option>
                  <option value="completed">Completed</option>

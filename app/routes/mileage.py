@@ -609,6 +609,85 @@ def mark_reimbursed(mileage_id):
     return redirect(url_for("mileage.view_mileage", mileage_id=mileage_id))
 
 
+@mileage_bp.route("/mileage/gps", methods=["GET"])
+@login_required
+@module_enabled("mileage")
+def gps_tracking_page():
+    """GPS mileage tracking helper page."""
+    projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    clients = Client.get_active_clients()
+    return render_template("mileage/gps.html", projects=projects, clients=clients)
+
+
+@mileage_bp.route("/api/mileage/gps/start", methods=["POST"])
+@login_required
+@module_enabled("mileage")
+def web_gps_start():
+    from app.services.gps_tracking_service import GPSTrackingService
+
+    data = request.get_json() or {}
+    result = GPSTrackingService().start_tracking(
+        user_id=current_user.id,
+        latitude=data.get("latitude"),
+        longitude=data.get("longitude"),
+        location=data.get("location"),
+    )
+    status_code = 201 if result.get("success") else 400
+    return jsonify(result), status_code
+
+
+@mileage_bp.route("/api/mileage/gps/<int:track_id>/point", methods=["POST"])
+@login_required
+@module_enabled("mileage")
+def web_gps_add_point(track_id):
+    from app.services.gps_tracking_service import GPSTrackingService
+
+    data = request.get_json() or {}
+    if data.get("latitude") is None or data.get("longitude") is None:
+        return jsonify({"success": False, "message": "latitude and longitude are required"}), 400
+
+    result = GPSTrackingService().add_track_point(
+        track_id=track_id,
+        latitude=data.get("latitude"),
+        longitude=data.get("longitude"),
+    )
+    status_code = 200 if result.get("success") else 400
+    return jsonify(result), status_code
+
+
+@mileage_bp.route("/api/mileage/gps/<int:track_id>/stop", methods=["POST"])
+@login_required
+@module_enabled("mileage")
+def web_gps_stop(track_id):
+    from app.services.gps_tracking_service import GPSTrackingService
+
+    data = request.get_json() or {}
+    result = GPSTrackingService().stop_tracking(
+        track_id=track_id,
+        latitude=data.get("latitude"),
+        longitude=data.get("longitude"),
+        location=data.get("location"),
+    )
+    status_code = 200 if result.get("success") else 400
+    return jsonify(result), status_code
+
+
+@mileage_bp.route("/api/mileage/gps/<int:track_id>/expense", methods=["POST"])
+@login_required
+@module_enabled("mileage")
+def web_gps_create_expense(track_id):
+    from app.services.gps_tracking_service import GPSTrackingService
+
+    data = request.get_json() or {}
+    result = GPSTrackingService().create_expense_from_track(
+        track_id=track_id,
+        project_id=data.get("project_id"),
+        rate_per_km=data.get("rate_per_km"),
+    )
+    status_code = 200 if result.get("success") else 400
+    return jsonify(result), status_code
+
+
 # API endpoints
 @mileage_bp.route("/api/mileage", methods=["GET"])
 @login_required

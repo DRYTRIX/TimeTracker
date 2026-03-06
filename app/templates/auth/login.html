@@ -8,8 +8,10 @@
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
     <link rel="alternate icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
+    <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
+    <link href="https://fonts.bunny.net/css?family=Inter:400,500,600,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}?v={{ app_version }}-toastfix1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}?v={{ app_version }}-toastfix1">
     <script>
         // On page load or when changing themes, best to add inline in `head` to avoid FOUC
         if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -19,7 +21,7 @@
         }
     </script>
 </head>
-<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+<body class="font-sans antialiased bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
     <div class="min-h-screen flex items-center justify-center px-4">
         <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-0 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg overflow-hidden">
             <div class="hidden md:flex items-center justify-center p-10 bg-gradient-to-br from-primary/10 to-secondary/10 dark:from-primary/20 dark:to-secondary/20">
@@ -37,7 +39,11 @@
                     </div>
                 </div>
             </div>
-            <div class="p-8">
+            <div class="p-6 sm:p-8">
+                <div class="flex items-center gap-3 mb-4 md:hidden">
+                    <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="TimeTracker Logo" class="w-10 h-10">
+                    <span class="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">TimeTracker</span>
+                </div>
                 <h2 class="text-2xl font-bold tracking-tight">{{ _('Sign in to your account') }}</h2>
                 {% if demo_mode %}
                 <div class="mt-4 p-4 rounded-lg bg-primary/10 dark:bg-primary/20 border border-primary/30 dark:border-primary/40">
@@ -51,14 +57,14 @@
                     <label for="username" class="block mb-2 text-sm font-medium">{{ _('Username') }}</label>
                     <div class="relative">
                         <i class="fa-solid fa-user absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark"></i>
-                        <input type="text" name="username" id="username" autocomplete="username" class="w-full pl-10 bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg px-3 py-2 text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" placeholder="your-username" required>
+                        <input type="text" name="username" id="username" autocomplete="username" class="w-full pl-10 bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg px-3 py-2.5 text-base text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" placeholder="your-username" required>
                     </div>
 
                     {% if requires_password %}
                     <label for="password" class="block mb-2 text-sm font-medium mt-4">{{ _('Password') }}</label>
                     <div class="relative">
                         <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark"></i>
-                        <input type="password" name="password" id="password" autocomplete="current-password" class="w-full pl-10 bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg px-3 py-2 text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" placeholder="{{ _('Password') }}">
+                        <input type="password" name="password" id="password" autocomplete="current-password" class="w-full pl-10 bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg px-3 py-2.5 text-base text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" placeholder="{{ _('Password') }}">
                     </div>
                     {% endif %}
 
@@ -101,7 +107,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
-    <script src="{{ url_for('static', filename='toast-notifications.js') }}"></script>
+    <script src="{{ url_for('static', filename='toast-notifications.js') }}?v={{ app_version }}-toastfix1"></script>
     <script src="{{ url_for('static', filename='error-handling-enhanced.js') }}"></script>
 </body>
 </html>

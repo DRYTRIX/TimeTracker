@@ -11,10 +11,10 @@
     title_text='Projects',
     subtitle_text='Manage your projects here',
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("projects.create_project") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Project</a>' if (current_user.is_admin or has_permission('create_projects')) else None
+    actions_html='<a href="' + url_for("projects.create_project") + '" class="btn btn-primary"><i class="fas fa-plus"></i>Create Project</a>' if (current_user.is_admin or has_permission('create_projects')) else None
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold">{{ _('Filter Projects') }}</h2>
         <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
@@ -24,11 +24,11 @@
     <div id="filterBody">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4" id="projectsFilterForm" data-filter-form>
         <div>
-            <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
-            <input type="text" name="search" id="search" value="{{ search or '' }}" class="form-input">
+            <label for="projects-filter-search" class="form-label">Search</label>
+            <input type="text" name="search" id="projects-filter-search" value="{{ search or '' }}" class="form-input">
         </div>
         <div>
-            <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+            <label for="status" class="form-label">Status</label>
             <select name="status" id="status" class="form-input">
                 <option value="all" {% if not status or status == 'all' %}selected{% endif %}>All</option>
                 <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
@@ -37,7 +37,7 @@
             </select>
         </div>
         <div>
-            <label for="client" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client</label>
+            <label for="client" class="form-label">Client</label>
             {% set locked_client = get_locked_client() %}
             {% if locked_client %}
                 <input type="hidden" name="client" id="client" value="{{ locked_client.name }}">
@@ -57,7 +57,7 @@
             {% endif %}
         </div>
         <div>
-            <label for="favorites" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Show</label>
+            <label for="favorites" class="form-label">Show</label>
             <select name="favorites" id="favorites" class="form-input">
                 <option value="">All Projects</option>
                 <option value="true" {% if favorites_only %}selected{% endif %}>⭐ Favorites Only</option>
@@ -66,7 +66,7 @@
         {% if custom_field_definitions %}
         {% for definition in custom_field_definitions %}
         <div>
-            <label for="custom_field_{{ definition.field_key }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ definition.label }}</label>
+            <label for="custom_field_{{ definition.field_key }}" class="form-label">{{ definition.label }}</label>
             <input type="text" name="custom_field_{{ definition.field_key }}" id="custom_field_{{ definition.field_key }}" 
                    value="{{ request.args.get('custom_field_' + definition.field_key, '') }}" 
                    class="form-input" 
@@ -78,11 +78,11 @@
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-visible" id="projectsContainer">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-visible" id="projectsContainer">
     <div id="projectsListContainer">
     <div class="flex justify-between items-center mb-4">
-        <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
-            {{ projects|length }} project{{ 's' if projects|length != 1 else '' }} found
+        <h3 class="text-sm font-medium">
+            <span class="table-count-badge">{{ projects|length }} project{{ 's' if projects|length != 1 else '' }} found</span>
         </h3>
         <div class="flex items-center gap-2">
             <!-- View Toggle -->
@@ -119,7 +119,7 @@
     
     <!-- List View -->
     <div id="listView" class="view-container">
-    <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
+    <table class="table table-zebra w-full text-left responsive-cards" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
         <thead class="border-b border-border-light dark:border-border-dark">
             <tr>
                 {% if current_user.is_admin %}
@@ -156,15 +156,15 @@
                         <i class="{{ 'fas fa-star text-yellow-500' if is_fav else 'far fa-star text-gray-400' }}"></i>
                     </button>
                 </td>
-                <td class="p-4 font-medium"><a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="text-primary hover:underline">{{ project.name }}</a></td>
-                <td class="p-4">
+                <td class="p-4 font-medium mobile-card-header" data-label="{{ _('Name') }}"><a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="text-primary hover:underline">{{ project.name }}</a></td>
+                <td class="p-4" data-label="{{ _('Client') }}">
                     {% if project.client_id %}
                         <a href="{{ url_for('clients.view_client', client_id=project.client_id) }}" class="text-primary hover:underline">{{ project.client }}</a>
                     {% else %}
                         {{ project.client }}
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Status') }}">
                     {% if project.status == 'active' %}
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Active</span>
                     {% elif project.status == 'inactive' %}
@@ -173,21 +173,21 @@
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">Archived</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Billable') }}">
                     {% if project.billable %}
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Billable</span>
                     {% else %}
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">Non-billable</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Rate') }}">
                     {% if project.hourly_rate %}
                         <span class="px-2 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary">{{ '%.2f'|format(project.hourly_rate|float) }}/h</span>
                     {% else %}
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Budget') }}">
                     {% if project.budget_amount %}
                         {% set consumed = (project.budget_consumed_amount or 0.0) %}
                         {% set total = project.budget_amount|float %}
@@ -204,7 +204,7 @@
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4 mobile-actions" data-label="{{ _('Actions') }}">
                     <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="text-primary hover:underline">View</a>
                 </td>
             </tr>
@@ -560,7 +560,7 @@ function showBulkArchiveDialog(){
             <div class="relative bg-card-light dark:bg-card-dark rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
                 <h3 class="text-lg font-semibold mb-4">Archive ${count} Project${count !== 1 ? 's' : ''}?</h3>
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label class="form-label">
                         Reason for Archiving <span class="text-text-muted-light dark:text-text-muted-dark">(Optional)</span>
                     </label>
                     <textarea id="bulkArchiveReasonInput" rows="3" class="form-input" placeholder="e.g., Projects completed, Contracts ended, etc."></textarea>
@@ -771,7 +771,7 @@ function toggleFavorite(projectId, button) {
         const params = {};
         
         // Get search input value directly (more reliable than FormData for text inputs)
-        const searchInput = form.querySelector('input[name="search"], input#search');
+        const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
             const searchValue = searchInput.value.trim();
             if (searchValue) {
@@ -1024,7 +1024,7 @@ function toggleFavorite(projectId, button) {
         });
         
         // Auto-submit on search input (debounced)
-        const searchInput = form.querySelector('input[name="search"], input#search');
+        const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 debouncedSearch(500);

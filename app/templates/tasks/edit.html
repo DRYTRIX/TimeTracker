@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'components/ui.html' import page_header %}
 
 {% block title %}{{ _('Edit Task') }} - {{ task.name }} - Time Tracker{% endblock %}
 
@@ -9,31 +10,15 @@
 {% endblock %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">{{ _('Edit Task') }}</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Update task details and settings for "%(task)s"', task=task.name) }}</p>
-    </div>
-    <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Task') }}</a>
-    </div>
-
-<!-- Header -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
-    <div class="flex items-center">
-        <div class="flex items-center justify-center mr-3 rounded-full bg-yellow-100 dark:bg-yellow-900/30" style="width:48px;height:48px;">
-            <i class="fas fa-edit text-yellow-600"></i>
-        </div>
-        <div>
-            <h2 class="text-xl font-semibold">{{ _('Edit Task') }}</h2>
-            <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Update task details and settings for "%(task)s"', task=task.name) }}</p>
-        </div>
-    </div>
-</div>
+{% set actions %}
+<a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> {{ _('Back to Task') }}</a>
+{% endset %}
+{{ page_header('fas fa-edit', _('Edit Task'), subtitle_text=_('Update task details and settings for "%(task)s"', task=task.name), actions_html=actions, breadcrumbs=[{'text': _('Tasks'), 'url': url_for('tasks.list_tasks')}, {'text': task.name, 'url': url_for('tasks.view_task', task_id=task.id)}, {'text': _('Edit')}]) }}
 
 <!-- Edit Task Form -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2">
-        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <div class="border-b border-border-light dark:border-border-dark p-4">
                 <h6 class="font-semibold flex items-center gap-2"><i class="fas fa-edit text-yellow-600"></i>{{ _('Task Information') }}</h6>
             </div>
@@ -42,7 +27,7 @@
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <!-- Task Name -->
                         <div class="mb-4">
-                            <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label for="name" class="form-label">
                                 <i class="fas fa-tag mr-2 text-primary"></i>{{ _('Task Name') }} <span class="text-red-500">*</span>
                             </label>
                             <input type="text" class="form-input" id="name" name="name" 
@@ -52,7 +37,7 @@
 
                         <!-- Description -->
                         <div class="mb-4">
-                            <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label for="description" class="form-label">
                                 <span><i class="fas fa-align-left mr-2 text-primary"></i>{{ _('Description') }}</span>
                             </label>
                             <div class="markdown-editor-wrapper">
@@ -64,7 +49,7 @@
 
                         <!-- Project Selection -->
                         <div class="mb-4">
-                            <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label for="project_id" class="form-label">
                                 <i class="fas fa-project-diagram mr-2 text-primary"></i>{{ _('Project') }} <span class="text-red-500">*</span>
                             </label>
                             <select class="form-input" id="project_id" name="project_id" required>
@@ -81,7 +66,7 @@
                         <!-- Priority and Status -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
                             <div>
-                                <label for="priority" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Priority') }}</label>
+                                <label for="priority" class="form-label">{{ _('Priority') }}</label>
                                 <select id="priority" name="priority" class="form-input">
                                     <option value="low" {% if task.priority == 'low' %}selected{% endif %}>{{ _('Low') }}</option>
                                     <option value="medium" {% if task.priority == 'medium' %}selected{% endif %}>{{ _('Medium') }}</option>
@@ -90,7 +75,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Status') }}</label>
+                                <label for="status" class="form-label">{{ _('Status') }}</label>
                                 <select id="status" name="status" class="form-input">
                                     <option value="todo" {% if task.status == 'todo' %}selected{% endif %}>{{ _('To Do') }}</option>
                                     <option value="in_progress" {% if task.status == 'in_progress' %}selected{% endif %}>{{ _('In Progress') }}</option>
@@ -113,12 +98,12 @@
                         <!-- Due Date and Estimated Hours -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
-                            <label for="due_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Due Date') }}</label>
+                            <label for="due_date" class="form-label">{{ _('Due Date') }}</label>
                             <input type="date" id="due_date" name="due_date" value="{{ task.due_date.strftime('%Y-%m-%d') if task.due_date else '' }}" class="form-input">
                                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Set a deadline for this task') }}</p>
                             </div>
                             <div>
-                            <label for="estimated_hours" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Estimated Hours') }}</label>
+                            <label for="estimated_hours" class="form-label">{{ _('Estimated Hours') }}</label>
                             <input type="number" id="estimated_hours" name="estimated_hours" value="{{ task.estimated_hours or '' }}" step="0.5" min="0" placeholder="0.0" class="form-input">
                                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Estimate how long this task will take') }}</p>
                             </div>
@@ -126,7 +111,7 @@
 
                         <!-- Assignment -->
                         <div class="mb-4">
-                            <label for="assigned_to" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Assign To') }}</label>
+                            <label for="assigned_to" class="form-label">{{ _('Assign To') }}</label>
                             <select id="assigned_to" name="assigned_to" class="form-input">
                                 <option value="">{{ _('Unassigned') }}</option>
                                 {% for user in users %}
@@ -138,7 +123,7 @@
 
                         <!-- Tags -->
                         <div class="mb-4">
-                            <label for="tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label for="tags" class="form-label">
                                 <i class="fas fa-tags mr-2 text-primary"></i>{{ _('Tags') }}
                             </label>
                             <input type="text" class="form-input" id="tags" name="tags"
@@ -148,7 +133,7 @@
 
                         <!-- Gantt color -->
                         <div class="mb-4">
-                            <label for="color" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Gantt color') }}</label>
+                            <label for="color" class="form-label">{{ _('Gantt color') }}</label>
                             <div class="gantt-color-picker flex items-center gap-3 mt-1">
                                 <div class="gantt-color-picker-swatch rounded border border-gray-300 dark:border-gray-600 overflow-hidden flex-shrink-0" style="width:2.5rem;height:2.5rem;min-width:2.5rem;min-height:2.5rem;"></div>
                                 <input type="text" name="color" id="color" value="{{ request.form.get('color', task.color or '') }}" class="form-input w-28 font-mono text-sm" maxlength="7" placeholder="#3b82f6" data-color-input>
@@ -158,8 +143,8 @@
 
                         <!-- Form Actions -->
                         <div class="mt-6 flex justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
-                            <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">{{ _('Cancel') }}</a>
-                            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Update Task') }}</button>
+                            <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+                            <button type="submit" class="btn btn-primary">{{ _('Update Task') }}</button>
                         </div>
                 </form>
             </div>
@@ -169,7 +154,7 @@
     <!-- Sidebar -->
     <div class="lg:col-span-1 space-y-4">
             <!-- Progress -->
-            <div class="bg-card-light dark:bg-card-dark rounded-lg shadow">
+            <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
                 <div class="border-b border-border-light dark:border-border-dark p-4">
                     <h6 class="font-semibold flex items-center gap-2"><i class="fas fa-chart-line text-primary"></i>{{ _('Progress') }}</h6>
                 </div>
@@ -193,7 +178,7 @@
                 </div>
             </div>
             <!-- Current Task Info -->
-            <div class="bg-card-light dark:bg-card-dark rounded-lg shadow mb-4">
+            <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-4">
                 <div class="border-b border-border-light dark:border-border-dark p-4">
                     <h6 class="font-semibold flex items-center gap-2"><i class="fas fa-info-circle text-sky-600"></i>{{ _('Current Task Info') }}</h6>
                 </div>
@@ -285,7 +270,7 @@
             </div>
 
             <!-- Quick Actions -->
-            <div class="bg-card-light dark:bg-card-dark rounded-lg shadow mb-4">
+            <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-4">
                 <div class="border-b border-border-light dark:border-border-dark p-4">
                     <h6 class="font-semibold flex items-center gap-2"><i class="fas fa-bolt text-yellow-600"></i>{{ _('Quick Actions') }}</h6>
                 </div>
@@ -309,42 +294,42 @@
             </div>
 
             <!-- Edit Tips -->
-            <div class="bg-card-light dark:bg-card-dark rounded-lg shadow" data-testid="task-edit-tips">
+            <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm" data-testid="task-edit-tips">
                 <div class="border-b border-border-light dark:border-border-dark p-4">
                     <h6 class="font-semibold flex items-center gap-2"><i class="fas fa-lightbulb text-yellow-600"></i>{{ _('Edit Tips') }}</h6>
                 </div>
                 <div class="p-4">
                     <div class="tip-item mb-3">
-                        <div class="d-flex align-items-start">
-                            <div class="rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
+                        <div class="flex items-start">
+                            <div class="rounded-full flex items-center justify-center mr-2" style="width: 24px; height: 24px;">
                                 <i class="fas fa-info text-sky-600 dark:text-sky-400 fa-xs"></i>
                             </div>
                             <div>
-                                <small class="fw-semibold d-block">{{ _('Status Changes') }}</small>
+                                <small class="font-semibold block">{{ _('Status Changes') }}</small>
                                 <small class="text-text-muted-light dark:text-text-muted-dark">{{ _('Changing status may affect time tracking and progress calculations') }}</small>
                             </div>
                         </div>
                     </div>
                     
                     <div class="tip-item mb-3">
-                        <div class="d-flex align-items-start">
-                            <div class="rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
+                        <div class="flex items-start">
+                            <div class="rounded-full flex items-center justify-center mr-2" style="width: 24px; height: 24px;">
                                 <i class="fas fa-exclamation-triangle text-amber-600 dark:text-amber-400 fa-xs"></i>
                             </div>
                             <div>
-                                <small class="fw-semibold d-block">{{ _('Due Date Updates') }}</small>
+                                <small class="font-semibold block">{{ _('Due Date Updates') }}</small>
                                 <small class="text-text-muted-light dark:text-text-muted-dark">{{ _('Consider team workload when adjusting deadlines') }}</small>
                             </div>
                         </div>
                     </div>
                     
                     <div class="tip-item">
-                        <div class="d-flex align-items-start">
-                            <div class="rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
+                        <div class="flex items-start">
+                            <div class="rounded-full flex items-center justify-center mr-2" style="width: 24px; height: 24px;">
                                 <i class="fas fa-check text-emerald-600 dark:text-emerald-400 fa-xs"></i>
                             </div>
                             <div>
-                                <small class="fw-semibold d-block">{{ _('Assignment Changes') }}</small>
+                                <small class="font-semibold block">{{ _('Assignment Changes') }}</small>
                                 <small class="text-text-muted-light dark:text-text-muted-dark">{{ _('Notify team members when reassigning tasks') }}</small>
                             </div>
                         </div>
@@ -638,22 +623,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add visual indicators for current values
     if (statusSelect) {
         statusSelect.addEventListener('change', function() {
-            this.classList.remove('border-success', 'border-warning');
+            this.classList.remove('border-green-500', 'border-yellow-500');
             if (this.value === currentStatus) {
-                this.classList.add('border-success');
+                this.classList.add('border-green-500');
             } else {
-                this.classList.add('border-warning');
+                this.classList.add('border-yellow-500');
             }
         });
     }
     
     if (prioritySelect) {
         prioritySelect.addEventListener('change', function() {
-            this.classList.remove('border-success', 'border-warning');
+            this.classList.remove('border-green-500', 'border-yellow-500');
             if (this.value === currentPriority) {
-                this.classList.add('border-success');
+                this.classList.add('border-green-500');
             } else {
-                this.classList.add('border-warning');
+                this.classList.add('border-yellow-500');
             }
         });
     }

@@ -26,18 +26,33 @@
     actions_html=None
 ) }}
 
+<!-- Mobile Section Navigation -->
+<div class="mb-4 overflow-x-auto lg:hidden">
+    <nav class="flex gap-2 pb-2 min-w-max">
+        <a href="#section-general" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">General</a>
+        <a href="#section-timers" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Timers</a>
+        <a href="#section-time-entry" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Time Entry</a>
+        <a href="#section-branding" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Branding</a>
+        <a href="#section-invoices" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Invoices</a>
+        <a href="#section-peppol" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Peppol</a>
+        <a href="#section-backup" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Backup</a>
+        <a href="#section-kiosk" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Kiosk</a>
+        <a href="#section-analytics" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Analytics</a>
+    </nav>
+</div>
+
 <!-- Main Settings Form -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
         <div class="space-y-8">
             <!-- General Settings -->
-            <div class="border-b border-border-light dark:border-border-dark pb-6">
+            <div id="section-general" class="border-b border-border-light dark:border-border-dark pb-6">
                 <h2 class="text-lg font-semibold mb-4">General</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label for="timezone" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Timezone</label>
+                        <label for="timezone" class="form-label">Timezone</label>
                         <select name="timezone" id="timezone" class="form-input" required>
                             {% for tz in timezones %}
                             <option value="{{ tz }}" {% if settings.timezone == tz %}selected{% endif %}>{{ tz }}</option>
@@ -48,11 +63,11 @@
                         </p>
                     </div>
                     <div>
-                        <label for="currency" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Currency</label>
+                        <label for="currency" class="form-label">Currency</label>
                         <input type="text" name="currency" id="currency" value="{{ settings.currency }}" required class="form-input">
                     </div>
                     <div>
-                        <label for="date_format" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Date Format</label>
+                        <label for="date_format" class="form-label">Date Format</label>
                         <select name="date_format" id="date_format" class="form-input">
                             <option value="YYYY-MM-DD" {% if settings.date_format == 'YYYY-MM-DD' %}selected{% endif %}>YYYY-MM-DD (2026-02-06)</option>
                             <option value="MM/DD/YYYY" {% if settings.date_format == 'MM/DD/YYYY' %}selected{% endif %}>MM/DD/YYYY (02/06/2026)</option>
@@ -64,7 +79,7 @@
                         </p>
                     </div>
                     <div>
-                        <label for="time_format" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Time Format</label>
+                        <label for="time_format" class="form-label">Time Format</label>
                         <select name="time_format" id="time_format" class="form-input">
                             <option value="24h" {% if settings.time_format == '24h' %}selected{% endif %}>24-hour (14:30)</option>
                             <option value="12h" {% if settings.time_format == '12h' %}selected{% endif %}>12-hour (2:30 PM)</option>
@@ -77,15 +92,15 @@
             </div>
 
             <!-- Timer Settings -->
-            <div class="border-b border-border-light dark:border-border-dark pb-6">
+            <div id="section-timers" class="border-b border-border-light dark:border-border-dark pb-6">
                 <h2 class="text-lg font-semibold mb-4">Timers</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label for="rounding_minutes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Rounding (Minutes)</label>
+                        <label for="rounding_minutes" class="form-label">Rounding (Minutes)</label>
                         <input type="number" name="rounding_minutes" id="rounding_minutes" value="{{ settings.rounding_minutes }}" required class="form-input">
                     </div>
                     <div>
-                        <label for="idle_timeout_minutes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Idle Timeout (Minutes)</label>
+                        <label for="idle_timeout_minutes" class="form-label">Idle Timeout (Minutes)</label>
                         <input type="number" name="idle_timeout_minutes" id="idle_timeout_minutes" value="{{ settings.idle_timeout_minutes }}" required class="form-input">
                     </div>
                     <div class="md:col-span-2 flex items-center">
@@ -96,7 +111,7 @@
             </div>
 
             <!-- Time Entry Requirements -->
-            <div class="border-b border-border-light dark:border-border-dark pb-6">
+            <div id="section-time-entry" class="border-b border-border-light dark:border-border-dark pb-6">
                 <h2 class="text-lg font-semibold mb-4">{{ _('Time Entry Requirements') }}</h2>
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
                     {{ _('Optionally require users to provide task and description when logging worked time. Enforced across web, mobile, and desktop.') }}
@@ -111,12 +126,12 @@
                         <label for="time_entry_require_description" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">{{ _('Require description when logging time') }}</label>
                     </div>
                     <div id="time_entry_min_length_row" class="ml-6 {% if not getattr(settings, 'time_entry_require_description', false) %}hidden{% endif %}">
-                        <label for="time_entry_description_min_length" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Minimum description length (characters)') }}</label>
+                        <label for="time_entry_description_min_length" class="form-label">{{ _('Minimum description length (characters)') }}</label>
                         <input type="number" name="time_entry_description_min_length" id="time_entry_description_min_length" value="{{ getattr(settings, 'time_entry_description_min_length', 20) }}" min="1" max="500" class="form-input w-32 mt-1">
                         <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Minimum number of characters required in the description field.') }}</p>
                     </div>
                     <div class="pt-4 border-t border-border-light dark:border-border-dark mt-4">
-                        <label for="default_daily_working_hours" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Default daily working hours (for new users)') }}</label>
+                        <label for="default_daily_working_hours" class="form-label">{{ _('Default daily working hours (for new users)') }}</label>
                         <input type="number" name="default_daily_working_hours" id="default_daily_working_hours" value="{{ getattr(settings, 'default_daily_working_hours', 8.0) }}" min="0.5" max="24" step="0.5" class="form-input w-32 mt-1">
                         <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Used as the standard hours per day for overtime calculation when new users are created. Existing users keep their own setting.') }}</p>
                     </div>
@@ -156,7 +171,7 @@
                 </p>
                 {% if system_instance_id %}
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Step 1: System ID') }}</label>
+                    <label class="form-label">{{ _('Step 1: System ID') }}</label>
                     <div class="flex items-center gap-2">
                         <input type="text" id="adminSystemInstanceId" value="{{ system_instance_id }}" readonly class="flex-1 form-input font-mono text-sm bg-gray-100 dark:bg-gray-700">
                         <button type="button" onclick="copyAdminSystemId(this)" class="px-3 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded-md text-sm font-medium transition">
@@ -175,7 +190,7 @@
                 {% else %}
                 <div class="flex flex-wrap items-end gap-2">
                     <div class="flex-1 min-w-[200px]">
-                        <label for="adminDonateHideCode" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Step 3: Paste code') }}</label>
+                        <label for="adminDonateHideCode" class="form-label">{{ _('Step 3: Paste code') }}</label>
                         <input type="text" id="adminDonateHideCode" placeholder="{{ _('Enter code from email') }}" class="form-input w-full">
                     </div>
                     <button type="button" id="adminVerifyDonateHideCodeBtn" onclick="verifyAdminDonateHideCode()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition">
@@ -187,69 +202,69 @@
             </div>
 
             <!-- Company Branding -->
-            <div class="border-b border-border-light dark:border-border-dark pb-6">
+            <div id="section-branding" class="border-b border-border-light dark:border-border-dark pb-6">
                 <h2 class="text-lg font-semibold mb-4">{{ _('Company Branding') }}</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label for="company_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Company Name') }}</label>
+                        <label for="company_name" class="form-label">{{ _('Company Name') }}</label>
                         <input type="text" name="company_name" id="company_name" value="{{ settings.company_name }}" class="form-input">
                     </div>
                     <div>
-                        <label for="company_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Email</label>
+                        <label for="company_email" class="form-label">Company Email</label>
                         <input type="email" name="company_email" id="company_email" value="{{ settings.company_email }}" class="form-input">
                     </div>
                     <div>
-                        <label for="company_phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Phone</label>
+                        <label for="company_phone" class="form-label">Company Phone</label>
                         <input type="text" name="company_phone" id="company_phone" value="{{ settings.company_phone }}" class="form-input">
                     </div>
                     <div>
-                        <label for="company_website" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Website</label>
+                        <label for="company_website" class="form-label">Company Website</label>
                         <input type="text" name="company_website" id="company_website" value="{{ settings.company_website }}" class="form-input">
                     </div>
                     <div class="md:col-span-2">
-                        <label for="company_address" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Address</label>
+                        <label for="company_address" class="form-label">Company Address</label>
                         <textarea name="company_address" id="company_address" rows="3" class="form-input">{{ settings.company_address }}</textarea>
                     </div>
                     <div>
-                        <label for="company_tax_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tax ID (optional)</label>
+                        <label for="company_tax_id" class="form-label">Tax ID (optional)</label>
                         <input type="text" name="company_tax_id" id="company_tax_id" value="{{ settings.company_tax_id }}" class="form-input">
                     </div>
                     <div>
-                        <label for="company_bank_info" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Bank Information (optional)</label>
+                        <label for="company_bank_info" class="form-label">Bank Information (optional)</label>
                         <textarea name="company_bank_info" id="company_bank_info" rows="3" class="form-input">{{ settings.company_bank_info }}</textarea>
                     </div>
                 </div>
             </div>
 
             <!-- Invoice Defaults -->
-            <div class="border-b border-border-light dark:border-border-dark pb-6">
+            <div id="section-invoices" class="border-b border-border-light dark:border-border-dark pb-6">
                 <h2 class="text-lg font-semibold mb-4">{{ _('Invoice Defaults') }}</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label for="invoice_prefix" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Invoice Prefix</label>
+                        <label for="invoice_prefix" class="form-label">Invoice Prefix</label>
                         <input type="text" name="invoice_prefix" id="invoice_prefix" value="{{ settings.invoice_prefix }}" class="form-input">
                     </div>
                     <div>
-                        <label for="invoice_start_number" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Invoice Start Number</label>
+                        <label for="invoice_start_number" class="form-label">Invoice Start Number</label>
                         <input type="number" name="invoice_start_number" id="invoice_start_number" value="{{ settings.invoice_start_number }}" class="form-input">
                     </div>
                     <div class="md:col-span-2">
-                        <label for="invoice_terms" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Default Payment Terms</label>
+                        <label for="invoice_terms" class="form-label">Default Payment Terms</label>
                         <textarea name="invoice_terms" id="invoice_terms" rows="3" class="form-input">{{ settings.invoice_terms }}</textarea>
                     </div>
                     <div class="md:col-span-2">
-                        <label for="invoice_notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Default Invoice Notes</label>
+                        <label for="invoice_notes" class="form-label">Default Invoice Notes</label>
                         <textarea name="invoice_notes" id="invoice_notes" rows="3" class="form-input">{{ settings.invoice_notes }}</textarea>
                     </div>
                 </div>
             </div>
 
             <!-- Peppol e-Invoicing -->
-            <div class="border-b border-border-light dark:border-border-dark pb-6">
+            <div id="section-peppol" class="border-b border-border-light dark:border-border-dark pb-6">
                 <h2 class="text-lg font-semibold mb-4">Peppol e-Invoicing</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="md:col-span-2">
-                        <label for="peppol_enabled_mode" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Enable Peppol sending</label>
+                        <label for="peppol_enabled_mode" class="form-label">Enable Peppol sending</label>
                         <select name="peppol_enabled_mode" id="peppol_enabled_mode" class="form-input">
                             <option value="env" {% if settings.peppol_enabled is none %}selected{% endif %}>
                                 Use environment variable (PEPPOL_ENABLED) — currently {% if peppol_env_enabled|default(false) %}enabled{% else %}disabled{% endif %}
@@ -265,7 +280,7 @@
                     <div class="md:col-span-2 flex items-start">
                         <input type="checkbox" name="invoices_peppol_compliant" id="invoices_peppol_compliant" {% if settings.invoices_peppol_compliant %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 mt-1">
                         <div class="ml-2">
-                            <label for="invoices_peppol_compliant" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Make all invoices PEPPOL compliant</label>
+                            <label for="invoices_peppol_compliant" class="form-label">Make all invoices PEPPOL compliant</label>
                             <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
                                 When enabled, PDFs include PEPPOL/EN 16931 identifiers (seller/buyer endpoint and VAT), and warnings are shown when required data is missing. UBL for Peppol includes mandatory elements.
                             </p>
@@ -275,85 +290,85 @@
                     <div class="md:col-span-2 flex items-start">
                         <input type="checkbox" name="invoices_zugferd_pdf" id="invoices_zugferd_pdf" {% if settings.invoices_zugferd_pdf %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 mt-1">
                         <div class="ml-2">
-                            <label for="invoices_zugferd_pdf" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Embed EN 16931 XML in invoice PDFs (ZugFerd / Factur-X)</label>
+                            <label for="invoices_zugferd_pdf" class="form-label">Embed Factur-X / ZUGFeRD CII XML in invoice PDFs (EN 16931)</label>
                             <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
-                                When enabled, exported invoice PDFs contain an embedded XML file (ZUGFeRD-invoice.xml) so the file is both human-readable and machine-readable (EN 16931). These PDFs can also be sent via Peppol.
+                                When enabled, exported invoice PDFs contain an embedded CII (Cross-Industry Invoice) XML file (<code>factur-x.xml</code>) conforming to the Factur-X / ZUGFeRD EN 16931 profile. The PDF is both human-readable and machine-readable.
                             </p>
                         </div>
                     </div>
                     <div class="md:col-span-2 flex items-start">
                         <input type="checkbox" name="invoices_pdfa3_compliant" id="invoices_pdfa3_compliant" {% if getattr(settings, 'invoices_pdfa3_compliant', false) %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 mt-1">
                         <div class="ml-2">
-                            <label for="invoices_pdfa3_compliant" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Normalize ZUGFeRD PDFs to PDF/A-3</label>
+                            <label for="invoices_pdfa3_compliant" class="form-label">Normalize Factur-X PDFs to PDF/A-3b</label>
                             <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
-                                When enabled with ZUGFeRD embedding, exported PDFs are normalized to PDF/A-3 (XMP identification and output intent) for veraPDF and other validators.
+                                When enabled with Factur-X embedding, exported PDFs include PDF/A-3b identification, an embedded sRGB ICC profile, and output intent metadata for validator compliance (e.g. veraPDF).
                             </p>
                         </div>
                     </div>
                     <div class="md:col-span-2 flex items-start">
                         <input type="checkbox" name="invoices_validate_export" id="invoices_validate_export" {% if getattr(settings, 'invoices_validate_export', false) %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 mt-1">
                         <div class="ml-2">
-                            <label for="invoices_validate_export" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Run veraPDF after export (optional)</label>
+                            <label for="invoices_validate_export" class="form-label">Run veraPDF after export (optional)</label>
                             <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
                                 When enabled, runs veraPDF on exported ZUGFeRD PDFs and shows a summary. Does not block download. Set path below.
                             </p>
                         </div>
                     </div>
                     <div class="md:col-span-2">
-                        <label for="invoices_verapdf_path" class="block text-sm font-medium text-gray-700 dark:text-gray-300">veraPDF executable path</label>
+                        <label for="invoices_verapdf_path" class="form-label">veraPDF executable path</label>
                         <input type="text" name="invoices_verapdf_path" id="invoices_verapdf_path" value="{{ getattr(settings, 'invoices_verapdf_path', '') or '' }}" class="form-input" placeholder="e.g. /usr/bin/verapdf or C:\verapdf\verapdf.exe">
                     </div>
 
                     <div>
-                        <label for="peppol_sender_endpoint_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Sender Endpoint ID</label>
+                        <label for="peppol_sender_endpoint_id" class="form-label">Sender Endpoint ID</label>
                         <input type="text" name="peppol_sender_endpoint_id" id="peppol_sender_endpoint_id" value="{{ settings.peppol_sender_endpoint_id or '' }}" class="form-input" placeholder="e.g. 9915:BE0123456789">
                     </div>
                     <div>
-                        <label for="peppol_sender_scheme_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Sender Scheme ID</label>
+                        <label for="peppol_sender_scheme_id" class="form-label">Sender Scheme ID</label>
                         <input type="text" name="peppol_sender_scheme_id" id="peppol_sender_scheme_id" value="{{ settings.peppol_sender_scheme_id or '' }}" class="form-input" placeholder="e.g. 9915">
                     </div>
                     <div>
-                        <label for="peppol_sender_country" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Sender Country (optional)</label>
+                        <label for="peppol_sender_country" class="form-label">Sender Country (optional)</label>
                         <input type="text" name="peppol_sender_country" id="peppol_sender_country" value="{{ settings.peppol_sender_country or '' }}" class="form-input" placeholder="e.g. BE">
                     </div>
                     <div>
-                        <label for="peppol_provider" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Provider label</label>
+                        <label for="peppol_provider" class="form-label">Provider label</label>
                         <input type="text" name="peppol_provider" id="peppol_provider" value="{{ settings.peppol_provider or 'generic' }}" class="form-input">
                     </div>
                     <div class="md:col-span-2">
-                        <label for="peppol_transport_mode" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Transport mode</label>
+                        <label for="peppol_transport_mode" class="form-label">Transport mode</label>
                         <select name="peppol_transport_mode" id="peppol_transport_mode" class="form-input">
                             <option value="generic" {% if (getattr(settings, 'peppol_transport_mode', '') or 'generic') == 'generic' %}selected{% endif %}>Generic (HTTP JSON access point)</option>
-                            <option value="native" {% if getattr(settings, 'peppol_transport_mode', '') == 'native' %}selected{% endif %}>Native (SML/SMP + AS4)</option>
+                            <option value="native" {% if getattr(settings, 'peppol_transport_mode', '') == 'native' %}selected{% endif %}>Native (SML/SMP + AS4) — experimental</option>
                         </select>
                         <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
-                            Generic: use your access point adapter URL. Native: discover recipient via SML/SMP and send AS4 message.
+                            Generic: use your access point adapter URL. Native (experimental): discover recipient via SML/SMP and send AS4 — lacks WS-Security and receipt handling; use a Peppol AP provider for production.
                         </p>
                     </div>
                     <div id="peppol_native_fields" class="md:col-span-2 space-y-4 {% if getattr(settings, 'peppol_transport_mode', '') != 'native' %}hidden{% endif %}">
                         <div>
-                            <label for="peppol_sml_url" class="block text-sm font-medium text-gray-700 dark:text-gray-300">SML URL (required for native)</label>
+                            <label for="peppol_sml_url" class="form-label">SML URL (required for native)</label>
                             <input type="text" name="peppol_sml_url" id="peppol_sml_url" value="{{ getattr(settings, 'peppol_sml_url', '') or '' }}" class="form-input" placeholder="https://edelivery.tech.ec.europa.eu/edelivery-sml">
                         </div>
                         <div>
-                            <label for="peppol_native_cert_path" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client certificate path (optional)</label>
+                            <label for="peppol_native_cert_path" class="form-label">Client certificate path (optional)</label>
                             <input type="text" name="peppol_native_cert_path" id="peppol_native_cert_path" value="{{ getattr(settings, 'peppol_native_cert_path', '') or '' }}" class="form-input" placeholder="/path/to/cert.pem">
                         </div>
                         <div>
-                            <label for="peppol_native_key_path" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client key path (optional)</label>
+                            <label for="peppol_native_key_path" class="form-label">Client key path (optional)</label>
                             <input type="text" name="peppol_native_key_path" id="peppol_native_key_path" value="{{ getattr(settings, 'peppol_native_key_path', '') or '' }}" class="form-input" placeholder="/path/to/key.pem">
                         </div>
                     </div>
                     <div class="md:col-span-2 peppol-generic-url">
-                        <label for="peppol_access_point_url" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Access Point URL (generic mode)</label>
+                        <label for="peppol_access_point_url" class="form-label">Access Point URL (generic mode)</label>
                         <input type="text" name="peppol_access_point_url" id="peppol_access_point_url" value="{{ settings.peppol_access_point_url or '' }}" class="form-input" placeholder="https://your-access-point-adapter.example.com/send">
                     </div>
                     <div>
-                        <label for="peppol_access_point_timeout" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Access Point Timeout (seconds)</label>
+                        <label for="peppol_access_point_timeout" class="form-label">Access Point Timeout (seconds)</label>
                         <input type="number" name="peppol_access_point_timeout" id="peppol_access_point_timeout" value="{{ settings.peppol_access_point_timeout or 30 }}" class="form-input" min="1" max="300">
                     </div>
                     <div>
-                        <label for="peppol_access_point_token" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Access Point Token (optional)</label>
+                        <label for="peppol_access_point_token" class="form-label">Access Point Token (optional)</label>
                         <input type="password" name="peppol_access_point_token" id="peppol_access_point_token" value="" class="form-input" placeholder="{% if settings.peppol_access_point_token %}Token is set (enter to replace){% else %}Enter token (optional){% endif %}">
                         <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
                             For security, the token is not shown. Leave blank to keep the current token.
@@ -363,15 +378,15 @@
             </div>
 
             <!-- Backup Settings -->
-            <div class="border-b border-border-light dark:border-border-dark pb-6">
+            <div id="section-backup" class="border-b border-border-light dark:border-border-dark pb-6">
                 <h2 class="text-lg font-semibold mb-4">{{ _('Backup Settings') }}</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label for="backup_retention_days" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Backup Retention (Days)</label>
+                        <label for="backup_retention_days" class="form-label">Backup Retention (Days)</label>
                         <input type="number" name="backup_retention_days" id="backup_retention_days" value="{{ settings.backup_retention_days }}" class="form-input">
                     </div>
                     <div>
-                        <label for="backup_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Backup Time (HH:MM)</label>
+                        <label for="backup_time" class="form-label">Backup Time (HH:MM)</label>
                         <input type="text" name="backup_time" id="backup_time" value="{{ settings.backup_time }}" placeholder="02:00" class="form-input">
                     </div>
                 </div>
@@ -382,7 +397,7 @@
                 <h2 class="text-lg font-semibold mb-4">{{ _('Export Settings') }}</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label for="export_delimiter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">CSV Export Delimiter</label>
+                        <label for="export_delimiter" class="form-label">CSV Export Delimiter</label>
                         <select name="export_delimiter" id="export_delimiter" class="form-input">
                             <option value="," {% if settings.export_delimiter == ',' %}selected{% endif %}>Comma (,)</option>
                             <option value=";" {% if settings.export_delimiter == ';' %}selected{% endif %}>Semicolon (;)</option>
@@ -393,7 +408,7 @@
             </div>
 
             <!-- Kiosk Mode Settings -->
-            <div class="border-b border-border-light dark:border-border-dark pb-6">
+            <div id="section-kiosk" class="border-b border-border-light dark:border-border-dark pb-6">
                 <h2 class="text-lg font-semibold mb-4">{{ _('Kiosk Mode') }}</h2>
                 <div class="space-y-4">
                     <div class="flex items-center">
@@ -408,11 +423,11 @@
                     {% if kiosk_settings.kiosk_mode_enabled %}
                     <div class="ml-6 grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                         <div>
-                            <label for="kiosk_auto_logout_minutes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Auto-Logout Timeout (Minutes)') }}</label>
+                            <label for="kiosk_auto_logout_minutes" class="form-label">{{ _('Auto-Logout Timeout (Minutes)') }}</label>
                             <input type="number" name="kiosk_auto_logout_minutes" id="kiosk_auto_logout_minutes" value="{{ kiosk_settings.kiosk_auto_logout_minutes }}" min="1" max="60" class="form-input">
                         </div>
                         <div>
-                            <label for="kiosk_default_movement_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Default Movement Type') }}</label>
+                            <label for="kiosk_default_movement_type" class="form-label">{{ _('Default Movement Type') }}</label>
                             <select name="kiosk_default_movement_type" id="kiosk_default_movement_type" class="form-input">
                                 <option value="adjustment" {% if kiosk_settings.kiosk_default_movement_type == 'adjustment' %}selected{% endif %}>{{ _('Adjustment') }}</option>
                                 <option value="transfer" {% if kiosk_settings.kiosk_default_movement_type == 'transfer' %}selected{% endif %}>{{ _('Transfer') }}</option>
@@ -439,7 +454,7 @@
             </div>
 
             <!-- Analytics Settings -->
-            <div>
+            <div id="section-analytics">
                 <h2 class="text-lg font-semibold mb-4">{{ _('Privacy & Analytics') }}</h2>
                 <div class="space-y-4">
                     <div class="flex items-center">
@@ -460,14 +475,14 @@
             </div>
         </div>
 
-        <div class="mt-8 pt-6 flex justify-end">
+        <div class="mt-8 pt-6 flex justify-end sticky bottom-0 bg-card-light dark:bg-card-dark py-4 z-10">
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Save Settings') }}</button>
         </div>
     </form>
 </div>
 
 <!-- Company Logo Upload - Separate Section -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h2 class="text-lg font-semibold mb-4">{{ _('Company Logo') }}</h2>
     
     <!-- Current Logo Display -->

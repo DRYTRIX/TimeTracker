@@ -140,7 +140,7 @@
 <!-- Charts Section -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
     <!-- User Activity Chart -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="font-semibold mb-3 flex items-center gap-2">
             <i class="fas fa-chart-line text-blue-500"></i>
             {{ _('User Activity (30 Days)') }}
@@ -151,7 +151,7 @@
     </div>
     
     <!-- Project Status Chart -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="font-semibold mb-3 flex items-center gap-2">
             <i class="fas fa-chart-pie text-purple-500"></i>
             {{ _('Project Status') }}
@@ -162,7 +162,7 @@
     </div>
     
     <!-- Time Entry Trends Chart -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="font-semibold mb-3 flex items-center gap-2">
             <i class="fas fa-chart-bar text-green-500"></i>
             {{ _('Time Entry Trends (30 Days)') }}
@@ -174,7 +174,7 @@
 </div>
 
 <!-- System Health Section -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
         <i class="fas fa-heartbeat text-red-500"></i>
         {{ _('System Health') }}
@@ -220,7 +220,7 @@
 </div>
 
 <!-- Admin Sections -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
         <i class="fas fa-cogs text-primary"></i>
         {{ _('Admin Sections') }}
@@ -321,14 +321,14 @@
 </div>
 
 <!-- Recent Activity -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
     <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
         <i class="fas fa-history text-primary"></i>
         {{ _('Recent Activity') }}
     </h2>
     {% if recent_entries %}
     <div class="overflow-x-auto">
-        <table class="w-full text-left">
+        <table class="w-full text-left responsive-cards">
             <thead class="border-b-2 border-border-light dark:border-border-dark">
                 <tr>
                     <th class="p-4 font-semibold text-text-light dark:text-text-dark">{{ _('User') }}</th>
@@ -340,25 +340,25 @@
             <tbody>
                 {% for entry in recent_entries %}
                 <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors {% if loop.index % 2 == 0 %}bg-background-light/50 dark:bg-background-dark/50{% endif %}">
-                    <td class="p-4">
+                    <td class="p-4 mobile-card-header" data-label="User">
                         <div class="flex items-center gap-2">
                             <i class="fas fa-user text-text-muted-light dark:text-text-muted-dark"></i>
                             <span class="text-text-light dark:text-text-dark">{{ entry.user.username }}</span>
                         </div>
                     </td>
-                    <td class="p-4">
+                    <td class="p-4" data-label="Project">
                         <div class="flex items-center gap-2">
                             <i class="fas fa-folder text-text-muted-light dark:text-text-muted-dark"></i>
                             <span class="text-text-light dark:text-text-dark">{{ entry.project.name if entry.project else _('N/A') }}</span>
                         </div>
                     </td>
-                    <td class="p-4">
+                    <td class="p-4" data-label="Duration">
                         <div class="flex items-center gap-2">
                             <i class="fas fa-clock text-text-muted-light dark:text-text-muted-dark"></i>
                             <span class="text-text-light dark:text-text-dark">{{ entry.duration }}</span>
                         </div>
                     </td>
-                    <td class="p-4">
+                    <td class="p-4" data-label="Date">
                         <div class="flex items-center gap-2">
                             <i class="fas fa-calendar text-text-muted-light dark:text-text-muted-dark"></i>
                             <span class="text-text-light dark:text-text-dark">{{ entry.start_time|user_datetime }}</span>

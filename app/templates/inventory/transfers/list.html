@@ -15,14 +15,14 @@
     actions_html='<a href="' + url_for("inventory.new_transfer") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Transfer</a>' if (current_user.is_admin or has_permission('transfer_stock')) else None
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-            <label for="date_from" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Date From') }}</label>
+            <label for="date_from" class="form-label">{{ _('Date From') }}</label>
             <input type="date" name="date_from" id="date_from" value="{{ date_from or '' }}" class="form-input">
         </div>
         <div>
-            <label for="date_to" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Date To') }}</label>
+            <label for="date_to" class="form-label">{{ _('Date To') }}</label>
             <input type="date" name="date_to" id="date_to" value="{{ date_to or '' }}" class="form-input">
         </div>
         <div class="flex items-end">
@@ -31,8 +31,8 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
-    <table class="table table-zebra w-full text-left">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+    <table class="table table-zebra w-full text-left responsive-cards">
         <thead>
             <tr>
                 <th class="p-4">{{ _('Date') }}</th>
@@ -50,24 +50,24 @@
                     {% set in_movement = movements|selectattr('quantity', 'gt', 0)|first %}
                     {% if out_movement and in_movement %}
                     <tr>
-                        <td class="p-4">{{ out_movement.moved_at|user_datetime if out_movement.moved_at else '—' }}</td>
-                        <td class="p-4">
+                        <td class="p-4 mobile-card-header" data-label="{{ _('Date') }}">{{ out_movement.moved_at|user_datetime if out_movement.moved_at else '—' }}</td>
+                        <td class="p-4" data-label="{{ _('Item') }}">
                             <a href="{{ url_for('inventory.view_stock_item', item_id=out_movement.stock_item_id) }}" class="text-primary hover:underline">
                                 {{ out_movement.stock_item.name }} ({{ out_movement.stock_item.sku }})
                             </a>
                         </td>
-                        <td class="p-4">
+                        <td class="p-4" data-label="{{ _('From Warehouse') }}">
                             <a href="{{ url_for('inventory.view_warehouse', warehouse_id=out_movement.warehouse_id) }}" class="text-primary hover:underline">
                                 {{ out_movement.warehouse.code }}
                             </a>
                         </td>
-                        <td class="p-4">
+                        <td class="p-4" data-label="{{ _('To Warehouse') }}">
                             <a href="{{ url_for('inventory.view_warehouse', warehouse_id=in_movement.warehouse_id) }}" class="text-primary hover:underline">
                                 {{ in_movement.warehouse.code }}
                             </a>
                         </td>
-                        <td class="p-4 font-semibold">{{ in_movement.quantity }}</td>
-                        <td class="p-4">{{ out_movement.moved_by_user.username if out_movement.moved_by_user else '—' }}</td>
+                        <td class="p-4 font-semibold" data-label="{{ _('Quantity') }}">{{ in_movement.quantity }}</td>
+                        <td class="p-4" data-label="{{ _('User') }}">{{ out_movement.moved_by_user.username if out_movement.moved_by_user else '—' }}</td>
                     </tr>
                     {% endif %}
                 {% endif %}

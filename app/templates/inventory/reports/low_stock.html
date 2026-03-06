@@ -15,7 +15,7 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
     {% if low_stock_items %}
     <div class="mb-4">
         <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -23,7 +23,7 @@
         </p>
     </div>
     
-    <table class="table table-zebra w-full text-left">
+    <table class="table table-zebra w-full text-left responsive-cards">
         <thead>
             <tr>
                 <th class="p-4">{{ _('Item') }}</th>
@@ -39,22 +39,22 @@
         <tbody>
             {% for item_data in low_stock_items %}
             <tr>
-                <td class="p-4">
+                <td class="p-4 mobile-card-header" data-label="{{ _('Item') }}">
                     <a href="{{ url_for('inventory.view_stock_item', item_id=item_data.item.id) }}" class="text-primary hover:underline font-medium">
                         {{ item_data.item.name }}
                     </a>
                 </td>
-                <td class="p-4 font-mono text-sm">{{ item_data.item.sku }}</td>
-                <td class="p-4">
+                <td class="p-4 font-mono text-sm" data-label="{{ _('SKU') }}">{{ item_data.item.sku }}</td>
+                <td class="p-4" data-label="{{ _('Warehouse') }}">
                     <a href="{{ url_for('inventory.view_warehouse', warehouse_id=item_data.warehouse.id) }}" class="text-primary hover:underline">
                         {{ item_data.warehouse.code }}
                     </a>
                 </td>
-                <td class="p-4 font-semibold text-red-600">{{ item_data.quantity_on_hand }}</td>
-                <td class="p-4">{{ item_data.reorder_point }}</td>
-                <td class="p-4 font-semibold text-red-600">{{ item_data.shortfall }}</td>
-                <td class="p-4">{{ item_data.reorder_quantity }}</td>
-                <td class="p-4">
+                <td class="p-4 font-semibold text-red-600" data-label="{{ _('Quantity On Hand') }}">{{ item_data.quantity_on_hand }}</td>
+                <td class="p-4" data-label="{{ _('Reorder Point') }}">{{ item_data.reorder_point }}</td>
+                <td class="p-4 font-semibold text-red-600" data-label="{{ _('Shortfall') }}">{{ item_data.shortfall }}</td>
+                <td class="p-4" data-label="{{ _('Reorder Quantity') }}">{{ item_data.reorder_quantity }}</td>
+                <td class="p-4 mobile-actions" data-label="{{ _('Actions') }}">
                     <a href="{{ url_for('inventory.new_purchase_order') }}" class="text-primary hover:underline text-sm">
                         <i class="fas fa-shopping-cart mr-1"></i>{{ _('Create PO') }}
                     </a>

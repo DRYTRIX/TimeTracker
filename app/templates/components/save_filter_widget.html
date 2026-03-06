@@ -10,8 +10,8 @@
 </div>
 
 <!-- Save Filter Modal -->
-<div id="saveFilterModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-card-light dark:bg-card-dark">
+<div id="saveFilterModal" class="hidden fixed inset-0 bg-black/50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-sm sm:max-w-md shadow-lg rounded-xl bg-card-light dark:bg-card-dark mx-4 sm:mx-auto">
         <div class="mt-3">
             <!-- Header -->
             <div class="flex justify-between items-center mb-4">
@@ -24,8 +24,8 @@
             <!-- Form -->
             <form id="saveFilterForm" onsubmit="saveFilter(event)">
                 <div class="mb-4">
-                    <label for="filterName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Filter Name <span class="text-red-500">*</span>
+                    <label for="filterName" class="form-label">
+                        {{ _('Filter Name') }} <span class="text-red-500">*</span>
                     </label>
                     <input type="text" 
                            id="filterName" 
@@ -39,7 +39,7 @@
                         <input type="checkbox" 
                                id="filterShared" 
                                class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Share with team</span>
+                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ _('Share with team') }}</span>
                     </label>
                 </div>
 
@@ -47,11 +47,11 @@
                 <div class="flex justify-end space-x-2">
                     <button type="button" 
                             onclick="closeSaveFilterModal()" 
-                            class="btn btn-secondary">
-                        Cancel
+                            class="btn btn-secondary min-h-[44px]">
+                        {{ _('Cancel') }}
                     </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save mr-2"></i>Save
+                    <button type="submit" class="btn btn-primary min-h-[44px]">
+                        <i class="fas fa-save mr-2"></i>{{ _('Save') }}
                     </button>
                 </div>
             </form>
@@ -68,7 +68,7 @@
     </button>
     
     <div id="savedFiltersDropdown" 
-         class="hidden absolute right-0 mt-2 w-64 bg-card-light dark:bg-card-dark rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
+         class="hidden absolute right-0 sm:right-0 left-0 sm:left-auto mt-2 w-auto sm:w-72 bg-card-light dark:bg-card-dark rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
         <div class="p-2 max-h-96 overflow-y-auto">
             <div id="savedFiltersList" class="space-y-1">
                 <!-- Filters will be loaded here -->
@@ -203,8 +203,11 @@ function applyFilter(filterId) {
 }
 
 function showNotification(message, type) {
-    // Simple notification - you can enhance this with a toast library
-    alert(message);
+    if (window.toastManager) {
+        if (type === 'success') window.toastManager.success(message);
+        else if (type === 'error') window.toastManager.error(message);
+        else window.toastManager.info(message);
+    }
 }
 
 // Close dropdown when clicking outside

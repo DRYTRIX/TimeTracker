@@ -8,7 +8,7 @@
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <div class="space-y-6">
         <!-- ServiceWorker Status -->
         <div class="border-b border-border-light dark:border-border-dark pb-6">
@@ -33,11 +33,11 @@
         <!-- ServiceWorker Actions -->
         <div class="border-b border-border-light dark:border-border-dark pb-6">
             <h2 class="text-lg font-semibold mb-4">{{ _('ServiceWorker Actions') }}</h2>
-            <div class="space-y-3">
+            <div class="flex flex-wrap gap-3">
                 <button onclick="unregisterSW()" class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
                     Unregister ServiceWorker
                 </button>
-                <button onclick="updateSW()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium ml-2 transition-colors">
+                <button onclick="updateSW()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
                     Update ServiceWorker
                 </button>
             </div>

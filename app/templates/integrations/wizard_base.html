@@ -17,17 +17,17 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <!-- Progress Indicator -->
     <div class="mb-8">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center justify-between mb-4 overflow-x-auto">
             {% for step in range(1, total_steps + 1) %}
-            <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-2 flex-shrink-0">
                 <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 flex items-center justify-center text-sm font-semibold step-indicator" data-step="{{ step }}">{{ step }}</div>
-                <span class="text-sm font-medium step-label" data-step="{{ step }}">{{ step_labels[step - 1] if step_labels and step < step_labels|length + 1 else _('Step') }} {{ step }}</span>
+                <span class="text-sm font-medium step-label hidden sm:inline" data-step="{{ step }}">{{ step_labels[step - 1] if step_labels and step < step_labels|length + 1 else _('Step') }} {{ step }}</span>
             </div>
             {% if not loop.last %}
-            <div class="flex-1 h-1 mx-4 bg-gray-200 dark:bg-gray-700 step-connector" data-step="{{ step }}"></div>
+            <div class="flex-1 h-1 mx-2 sm:mx-4 min-w-[1rem] bg-gray-200 dark:bg-gray-700 step-connector" data-step="{{ step }}"></div>
             {% endif %}
             {% endfor %}
         </div>
@@ -43,15 +43,15 @@
         {% endblock %}
         
         <!-- Navigation Buttons -->
-        <div class="flex justify-between mt-8 pt-6 border-t border-border-light dark:border-border-dark">
-            <button type="button" id="prev-btn" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors hidden">
+        <div class="flex flex-col sm:flex-row justify-between gap-3 mt-8 pt-6 border-t border-border-light dark:border-border-dark">
+            <button type="button" id="prev-btn" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 min-h-[44px] rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors hidden">
                 <i class="fas fa-arrow-left mr-2"></i>{{ _('Previous') }}
             </button>
             <div class="ml-auto flex gap-2">
-                <button type="button" id="next-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <button type="button" id="next-btn" class="bg-primary text-white px-6 py-2 min-h-[44px] rounded-lg hover:bg-primary/90 transition-colors">
                     {{ _('Next') }}<i class="fas fa-arrow-right ml-2"></i>
                 </button>
-                <a href="{{ url_for('integrations.manage_integration', provider=provider) }}" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors inline-block">
+                <a href="{{ url_for('integrations.manage_integration', provider=provider) }}" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 min-h-[44px] rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors inline-flex items-center">
                     {{ _('Cancel') }}
                 </a>
             </div>

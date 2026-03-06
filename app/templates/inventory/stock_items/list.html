@@ -15,14 +15,14 @@
     actions_html='<a href="' + url_for("inventory.new_stock_item") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Stock Item</a>' if (current_user.is_admin or has_permission('manage_stock_items')) else None
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-            <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Search') }}</label>
-            <input type="text" name="search" id="search" value="{{ search or '' }}" class="form-input" placeholder="{{ _('SKU, Name, Barcode...') }}">
+            <label for="stock-items-filter-search" class="form-label">{{ _('Search') }}</label>
+            <input type="text" name="search" id="stock-items-filter-search" value="{{ search or '' }}" class="form-input" placeholder="{{ _('SKU, Name, Barcode...') }}">
         </div>
         <div>
-            <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Category') }}</label>
+            <label for="category" class="form-label">{{ _('Category') }}</label>
             <select name="category" id="category" class="form-input">
                 <option value="">{{ _('All Categories') }}</option>
                 {% for cat in categories %}
@@ -42,39 +42,39 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
-    <table class="table table-zebra w-full text-left">
-        <thead>
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+    <table class="table table-zebra w-full text-left enhanced-table responsive-cards">
+        <thead class="bg-background-light dark:bg-background-dark">
             <tr>
-                <th class="p-4">{{ _('SKU') }}</th>
-                <th class="p-4">{{ _('Name') }}</th>
-                <th class="p-4">{{ _('Category') }}</th>
-                <th class="p-4">{{ _('Unit') }}</th>
-                <th class="p-4">{{ _('Total Qty') }}</th>
-                <th class="p-4">{{ _('Available') }}</th>
-                <th class="p-4">{{ _('Status') }}</th>
-                <th class="p-4">{{ _('Actions') }}</th>
+                <th class="px-4 py-3">{{ _('SKU') }}</th>
+                <th class="px-4 py-3">{{ _('Name') }}</th>
+                <th class="px-4 py-3">{{ _('Category') }}</th>
+                <th class="px-4 py-3">{{ _('Unit') }}</th>
+                <th class="px-4 py-3">{{ _('Total Qty') }}</th>
+                <th class="px-4 py-3">{{ _('Available') }}</th>
+                <th class="px-4 py-3">{{ _('Status') }}</th>
+                <th class="px-4 py-3">{{ _('Actions') }}</th>
             </tr>
         </thead>
         <tbody>
             {% for item in items %}
             <tr>
-                <td class="p-4 font-mono text-sm">{{ item.sku }}</td>
-                <td class="p-4 font-medium">
+                <td class="p-4 font-mono text-sm" data-label="{{ _('SKU') }}">{{ item.sku }}</td>
+                <td class="p-4 font-medium mobile-card-header" data-label="{{ _('Name') }}">
                     <a href="{{ url_for('inventory.view_stock_item', item_id=item.id) }}" class="text-primary hover:underline">
                         {{ item.name }}
                     </a>
                 </td>
-                <td class="p-4">{{ item.category or '—' }}</td>
-                <td class="p-4">{{ item.unit }}</td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Category') }}">{{ item.category or '—' }}</td>
+                <td class="p-4" data-label="{{ _('Unit') }}">{{ item.unit }}</td>
+                <td class="p-4" data-label="{{ _('Total Qty') }}">
                     {% if item.is_trackable %}
                         {{ item.total_quantity_on_hand or 0 }}
                     {% else %}
                         <span class="text-gray-400">N/A</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Available') }}">
                     {% if item.is_trackable %}
                         {{ item.total_quantity_available or 0 }}
                         {% if item.is_low_stock %}
@@ -84,14 +84,14 @@
                         <span class="text-gray-400">N/A</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Status') }}">
                     {% if item.is_active %}
                         <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Active') }}</span>
                     {% else %}
                         <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ _('Inactive') }}</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4 mobile-actions" data-label="{{ _('Actions') }}">
                     <a href="{{ url_for('inventory.view_stock_item', item_id=item.id) }}" class="text-primary hover:underline mr-3">
                         <i class="fas fa-eye"></i>
                     </a>

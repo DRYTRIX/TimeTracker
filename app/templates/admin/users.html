@@ -12,29 +12,29 @@
     title_text='Manage Users',
     subtitle_text='Add, edit, or remove user accounts',
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("admin.create_user") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create User</a>' if (current_user.is_admin or has_permission('create_users')) else None
+    actions_html='<a href="' + url_for("admin.create_user") + '" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>Create User</a>' if (current_user.is_admin or has_permission('create_users')) else None
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
-    <table class="w-full text-left">
-        <thead class="border-b border-border-light dark:border-border-dark">
+    <table class="w-full text-left enhanced-table responsive-cards">
+        <thead class="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
             <tr>
-                <th class="p-4">Username</th>
-                <th class="p-4">Roles & Permissions</th>
-                <th class="p-4">Status</th>
-                <th class="p-4">Actions</th>
+                <th class="px-4 py-3">Username</th>
+                <th class="px-4 py-3">Roles & Permissions</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for user in users %}
             <tr class="border-b border-border-light dark:border-border-dark">
-                <td class="p-4">
+                <td class="p-4 mobile-card-header" data-label="Username">
                     <div class="font-medium">{{ user.username }}</div>
                     {% if user.is_admin %}
                     <span class="text-xs text-primary">{{ _('Admin Access') }}</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="Roles">
                     {% if user.roles %}
                     <div class="flex flex-wrap gap-1">
                         {% for role in user.roles %}
@@ -59,7 +59,7 @@
                     </div>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="Status">
                     <div class="flex flex-col gap-1">
                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' if user.is_active else 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' }}">
                             {{ 'Active' if user.is_active else 'Inactive' }}
@@ -71,7 +71,7 @@
                         {% endif %}
                     </div>
                 </td>
-                <td class="p-4">
+                <td class="p-4 mobile-actions" data-label="Actions">
                     <div class="flex gap-2">
                         {% if current_user.is_admin or has_permission('edit_users') %}
                         <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="text-primary hover:underline text-sm">{{ _('Edit') }}</a>

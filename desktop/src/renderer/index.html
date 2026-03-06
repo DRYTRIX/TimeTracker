@@ -53,7 +53,7 @@
       <header class="app-header">
         <div class="header-left">
           <h1>TimeTracker</h1>
-          <span id="connection-status" class="connection-status" title="Connection status"></span>
+          <span id="connection-status" class="connection-status" role="status" aria-live="polite" aria-label="Connection status" title="Connection status"></span>
         </div>
         <div class="header-right">
           <button id="minimize-btn" class="header-btn" title="Minimize">−</button>
@@ -67,6 +67,9 @@
         <button class="nav-btn active" data-view="dashboard">Dashboard</button>
         <button class="nav-btn" data-view="projects">Projects</button>
         <button class="nav-btn" data-view="entries">Time Entries</button>
+        <button class="nav-btn" data-view="invoices">Invoices</button>
+        <button class="nav-btn" data-view="expenses">Expenses</button>
+        <button class="nav-btn" data-view="workforce">Workforce</button>
         <button class="nav-btn" data-view="settings">Settings</button>
       </nav>
 
@@ -142,6 +145,80 @@
           </div>
         </div>
 
+        <!-- Invoices View -->
+        <div id="invoices-view" class="view">
+          <div class="view-header">
+            <h2>Invoices</h2>
+            <div class="view-header-actions">
+              <input type="search" id="invoice-search" placeholder="Search invoices...">
+              <button id="invoice-prev-page-btn" class="btn btn-secondary">Prev</button>
+              <span id="invoice-page-indicator">Page 1/1</span>
+              <button id="invoice-next-page-btn" class="btn btn-secondary">Next</button>
+              <button id="add-invoice-btn" class="btn btn-primary">Add Invoice</button>
+            </div>
+          </div>
+          <div id="invoices-list" class="entries-list">
+            <p class="empty-state">No invoices</p>
+          </div>
+        </div>
+
+        <!-- Expenses View -->
+        <div id="expenses-view" class="view">
+          <div class="view-header">
+            <h2>Expenses</h2>
+            <div class="view-header-actions">
+              <input type="search" id="expense-search" placeholder="Search expenses...">
+              <button id="expense-prev-page-btn" class="btn btn-secondary">Prev</button>
+              <span id="expense-page-indicator">Page 1/1</span>
+              <button id="expense-next-page-btn" class="btn btn-secondary">Next</button>
+              <button id="add-expense-btn" class="btn btn-primary">Add Expense</button>
+            </div>
+          </div>
+          <div id="expenses-list" class="entries-list">
+            <p class="empty-state">No expenses</p>
+          </div>
+        </div>
+
+        <!-- Workforce View -->
+        <div id="workforce-view" class="view">
+          <div class="view-header">
+            <h2>Workforce</h2>
+          </div>
+          <div id="workforce-summary" class="dashboard-grid">
+            <div class="dashboard-card">
+              <h3>Timesheet Periods</h3>
+              <div class="view-header-actions" style="margin-bottom: 8px;">
+                <button id="refresh-periods-btn" class="btn btn-secondary">Refresh</button>
+              </div>
+              <div id="periods-list" class="entries-list">
+                <p class="empty-state">No periods</p>
+              </div>
+            </div>
+            <div class="dashboard-card">
+              <h3>Capacity</h3>
+              <div id="capacity-list" class="entries-list">
+                <p class="empty-state">No capacity rows</p>
+              </div>
+            </div>
+            <div class="dashboard-card">
+              <h3>Time-Off Requests</h3>
+              <div class="view-header-actions" style="margin-bottom: 8px;">
+                <input type="search" id="timeoff-search" placeholder="Search requests...">
+                <button id="add-timeoff-btn" class="btn btn-primary">New Request</button>
+              </div>
+              <div id="timeoff-list" class="entries-list">
+                <p class="empty-state">No time-off requests</p>
+              </div>
+            </div>
+            <div class="dashboard-card">
+              <h3>Leave Balances</h3>
+              <div id="balances-list" class="entries-list">
+                <p class="empty-state">No leave balances</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Settings View -->
         <div id="settings-view" class="view">
           <h2>Settings</h2>
@@ -183,9 +260,7 @@
     </div>
   </div>
 
-  <script src="js/api/client.js"></script>
-  <script src="js/storage/storage.js"></script>
-  <script src="js/utils/helpers.js"></script>
-  <script src="js/app.js"></script>
+  <script src="../shared/config.js"></script>
+  <script src="js/bundle.js"></script>
 </body>
 </html>

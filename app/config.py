@@ -41,14 +41,17 @@ class Config:
     SINGLE_ACTIVE_TIMER = os.getenv("SINGLE_ACTIVE_TIMER", "true").lower() == "true"
     IDLE_TIMEOUT_MINUTES = int(os.getenv("IDLE_TIMEOUT_MINUTES", 30))
 
-    # User management
-    ALLOW_SELF_REGISTER = os.getenv("ALLOW_SELF_REGISTER", "true").lower() == "true"
+    # User management (default false for production-safe deployments)
+    ALLOW_SELF_REGISTER = os.getenv("ALLOW_SELF_REGISTER", "false").lower() == "true"
     ADMIN_USERNAMES = [u.strip() for u in os.getenv("ADMIN_USERNAMES", "admin").split(",") if u.strip()]
 
     # Demo mode: single fixed user, credentials shown on login, no other account creation
     DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
     DEMO_USERNAME = (os.getenv("DEMO_USERNAME", "demo") or "demo").strip().lower()
     DEMO_PASSWORD = os.getenv("DEMO_PASSWORD", "demo")
+
+    # API token default expiry (days); 0 or empty = never expire (not recommended for production)
+    API_TOKEN_DEFAULT_EXPIRY_DAYS = int(os.getenv("API_TOKEN_DEFAULT_EXPIRY_DAYS", "90"))
 
     # Authentication method: 'none' | 'local' | 'oidc' | 'both'
     # 'none' = no password authentication (username only)

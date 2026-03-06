@@ -1,12 +1,13 @@
 {
   "name": "timetracker-desktop",
-  "version": "4.10.6",
+  "version": "4.20.9",
   "description": "TimeTracker desktop app for Windows, Linux, and macOS",
   "main": "src/main/main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "npm run build:renderer && electron .",
     "dev": "electron . --dev",
-    "build": "electron-builder",
+    "build:renderer": "esbuild src/renderer/js/app.js --bundle --outfile=src/renderer/js/bundle.js --platform=browser --format=iife",
+    "build": "npm run build:renderer && electron-builder",
     "build:win": "electron-builder --win",
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
@@ -29,12 +30,13 @@
   "license": "MIT",
   "devDependencies": {
     "electron": "^35.7.5",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.2"
   },
   "dependencies": {
     "axios": "^1.6.2",
-    "electron-store": "^8.1.0",
-    "dexie": "^3.2.4"
+    "dexie": "^3.2.4",
+    "electron-store": "^8.1.0"
   },
   "build": {
     "appId": "com.timetracker.desktop",

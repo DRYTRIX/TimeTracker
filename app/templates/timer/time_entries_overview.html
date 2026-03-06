@@ -26,11 +26,14 @@
 </div>
 
 <!-- Filters -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold">{{ _('Filters') }}</h2>
         <div class="flex items-center gap-2 flex-wrap">
             <span class="text-xs text-text-muted-light dark:text-text-muted-dark self-center mr-1">{{ _('Exports use current filters') }}</span>
+            <button type="button" id="clearFiltersBtn" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-border-light dark:border-border-dark">
+                <i class="fas fa-times mr-1"></i>{{ _('Clear Filters') }}
+            </button>
             <a
                 id="exportCsvBtn"
                 data-export-base="{{ url_for('timer.export_time_entries_csv') }}"
@@ -56,7 +59,7 @@
         <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="timeEntriesFilterForm" data-filter-form data-filter-handler="custom">
             {% if can_view_all %}
             <div>
-                <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('User') }}</label>
+                <label for="user_id" class="form-label">{{ _('User') }}</label>
                 <select name="user_id" id="user_id" class="form-input">
                     <option value="">{{ _('All Users') }}</option>
                     {% for user in users %}
@@ -68,17 +71,17 @@
             <div class="lg:col-span-2">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Start Date') }}</label>
+                        <label for="start_date" class="form-label">{{ _('Start Date') }}</label>
                         <input type="date" name="start_date" id="start_date" value="{{ filters.start_date or '' }}" class="form-input user-date-input">
                     </div>
                     <div>
-                        <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('End Date') }}</label>
+                        <label for="end_date" class="form-label">{{ _('End Date') }}</label>
                         <input type="date" name="end_date" id="end_date" value="{{ filters.end_date or '' }}" class="form-input user-date-input">
                     </div>
                 </div>
             </div>
             <div>
-                <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Project') }}</label>
+                <label for="project_id" class="form-label">{{ _('Project') }}</label>
                 <select name="project_id" id="project_id" class="form-input">
                     <option value="">{{ _('All Projects') }}</option>
                     {% for project in projects %}
@@ -87,11 +90,11 @@
                 </select>
             </div>
             <div>
-                <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Client') }}</label>
+                <label for="client_id" class="form-label">{{ _('Client') }}</label>
                 {{ client_select('client_id', clients, selected_id=filters.client_id, required=False, only_one_client=only_one_client|default(false), single_client=single_client) }}
             </div>
             <div>
-                <label for="paid" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Paid Status') }}</label>
+                <label for="paid" class="form-label">{{ _('Paid Status') }}</label>
                 <select name="paid" id="paid" class="form-input">
                     <option value="">{{ _('All') }}</option>
                     <option value="true" {% if filters.paid == 'true' %}selected{% endif %}>{{ _('Paid') }}</option>
@@ -99,7 +102,7 @@
                 </select>
             </div>
             <div>
-                <label for="billable" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Billable Status') }}</label>
+                <label for="billable" class="form-label">{{ _('Billable Status') }}</label>
                 <select name="billable" id="billable" class="form-input">
                     <option value="">{{ _('All') }}</option>
                     <option value="true" {% if filters.billable == 'true' %}selected{% endif %}>{{ _('Billable') }}</option>
@@ -107,13 +110,13 @@
                 </select>
             </div>
             <div>
-                <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Search') }}</label>
-                <input type="text" name="search" id="search" value="{{ filters.search or '' }}" placeholder="{{ _('Search in notes and tags...') }}" class="form-input">
+                <label for="time-entries-filter-search" class="form-label">{{ _('Search') }}</label>
+                <input type="text" name="search" id="time-entries-filter-search" value="{{ filters.search or '' }}" placeholder="{{ _('Search in notes and tags...') }}" class="form-input">
             </div>
             {% if custom_field_definitions %}
             {% for definition in custom_field_definitions %}
             <div>
-                <label for="custom_field_{{ definition.field_key }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ definition.label }} (Client)</label>
+                <label for="custom_field_{{ definition.field_key }}" class="form-label">{{ definition.label }} (Client)</label>
                 <input type="text" name="custom_field_{{ definition.field_key }}" id="custom_field_{{ definition.field_key }}" 
                        value="{{ filters.client_custom_field.get(definition.field_key, '') if filters.client_custom_field else '' }}" 
                        class="form-input" 
@@ -147,7 +150,7 @@
 </form>
 
 <!-- Time Entries Table -->
-<div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-hidden">
+<div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
     {% include 'timer/_time_entries_list.html' %}
 </div>
 
@@ -158,7 +161,7 @@
             <h3 class="text-lg font-semibold mb-4 text-rose-600">{{ _('Delete Selected Time Entries') }}</h3>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-4" id="bulkDeleteMessage"></p>
             <div class="mb-4">
-                <label for="bulkDeleteReasonInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label for="bulkDeleteReasonInput" class="form-label">
                     {{ _('Reason for Deletion') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs">({{ _('Optional but recommended') }})</span>
                 </label>
                 <textarea id="bulkDeleteReasonInput" class="form-input w-full" rows="3" placeholder="{{ _('e.g., Duplicate entry, incorrect time, etc.') }}"></textarea>
@@ -180,13 +183,13 @@
     <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="p-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Mark Selected Entries as Paid/Unpaid') }}</h3>
-            <label for="bulkPaidSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Status') }}</label>
+            <label for="bulkPaidSelect" class="form-label">{{ _('Status') }}</label>
             <select id="bulkPaidSelect" class="form-input w-full mb-4">
                 <option value="true">{{ _('Paid') }}</option>
                 <option value="false">{{ _('Unpaid') }}</option>
             </select>
             <div id="invoiceReferenceField" class="hidden mb-4">
-                <label for="bulkInvoiceReference" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Invoice Reference') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs">({{ _('Optional') }})</span></label>
+                <label for="bulkInvoiceReference" class="form-label">{{ _('Invoice Reference') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs">({{ _('Optional') }})</span></label>
                 <input type="text" id="bulkInvoiceReference" class="form-input w-full" placeholder="{{ _('e.g., Invoice number or payment reference') }}">
             </div>
             <div class="flex justify-end gap-3 mt-6">
@@ -206,6 +209,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     var toggleFiltersBtn = document.getElementById('toggleFilters');
     if (toggleFiltersBtn) toggleFiltersBtn.addEventListener('click', toggleFilterVisibility);
+
+    var clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    if (clearFiltersBtn) clearFiltersBtn.addEventListener('click', clearAllFilters);
 
     var closeBulkDeleteBtn = document.getElementById('closeBulkDeleteBtn');
     if (closeBulkDeleteBtn) closeBulkDeleteBtn.addEventListener('click', closeBulkDeleteDialog);
@@ -229,6 +235,14 @@ function toggleFilterVisibility() {
     filterBody.classList.toggle('hidden');
     icon.classList.toggle('fa-chevron-up');
     icon.classList.toggle('fa-chevron-down');
+}
+
+function clearAllFilters() {
+    const form = document.getElementById('timeEntriesFilterForm');
+    if (!form) return;
+    form.querySelectorAll('select').forEach(function(el) { el.value = ''; });
+    form.querySelectorAll('input[type="date"], input[type="text"]').forEach(function(el) { el.value = ''; });
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 }
 
 function toggleSelectAll() {
@@ -430,7 +444,7 @@ function confirmBulkDelete() {
         const params = {};
         
         // Get search input value directly (more reliable than FormData for text inputs) (Issue #489)
-        const searchInput = form.querySelector('input[name="search"], input#search');
+        const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
             const searchValue = searchInput.value.trim();
             if (searchValue) {
@@ -637,7 +651,7 @@ function confirmBulkDelete() {
         form.addEventListener('input', (e) => {
             const t = e.target;
             if (!t || !(t instanceof Element)) return;
-            if (t.matches('input[name="search"], input#search')) {
+            if (t.matches('input[name="search"]')) {
                 debouncedSearch(500);
             }
         });
@@ -646,7 +660,7 @@ function confirmBulkDelete() {
         form.addEventListener('keydown', (e) => {
             const t = e.target;
             if (!t || !(t instanceof Element)) return;
-            if (e.key === 'Enter' && t.matches('input[name="search"], input#search')) {
+            if (e.key === 'Enter' && t.matches('input[name="search"]')) {
                 e.preventDefault();
                 if (searchTimeout) clearTimeout(searchTimeout);
                 applyFilters();

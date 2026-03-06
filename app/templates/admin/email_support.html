@@ -14,7 +14,7 @@
 </div>
 
 <!-- Database Configuration Form -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <h2 class="text-lg font-semibold mb-4">{{ _('Email Configuration') }}</h2>
     
     <div class="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 rounded-lg">
@@ -34,18 +34,18 @@
         <div id="emailConfigFields" class="space-y-4 pl-6">
             <!-- Mail Server -->
             <div>
-                <label for="mailServer" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Mail Server') }} *</label>
+                <label for="mailServer" class="form-label">{{ _('Mail Server') }} *</label>
                 <input type="text" id="mailServer" class="form-input" placeholder="smtp.gmail.com" required>
             </div>
             
             <!-- Mail Port -->
             <div>
-                <label for="mailPort" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Mail Port') }} *</label>
+                <label for="mailPort" class="form-label">{{ _('Mail Port') }} *</label>
                 <input type="number" id="mailPort" class="form-input" value="587" required>
             </div>
             
             <!-- TLS/SSL -->
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="flex items-center">
                     <input type="checkbox" id="mailUseTls" class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" checked>
                     <label for="mailUseTls" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">{{ _('Use TLS') }}</label>
@@ -58,13 +58,13 @@
             
             <!-- Username -->
             <div>
-                <label for="mailUsername" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Username') }}</label>
+                <label for="mailUsername" class="form-label">{{ _('Username') }}</label>
                 <input type="text" id="mailUsername" class="form-input" placeholder="your-email@gmail.com">
             </div>
             
             <!-- Password -->
             <div>
-                <label for="mailPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label for="mailPassword" class="form-label">
                     {{ _('Password') }}
                     <span id="passwordStatus" class="text-sm text-gray-500"></span>
                 </label>
@@ -73,13 +73,13 @@
             
             <!-- Default Sender -->
             <div>
-                <label for="mailDefaultSender" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Default Sender') }} *</label>
+                <label for="mailDefaultSender" class="form-label">{{ _('Default Sender') }} *</label>
                 <input type="email" id="mailDefaultSender" class="form-input" placeholder="noreply@yourdomain.com" required>
             </div>
         </div>
         
         <!-- Save Button -->
-        <div class="flex items-center gap-4">
+        <div class="flex flex-wrap items-center gap-4">
             <button type="submit" class="btn btn-primary" id="saveConfigBtn">
                 <i class="fas fa-save mr-2"></i>{{ _('Save Configuration') }}
             </button>
@@ -94,7 +94,7 @@
 </div>
 
 <!-- Configuration Status Card -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold">{{ _('Email Configuration Status') }}</h2>
         <button onclick="refreshStatus()" class="btn btn-sm btn-secondary" id="refreshBtn">
@@ -197,12 +197,12 @@
 </div>
 
 <!-- Test Email Card -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <h2 class="text-lg font-semibold mb-4">{{ _('Send Test Email') }}</h2>
     
     <div id="testEmailForm">
         <div class="mb-4">
-            <label for="recipientEmail" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label for="recipientEmail" class="form-label">
                 {{ _('Recipient Email Address') }}
             </label>
             <input 
@@ -224,7 +224,7 @@
 </div>
 
 <!-- Configuration Guide Card -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h2 class="text-lg font-semibold mb-4">{{ _('Configuration Guide') }}</h2>
     
     <div class="prose dark:prose-invert max-w-none">

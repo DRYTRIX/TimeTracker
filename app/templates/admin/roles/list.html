@@ -21,7 +21,7 @@
 
 <!-- Statistics Summary -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-    <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center">
             <div class="flex-shrink-0 bg-primary/10 rounded-full p-3">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -35,7 +35,7 @@
         </div>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center">
             <div class="flex-shrink-0 bg-blue-100 dark:bg-blue-900/30 rounded-full p-3">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -49,7 +49,7 @@
         </div>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center">
             <div class="flex-shrink-0 bg-gray-100 dark:bg-gray-700 rounded-full p-3">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -63,7 +63,7 @@
         </div>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center">
             <div class="flex-shrink-0 bg-green-100 dark:bg-green-900/30 rounded-full p-3">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -84,29 +84,29 @@
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
-    <table class="w-full text-left">
-        <thead class="border-b border-border-light dark:border-border-dark">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+    <table class="w-full text-left enhanced-table responsive-cards">
+        <thead class="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
             <tr>
-                <th class="p-4">{{ _('Role Name') }}</th>
-                <th class="p-4">{{ _('Description') }}</th>
-                <th class="p-4">{{ _('Permissions') }}</th>
-                <th class="p-4">{{ _('Users') }}</th>
-                <th class="p-4">{{ _('Type') }}</th>
-                <th class="p-4">{{ _('Actions') }}</th>
+                <th class="px-4 py-3">{{ _('Role Name') }}</th>
+                <th class="px-4 py-3">{{ _('Description') }}</th>
+                <th class="px-4 py-3">{{ _('Permissions') }}</th>
+                <th class="px-4 py-3">{{ _('Users') }}</th>
+                <th class="px-4 py-3">{{ _('Type') }}</th>
+                <th class="px-4 py-3">{{ _('Actions') }}</th>
             </tr>
         </thead>
         <tbody>
             {% for role in roles %}
             <tr class="border-b border-border-light dark:border-border-dark hover:bg-bg-hover-light dark:hover:bg-bg-hover-dark">
-                <td class="p-4">
+                <td class="p-4 mobile-card-header" data-label="Role">
                     <div class="font-semibold">{{ role.name }}</div>
                     {% if role.is_system_role %}
                     <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Default role') }}</span>
                     {% endif %}
                 </td>
-                <td class="p-4 text-sm text-text-muted-light dark:text-text-muted-dark">{{ role.description or '-' }}</td>
-                <td class="p-4">
+                <td class="p-4 text-sm text-text-muted-light dark:text-text-muted-dark" data-label="Description">{{ role.description or '-' }}</td>
+                <td class="p-4" data-label="Permissions">
                     <button type="button" 
                             onclick="document.getElementById('perms-{{ role.id }}').classList.toggle('hidden')"
                             class="text-primary hover:underline text-sm flex items-center gap-1">
@@ -116,7 +116,7 @@
                         </svg>
                     </button>
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="Users">
                     {% set user_count = role.users.count() %}
                     {% if user_count > 0 %}
                     <a href="{{ url_for('permissions.view_role', role_id=role.id) }}" class="text-sm font-semibold text-primary hover:underline">
@@ -126,7 +126,7 @@
                     <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No users') }}</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="Type">
                     {% if role.is_system_role %}
                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                         {{ _('System') }}
@@ -137,7 +137,7 @@
                     </span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4 mobile-actions" data-label="Actions">
                     <div class="flex gap-2">
                         <a href="{{ url_for('permissions.view_role', role_id=role.id) }}" class="text-primary hover:underline text-sm">{{ _('View') }}</a>
                         {% if current_user.is_admin or has_permission('manage_roles') %}

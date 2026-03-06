@@ -12,6 +12,7 @@ import 'timer_screen.dart';
 import 'projects_screen.dart';
 import 'time_entries_screen.dart';
 import 'settings_screen.dart';
+import 'finance_workforce_screen.dart';
 import 'dart:async';
 
 class HomeScreen extends StatefulWidget {
@@ -28,13 +29,17 @@ class _HomeScreenState extends State<HomeScreen> {
     const DashboardTab(),
     const ProjectsScreen(),
     const TimeEntriesScreen(),
+    const FinanceWorkforceScreen(),
     const SettingsScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {
@@ -57,6 +62,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.history_outlined),
             selectedIcon: Icon(Icons.history),
             label: 'Entries',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.account_balance_wallet_outlined),
+            selectedIcon: Icon(Icons.account_balance_wallet),
+            label: 'Finance',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

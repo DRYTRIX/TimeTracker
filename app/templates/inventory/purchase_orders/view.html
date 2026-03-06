@@ -23,9 +23,9 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 space-y-6">
         <!-- Purchase Order Details -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Purchase Order Details') }}</h2>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('PO Number') }}</label>
                     <p class="mt-1 font-mono font-semibold">{{ purchase_order.po_number }}</p>
@@ -71,7 +71,7 @@
                 </div>
                 {% endif %}
                 {% if purchase_order.notes %}
-                <div class="col-span-2">
+                <div class="sm:col-span-2">
                     <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Notes') }}</label>
                     <p class="mt-1">{{ purchase_order.notes }}</p>
                 </div>
@@ -81,10 +81,10 @@
 
         <!-- Items -->
         {% if purchase_order.items.count() > 0 %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Items') }}</h2>
             <div class="overflow-x-auto">
-                <table class="table table-zebra w-full text-left">
+                <table class="table table-zebra w-full text-left responsive-cards">
                     <thead>
                         <tr>
                             <th class="p-4">{{ _('Item') }}</th>
@@ -98,7 +98,7 @@
                     <tbody>
                         {% for item in purchase_order.items %}
                         <tr>
-                            <td class="p-4">
+                            <td class="p-4 mobile-card-header" data-label="{{ _('Item') }}">
                                 {% if item.stock_item %}
                                     <a href="{{ url_for('inventory.view_stock_item', item_id=item.stock_item_id) }}" class="text-primary hover:underline">
                                         {{ item.stock_item.sku }}
@@ -107,13 +107,13 @@
                                     {{ item.supplier_sku or '—' }}
                                 {% endif %}
                             </td>
-                            <td class="p-4">{{ item.description }}</td>
-                            <td class="p-4">{{ item.quantity_ordered }}</td>
-                            <td class="p-4 {% if item.quantity_received < item.quantity_ordered %}text-amber-600{% else %}text-green-600{% endif %}">
+                            <td class="p-4" data-label="{{ _('Description') }}">{{ item.description }}</td>
+                            <td class="p-4" data-label="{{ _('Quantity Ordered') }}">{{ item.quantity_ordered }}</td>
+                            <td class="p-4 {% if item.quantity_received < item.quantity_ordered %}text-amber-600{% else %}text-green-600{% endif %}" data-label="{{ _('Quantity Received') }}">
                                 {{ item.quantity_received }}
                             </td>
-                            <td class="p-4">{{ "%.2f"|format(item.unit_cost) }} {{ item.currency_code }}</td>
-                            <td class="p-4 font-medium">{{ "%.2f"|format(item.line_total) }} {{ item.currency_code }}</td>
+                            <td class="p-4" data-label="{{ _('Unit Cost') }}">{{ "%.2f"|format(item.unit_cost) }} {{ item.currency_code }}</td>
+                            <td class="p-4 font-medium" data-label="{{ _('Line Total') }}">{{ "%.2f"|format(item.line_total) }} {{ item.currency_code }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -145,12 +145,12 @@
         
         <!-- Receive Purchase Order Form -->
         {% if purchase_order.status != 'received' and purchase_order.status != 'cancelled' %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Receive Purchase Order') }}</h2>
             <form method="POST" action="{{ url_for('inventory.receive_purchase_order', po_id=purchase_order.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="mb-4">
-                    <label for="received_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Received Date') }}</label>
+                    <label for="received_date" class="form-label">{{ _('Received Date') }}</label>
                     <input type="date" name="received_date" id="received_date" value="{{ datetime.now().strftime('%Y-%m-%d') }}" class="form-input">
                 </div>
                 <div class="space-y-2 mb-4">
@@ -170,7 +170,7 @@
         </div>
         {% endif %}
         {% else %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <p class="text-gray-500 text-center">{{ _('No items in this purchase order.') }}</p>
         </div>
         {% endif %}
@@ -178,7 +178,7 @@
 
     <div>
         <!-- Summary -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-4">{{ _('Summary') }}</h3>
             <div class="space-y-3">
                 <div>

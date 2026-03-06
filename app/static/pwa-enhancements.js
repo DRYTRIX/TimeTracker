@@ -83,7 +83,7 @@ class PWAEnhancements {
         this.showNotification('You\'re back online!', 'Your data will sync automatically.');
         
         // Trigger background sync
-        if (this.serviceWorkerRegistration && 'sync' in self.registration) {
+        if (this.serviceWorkerRegistration && this.serviceWorkerRegistration.sync) {
             this.serviceWorkerRegistration.sync.register('sync-time-entries');
         }
 
@@ -397,7 +397,20 @@ class PWAEnhancements {
     }
 
     showUpdateNotification() {
-        // Show notification that update is available
+        if (window.toastManager && typeof window.toastManager.info === 'function') {
+            const toastId = window.toastManager.info('New version available!', 0);
+            const toastEl = toastId && document.querySelector('[data-toast-id="' + toastId + '"]');
+            if (toastEl) {
+                const btn = document.createElement('button');
+                btn.textContent = 'Reload';
+                btn.className = 'ml-2 px-3 py-1 bg-primary text-white rounded hover:bg-primary/90';
+                btn.onclick = () => window.location.reload();
+                const content = toastEl.querySelector('.toast-content');
+                if (content) content.appendChild(btn);
+                else toastEl.appendChild(btn);
+            }
+            return;
+        }
         const notification = document.createElement('div');
         notification.className = 'fixed bottom-4 left-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 max-w-sm';
         notification.innerHTML = `
@@ -406,17 +419,12 @@ class PWAEnhancements {
                     <p class="font-semibold">Update Available</p>
                     <p class="text-sm">A new version is available. Refresh to update.</p>
                 </div>
-                <button onclick="window.location.reload()" class="ml-4 bg-white text-blue-600 px-3 py-1 rounded hover:bg-gray-100">
-                    Update
-                </button>
+                <button type="button" class="ml-4 bg-white text-blue-600 px-3 py-1 rounded hover:bg-gray-100">Reload</button>
             </div>
         `;
+        notification.querySelector('button').addEventListener('click', () => window.location.reload());
         document.body.appendChild(notification);
-
-        // Auto-remove after 10 seconds
-        setTimeout(() => {
-            notification.remove();
-        }, 10000);
+        setTimeout(() => { try { notification.remove(); } catch (_) {} }, 10000);
     }
 
     showNotification(title, body) {

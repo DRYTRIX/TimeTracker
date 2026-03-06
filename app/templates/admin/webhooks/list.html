@@ -15,33 +15,33 @@
     actions_html='<a href="' + url_for("webhooks.create_webhook") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>' + _('Create Webhook') + '</a>'
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     {% if webhooks %}
     <div class="overflow-x-auto">
-        <table class="w-full text-left">
-            <thead class="border-b border-border-light dark:border-border-dark">
+        <table class="w-full text-left enhanced-table responsive-cards">
+            <thead class="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
                 <tr>
-                    <th class="p-4">{{ _('Name') }}</th>
-                    <th class="p-4">{{ _('URL') }}</th>
-                    <th class="p-4">{{ _('Events') }}</th>
-                    <th class="p-4">{{ _('Status') }}</th>
-                    <th class="p-4">{{ _('Statistics') }}</th>
-                    <th class="p-4">{{ _('Actions') }}</th>
+                    <th class="px-4 py-3">{{ _('Name') }}</th>
+                    <th class="px-4 py-3">{{ _('URL') }}</th>
+                    <th class="px-4 py-3">{{ _('Events') }}</th>
+                    <th class="px-4 py-3">{{ _('Status') }}</th>
+                    <th class="px-4 py-3">{{ _('Statistics') }}</th>
+                    <th class="px-4 py-3">{{ _('Actions') }}</th>
                 </tr>
             </thead>
             <tbody>
                 {% for webhook in webhooks %}
                 <tr class="border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td class="p-4">
+                    <td class="p-4 mobile-card-header" data-label="{{ _('Name') }}">
                         <div class="font-semibold">{{ webhook.name }}</div>
                         {% if webhook.description %}
                         <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ webhook.description }}</div>
                         {% endif %}
                     </td>
-                    <td class="p-4">
+                    <td class="p-4" data-label="{{ _('URL') }}">
                         <code class="text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{{ webhook.url[:50] }}{% if webhook.url|length > 50 %}...{% endif %}</code>
                     </td>
-                    <td class="p-4">
+                    <td class="p-4" data-label="{{ _('Events') }}">
                         <div class="flex flex-wrap gap-1">
                             {% if webhook.events|length > 3 %}
                                 {% for event in webhook.events[:3] %}
@@ -55,21 +55,21 @@
                             {% endif %}
                         </div>
                     </td>
-                    <td class="p-4">
+                    <td class="p-4" data-label="{{ _('Status') }}">
                         {% if webhook.is_active %}
                         <span class="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded">{{ _('Active') }}</span>
                         {% else %}
                         <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded">{{ _('Inactive') }}</span>
                         {% endif %}
                     </td>
-                    <td class="p-4">
+                    <td class="p-4" data-label="{{ _('Statistics') }}">
                         <div class="text-sm">
                             <div>{{ _('Total') }}: {{ webhook.total_deliveries }}</div>
                             <div class="text-green-600 dark:text-green-400">{{ _('Success') }}: {{ webhook.successful_deliveries }}</div>
                             <div class="text-red-600 dark:text-red-400">{{ _('Failed') }}: {{ webhook.failed_deliveries }}</div>
                         </div>
                     </td>
-                    <td class="p-4">
+                    <td class="p-4 mobile-actions" data-label="{{ _('Actions') }}">
                         <div class="flex gap-2">
                             <a href="{{ url_for('webhooks.view_webhook', webhook_id=webhook.id) }}" class="text-primary hover:text-primary/80">
                                 <i class="fas fa-eye"></i>

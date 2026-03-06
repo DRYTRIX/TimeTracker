@@ -17,7 +17,7 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <p class="mb-4">{{ _('This will create a new client and primary contact from this lead, then mark the lead as converted.') }}</p>
     <div class="mb-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Lead summary') }}</h3>
@@ -27,7 +27,7 @@
     </div>
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                 <i class="fas fa-user-check mr-2"></i>{{ _('Convert to Client') }}
             </button>

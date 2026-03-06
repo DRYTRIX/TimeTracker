@@ -15,31 +15,31 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST" action="{{ url_for('custom_field_definitions.edit_custom_field_definition', definition_id=definition.id) if definition else url_for('custom_field_definitions.create_custom_field_definition') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <div class="space-y-6">
             <div>
-                <label for="field_key" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Field Key') }} *</label>
+                <label for="field_key" class="form-label">{{ _('Field Key') }} *</label>
                 <input type="text" id="field_key" name="field_key" required value="{{ request.form.get('field_key', definition.field_key if definition else '') }}" placeholder="{{ _('e.g., debtor_number') }}" class="form-input w-full font-mono" {% if definition %}readonly{% endif %}>
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Unique identifier for this field (letters, numbers, and underscores only). Cannot be changed after creation.') }}</p>
             </div>
 
             <div>
-                <label for="label" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Label') }} *</label>
+                <label for="label" class="form-label">{{ _('Label') }} *</label>
                 <input type="text" id="label" name="label" required value="{{ request.form.get('label', definition.label if definition else '') }}" placeholder="{{ _('e.g., Debtor Number') }}" class="form-input w-full">
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Display name shown in client forms') }}</p>
             </div>
 
             <div>
-                <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Description') }}</label>
+                <label for="description" class="form-label">{{ _('Description') }}</label>
                 <textarea id="description" name="description" rows="2" placeholder="{{ _('Optional help text for this field') }}" class="form-input w-full">{{ request.form.get('description', definition.description if definition else '') }}</textarea>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label for="order" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Display Order') }}</label>
+                    <label for="order" class="form-label">{{ _('Display Order') }}</label>
                     <input type="number" id="order" name="order" value="{{ request.form.get('order', definition.order if definition else 0) }}" min="0" class="form-input w-full">
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Lower numbers appear first') }}</p>
                 </div>
@@ -62,7 +62,7 @@
             </div>
         </div>
 
-        <div class="mt-6 flex justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
+        <div class="mt-6 flex flex-col sm:flex-row justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
             <a href="{{ url_for('custom_field_definitions.list_custom_field_definitions') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">{{ _('Cancel') }}</a>
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Save') if definition else _('Create') }}</button>
         </div>

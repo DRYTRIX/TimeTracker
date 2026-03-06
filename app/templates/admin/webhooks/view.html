@@ -21,7 +21,7 @@
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
     <!-- Webhook Details -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-lg font-semibold mb-4">{{ _('Details') }}</h3>
         <dl class="space-y-3">
             <div>
@@ -65,7 +65,7 @@
     </div>
     
     <!-- Statistics -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-lg font-semibold mb-4">{{ _('Statistics') }}</h3>
         <dl class="space-y-3">
             <div>
@@ -91,11 +91,11 @@
 </div>
 
 <!-- Recent Deliveries -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h3 class="text-lg font-semibold mb-4">{{ _('Recent Deliveries') }}</h3>
     {% if deliveries %}
     <div class="overflow-x-auto">
-        <table class="w-full text-left">
+        <table class="w-full text-left responsive-cards">
             <thead class="border-b border-border-light dark:border-border-dark">
                 <tr>
                     <th class="p-4">{{ _('Event') }}</th>
@@ -108,8 +108,8 @@
             <tbody>
                 {% for delivery in deliveries %}
                 <tr class="border-b border-border-light dark:border-border-dark">
-                    <td class="p-4">{{ delivery.event_type }}</td>
-                    <td class="p-4">
+                    <td class="p-4 mobile-card-header" data-label="{{ _('Event') }}">{{ delivery.event_type }}</td>
+                    <td class="p-4" data-label="{{ _('Status') }}">
                         {% if delivery.status == 'success' %}
                         <span class="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded">{{ _('Success') }}</span>
                         {% elif delivery.status == 'failed' %}
@@ -120,8 +120,8 @@
                         <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded">{{ delivery.status }}</span>
                         {% endif %}
                     </td>
-                    <td class="p-4">{{ delivery.attempt_number }}</td>
-                    <td class="p-4">
+                    <td class="p-4" data-label="{{ _('Attempt') }}">{{ delivery.attempt_number }}</td>
+                    <td class="p-4" data-label="{{ _('Response') }}">
                         {% if delivery.response_status_code %}
                         <span class="text-sm">{{ delivery.response_status_code }}</span>
                         {% endif %}
@@ -129,7 +129,7 @@
                         <div class="text-xs text-red-600 dark:text-red-400 mt-1">{{ delivery.error_message[:50] }}{% if delivery.error_message|length > 50 %}...{% endif %}</div>
                         {% endif %}
                     </td>
-                    <td class="p-4 text-sm">{{ delivery.started_at|user_datetime if delivery.started_at else '' }}</td>
+                    <td class="p-4 text-sm" data-label="{{ _('Time') }}">{{ delivery.started_at|user_datetime if delivery.started_at else '' }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

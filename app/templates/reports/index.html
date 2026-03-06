@@ -23,7 +23,7 @@
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between mb-2">
             <i class="fas fa-money-bill-wave text-green-600 text-xl"></i>
         </div>
@@ -31,7 +31,7 @@
         <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Total Payments') }}</div>
         <div class="text-[11px] text-text-muted-light dark:text-text-muted-dark">{{ _('Last 30 days') }}</div>
     </div>
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between mb-2">
             <i class="fas fa-receipt text-blue-600 text-xl"></i>
         </div>
@@ -39,7 +39,7 @@
         <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Payments Received') }}</div>
         <div class="text-[11px] text-text-muted-light dark:text-text-muted-dark">{{ _('Last 30 days') }}</div>
     </div>
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between mb-2">
             <i class="fas fa-credit-card text-amber-600 text-xl"></i>
         </div>
@@ -47,7 +47,7 @@
         <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Gateway Fees') }}</div>
         <div class="text-[11px] text-text-muted-light dark:text-text-muted-dark">{{ _('Last 30 days') }}</div>
     </div>
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between mb-2">
             <i class="fas fa-chart-line text-emerald-600 text-xl"></i>
         </div>
@@ -58,32 +58,32 @@
 </div>
 
 <!-- Date Range Presets and Comparison View -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <h2 class="text-lg font-semibold mb-4">{{ _('Date Range & Comparison') }}</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Date Range Presets -->
         <div>
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('Quick Date Ranges') }}</h3>
             <div class="flex flex-wrap gap-2">
-                <button type="button" onclick="setDateRange('today')" class="date-preset-btn px-4 py-2 rounded-lg text-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                <button type="button" onclick="setDateRange('today')" class="date-preset-btn px-4 py-2 min-h-[44px] rounded-lg text-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <i class="fas fa-calendar-day mr-1"></i>{{ _('Today') }}
                 </button>
-                <button type="button" onclick="setDateRange('week')" class="date-preset-btn px-4 py-2 rounded-lg text-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                <button type="button" onclick="setDateRange('week')" class="date-preset-btn px-4 py-2 min-h-[44px] rounded-lg text-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <i class="fas fa-calendar-week mr-1"></i>{{ _('This Week') }}
                 </button>
-                <button type="button" onclick="setDateRange('month')" class="date-preset-btn px-4 py-2 rounded-lg text-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                <button type="button" onclick="setDateRange('month')" class="date-preset-btn px-4 py-2 min-h-[44px] rounded-lg text-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <i class="fas fa-calendar-alt mr-1"></i>{{ _('This Month') }}
                 </button>
-                <button type="button" onclick="setDateRange('year')" class="date-preset-btn px-4 py-2 rounded-lg text-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                <button type="button" onclick="setDateRange('year')" class="date-preset-btn px-4 py-2 min-h-[44px] rounded-lg text-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <i class="fas fa-calendar mr-1"></i>{{ _('This Year') }}
                 </button>
             </div>
             <div class="mt-3">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Custom Range') }}</label>
+                <label class="form-label">{{ _('Custom Range') }}</label>
                 <div class="flex gap-2">
                     <input type="date" id="startDate" class="form-input user-date-input flex-1">
                     <input type="date" id="endDate" class="form-input user-date-input flex-1">
-                    <button type="button" onclick="applyCustomDateRange()" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                    <button type="button" onclick="applyCustomDateRange()" class="btn btn-primary">
                         {{ _('Apply') }}
                     </button>
                 </div>
@@ -126,7 +126,7 @@
 </div>
 
 <!-- Export Format Selection -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <h2 class="text-lg font-semibold mb-4">{{ _('Export Reports') }}</h2>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="p-4 border border-border-light dark:border-border-dark rounded-lg">
@@ -135,7 +135,7 @@
                 <option value="csv">CSV</option>
                 <option value="excel">Excel</option>
             </select>
-            <button type="button" onclick="exportReport()" class="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <button type="button" onclick="exportReport()" class="btn btn-primary w-full">
                 <i class="fas fa-download mr-2"></i>{{ _('Export Report') }}
             </button>
         </div>
@@ -149,7 +149,7 @@
         <div class="p-4 border border-border-light dark:border-border-dark rounded-lg">
             <h3 class="font-medium mb-2">{{ _('Quick Actions') }}</h3>
             <div class="space-y-2">
-                <a href="{{ url_for('reports.export_form', format='csv') }}" class="block w-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-center">
+                <a href="{{ url_for('reports.export_form', format='csv') }}" class="btn btn-secondary block w-full text-center">
                     <i class="fas fa-file-csv mr-2"></i>{{ _('CSV Export') }}
                 </a>
                 <a href="{{ url_for('reports.export_form', format='excel') }}" class="block w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-center">
@@ -160,7 +160,7 @@
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <h2 class="text-lg font-semibold mb-4">{{ _('Report Types') }}</h2>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <a href="{{ url_for('reports.project_report') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
@@ -187,7 +187,7 @@
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <h2 class="text-lg font-semibold mb-4">{{ _('Report Management') }}</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <a href="{{ url_for('custom_reports.list_saved_views') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 p-4 rounded-lg text-center hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
@@ -201,9 +201,9 @@
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h2 class="text-lg font-semibold mb-4">{{ _('Recent Entries') }}</h2>
-    <table class="w-full text-left">
+    <table class="w-full text-left responsive-cards">
         <thead>
             <tr>
                 <th class="p-2">{{ _('Project') }}</th>
@@ -214,9 +214,9 @@
         <tbody>
             {% for entry in recent_entries %}
             <tr class="border-b border-border-light dark:border-border-dark">
-                <td class="p-2">{{ entry.project.name }}</td>
-                <td class="p-2">{{ entry.duration }}</td>
-                <td class="p-2">{{ entry.start_time|user_date }}</td>
+                <td class="p-2" data-label="{{ _('Project') }}">{{ entry.project.name }}</td>
+                <td class="p-2" data-label="{{ _('Duration') }}">{{ entry.duration }}</td>
+                <td class="p-2" data-label="{{ _('Date') }}">{{ entry.start_time|user_date }}</td>
             </tr>
             {% else %}
             <tr>
@@ -227,7 +227,7 @@
                         </div>
                         <p class="text-text-muted-light dark:text-text-muted-dark font-medium mb-1">{{ _('No recent entries.') }}</p>
                         <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('Start tracking time to see entries here.') }}</p>
-                        <a href="{{ url_for('timer.manual_entry') }}" class="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium">
+                        <a href="{{ url_for('timer.manual_entry') }}" class="btn btn-primary">
                             <i class="fas fa-play"></i>{{ _('Log Time') }}
                         </a>
                     </div>
@@ -253,7 +253,7 @@
                 <p class="text-text-muted-light dark:text-text-muted-dark text-center py-4">{{ _('No scheduled reports yet.') }}</p>
             </div>
             <div class="mt-6 pt-4 border-t border-border-light dark:border-border-dark">
-                <button type="button" onclick="showAddScheduledReportForm()" class="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <button type="button" onclick="showAddScheduledReportForm()" class="btn btn-primary w-full">
                     <i class="fas fa-plus mr-2"></i>{{ _('Add Scheduled Report') }}
                 </button>
             </div>
@@ -276,16 +276,17 @@ function setDateRange(preset) {
         case 'week':
             const dayOfWeek = today.getDay();
             const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-            startDate = new Date(today.setDate(diff));
-            endDate = new Date();
+            startDate = new Date(today);
+            startDate.setDate(diff);
+            endDate = new Date(today);
             break;
         case 'month':
             startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-            endDate = new Date();
+            endDate = new Date(today);
             break;
         case 'year':
             startDate = new Date(today.getFullYear(), 0, 1);
-            endDate = new Date();
+            endDate = new Date(today);
             break;
     }
     
@@ -471,10 +472,10 @@ function showAddScheduledReportForm() {
                                 </select>
                             </div>
                             <div class="flex gap-2">
-                                <button type="button" onclick="closeAddScheduledReportForm()" class="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                                <button type="button" onclick="closeAddScheduledReportForm()" class="btn btn-secondary flex-1">
                                     {{ _('Cancel') }}
                                 </button>
-                                <button type="submit" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                                <button type="submit" class="btn btn-primary flex-1">
                                     {{ _('Create Schedule') }}
                                 </button>
                             </div>

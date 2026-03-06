@@ -1,17 +1,23 @@
 {% extends "base.html" %}
+{% from 'components/ui.html' import page_header %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">Profile</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">View your account details below.</p>
-    </div>
-    <a href="{{ url_for('auth.edit_profile') }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Edit Profile') }}</a>
-</div>
+{% set actions %}
+<a href="{{ url_for('auth.edit_profile') }}" class="btn btn-primary"><i class="fas fa-user-edit mr-2"></i>{{ _('Edit Profile') }}</a>
+{% endset %}
 
-<div class="bg-card-light dark:bg-card-dark p-8 rounded-lg shadow">
+{{ page_header(
+    icon_class='fas fa-user-circle',
+    title_text='My Profile',
+    actions_html=actions,
+    breadcrumbs=[
+        {'text': 'Profile'}
+    ]
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-4 sm:p-8 rounded-lg shadow max-w-2xl mx-auto">
     <div class="space-y-6">
-        <div class="flex items-center gap-4">
+        <div class="flex flex-col sm:flex-row items-center gap-4">
             <div class="relative">
                 {% if current_user.get_avatar_url() %}
                     <img id="profileAvatar" src="{{ current_user.get_avatar_url() }}" alt="{{ current_user.display_name }}" class="w-20 h-20 rounded-full object-cover border-4 border-primary shadow-lg" onerror="this.onerror=null; this.style.display='none'; document.getElementById('profileAvatarFallback').style.display='flex';">

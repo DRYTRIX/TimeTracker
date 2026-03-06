@@ -23,12 +23,12 @@
 <!-- Key Stats with Sparklines -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
     <!-- Today's Hours Card -->
-    <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 dashboard-widget" id="todayHours">
+    <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800 p-6 rounded-xl shadow-sm dashboard-widget" id="todayHours">
         <div class="flex items-center justify-between mb-4">
             <div>
                 <p class="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">{{ _('Today\'s Hours') }}</p>
                 <div class="flex items-baseline gap-2">
-                    <span class="text-3xl font-bold text-blue-900 dark:text-blue-100 stat-value" id="todayHoursValue">{{ "%.2f"|format(today_hours) }}</span>
+                    <span class="text-2xl lg:text-3xl font-bold text-blue-900 dark:text-blue-100 stat-value" id="todayHoursValue">{{ "%.2f"|format(today_hours) }}</span>
                     <span class="text-sm text-blue-600/70 dark:text-blue-400/70">hours</span>
                 </div>
                 {% if standard_hours_per_day is defined and today_overtime_hours is defined %}
@@ -48,12 +48,12 @@
         <div class="sparkline-container" data-sparkline='[0,0,0,0,0,0,0]' data-sparkline-id="today" data-color="#3b82f6" id="sparkline-today" aria-label="{{ _('Loading...') }}"></div>
     </div>
     <!-- Week's Hours Card -->
-    <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border border-green-200 dark:border-green-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 dashboard-widget" id="weekHours">
+    <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border border-green-200 dark:border-green-800 p-6 rounded-xl shadow-sm dashboard-widget" id="weekHours">
         <div class="flex items-center justify-between mb-4">
             <div>
                 <p class="text-sm font-medium text-green-600 dark:text-green-400 mb-1">{{ _('Week\'s Hours') }}</p>
                 <div class="flex items-baseline gap-2">
-                    <span class="text-3xl font-bold text-green-900 dark:text-green-100 stat-value" id="weekHoursValue">{{ "%.2f"|format(week_hours) }}</span>
+                    <span class="text-2xl lg:text-3xl font-bold text-green-900 dark:text-green-100 stat-value" id="weekHoursValue">{{ "%.2f"|format(week_hours) }}</span>
                     <span class="text-sm text-green-600/70 dark:text-green-400/70">hours</span>
                 </div>
                 {% if standard_hours_per_day is defined and week_overtime_hours is defined %}
@@ -69,12 +69,12 @@
         <div class="sparkline-container" data-sparkline='[0,0,0,0,0,0,0]' data-sparkline-id="week" data-color="#10b981" id="sparkline-week" aria-label="{{ _('Loading...') }}"></div>
     </div>
     <!-- Month's Hours Card -->
-    <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border border-purple-200 dark:border-purple-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 dashboard-widget" id="monthHours">
+    <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border border-purple-200 dark:border-purple-800 p-6 rounded-xl shadow-sm dashboard-widget" id="monthHours">
         <div class="flex items-center justify-between mb-4">
             <div>
                 <p class="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">{{ _('Month\'s Hours') }}</p>
                 <div class="flex items-baseline gap-2">
-                    <span class="text-3xl font-bold text-purple-900 dark:text-purple-100 stat-value" id="monthHoursValue">{{ "%.2f"|format(month_hours) }}</span>
+                    <span class="text-2xl lg:text-3xl font-bold text-purple-900 dark:text-purple-100 stat-value" id="monthHoursValue">{{ "%.2f"|format(month_hours) }}</span>
                     <span class="text-sm text-purple-600/70 dark:text-purple-400/70">hours</span>
                 </div>
             </div>
@@ -90,7 +90,7 @@
     <!-- Left Column: Active Timer & Recent Entries -->
     <div class="lg:col-span-2 space-y-6">
         <!-- Active Timer -->
-        <div class="{% if active_timer %}bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800{% else %}bg-card-light dark:bg-card-dark{% endif %} p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card" {% if active_timer %}data-timer-start="{{ active_timer.start_time.isoformat() }}" data-today-hours="{{ today_hours }}" data-week-hours="{{ week_hours }}" data-month-hours="{{ month_hours }}"{% endif %}>
+        <div class="{% if active_timer %}bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800{% else %}bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark{% endif %} p-6 rounded-xl shadow-sm dashboard-widget animated-card" {% if active_timer %}data-timer-start="{{ active_timer.start_time.isoformat() }}" data-today-hours="{{ today_hours }}" data-week-hours="{{ week_hours }}" data-month-hours="{{ month_hours }}"{% endif %}>
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
                     <div class="{% if active_timer %}bg-blue-500/10 dark:bg-blue-400/10{% else %}bg-gray-100 dark:bg-gray-800{% endif %} p-3 rounded-lg">
@@ -99,8 +99,8 @@
                     <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Timer') }}</h2>
                 </div>
                 {% if not active_timer %}
-                <button type="button" id="openStartTimer" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
-                    <i class="fas fa-play mr-2"></i>{{ _('Start Timer') }}
+                <button type="button" class="btn btn-primary js-open-start-timer">
+                    <i class="fas fa-play"></i>{{ _('Start Timer') }}
                 </button>
                 {% endif %}
             </div>
@@ -155,14 +155,8 @@
                     <div class="flex flex-col sm:flex-row gap-2">
                         <form action="{{ url_for('timer.stop_timer') }}" method="POST" class="inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5" title="{{ _('Pause and save current time; you can resume later') }}">
-                                <i class="fas fa-pause mr-2"></i>{{ _('Pause') }}
-                            </button>
-                        </form>
-                        <form action="{{ url_for('timer.stop_timer') }}" method="POST" class="inline">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
-                                <i class="fas fa-stop mr-2"></i>{{ _('Stop') }}
+                            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5" title="{{ _('Stop and save current time') }}">
+                                <i class="fas fa-stop mr-2"></i>{{ _('Stop & save') }}
                             </button>
                         </form>
                     </div>
@@ -176,7 +170,7 @@
                         <a href="{{ url_for('timer.resume_timer', timer_id=recent_entries[0].id) }}" class="inline-flex items-center bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
                             <i class="fas fa-play mr-2"></i>{{ _('Resume') }}{% if recent_entries[0].project %} ({{ recent_entries[0].project.name }}){% elif recent_entries[0].client %} ({{ recent_entries[0].client.name }}){% endif %}
                         </a>
-                        <button type="button" id="openStartTimer" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+                        <button type="button" class="js-open-start-timer bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
                             <i class="fas fa-plus mr-2"></i>{{ _('Start new') }}
                         </button>
                     </div>
@@ -198,7 +192,7 @@
                 </div>
             </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-left">
+                <table class="w-full text-left responsive-cards">
                     <thead class="border-b-2 border-border-light dark:border-border-dark">
                         <tr>
                             <th class="p-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Source') }}</th>
@@ -213,7 +207,7 @@
                     <tbody>
                         {% for entry in recent_entries %}
                         <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors duration-150">
-                            <td class="p-4">
+                            <td class="p-4" data-label="{{ _('Source') }}">
                                 {% if entry.project %}
                                     <a href="{{ url_for('projects.view_project', project_id=entry.project.id) }}" class="inline-flex items-center gap-2 text-primary hover:text-primary-dark hover:underline font-medium">
                                         <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
@@ -230,7 +224,7 @@
                                     <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('N/A') }}</span>
                                 {% endif %}
                             </td>
-                            <td class="p-4">
+                            <td class="p-4" data-label="{{ _('Task') }}">
                                 {% if entry.task %}
                                     <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                                         {{ entry.task.name }}
@@ -239,14 +233,14 @@
                                     <span class="text-text-muted-light dark:text-text-muted-dark">-</span>
                                 {% endif %}
                             </td>
-                            <td class="p-4">
+                            <td class="p-4" data-label="{{ _('Notes') }}">
                                 {% if entry.notes %}
                                     <span class="text-sm text-text-light dark:text-text-dark" title="{{ entry.notes|striptags }}">{{ entry.notes|striptags|truncate(60) }}</span>
                                 {% else %}
                                     <span class="text-text-muted-light dark:text-text-muted-dark">-</span>
                                 {% endif %}
                             </td>
-                            <td class="p-4">
+                            <td class="p-4" data-label="{{ _('Tags') }}">
                                 {% if entry.tags %}
                                     <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                                         {{ entry.tags }}
@@ -255,14 +249,14 @@
                                     <span class="text-text-muted-light dark:text-text-muted-dark">-</span>
                                 {% endif %}
                             </td>
-                            <td class="p-4">
+                            <td class="p-4" data-label="{{ _('Duration') }}">
                                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                                     <i class="fas fa-clock mr-1"></i>{% if active_timer and entry.id == active_timer.id %}<span class="dashboard-live-duration" data-timer-start="{{ active_timer.start_time.isoformat() }}">{{ entry.duration_formatted }}</span>{% else %}{{ entry.duration_formatted }}{% endif %}
                                 </span>
                             </td>
-                            <td class="p-4 text-sm text-text-light dark:text-text-dark">{{ entry.start_time|user_datetime }}</td>
-                            <td class="p-4">
-                                <div class="flex gap-2">
+                            <td class="p-4 text-sm text-text-light dark:text-text-dark" data-label="{{ _('Date') }}">{{ entry.start_time|user_datetime }}</td>
+                            <td class="p-4" data-label="{{ _('Actions') }}">
+                                <div class="flex flex-wrap gap-2">
                                     <a href="{{ url_for('timer.resume_timer', timer_id=entry.id) }}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400 transition-colors" title="{{ _('Resume - Start a new timer with same properties') }}">
                                         <i class="fas fa-play text-xs"></i>
                                     </a>
@@ -565,7 +559,7 @@
             <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between gap-2">
                 <div class="text-lg font-semibold">{{ _('Start Timer') }}</div>
                 <div class="flex items-center gap-2 shrink-0">
-                    <button type="submit" form="startTimerForm" id="startTimerSubmitBtn" class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-dark">{{ _('Start') }}</button>
+                    <button type="submit" form="startTimerForm" id="startTimerSubmitBtn" class="btn btn-primary btn-sm">{{ _('Start') }}</button>
                     <button type="button" data-close class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded">{{ _('Close') }}</button>
                 </div>
             </div>
@@ -574,7 +568,7 @@
                 <div class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label for="startTimerProject" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Project') }}</label>
+                            <label for="startTimerProject" class="form-label">{{ _('Project') }}</label>
                             <select id="startTimerProject" name="project_id" class="form-input">
                                 <option value="">{{ _('Select a project (optional)') }}</option>
                                 {% for project in active_projects %}
@@ -583,7 +577,7 @@
                             </select>
                         </div>
                         <div>
-                            <label for="startTimerClient" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client') }}</label>
+                            <label for="startTimerClient" class="form-label">{{ _('Client') }}</label>
                             {{ client_select('client_id', active_clients, required=False, only_one_client=only_one_client|default(false), single_client=single_client, id='startTimerClient') }}
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
                                 {{ _('Select either a project or a client') }}
@@ -591,7 +585,7 @@
                         </div>
                     </div>
                     <div>
-                        <label for="startTimerTask" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{% if getattr(settings, 'time_entry_require_task', false) %}{{ _('Task') }} *{% else %}{{ _('Task (optional)') }}{% endif %}</label>
+                        <label for="startTimerTask" class="form-label">{% if getattr(settings, 'time_entry_require_task', false) %}{{ _('Task') }} *{% else %}{{ _('Task (optional)') }}{% endif %}</label>
                         <select id="startTimerTask" name="task_id" class="form-input w-full">
                             <option value="">{{ _('No task') }}</option>
                             <!-- Options populated dynamically when project is selected -->
@@ -601,7 +595,7 @@
                         </p>
                     </div>
                     <div>
-                        <label for="startTimerNotes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{% if getattr(settings, 'time_entry_require_description', false) %}{{ _('Notes') }} *{% else %}{{ _('Notes (optional)') }}{% endif %}</label>
+                        <label for="startTimerNotes" class="form-label">{% if getattr(settings, 'time_entry_require_description', false) %}{{ _('Notes') }} *{% else %}{{ _('Notes (optional)') }}{% endif %}</label>
                         <div class="markdown-editor-wrapper">
                             <textarea id="startTimerNotes" name="notes" class="hidden" placeholder="{{ _('What are you working on?') }}"></textarea>
                             <div id="startTimerNotes_editor"></div>
@@ -609,7 +603,7 @@
                     </div>
                     {% if templates %}
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Or use a template') }}</label>
+                        <label class="form-label">{{ _('Or use a template') }}</label>
                         <div class="space-y-2">
                             {% for template in templates %}
                             <button type="button" 
@@ -650,7 +644,7 @@
     {% endset %}
     {% set create_task_modal_footer %}
         <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" data-create-task-cancel>{{ _('Cancel') }}</button>
-        <button type="button" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors" data-create-task-confirm>{{ _('Create') }}</button>
+        <button type="button" class="btn btn-primary" data-create-task-confirm>{{ _('Create') }}</button>
     {% endset %}
     {{ modal('createTaskModal', _('Create task'), create_task_modal_content, create_task_modal_footer, 'sm') }}
 {% endblock %}
@@ -731,10 +725,9 @@
                 } catch (_) {}
             }
         }
-        const openBtn = document.getElementById('openStartTimer');
-        if (openBtn && modal) {
-            openBtn.addEventListener('click', openStartTimerModal);
-        }
+        document.querySelectorAll('.js-open-start-timer').forEach(function(openBtn) {
+            if (openBtn && modal) openBtn.addEventListener('click', openStartTimerModal);
+        });
         if (modal) {
             const closeBtn = modal.querySelector('[data-close]');
             if (closeBtn) {

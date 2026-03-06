@@ -16,7 +16,7 @@
 
 <!-- Summary Stats -->
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Total Claims</p>
@@ -28,7 +28,7 @@
         </div>
     </div>
     
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Total Amount</p>
@@ -42,7 +42,7 @@
 </div>
 
 <!-- Filter Form -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold">{{ _('Filter Claims') }}</h2>
         <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
@@ -52,7 +52,7 @@
     <div id="filterBody">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-filter-form>
         <div>
-            <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+            <label for="status" class="form-label">Status</label>
             <select name="status" id="status" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 <option value="">All Statuses</option>
                 <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
@@ -63,7 +63,7 @@
         </div>
         
         <div>
-            <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project</label>
+            <label for="project_id" class="form-label">Project</label>
             <select name="project_id" id="project_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 <option value="">All Projects</option>
                 {% for project in projects %}
@@ -73,13 +73,13 @@
         </div>
         
         <div>
-            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+            <label for="start_date" class="form-label">Start Date</label>
             <input type="date" name="start_date" id="start_date" value="{{ start_date or '' }}" 
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700 user-date-input">
         </div>
         
         <div>
-            <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+            <label for="end_date" class="form-label">End Date</label>
             <input type="date" name="end_date" id="end_date" value="{{ end_date or '' }}" 
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700 user-date-input">
         </div>
@@ -110,7 +110,7 @@
 <!-- Bulk Delete Confirmation Dialog -->
 <div id="confirmBulkDelete" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
     <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75" onclick="closeBulkDeleteDialog()"></div>
+        <div class="fixed inset-0 transition-opacity bg-black/50 dark:bg-gray-900 dark:bg-opacity-75" onclick="closeBulkDeleteDialog()"></div>
         <div class="relative bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full p-6 zoom-in">
             <div class="flex items-start mb-4">
                 <div class="flex-shrink-0">
@@ -140,7 +140,7 @@
     <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="p-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Change Status for Selected Claims') }}</h3>
-            <label for="bulkStatusSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Status</label>
+            <label for="bulkStatusSelect" class="form-label">Select Status</label>
             <select id="bulkStatusSelect" class="form-input w-full mb-4">
                 <option value="">-- Select Status --</option>
                 <option value="pending">Pending</option>
@@ -158,7 +158,7 @@
 {% endif %}
 
 <!-- Claims Table -->
-<div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-visible">
+<div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-visible">
     <div class="flex justify-between items-center mb-4 p-6 pb-0">
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
             {{ per_diem_claims|length }} claim{{ 's' if per_diem_claims|length != 1 else '' }} found
@@ -179,21 +179,21 @@
         </div>
     </div>
     <div class="overflow-x-auto p-6 pt-4">
-        <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
-            <thead class="border-b border-border-light dark:border-border-dark">
+        <table class="table table-zebra w-full text-left enhanced-table responsive-cards" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
+            <thead class="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
                 <tr>
                     {% if current_user.is_admin %}
-                    <th class="p-4 w-12">
+                    <th class="px-4 py-3 w-12">
                         <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllPerDiem()">
                     </th>
                     {% endif %}
-                    <th class="p-4" data-sortable>Period</th>
-                    <th class="p-4" data-sortable>Purpose</th>
-                    <th class="p-4" data-sortable>Location</th>
-                    <th class="p-4 table-number" data-sortable>Days</th>
-                    <th class="p-4 table-number" data-sortable>Amount</th>
-                    <th class="p-4" data-sortable>Status</th>
-                    <th class="p-4">Actions</th>
+                    <th class="px-4 py-3" data-sortable>Period</th>
+                    <th class="px-4 py-3" data-sortable>Purpose</th>
+                    <th class="px-4 py-3" data-sortable>Location</th>
+                    <th class="px-4 py-3 table-number" data-sortable>Days</th>
+                    <th class="px-4 py-3 table-number" data-sortable>Amount</th>
+                    <th class="px-4 py-3" data-sortable>Status</th>
+                    <th class="px-4 py-3">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -205,11 +205,11 @@
                             <input type="checkbox" class="per-diem-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ claim.id }}" onchange="updateBulkDeleteButton()">
                         </td>
                         {% endif %}
-                        <td class="p-4 whitespace-nowrap">
+                        <td class="p-4 whitespace-nowrap" data-label="Period">
                             {{ claim.start_date|format_date }}<br>
                             <span class="text-xs text-gray-500 dark:text-gray-400">to {{ claim.end_date|format_date }}</span>
                         </td>
-                        <td class="p-4">
+                        <td class="p-4" data-label="Purpose">
                             <a href="{{ url_for('per_diem.view_per_diem', per_diem_id=claim.id) }}" class="text-primary hover:underline font-medium">
                                 {{ claim.trip_purpose }}
                             </a>
@@ -217,10 +217,10 @@
                             <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ claim.project.name }}</div>
                             {% endif %}
                         </td>
-                        <td class="p-4">{{ claim.city + ', ' if claim.city else '' }}{{ claim.country }}</td>
-                        <td class="p-4 table-number">{{ claim.total_days if claim.total_days else ((claim.full_days or 0) + (claim.half_days or 0) * 0.5) }}</td>
-                        <td class="p-4 table-number font-medium">{{ (claim.calculated_amount or 0)|format_currency(claim.currency_code) }}</td>
-                        <td class="p-4">
+                        <td class="p-4" data-label="Location">{{ claim.city + ', ' if claim.city else '' }}{{ claim.country }}</td>
+                        <td class="p-4 table-number" data-label="Days">{{ claim.total_days if claim.total_days else ((claim.full_days or 0) + (claim.half_days or 0) * 0.5) }}</td>
+                        <td class="p-4 table-number font-medium" data-label="Amount">{{ (claim.calculated_amount or 0)|format_currency(claim.currency_code) }}</td>
+                        <td class="p-4" data-label="Status">
                             {% if claim.status == 'pending' %}
                             <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Pending</span>
                             {% elif claim.status == 'approved' %}
@@ -233,7 +233,7 @@
                             <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ claim.status|title }}</span>
                             {% endif %}
                         </td>
-                        <td class="p-4">
+                        <td class="p-4" data-label="Actions">
                             <a href="{{ url_for('per_diem.view_per_diem', per_diem_id=claim.id) }}" class="text-primary hover:underline">View</a>
                         </td>
                     </tr>

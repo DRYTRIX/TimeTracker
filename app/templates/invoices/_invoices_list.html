@@ -5,7 +5,7 @@
         </h3>
         <div class="flex items-center gap-2">
             <a href="{{ url_for('invoices.export_invoices_excel') }}" 
-               class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center export-btn" 
+               class="btn btn-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 export-btn" 
                title="{{ _('Export to Excel') }}"
                onclick="showExportLoading(this); return true;">
                 <i class="fas fa-download mr-1"></i> <span class="export-text">Export</span>
@@ -24,21 +24,21 @@
             {% endif %}
         </div>
     </div>
-    <table class="table table-zebra w-full text-left" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
-        <thead class="border-b border-border-light dark:border-border-dark">
+    <table class="table table-zebra w-full text-left enhanced-table responsive-cards" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
+        <thead class="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
             <tr>
                 {% if current_user.is_admin %}
-                <th class="p-4 w-12">
+                <th class="px-4 py-3 w-12">
                     <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" onchange="toggleAllInvoices()">
                 </th>
                 {% endif %}
-                <th class="p-4" data-sortable>Number</th>
-                <th class="p-4" data-sortable>Client</th>
-                <th class="p-4" data-sortable>Status</th>
-                <th class="p-4" data-sortable>Payment</th>
-                <th class="p-4 table-number" data-sortable>Total</th>
-                <th class="p-4 table-number" data-sortable>Due Date</th>
-                <th class="p-4">Actions</th>
+                <th class="px-4 py-3" data-sortable>Number</th>
+                <th class="px-4 py-3" data-sortable>Client</th>
+                <th class="px-4 py-3" data-sortable>Status</th>
+                <th class="px-4 py-3" data-sortable>Payment</th>
+                <th class="px-4 py-3 table-number" data-sortable>Total</th>
+                <th class="px-4 py-3 table-number" data-sortable>Due Date</th>
+                <th class="px-4 py-3">Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -49,9 +49,9 @@
                     <input type="checkbox" class="invoice-checkbox h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" value="{{ invoice.id }}" onchange="updateBulkDeleteButton()">
                 </td>
                 {% endif %}
-                <td class="p-4 font-medium">{{ invoice.invoice_number }}</td>
-                <td class="p-4">{{ invoice.client_name }}</td>
-                <td class="p-4">
+                <td class="p-4 font-medium mobile-card-header" data-label="Number">{{ invoice.invoice_number }}</td>
+                <td class="p-4" data-label="Client">{{ invoice.client_name }}</td>
+                <td class="p-4" data-label="Status">
                     {% set s = invoice.status %}
                     {% if s == 'draft' %}
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
@@ -73,7 +73,7 @@
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{{ s }}</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="Payment">
                     {% set ps = invoice.payment_status %}
                     {% if ps == 'unpaid' %}
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" title="{{ _('Unpaid') }}">
@@ -95,8 +95,8 @@
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{{ ps }}</span>
                     {% endif %}
                 </td>
-                <td class="p-4 table-number">{{ "%.2f"|format(invoice.total_amount) }} {{ invoice.currency_code }}</td>
-                <td class="p-4 table-number">
+                <td class="p-4 table-number" data-label="Total">{{ "%.2f"|format(invoice.total_amount) }} {{ invoice.currency_code }}</td>
+                <td class="p-4 table-number" data-label="Due Date">
                     {% if invoice.due_date %}
                         {% set is_overdue = invoice._is_overdue %}
                         <span class="chip whitespace-nowrap {% if is_overdue %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border-2 border-red-500{% else %}chip-neutral{% endif %}">
@@ -107,7 +107,7 @@
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}
                 </td>
-                <td class="p-4 relative overflow-visible">
+                <td class="p-4 relative overflow-visible mobile-actions" data-label="Actions">
                     <div class="relative inline-block">
                         <button type="button" onclick="toggleInvoiceActions(event, {{ invoice.id }})" class="text-primary hover:text-primary/80 font-medium">
                             Actions <i class="fas fa-chevron-down ml-1 text-xs"></i>
@@ -141,10 +141,10 @@
     {% if not invoices %}
     {% from "components/ui.html" import empty_state %}
     {% set actions %}
-        <a href="{{ url_for('invoices.create_invoice') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+        <a href="{{ url_for('invoices.create_invoice') }}" class="btn btn-primary">
             <i class="fas fa-plus mr-2"></i>Create Your First Invoice
         </a>
-        <a href="{{ url_for('main.help') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+        <a href="{{ url_for('main.help') }}" class="btn btn-secondary">
             <i class="fas fa-question-circle mr-2"></i>Learn More
         </a>
     {% endset %}

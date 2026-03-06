@@ -15,6 +15,9 @@ from app.utils.module_helpers import module_enabled
 
 custom_reports_bp = Blueprint("custom_reports", __name__)
 
+# Maximum rows returned by report preview/data endpoints to avoid heavy in-memory processing
+REPORT_DATA_LIMIT = 2000
+
 
 @custom_reports_bp.route("/reports/builder")
 @custom_reports_bp.route("/reports/builder/<int:view_id>/edit")
@@ -357,8 +360,8 @@ def generate_report_data(config, user_id=None):
 
             # Apply custom field filter if provided
             if custom_field_filter:
-                # Get all entries first, then filter by custom fields
-                all_entries = query.all()
+                # Get entries with limit, then filter by custom fields
+                all_entries = query.order_by(TimeEntry.start_time.desc()).limit(REPORT_DATA_LIMIT).all()
                 entries = []
                 for entry in all_entries:
                     client = None
@@ -377,7 +380,34 @@ def generate_report_data(config, user_id=None):
                         if matches:
                             entries.append(entry)
             else:
-                entries = query.all()
+                entries = query.order_by(TimeEntry.start_time.desc()).limit(REPORT_DATA_LIMIT).all()
+
+        # Summary: use SQL aggregate when standard path (no unpaid_only, no custom_field_filter)
+        if not unpaid_only and not custom_field_filter:
+            from sqlalchemy import func
+            summary_query = db.session.query(
+                func.count(TimeEntry.id).label("total_entries"),
+                func.coalesce(func.sum(TimeEntry.duration_seconds), 0).label("total_seconds"),
+            ).filter(
+                TimeEntry.end_time.isnot(None),
+                TimeEntry.start_time >= start_dt,
+                TimeEntry.start_time <= end_dt,
+            )
+            if user_id:
+                from app.models import User as U
+                u = U.query.get(user_id)
+                if u and not u.is_admin:
+                    summary_query = summary_query.filter(TimeEntry.user_id == user_id)
+            if project_id:
+                summary_query = summary_query.filter(TimeEntry.project_id == project_id)
+            if filters.get("user_id"):
+                summary_query = summary_query.filter(TimeEntry.user_id == filters["user_id"])
+            total_count, total_seconds = summary_query.one()
+            summary_total_entries = total_count
+            summary_total_hours = round((total_seconds or 0) / 3600, 2)
+        else:
+            summary_total_entries = len(entries)
+            summary_total_hours = round(sum(e.duration_hours or 0 for e in entries), 2)
 
         # Build response data
         client_data = {}
@@ -419,11 +449,13 @@ def generate_report_data(config, user_id=None):
         return {
             "data": data_list,
             "summary": {
-                "total_entries": len(entries),
-                "total_hours": round(sum(e.duration_hours or 0 for e in entries), 2),
+                "total_entries": summary_total_entries,
+                "total_hours": summary_total_hours,
                 "unpaid_only": unpaid_only,
                 "by_client": client_data,
             },
+            "truncated": len(entries) >= REPORT_DATA_LIMIT,
+            "limit": REPORT_DATA_LIMIT,
         }
 
     elif data_source == "projects":
@@ -432,7 +464,7 @@ def generate_report_data(config, user_id=None):
         if filters.get("status"):
             query = query.filter(Project.status == filters["status"])
 
-        projects = query.all()
+        projects = query.limit(REPORT_DATA_LIMIT).all()
 
         return {
             "data": [
@@ -477,7 +509,7 @@ def generate_report_data(config, user_id=None):
             joinedload(Expense.project),
             joinedload(Expense.user),
             joinedload(Expense.client),
-        ).order_by(Expense.expense_date.desc()).all()
+        ).order_by(Expense.expense_date.desc()).limit(REPORT_DATA_LIMIT).all()
 
         data_list = [
             {
@@ -542,7 +574,7 @@ def generate_report_data(config, user_id=None):
         invoices = query.options(
             joinedload(Invoice.project),
             joinedload(Invoice.client),
-        ).order_by(Invoice.issue_date.desc()).all()
+        ).order_by(Invoice.issue_date.desc()).limit(REPORT_DATA_LIMIT).all()
 
         data_list = [
             {

@@ -1,8 +1,10 @@
 """
 PEPPOL transport provider interface and implementations.
 
-- GenericTransport: existing HTTP JSON adapter (access point URL).
-- NativePeppolTransport: SML/SMP discovery + AS4 send.
+- GenericTransport: HTTP JSON adapter (access point URL). Production-ready.
+- NativePeppolTransport: SML/SMP discovery + AS4 send. EXPERIMENTAL - lacks
+  WS-Security, receipt handling, and full Peppol AS4 compliance. Prefer a
+  standards-compliant Access Point provider for production workloads.
 """
 
 from __future__ import annotations

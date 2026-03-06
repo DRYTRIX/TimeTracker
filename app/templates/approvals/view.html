@@ -16,7 +16,7 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Time Entry Details -->
         <div>
@@ -125,14 +125,14 @@
     </div>
 
     {% if approval.status.value == 'pending' and can_approve %}
-    <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark flex gap-3">
+    <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark flex flex-wrap gap-3">
         <form method="POST" action="{{ url_for('time_approvals.approve_entry', approval_id=approval.id) }}" class="inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors">
+            <button type="submit" class="bg-green-600 text-white px-6 py-2 min-h-[44px] rounded-lg hover:bg-green-700 transition-colors">
                 <i class="fas fa-check mr-1"></i>{{ _('Approve') }}
             </button>
         </form>
-        <button onclick="showRejectModal()" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors">
+        <button onclick="showRejectModal()" class="bg-red-600 text-white px-6 py-2 min-h-[44px] rounded-lg hover:bg-red-700 transition-colors">
             <i class="fas fa-times mr-1"></i>{{ _('Reject') }}
         </button>
     </div>

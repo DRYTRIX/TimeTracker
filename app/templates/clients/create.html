@@ -1,29 +1,27 @@
 {% extends "base.html" %}
+{% from 'components/ui.html' import page_header %}
 
 {% block title %}{{ _('Create Client') }} - {{ app_name }}{% endblock %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">{{ _('Create Client') }}</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Add a new client to manage related projects and billing.') }}</p>
-    </div>
-    <a href="{{ url_for('clients.list_clients') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0">{{ _('Back to Clients') }}</a>
-    </div>
+{% set actions %}
+<a href="{{ url_for('clients.list_clients') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> {{ _('Back to Clients') }}</a>
+{% endset %}
+{{ page_header('fas fa-users', _('Create Client'), subtitle_text=_('Add a new client to manage related projects and billing.'), actions_html=actions, breadcrumbs=[{'text': _('Clients'), 'url': url_for('clients.list_clients')}, {'text': _('Create Client')}]) }}
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <form method="POST" action="{{ url_for('clients.create_client') }}" novalidate data-validate-form>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Client Name') }} *</label>
+                        <label for="name" class="form-label">{{ _('Client Name') }} *</label>
                         <input type="text" id="name" name="name" required value="{{ request.form.get('name','') }}" placeholder="{{ _('Enter client name') }}" class="form-input">
                     </div>
                     <div>
-                        <label for="default_hourly_rate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Default Hourly Rate') }}</label>
+                        <label for="default_hourly_rate" class="form-label">{{ _('Default Hourly Rate') }}</label>
                         <input type="number" step="0.01" min="0" id="default_hourly_rate" name="default_hourly_rate" value="{{ request.form.get('default_hourly_rate','') }}" placeholder="{{ _('e.g. 75.00') }}" class="form-input">
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('This rate will be automatically filled when creating projects for this client') }}</p>
                     </div>
@@ -31,7 +29,7 @@
 
                 <div>
                     <div class="flex items-center justify-between">
-                        <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Description') }}</label>
+                        <label for="description" class="form-label">{{ _('Description') }}</label>
                         <small class="text-text-muted-light dark:text-text-muted-dark">{{ _('Supports Markdown') }}</small>
                     </div>
                     <div class="markdown-editor-wrapper">
@@ -42,23 +40,23 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="contact_person" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Contact Person') }}</label>
+                        <label for="contact_person" class="form-label">{{ _('Contact Person') }}</label>
                         <input type="text" id="contact_person" name="contact_person" value="{{ request.form.get('contact_person','') }}" placeholder="{{ _('Primary contact name') }}" class="form-input">
                     </div>
                     <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Email') }}</label>
+                        <label for="email" class="form-label">{{ _('Email') }}</label>
                         <input type="email" id="email" name="email" value="{{ request.form.get('email','') }}" placeholder="{{ _('contact@client.com') }}" class="form-input">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="prepaid_hours_monthly" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Monthly Prepaid Hours') }}</label>
+                        <label for="prepaid_hours_monthly" class="form-label">{{ _('Monthly Prepaid Hours') }}</label>
                         <input type="number" step="0.25" min="0" id="prepaid_hours_monthly" name="prepaid_hours_monthly" value="{{ request.form.get('prepaid_hours_monthly','') }}" placeholder="{{ _('e.g. 50') }}" class="form-input">
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Leave empty if this client has no prepaid allocation.') }}</p>
                     </div>
                     <div>
-                        <label for="prepaid_reset_day" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Prepaid Reset Day') }}</label>
+                        <label for="prepaid_reset_day" class="form-label">{{ _('Prepaid Reset Day') }}</label>
                         <input type="number" min="1" max="28" id="prepaid_reset_day" name="prepaid_reset_day" value="{{ request.form.get('prepaid_reset_day','1') }}" class="form-input">
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Day of the month when prepaid hours reset (1-28).') }}</p>
                     </div>
@@ -66,11 +64,11 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Phone') }}</label>
+                        <label for="phone" class="form-label">{{ _('Phone') }}</label>
                         <input type="tel" id="phone" name="phone" value="{{ request.form.get('phone','') }}" placeholder="{{ _('+1 (555) 123-4567') }}" class="form-input">
                     </div>
                     <div>
-                        <label for="address" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ _('Address') }}</label>
+                        <label for="address" class="form-label">{{ _('Address') }}</label>
                         <textarea id="address" name="address" rows="2" placeholder="{{ _('Client address') }}" class="form-input">{{ request.form.get('address','') }}</textarea>
                     </div>
                 </div>
@@ -84,7 +82,7 @@
                     <div class="space-y-4">
                         {% for definition in custom_field_definitions %}
                         <div>
-                            <label for="custom_field_{{ definition.field_key }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <label for="custom_field_{{ definition.field_key }}" class="form-label">
                                 {{ definition.label }}
                                 {% if definition.is_mandatory %}<span class="text-red-600 dark:text-red-400">*</span>{% endif %}
                             </label>
@@ -107,15 +105,15 @@
                 {% endif %}
 
                 <div class="mt-6 flex justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
-                    <a href="{{ url_for('clients.list_clients') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">{{ _('Cancel') }}</a>
-                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Create Client') }}</button>
+                    <a href="{{ url_for('clients.list_clients') }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+                    <button type="submit" class="btn btn-primary">{{ _('Create Client') }}</button>
                 </div>
             </form>
         </div>
     </div>
 
     <div>
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-3">{{ _('Help') }}</h3>
             <ul class="space-y-3 text-sm">
                 <li>
@@ -149,9 +147,9 @@
 <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css">
 {% endblock %}
 
+{% block scripts_extra %}
 <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
 <script>
-
 document.addEventListener('DOMContentLoaded', function(){
   const descriptionInput = document.getElementById('description');
   let mdEditor = null;
@@ -182,3 +180,4 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 });
 </script>
+{% endblock %}

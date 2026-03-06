@@ -220,7 +220,7 @@ jobs:
       
       - name: Run Safety dependency check
         run: |
-          safety check --file requirements.txt --json > safety-report.json || true
+          safety check --file requirements.txt --json > safety-report.json
       
       - name: Upload security reports
         if: always()
@@ -250,12 +250,23 @@ jobs:
       
       - name: Install dependencies
         run: |
+          pip install -r requirements.txt
           pip install -r requirements-test.txt
+          pip install -e .
       
       - name: Run flake8
         run: |
           flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 app/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          flake8 app/ --count --max-complexity=10 --max-line-length=120 --statistics
+      
+      - name: Run black (format check)
+        run: black --check app/
+      
+      - name: Run isort (import check)
+        run: isort --check-only app/
+      
+      - name: Run mypy
+        run: mypy app/ || true
 
   # ============================================================================
   # Docker Build Test
@@ -457,7 +468,7 @@ jobs:
           INSTALLATION_CONFIG_DIR: ${{ github.workspace }}/.test_installation_config
         run: |
           pytest -v -n auto --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing \
-                 --junitxml=junit.xml --maxfail=5
+                 --cov-fail-under=35 --junitxml=junit.xml --maxfail=5
       
       - name: Upload full coverage
         uses: codecov/codecov-action@v4

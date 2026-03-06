@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
             <div class="flex items-center mb-2">
                 <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ _('Restore Backup') }}</h1>
@@ -126,7 +126,7 @@
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         
                         <div class="mb-6">
-                            <label for="backup_file" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <label for="backup_file" class="form-label">
                                 Select Backup Archive (.zip)
                             </label>
                             <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg hover:border-blue-500 transition-colors">

@@ -15,8 +15,8 @@
     actions_html='<a href="' + url_for("inventory.new_warehouse") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Warehouse</a>' if (current_user.is_admin or has_permission('manage_warehouses')) else None
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
-    <table class="table table-zebra w-full text-left">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+    <table class="table table-zebra w-full text-left responsive-cards">
         <thead>
             <tr>
                 <th class="p-4">{{ _('Code') }}</th>
@@ -30,28 +30,28 @@
         <tbody>
             {% for warehouse in warehouses %}
             <tr>
-                <td class="p-4 font-mono text-sm">{{ warehouse.code }}</td>
-                <td class="p-4 font-medium">
+                <td class="p-4 font-mono text-sm" data-label="{{ _('Code') }}">{{ warehouse.code }}</td>
+                <td class="p-4 font-medium mobile-card-header" data-label="{{ _('Name') }}">
                     <a href="{{ url_for('inventory.view_warehouse', warehouse_id=warehouse.id) }}" class="text-primary hover:underline">
                         {{ warehouse.name }}
                     </a>
                 </td>
-                <td class="p-4">{{ warehouse.contact_person or '—' }}</td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Contact Person') }}">{{ warehouse.contact_person or '—' }}</td>
+                <td class="p-4" data-label="{{ _('Contact Email') }}">
                     {% if warehouse.contact_email %}
                         <a href="mailto:{{ warehouse.contact_email }}" class="text-primary hover:underline">{{ warehouse.contact_email }}</a>
                     {% else %}
                         —
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Status') }}">
                     {% if warehouse.is_active %}
                         <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Active') }}</span>
                     {% else %}
                         <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ _('Inactive') }}</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4 mobile-actions" data-label="{{ _('Actions') }}">
                     <a href="{{ url_for('inventory.view_warehouse', warehouse_id=warehouse.id) }}" class="text-primary hover:underline mr-3">
                         <i class="fas fa-eye"></i>
                     </a>

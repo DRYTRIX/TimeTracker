@@ -15,7 +15,7 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow max-w-6xl mx-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm max-w-6xl mx-auto">
     <form method="POST" action="{{ url_for('inventory.new_purchase_order') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
@@ -26,7 +26,7 @@
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label for="supplier_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Supplier') }} *</label>
+                    <label for="supplier_id" class="form-label">{{ _('Supplier') }} *</label>
                     <select name="supplier_id" id="supplier_id" class="form-input" required>
                         <option value="">{{ _('Select Supplier') }}</option>
                         {% for supplier in suppliers %}
@@ -35,15 +35,15 @@
                     </select>
                 </div>
                 <div>
-                    <label for="order_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Order Date') }} *</label>
+                    <label for="order_date" class="form-label">{{ _('Order Date') }} *</label>
                     <input type="date" name="order_date" id="order_date" value="{{ request.form.get('order_date', '') }}" class="form-input" required>
                 </div>
                 <div>
-                    <label for="expected_delivery_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Expected Delivery Date') }}</label>
+                    <label for="expected_delivery_date" class="form-label">{{ _('Expected Delivery Date') }}</label>
                     <input type="date" name="expected_delivery_date" id="expected_delivery_date" value="{{ request.form.get('expected_delivery_date', '') }}" class="form-input">
                 </div>
                 <div>
-                    <label for="currency_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Currency') }}</label>
+                    <label for="currency_code" class="form-label">{{ _('Currency') }}</label>
                     <select name="currency_code" id="currency_code" class="form-input">
                         <option value="EUR" selected>EUR</option>
                         <option value="USD">USD</option>
@@ -52,11 +52,11 @@
                     </select>
                 </div>
                 <div class="md:col-span-2">
-                    <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Notes') }}</label>
+                    <label for="notes" class="form-label">{{ _('Notes') }}</label>
                     <textarea name="notes" id="notes" rows="2" class="form-input" placeholder="{{ _('Notes visible to supplier') }}">{{ request.form.get('notes', '') }}</textarea>
                 </div>
                 <div class="md:col-span-2">
-                    <label for="internal_notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Internal Notes') }}</label>
+                    <label for="internal_notes" class="form-label">{{ _('Internal Notes') }}</label>
                     <textarea name="internal_notes" id="internal_notes" rows="2" class="form-input" placeholder="{{ _('Internal notes (not visible to supplier)') }}">{{ request.form.get('internal_notes', '') }}</textarea>
                 </div>
             </div>
@@ -96,8 +96,8 @@
             </div>
         </div>
 
-        <div class="mt-6 flex justify-end gap-3">
-            <a href="{{ url_for('inventory.list_purchase_orders') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+        <div class="mt-6 flex flex-col sm:flex-row justify-end gap-3">
+            <a href="{{ url_for('inventory.list_purchase_orders') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-center">
                 {{ _('Cancel') }}
             </a>
             <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">

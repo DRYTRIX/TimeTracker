@@ -17,7 +17,7 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST" action="{{ url_for('client_portal.new_issue') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         
@@ -77,13 +77,13 @@
             </div>
         </div>
         
-        <div class="mt-6 flex gap-3">
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded hover:bg-primary-dark transition-colors">
-                <i class="fas fa-paper-plane mr-2"></i>{{ _('Submit Issue') }}
-            </button>
-            <a href="{{ url_for('client_portal.issues') }}" class="bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark px-4 py-2 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+        <div class="mt-6 flex flex-col-reverse sm:flex-row gap-3">
+            <a href="{{ url_for('client_portal.issues') }}" class="bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark px-4 py-2.5 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors text-center">
                 {{ _('Cancel') }}
             </a>
+            <button type="submit" class="bg-primary text-white px-4 py-2.5 rounded hover:bg-primary-dark transition-colors">
+                <i class="fas fa-paper-plane mr-2"></i>{{ _('Submit Issue') }}
+            </button>
         </div>
     </form>
 </div>

@@ -1,18 +1,21 @@
 {% extends "base.html" %}
+{% from 'components/ui.html' import page_header %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">{{ _('Edit Profile') }}</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">Update your personal information.</p>
-    </div>
-</div>
+{{ page_header(
+    icon_class='fas fa-user-edit',
+    title_text='Edit Profile',
+    breadcrumbs=[
+        {'text': 'Profile', 'url': url_for('auth.profile')},
+        {'text': 'Edit'}
+    ]
+) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+<div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm max-w-2xl mx-auto">
     <form method="POST" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="space-y-6">
-            <div class="flex items-center gap-4">
+            <div class="flex flex-col sm:flex-row items-center gap-4">
                 <div class="relative">
                     {% if current_user.get_avatar_url() %}
                         <img id="avatar-preview" src="{{ current_user.get_avatar_url() }}" alt="{{ current_user.display_name }}" class="w-20 h-20 rounded-full object-cover border-4 border-primary shadow-lg" onerror="this.onerror=null; this.style.display='none'; document.getElementById('avatarPreviewFallback').style.display='flex';">
@@ -30,7 +33,7 @@
                     </div>
                 </div>
                 <div class="flex-1">
-                    <label for="avatar" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Profile picture</label>
+                    <label for="avatar" class="form-label">Profile picture</label>
                     <input type="file" name="avatar" id="avatar" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" class="mt-1 block w-full text-sm text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90" onchange="previewAvatar(this)">
                     <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">PNG, JPG, GIF, or WEBP up to 5MB.</p>
                     {% if current_user.has_avatar() %}
@@ -45,15 +48,15 @@
                 </div>
             </div>
             <div>
-                <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
+                <label for="username" class="form-label">Username</label>
                 <input type="text" name="username" id="username" value="{{ current_user.username }}" disabled class="form-input bg-gray-100 dark:bg-gray-700">
             </div>
             <div>
-                <label for="full_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Full Name</label>
+                <label for="full_name" class="form-label">Full Name</label>
                 <input type="text" name="full_name" id="full_name" value="{{ current_user.full_name or '' }}" class="form-input">
             </div>
             <div>
-                <label for="preferred_language" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Language</label>
+                <label for="preferred_language" class="form-label">Language</label>
                 <select name="preferred_language" id="preferred_language" class="form-input">
                     {% for code, label in config['LANGUAGES'].items() %}
                     <option value="{{ code }}" {% if (current_user.preferred_language or current_language_code) == code %}selected{% endif %}>{{ label }}</option>
@@ -62,20 +65,20 @@
             </div>
             {% if requires_password %}
             <div>
-                <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
+                <label for="password" class="form-label">New Password</label>
                 <input type="password" name="password" id="password" class="form-input" placeholder="{{ _('Leave blank to keep current password') }}" minlength="8">
                 <div id="password-error" class="mt-1 text-sm text-red-600 dark:text-red-400 hidden"></div>
             </div>
             <div>
-                <label for="password_confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
+                <label for="password_confirm" class="form-label">Confirm New Password</label>
                 <input type="password" name="password_confirm" id="password_confirm" class="form-input">
                 <div id="password_confirm-error" class="mt-1 text-sm text-red-600 dark:text-red-400 hidden"></div>
             </div>
             {% endif %}
         </div>
-        <div class="mt-8 border-t border-border-light dark:border-border-dark pt-6 flex justify-end">
-            <a href="{{ url_for('auth.profile') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mr-4">Cancel</a>
-            <button type="submit" id="save-button" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed">{{ _('Save Changes') }}</button>
+        <div class="mt-8 border-t border-border-light dark:border-border-dark pt-6 flex flex-col-reverse sm:flex-row justify-end gap-3">
+            <a href="{{ url_for('auth.profile') }}" class="btn btn-secondary text-center">Cancel</a>
+            <button type="submit" id="save-button" class="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed">{{ _('Save Changes') }}</button>
         </div>
     </form>
 </div>

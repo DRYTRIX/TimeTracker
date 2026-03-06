@@ -9,7 +9,7 @@
                     <i class="fas fa-arrow-left mr-1"></i>{{ _('Back to Project') }}
                 </a>
             </div>
-            <h1 class="text-3xl font-bold flex items-center gap-2">
+            <h1 class="text-2xl sm:text-3xl font-bold flex items-center gap-2">
                 <i class="fas fa-chart-line text-primary"></i>
                 <span>{{ project.name }}</span>
                 {% if project.code_display %}
@@ -45,68 +45,68 @@
 </div>
 
 <!-- Key Metrics Overview -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+<div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
     <!-- Total Hours -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-text-muted-light dark:text-text-muted-dark text-sm">{{ _('Total Hours') }}</p>
-                <p class="text-3xl font-bold mt-2">{{ "%.1f"|format(project.total_hours) }}</p>
+                <p class="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm">{{ _('Total Hours') }}</p>
+                <p class="text-xl sm:text-3xl font-bold mt-1 sm:mt-2">{{ "%.1f"|format(project.total_hours) }}</p>
                 {% if budget_data.estimated_hours > 0 %}
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
                     {{ _('of') }} {{ "%.0f"|format(budget_data.estimated_hours) }} {{ _('estimated') }}
                 </p>
                 {% endif %}
             </div>
-            <div class="text-4xl text-blue-500">
+            <div class="text-2xl sm:text-4xl text-blue-500">
                 <i class="fas fa-clock"></i>
             </div>
         </div>
     </div>
     
     <!-- Budget Consumed -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-text-muted-light dark:text-text-muted-dark text-sm">{{ _('Budget Used') }}</p>
-                <p class="text-3xl font-bold mt-2">{{ "%.0f"|format(budget_data.consumed_amount) }}</p>
+                <p class="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm">{{ _('Budget Used') }}</p>
+                <p class="text-xl sm:text-3xl font-bold mt-1 sm:mt-2">{{ "%.0f"|format(budget_data.consumed_amount) }}</p>
                 {% if budget_data.budget_amount > 0 %}
                 <p class="text-xs {% if budget_data.threshold_exceeded %}text-red-500{% else %}text-text-muted-light dark:text-text-muted-dark{% endif %} mt-1">
                     {{ "%.1f"|format(budget_data.percentage) }}% {{ _('of budget') }}
                 </p>
                 {% endif %}
             </div>
-            <div class="text-4xl {% if budget_data.threshold_exceeded %}text-red-500{% else %}text-green-500{% endif %}">
+            <div class="text-2xl sm:text-4xl {% if budget_data.threshold_exceeded %}text-red-500{% else %}text-green-500{% endif %}">
                 <i class="fas fa-dollar-sign"></i>
             </div>
         </div>
     </div>
     
     <!-- Task Completion -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-text-muted-light dark:text-text-muted-dark text-sm">{{ _('Tasks Complete') }}</p>
-                <p class="text-3xl font-bold mt-2">{{ task_stats.completed }}/{{ task_stats.total }}</p>
+                <p class="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm">{{ _('Tasks Complete') }}</p>
+                <p class="text-xl sm:text-3xl font-bold mt-1 sm:mt-2">{{ task_stats.completed }}/{{ task_stats.total }}</p>
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
                     {{ "%.1f"|format(task_stats.completion_rate) }}% {{ _('completion') }}
                 </p>
             </div>
-            <div class="text-4xl text-purple-500">
+            <div class="text-2xl sm:text-4xl text-purple-500">
                 <i class="fas fa-tasks"></i>
             </div>
         </div>
     </div>
     
     <!-- Team Size -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+    <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-text-muted-light dark:text-text-muted-dark text-sm">{{ _('Team Members') }}</p>
-                <p class="text-3xl font-bold mt-2">{{ team_contributions|length }}</p>
+                <p class="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm">{{ _('Team Members') }}</p>
+                <p class="text-xl sm:text-3xl font-bold mt-1 sm:mt-2">{{ team_contributions|length }}</p>
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('contributing') }}</p>
             </div>
-            <div class="text-4xl text-orange-500">
+            <div class="text-2xl sm:text-4xl text-orange-500">
                 <i class="fas fa-users"></i>
             </div>
         </div>
@@ -116,8 +116,8 @@
 <!-- Charts Row 1 -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
     <!-- Budget vs Actual Chart -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <h2 class="text-lg sm:text-xl font-semibold mb-4 flex items-center gap-2">
             <i class="fas fa-chart-bar text-primary"></i>
             {{ _('Budget vs. Actual') }}
         </h2>
@@ -148,8 +148,8 @@
     </div>
     
     <!-- Task Status Distribution -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <h2 class="text-lg sm:text-xl font-semibold mb-4 flex items-center gap-2">
             <i class="fas fa-chart-pie text-primary"></i>
             {{ _('Task Status Distribution') }}
         </h2>
@@ -179,8 +179,8 @@
 <!-- Charts Row 2 -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
     <!-- Team Contributions Chart -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <h2 class="text-lg sm:text-xl font-semibold mb-4 flex items-center gap-2">
             <i class="fas fa-user-friends text-primary"></i>
             {{ _('Team Member Contributions') }}
         </h2>
@@ -213,8 +213,8 @@
     </div>
     
     <!-- Time Tracking Timeline -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <h2 class="text-lg sm:text-xl font-semibold mb-4 flex items-center gap-2">
             <i class="fas fa-chart-line text-primary"></i>
             {{ _('Time Tracking Timeline') }}
         </h2>
@@ -236,8 +236,8 @@
 <!-- Recent Activity and Team Details -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
     <!-- Recent Activity -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <h2 class="text-lg sm:text-xl font-semibold mb-4 flex items-center gap-2">
             <i class="fas fa-history text-primary"></i>
             {{ _('Recent Activity') }}
         </h2>
@@ -271,8 +271,8 @@
     </div>
     
     <!-- Team Member Details -->
-    <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
-        <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <h2 class="text-lg sm:text-xl font-semibold mb-4 flex items-center gap-2">
             <i class="fas fa-users text-primary"></i>
             {{ _('Team Member Details') }}
         </h2>

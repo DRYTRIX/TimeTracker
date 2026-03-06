@@ -18,7 +18,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Invoice Selection -->
                 <div class="md:col-span-2">
-                    <label for="invoice_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label for="invoice_id" class="form-label">
                         Invoice <span class="text-red-500">*</span>
                     </label>
                     <select name="invoice_id" id="invoice_id" required 
@@ -42,7 +42,7 @@
                 <!-- Invoice Details Display -->
                 <div id="invoice-details" class="md:col-span-2 bg-background-light dark:bg-background-dark p-4 rounded-lg" style="display: none;">
                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('Invoice Details') }}</h3>
-                    <div class="grid grid-cols-3 gap-4 text-sm">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                         <div>
                             <span class="text-gray-600 dark:text-gray-400">Total Amount:</span>
                             <span id="invoice-total" class="font-semibold text-gray-900 dark:text-gray-100 ml-2">-</span>
@@ -60,7 +60,7 @@
 
                 <!-- Amount -->
                 <div>
-                    <label for="amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label for="amount" class="form-label">
                         Amount <span class="text-red-500">*</span>
                     </label>
                     <input type="number" name="amount" id="amount" step="0.01" min="0.01" required
@@ -71,7 +71,7 @@
 
                 <!-- Currency -->
                 <div>
-                    <label for="currency" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Currency</label>
+                    <label for="currency" class="form-label">Currency</label>
                     <input type="text" name="currency" id="currency" maxlength="3"
                            value="{{ selected_invoice.currency_code if selected_invoice else 'EUR' }}"
                            class="form-input">
@@ -80,7 +80,7 @@
 
                 <!-- Payment Date -->
                 <div>
-                    <label for="payment_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label for="payment_date" class="form-label">
                         Payment Date <span class="text-red-500">*</span>
                     </label>
                     <input type="date" name="payment_date" id="payment_date" required
@@ -90,7 +90,7 @@
 
                 <!-- Payment Method -->
                 <div>
-                    <label for="method" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Payment Method</label>
+                    <label for="method" class="form-label">Payment Method</label>
                     <select name="method" id="method"
                             class="form-input">
                         <option value="">Select method</option>
@@ -108,7 +108,7 @@
 
                 <!-- Status -->
                 <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+                    <label for="status" class="form-label">Status</label>
                     <select name="status" id="status"
                             class="form-input">
                         <option value="completed" selected>Completed</option>
@@ -121,7 +121,7 @@
 
                 <!-- Reference -->
                 <div>
-                    <label for="reference" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Reference/Transaction ID</label>
+                    <label for="reference" class="form-label">Reference/Transaction ID</label>
                     <input type="text" name="reference" id="reference" maxlength="100"
                            class="form-input">
                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Check number, transaction ID, etc.</p>
@@ -129,7 +129,7 @@
 
                 <!-- Gateway Transaction ID -->
                 <div>
-                    <label for="gateway_transaction_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Gateway Transaction ID</label>
+                    <label for="gateway_transaction_id" class="form-label">Gateway Transaction ID</label>
                     <input type="text" name="gateway_transaction_id" id="gateway_transaction_id" maxlength="255"
                            class="form-input">
                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Payment gateway transaction ID</p>
@@ -137,7 +137,7 @@
 
                 <!-- Gateway Fee -->
                 <div>
-                    <label for="gateway_fee" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Gateway Fee</label>
+                    <label for="gateway_fee" class="form-label">Gateway Fee</label>
                     <input type="number" name="gateway_fee" id="gateway_fee" step="0.01" min="0"
                            class="form-input">
                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Transaction or processing fee</p>
@@ -145,7 +145,7 @@
 
                 <!-- Notes -->
                 <div class="md:col-span-2">
-                    <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
+                    <label for="notes" class="form-label">Notes</label>
                     <textarea name="notes" id="notes" rows="3"
                               class="form-input"></textarea>
                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Additional payment notes</p>
@@ -153,7 +153,7 @@
             </div>
 
             <!-- Form Actions -->
-            <div class="mt-6 flex justify-end space-x-3">
+            <div class="mt-6 flex flex-col sm:flex-row justify-end gap-3">
                 <a href="{{ url_for('payments.list_payments') }}" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                     Cancel
                 </a>

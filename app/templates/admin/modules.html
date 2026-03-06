@@ -30,7 +30,7 @@
 ) }}
 
 <!-- Main Module Management Form -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     {% if modules_by_category is defined and modules_by_category %}
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -82,7 +82,7 @@
         {% endfor %}
 
         <!-- Summary Statistics -->
-        <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center gap-4 text-sm">
+        <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-wrap items-center gap-4 text-sm">
             <div class="flex items-center gap-2">
                 <span class="font-medium">{{ _('Total Modules:') }}</span>
                 <span class="text-gray-700 dark:text-gray-300">{{ _total_modules }}</span>
@@ -146,7 +146,7 @@
         <div class="space-y-4">
             {% for category, modules in modules_by_category.items() %}
             <div class="module-category border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden" data-category="{{ category.value }}">
-                <div class="category-header bg-gray-50 dark:bg-gray-800 px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onclick="toggleCategory('{{ category.value }}')">
+                <div class="category-header bg-gray-50 dark:bg-gray-800 px-4 py-3 flex flex-wrap items-center justify-between gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" onclick="toggleCategory('{{ category.value }}')">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-chevron-down category-chevron text-gray-500 dark:text-gray-400 transition-transform"></i>
                         <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -241,7 +241,7 @@
         </p>
 
         <div class="mt-8 pt-6 flex justify-end">
-            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Save Changes') }}</button>
+            <button type="submit" class="btn btn-primary">{{ _('Save Changes') }}</button>
         </div>
     </form>
     {% else %}

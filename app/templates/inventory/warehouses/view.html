@@ -19,9 +19,9 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 space-y-6">
         <!-- Warehouse Details -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Warehouse Details') }}</h2>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Code') }}</label>
                     <p class="mt-1 font-mono">{{ warehouse.code }}</p>
@@ -37,7 +37,7 @@
                     </p>
                 </div>
                 {% if warehouse.address %}
-                <div class="col-span-2">
+                <div class="sm:col-span-2">
                     <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Address') }}</label>
                     <p class="mt-1">{{ warehouse.address }}</p>
                 </div>
@@ -65,7 +65,7 @@
                 </div>
                 {% endif %}
                 {% if warehouse.notes %}
-                <div class="col-span-2">
+                <div class="sm:col-span-2">
                     <label class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ _('Notes') }}</label>
                     <p class="mt-1">{{ warehouse.notes }}</p>
                 </div>
@@ -75,10 +75,10 @@
 
         <!-- Stock Levels -->
         {% if stock_levels %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Stock Levels') }}</h2>
             <div class="overflow-x-auto">
-                <table class="table table-zebra w-full text-left">
+                <table class="table table-zebra w-full text-left responsive-cards">
                     <thead>
                         <tr>
                             <th class="p-4">{{ _('Item') }}</th>
@@ -92,21 +92,21 @@
                     <tbody>
                         {% for stock in stock_levels %}
                         <tr>
-                            <td class="p-4 font-medium">
+                            <td class="p-4 font-medium mobile-card-header" data-label="{{ _('Item') }}">
                                 <a href="{{ url_for('inventory.view_stock_item', item_id=stock.stock_item_id) }}" class="text-primary hover:underline">
                                     {{ stock.stock_item.name }}
                                 </a>
                             </td>
-                            <td class="p-4 font-mono text-sm">{{ stock.stock_item.sku }}</td>
-                            <td class="p-4">{{ stock.quantity_on_hand }}</td>
-                            <td class="p-4">{{ stock.quantity_reserved }}</td>
-                            <td class="p-4">
+                            <td class="p-4 font-mono text-sm" data-label="{{ _('SKU') }}">{{ stock.stock_item.sku }}</td>
+                            <td class="p-4" data-label="{{ _('On Hand') }}">{{ stock.quantity_on_hand }}</td>
+                            <td class="p-4" data-label="{{ _('Reserved') }}">{{ stock.quantity_reserved }}</td>
+                            <td class="p-4" data-label="{{ _('Available') }}">
                                 {{ stock.quantity_available }}
                                 {% if stock.stock_item.reorder_point and stock.quantity_on_hand < stock.stock_item.reorder_point %}
                                     <span class="ml-2 text-amber-500" title="{{ _('Low Stock') }}"><i class="fas fa-exclamation-triangle"></i></span>
                                 {% endif %}
                             </td>
-                            <td class="p-4">{{ stock.location or '—' }}</td>
+                            <td class="p-4" data-label="{{ _('Location') }}">{{ stock.location or '—' }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -114,16 +114,16 @@
             </div>
         </div>
         {% else %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <p class="text-gray-500 text-center">{{ _('No stock items in this warehouse.') }}</p>
         </div>
         {% endif %}
 
         <!-- Recent Movements -->
         {% if recent_movements %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Recent Stock Movements') }}</h2>
-            <table class="table table-zebra w-full text-left">
+            <table class="table table-zebra w-full text-left responsive-cards">
                 <thead>
                     <tr>
                         <th class="p-4">{{ _('Date') }}</th>
@@ -136,21 +136,21 @@
                 <tbody>
                     {% for movement in recent_movements %}
                     <tr>
-                        <td class="p-4">{{ movement.moved_at|user_datetime if movement.moved_at else '—' }}</td>
-                        <td class="p-4">
+                        <td class="p-4 mobile-card-header" data-label="{{ _('Date') }}">{{ movement.moved_at|user_datetime if movement.moved_at else '—' }}</td>
+                        <td class="p-4" data-label="{{ _('Item') }}">
                             <a href="{{ url_for('inventory.view_stock_item', item_id=movement.stock_item_id) }}" class="text-primary hover:underline">
                                 {{ movement.stock_item.name }}
                             </a>
                         </td>
-                        <td class="p-4">
+                        <td class="p-4" data-label="{{ _('Type') }}">
                             <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 capitalize">
                                 {{ movement.movement_type }}
                             </span>
                         </td>
-                        <td class="p-4 {% if movement.quantity > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                        <td class="p-4 {% if movement.quantity > 0 %}text-green-600{% else %}text-red-600{% endif %}" data-label="{{ _('Quantity') }}">
                             {{ '+' if movement.quantity > 0 else '' }}{{ movement.quantity }}
                         </td>
-                        <td class="p-4">{{ movement.reason or '—' }}</td>
+                        <td class="p-4" data-label="{{ _('Reason') }}">{{ movement.reason or '—' }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -161,7 +161,7 @@
 
     <div>
         <!-- Summary -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-4">{{ _('Summary') }}</h3>
             <div class="space-y-3">
                 <div>

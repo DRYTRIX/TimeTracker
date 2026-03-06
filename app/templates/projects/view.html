@@ -1,76 +1,103 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import confirm_dialog %}
+{% from "components/ui.html" import confirm_dialog, page_header %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-    <div>
-        <h1 class="text-2xl font-bold flex items-center gap-2">
-            <span>{{ project.name }}</span>
-            {% if project.code_display %}
-            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200" title="{{ _('Project Code') }}">{{ project.code_display }}</span>
-            {% endif %}
-        </h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{{ project.client }}</p>
-    </div>
-    <div class="flex gap-2 flex-wrap">
-        <a href="{{ url_for('projects.project_time_entries_overview', project_id=project.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg mt-4 md:mt-0 flex items-center gap-2 transition">
-            <i class="fas fa-list"></i>
-            {{ _('Entries Overview') }}
-        </a>
-        {% if current_user.is_admin or has_any_permission('edit_projects', 'archive_projects') %}
-        <a href="{{ url_for('projects.project_dashboard', project_id=project.id) }}" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg mt-4 md:mt-0 flex items-center gap-2 transition">
-            <i class="fas fa-chart-line"></i>
-            {{ _('Dashboard') }}
-        </a>
-        {% endif %}
-        {% if project.budget_amount and (current_user.is_admin or has_any_permission('edit_projects', 'archive_projects')) %}
-        <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}" class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-lg mt-4 md:mt-0 flex items-center gap-2 transition shadow-lg">
-            <i class="fas fa-wallet"></i>
-            {{ _('Budget Analysis') }}
-        </a>
-        {% endif %}
-        {% if current_user.is_admin or has_permission('edit_projects') %}
-        <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg mt-4 md:mt-0 transition">{{ _('Edit Project') }}</a>
-        {% endif %}
-        {% if current_user.is_admin or has_permission('edit_projects') %}
-        {% if project.status == 'active' %}
-        <form method="POST" action="{{ url_for('projects.deactivate_project', project_id=project.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Mark project as Inactive?') }}', { title: '{{ _('Change Project Status') }}', confirmText: '{{ _('Change') }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="px-4 py-2 rounded-lg bg-amber-500 text-white mt-4 md:mt-0">{{ _('Mark Inactive') }}</button>
-        </form>
-        {% elif project.status == 'inactive' %}
-        <form method="POST" action="{{ url_for('projects.activate_project', project_id=project.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Activate project?') }}', { title: '{{ _('Activate Project') }}', confirmText: '{{ _('Activate') }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 text-white mt-4 md:mt-0">{{ _('Activate') }}</button>
-        </form>
-        {% endif %}
-        {% endif %}
-        {% if current_user.is_admin or has_permission('archive_projects') %}
-        {% if not project.is_archived %}
-        <a href="{{ url_for('projects.archive_project', project_id=project.id) }}" class="inline-block px-4 py-2 rounded-lg bg-gray-600 text-white mt-4 md:mt-0 hover:bg-gray-700 transition-colors">{{ _('Archive') }}</a>
-        {% else %}
-        <form method="POST" action="{{ url_for('projects.unarchive_project', project_id=project.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Unarchive project?') }}', { title: '{{ _('Unarchive Project') }}', confirmText: '{{ _('Unarchive') }}' }).then(ok=>{ if(ok) this.submit(); });" class="inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="px-4 py-2 rounded-lg bg-sky-600 text-white mt-4 md:mt-0">{{ _('Unarchive') }}</button>
-        </form>
-        {% endif %}
-        {% endif %}
-        {% if current_user.is_admin or has_permission('delete_projects') %}
-        <button type="button" class="bg-red-600 text-white px-4 py-2 rounded-lg mt-4 md:mt-0"
-                onclick="document.getElementById('confirmDeleteProject-{{ project.id }}').classList.remove('hidden')">
-            {{ _('Delete Project') }}
+{% set breadcrumbs = [
+    {'text': _('Projects'), 'url': url_for('projects.list_projects')},
+    {'text': project.name}
+] %}
+
+{% set primary_actions %}
+<a href="{{ url_for('projects.project_time_entries_overview', project_id=project.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 transition">
+    <i class="fas fa-list"></i>
+    <span class="hidden sm:inline">{{ _('Entries Overview') }}</span>
+</a>
+{% if current_user.is_admin or has_permission('edit_projects') %}
+<a href="{{ url_for('projects.edit_project', project_id=project.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg transition flex items-center gap-2">
+    <i class="fas fa-edit"></i>
+    <span class="hidden sm:inline">{{ _('Edit Project') }}</span>
+</a>
+{% endif %}
+{% endset %}
+
+{{ page_header(
+    icon_class='fas fa-folder',
+    title_text=project.name,
+    subtitle_text=project.client,
+    breadcrumbs=breadcrumbs,
+    actions_html=primary_actions
+) }}
+
+<div class="flex flex-wrap gap-2 mb-6">
+    {% if current_user.is_admin or has_any_permission('edit_projects', 'archive_projects') %}
+    <a href="{{ url_for('projects.project_dashboard', project_id=project.id) }}" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition">
+        <i class="fas fa-chart-line"></i>
+        {{ _('Dashboard') }}
+    </a>
+    {% endif %}
+    {% if project.budget_amount and (current_user.is_admin or has_any_permission('edit_projects', 'archive_projects')) %}
+    <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}" class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition shadow-lg">
+        <i class="fas fa-wallet"></i>
+        {{ _('Budget Analysis') }}
+    </a>
+    {% endif %}
+
+    <!-- More actions dropdown for secondary actions -->
+    <div class="relative" id="moreActionsContainer">
+        <button type="button" onclick="document.getElementById('moreActionsMenu').classList.toggle('hidden')" class="bg-gray-200 dark:bg-gray-700 px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition hover:bg-gray-300 dark:hover:bg-gray-600">
+            <i class="fas fa-ellipsis-h"></i>
+            {{ _('More') }}
         </button>
-        <form id="confirmDeleteProject-{{ project.id }}-form" method="POST" action="{{ url_for('projects.delete_project', project_id=project.id) }}" class="hidden">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        </form>
-        {% endif %}
+        <div id="moreActionsMenu" class="hidden absolute right-0 mt-2 w-48 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg shadow-lg z-50">
+            {% if current_user.is_admin or has_permission('edit_projects') %}
+            {% if project.status == 'active' %}
+            <form method="POST" action="{{ url_for('projects.deactivate_project', project_id=project.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Mark project as Inactive?') }}', { title: '{{ _('Change Project Status') }}', confirmText: '{{ _('Change') }}' }).then(ok=>{ if(ok) this.submit(); });">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                    <i class="fas fa-pause-circle text-amber-500"></i> {{ _('Mark Inactive') }}
+                </button>
+            </form>
+            {% elif project.status == 'inactive' %}
+            <form method="POST" action="{{ url_for('projects.activate_project', project_id=project.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Activate project?') }}', { title: '{{ _('Activate Project') }}', confirmText: '{{ _('Activate') }}' }).then(ok=>{ if(ok) this.submit(); });">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                    <i class="fas fa-check-circle text-emerald-500"></i> {{ _('Activate') }}
+                </button>
+            </form>
+            {% endif %}
+            {% endif %}
+            {% if current_user.is_admin or has_permission('archive_projects') %}
+            {% if not project.is_archived %}
+            <a href="{{ url_for('projects.archive_project', project_id=project.id) }}" class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                <i class="fas fa-archive text-gray-500"></i> {{ _('Archive') }}
+            </a>
+            {% else %}
+            <form method="POST" action="{{ url_for('projects.unarchive_project', project_id=project.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Unarchive project?') }}', { title: '{{ _('Unarchive Project') }}', confirmText: '{{ _('Unarchive') }}' }).then(ok=>{ if(ok) this.submit(); });">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                    <i class="fas fa-box-open text-sky-500"></i> {{ _('Unarchive') }}
+                </button>
+            </form>
+            {% endif %}
+            {% endif %}
+            {% if current_user.is_admin or has_permission('delete_projects') %}
+            <div class="border-t border-border-light dark:border-border-dark my-1"></div>
+            <button type="button" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                    onclick="document.getElementById('confirmDeleteProject-{{ project.id }}').classList.remove('hidden')">
+                <i class="fas fa-trash"></i> {{ _('Delete Project') }}
+            </button>
+            <form id="confirmDeleteProject-{{ project.id }}-form" method="POST" action="{{ url_for('projects.delete_project', project_id=project.id) }}" class="hidden">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            </form>
+            {% endif %}
+        </div>
     </div>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Left Column: Project Details -->
     <div class="lg:col-span-1 space-y-6">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">Details</h2>
             <div class="space-y-4">
                 <div>
@@ -129,7 +156,7 @@
 
         <!-- Custom Fields Section -->
         {% if project.custom_fields %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Custom Fields') }}</h2>
             <div class="space-y-3">
                 {% for key, value in project.custom_fields.items() %}
@@ -177,7 +204,7 @@
         <!-- Rendered Links from Link Templates -->
         {% set rendered_links = project.get_rendered_links() %}
         {% if rendered_links %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Quick Links') }}</h2>
             <div class="space-y-2">
                 {% for link in rendered_links %}
@@ -196,7 +223,7 @@
 
         <!-- Budget Overview Card -->
         {% if project.budget_amount %}
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow animated-card">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm animated-card">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold flex items-center">
                     <i class="fas fa-wallet mr-2 text-green-500"></i>
@@ -278,7 +305,7 @@
         </div>
         {% endif %}
 
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">User Contributions</h2>
             <ul>
                 {% for user_total in user_totals %}
@@ -293,7 +320,7 @@
         </div>
 
         <!-- Attachments Section -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-semibold">
                     <i class="fas fa-paperclip mr-2"></i>{{ _('Attachments') }}
@@ -314,12 +341,12 @@
                 <form method="POST" action="{{ url_for('projects.upload_project_attachment', project_id=project.id) }}" enctype="multipart/form-data" class="space-y-3">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div>
-                        <label for="attachment-file" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('File') }}</label>
+                        <label for="attachment-file" class="form-label">{{ _('File') }}</label>
                         <input type="file" name="file" id="attachment-file" class="w-full form-input" required>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Max size: 10 MB. Allowed: images, PDFs, documents, spreadsheets, archives') }}</p>
                     </div>
                     <div>
-                        <label for="attachment-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Description (optional)') }}</label>
+                        <label for="attachment-description" class="form-label">{{ _('Description (optional)') }}</label>
                         <input type="text" name="description" id="attachment-description" class="w-full form-input" placeholder="{{ _('e.g., Contract, Specification, etc.') }}">
                     </div>
                     <div class="flex items-center">
@@ -391,9 +418,9 @@
 
     <!-- Right Column: Tabs for Tasks, Entries, etc. -->
     <div class="lg:col-span-2">
-        <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6 overflow-x-auto">
+        <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-6 overflow-x-auto">
             <h3 class="text-lg font-semibold mb-4">{{ _('Tasks for this project') }}</h3>
-            <table class="w-full text-left">
+            <table class="w-full text-left responsive-cards">
                 <thead class="border-b border-border-light dark:border-border-dark">
                     <tr>
                         <th class="p-3">{{ _('Name') }}</th>
@@ -408,8 +435,8 @@
                 <tbody>
                     {% for task in tasks %}
                     <tr class="border-b border-border-light dark:border-border-dark">
-                        <td class="p-3">{{ task.name }}</td>
-                        <td class="p-3">
+                        <td class="p-3 mobile-card-header" data-label="{{ _('Name') }}">{{ task.name }}</td>
+                        <td class="p-3" data-label="{{ _('Priority') }}">
                             {% set p = task.priority %}
                             {% set pcls = {'low':'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
                                            'medium':'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
@@ -417,7 +444,7 @@
                                            'urgent':'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'}[p] if p in ['low','medium','high','urgent'] else 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' %}
                             <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ pcls }}">{{ task.priority_display }}</span>
                         </td>
-                        <td class="p-3">
+                        <td class="p-3" data-label="{{ _('Status') }}">
                             {% set s = task.status %}
                             {% set scls = {'todo':'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
                                            'in_progress':'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
@@ -426,7 +453,7 @@
                                            'cancelled':'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'}[s] if s in ['todo','in_progress','review','done','cancelled'] else 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' %}
                             <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ scls }}">{{ task.status_display }}</span>
                         </td>
-                        <td class="p-3">
+                        <td class="p-3" data-label="{{ _('Due') }}">
                             {% if task.due_date %}
                                 {% set overdue = task.is_overdue %}
                                 <span class="px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap {{ 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' if overdue else 'bg-primary/10 text-primary' }}">{{ task.due_date|format_date }}</span>
@@ -434,20 +461,20 @@
                                 <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                             {% endif %}
                         </td>
-                        <td class="p-3">
+                        <td class="p-3" data-label="{{ _('Estimated') }}">
                             {% if task.estimated_hours %}
                                 {{ task.estimated_hours }} {{ _('h') }}
                             {% else %}
                                 <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                             {% endif %}
                         </td>
-                        <td class="p-3">
+                        <td class="p-3" data-label="{{ _('Progress') }}">
                             {% set pct = task.progress_percentage or 0 %}
                             <div class="w-28 h-2 bg-gray-200 dark:bg-gray-700 rounded">
                                 <div class="h-2 rounded {{ 'bg-emerald-500' if pct>=100 else 'bg-primary' }}" style="width: {{ [pct,100]|min }}%"></div>
                             </div>
                         </td>
-                        <td class="p-3">
+                        <td class="p-3 mobile-actions" data-label="{{ _('Actions') }}">
                             <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="text-primary hover:underline">{{ _('View') }}</a>
                         </td>
                     </tr>
@@ -473,4 +500,14 @@
 {% endif %}
 {% endblock %}
 
-{% block scripts_extra %}{% endblock %}
+{% block scripts_extra %}
+<script>
+document.addEventListener('click', function(e) {
+    const container = document.getElementById('moreActionsContainer');
+    const menu = document.getElementById('moreActionsMenu');
+    if (container && menu && !container.contains(e.target)) {
+        menu.classList.add('hidden');
+    }
+});
+</script>
+{% endblock %}

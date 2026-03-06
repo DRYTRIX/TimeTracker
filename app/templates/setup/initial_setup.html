@@ -8,8 +8,10 @@
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
     <link rel="alternate icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}">
+    <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
+    <link href="https://fonts.bunny.net/css?family=Inter:400,500,600,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}?v={{ app_version }}-toastfix1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}?v={{ app_version }}-toastfix1">
     <script>
         // On page load or when changing themes, best to add inline in `head` to avoid FOUC
         if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -19,7 +21,7 @@
         }
     </script>
 </head>
-<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+<body class="font-sans antialiased bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
     <div class="min-h-screen flex items-center justify-center px-4 py-8">
         <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-0 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg overflow-hidden">
             <!-- Left side - Branding -->
@@ -60,7 +62,11 @@
             </div>
 
             <!-- Right side - Wizard -->
-            <div class="p-8 overflow-y-auto max-h-[90vh]">
+            <div class="p-4 sm:p-8 overflow-y-auto max-h-[90vh]">
+                <div class="flex items-center gap-3 mb-4 md:hidden">
+                    <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="TimeTracker Logo" class="w-10 h-10">
+                    <span class="text-xl font-bold text-primary">TimeTracker</span>
+                </div>
                 <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-4" id="wizard-progress-label">{{ _('Step 1 of 6') }}</p>
                 <div class="flex gap-1 mb-6" aria-hidden="true">
                     <div class="h-1 flex-1 rounded-full bg-primary setup-progress-dot" data-step="1"></div>
@@ -269,9 +275,9 @@
                     </div>
 
                     <!-- Navigation -->
-                    <div class="flex justify-between items-center pt-6 border-t border-border-light dark:border-border-dark mt-6">
-                        <button type="button" id="setup-back-btn" class="btn border border-border-light dark:border-border-dark hidden" aria-label="{{ _('Back') }}">
-                            <i class="fa-solid fa-arrow-left mr-2"></i>{{ _('Back') }}
+                    <div class="flex justify-between items-center pt-6 border-t border-border-light dark:border-border-dark mt-6 gap-3">
+                        <button type="button" id="setup-back-btn" class="btn border border-border-light dark:border-border-dark hidden flex-shrink-0" aria-label="{{ _('Back') }}">
+                            <i class="fa-solid fa-arrow-left mr-2"></i><span class="hidden sm:inline">{{ _('Back') }}</span>
                         </button>
                         <div class="flex-1"></div>
                         <div class="flex gap-2">
@@ -279,7 +285,7 @@
                                 {{ _('Next') }}<i class="fa-solid fa-arrow-right ml-2"></i>
                             </button>
                             <button type="submit" id="setup-submit-btn" class="btn btn-primary hidden" aria-label="{{ _('Complete Setup & Continue') }}">
-                                <i class="fa-solid fa-check mr-2"></i>{{ _('Complete Setup & Continue') }}
+                                <i class="fa-solid fa-check mr-2"></i><span class="hidden sm:inline">{{ _('Complete Setup & Continue') }}</span><span class="sm:hidden">{{ _('Finish') }}</span>
                             </button>
                         </div>
                     </div>
@@ -300,7 +306,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
-    <script src="{{ url_for('static', filename='toast-notifications.js') }}"></script>
+    <script src="{{ url_for('static', filename='toast-notifications.js') }}?v={{ app_version }}-toastfix1"></script>
     <script src="{{ url_for('static', filename='error-handling-enhanced.js') }}"></script>
     <script src="{{ url_for('static', filename='js/setup-wizard.js') }}"></script>
 </body>

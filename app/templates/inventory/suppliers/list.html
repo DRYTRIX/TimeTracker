@@ -15,14 +15,14 @@
     actions_html='<a href="' + url_for("inventory.new_supplier") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>Create Supplier</a>' if (current_user.is_admin or has_permission('manage_suppliers')) else None
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow mb-6">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-            <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Search') }}</label>
-            <input type="text" name="search" id="search" value="{{ search }}" placeholder="{{ _('Code, name, email') }}" class="form-input">
+            <label for="suppliers-filter-search" class="form-label">{{ _('Search') }}</label>
+            <input type="text" name="search" id="suppliers-filter-search" value="{{ search }}" placeholder="{{ _('Code, name, email') }}" class="form-input">
         </div>
         <div>
-            <label for="active" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Status') }}</label>
+            <label for="active" class="form-label">{{ _('Status') }}</label>
             <select name="active" id="active" class="form-input">
                 <option value="true" {% if active_only %}selected{% endif %}>{{ _('Active Only') }}</option>
                 <option value="false" {% if not active_only %}selected{% endif %}>{{ _('All') }}</option>
@@ -34,51 +34,51 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow overflow-x-auto">
-    <table class="table table-zebra w-full text-left">
-        <thead>
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+    <table class="table table-zebra w-full text-left enhanced-table responsive-cards">
+        <thead class="bg-background-light dark:bg-background-dark">
             <tr>
-                <th class="p-4">{{ _('Code') }}</th>
-                <th class="p-4">{{ _('Name') }}</th>
-                <th class="p-4">{{ _('Contact Person') }}</th>
-                <th class="p-4">{{ _('Email') }}</th>
-                <th class="p-4">{{ _('Phone') }}</th>
-                <th class="p-4">{{ _('Status') }}</th>
-                <th class="p-4">{{ _('Actions') }}</th>
+                <th class="px-4 py-3">{{ _('Code') }}</th>
+                <th class="px-4 py-3">{{ _('Name') }}</th>
+                <th class="px-4 py-3">{{ _('Contact Person') }}</th>
+                <th class="px-4 py-3">{{ _('Email') }}</th>
+                <th class="px-4 py-3">{{ _('Phone') }}</th>
+                <th class="px-4 py-3">{{ _('Status') }}</th>
+                <th class="px-4 py-3">{{ _('Actions') }}</th>
             </tr>
         </thead>
         <tbody>
             {% for supplier in suppliers %}
             <tr>
-                <td class="p-4 font-mono text-sm">{{ supplier.code }}</td>
-                <td class="p-4 font-medium">
+                <td class="p-4 font-mono text-sm" data-label="{{ _('Code') }}">{{ supplier.code }}</td>
+                <td class="p-4 font-medium mobile-card-header" data-label="{{ _('Name') }}">
                     <a href="{{ url_for('inventory.view_supplier', supplier_id=supplier.id) }}" class="text-primary hover:underline">
                         {{ supplier.name }}
                     </a>
                 </td>
-                <td class="p-4">{{ supplier.contact_person or '—' }}</td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Contact Person') }}">{{ supplier.contact_person or '—' }}</td>
+                <td class="p-4" data-label="{{ _('Email') }}">
                     {% if supplier.email %}
                         <a href="mailto:{{ supplier.email }}" class="text-primary hover:underline">{{ supplier.email }}</a>
                     {% else %}
                         —
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Phone') }}">
                     {% if supplier.phone %}
                         <a href="tel:{{ supplier.phone }}" class="text-primary hover:underline">{{ supplier.phone }}</a>
                     {% else %}
                         —
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4" data-label="{{ _('Status') }}">
                     {% if supplier.is_active %}
                         <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Active') }}</span>
                     {% else %}
                         <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ _('Inactive') }}</span>
                     {% endif %}
                 </td>
-                <td class="p-4">
+                <td class="p-4 mobile-actions" data-label="{{ _('Actions') }}">
                     <a href="{{ url_for('inventory.view_supplier', supplier_id=supplier.id) }}" class="text-primary hover:underline mr-3">
                         <i class="fas fa-eye"></i>
                     </a>
