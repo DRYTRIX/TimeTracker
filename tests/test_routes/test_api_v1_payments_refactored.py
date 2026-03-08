@@ -3,6 +3,9 @@ Tests for refactored API v1 payment routes using service layer.
 """
 
 import pytest
+
+pytestmark = [pytest.mark.api, pytest.mark.integration]
+
 from datetime import date
 from decimal import Decimal
 from app.models import Payment, Invoice, ApiToken

@@ -1,6 +1,9 @@
 """Tests for inventory routes"""
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.routes]
+
 from decimal import Decimal
 from flask import url_for
 from app import db

@@ -1,6 +1,9 @@
 """Tests for Webhook models"""
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.models]
+
 from datetime import datetime, timedelta
 from app import db
 from app.models import Webhook, WebhookDelivery, User

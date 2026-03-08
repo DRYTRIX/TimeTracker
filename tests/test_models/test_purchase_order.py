@@ -1,6 +1,9 @@
 """Tests for PurchaseOrder model"""
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.models]
+
 from decimal import Decimal
 from datetime import date, datetime
 from app import db

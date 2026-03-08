@@ -3,6 +3,9 @@ Tests for refactored API v1 invoice, task, and expense routes using service laye
 """
 
 import pytest
+
+pytestmark = [pytest.mark.api, pytest.mark.integration]
+
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from app.models import Invoice, Task, Expense, Project, Client, ApiToken

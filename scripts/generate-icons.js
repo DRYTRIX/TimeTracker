@@ -4,9 +4,11 @@
  * Icon Generation Script for TimeTracker
  * 
  * This script generates all required icon formats from the SVG logo.
- * Requires: sharp (npm install sharp)
+ * Requires: sharp, to-ico (npm install sharp to-ico)
  * 
  * Usage: node scripts/generate-icons.js
+ * 
+ * For macOS .icns: run scripts/generate-macos-icon.sh on macOS (uses iconutil)
  */
 
 const fs = require('fs');
@@ -18,6 +20,14 @@ try {
   sharp = require('sharp');
 } catch (e) {
   console.error('Error: sharp package is required. Install it with: npm install sharp');
+  process.exit(1);
+}
+
+let toIco;
+try {
+  toIco = require('to-ico');
+} catch (e) {
+  console.error('Error: to-ico package is required. Install it with: npm install to-ico');
   process.exit(1);
 }
 
@@ -87,7 +97,7 @@ async function generateIcons() {
 
     // Generate Desktop Icons
     console.log('\nGenerating Desktop Icons...');
-    
+
     // Linux PNG (512x512)
     await sharp(svgBuffer)
       .resize(512, 512)
@@ -95,28 +105,47 @@ async function generateIcons() {
       .toFile(path.join(desktopAssetsDir, 'icon.png'));
     console.log('  ✓ Created desktop/assets/icon.png (512x512)');
 
-    // Windows ICO (requires multi-size, creating PNG for now)
-    // Note: Proper .ico generation requires additional tools
-    await sharp(svgBuffer)
-      .resize(256, 256)
-      .png()
-      .toFile(path.join(desktopAssetsDir, 'icon-256x256.png'));
-    console.log('  ✓ Created desktop/assets/icon-256x256.png');
-    console.log('  ⚠ Note: Convert to .ico using online tool or ImageMagick');
+    // Windows ICO (multi-size: 16, 32, 48, 256)
+    const icoSizes = [16, 32, 48, 256];
+    const icoBuffers = await Promise.all(
+      icoSizes.map(size =>
+        sharp(svgBuffer)
+          .resize(size, size)
+          .png()
+          .toBuffer()
+      )
+    );
+    const icoBuffer = await toIco(icoBuffers);
+    fs.writeFileSync(path.join(desktopAssetsDir, 'icon.ico'), icoBuffer);
+    console.log('  ✓ Created desktop/assets/icon.ico (multi-size)');
 
-    // macOS ICNS (requires iconutil, creating PNG for now)
-    await sharp(svgBuffer)
-      .resize(512, 512)
-      .png()
-      .toFile(path.join(desktopAssetsDir, 'icon-512x512.png'));
-    console.log('  ✓ Created desktop/assets/icon-512x512.png');
-    console.log('  ⚠ Note: Convert to .icns using iconutil on macOS');
+    // macOS ICNS source: create icon.iconset for iconutil (macOS only)
+    // The icon.icns must be created on macOS via: iconutil -c icns icon.iconset -o icon.icns
+    const iconsetDir = path.join(desktopAssetsDir, 'icon.iconset');
+    if (!fs.existsSync(iconsetDir)) {
+      fs.mkdirSync(iconsetDir, { recursive: true });
+    }
+    const macSizes = [
+      { size: 16, name: 'icon_16x16.png' },
+      { size: 32, name: 'icon_16x16@2x.png' },
+      { size: 32, name: 'icon_32x32.png' },
+      { size: 64, name: 'icon_32x32@2x.png' },
+      { size: 128, name: 'icon_128x128.png' },
+      { size: 256, name: 'icon_128x128@2x.png' },
+      { size: 256, name: 'icon_256x256.png' },
+      { size: 512, name: 'icon_256x256@2x.png' },
+      { size: 512, name: 'icon_512x512.png' },
+      { size: 1024, name: 'icon_512x512@2x.png' },
+    ];
+    for (const { size, name } of macSizes) {
+      await sharp(svgBuffer)
+        .resize(size, size)
+        .png()
+        .toFile(path.join(iconsetDir, name));
+    }
+    console.log('  ✓ Created desktop/assets/icon.iconset/ (run iconutil on macOS to create icon.icns)');
 
     console.log('\n✓ Icon generation complete!');
-    console.log('\nNext steps:');
-    console.log('1. Convert icon-256x256.png to icon.ico for Windows');
-    console.log('2. Convert icon-512x512.png to icon.icns for macOS');
-    console.log('3. Use online tools like cloudconvert.com or iconverticons.com');
 
   } catch (error) {
     console.error('Error generating icons:', error);

@@ -2,6 +2,9 @@
 
 import json
 import pytest
+
+pytestmark = [pytest.mark.api, pytest.mark.integration]
+
 from decimal import Decimal
 from flask import url_for
 from app import db

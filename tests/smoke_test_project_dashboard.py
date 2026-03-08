@@ -125,6 +125,7 @@ def login(client, username="testuser", password="testpass123"):
     return client.post("/auth/login", data={"username": username, "password": password}, follow_redirects=True)
 
 
+@pytest.mark.smoke
 class TestProjectDashboardSmoke:
     """Smoke tests for project dashboard functionality."""
 

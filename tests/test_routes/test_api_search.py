@@ -4,6 +4,9 @@ Tests both /api/search (legacy) and /api/v1/search (versioned API).
 """
 
 import pytest
+
+pytestmark = [pytest.mark.api, pytest.mark.integration]
+
 from app.models import Project, Task, Client, TimeEntry, ApiToken
 
 

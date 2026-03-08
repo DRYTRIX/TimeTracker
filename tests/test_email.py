@@ -3,6 +3,9 @@ Tests for email functionality
 """
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.utils]
+
 from unittest.mock import patch, MagicMock
 from flask import current_app
 from app.utils.email import send_email, check_email_configuration, send_test_email, init_mail

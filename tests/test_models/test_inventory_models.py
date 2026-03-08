@@ -1,6 +1,9 @@
 """Tests for inventory management models"""
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.models]
+
 from decimal import Decimal
 from datetime import datetime, timedelta
 from app import db

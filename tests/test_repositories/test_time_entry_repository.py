@@ -3,6 +3,9 @@ Integration tests for TimeEntryRepository.
 """
 
 import pytest
+
+pytestmark = [pytest.mark.integration]
+
 from datetime import datetime, timedelta
 from app.repositories import TimeEntryRepository
 from app.models import TimeEntry, Project, User

@@ -3,6 +3,9 @@ Tests for enhanced API authentication with IP whitelisting and better error hand
 """
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.utils]
+
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
 from flask import Flask, g

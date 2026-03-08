@@ -4,6 +4,7 @@
   "description": "Frontend assets for TimeTracker",
   "main": "index.js",
   "scripts": {
+    "generate:icons": "node scripts/generate-icons.js",
     "install:all": "npm install && npm install -D tailwindcss postcss autoprefixer",
     "install:cmdk": "npm install cmdk",
     "build:css": "tailwindcss -i ./app/static/src/input.css -o ./app/static/dist/output.css --watch",
@@ -15,7 +16,9 @@
   "devDependencies": {
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.31",
-    "tailwindcss": "^3.3.5"
+    "sharp": "^0.33.5",
+    "tailwindcss": "^3.3.5",
+    "to-ico": "^1.1.4"
   },
   "dependencies": {
     "cmdk": "^1.1.1",

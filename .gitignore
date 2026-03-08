@@ -189,6 +189,7 @@ nginx/ssl/*.crt
 *.pvk
 desktop/certs/
 desktop/*.pfx
+desktop/assets/icon.iconset/
 desktop/*.p12
 desktop/*.spc
 desktop/*.pvk

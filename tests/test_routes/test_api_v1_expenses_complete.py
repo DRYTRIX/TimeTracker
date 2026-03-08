@@ -3,6 +3,9 @@ Comprehensive tests for refactored expense API routes.
 """
 
 import pytest
+
+pytestmark = [pytest.mark.api, pytest.mark.integration]
+
 from datetime import date
 from decimal import Decimal
 from app.models import Expense, Project, ApiToken

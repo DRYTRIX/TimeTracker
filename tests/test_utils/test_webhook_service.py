@@ -1,6 +1,9 @@
 """Tests for webhook service"""
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.utils]
+
 from unittest.mock import Mock, patch, MagicMock
 from app.models import Webhook, WebhookDelivery, User
 from app.utils.webhook_service import WebhookService, WebhookDeliveryError

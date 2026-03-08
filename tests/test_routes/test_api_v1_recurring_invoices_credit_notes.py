@@ -3,6 +3,9 @@ Tests for recurring invoices and credit notes API routes with eager loading.
 """
 
 import pytest
+
+pytestmark = [pytest.mark.api, pytest.mark.integration]
+
 from datetime import date, timedelta
 from app.models import RecurringInvoice, CreditNote, Invoice, ApiToken
 

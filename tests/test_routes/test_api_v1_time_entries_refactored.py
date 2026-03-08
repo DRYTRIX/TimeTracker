@@ -3,6 +3,9 @@ Tests for refactored API v1 time entry routes with N+1 query fixes.
 """
 
 import pytest
+
+pytestmark = [pytest.mark.api, pytest.mark.integration]
+
 from datetime import datetime, timedelta
 from app.models import TimeEntry, Project, ApiToken
 

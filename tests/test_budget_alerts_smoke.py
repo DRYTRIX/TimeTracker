@@ -54,6 +54,7 @@ def project_with_budget(app, client_obj):
     return project
 
 
+@pytest.mark.smoke
 def test_budget_dashboard_loads(client, app, admin_user, project_with_budget):
     """Test that the budget dashboard page loads"""
     with client.session_transaction() as sess:
@@ -64,6 +65,7 @@ def test_budget_dashboard_loads(client, app, admin_user, project_with_budget):
     assert b"Budget Alerts" in response.data or b"budget" in response.data.lower()
 
 
+@pytest.mark.smoke
 def test_project_budget_detail_loads(client, app, admin_user, project_with_budget):
     """Test that the project budget detail page loads"""
     with client.session_transaction() as sess:
@@ -74,6 +76,7 @@ def test_project_budget_detail_loads(client, app, admin_user, project_with_budge
     assert project_with_budget.name.encode() in response.data
 
 
+@pytest.mark.smoke
 def test_burn_rate_api_endpoint(client, app, admin_user, project_with_budget, regular_user):
     """Test the burn rate API endpoint"""
     # Add some time entries
@@ -102,6 +105,7 @@ def test_burn_rate_api_endpoint(client, app, admin_user, project_with_budget, re
     assert "period_total" in data
 
 
+@pytest.mark.smoke
 def test_completion_estimate_api_endpoint(client, app, admin_user, project_with_budget):
     """Test the completion estimate API endpoint"""
     with client.session_transaction() as sess:
@@ -143,6 +147,7 @@ def test_resource_allocation_api_endpoint(client, app, admin_user, project_with_
     assert "total_cost" in data
 
 
+@pytest.mark.smoke
 def test_cost_trends_api_endpoint(client, app, admin_user, project_with_budget, regular_user):
     """Test the cost trends API endpoint"""
     # Add some time entries
@@ -171,6 +176,7 @@ def test_cost_trends_api_endpoint(client, app, admin_user, project_with_budget, 
     assert "average_cost_per_period" in data
 
 
+@pytest.mark.smoke
 def test_budget_status_api_endpoint(client, app, admin_user, project_with_budget):
     """Test the budget status API endpoint"""
     with client.session_transaction() as sess:
@@ -214,6 +220,7 @@ def test_alerts_api_endpoint(client, app, admin_user, project_with_budget):
     assert data["count"] >= 1
 
 
+@pytest.mark.smoke
 def test_acknowledge_alert_api_endpoint(client, app, admin_user, project_with_budget):
     """Test the acknowledge alert API endpoint"""
     # Create a test alert
@@ -245,6 +252,7 @@ def test_acknowledge_alert_api_endpoint(client, app, admin_user, project_with_bu
     assert alert.acknowledged_by == admin_user.id
 
 
+@pytest.mark.smoke
 def test_check_alerts_api_endpoint(client, app, admin_user, project_with_budget, regular_user):
     """Test the check alerts API endpoint (admin only)"""
     # Add time entries to trigger an alert
@@ -291,6 +299,7 @@ def test_budget_summary_api_endpoint(client, app, admin_user, project_with_budge
     assert "alert_stats" in data
 
 
+@pytest.mark.smoke
 def test_non_admin_cannot_check_alerts(client, app, regular_user, project_with_budget):
     """Test that non-admin users cannot manually check alerts"""
     with client.session_transaction() as sess:
@@ -326,6 +335,7 @@ def test_budget_alert_model_integration(app, project_with_budget):
     assert "project_id" in alert_dict
 
 
+@pytest.mark.smoke
 def test_scheduled_task_integration(app, project_with_budget, regular_user):
     """Test that budget alert checking task runs without errors"""
     from app.utils.scheduled_tasks import check_project_budget_alerts
@@ -397,6 +407,7 @@ def test_budget_forecasting_utilities_integration(app, project_with_budget, regu
     assert isinstance(alerts, list)
 
 
+@pytest.mark.smoke
 def test_project_without_budget_handling(client, app, admin_user, client_obj):
     """Test that project without budget is handled gracefully"""
     # Create project without budget
@@ -415,6 +426,7 @@ def test_project_without_budget_handling(client, app, admin_user, client_obj):
     assert response.status_code in [200, 302, 404]
 
 
+@pytest.mark.smoke
 def test_end_to_end_budget_workflow(client, app, admin_user, project_with_budget, regular_user):
     """Test complete budget monitoring workflow"""
     with client.session_transaction() as sess:

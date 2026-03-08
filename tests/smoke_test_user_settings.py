@@ -9,6 +9,7 @@ from app.models import User
 from app import db
 
 
+@pytest.mark.smoke
 class TestUserSettingsSmokeTests:
     """Smoke tests for user settings functionality"""
 

@@ -3,6 +3,9 @@ Tests for Mileage model
 """
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.models]
+
 from datetime import date, datetime
 from decimal import Decimal
 from app import db

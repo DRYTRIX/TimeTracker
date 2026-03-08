@@ -1,6 +1,9 @@
 """Tests for supplier routes"""
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.routes]
+
 from flask import url_for
 from app import db
 from app.models import Supplier, User

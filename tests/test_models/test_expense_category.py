@@ -3,6 +3,9 @@ Tests for ExpenseCategory model
 """
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.models]
+
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from app import db

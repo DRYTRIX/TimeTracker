@@ -1,6 +1,9 @@
 """Tests for REST API v1"""
 
 import pytest
+
+pytestmark = [pytest.mark.api, pytest.mark.integration]
+
 import json
 from datetime import datetime, timedelta
 from app import create_app, db

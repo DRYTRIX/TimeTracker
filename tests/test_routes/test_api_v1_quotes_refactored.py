@@ -3,6 +3,9 @@ Tests for refactored quote API routes.
 """
 
 import pytest
+
+pytestmark = [pytest.mark.api, pytest.mark.integration]
+
 from app.models import Quote, ApiToken, Client
 
 

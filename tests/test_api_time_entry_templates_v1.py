@@ -1,5 +1,7 @@
 import pytest
 
+pytestmark = [pytest.mark.api, pytest.mark.integration]
+
 from app import create_app, db
 from app.models import User, ApiToken
 

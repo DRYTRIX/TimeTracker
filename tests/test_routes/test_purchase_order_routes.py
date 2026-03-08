@@ -1,6 +1,9 @@
 """Tests for purchase order routes"""
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.routes]
+
 from decimal import Decimal
 from datetime import date
 from flask import url_for

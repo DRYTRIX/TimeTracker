@@ -341,6 +341,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKERHUB_PASSWORD }}
+        continue-on-error: true
       
       - name: Set lowercase image name
         id: image-name
@@ -388,15 +389,8 @@ jobs:
           # Verify secrets are available
           echo "🔍 Verifying GitHub Secrets availability..."
           if [ -z "$POSTHOG_API_KEY" ]; then
-            echo "❌ ERROR: POSTHOG_API_KEY secret is NOT available from GitHub Secret Store!"
-            echo ""
-            echo "To fix this:"
-            echo "  1. Go to: Repository → Settings → Secrets and variables → Actions"
-            echo "  2. Click 'New repository secret'"
-            echo "  3. Name: POSTHOG_API_KEY"
-            echo "  4. Value: Your PostHog API key (format: phc_xxxxx)"
-            echo ""
-            exit 1
+            echo "⚠️  POSTHOG_API_KEY secret not set (optional - analytics disabled in this build)"
+            echo "   → To enable: Add POSTHOG_API_KEY secret (format: phc_xxxxx) in Settings → Secrets"
           else
             echo "✅ POSTHOG_API_KEY secret found in GitHub Secret Store"
             echo "   → Format: ${POSTHOG_API_KEY:0:8}***${POSTHOG_API_KEY: -4} (${#POSTHOG_API_KEY} characters)"
@@ -411,11 +405,11 @@ jobs:
           fi
           echo ""
           
-          # Perform replacement
+          # Perform replacement (use empty string if secrets not set)
           echo "🔧 Injecting secrets into application configuration..."
-          sed -i "s|%%POSTHOG_API_KEY_PLACEHOLDER%%|${POSTHOG_API_KEY}|g" app/config/analytics_defaults.py
-          sed -i "s|%%SENTRY_DSN_PLACEHOLDER%%|${SENTRY_DSN}|g" app/config/analytics_defaults.py
-          echo "   → Placeholders replaced with actual secret values"
+          sed -i "s|%%POSTHOG_API_KEY_PLACEHOLDER%%|${POSTHOG_API_KEY:-}|g" app/config/analytics_defaults.py
+          sed -i "s|%%SENTRY_DSN_PLACEHOLDER%%|${SENTRY_DSN:-}|g" app/config/analytics_defaults.py
+          echo "   → Placeholders replaced with secret values (or empty if not set)"
           echo ""
           
           # Show file after injection (redacted)
@@ -445,14 +439,18 @@ jobs:
             echo "✅ Sentry DSN placeholder successfully replaced"
           fi
           
-          # Verify the actual key format (should start with 'phc_')
-          if ! grep -q 'POSTHOG_API_KEY_DEFAULT = "phc_' app/config/analytics_defaults.py; then
-            echo "❌ ERROR: PostHog API key format validation FAILED!"
-            echo "   Expected format: phc_* (PostHog Cloud key)"
-            echo "   Please verify the secret value in GitHub Settings."
-            exit 1
+          # Verify PostHog key format only when it was provided (non-empty)
+          if [ -n "$POSTHOG_API_KEY" ]; then
+            if ! grep -q 'POSTHOG_API_KEY_DEFAULT = "phc_' app/config/analytics_defaults.py; then
+              echo "❌ ERROR: PostHog API key format validation FAILED!"
+              echo "   Expected format: phc_* (PostHog Cloud key)"
+              echo "   Please verify the secret value in GitHub Settings."
+              exit 1
+            else
+              echo "✅ PostHog API key format validated (phc_* pattern confirmed)"
+            fi
           else
-            echo "✅ PostHog API key format validated (phc_* pattern confirmed)"
+            echo "✅ PostHog API key skipped (not configured - analytics disabled)"
           fi
           echo ""
           
@@ -461,7 +459,11 @@ jobs:
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo ""
           echo "📊 Injected Credentials Summary:"
-          echo "   • PostHog API Key: phc_***${POSTHOG_API_KEY: -4} ✓"
+          if [ -n "$POSTHOG_API_KEY" ]; then
+            echo "   • PostHog API Key: phc_***${POSTHOG_API_KEY: -4} ✓"
+          else
+            echo "   • PostHog API Key: [Not configured - analytics disabled] ⚠️"
+          fi
           if [ -n "$SENTRY_DSN" ]; then
             echo "   • Sentry DSN: ${SENTRY_DSN:0:20}*** ✓"
           else
@@ -825,6 +827,11 @@ jobs:
         with:
           node-version: '18'
       
+      - name: Generate desktop icons
+        run: |
+          npm install
+          npm run generate:icons
+      
       - name: Install dependencies
         working-directory: desktop
         run: npm ci
@@ -856,6 +863,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+      
+      - name: Generate desktop icons
+        run: |
+          npm install
+          npm run generate:icons
       
       - name: Install dependencies
         working-directory: desktop
@@ -890,6 +902,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+      
+      - name: Generate desktop icons
+        run: |
+          npm install
+          npm run generate:icons
+          chmod +x scripts/generate-macos-icon.sh
+          ./scripts/generate-macos-icon.sh
       
       - name: Install dependencies
         working-directory: desktop
@@ -933,9 +952,18 @@ jobs:
           flutter-version: '3.35.4'
           channel: 'stable'
       
+      - name: Generate app icons
+        run: |
+          pip install Pillow
+          python scripts/generate-mobile-icon.py
+      
       - name: Install dependencies
         working-directory: mobile
         run: flutter pub get
+      
+      - name: Generate launcher icons
+        working-directory: mobile
+        run: dart run flutter_launcher_icons
       
       - name: Build APK
         working-directory: mobile
@@ -980,9 +1008,20 @@ jobs:
           flutter-version: '3.35.4'
           channel: 'stable'
       
+      - name: Generate app icons
+        run: |
+          pip install Pillow
+          python scripts/generate-mobile-icon.py
+      
       - name: Install dependencies
         working-directory: mobile
         run: flutter pub get
+      
+      - name: Generate launcher icons
+        working-directory: mobile
+        run: |
+          dart run flutter_launcher_icons
+          dart run flutter_launcher_icons -f flutter_launcher_icons_ios.yaml
       
       - name: Generate iOS platform files
         working-directory: mobile
