@@ -8,10 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Dashboard cache (Issue #549)** — Removed dashboard caching that caused "Instance not bound to a Session" and "Database Error" on second visit. Cached template data contained ORM objects (active_timer, recent_entries, top_projects, templates, etc.) that become detached when served in a different request.
 - **Task description field (Issue #535)** — When creating or editing a task, the description field could appear missing or broken if the Toast UI Editor (loaded from CDN) failed to load (e.g. reverse proxy, CSP, Firefox, or offline). A fallback now shows a plain textarea so users can always enter a description; Markdown is still supported when the rich editor loads.
 - **ZUGFeRD / PDF/A-3 and PEPPOL (Discussion #433)** — ZUGFeRD embedding no longer silently succeeds without XML when the embed step fails; export is aborted with an actionable error. XMP metadata is created when missing so validators recognize the document. Optional PDF/A-3 normalization (XMP identification and output intent) and optional veraPDF validation gate added. Native PEPPOL transport (SML/SMP + AS4) and strict sender/recipient identifier validation added.
 
 ### Added
+- **Migration merge 133** — Merge heads 132 (timesheet governance) and 129 (task tags) so `flask db upgrade` runs without conflicts.
 - **PEPPOL native transport** — Transport mode can be set to **Native** (SML/SMP participant discovery + AS4 send) in addition to **Generic** (HTTP JSON access point). Sender and recipient identifiers are validated before send. New settings: `peppol_transport_mode`, `peppol_sml_url`, `peppol_native_cert_path`, `peppol_native_key_path` (Admin → Peppol e-Invoicing).
 - **PDF/A-3 and validation** — Option **Normalize ZUGFeRD PDFs to PDF/A-3** and optional **Run veraPDF after export** with configurable path. Migration `130_add_peppol_transport_mode_and_native` adds the new columns.
 - **Dashboard timer widget** — Pause and Stop buttons while a timer is running (Pause saves the segment so you can resume later). When no timer is active, a prominent "Resume (project name)" button restarts tracking with the same project/task/notes as your last entry. Quick time adjustment buttons (−15 / −5 / +5 / +15 minutes) let you correct the current session without leaving the dashboard. New route `POST /timer/adjust` for start-time adjustment.

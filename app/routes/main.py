@@ -25,19 +25,10 @@ def dashboard():
     # Update user segments periodically (cached, not every request)
     update_user_segments_if_needed(current_user.id, current_user)
 
-    # Use caching for dashboard data (5 minute TTL)
-    # Skip cache when testing: cached data can contain ORM objects that become detached
-    # when served in a different request, causing "Instance not bound to a Session" errors.
-    from app.utils.cache import get_cache, cached
-
-    cache = get_cache()
-    cache_key = f"dashboard:{current_user.id}"
-    use_cache = not current_app.testing
-
-    if use_cache:
-        cached_data = cache.get(cache_key)
-        if cached_data:
-            return render_template("main/dashboard.html", **cached_data)
+    # Do not cache dashboard template_data: it contains ORM objects (active_timer,
+    # recent_entries, top_projects, templates, etc.) that become detached when
+    # served in a different request, causing "Instance not bound to a Session"
+    # and "Database Error" on second visit (Issue #549).
 
     # Get user's active timer
     active_timer = current_user.active_timer
@@ -160,9 +151,6 @@ def dashboard():
         "time_entries_count": time_entries_count,  # For donation widget
         "total_hours": total_hours,  # For donation widget
     }
-
-    if use_cache:
-        cache.set(cache_key, template_data, ttl=300)
 
     return render_template("main/dashboard.html", **template_data)
 
