@@ -11,6 +11,7 @@ from app.utils.overtime import (
     calculate_daily_overtime,
     calculate_period_overtime,
     get_daily_breakdown,
+    get_week_start_for_date,
     get_weekly_overtime_summary,
     get_overtime_statistics,
 )
@@ -422,3 +423,81 @@ class TestWeeklyOvertimeSummary:
             assert "overtime_hours" in week_data
             assert "total_hours" in week_data
             assert "days_worked" in week_data
+
+
+class TestWeeklyOvertimeMode:
+    """Test overtime calculation in weekly mode (Issue #551)."""
+
+    @pytest.fixture
+    def user_weekly(self, app):
+        """User with weekly overtime: 20h/week."""
+        user = User(username="user_weekly_20", role="user")
+        user.standard_hours_per_day = 8.0
+        user.overtime_calculation_mode = "weekly"
+        user.standard_hours_per_week = 20.0
+        user.week_start_day = 1  # Monday
+        db.session.add(user)
+        db.session.commit()
+        return user
+
+    @pytest.fixture
+    def client_and_project(self, app):
+        client = Client(name="Client Weekly OT")
+        db.session.add(client)
+        db.session.commit()
+        project = Project(name="Project Weekly OT", client_id=client.id)
+        db.session.add(project)
+        db.session.commit()
+        return client, project
+
+    def test_week_start_for_date_monday(self, app, user_weekly):
+        """Week start for a Wednesday with week_start_day=1 (Monday) is that week's Monday."""
+        wed = date(2026, 3, 11)  # Wednesday
+        start = get_week_start_for_date(wed, user_weekly)
+        assert start.weekday() == 0  # Monday
+        assert start == date(2026, 3, 9)
+
+    def test_period_overtime_weekly_no_overtime(self, app, user_weekly, client_and_project):
+        """4 days of 5h each in one week = 20h total -> 0 overtime."""
+        client, project = client_and_project
+        # Use a week that is fully inside the period (Monday–Sunday)
+        week_start = date(2026, 3, 9)  # Monday
+        for day_offset in range(4):  # Mon–Thu
+            entry_date = week_start + timedelta(days=day_offset)
+            entry_start = datetime.combine(entry_date, datetime.min.time().replace(hour=9))
+            entry_end = entry_start + timedelta(hours=5)
+            entry = TimeEntry(
+                user_id=user_weekly.id,
+                project_id=project.id,
+                start_time=entry_start,
+                end_time=entry_end,
+            )
+            db.session.add(entry)
+        db.session.commit()
+        result = calculate_period_overtime(user_weekly, week_start, week_start + timedelta(days=6))
+        assert result["total_hours"] == 20.0
+        assert result["regular_hours"] == 20.0
+        assert result["overtime_hours"] == 0.0
+
+    def test_period_overtime_weekly_with_overtime(self, app, user_weekly, client_and_project):
+        """6+5+5+5 in one week = 21h -> 1h overtime."""
+        client, project = client_and_project
+        week_start = date(2026, 3, 9)
+        hours_per_day = [6, 5, 5, 5]
+        for day_offset, hours in enumerate(hours_per_day):
+            entry_date = week_start + timedelta(days=day_offset)
+            entry_start = datetime.combine(entry_date, datetime.min.time().replace(hour=9))
+            entry_end = entry_start + timedelta(hours=hours)
+            entry = TimeEntry(
+                user_id=user_weekly.id,
+                project_id=project.id,
+                start_time=entry_start,
+                end_time=entry_end,
+            )
+            db.session.add(entry)
+        db.session.commit()
+        result = calculate_period_overtime(user_weekly, week_start, week_start + timedelta(days=6))
+        assert result["total_hours"] == 21.0
+        assert result["regular_hours"] == 20.0
+        assert result["overtime_hours"] == 1.0
+

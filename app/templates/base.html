@@ -1610,7 +1610,11 @@
                         if (!inside && !trigger) hideFlyout();
                     });
                     window.addEventListener('resize', hideFlyout);
-                    window.addEventListener('scroll', hideFlyout, true);
+                    window.addEventListener('scroll', function(e) {
+                        if (flyout && !flyout.classList.contains('hidden') && (e.target === flyout || flyout.contains(e.target)))
+                            return;
+                        hideFlyout();
+                    }, true);
                 }
             }
             function showFlyout(triggerBtn, listId){

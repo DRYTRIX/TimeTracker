@@ -1457,13 +1457,13 @@ def get_users():
 @login_required
 def get_stats():
     """Get user statistics"""
-    from app.utils.overtime import calculate_period_overtime
+    from app.utils.overtime import calculate_period_overtime, get_week_start_for_date
 
     # Get date range
     end_date = datetime.utcnow()
     start_date = end_date - timedelta(days=30)
     today = end_date.date()
-    week_start = today - timedelta(days=today.weekday())
+    week_start = get_week_start_for_date(today, current_user)
     user_id = current_user.id if not current_user.is_admin else None
 
     # Calculate statistics
@@ -1796,10 +1796,10 @@ def dashboard_stats():
     """Get dashboard statistics for real-time updates"""
     from app.models import TimeEntry
     from datetime import datetime, timedelta
-    from app.utils.overtime import calculate_period_overtime
+    from app.utils.overtime import calculate_period_overtime, get_week_start_for_date
 
     today = datetime.utcnow().date()
-    week_start = today - timedelta(days=today.weekday())
+    week_start = get_week_start_for_date(today, current_user)
     month_start = today.replace(day=1)
 
     today_hours = TimeEntry.get_total_hours_for_period(start_date=today, user_id=current_user.id)

@@ -229,10 +229,28 @@
             </summary>
             <div class="px-6 pb-6">
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                {{ _('Set your standard working hours per day. Any time worked beyond this will be counted as overtime.') }}
+                {{ _('Choose whether overtime is calculated per day or per week, and set your standard hours accordingly.') }}
             </p>
+
+            <div class="mb-4">
+                <label class="form-label block mb-2">{{ _('Calculate overtime by') }}</label>
+                <div class="flex flex-wrap gap-4">
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="radio" name="overtime_calculation_mode" value="daily"
+                               {% if getattr(user, 'overtime_calculation_mode', 'daily') == 'daily' %}checked{% endif %}
+                               class="h-4 w-4 text-primary focus:ring-primary border-gray-300 dark:bg-gray-700 dark:border-gray-600">
+                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ _('Daily hours') }}</span>
+                    </label>
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="radio" name="overtime_calculation_mode" value="weekly"
+                               {% if getattr(user, 'overtime_calculation_mode', 'daily') == 'weekly' %}checked{% endif %}
+                               class="h-4 w-4 text-primary focus:ring-primary border-gray-300 dark:bg-gray-700 dark:border-gray-600">
+                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ _('Weekly hours') }}</span>
+                    </label>
+                </div>
+            </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="overtime-daily-fields" style="display: {% if getattr(user, 'overtime_calculation_mode', 'daily') != 'weekly' %}grid{% else %}none{% endif %};">
                 <div>
                     <label for="standard_hours_per_day" class="form-label">
                         {{ _('Standard Hours Per Day') }}
@@ -246,16 +264,41 @@
                     </div>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Typically 8 hours for a full-time job') }}</p>
                 </div>
-                
-                <div class="flex items-center bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md">
-                    <div>
-                        <p class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
-                            <i class="fas fa-info-circle mr-1"></i>{{ _('How it works') }}
-                        </p>
-                        <p class="text-xs text-blue-800 dark:text-blue-200">
-                            {{ _('If you work more than your standard hours in a day, the extra time will be tracked as overtime in reports and analytics.') }}
-                        </p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4" id="overtime-weekly-fields" style="display: {% if getattr(user, 'overtime_calculation_mode', 'daily') == 'weekly' %}grid{% else %}none{% endif %};">
+                <div>
+                    <label for="standard_hours_per_week" class="form-label">
+                        {{ _('Standard Hours Per Week') }}
+                    </label>
+                    <div class="relative">
+                        <input type="number" id="standard_hours_per_week" name="standard_hours_per_week" 
+                               value="{{ user.standard_hours_per_week or '' }}"
+                               min="1" max="168" step="0.5" placeholder="{{ (user.standard_hours_per_day or 8) * 5 }}"
+                               class="w-full px-3 py-2 pr-16 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                        <span class="absolute right-3 top-2.5 text-sm text-gray-500 dark:text-gray-400 pointer-events-none">{{ _('hours') }}</span>
                     </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('e.g. 20 for a part-time week, 40 for full-time') }}</p>
+                </div>
+            </div>
+                
+            <div class="flex items-center bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md mt-4" id="overtime-how-daily" style="display: {% if getattr(user, 'overtime_calculation_mode', 'daily') != 'weekly' %}block{% else %}none{% endif %};">
+                <div>
+                    <p class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                        <i class="fas fa-info-circle mr-1"></i>{{ _('How it works') }}
+                    </p>
+                    <p class="text-xs text-blue-800 dark:text-blue-200">
+                        {{ _('If you work more than your standard hours in a day, the extra time will be tracked as overtime in reports and analytics.') }}
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md mt-4" id="overtime-how-weekly" style="display: {% if getattr(user, 'overtime_calculation_mode', 'daily') == 'weekly' %}block{% else %}none{% endif %};">
+                <div>
+                    <p class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                        <i class="fas fa-info-circle mr-1"></i>{{ _('How it works') }}
+                    </p>
+                    <p class="text-xs text-blue-800 dark:text-blue-200">
+                        {{ _('Overtime is calculated per week: any hours beyond your standard hours per week count as overtime. Suited for contracts based on weekly hours.') }}
+                    </p>
                 </div>
             </div>
             <div class="mt-4">
@@ -468,14 +511,27 @@ function updateRoundingExample() {
     `;
 }
 
+// Toggle overtime daily vs weekly fields
+function toggleOvertimeMode() {
+    const mode = document.querySelector('input[name="overtime_calculation_mode"]:checked');
+    const isWeekly = mode && mode.value === 'weekly';
+    document.getElementById('overtime-daily-fields').style.display = isWeekly ? 'none' : 'grid';
+    document.getElementById('overtime-weekly-fields').style.display = isWeekly ? 'grid' : 'none';
+    document.getElementById('overtime-how-daily').style.display = isWeekly ? 'none' : 'block';
+    document.getElementById('overtime-how-weekly').style.display = isWeekly ? 'block' : 'none';
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     toggleRoundingOptions();
     updateRoundingMethodDescription();
-    
-    // Update example when settings change
+    toggleOvertimeMode();
+
     document.getElementById('time_rounding_enabled').addEventListener('change', updateRoundingExample);
     document.getElementById('time_rounding_minutes').addEventListener('change', updateRoundingExample);
+    document.querySelectorAll('input[name="overtime_calculation_mode"]').forEach(function(radio) {
+        radio.addEventListener('change', toggleOvertimeMode);
+    });
 });
 </script>
 {% endblock %}

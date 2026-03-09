@@ -342,6 +342,45 @@ class TestUserSettingsUpdate:
         assert response.status_code == 200
         assert b"Standard hours per day must be between 0.5 and 24" in response.data
 
+    def test_update_overtime_calculation_mode_and_weekly_hours(self, client, user):
+        """Test updating overtime calculation mode to weekly and standard hours per week."""
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+
+        response = client.post(
+            "/settings",
+            data={
+                "overtime_calculation_mode": "weekly",
+                "standard_hours_per_week": "20",
+            },
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        db.session.refresh(user)
+        assert getattr(user, "overtime_calculation_mode", "daily") == "weekly"
+        assert getattr(user, "standard_hours_per_week", None) == 20.0
+
+    def test_update_standard_hours_per_week_validation(self, client, user):
+        """Test validation of standard hours per week (must be between 1 and 168)."""
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+
+        response = client.post(
+            "/settings",
+            data={"overtime_calculation_mode": "weekly", "standard_hours_per_week": "0.5"},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        assert b"Standard hours per week must be between 1 and 168" in response.data
+
+        response = client.post(
+            "/settings",
+            data={"overtime_calculation_mode": "weekly", "standard_hours_per_week": "200"},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        assert b"Standard hours per week must be between 1 and 168" in response.data
+
     def test_update_language_preference(self, client, user):
         """Test updating language preference"""
         with client.session_transaction() as sess:

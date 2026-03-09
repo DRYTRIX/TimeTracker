@@ -21758,6 +21758,39 @@ msgid ""
 "be tracked as overtime in reports and analytics."
 msgstr ""
 
+#: app/templates/user/settings.html
+msgid "Choose whether overtime is calculated per day or per week, and set your standard hours accordingly."
+msgstr ""
+
+#: app/templates/user/settings.html
+msgid "Calculate overtime by"
+msgstr ""
+
+#: app/templates/user/settings.html
+msgid "Daily hours"
+msgstr ""
+
+#: app/templates/user/settings.html
+msgid "Weekly hours"
+msgstr ""
+
+#: app/templates/user/settings.html
+msgid "Standard Hours Per Week"
+msgstr ""
+
+#: app/templates/user/settings.html
+msgid "e.g. 20 for a part-time week, 40 for full-time"
+msgstr ""
+
+#: app/templates/user/settings.html
+msgid ""
+"Overtime is calculated per week: any hours beyond your standard hours per week count as overtime. Suited for contracts based on weekly hours."
+msgstr ""
+
+#: app/routes/user.py
+msgid "Standard hours per week must be between 1 and 168"
+msgstr ""
+
 #: app/templates/user/settings.html:243
 msgid "Regional Settings"
 msgstr ""

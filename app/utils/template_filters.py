@@ -512,13 +512,25 @@ def get_image_base64(image_path):
     import os
     from flask import current_app
 
-    # Handle relative paths (from app root)
-    if not os.path.isabs(image_path):
-        full_path = os.path.join(current_app.root_path, "..", image_path)
+    # Handle relative paths - Issue #537: try multiple resolutions for deployment flexibility
+    full_path = None
+    if os.path.isabs(image_path):
+        full_path = image_path if os.path.exists(image_path) else None
     else:
-        full_path = image_path
+        root = getattr(current_app, "root_path", None) if current_app else None
+        if root:
+            candidates = [
+                os.path.join(root, "..", image_path),
+                os.path.join(root, image_path),
+                os.path.join(os.path.dirname(root), image_path),
+            ]
+            for candidate in candidates:
+                resolved = os.path.abspath(candidate)
+                if os.path.exists(resolved) and os.path.isfile(resolved):
+                    full_path = resolved
+                    break
 
-    if not os.path.exists(full_path):
+    if not full_path or not os.path.exists(full_path):
         return ""
 
     try:

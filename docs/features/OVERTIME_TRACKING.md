@@ -2,13 +2,15 @@
 
 ## Quick Start
 
-The Overtime Tracking feature allows users to track hours worked beyond their standard workday.
+The Overtime Tracking feature allows users to track hours worked beyond their standard workday, either **per day** or **per week** (configurable).
 
 ### For Users
 
-1. **Set Your Standard Hours**
+1. **Set Your Overtime Mode and Standard Hours**
    - Go to Settings → Overtime Settings
-   - Enter your standard working hours per day (e.g., 8.0)
+   - Choose **Calculate overtime by**: **Daily hours** or **Weekly hours**
+   - **Daily**: Enter standard working hours per day (e.g., 8.0)
+   - **Weekly**: Enter standard hours per week (e.g., 20 for part-time, 40 for full-time)
    - Click Save
 
 2. **View Your Overtime**
@@ -19,11 +21,12 @@ The Overtime Tracking feature allows users to track hours worked beyond their st
 ### For Developers
 
 **Key Files:**
-- `app/utils/overtime.py` - Core calculation functions
-- `app/models/user.py` - User model with standard_hours_per_day field
+- `app/utils/overtime.py` - Core calculation functions (including `get_week_start_for_date` for weekly mode)
+- `app/models/user.py` - User model: `standard_hours_per_day`, `overtime_calculation_mode`, `standard_hours_per_week`
 - `app/routes/reports.py` - Report route with overtime display
 - `app/routes/analytics.py` - Analytics API endpoint
-- `migrations/versions/031_add_standard_hours_per_day.py` - Database migration
+- `migrations/versions/031_add_standard_hours_per_day.py` - Database migration (daily)
+- `migrations/versions/134_add_overtime_weekly_mode.py` - Weekly mode (Issue #551)
 
 **API Endpoint:**
 ```
@@ -36,6 +39,8 @@ from app.utils.overtime import (
     calculate_daily_overtime,
     calculate_period_overtime,
     get_daily_breakdown,
+    get_week_start_for_date,
+    get_weekly_overtime_summary,
     get_overtime_statistics
 )
 ```
@@ -57,45 +62,45 @@ pytest tests/test_overtime*.py --cov=app.utils.overtime --cov-report=html
 
 ## How It Works
 
-1. User sets standard hours per day in settings (default: 8.0)
-2. System tracks all time entries as usual
-3. When viewing reports, system calculates:
-   - For each day: regular hours (up to standard) + overtime hours (beyond standard)
-4. Reports display:
-   - Total hours worked
-   - Regular hours (green)
-   - Overtime hours (orange)
-   - Days with overtime
+1. User chooses **Daily** or **Weekly** overtime in settings and sets the corresponding standard hours.
+2. System tracks all time entries as usual.
+3. When viewing reports:
+   - **Daily mode**: For each day, hours up to standard hours per day are regular; the rest is overtime.
+   - **Weekly mode**: For each full week (using the user’s week start), hours up to standard hours per week are regular; the rest is overtime.
+4. Reports display total hours, regular hours, overtime hours, and (in daily mode) days with overtime.
 
 ## Examples
 
-### Example 1: Full-time Employee (8 hours/day)
+### Example 1: Daily mode – Full-time (8 hours/day)
 - Monday: 8 hours → 8 regular, 0 overtime
 - Tuesday: 10 hours → 8 regular, 2 overtime
 - Wednesday: 7 hours → 7 regular, 0 overtime
 
-### Example 2: Part-time Employee (6 hours/day)
+### Example 2: Daily mode – Part-time (6 hours/day)
 - Monday: 6 hours → 6 regular, 0 overtime
 - Tuesday: 7 hours → 6 regular, 1 overtime
 - Wednesday: 5 hours → 5 regular, 0 overtime
 
+### Example 3: Weekly mode (20 hours/week, e.g. 4 days)
+- Monday: 5 h, Tuesday: 5 h, Wednesday: 5 h, Thursday: 5 h → 20 total → 20 regular, 0 overtime
+- Monday: 6 h, Tuesday: 5 h, Wednesday: 5 h, Thursday: 5 h → 21 total → 20 regular, 1 overtime
+
 ## Configuration
 
-**User Setting:** `standard_hours_per_day`
-- Type: Float
-- Default: 8.0
-- Range: 0.5 to 24.0
+**User Settings (Overtime):**
+- `overtime_calculation_mode`: `"daily"` | `"weekly"` (default: `"daily"`)
+- `standard_hours_per_day`: Float, 0.5–24, default 8.0 (used in daily mode)
+- `standard_hours_per_week`: Float, 1–168, optional (used in weekly mode; if unset, derived as standard_hours_per_day × 5)
 - Location: User Settings → Overtime Settings
 
 ## Database
 
 **Table:** `users`
-**Column:** `standard_hours_per_day`
-- Type: `FLOAT`
-- Default: `8.0`
-- Nullable: `NO`
+- `standard_hours_per_day`: `FLOAT`, default 8.0, NOT NULL
+- `overtime_calculation_mode`: `VARCHAR(10)`, default `'daily'`, NOT NULL
+- `standard_hours_per_week`: `FLOAT`, nullable
 
-**Migration:** `031_add_standard_hours_per_day`
+**Migrations:** `031_add_standard_hours_per_day`, `134_add_overtime_weekly_mode`
 
 ## Features
 
@@ -111,7 +116,7 @@ pytest tests/test_overtime*.py --cov=app.utils.overtime --cov-report=html
 
 ## Future Enhancements
 
-- Weekly overtime thresholds
+- Weekly overtime thresholds (implemented as optional weekly mode; see Issue #551)
 - Overtime approval workflows
 - Overtime pay rate calculations
 - Email notifications for excessive overtime
@@ -127,7 +132,7 @@ For questions or issues:
 
 ---
 
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Status:** ✅ Production Ready  
-**Last Updated:** October 27, 2025
+**Last Updated:** March 9, 2026
 
