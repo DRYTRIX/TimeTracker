@@ -65,19 +65,20 @@ def safe_commit(action: Optional[str] = None, context: Optional[Dict[str, Any]] 
         db.session.commit()
         return True
     except ProgrammingError as e:
-        # Check if this is a "relation does not exist" error for time_entry_approvals
-        # This can happen when the model defines a relationship but the table hasn't been created yet
+        # Check if this is a "relation does not exist" error for optional tables
+        # (time_entry_approvals, donation_interactions) - model has relationship but table missing
         error_str = str(e.orig) if hasattr(e, 'orig') else str(e)
-        if 'time_entry_approvals' in error_str and 'does not exist' in error_str:
-            # This is a missing table error for an optional relationship
-            # Try to rollback and retry the commit, or proceed if it's just a relationship query
+        missing_table = (
+            ('time_entry_approvals' in error_str and 'does not exist' in error_str)
+            or ('donation_interactions' in error_str and 'does not exist' in error_str)
+        )
+        if missing_table:
+            # Try to rollback and retry the commit
             try:
                 db.session.rollback()
-                # If this is during a delete operation, the object might still be in the session
-                # Try to expunge and re-add, or just retry the commit
                 current_app.logger.warning(
-                    f"Missing time_entry_approvals table detected during {action or 'commit'}. "
-                    "This is expected if the migration hasn't been run yet. Proceeding with operation."
+                    "Missing optional table detected during %s. Proceeding with operation.",
+                    action or "commit",
                 )
                 # Retry the commit - the relationship query will fail but we can ignore it
                 # if we're just deleting a time entry
