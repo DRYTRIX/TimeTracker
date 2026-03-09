@@ -892,20 +892,28 @@ class ReportLabTemplateRenderer:
             element = element_data['element']
             element_type = element.get("type")
             
-            # Get position (already in points from generateCode)
-            x = element.get("x", 0)
-            y = element.get("y", 0)
-            width = element.get("width", 0)
-            height = element.get("height", 0)
+            # Get position (already in points from generateCode); coerce to float (JSON may give int/str)
+            try:
+                x = float(element.get("x", 0) or 0)
+                y = float(element.get("y", 0) or 0)
+                width = float(element.get("width", 0) or 0)
+                height = float(element.get("height", 0) or 0)
+            except (TypeError, ValueError):
+                x = y = width = height = 0
             
             # Validate element position to page boundaries
             # Elements are positioned relative to page (0,0 = top-left of page)
-            # Skip elements that are completely outside page boundaries
-            if x < 0 or y < 0 or x >= page_width or y >= page_height:
-                continue
+            # IMAGE: skip only when rect does not intersect page (so overflowing images still draw)
+            # Others: skip when top-left is outside page
+            if element_type == ElementType.IMAGE:
+                if x + width <= 0 or x >= page_width or y >= page_height or y + height <= 0:
+                    continue
+            else:
+                if x < 0 or y < 0 or x >= page_width or y >= page_height:
+                    continue
             
             # For elements with explicit dimensions, constrain them to page boundaries
-            # Issue #537: IMAGE elements (especially decorative) - don't skip when overflowing;
+            # Issue #537: IMAGE elements - don't constrain; draw at full size and clip in _draw_image_on_canvas
             # draw at full size and let PDF clip; user expects overflowing images to still show
             is_image = element_type == ElementType.IMAGE
             if width > 0 and height > 0 and not is_image:
@@ -1087,12 +1095,26 @@ class ReportLabTemplateRenderer:
         # Issue #537: Decorative images use exact dimensions (no aspect ratio preservation)
         preserve_aspect = not element.get("decorative", False)
         
-        # Issue #537: Draw images at full size when overflowing; PDF clips at page boundary
-        # so the visible portion will show in the exported PDF
+        # Issue #537: Draw images at full size when overflowing; clip to page so visible portion shows
         if width <= 0 or height <= 0:
             return
         
+        page_width = getattr(self, 'page_width', 595)
+        
+        def _draw_image_clipped(img_source, draw_x, draw_y, draw_w, draw_h):
+            """Draw image with clip to page rectangle so overflow is clipped."""
+            canv.saveState()
+            try:
+                # Clip to page: path rect then clipPath (no stroke/fill)
+                path = canv.beginPath()
+                path.rect(0, 0, page_width, page_height)
+                canv.clipPath(path, stroke=0, fill=0)
+                canv.drawImage(img_source, draw_x, draw_y, width=draw_w, height=draw_h, preserveAspectRatio=preserve_aspect, mask='auto')
+            finally:
+                canv.restoreState()
+        
         try:
+            draw_y = y - height
             # Handle base64 data URI with validated decode (Issue #432)
             if source.startswith("data:image"):
                 import base64
@@ -1104,46 +1126,47 @@ class ReportLabTemplateRenderer:
                 try:
                     img_data = base64.b64decode(parts[1])
                     img_reader = ImageReader(io.BytesIO(img_data))
-                    canv.drawImage(img_reader, x, y - height, width=width, height=height, preserveAspectRatio=preserve_aspect, mask='auto')
+                    _draw_image_clipped(img_reader, x, draw_y, width, height)
                 except Exception as e:
                     if current_app:
                         current_app.logger.error(f"Error decoding base64 image for canvas: {e}")
                     return
             # Handle template image URLs (convert to file path or base64)
-            # Issue #537: Also handle full URLs (https://host/uploads/template_images/xxx)
+            # Issue #537: Also handle full URLs; try file path first for reliability
             elif "/uploads/template_images/" in source:
                 try:
-                    from app.utils.template_filters import get_image_base64
                     filename = self._extract_template_image_filename(source)
                     if not filename:
                         if current_app:
                             current_app.logger.warning(f"Could not extract filename from template image URL: {source}")
                         raise ValueError("Invalid template image URL")
-                    # Build relative path (as get_image_base64 expects)
-                    relative_path = f"app/static/uploads/template_images/{filename}"
-                    # Convert to base64
-                    base64_data = get_image_base64(relative_path)
-                    if base64_data:
-                        # Convert base64 data URI to ImageReader
-                        import base64 as b64
-                        header, data = base64_data.split(",", 1)
-                        img_data = b64.b64decode(data)
-                        img_reader = ImageReader(io.BytesIO(img_data))
-                        canv.drawImage(img_reader, x, y - height, width=width, height=height, preserveAspectRatio=preserve_aspect, mask='auto')
-                    else:
-                        # Fallback: try direct file path (Issue #537: robust path resolution)
-                        file_path = self._resolve_template_image_path(filename)
-                        if file_path and os.path.exists(file_path):
-                            canv.drawImage(file_path, x, y - height, width=width, height=height, preserveAspectRatio=preserve_aspect, mask='auto')
-                        elif current_app:
-                            current_app.logger.warning(f"Template image not found: {source} (tried get_image_base64 and direct paths)")
+                    img_reader = None
+                    # Try direct file path first (most reliable across deployments)
+                    file_path = self._resolve_template_image_path(filename)
+                    if file_path and os.path.exists(file_path):
+                        img_reader = ImageReader(file_path)
+                    if not img_reader:
+                        from app.utils.template_filters import get_image_base64
+                        relative_path = f"app/static/uploads/template_images/{filename}"
+                        base64_data = get_image_base64(relative_path)
+                        if base64_data:
+                            import base64 as b64
+                            header, data = base64_data.split(",", 1)
+                            img_data = b64.b64decode(data)
+                            img_reader = ImageReader(io.BytesIO(img_data))
+                    if img_reader:
+                        if current_app:
+                            current_app.logger.info(f"[PDF_EXPORT] Drawing template image: {filename} at ({x}, {y - height}) size {width}x{height}")
+                        _draw_image_clipped(img_reader, x, draw_y, width, height)
+                    elif current_app:
+                        current_app.logger.warning(f"Template image not found: {source} (tried file path and get_image_base64)")
                 except Exception as e:
                     if current_app:
                         current_app.logger.error(f"Error loading template image {source}: {e}")
                     else:
                         print(f"Error loading template image {source}: {e}")
             elif os.path.exists(source):
-                canv.drawImage(source, x, y - height, width=width, height=height, preserveAspectRatio=preserve_aspect, mask='auto')
+                _draw_image_clipped(source, x, draw_y, width, height)
         except Exception as e:
             if current_app:
                 current_app.logger.error(f"Error drawing image on canvas: {e}")
