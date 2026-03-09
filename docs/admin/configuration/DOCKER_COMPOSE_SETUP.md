@@ -73,6 +73,10 @@ All environment variables can be provided via `.env` and are consumed by the `ap
 - POSTGRES_PASSWORD: Database password (db service). Default: `timetracker`.
 - POSTGRES_HOST: Hostname for external DB (not needed with bundled db). Default: `db`.
 
+### Docker / nginx ports (docker-compose.yml)
+- HTTP_PORT: Host port for HTTP (nginx). Default: `80`. Set e.g. to `8180` when 80 is already in use (reverse proxy, homelab).
+- HTTPS_PORT: Host port for HTTPS (nginx). Default: `443`. Set e.g. to `8443` when 443 is already in use. Use with HTTP_PORT in `.env` so you don't need to edit `docker-compose.yml`.
+
 ### Application behavior
 - CURRENCY: ISO currency code. Default: `EUR`.
 - ROUNDING_MINUTES: Rounding step for entries. Default: `1`.
