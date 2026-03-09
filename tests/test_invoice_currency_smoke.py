@@ -33,6 +33,7 @@ def app():
         db.drop_all()
 
 
+@pytest.mark.smoke
 def test_invoice_currency_smoke(app):
     """Smoke test: Create invoice and verify it uses settings currency"""
     with app.app_context():
@@ -79,6 +80,7 @@ def test_invoice_currency_smoke(app):
         print("✓ Smoke test passed: Invoice currency correctly set from Settings")
 
 
+@pytest.mark.smoke
 def test_pdf_generator_uses_settings_currency(app):
     """Smoke test: Verify PDF generator uses settings currency"""
     with app.app_context():

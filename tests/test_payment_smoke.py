@@ -52,6 +52,7 @@ def setup_payment_test_data(app):
         db.session.commit()
 
 
+@pytest.mark.smoke
 class TestPaymentSmokeTests:
     """Smoke tests to verify basic payment functionality"""
 

@@ -142,21 +142,11 @@ jobs:
           echo "Current migration: $CURRENT_MIGRATION"
           
           if [ -n "$CURRENT_MIGRATION" ] && [ "$CURRENT_MIGRATION" != "None" ]; then
-            # For our payment tracking migration (014), test rollback to 013
-            if [ "$CURRENT_MIGRATION" = "014" ]; then
-              echo "Testing rollback from 014 to 013..."
-              flask db downgrade 013
-              
-              echo "Testing re-upgrade to 014..."
-              flask db upgrade 014
-              
-              echo "✅ Migration rollback test passed"
-            else
-              # For other migrations, try a generic approach
-              echo "Testing basic migration operations..."
-              flask db upgrade head
-              echo "✅ Migration test passed (upgrade to head successful)"
-            fi
+            # Generic rollback test: downgrade one revision, then upgrade back to head
+            echo "Testing migration rollback (downgrade -1, upgrade head)..."
+            flask db downgrade -1
+            flask db upgrade head
+            echo "✅ Migration rollback test passed"
           else
             echo "ℹ️ No migrations to test rollback on"
           fi

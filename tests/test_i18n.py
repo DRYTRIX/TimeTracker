@@ -1,6 +1,9 @@
 """Tests for internationalization (i18n) functionality"""
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.utils]
+
 from flask import session
 from app import create_app, db
 from app.models import User

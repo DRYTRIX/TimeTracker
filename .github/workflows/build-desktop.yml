@@ -23,6 +23,11 @@ jobs:
         with:
           node-version: '18'
       
+      - name: Generate desktop icons
+        run: |
+          npm install
+          npm run generate:icons
+      
       - name: Install dependencies
         working-directory: desktop
         run: npm ci
@@ -51,6 +56,11 @@ jobs:
         with:
           node-version: '18'
       
+      - name: Generate desktop icons
+        run: |
+          npm install
+          npm run generate:icons
+      
       - name: Install dependencies
         working-directory: desktop
         run: npm ci
@@ -76,6 +86,13 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+      
+      - name: Generate desktop icons
+        run: |
+          npm install
+          npm run generate:icons
+          chmod +x scripts/generate-macos-icon.sh
+          ./scripts/generate-macos-icon.sh
       
       - name: Install dependencies
         working-directory: desktop

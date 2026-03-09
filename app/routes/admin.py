@@ -15,9 +15,10 @@ from flask_babel import gettext as _
 from flask_login import login_required, current_user
 import app as app_module
 from app import db, limiter
-from app.models import User, Project, TimeEntry, Settings, Invoice, Quote, QuoteItem, Role, UserClient
+from app.models import User, Project, TimeEntry, Settings, Invoice, Quote, QuoteItem, Role, UserClient, DonationInteraction
 from datetime import datetime
 from sqlalchemy import text
+from sqlalchemy.exc import ProgrammingError
 import os
 from werkzeug.utils import secure_filename
 import uuid
@@ -937,6 +938,19 @@ def delete_user(user_id):
     if user.time_entries.count() > 0:
         flash(_("Cannot delete user with existing time entries"), "error")
         return redirect(url_for("admin.list_users"))
+
+    # Remove donation_interactions for this user so delete succeeds (FK / optional table)
+    try:
+        DonationInteraction.query.filter_by(user_id=user.id).delete()
+    except ProgrammingError as e:
+        error_str = str(e.orig) if hasattr(e, "orig") else str(e)
+        if "donation_interactions" in error_str and "does not exist" in error_str:
+            current_app.logger.warning(
+                "donation_interactions table missing during user delete (user_id=%s); continuing.",
+                user.id,
+            )
+        else:
+            raise
 
     username = user.username
     db.session.delete(user)

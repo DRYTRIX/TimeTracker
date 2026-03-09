@@ -7,6 +7,7 @@ from app.models import Client, ClientPrepaidConsumption, User, Project, TimeEntr
 from factories import TimeEntryFactory
 
 
+@pytest.mark.unit
 @pytest.mark.models
 def test_client_prepaid_properties_and_consumption(app):
     client = Client(name="Model Client", prepaid_hours_monthly=Decimal("40.0"), prepaid_reset_day=5)

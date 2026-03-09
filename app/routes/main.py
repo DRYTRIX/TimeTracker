@@ -60,9 +60,9 @@ def dashboard():
     month_hours = stats["time_tracking"]["month_hours"]
 
     # Overtime for dashboard cards (today and week)
-    from app.utils.overtime import calculate_period_overtime
+    from app.utils.overtime import calculate_period_overtime, get_week_start_for_date
     today_dt = datetime.utcnow().date()
-    week_start_dt = today_dt - timedelta(days=today_dt.weekday())
+    week_start_dt = get_week_start_for_date(today_dt, current_user)
     today_overtime = calculate_period_overtime(current_user, today_dt, today_dt)
     week_overtime = calculate_period_overtime(current_user, week_start_dt, today_dt)
     standard_hours_per_day = float(getattr(current_user, "standard_hours_per_day", 8.0) or 8.0)

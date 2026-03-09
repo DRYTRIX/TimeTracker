@@ -3,6 +3,9 @@ Tests for refactored API v1 project routes using service layer.
 """
 
 import pytest
+
+pytestmark = [pytest.mark.api, pytest.mark.integration]
+
 from app.models import Project, Client, ApiToken
 
 

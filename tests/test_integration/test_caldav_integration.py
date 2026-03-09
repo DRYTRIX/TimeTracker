@@ -3,6 +3,9 @@ Tests for CalDAV calendar integration.
 """
 
 import pytest
+
+pytestmark = [pytest.mark.integration]
+
 from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch, MagicMock
 from flask import url_for

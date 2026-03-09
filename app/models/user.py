@@ -52,6 +52,12 @@ class User(UserMixin, db.Model):
     overtime_include_weekends = db.Column(
         db.Boolean, default=True, nullable=False
     )  # If True, weekend hours count toward regular/overtime; if False, all weekend hours count as overtime
+    overtime_calculation_mode = db.Column(
+        db.String(10), default="daily", nullable=False
+    )  # 'daily' | 'weekly': overtime by daily cap vs weekly cap
+    standard_hours_per_week = db.Column(
+        db.Float, nullable=True
+    )  # Used when overtime_calculation_mode is 'weekly'
 
     # Client portal settings
     client_portal_enabled = db.Column(db.Boolean, default=False, nullable=False)  # Enable/disable client portal access

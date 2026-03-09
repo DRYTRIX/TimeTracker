@@ -135,6 +135,20 @@ def settings():
                     return redirect(url_for("user.settings"))
             if hasattr(current_user, "overtime_include_weekends"):
                 current_user.overtime_include_weekends = request.form.get("overtime_include_weekends") == "on"
+            overtime_mode = request.form.get("overtime_calculation_mode")
+            if overtime_mode in ("daily", "weekly"):
+                current_user.overtime_calculation_mode = overtime_mode
+            if hasattr(current_user, "standard_hours_per_week"):
+                standard_hours_per_week = request.form.get("standard_hours_per_week", type=float)
+                if standard_hours_per_week is not None:
+                    if 1 <= standard_hours_per_week <= 168:
+                        current_user.standard_hours_per_week = standard_hours_per_week
+                    else:
+                        flash(_("Standard hours per week must be between 1 and 168"), "error")
+                        return redirect(url_for("user.settings"))
+                elif getattr(current_user, "overtime_calculation_mode", "daily") == "weekly":
+                    # Allow clearing to use derived default (daily * 5)
+                    current_user.standard_hours_per_week = None
 
             # Save changes
             if safe_commit(db.session):

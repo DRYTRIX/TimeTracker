@@ -3,6 +3,9 @@ Comprehensive tests for refactored time entry API routes including update/delete
 """
 
 import pytest
+
+pytestmark = [pytest.mark.api, pytest.mark.integration]
+
 from datetime import datetime, timedelta
 from app.models import TimeEntry, Project, ApiToken
 

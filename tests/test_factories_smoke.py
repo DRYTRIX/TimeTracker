@@ -21,6 +21,7 @@ from factories import (
 
 
 @pytest.mark.unit
+@pytest.mark.models
 def test_project_and_client_factory_persist(app):
     with app.app_context():
         client = ClientFactory()
@@ -32,6 +33,7 @@ def test_project_and_client_factory_persist(app):
 
 
 @pytest.mark.unit
+@pytest.mark.models
 def test_timeentry_factory_and_duration(app):
     with app.app_context():
         te = TimeEntryFactory()
@@ -45,6 +47,7 @@ def test_timeentry_factory_and_duration(app):
 
 
 @pytest.mark.unit
+@pytest.mark.models
 def test_invoice_and_items_factories(app):
     with app.app_context():
         invoice = InvoiceFactory()
@@ -68,6 +71,7 @@ def test_expense_factory(app):
 
 
 @pytest.mark.unit
+@pytest.mark.models
 def test_payment_factory(app):
     with app.app_context():
         payment = PaymentFactory()
@@ -78,6 +82,7 @@ def test_payment_factory(app):
 
 
 @pytest.mark.unit
+@pytest.mark.models
 def test_expense_category_factory(app):
     with app.app_context():
         cat = ExpenseCategoryFactory()

@@ -11,6 +11,7 @@ from factories import UserFactory, ClientFactory, ProjectFactory, TimeEntryFacto
 from app.utils.overtime import calculate_daily_overtime, calculate_period_overtime
 
 
+@pytest.mark.smoke
 class TestOvertimeSmoke:
     """Smoke tests for overtime feature"""
 

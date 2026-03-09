@@ -7,6 +7,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+pytestmark = [pytest.mark.integration]
+
 from app import db
 from app.integrations.activitywatch import ActivityWatchConnector
 from app.models import Integration, IntegrationExternalEventLink, Project, TimeEntry, User

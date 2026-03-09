@@ -3,6 +3,9 @@ Tests for caching utilities (Redis and in-memory fallback).
 """
 
 import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.utils]
+
 from unittest.mock import Mock, patch, MagicMock
 from app.utils.cache import get_cache, InMemoryCache, RedisCache
 

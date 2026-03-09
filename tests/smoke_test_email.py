@@ -9,6 +9,7 @@ import pytest
 from flask import url_for
 
 
+@pytest.mark.smoke
 class TestEmailSmokeTests:
     """Smoke tests for email feature integration"""
 
@@ -128,6 +129,7 @@ class TestEmailSmokeTests:
             assert app.config["MAIL_DEFAULT_SENDER"] == "test@example.com"
 
 
+@pytest.mark.smoke
 class TestEmailFeatureIntegrity:
     """Tests to verify email feature integrity"""
 

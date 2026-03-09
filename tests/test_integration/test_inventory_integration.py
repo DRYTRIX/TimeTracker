@@ -1,6 +1,9 @@
 """Integration tests for inventory with quotes and invoices"""
 
 import pytest
+
+pytestmark = [pytest.mark.integration]
+
 from decimal import Decimal
 from flask import url_for
 from app import db

@@ -1,5 +1,9 @@
 [tool.black]
 line-length = 120
+
+[tool.isort]
+profile = "black"
+line_length = 120
 target-version = ['py311']
 include = '\.pyi?$'
 extend-exclude = '''
@@ -75,17 +79,4 @@ exclude = [
     ".venv/",
 ]
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = [
-    "-v",
-    "--tb=short",
-    "--strict-markers",
-    "--color=yes",
-    "-W ignore::DeprecationWarning",
-    "-W ignore::PendingDeprecationWarning",
-    "--durations=10",
-]
+# Pytest config is in pytest.ini (single source of truth to avoid duplicate config warning)
