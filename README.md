@@ -70,7 +70,13 @@ TimeTracker is built with modern, reliable technologies:
 - **flake8** — Linting
 - **coverage** — Test coverage analysis
 
-**📖 Documentation:** [Architecture overview](ARCHITECTURE.md) · [Project Structure](docs/development/PROJECT_STRUCTURE.md)
+**📖 Documentation:** [Architecture overview](ARCHITECTURE.md) · [Project Structure](docs/development/PROJECT_STRUCTURE.md) · [UI Guidelines](docs/UI_GUIDELINES.md)
+
+---
+
+## 🖥️ UI overview
+
+The web app uses a **single main layout** with a sidebar and top header. Content is centered with a max width for readability. **Getting around:** **Dashboard** — overview, today’s stats, and the main **Timer** widget (start/stop, quick start, repeat last). **Timer** and **Time entries** are first-class in the sidebar for fast access. **Time entries** is the place to filter, review, and export all logged time. **Reports**, **Projects**, **Finance**, and **Settings** are available from the sidebar and navigation. For design and component conventions, see [UI Guidelines](docs/UI_GUIDELINES.md).
 
 ---
 

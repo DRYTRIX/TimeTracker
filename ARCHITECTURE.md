@@ -70,6 +70,7 @@ API endpoints are versioned under `/api/v1/`. Authentication is session-based fo
 
 - **Backend:** Flask (Python), Jinja2, SQLAlchemy, Flask-Migrate, Flask-Login, Authlib (OIDC), Flask-SocketIO, APScheduler. Configuration via environment variables (see `env.example`).
 - **Frontend:** Server-rendered HTML from Jinja2, styled with **Tailwind CSS**. JavaScript is used for interactivity (e.g. Chart.js, command palette, forms). The app can be used as a **PWA** (offline and installable). There is no separate SPA; the main UI is server-rendered with JS enhancements.
+- **UI layer:** The base layout is `app/templates/base.html` (sidebar, header, main content area). Styling uses **Tailwind** and design tokens in `app/static/src/input.css`. Reusable UI is built from **component macros** in `app/templates/components/ui.html` and `app/templates/components/cards.html` (page headers, stat cards, empty states, modals, buttons). Layout uses a max-width content container and consistent grid and spacing. See [UI Guidelines](docs/UI_GUIDELINES.md) and [Project Structure](docs/development/PROJECT_STRUCTURE.md) for templates and static assets.
 - **Native clients:** The **desktop** (Electron) and **mobile** (Flutter) apps are separate codebases that consume the REST API.
 
 ## Design Decisions
