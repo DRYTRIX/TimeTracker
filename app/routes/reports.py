@@ -61,6 +61,23 @@ def reports():
     )
 
 
+@reports_bp.route("/reports/week-in-review")
+@login_required
+@module_enabled("reports")
+def week_in_review():
+    """Week in review: this week's hours, top projects, billable vs non-billable."""
+    from app.services import ReportingService
+
+    reporting_service = ReportingService()
+    data = reporting_service.get_week_in_review(
+        user_id=current_user.id, is_admin=current_user.is_admin
+    )
+    if data.get("error"):
+        flash(data["error"], "error")
+        return redirect(url_for("reports.reports"))
+    return render_template("reports/week_in_review.html", **data)
+
+
 @reports_bp.route("/reports/comparison")
 @login_required
 @module_enabled("reports")

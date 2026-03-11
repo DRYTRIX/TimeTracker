@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header %}
+{% from "components/ui.html" import page_header, empty_state %}
 
 {% block title %}{{ saved_view.name }} - {{ _('Custom Report') }} - {{ app_name }}{% endblock %}
 
@@ -46,18 +46,14 @@
                 </table>
             </div>
             {% else %}
-            <div class="text-center py-12">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
-                    <i class="fas fa-inbox text-3xl text-gray-400"></i>
-                </div>
-                <h3 class="text-xl font-medium text-gray-900 dark:text-white mb-2">{{ _('No data found') }}</h3>
-                <p class="text-gray-600 dark:text-gray-400 mb-6">
-                    {{ _('This report has no data matching the current filters. Try adjusting your date range or filters.') }}
-                </p>
-                <a href="{{ url_for('custom_reports.report_builder') }}" class="btn btn-primary">
-                    <i class="fas fa-edit mr-2"></i>{{ _('Edit Report') }}
-                </a>
-            </div>
+            {% set edit_report_action %}<a href="{{ url_for('custom_reports.report_builder') }}" class="btn btn-primary"><i class="fas fa-edit mr-2"></i>{{ _('Edit Report') }}</a>{% endset %}
+            {{ empty_state(
+                'fas fa-inbox',
+                _('No data found'),
+                _('This report has no data matching the current filters. Try adjusting your date range or filters.'),
+                edit_report_action,
+                type='no-results'
+            ) }}
             {% endif %}
         </div>
         {% elif component == 'summary' %}

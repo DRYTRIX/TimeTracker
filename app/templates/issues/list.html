@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header, stat_card %}
+{% from "components/ui.html" import page_header, stat_card, empty_state %}
 {% from "components/client_select.html" import client_select %}
 
 {% block content %}
@@ -163,7 +163,14 @@
     </div>
     {% endif %}
     {% else %}
-    <p class="text-text-muted-light dark:text-text-muted-dark text-center py-8">{{ _('No issues found.') }}</p>
+    {% set create_issue_action %}{% if current_user.is_admin or has_permission('create_issues') %}<a href="{{ url_for('issues.new_issue') }}" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>{{ _('Create Issue') }}</a>{% endif %}{% endset %}
+    {{ empty_state(
+        'fas fa-bug',
+        _('No issues found'),
+        _('No issues match your filters. Create an issue or adjust your filters.'),
+        create_issue_action,
+        type='no-results'
+    ) }}
     {% endif %}
 </div>
 {% endblock %}

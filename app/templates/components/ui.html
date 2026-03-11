@@ -202,6 +202,17 @@
 </div>
 {% endmacro %}
 
+{# Generic loading placeholder for lists/tables: use kind="table" (default) or "spinner" #}
+{% macro loading_placeholder(kind="table", rows=5, cols=4, text=None, show_checkbox=False) %}
+{% if kind == "table" %}
+    {{ skeleton_table(rows=rows, cols=cols, show_checkbox=show_checkbox) }}
+{% else %}
+    <div class="py-12">
+        {{ loading_spinner(size="lg", text=text or _('Loading...')) }}
+    </div>
+{% endif %}
+{% endmacro %}
+
 {% macro skeleton_table(rows=5, cols=4, show_checkbox=False) %}
 <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm overflow-hidden animate-pulse">
     <!-- Table Header -->

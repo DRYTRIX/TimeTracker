@@ -58,6 +58,35 @@ def timer_status():
     )
 
 
+@api_bp.route("/api/tags")
+@login_required
+def get_recent_tags():
+    """Return distinct tags from current user's time entries for autocomplete (e.g. Start Timer modal)."""
+    limit = min(request.args.get("limit", 30, type=int), 100)
+    entries = (
+        TimeEntry.query.filter(
+            TimeEntry.user_id == current_user.id,
+            TimeEntry.tags.isnot(None),
+            TimeEntry.tags != "",
+        )
+        .order_by(TimeEntry.updated_at.desc())
+        .limit(500)
+        .all()
+    )
+    tags_set = set()
+    for e in entries:
+        if e.tags:
+            for part in e.tags.split(","):
+                t = part.strip()
+                if t:
+                    tags_set.add(t)
+                    if len(tags_set) >= limit:
+                        break
+        if len(tags_set) >= limit:
+            break
+    return jsonify({"tags": sorted(tags_set)})
+
+
 @api_bp.route("/api/search")
 @login_required
 def search():

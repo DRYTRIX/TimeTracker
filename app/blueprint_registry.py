@@ -14,6 +14,7 @@ def register_all_blueprints(app, logger=None):
     from app.routes.admin import admin_bp
     from app.routes.api import api_bp
     from app.routes.api_v1 import api_v1_bp
+    from app.routes.api_v1_time_entries import api_v1_time_entries_bp
     from app.routes.api_docs import api_docs_bp, swaggerui_blueprint
     from app.routes.analytics import analytics_bp
     from app.routes.tasks import tasks_bp
@@ -67,6 +68,7 @@ def register_all_blueprints(app, logger=None):
     app.register_blueprint(admin_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(api_v1_bp)
+    app.register_blueprint(api_v1_time_entries_bp)
     app.register_blueprint(api_docs_bp)
     app.register_blueprint(swaggerui_blueprint)
     app.register_blueprint(analytics_bp)

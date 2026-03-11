@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Reports'), 'url': url_for('reports.reports')},
+    {'text': _('Week in Review')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-calendar-week',
+    title_text=_('Week in Review'),
+    subtitle_text=_('This week\'s time summary and top projects'),
+    breadcrumbs=breadcrumbs,
+    actions_html=None
+) }}
+<p class="mb-4"><a href="{{ url_for('reports.reports') }}" class="btn btn-secondary">{{ _('Back to Reports') }}</a></p>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+        {{ _('Week') }} {{ week_start }} – {{ week_end }}
+    </p>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div class="p-4 rounded-lg bg-primary/10 dark:bg-primary/20">
+            <div class="text-2xl font-bold text-primary">{{ "%.1f"|format(total_hours) }}h</div>
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Total hours') }}</div>
+        </div>
+        <div class="p-4 rounded-lg bg-green-500/10 dark:bg-green-500/20">
+            <div class="text-2xl font-bold text-green-600 dark:text-green-400">{{ "%.1f"|format(billable_hours) }}h</div>
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Billable') }}</div>
+        </div>
+        <div class="p-4 rounded-lg bg-gray-500/10 dark:bg-gray-500/20">
+            <div class="text-2xl font-bold text-gray-600 dark:text-gray-400">{{ "%.1f"|format(non_billable_hours) }}h</div>
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Non-billable') }}</div>
+        </div>
+    </div>
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+        {{ _('%(count)s time entries logged this week.', count=entry_count) }}
+    </p>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    <h2 class="text-lg font-semibold text-text-light dark:text-text-dark mb-4">{{ _('Top projects this week') }}</h2>
+    {% if top_projects %}
+    <ul class="space-y-3">
+        {% for item in top_projects %}
+        <li class="flex items-center justify-between py-2 border-b border-border-light dark:border-border-dark last:border-0">
+            <span class="font-medium text-text-light dark:text-text-dark">{{ item.name }}</span>
+            <span class="text-primary font-semibold">{{ "%.1f"|format(item.hours) }}h</span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No time logged this week yet.') }}</p>
+    {% endif %}
+</div>
+{% endblock %}

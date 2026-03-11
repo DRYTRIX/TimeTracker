@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge, empty_state %}
 
 {% block title %}Saved Filters - {{ config.APP_NAME }}{% endblock %}
 
@@ -90,20 +90,14 @@
     </div>
     {% endfor %}
     {% else %}
-    <!-- Empty State -->
-    <div class="text-center py-12">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
-            <i class="fas fa-filter text-3xl text-gray-400"></i>
-        </div>
-        <h3 class="text-xl font-medium text-gray-900 dark:text-white mb-2">No saved filters yet</h3>
-        <p class="text-gray-600 dark:text-gray-400 mb-6">
-            Save filters from Reports or Tasks pages for quick access
-        </p>
-        <a href="{{ url_for('reports.reports') }}" 
-           class="btn btn-primary">
-            <i class="fas fa-chart-bar mr-2"></i> Go to Reports
-        </a>
-    </div>
+    {% set go_reports_action %}<a href="{{ url_for('reports.reports') }}" class="btn btn-primary"><i class="fas fa-chart-bar mr-2"></i>{{ _('Go to Reports') }}</a>{% endset %}
+    {{ empty_state(
+        'fas fa-filter',
+        _('No saved filters yet'),
+        _('Save filters from Reports or Tasks pages for quick access.'),
+        go_reports_action,
+        type='no-data'
+    ) }}
     {% endif %}
 </div>
 

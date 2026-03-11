@@ -108,6 +108,54 @@ def dashboard():
     # Get recent activities for activity feed widget
     recent_activities = Activity.get_recent(user_id=None if current_user.is_admin else current_user.id, limit=10)
 
+    # Recent tags for Start Timer modal autocomplete (distinct from user's time entries)
+    recent_tags = []
+    tag_rows = (
+        db.session.query(TimeEntry.tags)
+        .filter(
+            TimeEntry.user_id == current_user.id,
+            TimeEntry.tags.isnot(None),
+            TimeEntry.tags != "",
+        )
+        .order_by(TimeEntry.updated_at.desc())
+        .limit(200)
+        .all()
+    )
+    tags_seen = set()
+    for (tags_str,) in tag_rows:
+        if tags_str:
+            for part in tags_str.split(","):
+                t = part.strip()
+                if t and t not in tags_seen:
+                    tags_seen.add(t)
+                    recent_tags.append(t)
+                    if len(recent_tags) >= 30:
+                        break
+        if len(recent_tags) >= 30:
+            break
+
+    # Last timer context: most recent completed time entry for "Repeat last" / quick start
+    last_entry = (
+        TimeEntry.query.filter(
+            TimeEntry.user_id == current_user.id,
+            TimeEntry.end_time.isnot(None),
+        )
+        .order_by(TimeEntry.end_time.desc())
+        .limit(1)
+        .first()
+    )
+    last_timer_context = None
+    if last_entry and (last_entry.project_id or last_entry.client_id):
+        last_timer_context = {
+            "project_id": last_entry.project_id,
+            "task_id": last_entry.task_id,
+            "client_id": last_entry.client_id,
+            "notes": (last_entry.notes or "").strip(),
+            "tags": (last_entry.tags or "").strip(),
+            "project_name": last_entry.project.name if last_entry.project else None,
+            "client_name": last_entry.client.name if last_entry.client else None,
+        }
+
     # Get user stats for smart banner and donation widget
     try:
         from app.models import DonationInteraction
@@ -147,6 +195,8 @@ def dashboard():
         "current_week_goal": current_week_goal,
         "templates": templates,
         "recent_activities": recent_activities,
+        "last_timer_context": last_timer_context,
+        "recent_tags": recent_tags,
         "user_stats": user_stats,  # For smart banner
         "time_entries_count": time_entries_count,  # For donation widget
         "total_hours": total_hours,  # For donation widget
