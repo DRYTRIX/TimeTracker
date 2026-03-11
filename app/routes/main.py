@@ -144,7 +144,7 @@ def dashboard():
     # Post-timer toast data (show "Logged Xh on Project" + link to time entries)
     timer_stopped_toast = session.pop("timer_stopped_toast", None)
     if timer_stopped_toast:
-        timer_stopped_toast["time_entries_url"] = url_for("timer.time_entries")
+        timer_stopped_toast["time_entries_url"] = url_for("timer.time_entries_overview")
 
     # Get user stats for smart banner and donation widget
     try:
