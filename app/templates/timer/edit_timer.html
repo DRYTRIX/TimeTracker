@@ -3,8 +3,7 @@
 {% block title %}{{ _('Edit Time Entry') }} - {{ app_name }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
-<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css">
+{# Toast UI Editor CSS loaded dynamically on desktop only (Issue #557 mobile freeze fix) #}
 {% endblock %}
 
 {% block extra_js %}
@@ -532,15 +531,46 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
-<!-- Toast UI Editor -->
-<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+<script>
+(function() {
+    // Issue #557: avoid loading Toast UI Editor on mobile to prevent browser freeze
+    window.isMobileView = window.matchMedia('(max-width: 767px)').matches;
+    if (window.isMobileView) {
+        document.querySelectorAll('.markdown-editor-wrapper').forEach(function(wrapper) {
+            var notes = wrapper.querySelector('textarea[name="notes"]');
+            var editorEl = wrapper.querySelector('[id="notes_editor"]');
+            if (notes) {
+                notes.classList.remove('hidden');
+                notes.classList.add('form-input');
+                if (!notes.getAttribute('rows')) notes.setAttribute('rows', '5');
+            }
+            if (editorEl) editorEl.style.display = 'none';
+        });
+    }
+})();
+</script>
 
+<!-- Toast UI Editor: load only on desktop to avoid mobile freeze (Issue #557) -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    if (window.isMobileView) {
+        window.mdEditor = null;
+        return;
+    }
+    var link1 = document.createElement('link');
+    link1.rel = 'stylesheet';
+    link1.href = 'https://uicdn.toast.com/editor/latest/toastui-editor.min.css';
+    document.head.appendChild(link1);
+    var link2 = document.createElement('link');
+    link2.rel = 'stylesheet';
+    link2.href = 'https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css';
+    document.head.appendChild(link2);
+    var scriptEl = document.createElement('script');
+    scriptEl.src = 'https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js';
+    scriptEl.onload = function initToastEditorEditTimer() {
     const notesInput = document.getElementById('notes');
     let mdEditor = null;
 
-    // Initialize Toast UI Editor for notes
     if (notesInput && window.toastui && window.toastui.Editor) {
         const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
         mdEditor = new toastui.Editor({
@@ -866,6 +896,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+    }; // end Toast UI init onload
+    document.head.appendChild(scriptEl);
 });
 </script>
 {% endblock %}

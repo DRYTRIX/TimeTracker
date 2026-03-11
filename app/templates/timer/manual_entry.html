@@ -152,6 +152,22 @@
     </form>
 </div>
 <script>
+(function() {
+    // Issue #557: avoid loading Toast UI Editor on mobile to prevent browser freeze
+    window.isMobileView = window.matchMedia('(max-width: 767px)').matches;
+    if (window.isMobileView) {
+        var notes = document.getElementById('notes');
+        var editorEl = document.getElementById('notes_editor');
+        if (notes) {
+            notes.classList.remove('hidden');
+            notes.classList.add('form-input');
+            notes.setAttribute('rows', '5');
+        }
+        if (editorEl) editorEl.style.display = 'none';
+    }
+})();
+</script>
+<script>
 document.addEventListener('DOMContentLoaded', async function(){
     // Default values for date/time to now (use local date, not UTC, for timezones ahead of UTC)
     const now = new Date();
@@ -670,17 +686,27 @@ document.addEventListener('DOMContentLoaded', async function(){
 });
 </script>
 
-<!-- Toast UI Editor -->
-<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
-<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css">
-<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
-
+<!-- Toast UI Editor: load only on desktop to avoid mobile freeze (Issue #557) -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    if (window.isMobileView) {
+        window.mdEditor = null;
+        return;
+    }
+    var link1 = document.createElement('link');
+    link1.rel = 'stylesheet';
+    link1.href = 'https://uicdn.toast.com/editor/latest/toastui-editor.min.css';
+    document.head.appendChild(link1);
+    var link2 = document.createElement('link');
+    link2.rel = 'stylesheet';
+    link2.href = 'https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css';
+    document.head.appendChild(link2);
+    var scriptEl = document.createElement('script');
+    scriptEl.src = 'https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js';
+    scriptEl.onload = function initToastEditorManualEntry() {
     const notesInput = document.getElementById('notes');
     let mdEditor = null;
 
-    // Initialize Toast UI Editor for notes
     if (notesInput && window.toastui && window.toastui.Editor) {
         const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
         mdEditor = new toastui.Editor({
@@ -1014,6 +1040,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const originalNotesHandler = window.addEventListener;
         // This will be handled in the existing template application code
     }
+    }; // end Toast UI init onload
+    document.head.appendChild(scriptEl);
 });
 </script>
 {% endblock %}
