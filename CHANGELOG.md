@@ -90,31 +90,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Version Consistency** - Fixed version inconsistencies across documentation files
 
-## [4.8.0] - TBD
-
-### Added
-- Additional features and improvements (details to be documented)
-
-### Changed
-- Version management improvements
-
-## [4.7.1] - TBD
-
-### Added
-- Additional features and improvements (details to be documented)
-
-### Fixed
-- Bug fixes and stability improvements
-
-## [4.7.0] - TBD
-
-### Added
-- Additional features and improvements (details to be documented)
-
-### Changed
-- Performance optimizations
-- Code quality improvements
-
 ## [4.6.0] - 2025-12-14
 
 ### Added
@@ -212,14 +187,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## Release Notes Format
+## Release notes format
 
-Each release includes:
-- **Added** - New features
-- **Changed** - Changes in existing functionality
-- **Deprecated** - Soon-to-be removed features
-- **Removed** - Removed features
-- **Fixed** - Bug fixes
-- **Security** - Security improvements
+This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Section headings used:
 
-For detailed information about each release, see the [GitHub Releases](https://github.com/drytrix/TimeTracker/releases) page.
+- **Added** — New features
+- **Changed** — Changes in existing functionality
+- **Deprecated** — Soon-to-be removed features
+- **Removed** — Removed features
+- **Fixed** — Bug fixes
+- **Security** — Security-related changes
+
+For release artifacts and tags, see [GitHub Releases](https://github.com/drytrix/TimeTracker/releases).
