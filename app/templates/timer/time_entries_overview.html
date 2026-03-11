@@ -31,6 +31,9 @@
         <h2 class="text-lg font-semibold">{{ _('Filters') }}</h2>
         <div class="flex items-center gap-2 flex-wrap">
             <span class="text-xs text-text-muted-light dark:text-text-muted-dark self-center mr-1">{{ _('Exports use current filters') }}</span>
+            <button type="button" id="applyFiltersBtn" class="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-filter mr-2"></i>{{ _('Apply filters') }}
+            </button>
             <button type="button" id="clearFiltersBtn" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-border-light dark:border-border-dark">
                 <i class="fas fa-times mr-1"></i>{{ _('Clear Filters') }}
             </button>
@@ -642,7 +645,36 @@ function confirmBulkDelete() {
         }
 
         // Initialize export links from current form/URL (Issue #555: keep export in sync with filters)
-        try { updateExportLink(buildFilterUrl()); } catch (_) {}
+        try {
+            updateExportLink(buildFilterUrl());
+            // Fallback: if page was loaded with query params, use them for export href (e.g. right-click Open in new tab)
+            if (window.location.search) {
+                const csvBtn = document.getElementById('exportCsvBtn');
+                const pdfBtn = document.getElementById('exportPdfBtn');
+                const base = csvBtn ? (csvBtn.getAttribute('data-export-base') || '/time-entries/export/csv') : '/time-entries/export/csv';
+                const pdfBase = pdfBtn ? (pdfBtn.getAttribute('data-export-base') || '/time-entries/export/pdf') : '/time-entries/export/pdf';
+                const qs = window.location.search.slice(1);
+                if (csvBtn) csvBtn.href = base + (qs ? '?' + qs : '');
+                if (pdfBtn) pdfBtn.href = pdfBase + (qs ? '?' + qs : '');
+            }
+        } catch (_) {}
+
+        // Header "Apply filters" button (Issue #555: visible filter action)
+        const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+        if (applyFiltersBtn) {
+            applyFiltersBtn.addEventListener('click', function() {
+                const filterBody = document.getElementById('filterBody');
+                const icon = document.getElementById('filterToggleIcon');
+                if (filterBody && filterBody.classList.contains('hidden')) {
+                    filterBody.classList.remove('hidden');
+                    if (icon) { icon.classList.remove('fa-chevron-down'); icon.classList.add('fa-chevron-up'); }
+                }
+                if (filterTimeout) clearTimeout(filterTimeout);
+                if (searchTimeout) clearTimeout(searchTimeout);
+                lastUrl = null;
+                applyFilters();
+            });
+        }
 
         // Export CSV/PDF: always use current form params on click (Issue #555: export respects date/filters)
         const exportCsvBtn = document.getElementById('exportCsvBtn');
@@ -672,6 +704,7 @@ function confirmBulkDelete() {
             const t = e.target;
             if (!t || !(t instanceof Element)) return;
             if (t.matches('select') || t.matches('input[type="date"]') || t.matches('input[type="text"]')) {
+                updateExportLink(buildFilterUrl());  // Issue #555: export href reflects current form
                 debouncedApplyFilters(100);
             }
         });
@@ -680,6 +713,7 @@ function confirmBulkDelete() {
             const t = e.target;
             if (!t || !(t instanceof Element)) return;
             if (t.matches('input[name="search"]')) {
+                updateExportLink(buildFilterUrl());  // Issue #555: export href reflects current form
                 debouncedSearch(500);
             }
         });
