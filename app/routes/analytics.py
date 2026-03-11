@@ -451,16 +451,29 @@ def weekly_trends():
 @login_required
 @module_enabled("analytics")
 def overtime_analytics():
-    """Get overtime statistics for the current user or all users (if admin)"""
-    try:
-        days = int(request.args.get("days", 30))
-    except (ValueError, TypeError):
-        return jsonify({"error": "Invalid days parameter"}), 400
-
+    """Get overtime statistics for the current user or all users (if admin).
+    Supports period=ytd (year-to-date), or days=N (last N days), or start_date/end_date."""
     from app.utils.overtime import calculate_period_overtime, get_daily_breakdown
 
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=days)
+    period = request.args.get("period", "").lower()
+    if period == "ytd":
+        start_date = end_date.replace(month=1, day=1)
+    else:
+        start_date_arg = request.args.get("start_date")
+        end_date_arg = request.args.get("end_date")
+        if start_date_arg and end_date_arg:
+            try:
+                start_date = datetime.strptime(start_date_arg, "%Y-%m-%d").date()
+                end_date = datetime.strptime(end_date_arg, "%Y-%m-%d").date()
+            except ValueError:
+                return jsonify({"error": "Invalid start_date or end_date"}), 400
+        else:
+            try:
+                days = int(request.args.get("days", 30))
+            except (ValueError, TypeError):
+                return jsonify({"error": "Invalid days parameter"}), 400
+            start_date = end_date - timedelta(days=days)
 
     # If admin, show all users; otherwise show current user only
     if current_user.is_admin:
@@ -503,6 +516,9 @@ def overtime_analytics():
 
     return jsonify(
         {
+            "period": "ytd" if period == "ytd" else "range",
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
             "users": user_overtime_data,
             "summary": {
                 "total_regular_hours": round(total_regular, 2),

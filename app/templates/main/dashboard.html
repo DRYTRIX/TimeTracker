@@ -188,6 +188,11 @@
                     <span class="text-2xl lg:text-3xl font-bold text-purple-900 dark:text-purple-100 stat-value" id="monthHoursValue">{{ "%.2f"|format(month_hours) }}</span>
                     <span class="text-sm text-purple-600/70 dark:text-purple-400/70">hours</span>
                 </div>
+                {% if overtime_ytd_hours is defined %}
+                <div class="mt-1 text-xs text-purple-700 dark:text-purple-300">
+                    {{ _('Overtime (YTD)') }}: <span class="font-medium">{{ "%.2f"|format(overtime_ytd_hours) }}h</span>
+                </div>
+                {% endif %}
             </div>
             <div class="bg-purple-500/10 dark:bg-purple-400/10 p-4 rounded-full">
                 <i class="fas fa-calendar-alt text-purple-600 dark:text-purple-400 text-2xl"></i>

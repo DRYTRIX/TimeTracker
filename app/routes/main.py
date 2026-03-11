@@ -57,7 +57,7 @@ def dashboard():
 
     # Get user statistics and dashboard aggregations via analytics service
     from app.services import AnalyticsService
-    from app.utils.overtime import calculate_period_overtime, get_week_start_for_date
+    from app.utils.overtime import calculate_period_overtime, get_week_start_for_date, get_overtime_ytd
 
     analytics_service = AnalyticsService()
     stats = analytics_service.get_dashboard_stats(user_id=current_user.id)
@@ -70,6 +70,7 @@ def dashboard():
     week_start_dt = get_week_start_for_date(today_dt, current_user)
     today_overtime = calculate_period_overtime(current_user, today_dt, today_dt)
     week_overtime = calculate_period_overtime(current_user, week_start_dt, today_dt)
+    overtime_ytd = get_overtime_ytd(current_user)
     standard_hours_per_day = float(getattr(current_user, "standard_hours_per_day", 8.0) or 8.0)
 
     # Top projects (last 30 days) and time-by-project chart (last 7 days) from service
@@ -187,6 +188,8 @@ def dashboard():
         "today_overtime_hours": today_overtime["overtime_hours"],
         "week_regular_hours": week_overtime["regular_hours"],
         "week_overtime_hours": week_overtime["overtime_hours"],
+        "overtime_ytd_hours": overtime_ytd["overtime_hours"],
+        "overtime_ytd_regular": overtime_ytd["regular_hours"],
         "top_projects": top_projects,
         "time_by_project_7d": time_by_project_7d,
         "chart_labels_7d": chart_labels_7d,

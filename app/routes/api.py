@@ -1513,9 +1513,12 @@ def get_stats():
         start_date=start_date.date(), user_id=user_id
     )
 
-    # Overtime for today and week
+    # Overtime for today, week, and YTD
+    from app.utils.overtime import get_overtime_ytd
+
     today_overtime = calculate_period_overtime(current_user, today, today)
     week_overtime = calculate_period_overtime(current_user, week_start, today)
+    overtime_ytd = get_overtime_ytd(current_user)
     standard_hours = float(getattr(current_user, "standard_hours_per_day", 8.0) or 8.0)
 
     return jsonify(
@@ -1529,6 +1532,7 @@ def get_stats():
             "today_overtime_hours": today_overtime["overtime_hours"],
             "week_regular_hours": week_overtime["regular_hours"],
             "week_overtime_hours": week_overtime["overtime_hours"],
+            "overtime_ytd_hours": overtime_ytd["overtime_hours"],
         }
     )
 
@@ -1830,7 +1834,7 @@ def dashboard_stats():
     """Get dashboard statistics for real-time updates"""
     from app.models import TimeEntry
     from datetime import datetime, timedelta
-    from app.utils.overtime import calculate_period_overtime, get_week_start_for_date
+    from app.utils.overtime import calculate_period_overtime, get_week_start_for_date, get_overtime_ytd
 
     today = datetime.utcnow().date()
     week_start = get_week_start_for_date(today, current_user)
@@ -1842,9 +1846,10 @@ def dashboard_stats():
 
     month_hours = TimeEntry.get_total_hours_for_period(start_date=month_start, user_id=current_user.id)
 
-    # Overtime for today and week (for dashboard cards)
+    # Overtime for today, week, and YTD (for dashboard cards)
     today_overtime = calculate_period_overtime(current_user, today, today)
     week_overtime = calculate_period_overtime(current_user, week_start, today)
+    overtime_ytd = get_overtime_ytd(current_user)
     standard_hours = float(getattr(current_user, "standard_hours_per_day", 8.0) or 8.0)
 
     return jsonify(
@@ -1858,6 +1863,7 @@ def dashboard_stats():
             "today_overtime_hours": today_overtime["overtime_hours"],
             "week_regular_hours": week_overtime["regular_hours"],
             "week_overtime_hours": week_overtime["overtime_hours"],
+            "overtime_ytd_hours": overtime_ytd["overtime_hours"],
         }
     )
 
