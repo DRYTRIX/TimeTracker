@@ -103,6 +103,7 @@ def create_time_entry():
         client_id=validated.get("client_id"),
         start_time=start_time,
         end_time=end_time,
+        break_seconds=validated.get("break_seconds"),
         task_id=validated.get("task_id"),
         notes=validated.get("notes"),
         tags=validated.get("tags"),
@@ -169,6 +170,7 @@ def update_time_entry(entry_id):
         task_id=validated.get("task_id"),
         start_time=validated.get("start_time"),
         end_time=validated.get("end_time"),
+        break_seconds=validated.get("break_seconds"),
         notes=validated.get("notes"),
         tags=validated.get("tags"),
         billable=validated.get("billable"),
@@ -264,6 +266,38 @@ def start_timer():
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not start timer")}), 400
     return jsonify({"message": "Timer started successfully", "timer": result["timer"].to_dict()}), 201
+
+
+@api_v1_time_entries_bp.route("/timer/pause", methods=["POST"])
+@require_api_token("write:time_entries")
+def pause_timer():
+    """Pause the active timer (clock stops; break accumulates on resume)."""
+    from app.services import TimeTrackingService
+
+    time_tracking_service = TimeTrackingService()
+    result = time_tracking_service.pause_timer(user_id=g.api_user.id)
+    if not result.get("success"):
+        return jsonify({
+            "error": result.get("message", "Could not pause timer"),
+            "error_code": result.get("error", "pause_failed"),
+        }), 400
+    return jsonify({"message": "Timer paused", "time_entry": result["entry"].to_dict()})
+
+
+@api_v1_time_entries_bp.route("/timer/resume", methods=["POST"])
+@require_api_token("write:time_entries")
+def resume_timer():
+    """Resume a paused timer (time since pause is counted as break)."""
+    from app.services import TimeTrackingService
+
+    time_tracking_service = TimeTrackingService()
+    result = time_tracking_service.resume_timer(user_id=g.api_user.id)
+    if not result.get("success"):
+        return jsonify({
+            "error": result.get("message", "Could not resume timer"),
+            "error_code": result.get("error", "resume_failed"),
+        }), 400
+    return jsonify({"message": "Timer resumed", "time_entry": result["entry"].to_dict()})
 
 
 @api_v1_time_entries_bp.route("/timer/stop", methods=["POST"])
