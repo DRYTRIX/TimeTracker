@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}{{ _('Workforce Governance') }}{% endblock %}
 
 {% block content %}
@@ -98,6 +98,14 @@
 
         <section class="card p-4">
             <h2 class="text-lg font-semibold mb-3">{{ _('Leave Balances') }}</h2>
+            {% if overtime_ytd_hours is defined %}
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">
+                {{ _('Accumulated overtime (YTD)') }}: <strong>{{ "%.2f"|format(overtime_ytd_hours) }}h</strong>
+                {% if overtime_leave_type_id and overtime_ytd_hours > 0 %}
+                — <a href="#time-off-request-form" class="text-primary hover:underline js-take-overtime-as-leave">{{ _('Take as paid leave') }}</a>
+                {% endif %}
+            </p>
+            {% endif %}
             <div class="overflow-auto">
                 <table class="table w-full">
                     <thead>
@@ -128,17 +136,22 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section class="card p-4 space-y-3">
             <h2 class="text-lg font-semibold">{{ _('Time-Off Requests') }}</h2>
-            <form method="post" action="{{ url_for('workforce.create_time_off_request') }}" class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <form id="time-off-request-form" method="post" action="{{ url_for('workforce.create_time_off_request') }}" class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <select name="leave_type_id" class="form-select" required>
+                <select name="leave_type_id" class="form-select js-leave-type-select" required>
                     <option value="">{{ _('Select leave type') }}</option>
                     {% for lt in leave_types %}
                         {% if lt.enabled %}
-                        <option value="{{ lt.id }}">{{ lt.name }} ({{ lt.code }})</option>
+                        <option value="{{ lt.id }}" {% if overtime_leave_type_id is defined and lt.id == overtime_leave_type_id %}data-overtime="1"{% endif %}>{{ lt.name }} ({{ lt.code }})</option>
                         {% endif %}
                     {% endfor %}
                 </select>
-                <input type="number" step="0.25" name="requested_hours" class="form-input" placeholder="{{ _('Requested hours') }}">
+                <div class="md:col-span-2 flex flex-col gap-1">
+                    <input type="number" step="0.25" name="requested_hours" class="form-input js-requested-hours" placeholder="{{ _('Requested hours') }}" min="0" {% if overtime_ytd_hours is defined and overtime_ytd_hours > 0 %}data-overtime-max="{{ "%.2f"|format(overtime_ytd_hours) }}"{% endif %}>
+                    {% if overtime_ytd_hours is defined and overtime_ytd_hours > 0 %}
+                    <span class="text-xs text-text-muted-light dark:text-text-muted-dark js-overtime-hint" style="display: none;">{{ _('Available overtime (YTD)') }}: {{ "%.2f"|format(overtime_ytd_hours) }}h</span>
+                    {% endif %}
+                </div>
                 <input type="date" name="start_date" class="form-input" required>
                 <input type="date" name="end_date" class="form-input" required>
                 <input type="text" name="comment" class="form-input md:col-span-2" placeholder="{{ _('Comment') }}">
@@ -255,4 +268,53 @@
     </div>
     {% endif %}
 </div>
+{% block scripts_extra %}
+<script>
+(function() {
+    var form = document.getElementById('time-off-request-form');
+    if (!form) return;
+    var leaveTypeSelect = form.querySelector('.js-leave-type-select');
+    var requestedHoursInput = form.querySelector('.js-requested-hours');
+    var overtimeHint = form.querySelector('.js-overtime-hint');
+    var overtimeMax = requestedHoursInput && requestedHoursInput.getAttribute('data-overtime-max');
+    function isOvertimeSelected() {
+        var opt = leaveTypeSelect && leaveTypeSelect.options[leaveTypeSelect.selectedIndex];
+        return opt && opt.getAttribute('data-overtime') === '1';
+    }
+    function updateOvertimeUI() {
+        if (!overtimeHint || !overtimeMax) return;
+        if (isOvertimeSelected()) {
+            overtimeHint.style.display = '';
+            if (requestedHoursInput) {
+                requestedHoursInput.placeholder = overtimeMax + ' {{ _("hours (max from overtime)") }}';
+                requestedHoursInput.setAttribute('max', overtimeMax);
+            }
+        } else {
+            overtimeHint.style.display = 'none';
+            if (requestedHoursInput) {
+                requestedHoursInput.placeholder = '{{ _("Requested hours") }}';
+                requestedHoursInput.removeAttribute('max');
+            }
+        }
+    }
+    if (leaveTypeSelect) leaveTypeSelect.addEventListener('change', updateOvertimeUI);
+    document.querySelectorAll('.js-take-overtime-as-leave').forEach(function(a) {
+        a.addEventListener('click', function(e) {
+            e.preventDefault();
+            form.scrollIntoView({ behavior: 'smooth' });
+            if (leaveTypeSelect && overtimeMax) {
+                for (var i = 0; i < leaveTypeSelect.options.length; i++) {
+                    if (leaveTypeSelect.options[i].getAttribute('data-overtime') === '1') {
+                        leaveTypeSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+                updateOvertimeUI();
+            }
+        });
+    });
+    updateOvertimeUI();
+})();
+</script>
+{% endblock %}
 {% endblock %}

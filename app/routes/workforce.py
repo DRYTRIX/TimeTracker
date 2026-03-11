@@ -1,4 +1,4 @@
-﻿from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
 from flask_login import login_required, current_user
@@ -71,11 +71,21 @@ def dashboard():
 
     balances = service.get_leave_balance(selected_user_id)
 
+    from app.models import User
+    from app.utils.overtime import get_overtime_ytd
+
     users = []
     if current_user.is_admin:
-        from app.models import User
-
         users = User.query.order_by(User.username.asc()).all()
+
+    # Accumulated overtime (YTD) for selected user and overtime leave type for "Take as paid leave"
+    selected_user = User.query.get(selected_user_id)
+    overtime_ytd_hours = 0.0
+    overtime_leave_type = service.get_overtime_leave_type()
+    overtime_leave_type_id = overtime_leave_type.id if overtime_leave_type else None
+    if selected_user:
+        overtime_ytd = get_overtime_ytd(selected_user)
+        overtime_ytd_hours = float(overtime_ytd.get("overtime_hours", 0) or 0)
 
     return render_template(
         "workforce/dashboard.html",
@@ -91,6 +101,8 @@ def dashboard():
         capacity=capacity,
         cap_start=cap_start,
         cap_end=cap_end,
+        overtime_ytd_hours=overtime_ytd_hours,
+        overtime_leave_type_id=overtime_leave_type_id,
     )
 
 

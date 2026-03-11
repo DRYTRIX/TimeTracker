@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -179,6 +179,10 @@ class WorkforceGovernanceService:
             q = q.filter(LeaveType.enabled.is_(True))
         return q.order_by(LeaveType.name.asc()).all()
 
+    def get_overtime_leave_type(self) -> Optional[LeaveType]:
+        """Return the leave type used for overtime-as-paid-leave (code 'overtime'), if present."""
+        return LeaveType.query.filter_by(code="overtime", enabled=True).first()
+
     def create_leave_request(
         self,
         *,
@@ -195,6 +199,22 @@ class WorkforceGovernanceService:
             return {"success": False, "message": "Invalid leave type"}
         if end_date < start_date:
             return {"success": False, "message": "end_date must be after start_date"}
+
+        # When requesting overtime-as-leave, cap requested_hours at accumulated YTD overtime
+        if leave_type.code == "overtime" and requested_hours is not None and requested_hours > 0:
+            from app.utils.overtime import get_overtime_ytd
+
+            user = User.query.get(user_id)
+            if user:
+                ytd = get_overtime_ytd(user)
+                ytd_overtime = float(ytd.get("overtime_hours", 0) or 0)
+                if float(requested_hours) > ytd_overtime:
+                    return {
+                        "success": False,
+                        "message": f"Requested hours ({requested_hours}) exceed your accumulated overtime (YTD: {ytd_overtime:.2f}h). Please request at most {ytd_overtime:.2f} hours.",
+                    }
+            else:
+                return {"success": False, "message": "User not found"}
 
         status = TimeOffRequestStatus.SUBMITTED if submit_now else TimeOffRequestStatus.DRAFT
         req = TimeOffRequest(
