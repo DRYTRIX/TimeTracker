@@ -149,7 +149,7 @@
             {% if recent_entries %}
             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('Resume your last session or use the buttons above to repeat last / start a new timer.') }}</p>
             <div class="flex flex-wrap justify-center gap-3">
-                <a href="{{ url_for('timer.resume_timer', timer_id=recent_entries[0].id) }}" class="inline-flex items-center bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+                <a href="{{ url_for('timer.resume_timer_by_id', timer_id=recent_entries[0].id) }}" class="inline-flex items-center bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
                     <i class="fas fa-play mr-2"></i>{{ _('Resume') }}{% if recent_entries[0].project %} ({{ recent_entries[0].project.name }}){% elif recent_entries[0].client %} ({{ recent_entries[0].client.name }}){% endif %}
                 </a>
             </div>
@@ -282,7 +282,7 @@
                             <td class="p-3 text-sm text-text-light dark:text-text-dark" data-label="{{ _('Date') }}">{{ entry.start_time|user_datetime }}</td>
                             <td class="p-3" data-label="{{ _('Actions') }}">
                                 <div class="flex flex-wrap gap-2">
-                                    <a href="{{ url_for('timer.resume_timer', timer_id=entry.id) }}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400 transition-colors" title="{{ _('Resume - Start a new timer with same properties') }}">
+                                    <a href="{{ url_for('timer.resume_timer_by_id', timer_id=entry.id) }}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400 transition-colors" title="{{ _('Resume - Start a new timer with same properties') }}">
                                         <i class="fas fa-play text-xs"></i>
                                     </a>
                                     <a href="{{ url_for('timer.edit_timer', timer_id=entry.id) }}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 text-primary dark:text-primary transition-colors" title="{{ _('Edit entry') }}">

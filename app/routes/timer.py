@@ -1958,9 +1958,9 @@ def duplicate_timer(timer_id):
     )
 
 
-@timer_bp.route("/timer/resume/<int:timer_id>")
+@timer_bp.route("/timer/resume/<int:timer_id>", endpoint="resume_timer_by_id")
 @login_required
-def resume_timer(timer_id):
+def resume_timer_by_id(timer_id):
     """Resume an existing time entry - starts a new active timer with same properties"""
     timer = TimeEntry.query.get_or_404(timer_id)
 

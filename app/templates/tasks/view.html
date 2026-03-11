@@ -78,7 +78,7 @@
                             <td class="p-4" data-label="{{ _('Notes') }}">{% if entry.notes %}<span title="{{ entry.notes|striptags }}">{{ entry.notes|striptags|truncate(40) }}</span>{% else %}-{% endif %}</td>
                             <td class="p-4 mobile-actions" data-label="{{ _('Actions') }}">
                                 <div class="flex gap-2">
-                                    <a href="{{ url_for('timer.resume_timer', timer_id=entry.id) }}" class="text-green-600 hover:text-green-800" title="{{ _('Resume - Start a new timer with same properties') }}">
+                                    <a href="{{ url_for('timer.resume_timer_by_id', timer_id=entry.id) }}" class="text-green-600 hover:text-green-800" title="{{ _('Resume - Start a new timer with same properties') }}">
                                         <i class="fas fa-play"></i>
                                     </a>
                                     <a href="{{ url_for('timer.edit_timer', timer_id=entry.id) }}" class="text-primary hover:text-primary-dark" title="{{ _('Edit entry') }}">
