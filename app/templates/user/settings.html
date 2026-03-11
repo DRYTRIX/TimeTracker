@@ -109,6 +109,20 @@
                             {{ _('Weekly Time Summary Email') }}
                         </span>
                     </label>
+
+                    <label for="notification_remind_to_log" class="flex items-center min-h-[44px] cursor-pointer rounded-lg px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <input type="checkbox" id="notification_remind_to_log" name="notification_remind_to_log"
+                               {% if user.notification_remind_to_log %}checked{% endif %}
+                               class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0">
+                        <span class="ml-3 block text-sm text-gray-700 dark:text-gray-300">
+                            {{ _('Remind me to log time at end of day') }}
+                        </span>
+                    </label>
+                    <div class="ml-8 mt-1 {% if not user.notification_remind_to_log %}opacity-60{% endif %}" id="reminder_time_wrap">
+                        <label for="reminder_to_log_time" class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ _('Reminder time (your timezone)') }}</label>
+                        <input type="time" id="reminder_to_log_time" name="reminder_to_log_time" value="{{ user.reminder_to_log_time or '17:00' }}"
+                               class="w-32 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm">
+                    </div>
                 </div>
             </div>
             </div>

@@ -35,6 +35,8 @@ class User(UserMixin, db.Model):
     notification_task_assigned = db.Column(db.Boolean, default=True, nullable=False)  # Notify when assigned to task
     notification_task_comments = db.Column(db.Boolean, default=True, nullable=False)  # Notify about task comments
     notification_weekly_summary = db.Column(db.Boolean, default=False, nullable=False)  # Send weekly time summary
+    notification_remind_to_log = db.Column(db.Boolean, default=False, nullable=False)  # Remind to log time at end of day
+    reminder_to_log_time = db.Column(db.String(5), nullable=True)  # Time of day "HH:MM" (24h) for reminder, e.g. "17:00"
     timezone = db.Column(db.String(50), nullable=True)  # User-specific timezone override
     date_format = db.Column(db.String(20), default=None, nullable=True)  # None = use system default
     time_format = db.Column(db.String(10), default=None, nullable=True)  # None = use system default

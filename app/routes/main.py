@@ -6,7 +6,7 @@ from app import db, track_page_view
 from sqlalchemy import text
 from app.models.time_entry import local_now
 
-from flask import make_response, current_app
+from flask import make_response, current_app, session
 import json
 import os
 from app.utils.posthog_segmentation import update_user_segments_if_needed
@@ -88,6 +88,31 @@ def dashboard():
             project_hours[e.project.id]["billable_hours"] += e.duration_hours
     top_projects = sorted(project_hours.values(), key=lambda x: x["hours"], reverse=True)[:5]
 
+    # Time by project (last 7 days) for dashboard chart
+    period_7d_start = datetime.utcnow().date() - timedelta(days=7)
+    entries_7d = (
+        TimeEntry.query.options(joinedload(TimeEntry.project))
+        .filter(
+            TimeEntry.end_time.isnot(None),
+            TimeEntry.start_time >= period_7d_start,
+            TimeEntry.user_id == current_user.id,
+        )
+        .all()
+    )
+    project_hours_7d = {}
+    for e in entries_7d:
+        if not e.project:
+            continue
+        project_hours_7d.setdefault(e.project.id, {"name": e.project.name, "hours": 0.0})
+        project_hours_7d[e.project.id]["hours"] += e.duration_hours
+    time_by_project_7d = sorted(
+        [{"label": v["name"], "hours": round(v["hours"], 2)} for v in project_hours_7d.values()],
+        key=lambda x: x["hours"],
+        reverse=True,
+    )[:10]  # Top 10 for chart
+    chart_labels_7d = [x["label"] for x in time_by_project_7d]
+    chart_hours_7d = [x["hours"] for x in time_by_project_7d]
+
     # Get current week goal
     current_week_goal = WeeklyTimeGoal.get_current_week_goal(current_user.id)
     if current_week_goal:
@@ -156,6 +181,11 @@ def dashboard():
             "client_name": last_entry.client.name if last_entry.client else None,
         }
 
+    # Post-timer toast data (show "Logged Xh on Project" + link to time entries)
+    timer_stopped_toast = session.pop("timer_stopped_toast", None)
+    if timer_stopped_toast:
+        timer_stopped_toast["time_entries_url"] = url_for("timer.time_entries")
+
     # Get user stats for smart banner and donation widget
     try:
         from app.models import DonationInteraction
@@ -192,6 +222,9 @@ def dashboard():
         "week_regular_hours": week_overtime["regular_hours"],
         "week_overtime_hours": week_overtime["overtime_hours"],
         "top_projects": top_projects,
+        "time_by_project_7d": time_by_project_7d,
+        "chart_labels_7d": chart_labels_7d,
+        "chart_hours_7d": chart_hours_7d,
         "current_week_goal": current_week_goal,
         "templates": templates,
         "recent_activities": recent_activities,
@@ -200,6 +233,7 @@ def dashboard():
         "user_stats": user_stats,  # For smart banner
         "time_entries_count": time_entries_count,  # For donation widget
         "total_hours": total_hours,  # For donation widget
+        "timer_stopped_toast": timer_stopped_toast,
     }
 
     return render_template("main/dashboard.html", **template_data)

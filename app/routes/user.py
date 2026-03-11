@@ -50,6 +50,16 @@ def settings():
             current_user.notification_task_assigned = "notification_task_assigned" in request.form
             current_user.notification_task_comments = "notification_task_comments" in request.form
             current_user.notification_weekly_summary = "notification_weekly_summary" in request.form
+            current_user.notification_remind_to_log = "notification_remind_to_log" in request.form
+            reminder_time = request.form.get("reminder_to_log_time", "").strip()
+            if reminder_time and len(reminder_time) <= 5:
+                import re
+                if re.match(r"^([01]?\d|2[0-3]):[0-5]\d$", reminder_time):
+                    current_user.reminder_to_log_time = reminder_time
+                else:
+                    current_user.reminder_to_log_time = None
+            else:
+                current_user.reminder_to_log_time = None
 
             # Profile information
             full_name = request.form.get("full_name", "").strip()

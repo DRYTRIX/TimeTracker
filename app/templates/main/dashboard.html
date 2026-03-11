@@ -9,6 +9,22 @@
 {% endblock %}
 
 {% block content %}
+{% if timer_stopped_toast %}
+<script>
+(function() {
+    var data = {{ timer_stopped_toast|tojson }};
+    var msg = {{ _("Logged %(duration)s on %(project)s", duration=timer_stopped_toast.duration, project=timer_stopped_toast.project_name)|tojson }};
+    if (window.toastManager && typeof window.toastManager.show === 'function') {
+        window.toastManager.show({
+            message: msg,
+            type: 'success',
+            actionLink: data.time_entries_url || {{ url_for("timer.time_entries")|tojson }},
+            actionLabel: {{ _("View time entries")|tojson }}
+        });
+    }
+})();
+</script>
+{% endif %}
 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
     <div>
         <h1 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ _('Dashboard') }}</h1>
@@ -375,6 +391,64 @@
             </div>
             {% endif %}
         {% endif %}
+
+        <!-- Time by project (last 7 days) chart -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="bg-cyan-500/10 dark:bg-cyan-400/10 p-3 rounded-lg">
+                        <i class="fas fa-chart-pie text-cyan-600 dark:text-cyan-400 text-xl"></i>
+                    </div>
+                    <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Time by project (last 7 days)') }}</h2>
+                </div>
+                <a href="{{ url_for('reports.summary_report') }}" class="text-sm text-primary hover:underline">{{ _('View report') }}</a>
+            </div>
+            {% if time_by_project_7d %}
+            <div class="relative" style="height: 220px;">
+                <canvas id="dashboardTimeByProjectChart" aria-label="{{ _('Time distribution by project for the last 7 days') }}"></canvas>
+            </div>
+            <script>
+            (function() {
+                var labels = {{ chart_labels_7d|tojson }};
+                var hours = {{ chart_hours_7d|tojson }};
+                var ctx = document.getElementById('dashboardTimeByProjectChart');
+                if (ctx && typeof Chart !== 'undefined') {
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: '{{ _("Hours") }}',
+                                data: hours,
+                                backgroundColor: 'rgba(6, 182, 212, 0.6)',
+                                borderColor: 'rgb(6, 182, 212)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: { beginAtZero: true, ticks: { maxTicksLimit: 6 } },
+                                y: { ticks: { font: { size: 11 } } }
+                            }
+                        }
+                    });
+                }
+            })();
+            </script>
+            {% else %}
+            <div class="flex flex-col items-center justify-center py-8 text-center">
+                <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-4 w-16 h-16 flex items-center justify-center mb-3">
+                    <i class="fas fa-chart-bar text-2xl text-gray-400"></i>
+                </div>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No time logged in the last 7 days.') }}</p>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Start tracking to see distribution here.') }}</p>
+            </div>
+            {% endif %}
+        </div>
 
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card">
             <div class="flex items-center justify-between mb-6">
