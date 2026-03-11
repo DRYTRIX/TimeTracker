@@ -100,11 +100,15 @@ TimeTracker/
 
 ## 📚 Documentation Files
 
-- **README.md**: Main project documentation and quick start guide
-- **PROJECT_STRUCTURE.md**: This file - project structure overview
-- **TASK_MANAGEMENT_README.md**: Detailed Task Management feature documentation
-- **CONTRIBUTING.md**: How to contribute to the project
-- **CODE_OF_CONDUCT.md**: Community behavior guidelines
+- **README.md** (root): Main project documentation and quick start guide
+- **CONTRIBUTING.md** (root): [Contributing](../../CONTRIBUTING.md) — quick overview; full guidelines in [CONTRIBUTING.md](CONTRIBUTING.md) (this folder)
+- **CODE_OF_CONDUCT.md** (this folder): [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — community guidelines
+- **ARCHITECTURE.md** (root): [Architecture overview](../../ARCHITECTURE.md)
+- **INSTALLATION.md** (root): [Installation guide](../../INSTALLATION.md)
+- **DEVELOPMENT.md** (root): [Development guide](../../DEVELOPMENT.md)
+- **API.md** (root): [API quick reference](../../API.md)
+- **PROJECT_STRUCTURE.md**: This file — project structure overview
+- **TASK_MANAGEMENT_README.md** (docs/): Detailed Task Management feature documentation
 
 ## ✅ Workforce & Timesheet Governance
 

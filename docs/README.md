@@ -8,6 +8,10 @@ Welcome to the comprehensive TimeTracker documentation. Everything you need to i
 
 - **[🚀 Getting Started Guide](GETTING_STARTED.md)** — Complete beginner tutorial (⭐ Start here!)
 - **[Main README](../README.md)** — Product overview and quick start
+- **[Installation Guide](../INSTALLATION.md)** — Step-by-step installation (Docker, SQLite)
+- **[Architecture](../ARCHITECTURE.md)** — System overview and design
+- **[Development Guide](../DEVELOPMENT.md)** — Run locally, tests, releases
+- **[API Quick Reference](../API.md)** — REST API overview and examples
 - **[Installation & Deployment](#-installation--deployment)** — Get TimeTracker running
 - **[Feature Guides](#-feature-documentation)** — Learn what TimeTracker can do
 - **[Troubleshooting](#-troubleshooting)** — Solve common issues
@@ -47,6 +51,7 @@ docs/
 
 ### Getting Started
 - **[🚀 Getting Started Guide](GETTING_STARTED.md)** — Complete beginner tutorial (⭐ Start here!)
+- **[Installation Guide](../INSTALLATION.md)** — Step-by-step installation (root)
 - **[Requirements](REQUIREMENTS.md)** — System requirements and dependencies
 
 ### User Guides
@@ -109,7 +114,10 @@ See [features/](features/) for additional feature documentation.
 ## 👨‍💻 Developer Documentation
 
 ### Getting Started
-- **[Contributing Guidelines](development/CONTRIBUTING.md)** — How to contribute to TimeTracker
+- **[Contributing](../CONTRIBUTING.md)** — How to contribute (root; quick overview)
+- **[Contributing Guidelines (full)](development/CONTRIBUTING.md)** — Setup, standards, PR process
+- **[Development Guide](../DEVELOPMENT.md)** — Run locally, tests, releases (root)
+- **[Architecture](../ARCHITECTURE.md)** — System overview and design (root)
 - **[Code of Conduct](development/CODE_OF_CONDUCT.md)** — Community standards
 - **[Project Structure](development/PROJECT_STRUCTURE.md)** — Codebase organization and architecture
 
@@ -144,7 +152,8 @@ See [features/](features/) for additional feature documentation.
 
 ## 📚 API Documentation
 
-- **[REST API](api/REST_API.md)** — Complete API reference with all endpoints (⭐ Start here!)
+- **[API Quick Reference](../API.md)** — Overview and quick examples (root)
+- **[REST API](api/REST_API.md)** — Complete API reference with all endpoints (⭐ Full reference!)
 - **[API Token Scopes](api/API_TOKEN_SCOPES.md)** — Understanding token permissions and scopes
 - **[API Versioning](api/API_VERSIONING.md)** — API versioning strategy
 - **[API Enhancements](api/API_ENHANCEMENTS.md)** — Recent API improvements
@@ -174,9 +183,10 @@ See [REST API Documentation](api/REST_API.md) for complete examples and endpoint
 ## 🚀 Installation & Deployment
 
 ### Quick Start
-1. **[Getting Started Guide](GETTING_STARTED.md)** — Complete beginner tutorial
-2. **[Docker Compose Setup](admin/configuration/DOCKER_COMPOSE_SETUP.md)** — Recommended deployment method
-3. **[Requirements](REQUIREMENTS.md)** — System requirements
+1. **[Installation Guide](../INSTALLATION.md)** — Step-by-step installation (root)
+2. **[Getting Started Guide](GETTING_STARTED.md)** — Complete beginner tutorial
+3. **[Docker Compose Setup](admin/configuration/DOCKER_COMPOSE_SETUP.md)** — Recommended deployment method
+4. **[Requirements](REQUIREMENTS.md)** — System requirements
 
 ### Database & Migrations
 - **[Database Migrations](../migrations/README.md)** — Database schema management with Flask-Migrate
