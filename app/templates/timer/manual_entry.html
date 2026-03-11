@@ -42,7 +42,11 @@
           data-require-task="{{ 'true' if getattr(settings, 'time_entry_require_task', false) else 'false' }}"
           data-require-description="{{ 'true' if getattr(settings, 'time_entry_require_description', false) else 'false' }}"
           data-description-min-length="{{ getattr(settings, 'time_entry_description_min_length', 20) }}"
-          data-description-min-msg="{{ _('Description must be at least %(min)s characters', min=getattr(settings, 'time_entry_description_min_length', 20))|e }}">
+          data-description-min-msg="{{ _('Description must be at least %(min)s characters', min=getattr(settings, 'time_entry_description_min_length', 20))|e }}"
+          data-break-after-hours-1="{{ getattr(settings, 'break_after_hours_1', none) or 6 }}"
+          data-break-minutes-1="{{ getattr(settings, 'break_minutes_1', none) or 30 }}"
+          data-break-after-hours-2="{{ getattr(settings, 'break_after_hours_2', none) or 9 }}"
+          data-break-minutes-2="{{ getattr(settings, 'break_minutes_2', none) or 45 }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="worked_time_mode" id="worked_time_mode" value="{{ prefill_worked_time_mode or '' }}">
 
@@ -113,6 +117,14 @@
                             <label for="worked_time" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Worked Time') }}</label>
                             <input type="text" name="worked_time" id="worked_time" class="form-input" inputmode="numeric" placeholder="HH:MM" autocomplete="off" value="{{ prefill_worked_time or '' }}">
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: enter HH:MM for duration. You can combine with Start Date/Time to log time on a specific day.') }}</p>
+                        </div>
+                        <div>
+                            <label for="break_time" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Break') }}</label>
+                            <div class="flex items-center gap-2">
+                                <input type="text" name="break_time" id="break_time" class="form-input flex-1" inputmode="numeric" placeholder="HH:MM" autocomplete="off" value="{{ prefill_break_time or '' }}">
+                                <button type="button" id="suggestBreakBtn" class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-text-light dark:text-text-dark text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="{{ _('Suggest break based on duration (e.g. >6h: 30 min, >9h: 45 min)') }}">{{ _('Suggest') }}</button>
+                            </div>
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: break duration (HH:MM). Subtracted from total time to get worked duration.') }}</p>
                         </div>
                     </div>
                 </div>
@@ -273,6 +285,32 @@ document.addEventListener('DOMContentLoaded', async function(){
         setEndFromDate(end);
         if (workedTimeMode) workedTimeMode.value = workedTimeUserEdited ? 'explicit' : '';
         suppressTimeSync = false;
+    }
+
+    // Suggest break from duration (default rules: >6h = 30 min, >9h = 45 min)
+    const suggestBreakBtn = document.getElementById('suggestBreakBtn');
+    const breakTimeInput = document.getElementById('break_time');
+    if (suggestBreakBtn && breakTimeInput && form) {
+        suggestBreakBtn.addEventListener('click', function() {
+            let durationHours = 0;
+            const workedMins = parseWorkedMinutes(workedTime && workedTime.value);
+            if (workedMins != null) {
+                durationHours = workedMins / 60;
+            } else {
+                const { start, end } = getStartEnd();
+                if (start && end && end > start) {
+                    durationHours = (end.getTime() - start.getTime()) / (60 * 60 * 1000);
+                }
+            }
+            const h1 = parseFloat(form.dataset.breakAfterHours1 || '6');
+            const m1 = parseInt(form.dataset.breakMinutes1 || '30', 10);
+            const h2 = parseFloat(form.dataset.breakAfterHours2 || '9');
+            const m2 = parseInt(form.dataset.breakMinutes2 || '45', 10);
+            let suggestedMinutes = 0;
+            if (durationHours >= h2) suggestedMinutes = m2;
+            else if (durationHours >= h1) suggestedMinutes = m1;
+            breakTimeInput.value = formatWorkedMinutes(suggestedMinutes);
+        });
     }
 
     function onStartChange() {

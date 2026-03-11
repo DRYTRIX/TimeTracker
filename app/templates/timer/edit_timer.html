@@ -278,6 +278,14 @@ document.addEventListener('DOMContentLoaded', function() {
                                value="{{ timer.end_time.strftime('%H:%M') if timer.end_time else '' }}">
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Time the work ended') }}</p>
                     </div>
+                    <div>
+                        <label for="break_time" class="form-label">
+                            <i class="fas fa-coffee mr-1"></i>{{ _('Break') }}
+                        </label>
+                        <input type="text" class="form-input" id="break_time" name="break_time" placeholder="HH:MM"
+                               value="{% if timer.break_seconds %}{{ (timer.break_seconds // 3600) }}:{{ '%02d' | format((timer.break_seconds % 3600) // 60) }}{% endif %}">
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Break duration (HH:MM). Subtracted from total to get worked duration.') }}</p>
+                    </div>
                 </div>
 
                 <!-- Source, Billable, Duration -->

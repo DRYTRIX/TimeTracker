@@ -73,10 +73,22 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div class="flex-1">
                 <div class="flex items-center gap-2 mb-2">
+                    {% if active_timer.is_paused %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                        <i class="fas fa-pause mr-2"></i>{{ _('Paused') }}
+                    </span>
+                    {% if active_timer.break_seconds %}
+                    <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Break') }}: {{ active_timer.break_formatted }}</span>
+                    {% endif %}
+                    {% else %}
                     <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
                         <span class="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full mr-2 animate-pulse"></span>
                         {{ _('Running') }}
                     </span>
+                    {% if active_timer.break_seconds %}
+                    <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Break so far') }}: {{ active_timer.break_formatted }}</span>
+                    {% endif %}
+                    {% endif %}
                 </div>
                 <p class="font-semibold text-lg text-text-light dark:text-text-dark mb-1">
                     {% if active_timer.project %}
@@ -93,6 +105,7 @@
                 <p class="text-sm font-semibold text-text-light dark:text-text-dark mt-2">
                     {{ _('Elapsed') }}: <span id="dashboard-timer-elapsed">{{ active_timer.duration_formatted }}</span>
                 </p>
+                {% if not active_timer.is_paused %}
                 <div class="mt-3 flex flex-wrap items-center gap-2">
                     <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Adjust time') }}:</span>
                     <form id="dashboardAdjustTimerForm" action="{{ url_for('timer.adjust_timer') }}" method="POST" class="inline-flex items-center gap-1">
@@ -104,8 +117,24 @@
                         <button type="button" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-text-light dark:text-text-dark text-sm font-medium transition-colors" title="{{ _('Add 15 min') }}" data-delta="15">+15</button>
                     </form>
                 </div>
+                {% endif %}
             </div>
             <div class="flex flex-col sm:flex-row gap-2">
+                {% if active_timer.is_paused %}
+                <form action="{{ url_for('timer.resume_timer') }}" method="POST" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5" title="{{ _('Resume timer') }}">
+                        <i class="fas fa-play mr-2"></i>{{ _('Resume') }}
+                    </button>
+                </form>
+                {% else %}
+                <form action="{{ url_for('timer.pause_timer') }}" method="POST" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5" title="{{ _('Pause timer (break time will be counted on resume)') }}">
+                        <i class="fas fa-pause mr-2"></i>{{ _('Pause') }}
+                    </button>
+                </form>
+                {% endif %}
                 <form action="{{ url_for('timer.stop_timer') }}" method="POST" class="inline">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5" title="{{ _('Stop and save current time') }}">
