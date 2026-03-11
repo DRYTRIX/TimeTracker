@@ -43,11 +43,20 @@
 
 <!-- Filter Form -->
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
-    <div class="flex justify-between items-center mb-4">
+    <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
         <h2 class="text-lg font-semibold">{{ _('Filter Claims') }}</h2>
-        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
-            <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
-        </button>
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs text-gray-500 dark:text-gray-400 self-center">{{ _('Exports use current filters') }}</span>
+            <a id="perDiemExportCsvBtn" data-export-base="{{ url_for('per_diem.export_per_diem_csv') }}" href="{{ url_for('per_diem.export_per_diem_csv') }}" class="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-file-csv mr-2"></i>{{ _('Export CSV') }}
+            </a>
+            <a id="perDiemExportPdfBtn" data-export-base="{{ url_for('per_diem.export_per_diem_pdf') }}" href="{{ url_for('per_diem.export_per_diem_pdf') }}" class="px-3 py-1.5 text-sm bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors">
+                <i class="fas fa-file-pdf mr-2"></i>{{ _('Export PDF') }}
+            </a>
+            <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
+                <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
+            </button>
+        </div>
     </div>
     <div id="filterBody">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-filter-form>
@@ -70,6 +79,27 @@
                 <option value="{{ project.id }}" {% if project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
                 {% endfor %}
             </select>
+        </div>
+        
+        <div>
+            <label for="client_id" class="form-label">Client</label>
+            {% set locked_client = get_locked_client() %}
+            {% if locked_client %}
+                <input type="hidden" name="client_id" id="client_id" value="{{ locked_client.id }}">
+                <input type="text" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-75"
+                       value="{{ locked_client.name }}" disabled readonly>
+            {% elif only_one_client|default(false) and single_client %}
+                <input type="hidden" name="client_id" id="client_id" value="{{ single_client.id }}">
+                <input type="text" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-75"
+                       value="{{ single_client.name }}" disabled readonly>
+            {% else %}
+                <select name="client_id" id="client_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
+                    <option value="">All Clients</option>
+                    {% for client in clients %}
+                    <option value="{{ client.id }}" {% if client_id == client.id %}selected{% endif %}>{{ client.name }}</option>
+                    {% endfor %}
+                </select>
+            {% endif %}
         </div>
         
         <div>
@@ -268,6 +298,57 @@
 .filter-toggle-transition { transition: all 0.3s ease-in-out; }
 </style>
 <script>
+(function() {
+    function getPerDiemFilterParams() {
+        const form = document.querySelector('[data-filter-form]');
+        if (!form) return {};
+        const params = {};
+        ['status', 'project_id', 'client_id', 'start_date', 'end_date'].forEach(function(name) {
+            const el = form.querySelector('[name="' + name + '"]');
+            if (el && (el.tagName === 'SELECT' || el.type === 'hidden' || el.type === 'date')) {
+                const val = (el.value || '').trim();
+                if (val) params[name] = val;
+            }
+        });
+        return params;
+    }
+    function buildPerDiemExportUrl(base) {
+        const params = getPerDiemFilterParams();
+        const qs = new URLSearchParams(params).toString();
+        return qs ? base + '?' + qs : base;
+    }
+    function updatePerDiemExportLinks() {
+        const csvBtn = document.getElementById('perDiemExportCsvBtn');
+        const pdfBtn = document.getElementById('perDiemExportPdfBtn');
+        const csvBase = csvBtn ? csvBtn.getAttribute('data-export-base') : '';
+        const pdfBase = pdfBtn ? pdfBtn.getAttribute('data-export-base') : '';
+        if (csvBtn && csvBase) csvBtn.href = buildPerDiemExportUrl(csvBase);
+        if (pdfBtn && pdfBase) pdfBtn.href = buildPerDiemExportUrl(pdfBase);
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        updatePerDiemExportLinks();
+        const form = document.querySelector('[data-filter-form]');
+        if (form) {
+            form.addEventListener('change', updatePerDiemExportLinks);
+            form.addEventListener('input', updatePerDiemExportLinks);
+        }
+        const csvBtn = document.getElementById('perDiemExportCsvBtn');
+        const pdfBtn = document.getElementById('perDiemExportPdfBtn');
+        if (csvBtn) {
+            csvBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = buildPerDiemExportUrl(this.getAttribute('data-export-base') || '');
+            });
+        }
+        if (pdfBtn) {
+            pdfBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = buildPerDiemExportUrl(this.getAttribute('data-export-base') || '');
+            });
+        }
+    });
+})();
+
 function toggleFilterVisibility() {
     const filterBody = document.getElementById('filterBody');
     const toggleIcon = document.getElementById('filterToggleIcon');

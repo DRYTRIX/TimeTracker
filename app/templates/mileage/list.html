@@ -55,11 +55,20 @@
 
 <!-- Filter Form -->
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
-    <div class="flex justify-between items-center mb-4">
+    <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
         <h2 class="text-lg font-semibold">{{ _('Filter Mileage') }}</h2>
-        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
-            <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
-        </button>
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs text-gray-500 dark:text-gray-400 self-center">{{ _('Exports use current filters') }}</span>
+            <a id="mileageExportCsvBtn" data-export-base="{{ url_for('mileage.export_mileage_csv') }}" href="{{ url_for('mileage.export_mileage_csv') }}" class="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-file-csv mr-2"></i>{{ _('Export CSV') }}
+            </a>
+            <a id="mileageExportPdfBtn" data-export-base="{{ url_for('mileage.export_mileage_pdf') }}" href="{{ url_for('mileage.export_mileage_pdf') }}" class="px-3 py-1.5 text-sm bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors">
+                <i class="fas fa-file-pdf mr-2"></i>{{ _('Export PDF') }}
+            </a>
+            <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
+                <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
+            </button>
+        </div>
     </div>
     <div id="filterBody">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-filter-form>
@@ -250,6 +259,57 @@
 .filter-toggle-transition { transition: all 0.3s ease-in-out; }
 </style>
 <script>
+(function() {
+    function getMileageFilterParams() {
+        const form = document.querySelector('[data-filter-form]');
+        if (!form) return {};
+        const params = {};
+        ['search', 'status', 'project_id', 'client_id', 'start_date', 'end_date'].forEach(function(name) {
+            const el = form.querySelector('[name="' + name + '"]');
+            if (el && (el.tagName === 'SELECT' || el.type === 'hidden' || el.type === 'date' || el.type === 'text')) {
+                const val = (el.value || '').trim();
+                if (val) params[name] = val;
+            }
+        });
+        return params;
+    }
+    function buildMileageExportUrl(base) {
+        const params = getMileageFilterParams();
+        const qs = new URLSearchParams(params).toString();
+        return qs ? base + '?' + qs : base;
+    }
+    function updateMileageExportLinks() {
+        const csvBtn = document.getElementById('mileageExportCsvBtn');
+        const pdfBtn = document.getElementById('mileageExportPdfBtn');
+        const csvBase = csvBtn ? csvBtn.getAttribute('data-export-base') : '';
+        const pdfBase = pdfBtn ? pdfBtn.getAttribute('data-export-base') : '';
+        if (csvBtn && csvBase) csvBtn.href = buildMileageExportUrl(csvBase);
+        if (pdfBtn && pdfBase) pdfBtn.href = buildMileageExportUrl(pdfBase);
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        updateMileageExportLinks();
+        const form = document.querySelector('[data-filter-form]');
+        if (form) {
+            form.addEventListener('change', updateMileageExportLinks);
+            form.addEventListener('input', updateMileageExportLinks);
+        }
+        const csvBtn = document.getElementById('mileageExportCsvBtn');
+        const pdfBtn = document.getElementById('mileageExportPdfBtn');
+        if (csvBtn) {
+            csvBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = buildMileageExportUrl(this.getAttribute('data-export-base') || '');
+            });
+        }
+        if (pdfBtn) {
+            pdfBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = buildMileageExportUrl(this.getAttribute('data-export-base') || '');
+            });
+        }
+    });
+})();
+
 function toggleFilterVisibility() {
     const filterBody = document.getElementById('filterBody');
     const toggleIcon = document.getElementById('filterToggleIcon');

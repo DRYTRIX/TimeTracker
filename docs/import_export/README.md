@@ -12,6 +12,8 @@ The TimeTracker Import/Export system enables seamless data migration, GDPR-compl
 - 🔍 **Filtered Export** - Export specific data with custom filters
 - 💾 **Backup/Restore** - Full database backup (admin only)
 - 📊 **History Tracking** - Monitor all import/export operations
+- 🚗 **Mileage export** - From the Mileage list page: Export CSV and Export PDF use the current filters (search, status, project, client, date range). Files: `mileage_export_<start>_to_<end>.csv` / `.pdf`.
+- 🧾 **Per diem export** - From the Per Diem list page: Client filter plus Export CSV and Export PDF; exports respect the same filters (status, project, client, date range). Files: `per_diem_export_<start>_to_<end>.csv` / `.pdf`.
 
 ## Quick Links
 
