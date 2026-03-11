@@ -461,6 +461,11 @@ def kiosk_start_timer():
     if not project or project.status != "active":
         return jsonify({"error": "Invalid or inactive project"}), 400
 
+    from app.utils.scope_filter import user_can_access_project
+
+    if not user_can_access_project(current_user, project_id):
+        return jsonify({"error": "You do not have access to this project"}), 403
+
     # Check if user already has an active timer
     active_timer = current_user.active_timer
     if active_timer:

@@ -37,7 +37,7 @@ If you change the role away from Subcontractor, assigned clients are cleared. If
 
 - **Clients**: List and detail views; edit client. Other clients are hidden and direct URLs return 403.
 - **Projects**: List, export, view, edit. Only projects belonging to assigned clients are shown; others 403.
-- **Time entries**: Timer (manual entry, edit), time entries report and exports. Only entries for allowed projects are included.
+- **Time entries**: Timer start (web POST/GET, from template, legacy API, API v1, kiosk), manual entry, and edit. Starting a timer on a project or client the user is not assigned to returns 403 or a redirect with an error. Time entries report and exports only include allowed projects.
 - **Invoices**: Create invoice (project dropdown), and invoice data for reports.
 - **Reports**: All report screens and export form use scoped clients and projects; time entries report only includes allowed projects.
 - **API v1**: List/get clients and projects, global search, and client contacts are scoped; direct access to other resources returns 403.

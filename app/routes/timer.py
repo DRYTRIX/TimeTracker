@@ -13,6 +13,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.exc import ProgrammingError
 from app.services.project_service import ProjectService
 from app.services.client_service import ClientService
+from app.utils.scope_filter import user_can_access_project, user_can_access_client
 
 _project_service = ProjectService()
 _client_service = ClientService()
@@ -127,6 +128,16 @@ def start_timer():
                 "Start timer failed: task_id=%s provided for client-only timer (client_id=%s)", task_id, client_id
             )
             return redirect(url_for("main.dashboard"))
+
+    # Subcontractor scope: only allow starting timer on assigned project/client
+    if project_id and not user_can_access_project(current_user, project_id):
+        flash(_("You do not have access to this project"), "error")
+        current_app.logger.warning("Start timer denied: user has no access to project_id=%s", project_id)
+        return redirect(url_for("main.dashboard"))
+    if client_id and not project_id and not user_can_access_client(current_user, client_id):
+        flash(_("You do not have access to this client"), "error")
+        current_app.logger.warning("Start timer denied: user has no access to client_id=%s", client_id)
+        return redirect(url_for("main.dashboard"))
 
     # Check if user already has an active timer
     active_timer = current_user.active_timer
@@ -300,6 +311,13 @@ def start_timer_from_template(template_id):
         flash(_("Cannot start timer for this project"), "error")
         return redirect(url_for("time_entry_templates.list_templates"))
 
+    if not user_can_access_project(current_user, template.project_id):
+        flash(_("You do not have access to this project"), "error")
+        current_app.logger.warning(
+            "Start timer from template denied: user has no access to project_id=%s", template.project_id
+        )
+        return redirect(url_for("time_entry_templates.list_templates"))
+
     # Create new timer from template
     from app.models.time_entry import local_now
 
@@ -374,6 +392,11 @@ def start_timer_for_project(project_id):
     elif project.status != "active":
         flash(_("Cannot start timer for an inactive project"), "error")
         current_app.logger.warning("Start timer (GET) failed: project_id=%s is not active", project_id)
+        return redirect(url_for("main.dashboard"))
+
+    if not user_can_access_project(current_user, project_id):
+        flash(_("You do not have access to this project"), "error")
+        current_app.logger.warning("Start timer (GET) denied: user has no access to project_id=%s", project_id)
         return redirect(url_for("main.dashboard"))
 
     # Check if user already has an active timer

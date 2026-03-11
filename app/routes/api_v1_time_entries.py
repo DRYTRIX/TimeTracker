@@ -247,6 +247,12 @@ def start_timer():
     project_id = data.get("project_id")
     if not project_id:
         return jsonify({"error": "project_id is required"}), 400
+
+    from app.utils.scope_filter import user_can_access_project
+
+    if not user_can_access_project(g.api_user, project_id):
+        return jsonify({"error": "You do not have access to this project"}), 403
+
     time_tracking_service = TimeTrackingService()
     result = time_tracking_service.start_timer(
         user_id=g.api_user.id,

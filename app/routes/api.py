@@ -331,6 +331,11 @@ def api_start_timer():
     if not project:
         return jsonify({"error": "Invalid project"}), 400
 
+    from app.utils.scope_filter import user_can_access_project
+
+    if not user_can_access_project(current_user, project_id):
+        return jsonify({"error": "You do not have access to this project"}), 403
+
     # Validate task if provided
     task = None
     if task_id:
