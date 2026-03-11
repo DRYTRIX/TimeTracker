@@ -144,6 +144,37 @@
 </div>
 {% endmacro %}
 
+{# Compact empty state for tables / inline use #}
+{% macro empty_state_compact(icon_class, title, message, actions_html=None, type="default") %}
+{% set type_colors = {
+    'default': 'primary',
+    'no-data': 'gray-500',
+    'no-results': 'amber-500',
+    'error': 'red-500'
+} %}
+{% set color = type_colors.get(type, 'primary') %}
+<div class="flex flex-col items-center justify-center py-8 px-4 text-center">
+    <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-{{ color }}/10 dark:bg-{{ color }}/20 mb-3">
+        <i class="{{ icon_class }} text-{{ color }} text-2xl"></i>
+    </div>
+    <h3 class="text-base font-semibold text-text-light dark:text-text-dark mb-1">{{ _(title) }}</h3>
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark max-w-sm mb-4">{{ _(message) }}</p>
+    {% if actions_html %}
+    <div class="flex flex-wrap gap-2 justify-center">
+        {{ actions_html|safe }}
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# Full-page loading overlay (Tailwind) #}
+{% macro loading_overlay(text="Loading...") %}
+<div class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/30 dark:bg-black/50 backdrop-blur-sm" role="status" aria-live="polite">
+    <div class="inline-block w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+    <p class="mt-3 text-sm font-medium text-text-light dark:text-text-dark">{{ _(text) }}</p>
+</div>
+{% endmacro %}
+
 {# ============================================
    LOADING STATES
    ============================================ #}
