@@ -50,6 +50,7 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 
 #### 3. **Manual Time Entry**
 - Add historical time entries
+- **Break field (HH:MM)** — Optional break duration; effective duration = (end − start) − break. Suggest button uses default rules (e.g. >6 h → 30 min). See [Break Time Feature](BREAK_TIME_FEATURE.md).
 - Flexible date/time selection
 - Notes and tags support
 - Billable/non-billable flagging
@@ -57,7 +58,8 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 
 #### 4. **Timer Management**
 - Start, stop, pause, and resume timers
-- **Dashboard timer widget**: Pause (saves segment) and Stop; one-click "Resume (project)" to continue with the same project/task/notes; quick time adjustment (−15 / −5 / +5 / +15 min) while running
+- **Break time (Issue #561)** — Pause a running timer so time while paused counts as break; on resume, that time is added to the entry’s break. Stored duration = (end − start) − break. See [Break Time Feature](BREAK_TIME_FEATURE.md).
+- **Dashboard timer widget**: Pause (accumulates break) and Stop; one-click "Resume (project)" to continue with the same project/task/notes; quick time adjustment (−15 / −5 / +5 / +15 min) while running
 - Edit active timers
 - Delete timers
 - Timer history and audit trail
