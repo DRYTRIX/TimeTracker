@@ -319,6 +319,11 @@ class ApiClient {
     return response.data as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> deleteTimesheetPeriod(int periodId) async {
+    final response = await _dio.delete('/api/v1/timesheet-periods/$periodId');
+    return response.data as Map<String, dynamic>;
+  }
+
   Future<Map<String, dynamic>> getLeaveTypes() async {
     final response = await _dio.get('/api/v1/time-off/leave-types');
     return response.data as Map<String, dynamic>;
@@ -375,6 +380,11 @@ class ApiClient {
     final data = <String, dynamic>{};
     if (comment != null && comment.trim().isNotEmpty) data['comment'] = comment.trim();
     final response = await _dio.post('/api/v1/time-off/requests/$requestId/reject', data: data);
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> deleteTimeOffRequest(int requestId) async {
+    final response = await _dio.delete('/api/v1/time-off/requests/$requestId');
     return response.data as Map<String, dynamic>;
   }
 }

@@ -81,11 +81,12 @@ async function loadCurrentUserProfile() {
     const role = String(user.role || '').toLowerCase();
     const roleCanApprove = ['admin', 'owner', 'manager', 'approver'].includes(role);
     state.currentUserProfile = {
+      id: user.id,
       is_admin: Boolean(user.is_admin),
       can_approve: Boolean(user.is_admin) || roleCanApprove,
     };
   } catch (_) {
-    state.currentUserProfile = { is_admin: false, can_approve: false };
+    state.currentUserProfile = { id: null, is_admin: false, can_approve: false };
   }
 }
 
@@ -947,6 +948,9 @@ function renderPeriods() {
         ${(String(period.status || '').toLowerCase() === 'submitted' && state.currentUserProfile.can_approve)
           ? `<button class="btn btn-sm btn-danger" onclick="reviewTimesheetPeriodAction(${period.id}, false)">Reject</button>`
           : ''}
+        ${['draft', 'rejected'].includes(String(period.status || '').toLowerCase())
+          ? `<button class="btn btn-sm btn-danger" onclick="deleteTimesheetPeriodAction(${period.id})">Delete</button>`
+          : ''}
       </div>
     </div>
   `).join('');
@@ -1007,6 +1011,9 @@ function renderTimeOffRequests() {
           <div class="entry-time">${status}</div>
           ${canReview ? `<button class="btn btn-sm btn-primary" onclick="reviewTimeOffRequestAction(${req.id}, true)">Approve</button>` : ''}
           ${canReview ? `<button class="btn btn-sm btn-danger" onclick="reviewTimeOffRequestAction(${req.id}, false)">Reject</button>` : ''}
+          ${['draft', 'submitted', 'cancelled'].includes(String(status).toLowerCase()) && (req.user_id === state.currentUserProfile.id || state.currentUserProfile.can_approve)
+            ? `<button class="btn btn-sm btn-danger" onclick="deleteTimeOffRequestAction(${req.id})">Delete</button>`
+            : ''}
         </div>
       </div>
     `;
@@ -1149,6 +1156,18 @@ async function reviewTimesheetPeriodAction(periodId, approve) {
     await loadWorkforce();
   } catch (error) {
     showError('Failed to review period: ' + (error.response?.data?.error || error.message));
+  }
+}
+
+async function deleteTimesheetPeriodAction(periodId) {
+  if (!state.apiClient) return;
+  if (!confirm('Are you sure you want to delete this timesheet period?')) return;
+  try {
+    await state.apiClient.deleteTimesheetPeriod(periodId);
+    showSuccess('Timesheet period deleted');
+    await loadWorkforce();
+  } catch (error) {
+    showError('Failed to delete period: ' + (error.response?.data?.error || error.message));
   }
 }
 
@@ -1345,6 +1364,18 @@ async function reviewTimeOffRequestAction(requestId, approve) {
     await loadWorkforce();
   } catch (error) {
     showError('Failed to review time-off request: ' + (error.response?.data?.error || error.message));
+  }
+}
+
+async function deleteTimeOffRequestAction(requestId) {
+  if (!state.apiClient) return;
+  if (!confirm('Are you sure you want to delete this time-off request?')) return;
+  try {
+    await state.apiClient.deleteTimeOffRequest(requestId);
+    showSuccess('Time-off request deleted');
+    await loadWorkforce();
+  } catch (error) {
+    showError('Failed to delete time-off request: ' + (error.response?.data?.error || error.message));
   }
 }
 

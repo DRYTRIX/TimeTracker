@@ -4266,6 +4266,17 @@ def close_timesheet_period(period_id):
     return jsonify({"message": "Timesheet period closed", "timesheet_period": result["period"].to_dict()})
 
 
+@api_v1_bp.route("/timesheet-periods/<int:period_id>", methods=["DELETE"])
+@require_api_token("write:time_entries")
+def delete_timesheet_period_api(period_id):
+    from app.services.workforce_governance_service import WorkforceGovernanceService
+
+    result = WorkforceGovernanceService().delete_period(period_id=period_id, actor_id=g.api_user.id)
+    if not result.get("success"):
+        return jsonify({"error": result.get("message", "Could not delete period")}), 400
+    return jsonify({"message": "Timesheet period deleted"})
+
+
 @api_v1_bp.route("/timesheet-policy", methods=["GET"])
 @require_api_token("read:time_entries")
 def get_timesheet_policy():
@@ -4346,6 +4357,19 @@ def create_leave_type_api():
     db.session.add(leave_type)
     db.session.commit()
     return jsonify({"message": "Leave type created", "leave_type": leave_type.to_dict()}), 201
+
+
+@api_v1_bp.route("/time-off/leave-types/<int:leave_type_id>", methods=["DELETE"])
+@require_api_token("write:reports")
+def delete_leave_type_api(leave_type_id):
+    from app.services.workforce_governance_service import WorkforceGovernanceService
+
+    if not g.api_user.is_admin:
+        return jsonify({"error": "Access denied"}), 403
+    result = WorkforceGovernanceService().delete_leave_type(leave_type_id)
+    if not result.get("success"):
+        return jsonify({"error": result.get("message", "Could not delete leave type")}), 400
+    return jsonify({"message": "Leave type deleted"})
 
 
 @api_v1_bp.route("/time-off/requests", methods=["GET"])
@@ -4445,6 +4469,21 @@ def reject_time_off_request_api(request_id):
     return jsonify({"message": "Time-off request rejected", "time_off_request": result["request"].to_dict()})
 
 
+@api_v1_bp.route("/time-off/requests/<int:request_id>", methods=["DELETE"])
+@require_api_token("write:time_entries")
+def delete_time_off_request_api(request_id):
+    from app.services.workforce_governance_service import WorkforceGovernanceService
+
+    result = WorkforceGovernanceService().delete_leave_request(
+        request_id=request_id,
+        actor_id=g.api_user.id,
+        actor_can_approve=_is_api_approver(g.api_user),
+    )
+    if not result.get("success"):
+        return jsonify({"error": result.get("message", "Could not delete request")}), 400
+    return jsonify({"message": "Time-off request deleted"})
+
+
 @api_v1_bp.route("/time-off/balances", methods=["GET"])
 @require_api_token("read:time_entries")
 def time_off_balances_api():
@@ -4492,6 +4531,19 @@ def create_holiday_api():
     db.session.add(holiday)
     db.session.commit()
     return jsonify({"message": "Holiday created", "holiday": holiday.to_dict()}), 201
+
+
+@api_v1_bp.route("/time-off/holidays/<int:holiday_id>", methods=["DELETE"])
+@require_api_token("write:reports")
+def delete_holiday_api(holiday_id):
+    from app.services.workforce_governance_service import WorkforceGovernanceService
+
+    if not g.api_user.is_admin:
+        return jsonify({"error": "Access denied"}), 403
+    result = WorkforceGovernanceService().delete_holiday(holiday_id)
+    if not result.get("success"):
+        return jsonify({"error": result.get("message", "Could not delete holiday")}), 400
+    return jsonify({"message": "Holiday deleted"})
 
 
 # ==================== Payroll Export ====================

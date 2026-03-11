@@ -462,3 +462,63 @@ class WorkforceGovernanceService:
             item["non_billable_hours"] = round(item["non_billable_hours"], 2)
         out.sort(key=lambda x: (x["week_year"], x["week_number"], x["username"] or ""))
         return out
+
+    def delete_period(self, period_id: int, actor_id: int) -> Dict[str, Any]:
+        """Delete a timesheet period. Only draft or rejected periods; actor must be owner or admin."""
+        period = TimesheetPeriod.query.get(period_id)
+        if not period:
+            return {"success": False, "message": "Timesheet period not found"}
+        user = User.query.get(actor_id)
+        if not user:
+            return {"success": False, "message": "User not found"}
+        if period.user_id != actor_id and not user.is_admin:
+            return {"success": False, "message": "Only the period owner or an admin can delete it"}
+        status = period.status.value if hasattr(period.status, "value") else str(period.status)
+        if status not in (TimesheetPeriodStatus.DRAFT.value, TimesheetPeriodStatus.REJECTED.value):
+            return {"success": False, "message": "Only draft or rejected periods can be deleted"}
+        db.session.delete(period)
+        db.session.commit()
+        return {"success": True}
+
+    def delete_leave_request(
+        self, request_id: int, actor_id: int, actor_can_approve: bool = False
+    ) -> Dict[str, Any]:
+        """Delete a time-off request. Only draft, submitted, or cancelled; actor must be owner or approver."""
+        req = TimeOffRequest.query.get(request_id)
+        if not req:
+            return {"success": False, "message": "Time-off request not found"}
+        if req.user_id != actor_id and not actor_can_approve:
+            return {"success": False, "message": "Only the request owner or an approver can delete it"}
+        status = req.status.value if hasattr(req.status, "value") else str(req.status)
+        if status not in (
+            TimeOffRequestStatus.DRAFT.value,
+            TimeOffRequestStatus.SUBMITTED.value,
+            TimeOffRequestStatus.CANCELLED.value,
+        ):
+            return {"success": False, "message": "Only draft, submitted, or cancelled requests can be deleted"}
+        db.session.delete(req)
+        db.session.commit()
+        return {"success": True}
+
+    def delete_leave_type(self, leave_type_id: int) -> Dict[str, Any]:
+        """Delete a leave type. Fails if any time-off request references it."""
+        leave_type = LeaveType.query.get(leave_type_id)
+        if not leave_type:
+            return {"success": False, "message": "Leave type not found"}
+        if leave_type.requests.count() > 0:
+            return {
+                "success": False,
+                "message": "Cannot delete leave type that has time-off requests",
+            }
+        db.session.delete(leave_type)
+        db.session.commit()
+        return {"success": True}
+
+    def delete_holiday(self, holiday_id: int) -> Dict[str, Any]:
+        """Delete a company holiday."""
+        holiday = CompanyHoliday.query.get(holiday_id)
+        if not holiday:
+            return {"success": False, "message": "Holiday not found"}
+        db.session.delete(holiday)
+        db.session.commit()
+        return {"success": True}

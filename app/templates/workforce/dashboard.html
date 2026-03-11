@@ -87,6 +87,13 @@
                                 <button class="btn btn-sm btn-danger" type="submit">{{ _('Close') }}</button>
                             </form>
                             {% endif %}
+                            {% set p_status_val = p.status.value if p.status is defined and p.status.value is defined else (p.status|string) %}
+                            {% if p_status_val in ['draft', 'rejected'] and (p.user_id == current_user.id or current_user.is_admin) %}
+                            <form method="post" action="{{ url_for('workforce.delete_period', period_id=p.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-danger" type="submit">{{ _('Delete') }}</button>
+                            </form>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -180,6 +187,12 @@
                             </form>
                         </div>
                         {% endif %}
+                        {% if r_status in ['draft', 'submitted', 'cancelled'] and (r.user_id == current_user.id or can_approve) %}
+                        <form method="post" action="{{ url_for('workforce.delete_time_off_request', request_id=r.id) }}" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-danger" type="submit">{{ _('Delete') }}</button>
+                        </form>
+                        {% endif %}
                     </div>
                 </div>
                 {% endfor %}
@@ -245,6 +258,19 @@
                 <label class="flex items-center gap-2"><input type="checkbox" name="is_paid" checked> {{ _('Paid leave') }}</label>
                 <button class="btn btn-secondary" type="submit">{{ _('Add leave type') }}</button>
             </form>
+            <div class="mt-3 space-y-1">
+                {% for lt in leave_types %}
+                <div class="flex justify-between items-center gap-2 text-sm">
+                    <span>{{ lt.name }} ({{ lt.code }}){% if not lt.enabled %} <span class="text-text-muted-light dark:text-text-muted-dark">— {{ _('disabled') }}</span>{% endif %}</span>
+                    <form method="post" action="{{ url_for('workforce.delete_leave_type', leave_type_id=lt.id) }}" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-sm btn-danger" type="submit">{{ _('Delete') }}</button>
+                    </form>
+                </div>
+                {% else %}
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No leave types configured.') }}</p>
+                {% endfor %}
+            </div>
         </section>
 
         <section class="card p-4 space-y-2">
@@ -257,9 +283,15 @@
                 <input type="text" name="region" class="form-input" placeholder="{{ _('Region (optional)') }}">
                 <button class="btn btn-secondary" type="submit">{{ _('Add holiday') }}</button>
             </form>
-            <div class="max-h-40 overflow-auto text-sm">
+            <div class="max-h-40 overflow-auto text-sm space-y-1">
                 {% for h in holidays %}
-                    <div>{{ h.start_date }} - {{ h.end_date }}: {{ h.name }}{% if h.region %} ({{ h.region }}){% endif %}</div>
+                    <div class="flex justify-between items-center gap-2">
+                        <span>{{ h.start_date }} - {{ h.end_date }}: {{ h.name }}{% if h.region %} ({{ h.region }}){% endif %}</span>
+                        <form method="post" action="{{ url_for('workforce.delete_holiday', holiday_id=h.id) }}" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-danger" type="submit">{{ _('Delete') }}</button>
+                        </form>
+                    </div>
                 {% else %}
                     <div>{{ _('No holidays configured.') }}</div>
                 {% endfor %}
