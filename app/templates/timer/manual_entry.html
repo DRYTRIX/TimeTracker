@@ -42,7 +42,11 @@
           data-require-task="{{ 'true' if getattr(settings, 'time_entry_require_task', false) else 'false' }}"
           data-require-description="{{ 'true' if getattr(settings, 'time_entry_require_description', false) else 'false' }}"
           data-description-min-length="{{ getattr(settings, 'time_entry_description_min_length', 20) }}"
-          data-description-min-msg="{{ _('Description must be at least %(min)s characters', min=getattr(settings, 'time_entry_description_min_length', 20))|e }}">
+          data-description-min-msg="{{ _('Description must be at least %(min)s characters', min=getattr(settings, 'time_entry_description_min_length', 20))|e }}"
+          data-break-after-hours-1="{{ getattr(settings, 'break_after_hours_1', none) or 6 }}"
+          data-break-minutes-1="{{ getattr(settings, 'break_minutes_1', none) or 30 }}"
+          data-break-after-hours-2="{{ getattr(settings, 'break_after_hours_2', none) or 9 }}"
+          data-break-minutes-2="{{ getattr(settings, 'break_minutes_2', none) or 45 }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="worked_time_mode" id="worked_time_mode" value="{{ prefill_worked_time_mode or '' }}">
 
@@ -114,6 +118,14 @@
                             <input type="text" name="worked_time" id="worked_time" class="form-input" inputmode="numeric" placeholder="HH:MM" autocomplete="off" value="{{ prefill_worked_time or '' }}">
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: enter HH:MM for duration. You can combine with Start Date/Time to log time on a specific day.') }}</p>
                         </div>
+                        <div>
+                            <label for="break_time" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Break') }}</label>
+                            <div class="flex items-center gap-2">
+                                <input type="text" name="break_time" id="break_time" class="form-input flex-1" inputmode="numeric" placeholder="HH:MM" autocomplete="off" value="{{ prefill_break_time or '' }}">
+                                <button type="button" id="suggestBreakBtn" class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-text-light dark:text-text-dark text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title="{{ _('Suggest break based on duration (e.g. >6h: 30 min, >9h: 45 min)') }}">{{ _('Suggest') }}</button>
+                            </div>
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: break duration (HH:MM). Subtracted from total time to get worked duration.') }}</p>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -151,6 +163,22 @@
         </div>
     </form>
 </div>
+<script>
+(function() {
+    // Issue #557: avoid loading Toast UI Editor on mobile to prevent browser freeze
+    window.isMobileView = window.matchMedia('(max-width: 767px)').matches;
+    if (window.isMobileView) {
+        var notes = document.getElementById('notes');
+        var editorEl = document.getElementById('notes_editor');
+        if (notes) {
+            notes.classList.remove('hidden');
+            notes.classList.add('form-input');
+            notes.setAttribute('rows', '5');
+        }
+        if (editorEl) editorEl.style.display = 'none';
+    }
+})();
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', async function(){
     // Default values for date/time to now (use local date, not UTC, for timezones ahead of UTC)
@@ -257,6 +285,32 @@ document.addEventListener('DOMContentLoaded', async function(){
         setEndFromDate(end);
         if (workedTimeMode) workedTimeMode.value = workedTimeUserEdited ? 'explicit' : '';
         suppressTimeSync = false;
+    }
+
+    // Suggest break from duration (default rules: >6h = 30 min, >9h = 45 min)
+    const suggestBreakBtn = document.getElementById('suggestBreakBtn');
+    const breakTimeInput = document.getElementById('break_time');
+    if (suggestBreakBtn && breakTimeInput && form) {
+        suggestBreakBtn.addEventListener('click', function() {
+            let durationHours = 0;
+            const workedMins = parseWorkedMinutes(workedTime && workedTime.value);
+            if (workedMins != null) {
+                durationHours = workedMins / 60;
+            } else {
+                const { start, end } = getStartEnd();
+                if (start && end && end > start) {
+                    durationHours = (end.getTime() - start.getTime()) / (60 * 60 * 1000);
+                }
+            }
+            const h1 = parseFloat(form.dataset.breakAfterHours1 || '6');
+            const m1 = parseInt(form.dataset.breakMinutes1 || '30', 10);
+            const h2 = parseFloat(form.dataset.breakAfterHours2 || '9');
+            const m2 = parseInt(form.dataset.breakMinutes2 || '45', 10);
+            let suggestedMinutes = 0;
+            if (durationHours >= h2) suggestedMinutes = m2;
+            else if (durationHours >= h1) suggestedMinutes = m1;
+            breakTimeInput.value = formatWorkedMinutes(suggestedMinutes);
+        });
     }
 
     function onStartChange() {
@@ -670,17 +724,27 @@ document.addEventListener('DOMContentLoaded', async function(){
 });
 </script>
 
-<!-- Toast UI Editor -->
-<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
-<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css">
-<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
-
+<!-- Toast UI Editor: load only on desktop to avoid mobile freeze (Issue #557) -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    if (window.isMobileView) {
+        window.mdEditor = null;
+        return;
+    }
+    var link1 = document.createElement('link');
+    link1.rel = 'stylesheet';
+    link1.href = 'https://uicdn.toast.com/editor/latest/toastui-editor.min.css';
+    document.head.appendChild(link1);
+    var link2 = document.createElement('link');
+    link2.rel = 'stylesheet';
+    link2.href = 'https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css';
+    document.head.appendChild(link2);
+    var scriptEl = document.createElement('script');
+    scriptEl.src = 'https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js';
+    scriptEl.onload = function initToastEditorManualEntry() {
     const notesInput = document.getElementById('notes');
     let mdEditor = null;
 
-    // Initialize Toast UI Editor for notes
     if (notesInput && window.toastui && window.toastui.Editor) {
         const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
         mdEditor = new toastui.Editor({
@@ -1014,6 +1078,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const originalNotesHandler = window.addEventListener;
         // This will be handled in the existing template application code
     }
+    }; // end Toast UI init onload
+    document.head.appendChild(scriptEl);
 });
 </script>
 {% endblock %}

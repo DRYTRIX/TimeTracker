@@ -50,6 +50,9 @@ The TimeTracker application has been completely redesigned with a mobile-first a
 - **Efficient Scrolling**: Smooth, optimized scrolling performance
 - **Mobile-Specific CSS**: Dedicated mobile stylesheets for better performance
 
+### 8. **Log Time and Edit Time Entry on Mobile (Issue #557)**
+- **No browser freeze**: The manual time entry ("Log Time") and edit time entry pages no longer load the Toast UI Editor on mobile viewports (≤767px). The rich editor is resource-heavy and could freeze or crash mobile browsers. On mobile, the notes field is a plain textarea; on desktop, the full WYSIWYG editor still loads. Users can create and edit time entries on mobile without freezing the browser.
+
 ## 🛠️ Technical Implementation
 
 ### CSS Improvements

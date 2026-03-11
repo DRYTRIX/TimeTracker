@@ -191,6 +191,36 @@ class TimeTrackingService:
 
         return {"success": True, "message": "Timer stopped successfully", "entry": entry}
 
+    def pause_timer(self, user_id: int) -> Dict[str, Any]:
+        """Pause the active timer for a user. Clock stops; break accumulates on resume."""
+        entry = self.time_entry_repo.get_active_timer(user_id)
+        if not entry:
+            return {"success": False, "message": "No active timer found", "error": "no_active_timer"}
+        if entry.user_id != user_id:
+            return {"success": False, "message": "You can only pause your own timer", "error": "unauthorized"}
+        try:
+            entry.pause_timer()
+        except ValueError as e:
+            return {"success": False, "message": str(e), "error": "invalid_state"}
+        if not safe_commit("pause_timer", {"user_id": user_id, "entry_id": entry.id}):
+            return {"success": False, "message": "Could not pause timer", "error": "database_error"}
+        return {"success": True, "message": "Timer paused", "entry": entry}
+
+    def resume_timer(self, user_id: int) -> Dict[str, Any]:
+        """Resume a paused timer; time since pause is added to break_seconds."""
+        entry = self.time_entry_repo.get_active_timer(user_id)
+        if not entry:
+            return {"success": False, "message": "No active timer found", "error": "no_active_timer"}
+        if entry.user_id != user_id:
+            return {"success": False, "message": "You can only resume your own timer", "error": "unauthorized"}
+        try:
+            entry.resume_timer()
+        except ValueError as e:
+            return {"success": False, "message": str(e), "error": "invalid_state"}
+        if not safe_commit("resume_timer", {"user_id": user_id, "entry_id": entry.id}):
+            return {"success": False, "message": "Could not resume timer", "error": "database_error"}
+        return {"success": True, "message": "Timer resumed", "entry": entry}
+
     def create_manual_entry(
         self,
         user_id: int,
@@ -199,6 +229,7 @@ class TimeTrackingService:
         start_time: datetime = None,
         end_time: datetime = None,
         duration_seconds: Optional[int] = None,
+        break_seconds: Optional[int] = None,
         task_id: Optional[int] = None,
         notes: Optional[str] = None,
         tags: Optional[str] = None,
@@ -293,7 +324,9 @@ class TimeTrackingService:
             if duration_seconds <= 0:
                 return {"success": False, "message": "Duration must be positive", "error": "invalid_duration"}
 
-        # Create entry
+        # Create entry (duration_seconds is net; break_seconds is stored and subtracted when computing from start/end)
+        if break_seconds is not None:
+            break_seconds = max(0, int(break_seconds))
         entry = self.time_entry_repo.create_manual_entry(
             user_id=user_id,
             project_id=project_id,
@@ -301,6 +334,7 @@ class TimeTrackingService:
             start_time=start_time,
             end_time=end_time,
             duration_seconds=duration_seconds,
+            break_seconds=break_seconds,
             task_id=task_id,
             notes=notes,
             tags=tags,
@@ -365,6 +399,7 @@ class TimeTrackingService:
         task_id: Optional[int] = None,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
+        break_seconds: Optional[int] = None,
         notes: Optional[str] = None,
         tags: Optional[str] = None,
         billable: Optional[bool] = None,
@@ -460,8 +495,10 @@ class TimeTrackingService:
             entry.start_time = start_time
         if end_time is not None:
             entry.end_time = end_time
-        # Recompute stored duration when start or end time changed
-        if entry.end_time and (start_time is not None or end_time is not None):
+        if break_seconds is not None:
+            entry.break_seconds = max(0, int(break_seconds))
+        # Recompute stored duration when start, end, or break changed
+        if entry.end_time and (start_time is not None or end_time is not None or break_seconds is not None):
             entry.calculate_duration()
         if notes is not None:
             entry.notes = notes

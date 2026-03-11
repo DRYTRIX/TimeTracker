@@ -118,6 +118,12 @@ class Settings(db.Model):
     # Overtime / time tracking: default daily working hours for new users (e.g. 8.0)
     default_daily_working_hours = db.Column(db.Float, default=8.0, nullable=False)
 
+    # Default break rules for time entries (e.g. Germany: >6h = 30 min, >9h = 45 min). User can override per entry.
+    break_after_hours_1 = db.Column(db.Float, nullable=True)  # e.g. 6
+    break_minutes_1 = db.Column(db.Integer, nullable=True)  # e.g. 30
+    break_after_hours_2 = db.Column(db.Float, nullable=True)  # e.g. 9
+    break_minutes_2 = db.Column(db.Integer, nullable=True)  # e.g. 45
+
     # Email configuration settings (stored in database, takes precedence over environment variables)
     mail_enabled = db.Column(db.Boolean, default=False, nullable=False)  # Enable database-backed email config
     mail_server = db.Column(db.String(255), default="", nullable=True)

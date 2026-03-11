@@ -142,6 +142,175 @@ def list_mileage():
     )
 
 
+def _mileage_export_query():
+    """Build the same filtered query as list_mileage (no pagination). Caller must apply .all()."""
+    from app.utils.client_lock import enforce_locked_client_id
+    from sqlalchemy.orm import joinedload
+
+    status = request.args.get("status", "").strip()
+    project_id = request.args.get("project_id", type=int)
+    client_id = request.args.get("client_id", type=int)
+    client_id = enforce_locked_client_id(client_id)
+    start_date = request.args.get("start_date", "").strip()
+    end_date = request.args.get("end_date", "").strip()
+    search = request.args.get("search", "").strip()
+
+    query = Mileage.query.options(
+        joinedload(Mileage.user),
+        joinedload(Mileage.project),
+        joinedload(Mileage.client),
+    )
+
+    if not current_user.is_admin:
+        query = query.filter(db.or_(Mileage.user_id == current_user.id, Mileage.approved_by == current_user.id))
+
+    if status:
+        query = query.filter(Mileage.status == status)
+    if project_id:
+        query = query.filter(Mileage.project_id == project_id)
+    if client_id:
+        query = query.filter(Mileage.client_id == client_id)
+    if start_date:
+        try:
+            start = datetime.strptime(start_date, "%Y-%m-%d").date()
+            query = query.filter(Mileage.trip_date >= start)
+        except ValueError:
+            pass
+    if end_date:
+        try:
+            end = datetime.strptime(end_date, "%Y-%m-%d").date()
+            query = query.filter(Mileage.trip_date <= end)
+        except ValueError:
+            pass
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                Mileage.purpose.ilike(like),
+                Mileage.description.ilike(like),
+                Mileage.start_location.ilike(like),
+                Mileage.end_location.ilike(like),
+            )
+        )
+
+    return query.order_by(Mileage.trip_date.desc())
+
+
+@mileage_bp.route("/mileage/export/csv")
+@login_required
+@module_enabled("mileage")
+def export_mileage_csv():
+    """Export (filtered) mileage entries as CSV. Uses same filters as list_mileage."""
+    query = _mileage_export_query()
+    entries = query.all()
+
+    settings = Settings.get_settings()
+    delimiter = getattr(settings, "export_delimiter", ",") or ","
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=delimiter)
+
+    writer.writerow(
+        [
+            "ID",
+            "Date",
+            "User",
+            "Purpose",
+            "Start Location",
+            "End Location",
+            "Distance (km)",
+            "Rate per km",
+            "Amount",
+            "Round Trip",
+            "Status",
+            "Project",
+            "Client",
+            "Notes",
+        ]
+    )
+
+    for entry in entries:
+        multiplier = 2 if entry.is_round_trip else 1
+        amount = float(entry.calculated_amount or 0) * multiplier
+        writer.writerow(
+            [
+                entry.id,
+                entry.trip_date.isoformat() if entry.trip_date else "",
+                (entry.user.display_name if entry.user else ""),
+                entry.purpose or "",
+                entry.start_location or "",
+                entry.end_location or "",
+                float(entry.distance_km or 0),
+                float(entry.rate_per_km or 0),
+                amount,
+                "Yes" if entry.is_round_trip else "No",
+                entry.status or "",
+                (entry.project.name if entry.project else ""),
+                (entry.client.name if entry.client else ""),
+                entry.notes or "",
+            ]
+        )
+
+    csv_bytes = output.getvalue().encode("utf-8")
+    start_part = request.args.get("start_date", "") or "all"
+    end_part = request.args.get("end_date", "") or "all"
+    filename = f"mileage_export_{start_part}_to_{end_part}.csv"
+
+    return send_file(
+        io.BytesIO(csv_bytes),
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+@mileage_bp.route("/mileage/export/pdf")
+@login_required
+@module_enabled("mileage")
+def export_mileage_pdf():
+    """Export (filtered) mileage entries as PDF. Uses same filters as list_mileage."""
+    query = _mileage_export_query()
+    entries = query.all()
+
+    start_date = request.args.get("start_date", "").strip() or None
+    end_date = request.args.get("end_date", "").strip() or None
+
+    pdf_filters = {}
+    if request.args.get("status"):
+        pdf_filters["Status"] = request.args.get("status")
+    if request.args.get("project_id", type=int):
+        proj = Project.query.get(request.args.get("project_id", type=int))
+        if proj:
+            pdf_filters["Project"] = proj.name
+    if request.args.get("client_id", type=int):
+        cli = Client.query.get(request.args.get("client_id", type=int))
+        if cli:
+            pdf_filters["Client"] = cli.name
+
+    try:
+        from app.utils.mileage_pdf import build_mileage_pdf
+        pdf_bytes = build_mileage_pdf(
+            entries,
+            start_date=start_date,
+            end_date=end_date,
+            filters=pdf_filters if pdf_filters else None,
+        )
+    except Exception as e:
+        current_app.logger.warning("Mileage PDF export failed: %s", e, exc_info=True)
+        flash(_("PDF export failed: %(error)s", error=str(e)), "error")
+        return redirect(url_for("mileage.list_mileage"))
+
+    start_part = start_date or "all"
+    end_part = end_date or "all"
+    filename = f"mileage_export_{start_part}_to_{end_part}.pdf"
+
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
 @mileage_bp.route("/mileage/create", methods=["GET", "POST"])
 @login_required
 @module_enabled("mileage")

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, current_app
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, log_event, track_event
@@ -9,6 +9,8 @@ from decimal import Decimal
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required
 from app.utils.module_helpers import module_enabled
+import csv
+import io
 
 per_diem_bp = Blueprint("per_diem", __name__)
 
@@ -19,6 +21,7 @@ per_diem_bp = Blueprint("per_diem", __name__)
 def list_per_diem():
     """List all per diem claims with filters"""
     from app import track_page_view
+    from app.utils.client_lock import enforce_locked_client_id
 
     track_page_view("per_diem_list")
 
@@ -29,6 +32,7 @@ def list_per_diem():
     status = request.args.get("status", "").strip()
     project_id = request.args.get("project_id", type=int)
     client_id = request.args.get("client_id", type=int)
+    client_id = enforce_locked_client_id(client_id)
     start_date = request.args.get("start_date", "").strip()
     end_date = request.args.get("end_date", "").strip()
 
@@ -71,6 +75,8 @@ def list_per_diem():
     # Get filter options
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()
     clients = Client.get_active_clients()
+    only_one_client = len(clients) == 1
+    single_client = clients[0] if only_one_client else None
 
     # Calculate totals
     total_amount_query = db.session.query(db.func.sum(PerDiem.calculated_amount)).filter(
@@ -91,6 +97,8 @@ def list_per_diem():
         pagination=per_diem_pagination,
         projects=projects,
         clients=clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
         total_amount=float(total_amount),
         currency=currency,
         status=status,
@@ -98,6 +106,162 @@ def list_per_diem():
         client_id=client_id,
         start_date=start_date,
         end_date=end_date,
+    )
+
+
+def _per_diem_export_query():
+    """Build the same filtered query as list_per_diem (no pagination)."""
+    from sqlalchemy.orm import joinedload
+    from app.utils.client_lock import enforce_locked_client_id
+
+    status = request.args.get("status", "").strip()
+    project_id = request.args.get("project_id", type=int)
+    client_id = request.args.get("client_id", type=int)
+    client_id = enforce_locked_client_id(client_id)
+    start_date = request.args.get("start_date", "").strip()
+    end_date = request.args.get("end_date", "").strip()
+
+    query = PerDiem.query.options(
+        joinedload(PerDiem.user),
+        joinedload(PerDiem.project),
+        joinedload(PerDiem.client),
+    )
+
+    if not current_user.is_admin:
+        query = query.filter(db.or_(PerDiem.user_id == current_user.id, PerDiem.approved_by == current_user.id))
+
+    if status:
+        query = query.filter(PerDiem.status == status)
+    if project_id:
+        query = query.filter(PerDiem.project_id == project_id)
+    if client_id:
+        query = query.filter(PerDiem.client_id == client_id)
+    if start_date:
+        try:
+            start = datetime.strptime(start_date, "%Y-%m-%d").date()
+            query = query.filter(PerDiem.start_date >= start)
+        except ValueError:
+            pass
+    if end_date:
+        try:
+            end = datetime.strptime(end_date, "%Y-%m-%d").date()
+            query = query.filter(PerDiem.end_date <= end)
+        except ValueError:
+            pass
+
+    return query.order_by(PerDiem.start_date.desc())
+
+
+@per_diem_bp.route("/per-diem/export/csv")
+@login_required
+@module_enabled("per_diem")
+def export_per_diem_csv():
+    """Export (filtered) per diem claims as CSV. Uses same filters as list_per_diem."""
+    query = _per_diem_export_query()
+    entries = query.all()
+
+    settings = Settings.get_settings()
+    delimiter = getattr(settings, "export_delimiter", ",") or ","
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=delimiter)
+
+    writer.writerow(
+        [
+            "ID",
+            "User",
+            "Trip Purpose",
+            "Start Date",
+            "End Date",
+            "Country",
+            "City",
+            "Full Days",
+            "Half Days",
+            "Amount",
+            "Status",
+            "Project",
+            "Client",
+            "Notes",
+        ]
+    )
+
+    for entry in entries:
+        writer.writerow(
+            [
+                entry.id,
+                (entry.user.display_name if entry.user else ""),
+                entry.trip_purpose or "",
+                entry.start_date.isoformat() if entry.start_date else "",
+                entry.end_date.isoformat() if entry.end_date else "",
+                entry.country or "",
+                entry.city or "",
+                entry.full_days or 0,
+                entry.half_days or 0,
+                float(entry.calculated_amount or 0),
+                entry.status or "",
+                (entry.project.name if entry.project else ""),
+                (entry.client.name if entry.client else ""),
+                entry.notes or "",
+            ]
+        )
+
+    csv_bytes = output.getvalue().encode("utf-8")
+    start_part = request.args.get("start_date", "") or "all"
+    end_part = request.args.get("end_date", "") or "all"
+    filename = f"per_diem_export_{start_part}_to_{end_part}.csv"
+
+    return send_file(
+        io.BytesIO(csv_bytes),
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+@per_diem_bp.route("/per-diem/export/pdf")
+@login_required
+@module_enabled("per_diem")
+def export_per_diem_pdf():
+    """Export (filtered) per diem claims as PDF. Uses same filters as list_per_diem."""
+    query = _per_diem_export_query()
+    entries = query.all()
+
+    start_date = request.args.get("start_date", "").strip() or None
+    end_date = request.args.get("end_date", "").strip() or None
+
+    pdf_filters = {}
+    if request.args.get("status"):
+        pdf_filters["Status"] = request.args.get("status")
+    if request.args.get("project_id", type=int):
+        proj = Project.query.get(request.args.get("project_id", type=int))
+        if proj:
+            pdf_filters["Project"] = proj.name
+    if request.args.get("client_id", type=int):
+        cli = Client.query.get(request.args.get("client_id", type=int))
+        if cli:
+            pdf_filters["Client"] = cli.name
+
+    try:
+        from app.utils.per_diem_pdf import build_per_diem_pdf
+        pdf_bytes = build_per_diem_pdf(
+            entries,
+            start_date=start_date,
+            end_date=end_date,
+            filters=pdf_filters if pdf_filters else None,
+        )
+    except Exception as e:
+        current_app.logger.warning("Per diem PDF export failed: %s", e, exc_info=True)
+        flash(_("PDF export failed: %(error)s", error=str(e)), "error")
+        return redirect(url_for("per_diem.list_per_diem"))
+
+    start_part = start_date or "all"
+    end_part = end_date or "all"
+    filename = f"per_diem_export_{start_part}_to_{end_part}.pdf"
+
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename,
     )
 
 

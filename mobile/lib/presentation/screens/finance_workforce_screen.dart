@@ -18,6 +18,7 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
   final TextEditingController _expenseFilterController = TextEditingController();
   final TextEditingController _timeOffFilterController = TextEditingController();
   bool _canApprove = false;
+  int? _currentUserId;
   String _invoiceFilter = '';
   String _expenseFilter = '';
   String _timeOffFilter = '';
@@ -76,6 +77,7 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
     final roleCanApprove = role == 'admin' || role == 'owner' || role == 'manager' || role == 'approver';
     if (mounted) {
       _canApprove = (user['is_admin'] == true) || roleCanApprove;
+      _currentUserId = (user['id'] as num?)?.toInt();
     }
 
     final invoiceTotalPages = ((invoicesRes['pagination'] ?? const {})['pages'] as num?)?.toInt() ?? 1;
@@ -185,6 +187,24 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to review period: $e')),
+      );
+    }
+  }
+
+  Future<void> _deletePeriod(int periodId) async {
+    try {
+      final client = await ref.read(apiClientProvider.future);
+      if (client == null) return;
+      await client.deleteTimesheetPeriod(periodId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Timesheet period deleted')),
+      );
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Delete failed: $e')),
       );
     }
   }
@@ -559,6 +579,24 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Review failed: $e')),
+      );
+    }
+  }
+
+  Future<void> _deleteTimeOffRequest(int requestId) async {
+    try {
+      final client = await ref.read(apiClientProvider.future);
+      if (client == null) return;
+      await client.deleteTimeOffRequest(requestId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Time-off request deleted')),
+      );
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Delete failed: $e')),
       );
     }
   }
@@ -946,7 +984,12 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
                             final start = (req['start_date'] ?? '').toString();
                             final end = (req['end_date'] ?? '').toString();
                             final leaveType = (req['leave_type_name'] ?? 'Leave').toString();
+                            final reqUserId = (req['user_id'] as num?)?.toInt();
                             final isSubmitted = status.toLowerCase() == 'submitted';
+                            final canDelete = requestId != null &&
+                                ['draft', 'submitted', 'cancelled'].contains(status.toLowerCase()) &&
+                                (reqUserId == _currentUserId || _canApprove);
+                            final showMenu = (isSubmitted && _canApprove) || canDelete;
                             return ListTile(
                               dense: true,
                               contentPadding: EdgeInsets.zero,
@@ -956,19 +999,28 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(status),
-                                  if (isSubmitted && requestId != null && _canApprove)
+                                  if (showMenu && requestId != null)
                                     PopupMenuButton<String>(
                                       onSelected: (value) async {
                                         if (value == 'approve') {
                                           await _reviewTimeOffRequest(requestId: requestId, approve: true);
                                         } else if (value == 'reject') {
                                           await _reviewTimeOffRequest(requestId: requestId, approve: false);
+                                        } else if (value == 'delete') {
+                                          await _deleteTimeOffRequest(requestId);
                                         }
                                       },
-                                      itemBuilder: (context) => const [
-                                        PopupMenuItem(value: 'approve', child: Text('Approve')),
-                                        PopupMenuItem(value: 'reject', child: Text('Reject')),
-                                      ],
+                                      itemBuilder: (context) {
+                                        final items = <PopupMenuItem<String>>[];
+                                        if (isSubmitted && _canApprove) {
+                                          items.add(const PopupMenuItem(value: 'approve', child: Text('Approve')));
+                                          items.add(const PopupMenuItem(value: 'reject', child: Text('Reject')));
+                                        }
+                                        if (canDelete) {
+                                          items.add(const PopupMenuItem(value: 'delete', child: Text('Delete')));
+                                        }
+                                        return items;
+                                      },
                                     ),
                                 ],
                               ),
@@ -1034,6 +1086,8 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
                             final periodId = period['id'] as int?;
                             final canSubmit = status.toLowerCase() == 'draft' && periodId != null;
                             final canReview = _canApprove && status.toLowerCase() == 'submitted' && periodId != null;
+                            final canDelete = periodId != null &&
+                                ['draft', 'rejected'].contains(status.toLowerCase());
                             return ListTile(
                               dense: true,
                               contentPadding: EdgeInsets.zero,
@@ -1044,19 +1098,28 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
                                       onPressed: () => _submitPeriod(periodId),
                                       child: const Text('Submit'),
                                     )
-                                  : (canReview
+                                  : (canReview || canDelete
                                       ? PopupMenuButton<String>(
                                           onSelected: (value) async {
                                             if (value == 'approve') {
-                                              await _reviewPeriod(periodId: periodId, approve: true);
+                                              await _reviewPeriod(periodId: periodId!, approve: true);
                                             } else if (value == 'reject') {
-                                              await _reviewPeriod(periodId: periodId, approve: false);
+                                              await _reviewPeriod(periodId: periodId!, approve: false);
+                                            } else if (value == 'delete') {
+                                              await _deletePeriod(periodId!);
                                             }
                                           },
-                                          itemBuilder: (context) => const [
-                                            PopupMenuItem(value: 'approve', child: Text('Approve')),
-                                            PopupMenuItem(value: 'reject', child: Text('Reject')),
-                                          ],
+                                          itemBuilder: (context) {
+                                            final items = <PopupMenuItem<String>>[];
+                                            if (canReview) {
+                                              items.add(const PopupMenuItem(value: 'approve', child: Text('Approve')));
+                                              items.add(const PopupMenuItem(value: 'reject', child: Text('Reject')));
+                                            }
+                                            if (canDelete) {
+                                              items.add(const PopupMenuItem(value: 'delete', child: Text('Delete')));
+                                            }
+                                            return items;
+                                          },
                                         )
                                       : null),
                             );

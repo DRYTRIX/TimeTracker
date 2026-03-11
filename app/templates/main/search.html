@@ -62,7 +62,7 @@
                                     <td>{{ entry.tags or '-' }}</td>
                                     <td class="text-end">
                                         <div class="btn-group" role="group">
-                                            <a href="{{ url_for('timer.resume_timer', timer_id=entry.id) }}" 
+                                            <a href="{{ url_for('timer.resume_timer_by_id', timer_id=entry.id) }}" 
                                                class="btn btn-sm btn-action btn-action--success" title="{{ _('Resume - Start a new timer with same properties') }}">
                                                 <i class="fas fa-play"></i>
                                             </a>

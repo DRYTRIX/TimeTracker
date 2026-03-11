@@ -68,7 +68,22 @@
                 </div>
                 
                 <!-- Timer Controls -->
-                <div class="flex gap-4">
+                <div class="flex gap-4 flex-wrap">
+                    {% if active_timer.is_paused %}
+                    <form action="{{ url_for('timer.resume_timer') }}" method="POST" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors shadow-md">
+                            <i class="fas fa-play mr-2"></i>{{ _('Resume') }}
+                        </button>
+                    </form>
+                    {% else %}
+                    <form action="{{ url_for('timer.pause_timer') }}" method="POST" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="bg-amber-500 text-white px-6 py-3 rounded-lg hover:bg-amber-600 transition-colors shadow-md">
+                            <i class="fas fa-pause mr-2"></i>{{ _('Pause') }}
+                        </button>
+                    </form>
+                    {% endif %}
                     <form action="{{ url_for('timer.stop_timer') }}" method="POST" class="inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition-colors shadow-md">
@@ -76,6 +91,9 @@
                         </button>
                     </form>
                 </div>
+                {% if active_timer.break_seconds %}
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">{{ _('Break') }}: {{ active_timer.break_formatted }}</p>
+                {% endif %}
                 
                 <!-- Duration Estimation -->
                 <div class="mt-6 p-4 bg-background-light dark:bg-background-dark rounded-lg w-full max-w-md">

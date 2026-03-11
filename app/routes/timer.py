@@ -13,6 +13,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.exc import ProgrammingError
 from app.services.project_service import ProjectService
 from app.services.client_service import ClientService
+from app.utils.scope_filter import user_can_access_project, user_can_access_client
 
 _project_service = ProjectService()
 _client_service = ClientService()
@@ -127,6 +128,16 @@ def start_timer():
                 "Start timer failed: task_id=%s provided for client-only timer (client_id=%s)", task_id, client_id
             )
             return redirect(url_for("main.dashboard"))
+
+    # Subcontractor scope: only allow starting timer on assigned project/client
+    if project_id and not user_can_access_project(current_user, project_id):
+        flash(_("You do not have access to this project"), "error")
+        current_app.logger.warning("Start timer denied: user has no access to project_id=%s", project_id)
+        return redirect(url_for("main.dashboard"))
+    if client_id and not project_id and not user_can_access_client(current_user, client_id):
+        flash(_("You do not have access to this client"), "error")
+        current_app.logger.warning("Start timer denied: user has no access to client_id=%s", client_id)
+        return redirect(url_for("main.dashboard"))
 
     # Check if user already has an active timer
     active_timer = current_user.active_timer
@@ -300,6 +311,13 @@ def start_timer_from_template(template_id):
         flash(_("Cannot start timer for this project"), "error")
         return redirect(url_for("time_entry_templates.list_templates"))
 
+    if not user_can_access_project(current_user, template.project_id):
+        flash(_("You do not have access to this project"), "error")
+        current_app.logger.warning(
+            "Start timer from template denied: user has no access to project_id=%s", template.project_id
+        )
+        return redirect(url_for("time_entry_templates.list_templates"))
+
     # Create new timer from template
     from app.models.time_entry import local_now
 
@@ -374,6 +392,11 @@ def start_timer_for_project(project_id):
     elif project.status != "active":
         flash(_("Cannot start timer for an inactive project"), "error")
         current_app.logger.warning("Start timer (GET) failed: project_id=%s is not active", project_id)
+        return redirect(url_for("main.dashboard"))
+
+    if not user_can_access_project(current_user, project_id):
+        flash(_("You do not have access to this project"), "error")
+        current_app.logger.warning("Start timer (GET) denied: user has no access to project_id=%s", project_id)
         return redirect(url_for("main.dashboard"))
 
     # Check if user already has an active timer
@@ -544,6 +567,56 @@ def stop_timer():
         return redirect(url_for("main.dashboard"))
 
 
+@timer_bp.route("/timer/pause", methods=["POST"])
+@login_required
+def pause_timer():
+    """Pause the current user's active timer (clock stops; break accumulates on resume)."""
+    active_timer = current_user.active_timer
+    if not active_timer:
+        flash(_("No active timer to pause"), "error")
+        return redirect(url_for("main.dashboard"))
+    try:
+        active_timer.pause_timer()
+        flash(_("Timer paused"), "success")
+    except ValueError as e:
+        flash(_(str(e)), "error")
+    except Exception as e:
+        current_app.logger.exception("Error pausing timer: %s", e)
+        flash(_("Could not pause timer. Please try again."), "error")
+    try:
+        from app.utils.cache import get_cache
+        cache = get_cache()
+        cache.delete(f"dashboard:{current_user.id}")
+    except Exception:
+        pass
+    return redirect(url_for("main.dashboard"))
+
+
+@timer_bp.route("/timer/resume", methods=["POST"])
+@login_required
+def resume_timer():
+    """Resume a paused timer (time since pause is counted as break)."""
+    active_timer = current_user.active_timer
+    if not active_timer:
+        flash(_("No active timer to resume"), "error")
+        return redirect(url_for("main.dashboard"))
+    try:
+        active_timer.resume_timer()
+        flash(_("Timer resumed"), "success")
+    except ValueError as e:
+        flash(_(str(e)), "error")
+    except Exception as e:
+        current_app.logger.exception("Error resuming timer: %s", e)
+        flash(_("Could not resume timer. Please try again."), "error")
+    try:
+        from app.utils.cache import get_cache
+        cache = get_cache()
+        cache.delete(f"dashboard:{current_user.id}")
+    except Exception:
+        pass
+    return redirect(url_for("main.dashboard"))
+
+
 @timer_bp.route("/timer/adjust", methods=["POST"])
 @login_required
 def adjust_timer():
@@ -606,6 +679,10 @@ def timer_status():
                 "start_time": active_timer.start_time.isoformat(),
                 "current_duration": active_timer.current_duration_seconds,
                 "duration_formatted": active_timer.duration_formatted,
+                "paused": getattr(active_timer, "is_paused", False),
+                "paused_at": active_timer.paused_at.isoformat() if active_timer.paused_at else None,
+                "break_seconds": getattr(active_timer, "break_seconds", None) or 0,
+                "break_formatted": getattr(active_timer, "break_formatted", "00:00:00"),
             },
         }
     )
@@ -701,6 +778,7 @@ def edit_timer(timer_id):
             start_time = request.form.get("start_time")
             end_date = request.form.get("end_date")
             end_time = request.form.get("end_time")
+            break_time = (request.form.get("break_time") or "").strip()
 
             if start_date and start_time:
                 try:
@@ -761,6 +839,14 @@ def edit_timer(timer_id):
                     )
             else:
                 update_params["end_time"] = None
+
+            # Parse break time (HH:MM) to seconds; empty clears break
+            import re
+            if break_time:
+                m = re.match(r"^(\d{1,3}):([0-5]\d)$", break_time.strip())
+                update_params["break_seconds"] = (int(m.group(1)) * 3600 + int(m.group(2)) * 60) if m else 0
+            else:
+                update_params["break_seconds"] = 0
 
         # Call service layer to update
         result = service.update_entry(**update_params)
@@ -1151,6 +1237,7 @@ def manual_entry():
         end_time = request.form.get("end_time")
         worked_time = (request.form.get("worked_time") or "").strip()
         worked_time_mode = (request.form.get("worked_time_mode") or "").strip()  # 'explicit' when user typed duration
+        break_time = (request.form.get("break_time") or "").strip()
         notes = sanitize_input(request.form.get("notes", "").strip(), max_length=2000)
         tags = sanitize_input(request.form.get("tags", "").strip(), max_length=500)
         billable = request.form.get("billable") == "on"
@@ -1169,6 +1256,8 @@ def manual_entry():
             return total if total > 0 else None
 
         worked_minutes = _parse_worked_time_minutes(worked_time)
+        break_minutes = _parse_worked_time_minutes(break_time)
+        break_seconds = (break_minutes * 60) if break_minutes is not None else None
 
         has_all_times = bool(start_date and start_time and end_date and end_time)
         has_duration = worked_minutes is not None
@@ -1195,6 +1284,7 @@ def manual_entry():
                 prefill_end_time=end_time,
                 prefill_worked_time=worked_time,
                 prefill_worked_time_mode=worked_time_mode,
+                prefill_break_time=break_time,
             )
 
         # Validate that either project or client is selected
@@ -1217,6 +1307,9 @@ def manual_entry():
                 prefill_start_time=start_time,
                 prefill_end_date=end_date,
                 prefill_end_time=end_time,
+                prefill_worked_time=worked_time,
+                prefill_worked_time_mode=worked_time_mode,
+                prefill_break_time=break_time,
             )
 
         # If a locked client is configured, ensure selected project matches it.
@@ -1232,6 +1325,7 @@ def manual_entry():
         # Parse datetime: treat form input as user's local time, store in app timezone.
         # If duration + start date/time are provided: end = start + duration.
         # If duration only (no start): end=now, start=end-duration.
+        # Break is subtracted from span to get worked duration.
         from datetime import timedelta
         try:
             if has_all_times:
@@ -1239,6 +1333,8 @@ def manual_entry():
                 end_time_parsed = parse_user_local_datetime(end_date, end_time, current_user)
                 if worked_time_mode == "explicit" and has_duration:
                     duration_seconds_override = worked_minutes * 60
+                # When we have start/end and break, we pass break_seconds and do not override duration;
+                # calculate_duration() will compute (end - start) - break_seconds
             elif has_duration and start_date and start_time:
                 # Combined: worked time + start date/time (user can set date and duration)
                 start_time_parsed = parse_user_local_datetime(start_date, start_time, current_user)
@@ -1271,7 +1367,12 @@ def manual_entry():
                 prefill_end_time=end_time,
                 prefill_worked_time=worked_time,
                 prefill_worked_time_mode=worked_time_mode,
+                prefill_break_time=break_time,
             )
+
+        # When user entered both duration override and break, net duration = duration - break
+        if duration_seconds_override is not None and break_seconds is not None:
+            duration_seconds_override = max(0, duration_seconds_override - break_seconds)
 
         # Validate time range
         if end_time_parsed <= start_time_parsed:
@@ -1293,6 +1394,9 @@ def manual_entry():
                 prefill_start_time=start_time,
                 prefill_end_date=end_date,
                 prefill_end_time=end_time,
+                prefill_worked_time=worked_time,
+                prefill_worked_time_mode=worked_time_mode,
+                prefill_break_time=break_time,
             )
 
         # Use service to create entry (handles validation)
@@ -1304,6 +1408,7 @@ def manual_entry():
             start_time=start_time_parsed,
             end_time=end_time_parsed,
             duration_seconds=duration_seconds_override,
+            break_seconds=break_seconds,
             task_id=task_id,
             notes=notes if notes else None,
             tags=tags if tags else None,
@@ -1331,6 +1436,7 @@ def manual_entry():
                 prefill_end_time=end_time,
                 prefill_worked_time=worked_time,
                 prefill_worked_time_mode=worked_time_mode,
+                prefill_break_time=break_time,
             )
 
         entry = result.get("entry")
@@ -1832,6 +1938,8 @@ def duplicate_timer(timer_id):
     )
 
     # Render the manual entry form with pre-filled data
+    break_sec = getattr(timer, "break_seconds", None) or 0
+    prefill_break = f"{break_sec // 3600}:{(break_sec % 3600) // 60:02d}" if break_sec else ""
     return render_template(
         "timer/manual_entry.html",
         projects=active_projects,
@@ -1844,14 +1952,15 @@ def duplicate_timer(timer_id):
         prefill_notes=timer.notes,
         prefill_tags=timer.tags,
         prefill_billable=timer.billable,
+        prefill_break_time=prefill_break,
         is_duplicate=True,
         original_entry=timer,
     )
 
 
-@timer_bp.route("/timer/resume/<int:timer_id>")
+@timer_bp.route("/timer/resume/<int:timer_id>", endpoint="resume_timer_by_id")
 @login_required
-def resume_timer(timer_id):
+def resume_timer_by_id(timer_id):
     """Resume an existing time entry - starts a new active timer with same properties"""
     timer = TimeEntry.query.get_or_404(timer_id)
 

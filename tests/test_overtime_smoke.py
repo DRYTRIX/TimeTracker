@@ -24,6 +24,7 @@ class TestOvertimeSmoke:
         assert hasattr(overtime, "get_daily_breakdown")
         assert hasattr(overtime, "get_weekly_overtime_summary")
         assert hasattr(overtime, "get_overtime_statistics")
+        assert hasattr(overtime, "get_overtime_ytd")
 
     def test_user_model_has_standard_hours(self, app):
         """Smoke test: verify User model has standard_hours_per_day field"""

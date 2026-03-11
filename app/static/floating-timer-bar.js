@@ -53,16 +53,24 @@
         startElapsedUpdater() {
             this.stopElapsedUpdater();
             const update = () => {
-                if (!this.startTime || !this.bar) return;
-                const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
-                const h = Math.floor(elapsed / 3600);
-                const m = Math.floor((elapsed % 3600) / 60);
-                const s = elapsed % 60;
+                if (!this.timerData || !this.bar) return;
+                let elapsedSec;
+                if (this.timerData.paused) {
+                    elapsedSec = this.timerData.current_duration || 0;
+                } else {
+                    elapsedSec = this.timerData.current_duration != null
+                        ? this.timerData.current_duration
+                        : (this.startTime ? Math.floor((Date.now() - this.startTime) / 1000) : 0);
+                }
+                const h = Math.floor(elapsedSec / 3600);
+                const m = Math.floor((elapsedSec % 3600) / 60);
+                const s = elapsedSec % 60;
                 const formatted = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
                 const el = this.bar.querySelector('[data-timer-elapsed]');
                 if (el) el.textContent = formatted;
                 const btn = this.bar.querySelector('button');
-                if (btn) btn.title = (this.getLabel() || 'Timer') + ' – ' + formatted + ' – ' + (this.stopLabel || 'Stop');
+                const label = this.timerData.paused ? (this.bar.dataset.resumeLabel || 'Resume') : (this.stopLabel || 'Stop');
+                if (btn) btn.title = (this.getLabel() || 'Timer') + (this.timerData.paused ? ' (Paused) – ' : ' – ') + formatted + ' – ' + label;
             };
             update();
             this.elapsedInterval = setInterval(update, 1000);
@@ -86,8 +94,7 @@
         }
 
         async stopTimer() {
-            const tokenEl = document.querySelector('meta[name="csrf-token"]');
-            const token = tokenEl ? tokenEl.getAttribute('content') : '';
+            const token = this.getCsrfToken();
             try {
                 const res = await fetch('/timer/stop', {
                     method: 'POST',
@@ -108,6 +115,33 @@
             }
         }
 
+        async resumeTimer() {
+            const token = this.getCsrfToken();
+            try {
+                const res = await fetch('/timer/resume', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': token },
+                    body: 'csrf_token=' + encodeURIComponent(token),
+                    credentials: 'same-origin'
+                });
+                if (res.redirected) {
+                    window.location.href = res.url;
+                } else {
+                    await this.fetchStatus();
+                }
+            } catch (e) {
+                console.error('Resume timer failed', e);
+                if (window.toastManager) {
+                    window.toastManager.error('Failed to resume timer', 'Error', 3000);
+                }
+            }
+        }
+
+        getCsrfToken() {
+            const tokenEl = document.querySelector('meta[name="csrf-token"]');
+            return tokenEl ? tokenEl.getAttribute('content') || '' : '';
+        }
+
         getLabel() {
             if (!this.timerData) return '';
             return this.timerData.project_name || this.timerData.client_name || 'Timer';
@@ -117,15 +151,19 @@
             if (!this.bar) return;
 
             const baseClass = 'floating-timer-bar__round flex items-center justify-center w-10 h-10 rounded-full text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 text-sm transition-colors';
+            const actionLabel = this.timerData && this.timerData.paused ? (this.bar.dataset.resumeLabel || 'Resume') : (this.stopLabel || 'Stop');
             const title = this.timerData
-                ? (escapeHtml(this.getLabel()) + ' – ' + (this.timerData.duration_formatted || '00:00:00') + ' – ' + escapeHtml(this.stopLabel))
+                ? (escapeHtml(this.getLabel()) + (this.timerData.paused ? ' (Paused) – ' : ' – ') + (this.timerData.duration_formatted || '00:00:00') + ' – ' + escapeHtml(actionLabel))
                 : escapeHtml(this.startLabel);
 
             if (this.timerData) {
+                const isPaused = this.timerData.paused;
+                const pulseClass = isPaused ? 'bg-amber-500' : 'bg-green-500 animate-pulse';
+                const clickHandler = isPaused ? 'window.floatingTimerBar.resumeTimer()' : 'window.floatingTimerBar.stopTimer()';
                 this.bar.innerHTML = `
-                    <button type="button" class="${baseClass} relative" onclick="window.floatingTimerBar.stopTimer()" title="${title}" aria-label="${escapeHtml(this.stopLabel)} – ${escapeHtml(this.getLabel())}">
-                        <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-green-500 animate-pulse" aria-hidden="true"></span>
-                        <i class="fas fa-stopwatch text-base"></i>
+                    <button type="button" class="${baseClass} relative" onclick="${clickHandler}" title="${title}" aria-label="${escapeHtml(actionLabel)} – ${escapeHtml(this.getLabel())}">
+                        <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${pulseClass}" aria-hidden="true"></span>
+                        <i class="fas fa-${isPaused ? 'pause' : 'stopwatch'} text-base"></i>
                         <span class="floating-timer-bar__elapsed sr-only" data-timer-elapsed>${this.timerData.duration_formatted || '00:00:00'}</span>
                     </button>
                 `;

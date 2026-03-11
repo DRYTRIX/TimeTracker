@@ -164,6 +164,7 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
         start_time: datetime = None,
         end_time: datetime = None,
         duration_seconds: Optional[int] = None,
+        break_seconds: Optional[int] = None,
         task_id: Optional[int] = None,
         notes: Optional[str] = None,
         tags: Optional[str] = None,
@@ -171,7 +172,7 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
         paid: bool = False,
         invoice_number: Optional[str] = None,
     ) -> TimeEntry:
-        """Create a manual time entry"""
+        """Create a manual time entry. duration_seconds is net (worked time); break_seconds is subtracted when computing from start/end."""
         entry = self.model(
             user_id=user_id,
             project_id=project_id,
@@ -180,6 +181,7 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
             start_time=start_time,
             end_time=end_time,
             duration_seconds=duration_seconds,
+            break_seconds=break_seconds or 0,
             notes=notes,
             tags=tags,
             billable=billable,
@@ -187,8 +189,6 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
             invoice_number=invoice_number,
             source=TimeEntrySource.MANUAL.value,
         )
-        # If duration_seconds is explicitly provided, `TimeEntry.__init__` will keep it.
-        # Still run calculate_duration() to apply rounding behavior when duration was not provided.
         if duration_seconds is None:
             entry.calculate_duration()
         db.session.add(entry)

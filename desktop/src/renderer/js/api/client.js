@@ -234,6 +234,10 @@ class ApiClient {
     return await this.client.post(`/api/v1/timesheet-periods/${periodId}/reject`, data);
   }
 
+  async deleteTimesheetPeriod(periodId) {
+    return await this.client.delete(`/api/v1/timesheet-periods/${periodId}`);
+  }
+
   async getLeaveTypes() {
     return await this.client.get('/api/v1/time-off/leave-types');
   }
@@ -274,6 +278,10 @@ class ApiClient {
     const data = {};
     if (comment) data.comment = comment;
     return await this.client.post(`/api/v1/time-off/requests/${requestId}/reject`, data);
+  }
+
+  async deleteTimeOffRequest(requestId) {
+    return await this.client.delete(`/api/v1/time-off/requests/${requestId}`);
   }
 }
 

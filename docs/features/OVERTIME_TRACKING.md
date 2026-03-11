@@ -17,6 +17,13 @@ The Overtime Tracking feature allows users to track hours worked beyond their st
    - Navigate to Reports → User Report
    - Select your date range
    - View overtime breakdown in the report table
+   - **Accumulated overtime (YTD):** Your year-to-date overtime is shown on the main Dashboard (in the Month's Hours card), in Analytics (overtime API with `period=ytd`), and on the Workforce / Time-off page next to Leave Balances.
+
+3. **Take Overtime as Paid Leave (Issue #560)**
+   - Go to Workforce (or Time-off / Leave).
+   - Your **Accumulated overtime (YTD)** is displayed next to Leave Balances.
+   - Click **Take as paid leave** to scroll to the time-off request form with the "Overtime" leave type selected.
+   - Enter the number of hours to request (capped at your YTD overtime); submit the request as usual. Approved requests record the hours taken as leave (no automatic balance deduction in v1).
 
 ### For Developers
 
@@ -28,10 +35,10 @@ The Overtime Tracking feature allows users to track hours worked beyond their st
 - `migrations/versions/031_add_standard_hours_per_day.py` - Database migration (daily)
 - `migrations/versions/134_add_overtime_weekly_mode.py` - Weekly mode (Issue #551)
 
-**API Endpoint:**
-```
-GET /api/analytics/overtime?days=30
-```
+**API Endpoints:**
+- `GET /api/analytics/overtime?days=30` — Overtime for the last N days.
+- `GET /api/analytics/overtime?period=ytd` — Year-to-date accumulated overtime.
+- `GET /api/dashboard/stats` and dashboard stats APIs include `overtime_ytd_hours`.
 
 **Key Functions:**
 ```python
@@ -41,15 +48,17 @@ from app.utils.overtime import (
     get_daily_breakdown,
     get_week_start_for_date,
     get_weekly_overtime_summary,
-    get_overtime_statistics
+    get_overtime_statistics,
+    get_overtime_ytd,           # YTD accumulated overtime
+    get_overtime_last_12_months # Optional: last 12 months
 )
 ```
 
 ### Testing
 
 ```bash
-# Run all overtime tests
-pytest tests/test_overtime.py tests/test_overtime_smoke.py -v
+# Run all overtime tests (including YTD and overtime-as-leave)
+pytest tests/test_overtime.py tests/test_overtime_smoke.py tests/test_overtime_leave.py -v
 
 # With coverage
 pytest tests/test_overtime*.py --cov=app.utils.overtime --cov-report=html
@@ -100,14 +109,16 @@ pytest tests/test_overtime*.py --cov=app.utils.overtime --cov-report=html
 - `overtime_calculation_mode`: `VARCHAR(10)`, default `'daily'`, NOT NULL
 - `standard_hours_per_week`: `FLOAT`, nullable
 
-**Migrations:** `031_add_standard_hours_per_day`, `134_add_overtime_weekly_mode`
+**Migrations:** `031_add_standard_hours_per_day`, `134_add_overtime_weekly_mode`, `136_seed_overtime_leave_type` (seeds "Overtime" leave type for take-as-paid-leave)
 
 ## Features
 
 ✅ User-configurable standard hours  
 ✅ Automatic overtime calculation  
 ✅ Display in user reports  
-✅ Analytics API endpoint  
+✅ Analytics API endpoint (including `period=ytd`)  
+✅ **Accumulated overtime (YTD)** on Dashboard, Analytics, and Workforce  
+✅ **Take overtime as paid leave** — Overtime leave type and request flow (Issue #560)  
 ✅ Daily overtime breakdown  
 ✅ Weekly overtime summaries  
 ✅ Comprehensive statistics  
@@ -117,6 +128,7 @@ pytest tests/test_overtime*.py --cov=app.utils.overtime --cov-report=html
 ## Future Enhancements
 
 - Weekly overtime thresholds (implemented as optional weekly mode; see Issue #551)
+- Stored overtime balance and deduction when overtime leave is approved (v1 records only)
 - Overtime approval workflows
 - Overtime pay rate calculations
 - Email notifications for excessive overtime
@@ -132,7 +144,7 @@ For questions or issues:
 
 ---
 
-**Version:** 1.1.0  
+**Version:** 1.2.0  
 **Status:** ✅ Production Ready  
-**Last Updated:** March 9, 2026
+**Last Updated:** March 11, 2026
 

@@ -72,6 +72,7 @@ docs/
 - **[Bulk Time Entry](BULK_TIME_ENTRY_README.md)** — Create multiple time entries at once
 - **[Time Entry Templates](TIME_ENTRY_TEMPLATES.md)** — Reusable time entry templates
 - **[Weekly Time Goals](WEEKLY_TIME_GOALS.md)** — Set and track weekly hour targets
+- **[Break Time for timers and manual entries](BREAK_TIME_FEATURE.md)** — Pause timers (break time) and optional break field on manual entries (Issue #561)
 - **[Time Rounding](TIME_ROUNDING_PREFERENCES.md)** — Configurable time rounding
 - **[Role-Based Permissions](ADVANCED_PERMISSIONS.md)** — Granular access control
 - **[Subcontractor role and assigned clients](SUBCONTRACTOR_ROLE.md)** — Restrict users to specific clients and projects

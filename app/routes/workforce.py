@@ -1,4 +1,4 @@
-﻿from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
 from flask_login import login_required, current_user
@@ -71,11 +71,21 @@ def dashboard():
 
     balances = service.get_leave_balance(selected_user_id)
 
+    from app.models import User
+    from app.utils.overtime import get_overtime_ytd
+
     users = []
     if current_user.is_admin:
-        from app.models import User
-
         users = User.query.order_by(User.username.asc()).all()
+
+    # Accumulated overtime (YTD) for selected user and overtime leave type for "Take as paid leave"
+    selected_user = User.query.get(selected_user_id)
+    overtime_ytd_hours = 0.0
+    overtime_leave_type = service.get_overtime_leave_type()
+    overtime_leave_type_id = overtime_leave_type.id if overtime_leave_type else None
+    if selected_user:
+        overtime_ytd = get_overtime_ytd(selected_user)
+        overtime_ytd_hours = float(overtime_ytd.get("overtime_hours", 0) or 0)
 
     return render_template(
         "workforce/dashboard.html",
@@ -91,6 +101,8 @@ def dashboard():
         capacity=capacity,
         cap_start=cap_start,
         cap_end=cap_end,
+        overtime_ytd_hours=overtime_ytd_hours,
+        overtime_leave_type_id=overtime_leave_type_id,
     )
 
 
@@ -160,6 +172,14 @@ def close_period(period_id):
     return redirect(url_for("workforce.dashboard"))
 
 
+@workforce_bp.route("/workforce/periods/<int:period_id>/delete", methods=["POST"])
+@login_required
+def delete_period(period_id):
+    result = WorkforceGovernanceService().delete_period(period_id=period_id, actor_id=current_user.id)
+    flash(_(result.get("message", "Period deleted")) if result.get("success") else _(result.get("message", "Could not delete period")), "success" if result.get("success") else "error")
+    return redirect(url_for("workforce.dashboard"))
+
+
 @workforce_bp.route("/workforce/policy", methods=["POST"])
 @login_required
 def update_policy():
@@ -207,6 +227,17 @@ def create_leave_type():
     db.session.add(leave_type)
     db.session.commit()
     flash(_("Leave type created"), "success")
+    return redirect(url_for("workforce.dashboard"))
+
+
+@workforce_bp.route("/workforce/leave-types/<int:leave_type_id>/delete", methods=["POST"])
+@login_required
+def delete_leave_type(leave_type_id):
+    if not current_user.is_admin:
+        flash(_("Access denied"), "error")
+        return redirect(url_for("workforce.dashboard"))
+    result = WorkforceGovernanceService().delete_leave_type(leave_type_id)
+    flash(_(result.get("message", "Leave type deleted")) if result.get("success") else _(result.get("message", "Could not delete leave type")), "success" if result.get("success") else "error")
     return redirect(url_for("workforce.dashboard"))
 
 
@@ -272,6 +303,18 @@ def reject_time_off_request(request_id):
     return redirect(url_for("workforce.dashboard"))
 
 
+@workforce_bp.route("/workforce/time-off/<int:request_id>/delete", methods=["POST"])
+@login_required
+def delete_time_off_request(request_id):
+    result = WorkforceGovernanceService().delete_leave_request(
+        request_id=request_id,
+        actor_id=current_user.id,
+        actor_can_approve=_can_approve(),
+    )
+    flash(_(result.get("message", "Time-off request deleted")) if result.get("success") else _(result.get("message", "Could not delete request")), "success" if result.get("success") else "error")
+    return redirect(url_for("workforce.dashboard"))
+
+
 @workforce_bp.route("/workforce/holidays/create", methods=["POST"])
 @login_required
 def create_holiday():
@@ -290,6 +333,17 @@ def create_holiday():
     db.session.add(holiday)
     db.session.commit()
     flash(_("Holiday created"), "success")
+    return redirect(url_for("workforce.dashboard"))
+
+
+@workforce_bp.route("/workforce/holidays/<int:holiday_id>/delete", methods=["POST"])
+@login_required
+def delete_holiday(holiday_id):
+    if not current_user.is_admin:
+        flash(_("Access denied"), "error")
+        return redirect(url_for("workforce.dashboard"))
+    result = WorkforceGovernanceService().delete_holiday(holiday_id)
+    flash(_(result.get("message", "Holiday deleted")) if result.get("success") else _(result.get("message", "Could not delete holiday")), "success" if result.get("success") else "error")
     return redirect(url_for("workforce.dashboard"))
 
 

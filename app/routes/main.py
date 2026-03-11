@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_login import login_required, current_user
-from app.models import User, Project, TimeEntry, Settings, WeeklyTimeGoal, TimeEntryTemplate, Activity
+from app.models import User, Project, TimeEntry, Settings, WeeklyTimeGoal, TimeEntryTemplate, Activity, Client
 from datetime import datetime, timedelta
 from app import db, track_page_view
 from sqlalchemy import text
@@ -39,19 +39,25 @@ def dashboard():
     time_entry_repo = TimeEntryRepository()
     recent_entries = time_entry_repo.get_by_user(user_id=current_user.id, limit=10, include_relations=True)
 
-    # Get active projects for timer dropdown (using repository)
-    from app.repositories import ProjectRepository, ClientRepository
+    # Get active projects and clients for timer dropdown (scoped for subcontractors)
+    from app.utils.scope_filter import apply_project_scope_to_model, apply_client_scope_to_model
 
-    project_repo = ProjectRepository()
-    client_repo = ClientRepository()
-    active_projects = project_repo.get_active_projects()
-    active_clients = client_repo.get_active_clients()
+    projects_query = Project.query.filter_by(status="active").order_by(Project.name)
+    scope_p = apply_project_scope_to_model(Project, current_user)
+    if scope_p is not None:
+        projects_query = projects_query.filter(scope_p)
+    active_projects = projects_query.all()
+    clients_query = Client.query.filter_by(status="active").order_by(Client.name)
+    scope_c = apply_client_scope_to_model(Client, current_user)
+    if scope_c is not None:
+        clients_query = clients_query.filter(scope_c)
+    active_clients = clients_query.all()
     only_one_client = len(active_clients) == 1
     single_client = active_clients[0] if only_one_client else None
 
     # Get user statistics and dashboard aggregations via analytics service
     from app.services import AnalyticsService
-    from app.utils.overtime import calculate_period_overtime, get_week_start_for_date
+    from app.utils.overtime import calculate_period_overtime, get_week_start_for_date, get_overtime_ytd
 
     analytics_service = AnalyticsService()
     stats = analytics_service.get_dashboard_stats(user_id=current_user.id)
@@ -64,6 +70,7 @@ def dashboard():
     week_start_dt = get_week_start_for_date(today_dt, current_user)
     today_overtime = calculate_period_overtime(current_user, today_dt, today_dt)
     week_overtime = calculate_period_overtime(current_user, week_start_dt, today_dt)
+    overtime_ytd = get_overtime_ytd(current_user)
     standard_hours_per_day = float(getattr(current_user, "standard_hours_per_day", 8.0) or 8.0)
 
     # Top projects (last 30 days) and time-by-project chart (last 7 days) from service
@@ -144,7 +151,7 @@ def dashboard():
     # Post-timer toast data (show "Logged Xh on Project" + link to time entries)
     timer_stopped_toast = session.pop("timer_stopped_toast", None)
     if timer_stopped_toast:
-        timer_stopped_toast["time_entries_url"] = url_for("timer.time_entries")
+        timer_stopped_toast["time_entries_url"] = url_for("timer.time_entries_overview")
 
     # Get user stats for smart banner and donation widget
     try:
@@ -181,6 +188,8 @@ def dashboard():
         "today_overtime_hours": today_overtime["overtime_hours"],
         "week_regular_hours": week_overtime["regular_hours"],
         "week_overtime_hours": week_overtime["overtime_hours"],
+        "overtime_ytd_hours": overtime_ytd["overtime_hours"],
+        "overtime_ytd_regular": overtime_ytd["regular_hours"],
         "top_projects": top_projects,
         "time_by_project_7d": time_by_project_7d,
         "chart_labels_7d": chart_labels_7d,

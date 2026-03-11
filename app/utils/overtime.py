@@ -358,6 +358,25 @@ def get_weekly_overtime_summary(user, weeks: int = 4) -> List[Dict]:
     return weekly_summary
 
 
+def get_overtime_ytd(user) -> Dict[str, float]:
+    """
+    Return overtime for the current year to date (Jan 1 through today).
+    Uses calculate_period_overtime; no stored balance.
+    """
+    today = datetime.now().date()
+    start_ytd = date(today.year, 1, 1)
+    return calculate_period_overtime(user, start_ytd, today)
+
+
+def get_overtime_last_12_months(user) -> Dict[str, float]:
+    """
+    Return overtime for the last 12 months (rolling).
+    """
+    today = datetime.now().date()
+    start = today - timedelta(days=365)
+    return calculate_period_overtime(user, start, today)
+
+
 def get_overtime_statistics(user, start_date: date, end_date: date) -> Dict:
     """
     Get comprehensive overtime statistics for a period.

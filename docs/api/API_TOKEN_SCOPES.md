@@ -86,13 +86,15 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 ```
 
 #### `write:time_entries`
-**Grants**: Create, update, and delete time entries; control timer  
+**Grants**: Create, update, and delete time entries; control timer; timesheet periods and time-off requests  
 **Endpoints**:
 - `POST /api/v1/time-entries` - Create time entry
 - `PUT /api/v1/time-entries/{id}` - Update time entry
 - `DELETE /api/v1/time-entries/{id}` - Delete time entry
 - `POST /api/v1/timer/start` - Start timer
 - `POST /api/v1/timer/stop` - Stop timer
+- `DELETE /api/v1/timesheet-periods/{id}` - Delete timesheet period (draft/rejected only; owner or admin)
+- `DELETE /api/v1/time-off/requests/{id}` - Delete time-off request (draft/submitted/cancelled; owner or approver)
 
 **Use Cases**:
 - Time tracking integrations
@@ -199,9 +201,11 @@ curl -X POST https://your-domain.com/api/v1/clients \
 ### Reports
 
 #### `read:reports`
-**Grants**: Access reporting and analytics endpoints  
+**Grants**: Access reporting and analytics endpoints; read leave types and holidays  
 **Endpoints**:
 - `GET /api/v1/reports/summary` - Get summary reports
+- `GET /api/v1/time-off/leave-types` - List leave types
+- `GET /api/v1/time-off/holidays` - List company holidays
 
 **Use Cases**:
 - Business intelligence tools
@@ -218,6 +222,16 @@ curl -X POST https://your-domain.com/api/v1/clients \
 curl -H "Authorization: Bearer YOUR_TOKEN" \
      "https://your-domain.com/api/v1/reports/summary?start_date=2024-01-01&end_date=2024-01-31"
 ```
+
+#### `write:reports`
+**Grants**: Create and delete leave types and company holidays (workforce admin)  
+**Endpoints**:
+- `POST /api/v1/time-off/leave-types` - Create leave type (admin only)
+- `DELETE /api/v1/time-off/leave-types/{id}` - Delete leave type (admin only; blocked if it has time-off requests)
+- `POST /api/v1/time-off/holidays` - Create company holiday (admin only)
+- `DELETE /api/v1/time-off/holidays/{id}` - Delete company holiday (admin only)
+
+**Permissions**: Admin only for these endpoints.
 
 ---
 

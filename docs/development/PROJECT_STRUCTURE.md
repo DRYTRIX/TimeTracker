@@ -115,10 +115,11 @@ TimeTracker/
 Timesheet periods, policies, and time-off tracking for payroll and compliance:
 
 - **Models**: `TimesheetPeriod`, `TimesheetPolicy`, `TimeOff` (in `app/models/`)
-- **Routes**: `workforce` blueprint — dashboard, period close, policies, time-off
-- **Services**: `workforce_governance_service.py` — period close, policy checks, time-off logic
-- **Templates**: `app/templates/workforce/` (e.g. dashboard)
+- **Routes**: `workforce` blueprint — dashboard, period close, policies, time-off, **delete** (periods, time-off requests, leave types, holidays)
+- **Services**: `workforce_governance_service.py` — period close, policy checks, time-off logic, **delete** (period, leave request, leave type, holiday)
+- **Templates**: `app/templates/workforce/` (e.g. dashboard, with delete buttons where allowed)
 - **Migration**: `132_add_timesheet_governance_and_time_off.py`
+- **Docs**: [Workforce delete feature](../features/WORKFORCE_DELETE.md) (Issue #562)
 
 ## ✅ Task Management Feature
 

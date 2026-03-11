@@ -26,6 +26,8 @@ class TimeEntry(db.Model):
     start_time = db.Column(db.DateTime, nullable=False, index=True)
     end_time = db.Column(db.DateTime, nullable=True, index=True)
     duration_seconds = db.Column(db.Integer, nullable=True)
+    break_seconds = db.Column(db.Integer, nullable=True, default=0)
+    paused_at = db.Column(db.DateTime, nullable=True)
     notes = db.Column(db.Text, nullable=True)
     tags = db.Column(db.String(500), nullable=True)  # Comma-separated tags
     source = db.Column(db.String(20), default="manual", nullable=False)  # 'manual' or 'auto'
@@ -55,6 +57,7 @@ class TimeEntry(db.Model):
         paid=False,
         invoice_number=None,
         duration_seconds=None,
+        break_seconds=None,
         **kwargs,
     ):
         """Initialize a TimeEntry instance.
@@ -73,8 +76,11 @@ class TimeEntry(db.Model):
             paid: Whether this entry has been paid
             invoice_number: Optional internal invoice number reference
             duration_seconds: Optional duration override (usually calculated automatically)
+            break_seconds: Optional break time in seconds to subtract from duration
             **kwargs: Additional keyword arguments (for SQLAlchemy compatibility)
         """
+        if break_seconds is not None:
+            self.break_seconds = int(break_seconds)
         if user_id is not None:
             self.user_id = user_id
         if project_id is not None:
@@ -127,6 +133,20 @@ class TimeEntry(db.Model):
         return self.end_time is None
 
     @property
+    def is_paused(self):
+        """Check if this active timer is currently paused"""
+        return self.paused_at is not None
+
+    @property
+    def break_formatted(self):
+        """Format break_seconds as HH:MM:SS for display"""
+        sec = self.break_seconds or 0
+        hours = sec // 3600
+        minutes = (sec % 3600) // 60
+        seconds = sec % 60
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+    @property
     def duration_hours(self):
         """Get duration in hours"""
         if not self.duration_seconds:
@@ -160,20 +180,19 @@ class TimeEntry(db.Model):
 
     @property
     def current_duration_seconds(self):
-        """Calculate current duration for active timers"""
+        """Calculate current duration for active timers (worked time, excluding break)."""
         if self.end_time:
             return self.duration_seconds or 0
 
-        # For active timers, calculate from start time to now
-        # Since we store everything in local timezone, we can work with naive datetimes
-        # as long as we treat them as local time
-
-        # Get current time in local timezone (naive, matching database storage)
+        # For active timers: elapsed time minus break; if paused, time stops at paused_at
+        break_sec = self.break_seconds or 0
         now_local = local_now()
-
-        # Calculate duration (both times are treated as local time)
-        duration = now_local - self.start_time
-        return int(duration.total_seconds())
+        end_ref = self._naive_dt(self.paused_at) if self.paused_at else now_local
+        start_naive = self._naive_dt(self.start_time)
+        if start_naive is None or end_ref is None:
+            return 0
+        raw_seconds = int((end_ref - start_naive).total_seconds())
+        return max(0, raw_seconds - break_sec)
 
     def _naive_dt(self, dt):
         """Return datetime as naive local for duration math (handles DB returning aware in some backends)."""
@@ -197,6 +216,8 @@ class TimeEntry(db.Model):
             return
         duration = end - start
         raw_seconds = int(duration.total_seconds())
+        break_sec = self.break_seconds or 0
+        raw_seconds = max(0, raw_seconds - break_sec)
 
         # Apply per-user rounding if user preferences are set
         if self.user and hasattr(self.user, "time_rounding_enabled"):
@@ -228,6 +249,31 @@ class TimeEntry(db.Model):
         self.calculate_duration()
         self.updated_at = local_now()
 
+        db.session.commit()
+
+    def pause_timer(self):
+        """Pause an active timer (clock stops; break accumulates on resume)."""
+        if self.end_time:
+            raise ValueError("Timer is already stopped")
+        if self.paused_at:
+            raise ValueError("Timer is already paused")
+        self.paused_at = local_now()
+        self.updated_at = local_now()
+        db.session.commit()
+
+    def resume_timer(self):
+        """Resume a paused timer (accumulate time since paused_at into break_seconds)."""
+        if self.end_time:
+            raise ValueError("Timer is already stopped")
+        if not self.paused_at:
+            raise ValueError("Timer is not paused")
+        now = local_now()
+        paused_naive = self._naive_dt(self.paused_at)
+        if paused_naive:
+            added_break = int((now - paused_naive).total_seconds())
+            self.break_seconds = (self.break_seconds or 0) + added_break
+        self.paused_at = None
+        self.updated_at = local_now()
         db.session.commit()
 
     def update_notes(self, notes):
@@ -270,6 +316,8 @@ class TimeEntry(db.Model):
             "start_time": self.start_time.isoformat() if self.start_time else None,
             "end_time": self.end_time.isoformat() if self.end_time else None,
             "duration_seconds": self.duration_seconds,
+            "break_seconds": self.break_seconds,
+            "paused_at": self.paused_at.isoformat() if self.paused_at else None,
             "duration_hours": self.duration_hours,
             "duration_formatted": self.duration_formatted,
             "notes": self.notes,
