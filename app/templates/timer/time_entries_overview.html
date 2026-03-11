@@ -124,6 +124,11 @@
             </div>
             {% endfor %}
             {% endif %}
+            <div class="flex items-end">
+                <button type="submit" class="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-filter mr-2"></i>{{ _('Apply filters') }}
+                </button>
+            </div>
         </form>
     </div>
 </div>
@@ -636,8 +641,31 @@ function confirmBulkDelete() {
             return;
         }
 
-        // Initialize export link based on current URL
-        try { updateExportLink(window.location.pathname + window.location.search); } catch (_) {}
+        // Initialize export links from current form/URL (Issue #555: keep export in sync with filters)
+        try { updateExportLink(buildFilterUrl()); } catch (_) {}
+
+        // Export CSV/PDF: always use current form params on click (Issue #555: export respects date/filters)
+        const exportCsvBtn = document.getElementById('exportCsvBtn');
+        const exportPdfBtn = document.getElementById('exportPdfBtn');
+        function buildExportUrl(base) {
+            const params = getFilterParams();
+            const qs = new URLSearchParams(params).toString();
+            return qs ? base + '?' + qs : base;
+        }
+        if (exportCsvBtn) {
+            exportCsvBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const base = this.getAttribute('data-export-base') || '/time-entries/export/csv';
+                window.location.href = buildExportUrl(base);
+            });
+        }
+        if (exportPdfBtn) {
+            exportPdfBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const base = this.getAttribute('data-export-base') || '/time-entries/export/pdf';
+                window.location.href = buildExportUrl(base);
+            });
+        }
 
         // Event delegation so filters keep working (Issue #489: include text inputs for custom fields)
         form.addEventListener('change', (e) => {
