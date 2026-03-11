@@ -14,6 +14,8 @@ from app.utils.overtime import (
     get_week_start_for_date,
     get_weekly_overtime_summary,
     get_overtime_statistics,
+    get_overtime_ytd,
+    get_overtime_last_12_months,
 )
 
 
@@ -500,4 +502,66 @@ class TestWeeklyOvertimeMode:
         assert result["total_hours"] == 21.0
         assert result["regular_hours"] == 20.0
         assert result["overtime_hours"] == 1.0
+
+
+class TestOvertimeYTD:
+    """Tests for accumulated YTD and last-12-months overtime (Issue #560)."""
+
+    @pytest.fixture
+    def ytd_user(self, app):
+        user = UserFactory()
+        user.standard_hours_per_day = 8.0
+        db.session.add(user)
+        db.session.commit()
+        return user
+
+    @pytest.fixture
+    def ytd_client_project(self, app):
+        client = ClientFactory(name="YTD Client")
+        db.session.commit()
+        project = ProjectFactory(client_id=client.id, name="YTD Project")
+        db.session.commit()
+        return client, project
+
+    def test_get_overtime_ytd_returns_dict(self, app, ytd_user):
+        """get_overtime_ytd returns dict with expected keys."""
+        result = get_overtime_ytd(ytd_user)
+        assert isinstance(result, dict)
+        assert "regular_hours" in result
+        assert "overtime_hours" in result
+        assert "total_hours" in result
+        assert "days_with_overtime" in result
+
+    def test_get_overtime_ytd_no_entries(self, app, ytd_user):
+        """get_overtime_ytd with no entries returns zeros."""
+        result = get_overtime_ytd(ytd_user)
+        assert result["total_hours"] == 0.0
+        assert result["overtime_hours"] == 0.0
+        assert result["regular_hours"] == 0.0
+
+    def test_get_overtime_ytd_with_entries(self, app, ytd_user, ytd_client_project):
+        """get_overtime_ytd includes YTD overtime from time entries."""
+        _client, project = ytd_client_project
+        today = date.today()
+        # One day with 10h (2h overtime)
+        entry_start = datetime.combine(today, datetime.min.time().replace(hour=9))
+        entry_end = entry_start + timedelta(hours=10)
+        TimeEntryFactory(
+            user_id=ytd_user.id,
+            project_id=project.id,
+            start_time=entry_start,
+            end_time=entry_end,
+        )
+        db.session.commit()
+        result = get_overtime_ytd(ytd_user)
+        assert result["total_hours"] == 10.0
+        assert result["regular_hours"] == 8.0
+        assert result["overtime_hours"] == 2.0
+
+    def test_get_overtime_last_12_months_returns_dict(self, app, ytd_user):
+        """get_overtime_last_12_months returns dict with expected keys."""
+        result = get_overtime_last_12_months(ytd_user)
+        assert isinstance(result, dict)
+        assert "overtime_hours" in result
+        assert "total_hours" in result
 
