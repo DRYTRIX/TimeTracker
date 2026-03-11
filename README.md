@@ -70,7 +70,7 @@ TimeTracker is built with modern, reliable technologies:
 - **flake8** — Linting
 - **coverage** — Test coverage analysis
 
-**📖 For detailed architecture information, see [Project Structure](docs/development/PROJECT_STRUCTURE.md)**
+**📖 Documentation:** [Architecture overview](ARCHITECTURE.md) · [Project Structure](docs/development/PROJECT_STRUCTURE.md)
 
 ---
 
@@ -80,7 +80,7 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 > **📋 For complete release history, see [CHANGELOG.md](CHANGELOG.md)**
 
-**Latest Release: v4.20.6** (February 2025). Version is defined in `setup.py` (single source of truth).
+**Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for release history.
 - 📱 **Native Mobile & Desktop Apps** — Flutter mobile app (iOS/Android) and Electron desktop app with time tracking, offline support, and API integration ([Build Guide](BUILD.md), [Docs](docs/mobile-desktop-apps/README.md))
 - 📋 **Project Analysis & Documentation** — Comprehensive project analysis and documentation updates
 - 🔧 **Version Consistency** — Fixed version inconsistencies across documentation files
@@ -392,6 +392,8 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 
 ## 🚀 Quick Start
 
+For a full step-by-step guide, see **[INSTALLATION.md](INSTALLATION.md)**.
+
 ### Prerequisites
 
 Before you begin, ensure you have:
@@ -576,7 +578,8 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory. See 
 
 **For New Users:**
 - **[Getting Started Guide](docs/GETTING_STARTED.md)** — Complete beginner's tutorial (⭐ Start here!)
-- **[Installation Guide](docs/admin/configuration/DOCKER_PUBLIC_SETUP.md)** — Detailed setup instructions
+- **[Installation Guide](INSTALLATION.md)** — Step-by-step installation (Docker, SQLite test)
+- **[Docker Public Setup](docs/admin/configuration/DOCKER_PUBLIC_SETUP.md)** — Production deployment
 - **[Quick Start Guide](docs/guides/QUICK_START_GUIDE.md)** — Get up and running quickly
 
 **For Administrators:**
@@ -587,9 +590,12 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory. See 
 - **[Version Management](docs/admin/deployment/VERSION_MANAGEMENT.md)** — Updates and releases
 
 **For Developers:**
-- **[Contributing Guidelines](docs/development/CONTRIBUTING.md)** — How to contribute
-- **[Project Structure](docs/development/PROJECT_STRUCTURE.md)** — Codebase architecture
-- **[API Documentation](docs/api/REST_API.md)** — Complete REST API reference
+- **[Contributing](CONTRIBUTING.md)** — How to contribute (quick link)
+- **[Contributing Guidelines (full)](docs/development/CONTRIBUTING.md)** — Setup, standards, PR process
+- **[Development Guide](DEVELOPMENT.md)** — Run locally, test, release process
+- **[Architecture](ARCHITECTURE.md)** — System overview and design
+- **[Project Structure](docs/development/PROJECT_STRUCTURE.md)** — Codebase layout
+- **[API Documentation](API.md)** — API quick reference · [Full REST API](docs/api/REST_API.md)
 - **[Database Migrations](migrations/README.md)** — Schema management
 - **[CI/CD Documentation](docs/cicd/CI_CD_DOCUMENTATION.md)** — Build and deployment
 
@@ -957,7 +963,7 @@ We welcome contributions! Whether it's:
    ```
 
 3. **Make Your Changes**
-   - Follow the [Contributing Guidelines](docs/development/CONTRIBUTING.md)
+   - Follow the [Contributing guidelines](CONTRIBUTING.md) and [full Contributing doc](docs/development/CONTRIBUTING.md)
    - Write tests for new features
    - Update documentation as needed
 
@@ -966,8 +972,10 @@ We welcome contributions! Whether it's:
    - Reference any related issues
    - Ensure all tests pass
 
-**📖 See [Contributing Guidelines](docs/development/CONTRIBUTING.md) for complete details**  
-**📖 See [Development Setup](docs/development/LOCAL_TESTING_WITH_SQLITE.md) for local development**
+**📖 [CONTRIBUTING.md](CONTRIBUTING.md)** — Quick contributing overview  
+**📖 [Full Contributing Guidelines](docs/development/CONTRIBUTING.md)** — Setup, standards, PR process  
+**📖 [DEVELOPMENT.md](DEVELOPMENT.md)** — Run locally, tests, releases  
+**📖 [Local Testing with SQLite](docs/development/LOCAL_TESTING_WITH_SQLITE.md)** — Docker SQLite setup
 
 ---
 
