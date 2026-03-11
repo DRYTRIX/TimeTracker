@@ -248,7 +248,8 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 - **Multi-Currency** — Support for multiple currencies with conversion
 
 ### 📈 **Analytics & Reporting**
-- **Visual Dashboards** — Charts and graphs for quick insights
+- **Visual Dashboards** — Charts and graphs for quick insights; dashboard includes **time-by-project chart (last 7 days)** and **weekly goal progress bar**
+- **Summary Report** — Today/week/month hours with **time-by-project** and **daily trend (14 days)** charts; **export summary as PDF**
 - **Detailed Reports** — Time breakdown by project, user, or date range
 - **CSV Export** — Export data for external analysis
 - **Billable vs Non-billable** — Separate tracking for accurate billing
@@ -277,8 +278,9 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 - **Quick Actions Menu** — Floating action button with 6 quick actions (bottom-right)
 - **Enhanced Data Tables** — Sortable, filterable, inline-editable tables with bulk operations
 - **Email Notifications** — Configurable email alerts for tasks, invoices, and more
-- **Toast Notifications** — Beautiful in-app notifications for actions and updates
-- **Weekly Summaries** — Optional weekly time tracking summaries via email
+- **Toast Notifications** — Beautiful in-app notifications; **post-timer toast** shows "Logged Xh on Project" with link to time entries
+- **Weekly Summaries** — Optional weekly time tracking summaries via email (enable in Settings)
+- **Remind to Log** — Optional end-of-day email reminder to log time (Settings → Remind me to log time at end of day; set time in your timezone)
 - **Activity Feed** — Track recent activity across the system
 - **Saved Filters** — Save frequently used report filters for quick access
 - **Recently Viewed** — Quick access to recently viewed items
@@ -309,7 +311,7 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 ### 🏠 Dashboard — Your Command Center
 <img src="assets/screenshots/Dashboard.png" alt="Dashboard" width="700">
 
-*Start timers, view recent entries, and see your productivity at a glance*
+*Start timers, view recent entries, and see your productivity at a glance. **Daily workflow:** Start timer → work → stop → see recap toast with link to time entries; check dashboard for time-by-project chart (last 7 days) and weekly goal progress.*
 
 ---
 

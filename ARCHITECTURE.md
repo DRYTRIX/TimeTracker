@@ -62,7 +62,7 @@ flowchart TB
 - **Web request:** User or browser → Nginx (if used) → Flask → blueprint in `app/routes/` → optional **service** in `app/services/` → **models** and DB → response (HTML or JSON).
 - **API request:** Same path; API blueprints (`api`, `api_v1`, `api_v1_time_entries`, etc.) return JSON and use token auth (see [API documentation](docs/api/REST_API.md)).
 - **Real-time:** Flask-SocketIO is used for live timer updates; clients connect over WebSocket and receive events from the server.
-- **Background:** APScheduler runs periodic tasks (e.g. reminders, cleanup) inside the app process.
+- **Background:** APScheduler runs periodic tasks (e.g. scheduled reports, weekly summaries, remind-to-log end-of-day emails, reminders, cleanup) inside the app process. Report exports include time-entries PDF and summary-report PDF ([app/utils/summary_report_pdf.py](app/utils/summary_report_pdf.py)).
 
 API endpoints are versioned under `/api/v1/`. Authentication is session-based for the web UI and API-token (Bearer or `X-API-Key`) for the API.
 

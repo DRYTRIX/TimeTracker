@@ -13,12 +13,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ZUGFeRD / PDF/A-3 and PEPPOL (Discussion #433)** — ZUGFeRD embedding no longer silently succeeds without XML when the embed step fails; export is aborted with an actionable error. XMP metadata is created when missing so validators recognize the document. Optional PDF/A-3 normalization (XMP identification and output intent) and optional veraPDF validation gate added. Native PEPPOL transport (SML/SMP + AS4) and strict sender/recipient identifier validation added.
 
 ### Added
+- **Dashboard time-by-project chart** — "Time by project (last 7 days)" horizontal bar chart on the dashboard (Chart.js); link to Summary report.
+- **Summary report charts** — Time-by-project (last 30 days) bar chart and daily trend (last 14 days) line chart on the Summary report page.
+- **Summary report PDF export** — New route `/reports/summary/export/pdf`; one-page PDF with today/week/month hours and top projects table ([app/utils/summary_report_pdf.py](app/utils/summary_report_pdf.py)).
+- **Post-timer toast** — After stopping the timer, a success toast shows "Logged Xh on [Project]" with an action link "View time entries"; toast manager supports optional `actionLink` and `actionLabel`.
+- **Remind to log** — User setting "Remind me to log time at end of day" with time picker (Settings); scheduled task runs hourly and sends one email per day to users who have the reminder enabled and have logged &lt; 0.5h that day (in their timezone). Migration `135_add_remind_to_log_settings` adds `notification_remind_to_log` and `reminder_to_log_time` to users.
 - **Migration merge 133** — Merge heads 132 (timesheet governance) and 129 (task tags) so `flask db upgrade` runs without conflicts.
 - **PEPPOL native transport** — Transport mode can be set to **Native** (SML/SMP participant discovery + AS4 send) in addition to **Generic** (HTTP JSON access point). Sender and recipient identifiers are validated before send. New settings: `peppol_transport_mode`, `peppol_sml_url`, `peppol_native_cert_path`, `peppol_native_key_path` (Admin → Peppol e-Invoicing).
 - **PDF/A-3 and validation** — Option **Normalize ZUGFeRD PDFs to PDF/A-3** and optional **Run veraPDF after export** with configurable path. Migration `130_add_peppol_transport_mode_and_native` adds the new columns.
 - **Dashboard timer widget** — Pause and Stop buttons while a timer is running (Pause saves the segment so you can resume later). When no timer is active, a prominent "Resume (project name)" button restarts tracking with the same project/task/notes as your last entry. Quick time adjustment buttons (−15 / −5 / +5 / +15 minutes) let you correct the current session without leaving the dashboard. New route `POST /timer/adjust` for start-time adjustment.
 
 ### Changed
+- **Dashboard** — Weekly goal widget already showed progress bar; added time-by-project (7d) chart and chart data from main route.
+- **Summary report** — Added Chart.js time-by-project and daily-trend charts; added Export PDF button; backend passes chart and trend data from AnalyticsService.
+- **Toast notifications** — Optional `actionLink` and `actionLabel` in toast manager for action links in toasts.
+- **Documentation** — README updated with new features (dashboard chart, summary charts/PDF, post-timer toast, remind to log); daily workflow note in Screenshots section.
 - **Log Time Manually page** — Redesigned for a more professional layout: form grouped into sections (Project & task, Date & time, Details) with clear headings and icons; main card uses rounded-xl and shadow-lg; unified label and helper text styling; primary "Log Time" and secondary "Clear" buttons aligned with dashboard button styles; duplicate-entry banner uses rounded-xl.
 
 ## [4.20.6] - 2025-02-20
