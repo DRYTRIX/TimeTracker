@@ -15,6 +15,16 @@ def register_all_blueprints(app, logger=None):
     from app.routes.api import api_bp
     from app.routes.api_v1 import api_v1_bp
     from app.routes.api_v1_time_entries import api_v1_time_entries_bp
+    from app.routes.api_v1_projects import api_v1_projects_bp
+    from app.routes.api_v1_tasks import api_v1_tasks_bp
+    from app.routes.api_v1_clients import api_v1_clients_bp
+    from app.routes.api_v1_invoices import api_v1_invoices_bp
+    from app.routes.api_v1_expenses import api_v1_expenses_bp
+    from app.routes.api_v1_payments import api_v1_payments_bp
+    from app.routes.api_v1_mileage import api_v1_mileage_bp
+    from app.routes.api_v1_deals import api_v1_deals_bp
+    from app.routes.api_v1_leads import api_v1_leads_bp
+    from app.routes.api_v1_contacts import api_v1_contacts_bp
     from app.routes.api_docs import api_docs_bp, swaggerui_blueprint
     from app.routes.analytics import analytics_bp
     from app.routes.tasks import tasks_bp
@@ -69,6 +79,16 @@ def register_all_blueprints(app, logger=None):
     app.register_blueprint(api_bp)
     app.register_blueprint(api_v1_bp)
     app.register_blueprint(api_v1_time_entries_bp)
+    app.register_blueprint(api_v1_projects_bp)
+    app.register_blueprint(api_v1_tasks_bp)
+    app.register_blueprint(api_v1_clients_bp)
+    app.register_blueprint(api_v1_invoices_bp)
+    app.register_blueprint(api_v1_expenses_bp)
+    app.register_blueprint(api_v1_payments_bp)
+    app.register_blueprint(api_v1_mileage_bp)
+    app.register_blueprint(api_v1_deals_bp)
+    app.register_blueprint(api_v1_leads_bp)
+    app.register_blueprint(api_v1_contacts_bp)
     app.register_blueprint(api_docs_bp)
     app.register_blueprint(swaggerui_blueprint)
     app.register_blueprint(analytics_bp)

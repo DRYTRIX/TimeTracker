@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Architecture refactor** — API v1 split into per-resource sub-blueprints (projects, tasks, clients, invoices, expenses, payments, mileage, deals, leads, contacts) under `app/routes/api_v1_*.py`; bootstrap slimmed by moving `setup_logging` to `app/utils/setup_logging.py` and legacy migrations to `app/utils/legacy_migrations.py`. Dashboard aggregations (top projects, time-by-project chart) moved into `AnalyticsService` (`get_dashboard_top_projects`, `get_time_by_project_chart`); dashboard route simplified to call services only. ARCHITECTURE.md updated with module table, API structure, and data flow; DEVELOPMENT.md with development workflow and build steps.
+
 ### Fixed
 - **Dashboard cache (Issue #549)** — Removed dashboard caching that caused "Instance not bound to a Session" and "Database Error" on second visit. Cached template data contained ORM objects (active_timer, recent_entries, top_projects, templates, etc.) that become detached when served in a different request.
 - **Task description field (Issue #535)** — When creating or editing a task, the description field could appear missing or broken if the Toast UI Editor (loaded from CDN) failed to load (e.g. reverse proxy, CSP, Firefox, or offline). A fallback now shows a plain textarea so users can always enter a description; Markdown is still supported when the rich editor loads.

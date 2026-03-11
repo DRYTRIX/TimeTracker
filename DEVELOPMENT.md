@@ -90,6 +90,13 @@ For more detail, see [ARCHITECTURE.md](ARCHITECTURE.md) and [Project Structure](
 - Follow the [Contributing guidelines](docs/development/CONTRIBUTING.md): PEP 8, Black (line length 88), type hints and docstrings where appropriate.
 - Use blueprints for routes; keep business logic in [services](docs/development/SERVICE_LAYER_AND_BASE_CRUD.md).
 
+## Development Workflow
+
+1. Create a branch for your change.
+2. Run tests locally: `pytest` (or `pytest --cov=app` for coverage).
+3. Lint/format: follow [Contributing](docs/development/CONTRIBUTING.md) (e.g. Black, flake8).
+4. For user-facing changes, add an entry under **Unreleased** in [CHANGELOG.md](CHANGELOG.md).
+
 ## Running Tests
 
 ```bash
@@ -101,9 +108,18 @@ pytest --cov=app
 
 # Single file
 pytest tests/test_timer.py
+
+# Single test class or test
+pytest tests/test_routes/test_api_v1_projects_refactored.py -v
 ```
 
 See [Contributing – Testing](docs/development/CONTRIBUTING.md#testing) for more options and conventions.
+
+## Build Steps
+
+- **Web app:** No separate frontend build required; Tailwind and static assets are served as-is (or built via your pipeline if you use one). Run the app with `flask run` or `python app.py`.
+- **Docker image:** `docker build -t timetracker .` from repo root. See [Docker Compose Setup](docs/admin/configuration/DOCKER_COMPOSE_SETUP.md).
+- **Mobile/Desktop:** See [BUILD.md](BUILD.md) and [docs/mobile-desktop-apps/README.md](docs/mobile-desktop-apps/README.md) for Flutter and Electron build steps.
 
 ## Contributing
 

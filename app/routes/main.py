@@ -49,69 +49,29 @@ def dashboard():
     only_one_client = len(active_clients) == 1
     single_client = active_clients[0] if only_one_client else None
 
-    # Get user statistics using analytics service
+    # Get user statistics and dashboard aggregations via analytics service
     from app.services import AnalyticsService
+    from app.utils.overtime import calculate_period_overtime, get_week_start_for_date
 
     analytics_service = AnalyticsService()
     stats = analytics_service.get_dashboard_stats(user_id=current_user.id)
-
     today_hours = stats["time_tracking"]["today_hours"]
     week_hours = stats["time_tracking"]["week_hours"]
     month_hours = stats["time_tracking"]["month_hours"]
 
     # Overtime for dashboard cards (today and week)
-    from app.utils.overtime import calculate_period_overtime, get_week_start_for_date
     today_dt = datetime.utcnow().date()
     week_start_dt = get_week_start_for_date(today_dt, current_user)
     today_overtime = calculate_period_overtime(current_user, today_dt, today_dt)
     week_overtime = calculate_period_overtime(current_user, week_start_dt, today_dt)
     standard_hours_per_day = float(getattr(current_user, "standard_hours_per_day", 8.0) or 8.0)
 
-    # Build Top Projects (last 30 days) - using optimized query with eager loading
-    from sqlalchemy.orm import joinedload
-
-    period_start = datetime.utcnow().date() - timedelta(days=30)
-    entries_30 = (
-        TimeEntry.query.options(joinedload(TimeEntry.project))  # Eager load projects to avoid N+1
-        .filter(
-            TimeEntry.end_time.isnot(None), TimeEntry.start_time >= period_start, TimeEntry.user_id == current_user.id
-        )
-        .all()
-    )
-    project_hours = {}
-    for e in entries_30:
-        if not e.project:
-            continue
-        project_hours.setdefault(e.project.id, {"project": e.project, "hours": 0.0, "billable_hours": 0.0})
-        project_hours[e.project.id]["hours"] += e.duration_hours
-        if e.billable and e.project.billable:
-            project_hours[e.project.id]["billable_hours"] += e.duration_hours
-    top_projects = sorted(project_hours.values(), key=lambda x: x["hours"], reverse=True)[:5]
-
-    # Time by project (last 7 days) for dashboard chart
-    period_7d_start = datetime.utcnow().date() - timedelta(days=7)
-    entries_7d = (
-        TimeEntry.query.options(joinedload(TimeEntry.project))
-        .filter(
-            TimeEntry.end_time.isnot(None),
-            TimeEntry.start_time >= period_7d_start,
-            TimeEntry.user_id == current_user.id,
-        )
-        .all()
-    )
-    project_hours_7d = {}
-    for e in entries_7d:
-        if not e.project:
-            continue
-        project_hours_7d.setdefault(e.project.id, {"name": e.project.name, "hours": 0.0})
-        project_hours_7d[e.project.id]["hours"] += e.duration_hours
-    time_by_project_7d = sorted(
-        [{"label": v["name"], "hours": round(v["hours"], 2)} for v in project_hours_7d.values()],
-        key=lambda x: x["hours"],
-        reverse=True,
-    )[:10]  # Top 10 for chart
-    chart_labels_7d = [x["label"] for x in time_by_project_7d]
-    chart_hours_7d = [x["hours"] for x in time_by_project_7d]
+    # Top projects (last 30 days) and time-by-project chart (last 7 days) from service
+    top_projects = analytics_service.get_dashboard_top_projects(current_user.id, days=30, limit=5)
+    chart_data = analytics_service.get_time_by_project_chart(current_user.id, days=7, limit=10)
+    time_by_project_7d = chart_data["series"]
+    chart_labels_7d = chart_data["chart_labels"]
+    chart_hours_7d = chart_data["chart_hours"]
 
     # Get current week goal
     current_week_goal = WeeklyTimeGoal.get_current_week_goal(current_user.id)

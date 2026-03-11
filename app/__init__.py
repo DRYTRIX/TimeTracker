@@ -658,7 +658,8 @@ def create_app(config=None):
     app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(seconds=int(os.getenv("PERMANENT_SESSION_LIFETIME", 86400)))
 
     # Setup logging (including JSON logging)
-    setup_logging(app)
+    from app.utils.setup_logging import setup_logging as _setup_logging
+    _setup_logging(app)
 
     # Enable query logging in development mode
     if app.config.get("FLASK_DEBUG") or app.config.get("TESTING"):
@@ -1267,9 +1268,8 @@ def create_app(config=None):
             db.create_all()
 
             # Check and migrate Task Management tables if needed
+            from app.utils.legacy_migrations import migrate_task_management_tables, migrate_issues_table
             migrate_task_management_tables()
-            
-            # Check and migrate Issues table if needed
             migrate_issues_table()
 
             # Create default admin user or demo user if it doesn't exist
@@ -1316,154 +1316,6 @@ def create_app(config=None):
     return app
 
 
-def setup_logging(app):
-    """Setup application logging including JSON logging"""
-    log_level = os.getenv("LOG_LEVEL", "INFO")
-    # Default to a file in the project logs directory if not provided
-    default_log_path = os.path.abspath(
-        os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs", "timetracker.log")
-    )
-    log_file = os.getenv("LOG_FILE", default_log_path)
-
-    # JSON log file path
-    json_log_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs", "app.jsonl"))
-
-    # Prepare handlers
-    handlers = [logging.StreamHandler()]
-
-    # Add file handler (default or specified)
-    try:
-        # Ensure log directory exists
-        log_dir = os.path.dirname(log_file)
-        if log_dir and not os.path.exists(log_dir):
-            os.makedirs(log_dir, exist_ok=True)
-
-        # Create rotating file handler (10MB max, keep 5 backups)
-        from logging.handlers import RotatingFileHandler
-
-        file_handler = RotatingFileHandler(
-            log_file, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
-        )
-        handlers.append(file_handler)
-    except (PermissionError, OSError) as e:
-        print(f"Warning: Could not create log file '{log_file}': {e}")
-        print("Logging to console only")
-        # Don't add file handler, just use console logging
-
-    # Configure Flask app logger directly (works well under gunicorn)
-    for handler in handlers:
-        handler.setLevel(getattr(logging, log_level.upper()))
-        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"))
-
-    # Clear existing handlers to avoid duplicate logs
-    app.logger.handlers.clear()
-    app.logger.propagate = False
-    app.logger.setLevel(getattr(logging, log_level.upper()))
-    for handler in handlers:
-        app.logger.addHandler(handler)
-
-    # Also configure root logger so modules using logging.getLogger() are captured
-    root_logger = logging.getLogger()
-    root_logger.setLevel(getattr(logging, log_level.upper()))
-    # Avoid duplicating handlers if already attached
-    root_logger.handlers = []
-    for handler in handlers:
-        root_logger.addHandler(handler)
-
-    # Setup JSON logging for structured events
-    try:
-        json_log_dir = os.path.dirname(json_log_path)
-        if json_log_dir and not os.path.exists(json_log_dir):
-            os.makedirs(json_log_dir, exist_ok=True)
-
-        from logging.handlers import RotatingFileHandler as _RotatingFileHandler
-
-        json_handler = _RotatingFileHandler(
-            json_log_path, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
-        )
-        json_formatter = jsonlogger.JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s")
-        json_handler.setFormatter(json_formatter)
-        json_handler.setLevel(logging.INFO)
-
-        # Add JSON handler to the timetracker logger
-        json_logger.handlers.clear()
-        json_logger.addHandler(json_handler)
-        json_logger.propagate = False
-
-        app.logger.info(f"JSON logging initialized: {json_log_path}")
-    except (PermissionError, OSError) as e:
-        app.logger.warning(f"Could not initialize JSON logging: {e}")
-
-    # Suppress noisy logs in production
-    if not app.debug:
-        logging.getLogger("werkzeug").setLevel(logging.ERROR)
-
-
-def migrate_task_management_tables():
-    """Check and migrate Task Management tables if they don't exist"""
-    try:
-        from sqlalchemy import inspect, text
-
-        # Check if tasks table exists
-        inspector = inspect(db.engine)
-        existing_tables = inspector.get_table_names()
-
-        if "tasks" not in existing_tables:
-            print("Task Management: Creating tasks table...")
-            # Create the tasks table
-            db.create_all()
-            print("✓ Tasks table created successfully")
-        else:
-            print("Task Management: Tasks table already exists")
-
-        # Check if task_id column exists in time_entries table
-        if "time_entries" in existing_tables:
-            time_entries_columns = [col["name"] for col in inspector.get_columns("time_entries")]
-            if "task_id" not in time_entries_columns:
-                print("Task Management: Adding task_id column to time_entries table...")
-                try:
-                    # Add task_id column to time_entries table
-                    db.engine.execute(text("ALTER TABLE time_entries ADD COLUMN task_id INTEGER REFERENCES tasks(id)"))
-                    print("✓ task_id column added to time_entries table")
-                except Exception as e:
-                    print(f"⚠ Warning: Could not add task_id column: {e}")
-                    print("  You may need to manually add this column or recreate the database")
-            else:
-                print("Task Management: task_id column already exists in time_entries table")
-
-        print("Task Management migration check completed")
-
-    except Exception as e:
-        print(f"⚠ Warning: Task Management migration check failed: {e}")
-        print("  The application will continue, but Task Management features may not work properly")
-
-
-def migrate_issues_table():
-    """Check and migrate Issues table if it doesn't exist"""
-    try:
-        from sqlalchemy import inspect
-
-        # Check if issues table exists
-        inspector = inspect(db.engine)
-        existing_tables = inspector.get_table_names()
-
-        if "issues" not in existing_tables:
-            print("Issues: Creating issues table...")
-            # Import Issue model to ensure it's registered
-            from app.models import Issue
-            # Create the issues table
-            Issue.__table__.create(db.engine, checkfirst=True)
-            print("✓ Issues table created successfully")
-        else:
-            print("Issues: Issues table already exists")
-
-        print("Issues migration check completed")
-
-    except Exception as e:
-        print(f"⚠ Warning: Issues migration check failed: {e}")
-        print("  The application will continue, but Issues features may not work properly")
-
-
 def init_database(app):
     """Initialize database tables and create default admin user"""
     with app.app_context():
@@ -1484,7 +1336,9 @@ def init_database(app):
             db.create_all()
 
             # Check and migrate Task Management tables if needed
+            from app.utils.legacy_migrations import migrate_task_management_tables, migrate_issues_table
             migrate_task_management_tables()
+            migrate_issues_table()
 
             # Create default admin user or demo user if it doesn't exist
             if app.config.get("DEMO_MODE"):
