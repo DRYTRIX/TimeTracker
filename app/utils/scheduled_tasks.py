@@ -15,7 +15,7 @@ from app.models import (
     ReportEmailSchedule,
     Integration,
 )
-from app.utils.email import send_overdue_invoice_notification, send_weekly_summary, send_quote_expired_notification
+from app.utils.email import send_overdue_invoice_notification, send_weekly_summary, send_quote_expired_notification, send_remind_to_log_email
 from app.utils.budget_forecasting import check_budget_alerts
 from app.services.scheduled_report_service import ScheduledReportService
 from app.services.integration_service import IntegrationService
@@ -560,8 +560,94 @@ def register_scheduled_tasks(scheduler, app=None):
         )
         logger.info("Registered scheduled reports task")
 
+        # Remind to log time (end-of-day reminder) – every hour, check users whose local time matches their reminder time
+        def process_remind_to_log_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for remind-to-log processing")
+                    return
+            with app_instance.app_context():
+                process_remind_to_log()
+
+        scheduler.add_job(
+            func=process_remind_to_log_with_app,
+            trigger="cron",
+            minute=0,
+            id="process_remind_to_log",
+            name="Process remind-to-log notifications",
+            replace_existing=True,
+        )
+        logger.info("Registered remind-to-log task")
+
     except Exception as e:
         logger.error(f"Error registering scheduled tasks: {e}")
+
+
+def process_remind_to_log():
+    """Send end-of-day reminder to log time to users who have it enabled and have not logged (or logged very little) today.
+
+    Runs every hour; for each user with notification_remind_to_log and reminder_to_log_time set,
+    if current time in user's timezone matches the reminder hour and they have < 0.5h logged today (user's local day), send email.
+    """
+    from datetime import time as dt_time
+    from app.utils.timezone import now_in_user_timezone, get_timezone_for_user
+    from datetime import timezone as tz_utc
+
+    try:
+        users = User.query.filter(
+            User.is_active == True,
+            User.email_notifications == True,
+            User.notification_remind_to_log == True,
+            User.reminder_to_log_time.isnot(None),
+            User.reminder_to_log_time != "",
+        ).all()
+        if not users:
+            return 0
+        sent = 0
+        for user in users:
+            try:
+                if not user.email:
+                    continue
+                user_now = now_in_user_timezone(user)
+                reminder_time = (user.reminder_to_log_time or "").strip()
+                if not reminder_time or ":" not in reminder_time:
+                    continue
+                parts = reminder_time.split(":", 1)
+                try:
+                    reminder_hour = int(parts[0])
+                    reminder_min = int(parts[1]) if len(parts) > 1 else 0
+                except (ValueError, IndexError):
+                    continue
+                if not (user_now.hour == reminder_hour and user_now.minute < 30):
+                    continue
+                user_tz = get_timezone_for_user(user)
+                user_today = user_now.date()
+                start_local = datetime.combine(user_today, dt_time.min).replace(tzinfo=user_tz)
+                end_local = start_local + timedelta(days=1)
+                start_utc = start_local.astimezone(tz_utc)
+                end_utc = end_local.astimezone(tz_utc)
+                from sqlalchemy import func
+                total_seconds = db.session.query(func.coalesce(func.sum(TimeEntry.duration_seconds), 0)).filter(
+                    TimeEntry.user_id == user.id,
+                    TimeEntry.start_time >= start_utc,
+                    TimeEntry.start_time < end_utc,
+                    TimeEntry.end_time.isnot(None),
+                ).scalar() or 0
+                today_hours = total_seconds / 3600.0
+                if today_hours >= 0.5:
+                    continue
+                send_remind_to_log_email(user)
+                sent += 1
+                logger.info("Sent remind-to-log email to %s", user.username)
+            except Exception as e:
+                logger.error("Failed to process remind-to-log for user %s: %s", getattr(user, "username", user.id), e)
+        return sent
+    except Exception as e:
+        logger.error("Error in process_remind_to_log: %s", e)
+        return 0
 
 
 def process_scheduled_reports():

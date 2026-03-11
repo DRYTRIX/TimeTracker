@@ -296,3 +296,56 @@ class ReportingService:
                 "days": (end_date - start_date).days,
             },
         }
+
+    def get_week_in_review(
+        self, user_id: Optional[int] = None, is_admin: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Get a summary of the current week: total hours, billable vs non-billable, top projects.
+        Uses the user's week_start_day for "this week" boundaries.
+        """
+        from app.utils.overtime import get_week_start_for_date
+        from app.models import User
+
+        user = User.query.get(user_id) if user_id else None
+        if not user and user_id:
+            return {"error": "User not found"}
+        today = date.today() if hasattr(date, "today") else datetime.utcnow().date()
+        week_start = get_week_start_for_date(today, user or object())
+        week_end = week_start + timedelta(days=6)
+        start_dt = datetime.combine(week_start, datetime.min.time())
+        end_dt = datetime.combine(week_end, datetime.max.time().replace(microsecond=0))
+
+        time_summary = self.get_time_summary(
+            user_id=user_id, start_date=start_dt, end_date=end_dt, billable_only=False
+        )
+        entries = self.time_entry_repo.get_by_date_range(
+            start_date=start_dt, end_date=end_dt, user_id=user_id, include_relations=True
+        )
+
+        project_hours = {}
+        for entry in entries:
+            key = (entry.project_id, entry.project.name if entry.project else "No project")
+            if entry.project_id is None and entry.client_id:
+                key = (None, entry.client.name if entry.client else "Direct (client)")
+            elif entry.project_id is None:
+                key = (None, "No project")
+            name = key[1]
+            if name not in project_hours:
+                project_hours[name] = {"name": name, "hours": 0.0, "billable_hours": 0.0}
+            h = (entry.duration_seconds or 0) / 3600
+            project_hours[name]["hours"] += h
+            if entry.billable:
+                project_hours[name]["billable_hours"] += h
+
+        top_projects = sorted(project_hours.values(), key=lambda x: x["hours"], reverse=True)[:10]
+
+        return {
+            "total_hours": time_summary["total_hours"],
+            "billable_hours": time_summary["billable_hours"],
+            "non_billable_hours": time_summary.get("non_billable_hours", time_summary["total_hours"] - time_summary["billable_hours"]),
+            "entry_count": time_summary.get("total_entries", len(entries)),
+            "top_projects": top_projects,
+            "week_start": week_start.isoformat(),
+            "week_end": week_end.isoformat(),
+        }

@@ -5,6 +5,8 @@ Service for analytics and insights business logic.
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from decimal import Decimal
+from sqlalchemy.orm import joinedload
+from app.models import TimeEntry
 from app.repositories import TimeEntryRepository, ProjectRepository, InvoiceRepository, ExpenseRepository
 
 
@@ -64,6 +66,75 @@ class AnalyticsService:
                 "overdue_count": len(overdue_invoices),
                 "overdue_amount": sum(float(inv.total_amount - (inv.amount_paid or 0)) for inv in overdue_invoices),
             },
+        }
+
+    def get_dashboard_top_projects(
+        self, user_id: int, days: int = 30, limit: int = 5
+    ) -> List[Dict[str, Any]]:
+        """
+        Get top projects by hours for the dashboard (single query + in-memory aggregation).
+
+        Returns:
+            List of dicts with keys: project, hours, billable_hours (sorted by hours desc, limited).
+        """
+        period_start = datetime.utcnow().date() - timedelta(days=days)
+        entries = (
+            TimeEntry.query.options(joinedload(TimeEntry.project))
+            .filter(
+                TimeEntry.end_time.isnot(None),
+                TimeEntry.start_time >= period_start,
+                TimeEntry.user_id == user_id,
+            )
+            .all()
+        )
+        project_hours = {}
+        for e in entries:
+            if not e.project:
+                continue
+            key = e.project.id
+            if key not in project_hours:
+                project_hours[key] = {"project": e.project, "hours": 0.0, "billable_hours": 0.0}
+            project_hours[key]["hours"] += e.duration_hours
+            if e.billable and e.project.billable:
+                project_hours[key]["billable_hours"] += e.duration_hours
+        return sorted(project_hours.values(), key=lambda x: x["hours"], reverse=True)[:limit]
+
+    def get_time_by_project_chart(
+        self, user_id: int, days: int = 7, limit: int = 10
+    ) -> Dict[str, Any]:
+        """
+        Get time-by-project series for dashboard chart (single query + aggregation).
+
+        Returns:
+            dict with keys: series (list of {label, hours}), chart_labels, chart_hours.
+        """
+        period_start = datetime.utcnow().date() - timedelta(days=days)
+        entries = (
+            TimeEntry.query.options(joinedload(TimeEntry.project))
+            .filter(
+                TimeEntry.end_time.isnot(None),
+                TimeEntry.start_time >= period_start,
+                TimeEntry.user_id == user_id,
+            )
+            .all()
+        )
+        project_hours = {}
+        for e in entries:
+            if not e.project:
+                continue
+            key = e.project.id
+            if key not in project_hours:
+                project_hours[key] = {"name": e.project.name, "hours": 0.0}
+            project_hours[key]["hours"] += e.duration_hours
+        series = sorted(
+            [{"label": v["name"], "hours": round(v["hours"], 2)} for v in project_hours.values()],
+            key=lambda x: x["hours"],
+            reverse=True,
+        )[:limit]
+        return {
+            "series": series,
+            "chart_labels": [x["label"] for x in series],
+            "chart_hours": [x["hours"] for x in series],
         }
 
     def get_trends(self, user_id: Optional[int] = None, days: int = 30) -> Dict[str, Any]:

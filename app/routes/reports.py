@@ -61,6 +61,23 @@ def reports():
     )
 
 
+@reports_bp.route("/reports/week-in-review")
+@login_required
+@module_enabled("reports")
+def week_in_review():
+    """Week in review: this week's hours, top projects, billable vs non-billable."""
+    from app.services import ReportingService
+
+    reporting_service = ReportingService()
+    data = reporting_service.get_week_in_review(
+        user_id=current_user.id, is_admin=current_user.is_admin
+    )
+    if data.get("error"):
+        flash(data["error"], "error")
+        return redirect(url_for("reports.reports"))
+    return render_template("reports/week_in_review.html", **data)
+
+
 @reports_bp.route("/reports/comparison")
 @login_required
 @module_enabled("reports")
@@ -625,6 +642,61 @@ def export_csv():
         raise
 
 
+@reports_bp.route("/reports/summary/export/pdf")
+@login_required
+@module_enabled("reports")
+def export_summary_pdf():
+    """Export summary report as a one-page PDF (today/week/month hours + top projects)."""
+    end_date = datetime.utcnow()
+    start_date = end_date - timedelta(days=30)
+    today_hours = TimeEntry.get_total_hours_for_period(
+        start_date=end_date.date(), user_id=current_user.id if not current_user.is_admin else None
+    )
+    week_hours = TimeEntry.get_total_hours_for_period(
+        start_date=end_date.date() - timedelta(days=7), user_id=current_user.id if not current_user.is_admin else None
+    )
+    month_hours = TimeEntry.get_total_hours_for_period(
+        start_date=start_date.date(), user_id=current_user.id if not current_user.is_admin else None
+    )
+    from app.utils.scope_filter import apply_project_scope_to_model
+    scope_p = apply_project_scope_to_model(Project, current_user)
+    projects_query = Project.query.filter_by(status="active")
+    if scope_p is not None:
+        projects_query = projects_query.filter(scope_p)
+    elif not current_user.is_admin:
+        project_ids = (
+            db.session.query(TimeEntry.project_id).filter(TimeEntry.user_id == current_user.id).distinct().all()
+        )
+        project_ids = [pid[0] for pid in project_ids]
+        projects_query = projects_query.filter(Project.id.in_(project_ids)) if project_ids else projects_query.filter(Project.id.in_([]))
+    projects = projects_query.all()
+    project_stats = []
+    for project in projects:
+        hours = TimeEntry.get_total_hours_for_period(
+            start_date=start_date.date(),
+            project_id=project.id,
+            user_id=current_user.id if not current_user.is_admin else None,
+        )
+        if hours > 0:
+            project_stats.append({"project": project, "hours": hours})
+    project_stats.sort(key=lambda x: x["hours"], reverse=True)
+    project_stats = project_stats[:10]
+    try:
+        from app.utils.summary_report_pdf import build_summary_report_pdf
+        pdf_bytes = build_summary_report_pdf(today_hours, week_hours, month_hours, project_stats)
+    except Exception as e:
+        current_app.logger.warning("Summary report PDF export failed: %s", e, exc_info=True)
+        flash(_("PDF export failed: %(error)s", error=str(e)), "error")
+        return redirect(url_for("reports.summary_report"))
+    filename = f"summary_report_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
 @reports_bp.route("/reports/summary")
 @login_required
 @module_enabled("reports")
@@ -673,14 +745,34 @@ def summary_report():
             project_stats.append({"project": project, "hours": hours})
 
     project_stats.sort(key=lambda x: x["hours"], reverse=True)
+    project_stats = project_stats[:10]  # Top 10 projects
+
+    # Chart data: time by project (last 30 days)
+    chart_labels_summary = [s["project"].name for s in project_stats]
+    chart_hours_summary = [round(s["hours"], 2) for s in project_stats]
+
+    # Daily trend for last 14 days (for line chart)
+    from app.services import AnalyticsService
+    analytics_service = AnalyticsService()
+    trend_result = analytics_service.get_trends(
+        user_id=current_user.id if not current_user.is_admin else None,
+        days=14,
+    )
+    daily_trends_14d = trend_result.get("daily_trends", [])
+    trend_dates = [t["date"] for t in daily_trends_14d]
+    trend_hours = [t["hours"] for t in daily_trends_14d]
 
     return render_template(
         "reports/summary.html",
         today_hours=today_hours,
         week_hours=week_hours,
         month_hours=month_hours,
-        project_stats=project_stats[:10],
-    )  # Top 10 projects
+        project_stats=project_stats,
+        chart_labels_summary=chart_labels_summary,
+        chart_hours_summary=chart_hours_summary,
+        trend_dates=trend_dates,
+        trend_hours=trend_hours,
+    )
 
 
 @reports_bp.route("/reports/tasks")

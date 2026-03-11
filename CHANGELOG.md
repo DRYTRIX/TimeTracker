@@ -7,18 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Architecture refactor** — API v1 split into per-resource sub-blueprints (projects, tasks, clients, invoices, expenses, payments, mileage, deals, leads, contacts) under `app/routes/api_v1_*.py`; bootstrap slimmed by moving `setup_logging` to `app/utils/setup_logging.py` and legacy migrations to `app/utils/legacy_migrations.py`. Dashboard aggregations (top projects, time-by-project chart) moved into `AnalyticsService` (`get_dashboard_top_projects`, `get_time_by_project_chart`); dashboard route simplified to call services only. ARCHITECTURE.md updated with module table, API structure, and data flow; DEVELOPMENT.md with development workflow and build steps.
+
 ### Fixed
 - **Dashboard cache (Issue #549)** — Removed dashboard caching that caused "Instance not bound to a Session" and "Database Error" on second visit. Cached template data contained ORM objects (active_timer, recent_entries, top_projects, templates, etc.) that become detached when served in a different request.
 - **Task description field (Issue #535)** — When creating or editing a task, the description field could appear missing or broken if the Toast UI Editor (loaded from CDN) failed to load (e.g. reverse proxy, CSP, Firefox, or offline). A fallback now shows a plain textarea so users can always enter a description; Markdown is still supported when the rich editor loads.
 - **ZUGFeRD / PDF/A-3 and PEPPOL (Discussion #433)** — ZUGFeRD embedding no longer silently succeeds without XML when the embed step fails; export is aborted with an actionable error. XMP metadata is created when missing so validators recognize the document. Optional PDF/A-3 normalization (XMP identification and output intent) and optional veraPDF validation gate added. Native PEPPOL transport (SML/SMP + AS4) and strict sender/recipient identifier validation added.
 
 ### Added
+- **Dashboard time-by-project chart** — "Time by project (last 7 days)" horizontal bar chart on the dashboard (Chart.js); link to Summary report.
+- **Summary report charts** — Time-by-project (last 30 days) bar chart and daily trend (last 14 days) line chart on the Summary report page.
+- **Summary report PDF export** — New route `/reports/summary/export/pdf`; one-page PDF with today/week/month hours and top projects table ([app/utils/summary_report_pdf.py](app/utils/summary_report_pdf.py)).
+- **Post-timer toast** — After stopping the timer, a success toast shows "Logged Xh on [Project]" with an action link "View time entries"; toast manager supports optional `actionLink` and `actionLabel`.
+- **Remind to log** — User setting "Remind me to log time at end of day" with time picker (Settings); scheduled task runs hourly and sends one email per day to users who have the reminder enabled and have logged &lt; 0.5h that day (in their timezone). Migration `135_add_remind_to_log_settings` adds `notification_remind_to_log` and `reminder_to_log_time` to users.
 - **Migration merge 133** — Merge heads 132 (timesheet governance) and 129 (task tags) so `flask db upgrade` runs without conflicts.
 - **PEPPOL native transport** — Transport mode can be set to **Native** (SML/SMP participant discovery + AS4 send) in addition to **Generic** (HTTP JSON access point). Sender and recipient identifiers are validated before send. New settings: `peppol_transport_mode`, `peppol_sml_url`, `peppol_native_cert_path`, `peppol_native_key_path` (Admin → Peppol e-Invoicing).
 - **PDF/A-3 and validation** — Option **Normalize ZUGFeRD PDFs to PDF/A-3** and optional **Run veraPDF after export** with configurable path. Migration `130_add_peppol_transport_mode_and_native` adds the new columns.
 - **Dashboard timer widget** — Pause and Stop buttons while a timer is running (Pause saves the segment so you can resume later). When no timer is active, a prominent "Resume (project name)" button restarts tracking with the same project/task/notes as your last entry. Quick time adjustment buttons (−15 / −5 / +5 / +15 minutes) let you correct the current session without leaving the dashboard. New route `POST /timer/adjust` for start-time adjustment.
 
 ### Changed
+- **UI/UX redesign** — Consolidated component system: single `page_header`, `empty_state` / `empty_state_compact`, and `loading_overlay` in `components/ui.html`; migrated overdue tasks page from Bootstrap to Tailwind; added form error and disabled states in design tokens. Base layout: main content max-width (1280px) and centered; first-class **Timer** and **Time entries** in sidebar; reduced nav label weight. Timer flow: single adjust-time form with one submit; dashboard hero is the Timer card (start/stop, quick start, repeat last); post-stop toast with “View time entries” unchanged. Dashboard: Timer as hero block first, then Today/Week/Month stats, then Recent entries (last 5, columns Project/Duration/Date/Actions) with “View all” link to Time entries overview. Empty and loading states use shared macros; toasts used for errors and success. New [UI Guidelines](docs/UI_GUIDELINES.md); README and ARCHITECTURE updated with UI overview and UI layer section.
+- **Dashboard** — Weekly goal widget already showed progress bar; added time-by-project (7d) chart and chart data from main route.
+- **Summary report** — Added Chart.js time-by-project and daily-trend charts; added Export PDF button; backend passes chart and trend data from AnalyticsService.
+- **Toast notifications** — Optional `actionLink` and `actionLabel` in toast manager for action links in toasts.
+- **Documentation** — README updated with new features (dashboard chart, summary charts/PDF, post-timer toast, remind to log); daily workflow note in Screenshots section.
 - **Log Time Manually page** — Redesigned for a more professional layout: form grouped into sections (Project & task, Date & time, Details) with clear headings and icons; main card uses rounded-xl and shadow-lg; unified label and helper text styling; primary "Log Time" and secondary "Clear" buttons aligned with dashboard button styles; duplicate-entry banner uses rounded-xl.
 
 ## [4.20.6] - 2025-02-20
@@ -89,31 +102,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Version Consistency** - Fixed version inconsistencies across documentation files
-
-## [4.8.0] - TBD
-
-### Added
-- Additional features and improvements (details to be documented)
-
-### Changed
-- Version management improvements
-
-## [4.7.1] - TBD
-
-### Added
-- Additional features and improvements (details to be documented)
-
-### Fixed
-- Bug fixes and stability improvements
-
-## [4.7.0] - TBD
-
-### Added
-- Additional features and improvements (details to be documented)
-
-### Changed
-- Performance optimizations
-- Code quality improvements
 
 ## [4.6.0] - 2025-12-14
 
@@ -212,14 +200,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## Release Notes Format
+## Release notes format
 
-Each release includes:
-- **Added** - New features
-- **Changed** - Changes in existing functionality
-- **Deprecated** - Soon-to-be removed features
-- **Removed** - Removed features
-- **Fixed** - Bug fixes
-- **Security** - Security improvements
+This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Section headings used:
 
-For detailed information about each release, see the [GitHub Releases](https://github.com/drytrix/TimeTracker/releases) page.
+- **Added** — New features
+- **Changed** — Changes in existing functionality
+- **Deprecated** — Soon-to-be removed features
+- **Removed** — Removed features
+- **Fixed** — Bug fixes
+- **Security** — Security-related changes
+
+For release artifacts and tags, see [GitHub Releases](https://github.com/drytrix/TimeTracker/releases).

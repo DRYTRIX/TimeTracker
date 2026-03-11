@@ -6,7 +6,7 @@ from app import db, track_page_view
 from sqlalchemy import text
 from app.models.time_entry import local_now
 
-from flask import make_response, current_app
+from flask import make_response, current_app, session
 import json
 import os
 from app.utils.posthog_segmentation import update_user_segments_if_needed
@@ -49,44 +49,29 @@ def dashboard():
     only_one_client = len(active_clients) == 1
     single_client = active_clients[0] if only_one_client else None
 
-    # Get user statistics using analytics service
+    # Get user statistics and dashboard aggregations via analytics service
     from app.services import AnalyticsService
+    from app.utils.overtime import calculate_period_overtime, get_week_start_for_date
 
     analytics_service = AnalyticsService()
     stats = analytics_service.get_dashboard_stats(user_id=current_user.id)
-
     today_hours = stats["time_tracking"]["today_hours"]
     week_hours = stats["time_tracking"]["week_hours"]
     month_hours = stats["time_tracking"]["month_hours"]
 
     # Overtime for dashboard cards (today and week)
-    from app.utils.overtime import calculate_period_overtime, get_week_start_for_date
     today_dt = datetime.utcnow().date()
     week_start_dt = get_week_start_for_date(today_dt, current_user)
     today_overtime = calculate_period_overtime(current_user, today_dt, today_dt)
     week_overtime = calculate_period_overtime(current_user, week_start_dt, today_dt)
     standard_hours_per_day = float(getattr(current_user, "standard_hours_per_day", 8.0) or 8.0)
 
-    # Build Top Projects (last 30 days) - using optimized query with eager loading
-    from sqlalchemy.orm import joinedload
-
-    period_start = datetime.utcnow().date() - timedelta(days=30)
-    entries_30 = (
-        TimeEntry.query.options(joinedload(TimeEntry.project))  # Eager load projects to avoid N+1
-        .filter(
-            TimeEntry.end_time.isnot(None), TimeEntry.start_time >= period_start, TimeEntry.user_id == current_user.id
-        )
-        .all()
-    )
-    project_hours = {}
-    for e in entries_30:
-        if not e.project:
-            continue
-        project_hours.setdefault(e.project.id, {"project": e.project, "hours": 0.0, "billable_hours": 0.0})
-        project_hours[e.project.id]["hours"] += e.duration_hours
-        if e.billable and e.project.billable:
-            project_hours[e.project.id]["billable_hours"] += e.duration_hours
-    top_projects = sorted(project_hours.values(), key=lambda x: x["hours"], reverse=True)[:5]
+    # Top projects (last 30 days) and time-by-project chart (last 7 days) from service
+    top_projects = analytics_service.get_dashboard_top_projects(current_user.id, days=30, limit=5)
+    chart_data = analytics_service.get_time_by_project_chart(current_user.id, days=7, limit=10)
+    time_by_project_7d = chart_data["series"]
+    chart_labels_7d = chart_data["chart_labels"]
+    chart_hours_7d = chart_data["chart_hours"]
 
     # Get current week goal
     current_week_goal = WeeklyTimeGoal.get_current_week_goal(current_user.id)
@@ -107,6 +92,59 @@ def dashboard():
 
     # Get recent activities for activity feed widget
     recent_activities = Activity.get_recent(user_id=None if current_user.is_admin else current_user.id, limit=10)
+
+    # Recent tags for Start Timer modal autocomplete (distinct from user's time entries)
+    recent_tags = []
+    tag_rows = (
+        db.session.query(TimeEntry.tags)
+        .filter(
+            TimeEntry.user_id == current_user.id,
+            TimeEntry.tags.isnot(None),
+            TimeEntry.tags != "",
+        )
+        .order_by(TimeEntry.updated_at.desc())
+        .limit(200)
+        .all()
+    )
+    tags_seen = set()
+    for (tags_str,) in tag_rows:
+        if tags_str:
+            for part in tags_str.split(","):
+                t = part.strip()
+                if t and t not in tags_seen:
+                    tags_seen.add(t)
+                    recent_tags.append(t)
+                    if len(recent_tags) >= 30:
+                        break
+        if len(recent_tags) >= 30:
+            break
+
+    # Last timer context: most recent completed time entry for "Repeat last" / quick start
+    last_entry = (
+        TimeEntry.query.filter(
+            TimeEntry.user_id == current_user.id,
+            TimeEntry.end_time.isnot(None),
+        )
+        .order_by(TimeEntry.end_time.desc())
+        .limit(1)
+        .first()
+    )
+    last_timer_context = None
+    if last_entry and (last_entry.project_id or last_entry.client_id):
+        last_timer_context = {
+            "project_id": last_entry.project_id,
+            "task_id": last_entry.task_id,
+            "client_id": last_entry.client_id,
+            "notes": (last_entry.notes or "").strip(),
+            "tags": (last_entry.tags or "").strip(),
+            "project_name": last_entry.project.name if last_entry.project else None,
+            "client_name": last_entry.client.name if last_entry.client else None,
+        }
+
+    # Post-timer toast data (show "Logged Xh on Project" + link to time entries)
+    timer_stopped_toast = session.pop("timer_stopped_toast", None)
+    if timer_stopped_toast:
+        timer_stopped_toast["time_entries_url"] = url_for("timer.time_entries")
 
     # Get user stats for smart banner and donation widget
     try:
@@ -144,12 +182,18 @@ def dashboard():
         "week_regular_hours": week_overtime["regular_hours"],
         "week_overtime_hours": week_overtime["overtime_hours"],
         "top_projects": top_projects,
+        "time_by_project_7d": time_by_project_7d,
+        "chart_labels_7d": chart_labels_7d,
+        "chart_hours_7d": chart_hours_7d,
         "current_week_goal": current_week_goal,
         "templates": templates,
         "recent_activities": recent_activities,
+        "last_timer_context": last_timer_context,
+        "recent_tags": recent_tags,
         "user_stats": user_stats,  # For smart banner
         "time_entries_count": time_entries_count,  # For donation widget
         "total_hours": total_hours,  # For donation widget
+        "timer_stopped_toast": timer_stopped_toast,
     }
 
     return render_template("main/dashboard.html", **template_data)

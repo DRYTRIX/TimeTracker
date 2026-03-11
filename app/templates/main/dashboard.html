@@ -9,7 +9,23 @@
 {% endblock %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+{% if timer_stopped_toast %}
+<script>
+(function() {
+    var data = {{ timer_stopped_toast|tojson }};
+    var msg = {{ _("Logged %(duration)s on %(project)s", duration=timer_stopped_toast.duration, project=timer_stopped_toast.project_name)|tojson }};
+    if (window.toastManager && typeof window.toastManager.show === 'function') {
+        window.toastManager.show({
+            message: msg,
+            type: 'success',
+            actionLink: data.time_entries_url || {{ url_for("timer.time_entries_overview")|tojson }},
+            actionLabel: {{ _("View time entries")|tojson }}
+        });
+    }
+})();
+</script>
+{% endif %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
     <div>
         <h1 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ _('Dashboard') }}</h1>
         <p class="text-text-muted-light dark:text-text-muted-dark">{{ _("Here's a quick overview of your work.") }}</p>
@@ -18,6 +34,101 @@
         <i class="fas fa-tachometer-alt text-primary"></i>
         <span>/ {{ _('Dashboard') }}</span>
     </div>
+</div>
+
+<!-- Hero: Timer first (primary action) -->
+<div class="{% if active_timer %}bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800{% else %}bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark{% endif %} p-6 rounded-xl shadow-sm dashboard-widget animated-card mb-6" {% if active_timer %}data-timer-start="{{ active_timer.start_time.isoformat() }}" data-today-hours="{{ today_hours }}" data-week-hours="{{ week_hours }}" data-month-hours="{{ month_hours }}"{% endif %}>
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+            <div class="{% if active_timer %}bg-blue-500/10 dark:bg-blue-400/10{% else %}bg-gray-100 dark:bg-gray-800{% endif %} p-3 rounded-lg">
+                <i class="fas fa-stopwatch {% if active_timer %}text-blue-600 dark:text-blue-400 animate-pulse{% else %}text-gray-600 dark:text-gray-400{% endif %} text-xl"></i>
+            </div>
+            <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Timer') }}</h2>
+        </div>
+        {% if not active_timer %}
+        <div class="flex flex-wrap items-center gap-2">
+            {% if last_timer_context %}
+            <button type="button" class="btn btn-secondary js-repeat-last-timer" title="{{ _('Start timer with same project, task and notes as last entry') }}">
+                <i class="fas fa-redo"></i>{{ _('Repeat last') }}
+            </button>
+            <form method="POST" action="{{ url_for('timer.start_timer') }}" class="inline js-quick-start-last-form" data-confirm-message="{{ _('Start timer with last project and notes?') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="project_id" value="{{ last_timer_context.project_id or '' }}">
+                <input type="hidden" name="client_id" value="{{ last_timer_context.client_id or '' }}">
+                <input type="hidden" name="task_id" value="{{ last_timer_context.task_id or '' }}">
+                <input type="hidden" name="notes" value="{{ last_timer_context.notes or '' }}">
+                <input type="hidden" name="tags" value="{{ last_timer_context.tags or '' }}">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-bolt"></i>{{ _('Quick start') }}{% if last_timer_context.project_name %} ({{ last_timer_context.project_name }}){% elif last_timer_context.client_name %} ({{ last_timer_context.client_name }}){% endif %}
+                </button>
+            </form>
+            {% endif %}
+            <button type="button" class="btn btn-primary js-open-start-timer" id="openStartTimer">
+                <i class="fas fa-play"></i>{{ _('Start Timer') }}
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    {% if active_timer %}
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div class="flex-1">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                        <span class="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full mr-2 animate-pulse"></span>
+                        {{ _('Running') }}
+                    </span>
+                </div>
+                <p class="font-semibold text-lg text-text-light dark:text-text-dark mb-1">
+                    {% if active_timer.project %}
+                        <i class="fas fa-folder text-blue-600 dark:text-blue-400 mr-2"></i>{{ active_timer.project.name }}
+                    {% elif active_timer.client %}
+                        <i class="fas fa-building text-blue-600 dark:text-blue-400 mr-2"></i>{{ active_timer.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
+                    {% else %}
+                        {{ _('No project') }}
+                    {% endif %}
+                </p>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                    <i class="fas fa-clock mr-1"></i>{{ _('Started at') }} {{ active_timer.start_time|user_time }}
+                </p>
+                <p class="text-sm font-semibold text-text-light dark:text-text-dark mt-2">
+                    {{ _('Elapsed') }}: <span id="dashboard-timer-elapsed">{{ active_timer.duration_formatted }}</span>
+                </p>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                    <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Adjust time') }}:</span>
+                    <form id="dashboardAdjustTimerForm" action="{{ url_for('timer.adjust_timer') }}" method="POST" class="inline-flex items-center gap-1">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="delta_minutes" id="dashboardAdjustDelta" value="0">
+                        <button type="button" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-text-light dark:text-text-dark text-sm font-medium transition-colors" title="{{ _('Subtract 15 min') }}" data-delta="-15">−15</button>
+                        <button type="button" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-text-light dark:text-text-dark text-sm font-medium transition-colors" title="{{ _('Subtract 5 min') }}" data-delta="-5">−5</button>
+                        <button type="button" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-text-light dark:text-text-dark text-sm font-medium transition-colors" title="{{ _('Add 5 min') }}" data-delta="5">+5</button>
+                        <button type="button" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-text-light dark:text-text-dark text-sm font-medium transition-colors" title="{{ _('Add 15 min') }}" data-delta="15">+15</button>
+                    </form>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <form action="{{ url_for('timer.stop_timer') }}" method="POST" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5" title="{{ _('Stop and save current time') }}">
+                        <i class="fas fa-stop mr-2"></i>{{ _('Stop & save') }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    {% else %}
+        <div class="text-center py-4">
+            <p class="text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('No active timer.') }}</p>
+            {% if recent_entries %}
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('Resume your last session or use the buttons above to repeat last / start a new timer.') }}</p>
+            <div class="flex flex-wrap justify-center gap-3">
+                <a href="{{ url_for('timer.resume_timer', timer_id=recent_entries[0].id) }}" class="inline-flex items-center bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+                    <i class="fas fa-play mr-2"></i>{{ _('Resume') }}{% if recent_entries[0].project %} ({{ recent_entries[0].project.name }}){% elif recent_entries[0].client %} ({{ recent_entries[0].client.name }}){% endif %}
+                </a>
+            </div>
+            {% else %}
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Click "Start Timer" above to begin tracking your time.') }}</p>
+            {% endif %}
+        </div>
+    {% endif %}
 </div>
 
 <!-- Key Stats with Sparklines -->
@@ -87,127 +198,32 @@
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-    <!-- Left Column: Active Timer & Recent Entries -->
-    <div class="lg:col-span-2 space-y-6">
-        <!-- Active Timer -->
-        <div class="{% if active_timer %}bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800{% else %}bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark{% endif %} p-6 rounded-xl shadow-sm dashboard-widget animated-card" {% if active_timer %}data-timer-start="{{ active_timer.start_time.isoformat() }}" data-today-hours="{{ today_hours }}" data-week-hours="{{ week_hours }}" data-month-hours="{{ month_hours }}"{% endif %}>
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-3">
-                    <div class="{% if active_timer %}bg-blue-500/10 dark:bg-blue-400/10{% else %}bg-gray-100 dark:bg-gray-800{% endif %} p-3 rounded-lg">
-                        <i class="fas fa-stopwatch {% if active_timer %}text-blue-600 dark:text-blue-400 animate-pulse{% else %}text-gray-600 dark:text-gray-400{% endif %} text-xl"></i>
-                    </div>
-                    <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Timer') }}</h2>
-                </div>
-                {% if not active_timer %}
-                <button type="button" class="btn btn-primary js-open-start-timer">
-                    <i class="fas fa-play"></i>{{ _('Start Timer') }}
-                </button>
-                {% endif %}
-            </div>
-            {% if active_timer %}
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div class="flex-1">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                                <span class="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full mr-2 animate-pulse"></span>
-                                {{ _('Running') }}
-                            </span>
-                        </div>
-                        <p class="font-semibold text-lg text-text-light dark:text-text-dark mb-1">
-                            {% if active_timer.project %}
-                                <i class="fas fa-folder text-blue-600 dark:text-blue-400 mr-2"></i>{{ active_timer.project.name }}
-                            {% elif active_timer.client %}
-                                <i class="fas fa-building text-blue-600 dark:text-blue-400 mr-2"></i>{{ active_timer.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
-                            {% else %}
-                                {{ _('No project') }}
-                            {% endif %}
-                        </p>
-                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                            <i class="fas fa-clock mr-1"></i>{{ _('Started at') }} {{ active_timer.start_time|user_time }}
-                        </p>
-                        <p class="text-sm font-semibold text-text-light dark:text-text-dark mt-2">
-                            {{ _('Elapsed') }}: <span id="dashboard-timer-elapsed">{{ active_timer.duration_formatted }}</span>
-                        </p>
-                        <div class="mt-3 flex flex-wrap items-center gap-2">
-                            <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Adjust time') }}:</span>
-                            <form action="{{ url_for('timer.adjust_timer') }}" method="POST" class="inline">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="delta_minutes" value="-15">
-                                <button type="submit" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-text-light dark:text-text-dark text-sm font-medium transition-colors" title="{{ _('Subtract 15 min') }}">−15</button>
-                            </form>
-                            <form action="{{ url_for('timer.adjust_timer') }}" method="POST" class="inline">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="delta_minutes" value="-5">
-                                <button type="submit" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-text-light dark:text-text-dark text-sm font-medium transition-colors" title="{{ _('Subtract 5 min') }}">−5</button>
-                            </form>
-                            <form action="{{ url_for('timer.adjust_timer') }}" method="POST" class="inline">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="delta_minutes" value="5">
-                                <button type="submit" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-text-light dark:text-text-dark text-sm font-medium transition-colors" title="{{ _('Add 5 min') }}">+5</button>
-                            </form>
-                            <form action="{{ url_for('timer.adjust_timer') }}" method="POST" class="inline">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="delta_minutes" value="15">
-                                <button type="submit" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-text-light dark:text-text-dark text-sm font-medium transition-colors" title="{{ _('Add 15 min') }}">+15</button>
-                            </form>
-                        </div>
-                    </div>
-                    <div class="flex flex-col sm:flex-row gap-2">
-                        <form action="{{ url_for('timer.stop_timer') }}" method="POST" class="inline">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5" title="{{ _('Stop and save current time') }}">
-                                <i class="fas fa-stop mr-2"></i>{{ _('Stop & save') }}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            {% else %}
-                <div class="text-center py-4">
-                    <p class="text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('No active timer.') }}</p>
-                    {% if recent_entries %}
-                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('Resume your last session or start a new timer.') }}</p>
-                    <div class="flex flex-wrap justify-center gap-3">
-                        <a href="{{ url_for('timer.resume_timer', timer_id=recent_entries[0].id) }}" class="inline-flex items-center bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
-                            <i class="fas fa-play mr-2"></i>{{ _('Resume') }}{% if recent_entries[0].project %} ({{ recent_entries[0].project.name }}){% elif recent_entries[0].client %} ({{ recent_entries[0].client.name }}){% endif %}
-                        </a>
-                        <button type="button" class="js-open-start-timer bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
-                            <i class="fas fa-plus mr-2"></i>{{ _('Start new') }}
-                        </button>
-                    </div>
-                    {% else %}
-                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Click "Start Timer" above to begin tracking your time.') }}</p>
-                    {% endif %}
-                </div>
-            {% endif %}
-        </div>
-
-        <!-- Recent Entries -->
+    <!-- Left Column: Recent Entries -->
+    <div class="lg:col-span-2">
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card">
-            <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
                     <div class="bg-primary/10 dark:bg-primary/20 p-3 rounded-lg">
                         <i class="fas fa-history text-primary text-xl"></i>
                     </div>
                     <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Recent Entries') }}</h2>
                 </div>
+                <a href="{{ url_for('timer.time_entries_overview') }}" class="text-sm font-medium text-primary hover:text-primary-dark hover:underline">{{ _('View all') }}</a>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left responsive-cards">
                     <thead class="border-b-2 border-border-light dark:border-border-dark">
                         <tr>
-                            <th class="p-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Source') }}</th>
-                            <th class="p-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Task') }}</th>
-                            <th class="p-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Notes') }}</th>
-                            <th class="p-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Tags') }}</th>
-                            <th class="p-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Duration') }}</th>
-                            <th class="p-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Date') }}</th>
-                            <th class="p-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Actions') }}</th>
+                            <th class="p-3 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Project') }}</th>
+                            <th class="p-3 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Duration') }}</th>
+                            <th class="p-3 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Date') }}</th>
+                            <th class="p-3 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for entry in recent_entries %}
+                        {% for entry in recent_entries[:5] %}
                         <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors duration-150">
-                            <td class="p-4" data-label="{{ _('Source') }}">
+                            <td class="p-3" data-label="{{ _('Project') }}">
                                 {% if entry.project %}
                                     <a href="{{ url_for('projects.view_project', project_id=entry.project.id) }}" class="inline-flex items-center gap-2 text-primary hover:text-primary-dark hover:underline font-medium">
                                         <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
@@ -224,38 +240,13 @@
                                     <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('N/A') }}</span>
                                 {% endif %}
                             </td>
-                            <td class="p-4" data-label="{{ _('Task') }}">
-                                {% if entry.task %}
-                                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                                        {{ entry.task.name }}
-                                    </span>
-                                {% else %}
-                                    <span class="text-text-muted-light dark:text-text-muted-dark">-</span>
-                                {% endif %}
-                            </td>
-                            <td class="p-4" data-label="{{ _('Notes') }}">
-                                {% if entry.notes %}
-                                    <span class="text-sm text-text-light dark:text-text-dark" title="{{ entry.notes|striptags }}">{{ entry.notes|striptags|truncate(60) }}</span>
-                                {% else %}
-                                    <span class="text-text-muted-light dark:text-text-muted-dark">-</span>
-                                {% endif %}
-                            </td>
-                            <td class="p-4" data-label="{{ _('Tags') }}">
-                                {% if entry.tags %}
-                                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                                        {{ entry.tags }}
-                                    </span>
-                                {% else %}
-                                    <span class="text-text-muted-light dark:text-text-muted-dark">-</span>
-                                {% endif %}
-                            </td>
-                            <td class="p-4" data-label="{{ _('Duration') }}">
+                            <td class="p-3" data-label="{{ _('Duration') }}">
                                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                                     <i class="fas fa-clock mr-1"></i>{% if active_timer and entry.id == active_timer.id %}<span class="dashboard-live-duration" data-timer-start="{{ active_timer.start_time.isoformat() }}">{{ entry.duration_formatted }}</span>{% else %}{{ entry.duration_formatted }}{% endif %}
                                 </span>
                             </td>
-                            <td class="p-4 text-sm text-text-light dark:text-text-dark" data-label="{{ _('Date') }}">{{ entry.start_time|user_datetime }}</td>
-                            <td class="p-4" data-label="{{ _('Actions') }}">
+                            <td class="p-3 text-sm text-text-light dark:text-text-dark" data-label="{{ _('Date') }}">{{ entry.start_time|user_datetime }}</td>
+                            <td class="p-3" data-label="{{ _('Actions') }}">
                                 <div class="flex flex-wrap gap-2">
                                     <a href="{{ url_for('timer.resume_timer', timer_id=entry.id) }}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400 transition-colors" title="{{ _('Resume - Start a new timer with same properties') }}">
                                         <i class="fas fa-play text-xs"></i>
@@ -279,7 +270,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="7" class="p-12 text-center">
+                            <td colspan="4" class="p-12 text-center">
                                 <div class="flex flex-col items-center justify-center">
                                     <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
                                         <i class="fas fa-inbox text-3xl text-gray-400"></i>
@@ -361,6 +352,64 @@
             {% endif %}
         {% endif %}
 
+        <!-- Time by project (last 7 days) chart -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="bg-cyan-500/10 dark:bg-cyan-400/10 p-3 rounded-lg">
+                        <i class="fas fa-chart-pie text-cyan-600 dark:text-cyan-400 text-xl"></i>
+                    </div>
+                    <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Time by project (last 7 days)') }}</h2>
+                </div>
+                <a href="{{ url_for('reports.summary_report') }}" class="text-sm text-primary hover:underline">{{ _('View report') }}</a>
+            </div>
+            {% if time_by_project_7d %}
+            <div class="relative" style="height: 220px;">
+                <canvas id="dashboardTimeByProjectChart" aria-label="{{ _('Time distribution by project for the last 7 days') }}"></canvas>
+            </div>
+            <script>
+            (function() {
+                var labels = {{ chart_labels_7d|tojson }};
+                var hours = {{ chart_hours_7d|tojson }};
+                var ctx = document.getElementById('dashboardTimeByProjectChart');
+                if (ctx && typeof Chart !== 'undefined') {
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: '{{ _("Hours") }}',
+                                data: hours,
+                                backgroundColor: 'rgba(6, 182, 212, 0.6)',
+                                borderColor: 'rgb(6, 182, 212)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: { beginAtZero: true, ticks: { maxTicksLimit: 6 } },
+                                y: { ticks: { font: { size: 11 } } }
+                            }
+                        }
+                    });
+                }
+            })();
+            </script>
+            {% else %}
+            <div class="flex flex-col items-center justify-center py-8 text-center">
+                <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-4 w-16 h-16 flex items-center justify-center mb-3">
+                    <i class="fas fa-chart-bar text-2xl text-gray-400"></i>
+                </div>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No time logged in the last 7 days.') }}</p>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Start tracking to see distribution here.') }}</p>
+            </div>
+            {% endif %}
+        </div>
+
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card">
             <div class="flex items-center justify-between mb-6">
                 <div class="flex items-center gap-3">
@@ -410,113 +459,92 @@
                 </div>
             {% endif %}
         </div>
+    </div>
+</div>
 
-        <!-- Activity Timeline Widget -->
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center gap-3">
-                    <div class="bg-indigo-500/10 dark:bg-indigo-400/10 p-3 rounded-lg">
-                        <i class="fas fa-stream text-indigo-600 dark:text-indigo-400 text-xl"></i>
-                    </div>
-                    <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Recent Activity') }}</h2>
+<!-- Secondary row: Activity and Support (below main focus) -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+    <!-- Activity Timeline Widget - reduced visual weight -->
+    <div class="lg:col-span-2 bg-card-light dark:bg-card-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm dashboard-widget">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+                <div class="bg-indigo-500/10 dark:bg-indigo-400/10 p-2 rounded-lg">
+                    <i class="fas fa-stream text-indigo-600 dark:text-indigo-400"></i>
                 </div>
-                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 animate-pulse">
-                    <span class="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full mr-2"></span>
-                    {{ _('Live') }}
-                </span>
+                <h2 class="text-base font-semibold text-text-light dark:text-text-dark">{{ _('Recent Activity') }}</h2>
             </div>
-            <div id="activityTimeline" class="activity-timeline">
-                {% if recent_activities %}
-                    {% for activity in recent_activities %}
-                        <div class="activity-timeline-item group">
-                            <div class="flex items-start gap-4">
-                                <div class="flex-shrink-0 relative">
-                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
-                                        <i class="fas fa-circle text-xs text-white"></i>
-                                    </div>
-                                    {% if not loop.last %}
-                                    <div class="absolute left-1/2 top-10 w-0.5 h-6 bg-gradient-to-b from-indigo-300 to-transparent dark:from-indigo-700 dark:to-transparent transform -translate-x-1/2"></div>
-                                    {% endif %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                <span class="w-1.5 h-1.5 bg-green-600 dark:bg-green-400 rounded-full mr-1.5"></span>
+                {{ _('Live') }}
+            </span>
+        </div>
+        <div id="activityTimeline" class="activity-timeline">
+            {% if recent_activities %}
+                {% for activity in recent_activities %}
+                    <div class="activity-timeline-item group">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 relative">
+                                <div class="w-8 h-8 rounded-full bg-indigo-500/20 dark:bg-indigo-400/20 flex items-center justify-center">
+                                    <i class="fas fa-circle text-xs text-indigo-500 dark:text-indigo-400"></i>
                                 </div>
-                                <div class="flex-1 pb-6 group-last:pb-0">
-                                    <p class="text-sm font-medium text-text-light dark:text-text-dark mb-1 group-hover:text-primary dark:group-hover:text-primary transition-colors">{{ activity.description or 'Activity' }}</p>
-                                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark flex items-center gap-1">
-                                        <i class="fas fa-clock"></i>
-                                        {{ activity.created_at|local_datetime_short }}
-                                    </p>
-                                </div>
+                                {% if not loop.last %}
+                                <div class="absolute left-1/2 top-8 w-0.5 h-4 bg-border-light dark:bg-border-dark transform -translate-x-1/2"></div>
+                                {% endif %}
+                            </div>
+                            <div class="flex-1 pb-4 group-last:pb-0">
+                                <p class="text-sm font-medium text-text-light dark:text-text-dark mb-0.5">{{ activity.description or 'Activity' }}</p>
+                                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">
+                                    <i class="fas fa-clock mr-1"></i>{{ activity.created_at|local_datetime_short }}
+                                </p>
                             </div>
                         </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="text-center py-12">
-                        <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-                            <i class="fas fa-inbox text-3xl text-gray-400"></i>
-                        </div>
-                        <p class="text-text-muted-light dark:text-text-muted-dark font-medium mb-1">{{ _('No recent activity') }}</p>
-                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Activity will appear here as you use the system.') }}</p>
                     </div>
-                {% endif %}
-            </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-8">
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No recent activity') }}</p>
+                </div>
+            {% endif %}
         </div>
+    </div>
 
-        {% if (not settings or not getattr(settings, 'donate_ui_hidden', false)) and current_user.ui_show_donate %}
-        <!-- Support TimeTracker Widget -->
-        <div class="bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card text-white">
-            <div class="flex items-start justify-between mb-4">
-                <div class="flex items-center gap-3 mb-3">
-                    <div class="bg-white/20 backdrop-blur-sm p-3 rounded-lg">
-                        <i class="fas fa-mug-saucer text-xl"></i>
-                    </div>
-                    <h2 class="text-lg font-semibold">{{ _('Support TimeTracker') }}</h2>
-                </div>
+    {% if (not settings or not getattr(settings, 'donate_ui_hidden', false)) and current_user.ui_show_donate %}
+    <!-- Support TimeTracker Widget - compact, below fold -->
+    <div class="bg-card-light dark:bg-card-dark border border-amber-200 dark:border-amber-800 p-5 rounded-xl shadow-sm dashboard-widget">
+        <div class="flex items-center gap-2 mb-3">
+            <div class="bg-amber-500/10 dark:bg-amber-400/10 p-2 rounded-lg">
+                <i class="fas fa-mug-saucer text-amber-600 dark:text-amber-400"></i>
             </div>
-            <div class="mb-4">
-                <p class="text-sm opacity-90 mb-4">
-                    {{ _('Support updates and new features. One-time key removes prompts for this instance.') }}
-                </p>
-                {% if time_entries_count > 0 or total_hours > 0 %}
-                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/10 mb-4">
-                    <div class="text-xs opacity-90 space-y-2">
-                        {% if time_entries_count > 0 %}
-                        <div class="flex items-center gap-2">
-                            <i class="fas fa-check-circle"></i>
-                            <span>{{ _('You\'ve tracked %(count)s time entries', count=time_entries_count) }}</span>
-                        </div>
-                        {% endif %}
-                        {% if total_hours > 0 %}
-                        <div class="flex items-center gap-2">
-                            <i class="fas fa-check-circle"></i>
-                            <span>{{ _('You\'ve logged %(hours)s hours', hours="%.1f"|format(total_hours)) }}</span>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-            <div class="flex gap-2">
-                <a href="{{ url_for('main.donate') }}" 
-                   class="inline-flex items-center justify-center flex-1 bg-white text-amber-600 px-4 py-3 rounded-lg font-semibold hover:bg-amber-50 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                    <i class="fas fa-heart mr-2"></i>
-                    {{ _('Support / Get key') }}
-                </a>
-                <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=dashboard&utm_campaign=support" 
-                   target="_blank" 
-                   rel="noopener noreferrer"
-                   onclick="trackDonationClick('dashboard_widget')"
-                   class="inline-flex items-center justify-center flex-1 bg-amber-700 hover:bg-amber-800 text-white px-4 py-3 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                    <i class="fas fa-mug-saucer mr-2"></i>
-                    {{ _('Donate') }}
-                    <i class="fas fa-external-link-alt ml-2 text-xs"></i>
-                </a>
-            </div>
-            <p class="mt-3 text-xs opacity-90">
-                {{ _('Remove prompts with a one-time key.') }}
-                <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" onclick="trackDonationClick('dashboard_widget_key')" class="underline hover:no-underline font-medium">{{ _('Get key') }}</a>
-            </p>
+            <h2 class="text-base font-semibold text-text-light dark:text-text-dark">{{ _('Support TimeTracker') }}</h2>
+        </div>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">
+            {{ _('Support updates and new features. One-time key removes prompts for this instance.') }}
+        </p>
+        {% if time_entries_count > 0 or total_hours > 0 %}
+        <div class="bg-background-light dark:bg-background-dark rounded-lg p-2 mb-3 text-xs text-text-muted-light dark:text-text-muted-dark space-y-1">
+            {% if time_entries_count > 0 %}
+            <div><i class="fas fa-check-circle text-green-500 mr-1"></i>{{ _('You\'ve tracked %(count)s time entries', count=time_entries_count) }}</div>
+            {% endif %}
+            {% if total_hours > 0 %}
+            <div><i class="fas fa-check-circle text-green-500 mr-1"></i>{{ _('You\'ve logged %(hours)s hours', hours="%.1f"|format(total_hours)) }}</div>
+            {% endif %}
         </div>
         {% endif %}
+        <div class="flex flex-col sm:flex-row gap-2">
+            <a href="{{ url_for('main.donate') }}" class="inline-flex items-center justify-center flex-1 bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-lg font-medium text-sm transition-colors">
+                <i class="fas fa-heart mr-1.5"></i>{{ _('Support / Get key') }}
+            </a>
+            <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=dashboard&utm_campaign=support" target="_blank" rel="noopener noreferrer" onclick="trackDonationClick('dashboard_widget')" class="inline-flex items-center justify-center flex-1 border border-amber-500 text-amber-600 dark:text-amber-400 px-3 py-2 rounded-lg font-medium text-sm hover:bg-amber-500/10 transition-colors">
+                <i class="fas fa-mug-saucer mr-1.5"></i>{{ _('Donate') }} <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+            </a>
+        </div>
+        <p class="mt-2 text-xs text-text-muted-light dark:text-text-muted-dark">
+            {{ _('Remove prompts with a one-time key.') }}
+            <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" onclick="trackDonationClick('dashboard_widget_key')" class="underline hover:no-underline font-medium text-amber-600 dark:text-amber-400">{{ _('Get key') }}</a>
+        </p>
     </div>
+    {% endif %}
+</div>
     <!-- Delete Entry Confirmation Dialogs -->
     {% for entry in recent_entries %}
     {% if current_user.is_admin or entry.user_id == current_user.id %}
@@ -535,6 +563,7 @@
     <div id="startTimerModal"
          class="fixed inset-0 z-50 hidden overflow-y-auto"
          aria-hidden="true"
+         data-last-timer-context="{{ (last_timer_context|tojson)|e if last_timer_context else '{}' }}"
          data-tasks-api-url="{{ url_for('api.get_project_tasks', project_id=0) }}"
          data-create-task-url="{{ url_for('api.create_task_inline') }}"
          data-no-task="{{ _('No task')|e }}"
@@ -566,6 +595,24 @@
             <form method="POST" action="{{ url_for('timer.start_timer') }}" id="startTimerForm" class="p-4">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="space-y-4">
+                    {% if templates %}
+                    <div class="pb-3 border-b border-border-light dark:border-border-dark">
+                        <label class="form-label">{{ _('Quick start with a template') }}</label>
+                        <div class="flex flex-wrap gap-2 mt-2">
+                            {% for template in templates %}
+                            <button type="button"
+                                    onclick="applyTemplate({{ template.id }})"
+                                    class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-primary/30 bg-primary/5 dark:bg-primary/10 hover:bg-primary/15 dark:hover:bg-primary/20 text-primary font-medium text-sm transition">
+                                <i class="fas fa-bolt text-xs"></i>
+                                {{ template.name }}{% if template.project %} · {{ template.project.name }}{% endif %}
+                            </button>
+                            {% endfor %}
+                            <a href="{{ url_for('time_entry_templates.list_templates') }}" class="inline-flex items-center gap-1 px-3 py-2 text-sm text-text-muted-light dark:text-text-muted-dark hover:text-primary transition">
+                                {{ _('All templates') }} <i class="fas fa-external-link-alt text-xs"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label for="startTimerProject" class="form-label">{{ _('Project') }}</label>
@@ -601,35 +648,17 @@
                             <div id="startTimerNotes_editor"></div>
                         </div>
                     </div>
-                    {% if templates %}
                     <div>
-                        <label class="form-label">{{ _('Or use a template') }}</label>
-                        <div class="space-y-2">
-                            {% for template in templates %}
-                            <button type="button" 
-                                    onclick="applyTemplate({{ template.id }})"
-                                    class="w-full text-left p-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex-1">
-                                        <div class="font-medium text-sm">{{ template.name }}</div>
-                                        {% if template.project %}
-                                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            <i class="fas fa-folder"></i> {{ template.project.name }}
-                                            {% if template.task %} → {{ template.task.name }}{% endif %}
-                                        </div>
-                                        {% endif %}
-                                    </div>
-                                    <i class="fas fa-chevron-right text-gray-400"></i>
-                                </div>
-                            </button>
+                        <label for="startTimerTags" class="form-label">{{ _('Tags (optional)') }}</label>
+                        <input type="text" id="startTimerTags" name="tags" class="form-input w-full" placeholder="{{ _('e.g. meeting, dev, admin') }}"
+                               list="startTimerTagsList" autocomplete="off">
+                        <datalist id="startTimerTagsList">
+                            {% for tag in recent_tags %}
+                            <option value="{{ tag|e }}"></option>
                             {% endfor %}
-                            <a href="{{ url_for('time_entry_templates.list_templates') }}" 
-                               class="block text-center text-sm text-blue-600 dark:text-blue-400 hover:underline pt-2">
-                                {{ _('View all templates') }} →
-                            </a>
-                        </div>
+                        </datalist>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Comma-separated; recent tags shown as suggestions.') }}</p>
                     </div>
-                    {% endif %}
                 </div>
             </form>
         </div>
@@ -653,6 +682,22 @@
 {% block scripts_extra %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Single adjust-time form: buttons set delta and submit
+        (function initAdjustTimerForm() {
+            var form = document.getElementById('dashboardAdjustTimerForm');
+            var deltaInput = document.getElementById('dashboardAdjustDelta');
+            if (!form || !deltaInput) return;
+            form.querySelectorAll('button[data-delta]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var delta = this.getAttribute('data-delta');
+                    if (delta) {
+                        deltaInput.value = delta;
+                        form.submit();
+                    }
+                });
+            });
+        })();
+
         // Live timer: update elapsed every second when a timer is running; also live Today/Week/Month hours
         (function initLiveTimer() {
             var timerWidget = document.querySelector('[data-timer-start]');
@@ -951,6 +996,38 @@
 
             const onlyOneClient = (modal?.dataset?.onlyOneClient || 'false') === 'true';
             const singleClientId = (modal?.dataset?.singleClientId || '') || null;
+
+            // Repeat last: pre-fill modal from last_timer_context and open
+            document.querySelectorAll('.js-repeat-last-timer').forEach(function(btn) {
+                btn.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    if (!modal) return;
+                    var ctxRaw = modal.getAttribute('data-last-timer-context');
+                    var ctx = {};
+                    try { ctx = ctxRaw ? JSON.parse(ctxRaw) : {}; } catch (err) { ctx = {}; }
+                    if (!ctx.project_id && !ctx.client_id) {
+                        openStartTimerModal(e);
+                        return;
+                    }
+                    if (projectSelect) projectSelect.value = ctx.project_id || '';
+                    if (clientSelect) clientSelect.value = ctx.client_id || '';
+                    if (ctx.project_id && typeof loadTasksForProject === 'function') {
+                        await loadTasksForProject(ctx.project_id, ctx.task_id || null);
+                    } else if (taskSelect) {
+                        taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+                        taskSelect.disabled = false;
+                    }
+                    var notesEl = document.getElementById('startTimerNotes');
+                    if (notesEl) notesEl.value = ctx.notes || '';
+                    if (window.dashboardNotesEditor && typeof window.dashboardNotesEditor.setMarkdown === 'function') {
+                        try { window.dashboardNotesEditor.setMarkdown(ctx.notes || ''); } catch (err) {}
+                    }
+                    var tagsEl = document.getElementById('startTimerTags');
+                    if (tagsEl && ctx.tags) tagsEl.value = ctx.tags;
+                    modal.classList.remove('hidden');
+                    modal.setAttribute('aria-hidden', 'false');
+                });
+            });
 
             // Task loading: attach when project and task elements exist (independent of client)
             if (projectSelect && taskSelect) {

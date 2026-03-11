@@ -70,7 +70,13 @@ TimeTracker is built with modern, reliable technologies:
 - **flake8** — Linting
 - **coverage** — Test coverage analysis
 
-**📖 For detailed architecture information, see [Project Structure](docs/development/PROJECT_STRUCTURE.md)**
+**📖 Documentation:** [Architecture overview](ARCHITECTURE.md) · [Project Structure](docs/development/PROJECT_STRUCTURE.md) · [UI Guidelines](docs/UI_GUIDELINES.md)
+
+---
+
+## 🖥️ UI overview
+
+The web app uses a **single main layout** with a sidebar and top header. Content is centered with a max width for readability. **Getting around:** **Dashboard** — overview, today’s stats, and the main **Timer** widget (start/stop, quick start, repeat last). **Timer** and **Time entries** are first-class in the sidebar for fast access. **Time entries** is the place to filter, review, and export all logged time. **Reports**, **Projects**, **Finance**, and **Settings** are available from the sidebar and navigation. For design and component conventions, see [UI Guidelines](docs/UI_GUIDELINES.md).
 
 ---
 
@@ -80,7 +86,7 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 > **📋 For complete release history, see [CHANGELOG.md](CHANGELOG.md)**
 
-**Latest Release: v4.20.6** (February 2025). Version is defined in `setup.py` (single source of truth).
+**Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for release history.
 - 📱 **Native Mobile & Desktop Apps** — Flutter mobile app (iOS/Android) and Electron desktop app with time tracking, offline support, and API integration ([Build Guide](BUILD.md), [Docs](docs/mobile-desktop-apps/README.md))
 - 📋 **Project Analysis & Documentation** — Comprehensive project analysis and documentation updates
 - 🔧 **Version Consistency** — Fixed version inconsistencies across documentation files
@@ -248,7 +254,8 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 - **Multi-Currency** — Support for multiple currencies with conversion
 
 ### 📈 **Analytics & Reporting**
-- **Visual Dashboards** — Charts and graphs for quick insights
+- **Visual Dashboards** — Charts and graphs for quick insights; dashboard includes **time-by-project chart (last 7 days)** and **weekly goal progress bar**
+- **Summary Report** — Today/week/month hours with **time-by-project** and **daily trend (14 days)** charts; **export summary as PDF**
 - **Detailed Reports** — Time breakdown by project, user, or date range
 - **CSV Export** — Export data for external analysis
 - **Billable vs Non-billable** — Separate tracking for accurate billing
@@ -277,8 +284,9 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 - **Quick Actions Menu** — Floating action button with 6 quick actions (bottom-right)
 - **Enhanced Data Tables** — Sortable, filterable, inline-editable tables with bulk operations
 - **Email Notifications** — Configurable email alerts for tasks, invoices, and more
-- **Toast Notifications** — Beautiful in-app notifications for actions and updates
-- **Weekly Summaries** — Optional weekly time tracking summaries via email
+- **Toast Notifications** — Beautiful in-app notifications; **post-timer toast** shows "Logged Xh on Project" with link to time entries
+- **Weekly Summaries** — Optional weekly time tracking summaries via email (enable in Settings)
+- **Remind to Log** — Optional end-of-day email reminder to log time (Settings → Remind me to log time at end of day; set time in your timezone)
 - **Activity Feed** — Track recent activity across the system
 - **Saved Filters** — Save frequently used report filters for quick access
 - **Recently Viewed** — Quick access to recently viewed items
@@ -309,7 +317,7 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 ### 🏠 Dashboard — Your Command Center
 <img src="assets/screenshots/Dashboard.png" alt="Dashboard" width="700">
 
-*Start timers, view recent entries, and see your productivity at a glance*
+*Start timers, view recent entries, and see your productivity at a glance. **Daily workflow:** Start timer → work → stop → see recap toast with link to time entries; check dashboard for time-by-project chart (last 7 days) and weekly goal progress.*
 
 ---
 
@@ -391,6 +399,8 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 ---
 
 ## 🚀 Quick Start
+
+For a full step-by-step guide, see **[INSTALLATION.md](INSTALLATION.md)**.
 
 ### Prerequisites
 
@@ -576,7 +586,8 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory. See 
 
 **For New Users:**
 - **[Getting Started Guide](docs/GETTING_STARTED.md)** — Complete beginner's tutorial (⭐ Start here!)
-- **[Installation Guide](docs/admin/configuration/DOCKER_PUBLIC_SETUP.md)** — Detailed setup instructions
+- **[Installation Guide](INSTALLATION.md)** — Step-by-step installation (Docker, SQLite test)
+- **[Docker Public Setup](docs/admin/configuration/DOCKER_PUBLIC_SETUP.md)** — Production deployment
 - **[Quick Start Guide](docs/guides/QUICK_START_GUIDE.md)** — Get up and running quickly
 
 **For Administrators:**
@@ -587,9 +598,12 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory. See 
 - **[Version Management](docs/admin/deployment/VERSION_MANAGEMENT.md)** — Updates and releases
 
 **For Developers:**
-- **[Contributing Guidelines](docs/development/CONTRIBUTING.md)** — How to contribute
-- **[Project Structure](docs/development/PROJECT_STRUCTURE.md)** — Codebase architecture
-- **[API Documentation](docs/api/REST_API.md)** — Complete REST API reference
+- **[Contributing](CONTRIBUTING.md)** — How to contribute (quick link)
+- **[Contributing Guidelines (full)](docs/development/CONTRIBUTING.md)** — Setup, standards, PR process
+- **[Development Guide](DEVELOPMENT.md)** — Run locally, test, release process
+- **[Architecture](ARCHITECTURE.md)** — System overview and design
+- **[Project Structure](docs/development/PROJECT_STRUCTURE.md)** — Codebase layout
+- **[API Documentation](API.md)** — API quick reference · [Full REST API](docs/api/REST_API.md)
 - **[Database Migrations](migrations/README.md)** — Schema management
 - **[CI/CD Documentation](docs/cicd/CI_CD_DOCUMENTATION.md)** — Build and deployment
 
@@ -957,7 +971,7 @@ We welcome contributions! Whether it's:
    ```
 
 3. **Make Your Changes**
-   - Follow the [Contributing Guidelines](docs/development/CONTRIBUTING.md)
+   - Follow the [Contributing guidelines](CONTRIBUTING.md) and [full Contributing doc](docs/development/CONTRIBUTING.md)
    - Write tests for new features
    - Update documentation as needed
 
@@ -966,8 +980,10 @@ We welcome contributions! Whether it's:
    - Reference any related issues
    - Ensure all tests pass
 
-**📖 See [Contributing Guidelines](docs/development/CONTRIBUTING.md) for complete details**  
-**📖 See [Development Setup](docs/development/LOCAL_TESTING_WITH_SQLITE.md) for local development**
+**📖 [CONTRIBUTING.md](CONTRIBUTING.md)** — Quick contributing overview  
+**📖 [Full Contributing Guidelines](docs/development/CONTRIBUTING.md)** — Setup, standards, PR process  
+**📖 [DEVELOPMENT.md](DEVELOPMENT.md)** — Run locally, tests, releases  
+**📖 [Local Testing with SQLite](docs/development/LOCAL_TESTING_WITH_SQLITE.md)** — Docker SQLite setup
 
 ---
 

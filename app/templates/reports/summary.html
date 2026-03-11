@@ -4,10 +4,14 @@
 {% block content %}
 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
     <h1 class="text-2xl font-bold">{{ _('Summary Report') }}</h1>
-    <a href="{{ url_for('reports.export_excel') }}" 
-       class="bg-green-600 text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-green-700 inline-flex items-center">
-        <i class="fas fa-file-excel mr-2"></i>{{ _('Export to Excel') }}
-    </a>
+    <div class="flex flex-wrap gap-2">
+        <a href="{{ url_for('reports.export_summary_pdf') }}" class="bg-gray-700 text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-gray-800 inline-flex items-center">
+            <i class="fas fa-file-pdf mr-2"></i>{{ _('Export PDF') }}
+        </a>
+        <a href="{{ url_for('reports.export_excel') }}" class="bg-green-600 text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-green-700 inline-flex items-center">
+            <i class="fas fa-file-excel mr-2"></i>{{ _('Export to Excel') }}
+        </a>
+    </div>
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -16,8 +20,98 @@
     {{ info_card("Month's Hours", "%.2f"|format(month_hours), "Logged this month") }}
 </div>
 
+<!-- Charts row -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Time by project (last 30 days) -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <h2 class="text-lg font-semibold mb-4">{{ _('Time by project (last 30 days)') }}</h2>
+        {% if chart_labels_summary and chart_hours_summary %}
+        <div class="relative" style="height: 280px;">
+            <canvas id="summaryProjectChart" aria-label="{{ _('Time distribution by project') }}"></canvas>
+        </div>
+        <script>
+        (function() {
+            var labels = {{ chart_labels_summary|tojson }};
+            var hours = {{ chart_hours_summary|tojson }};
+            var ctx = document.getElementById('summaryProjectChart');
+            if (ctx && typeof Chart !== 'undefined') {
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: '{{ _("Hours") }}',
+                            data: hours,
+                            backgroundColor: 'rgba(99, 102, 241, 0.6)',
+                            borderColor: 'rgb(99, 102, 241)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { beginAtZero: true, ticks: { maxTicksLimit: 8 } },
+                            y: { ticks: { font: { size: 11 } } }
+                        }
+                    }
+                });
+            }
+        })();
+        </script>
+        {% else %}
+        <p class="text-text-muted-light dark:text-text-muted-dark py-8 text-center">{{ _('No project data for the last 30 days.') }}</p>
+        {% endif %}
+    </div>
+    <!-- Daily trend (last 14 days) -->
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <h2 class="text-lg font-semibold mb-4">{{ _('Daily trend (last 14 days)') }}</h2>
+        {% if trend_dates and trend_hours %}
+        <div class="relative" style="height: 280px;">
+            <canvas id="summaryTrendChart" aria-label="{{ _('Daily hours trend') }}"></canvas>
+        </div>
+        <script>
+        (function() {
+            var labels = {{ trend_dates|tojson }};
+            var hours = {{ trend_hours|tojson }};
+            var ctx = document.getElementById('summaryTrendChart');
+            if (ctx && typeof Chart !== 'undefined') {
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: '{{ _("Hours") }}',
+                            data: hours,
+                            borderColor: 'rgb(34, 197, 94)',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            fill: true,
+                            tension: 0.2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+                            y: { beginAtZero: true, ticks: { maxTicksLimit: 6 } }
+                        }
+                    }
+                });
+            }
+        })();
+        </script>
+        {% else %}
+        <p class="text-text-muted-light dark:text-text-muted-dark py-8 text-center">{{ _('No trend data.') }}</p>
+        {% endif %}
+    </div>
+</div>
+
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
-    <h2 class="text-lg font-semibold mb-4">Top Projects (Last 30 Days)</h2>
+    <h2 class="text-lg font-semibold mb-4">{{ _('Top Projects (Last 30 Days)') }}</h2>
     <table class="w-full text-left responsive-cards">
         <thead>
             <tr>
@@ -33,7 +127,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="2" class="p-4 text-center">No project data for the last 30 days.</td>
+                <td colspan="2" class="p-4 text-center">{{ _('No project data for the last 30 days.') }}</td>
             </tr>
             {% endfor %}
         </tbody>

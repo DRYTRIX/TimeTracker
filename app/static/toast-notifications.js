@@ -72,6 +72,8 @@ class ToastNotificationManager {
      * @param {string} options.type - Type: success, error, warning, info (default: info)
      * @param {number} options.duration - Duration in ms (default: 5000, 0 = no auto-dismiss)
      * @param {boolean} options.dismissible - Show close button (default: true)
+     * @param {string} options.actionLink - Optional URL for action link
+     * @param {string} options.actionLabel - Label for action link (e.g. "View time entries")
      */
     show(options) {
         if (!options || !options.message) {
@@ -104,7 +106,9 @@ class ToastNotificationManager {
                 : this.getDefaultTitle(options.type),
             type: options.type || 'info',
             duration: options.duration !== undefined ? options.duration : this.defaultDuration,
-            dismissible: options.dismissible !== false
+            dismissible: options.dismissible !== false,
+            actionLink: options.actionLink || '',
+            actionLabel: options.actionLabel || ''
         };
 
         const toastId = Date.now() + Math.random();
@@ -227,6 +231,23 @@ class ToastNotificationManager {
             overflowWrap: 'anywhere'
         });
         content.appendChild(message);
+
+        if (config.actionLink && config.actionLabel) {
+            const actionLink = document.createElement('a');
+            actionLink.href = config.actionLink;
+            actionLink.textContent = config.actionLabel;
+            actionLink.className = 'tt-toast-action';
+            Object.assign(actionLink.style, {
+                display: 'inline-block',
+                marginTop: '0.35rem',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: 'inherit',
+                opacity: '0.95',
+                textDecoration: 'underline'
+            });
+            content.appendChild(actionLink);
+        }
 
         // Close button
         let closeBtn = null;

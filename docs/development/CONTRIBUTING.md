@@ -78,7 +78,7 @@ This project and everyone participating in it is governed by our [Code of Conduc
 
 4. Set up environment variables:
    ```bash
-   cp .env.example .env
+   cp env.example .env
    # Edit .env with your development settings
    ```
 

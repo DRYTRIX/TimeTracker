@@ -340,7 +340,7 @@
             </div>
             <nav class="flex-1">
                 {% set ep = request.endpoint or '' %}
-                {% set work_open = ep.startswith('projects.') or ep.startswith('tasks.') or ep.startswith('issues.') or ep.startswith('timer.') or ep.startswith('time_approvals.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') or ep.startswith('project_templates.') or ep.startswith('gantt.') or ep.startswith('workforce.') %}
+                {% set work_open = (ep.startswith('projects.') or ep.startswith('tasks.') or ep.startswith('issues.') or ep.startswith('timer.') or ep.startswith('time_approvals.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') or ep.startswith('project_templates.') or ep.startswith('gantt.') or ep.startswith('workforce.')) and ep != 'timer.manual_entry' and ep != 'timer.time_entries_overview' %}
                 {% set calendar_open = ep.startswith('calendar.') %}
                 {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('recurring_invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('mileage.') or ep.startswith('per_diem.') or ep.startswith('budget_alerts.') or ep.startswith('invoice_approvals.') or ep.startswith('payment_gateways.') or ep.startswith('scheduled_reports.') or ep.startswith('custom_reports.') %}
                 {% set crm_open = ep.startswith('clients.') or ep.startswith('quotes.') or ep.startswith('contacts.') or ep.startswith('deals.') or ep.startswith('leads.') %}
@@ -354,8 +354,8 @@
                 {% set admin_data_open = ep == 'expense_categories.list_categories' or ep == 'per_diem.list_rates' or ep.startswith('time_entry_templates.') or ep.startswith('custom_field_definitions.') or ep.startswith('link_templates.') %}
                 {% set admin_maintenance_open = ep == 'admin.system_info' or ep == 'admin.backups_management' or ep == 'admin.telemetry_dashboard' %}
                 {% set pdf_open = ep == 'admin.pdf_layout' or ep == 'admin.quote_pdf_layout' %}
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider sidebar-label">{{ _('Navigation') }}</h2>
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider sidebar-label">{{ _('Navigation') }}</span>
                     <button id="sidebarCollapseBtn" class="p-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Toggle sidebar') }}" title="{{ _('Toggle sidebar') }}">
                         <i id="sidebarCollapseIcon" class="fas fa-angles-left"></i>
                     </button>
@@ -365,6 +365,18 @@
                         <a href="{{ url_for('main.dashboard') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg border-l-4 {% if ep == 'main.dashboard' %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" title="{{ _('Dashboard') }}">
                             <i class="fas fa-tachometer-alt w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Dashboard') }}</span>
+                        </a>
+                    </li>
+                    <li class="mt-1">
+                        <a href="{{ url_for('timer.manual_entry') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg border-l-4 {% if ep.startswith('timer.') and ep != 'timer.time_entries_overview' %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" title="{{ _('Timer') }}">
+                            <i class="fas fa-stopwatch w-6 text-center"></i>
+                            <span class="ml-3 sidebar-label">{{ _('Timer') }}</span>
+                        </a>
+                    </li>
+                    <li class="mt-1">
+                        <a href="{{ url_for('timer.time_entries_overview') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg border-l-4 {% if ep == 'timer.time_entries_overview' %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" title="{{ _('Time entries') }}">
+                            <i class="fas fa-list-alt w-6 text-center"></i>
+                            <span class="ml-3 sidebar-label">{{ _('Time entries') }}</span>
                         </a>
                     </li>
                     {% if is_module_enabled('calendar') %}
@@ -413,11 +425,6 @@
                             <li>
                                 <a class="block px-2 py-1 rounded border-l-4 ml-2 pl-2 {% if nav_active_timer %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timer.manual_entry') }}">
                                     <i class="fas fa-clock w-4 mr-2"></i>{{ _('Log Time') }}
-                                </a>
-                            </li>
-                            <li>
-                                <a class="block px-2 py-1 rounded border-l-4 ml-2 pl-2 {% if nav_active_time_entries %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timer.time_entries_overview') }}">
-                                    <i class="fas fa-list-alt w-4 mr-2"></i>{{ _('Time Entries') }}
                                 </a>
                             </li>
                             {% if is_module_enabled('time_approvals') %}
@@ -1213,8 +1220,8 @@
             </div>
             {% endif %}
 
-            <!-- Main page content -->
-            <main id="mainContentAnchor" class="flex-1 p-6">
+            <!-- Main page content (max-width for readability on large screens) -->
+            <main id="mainContentAnchor" class="flex-1 p-4 sm:p-6 w-full max-w-7xl mx-auto">
                 {% block content %}{% endblock %}
             </main>
         </div>
@@ -1982,6 +1989,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="{{ url_for('static', filename='charts.js') }}"></script>
     <script src="{{ url_for('static', filename='enhanced-ui.js') }}"></script>
+    <!-- Onboarding: onboarding.js = core tour runner + restartTour(); onboarding-enhanced.js = enhanced steps/tooltips. Use restartTour() or window.onboardingManager to restart tour. -->
     <script src="{{ url_for('static', filename='onboarding.js') }}"></script>
     <script src="{{ url_for('static', filename='onboarding-enhanced.js') }}"></script>
     <script src="{{ url_for('static', filename='error-handling-enhanced.js') }}"></script>

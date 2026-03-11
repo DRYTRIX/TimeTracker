@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, session
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from app import db, socketio, log_event, track_event
@@ -525,7 +525,13 @@ def stop_timer():
         except Exception as e:
             current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
 
-        flash(f"Timer stopped. Duration: {active_timer.duration_formatted}", "success")
+        # Pass data for post-timer toast (message + link to time entries; no flash to avoid duplicate)
+        project_name = active_timer.project.name if active_timer.project else (active_timer.client.name if active_timer.client else _("No project"))
+        session["timer_stopped_toast"] = {
+            "duration": active_timer.duration_formatted,
+            "project_name": project_name,
+        }
+        session.modified = True
         return redirect(url_for("main.dashboard"))
     except ValueError as e:
         # Timer already stopped or invalid state

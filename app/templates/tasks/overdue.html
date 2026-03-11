@@ -1,147 +1,108 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import page_header, empty_state, alert %}
 
 {% block title %}{{ _('Overdue Tasks') }} - Time Tracker{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    {% from "_components.html" import page_header %}
-    {% set actions %}
-    <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-outline-light btn-sm">
-        <i class="fas fa-arrow-left"></i> {{ _('Back to Tasks') }}
-    </a>
-    {% endset %}
-    {{ page_header('fas fa-exclamation-triangle', _('Overdue Tasks'), _('Requires immediate attention') ~ ' • ' ~ (tasks|length) ~ ' ' ~ _('items'), actions) }}
+{% set breadcrumbs = [
+    {'text': _('Tasks'), 'url': url_for('tasks.list_tasks')},
+    {'text': _('Overdue Tasks')}
+] %}
+{% set actions %}
+<a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-secondary btn-sm">
+    <i class="fas fa-arrow-left"></i> {{ _('Back to Tasks') }}
+</a>
+{% endset %}
 
-    <!-- Overdue Summary -->
-    <div class="alert alert-warning" role="alert">
-        <h5 class="alert-heading">
-            <i class="fas fa-exclamation-triangle"></i> {{ _('Overdue Tasks Detected') }}
-        </h5>
-        <p class="mb-0">
-            {{ _('There are') }} <strong>{{ tasks|length }}</strong> {{ _('overdue tasks that require immediate attention.') }} 
-            {{ _('Please review and update these tasks to prevent further delays.') }}
-        </p>
-    </div>
+{{ page_header(
+    'fas fa-exclamation-triangle',
+    _('Overdue Tasks'),
+    subtitle_text=_('Requires immediate attention') ~ ' • ' ~ (tasks|length) ~ ' ' ~ _('items'),
+    actions_html=actions,
+    breadcrumbs=breadcrumbs
+) }}
 
-    <!-- Overdue Tasks List -->
-    {% if tasks %}
-    <div class="row">
-        {% for task in tasks %}
-        <div class="col-md-6 col-lg-4 mb-3">
-            <div class="card h-100 task-card {{ task.priority_class }} border-danger">
-                <div class="card-header d-flex justify-content-between align-items-center bg-danger text-white">
-                    <span class="badge bg-danger">
-                        <i class="fas fa-exclamation-triangle"></i> {{ _('Overdue') }}
-                    </span>
-                    <span class="badge priority-badge priority-{{ task.priority }}">
-                        {{ task.priority_display }}
-                    </span>
+<!-- Overdue Summary -->
+{{ alert(_('There are') ~ ' ' ~ (tasks|length) ~ ' ' ~ _('overdue tasks that require immediate attention. Please review and update these tasks to prevent further delays.'), type='warning', icon='fa-exclamation-triangle') }}
+
+<!-- Overdue Tasks List -->
+{% if tasks %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+    {% for task in tasks %}
+    <div class="bg-card-light dark:bg-card-dark rounded-xl border-2 border-red-200 dark:border-red-800 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+        <div class="flex justify-between items-center px-4 py-2 bg-red-500/10 dark:bg-red-900/20 border-b border-border-light dark:border-border-dark">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
+                <i class="fas fa-exclamation-triangle"></i> {{ _('Overdue') }}
+            </span>
+            {% if task.priority_display %}
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium priority-badge priority-{{ task.priority }}">
+                {{ task.priority_display }}
+            </span>
+            {% endif %}
+        </div>
+        <div class="p-4">
+            <h3 class="text-base font-semibold text-text-light dark:text-text-dark mb-2">
+                <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="hover:text-primary transition-colors">
+                    {{ task.name }}
+                </a>
+            </h3>
+            {% if task.description %}
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3 line-clamp-2">{{ task.description[:100] }}{% if task.description|length > 100 %}...{% endif %}</p>
+            {% endif %}
+            <div class="space-y-1 text-sm text-text-muted-light dark:text-text-muted-dark">
+                <div><i class="fas fa-project-diagram w-4 mr-2 text-primary/70"></i>{{ task.project.name }}</div>
+                <div><i class="fas fa-user w-4 mr-2 text-primary/70"></i>{% if task.assigned_user %}{{ task.assigned_user.display_name }}{% else %}{{ _('Unassigned') }}{% endif %}</div>
+                <div class="font-semibold text-red-600 dark:text-red-400"><i class="fas fa-calendar w-4 mr-2"></i>{{ _('Due:') }} {{ task.due_date|format_date }}</div>
+                {% if task.estimated_hours %}<div><i class="fas fa-clock w-4 mr-2 text-primary/70"></i>{{ _('Est:') }} {{ task.estimated_hours }}h</div>{% endif %}
+                {% if task.total_hours > 0 %}<div><i class="fas fa-stopwatch w-4 mr-2 text-primary/70"></i>{{ _('Actual:') }} {{ task.total_hours }}h</div>{% endif %}
+            </div>
+            {% if task.estimated_hours and task.total_hours > 0 %}
+            <div class="mt-3">
+                <div class="flex justify-between text-xs text-text-muted-light dark:text-text-muted-dark mb-1">
+                    <span>{{ _('Progress') }}</span>
+                    <span>{{ task.progress_percentage }}%</span>
                 </div>
-                <div class="card-body">
-                    <h5 class="card-title">
-                        <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="text-decoration-none">
-                            {{ task.name }}
-                        </a>
-                    </h5>
-                    {% if task.description %}
-                    <p class="card-text text-muted">{{ task.description[:100] }}{% if task.description|length > 100 %}...{% endif %}</p>
-                    {% endif %}
-                    
-                    <div class="task-meta">
-                        <small class="text-muted">
-                            <i class="fas fa-project-diagram"></i> {{ task.project.name }}
-                        </small>
-                        <br><small class="text-muted">
-                            <i class="fas fa-user"></i> 
-                            {% if task.assigned_user %}
-                                {{ task.assigned_user.display_name }}
-                            {% else %}
-                                {{ _('Unassigned') }}
-                            {% endif %}
-                        </small>
-                        <br><small class="text-danger fw-bold">
-                            <i class="fas fa-calendar"></i> {{ _('Due:') }} {{ task.due_date|format_date }}
-                            <i class="fas fa-exclamation-triangle text-warning"></i>
-                        </small>
-                        {% if task.estimated_hours %}
-                        <br><small class="text-muted">
-                            <i class="fas fa-clock"></i> {{ _('Est:') }} {{ task.estimated_hours }}h
-                        </small>
-                        {% endif %}
-                        {% if task.total_hours > 0 %}
-                        <br><small class="text-muted">
-                            <i class="fas fa-stopwatch"></i> {{ _('Actual:') }} {{ task.total_hours }}h
-                        </small>
-                        {% endif %}
-                    </div>
-                    
-                    {% if task.estimated_hours and task.total_hours > 0 %}
-                    <div class="progress mt-2" style="height: 8px;">
-                        <div class="progress-bar" role="progressbar" 
-                             style="width: {{ task.progress_percentage }}%"
-                             aria-valuenow="{{ task.progress_percentage }}" 
-                             aria-valuemin="0" aria-valuemax="100">
-                        </div>
-                    </div>
-                    <small class="text-muted">{{ task.progress_percentage }}% complete</small>
-                    {% endif %}
-                </div>
-                <div class="card-footer">
-                    <div class="btn-group btn-group-sm w-100" role="group">
-                        <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="btn btn-outline-primary">
-                            <i class="fas fa-eye"></i> {{ _('View') }}
-                        </a>
-                        {% if current_user.is_admin or task.created_by == current_user.id %}
-                        <a href="{{ url_for('tasks.edit_task', task_id=task.id) }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-edit"></i> {{ _('Edit') }}
-                        </a>
-                        {% endif %}
-                        <a href="{{ url_for('timer.start_timer_for_project', project_id=task.project.id, task_id=task.id) }}" 
-                           class="btn btn-outline-success">
-                            <i class="fas fa-play"></i> {{ _('Timer') }}
-                        </a>
-                    </div>
+                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                    <div class="bg-primary h-full rounded-full transition-all" style="width: {{ task.progress_percentage }}%"></div>
                 </div>
             </div>
+            {% endif %}
         </div>
-        {% endfor %}
-    </div>
-
-    <!-- Bulk Actions -->
-    <div class="card mt-4">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="fas fa-tools"></i> Bulk Actions</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <h6>Update Due Dates</h6>
-                    <p class="text-muted small">Extend due dates for multiple tasks at once</p>
-                    <button type="button" class="btn btn-outline-warning" onclick="extendDueDates()">
-                        <i class="fas fa-calendar-plus"></i> Extend Due Dates
-                    </button>
-                </div>
-                <div class="col-md-6">
-                    <h6>Priority Management</h6>
-                    <p class="text-muted small">Adjust priorities for overdue tasks</p>
-                    <button type="button" class="btn btn-outline-info" onclick="adjustPriorities()">
-                        <i class="fas fa-arrow-up"></i> Adjust Priorities
-                    </button>
-                </div>
-            </div>
+        <div class="px-4 py-3 bg-background-light dark:bg-background-dark border-t border-border-light dark:border-border-dark flex flex-wrap gap-2">
+            <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i> {{ _('View') }}</a>
+            {% if current_user.is_admin or task.created_by == current_user.id %}
+            <a href="{{ url_for('tasks.edit_task', task_id=task.id) }}" class="btn btn-ghost btn-sm"><i class="fas fa-edit"></i> {{ _('Edit') }}</a>
+            {% endif %}
+            <a href="{{ url_for('timer.start_timer_for_project', project_id=task.project.id, task_id=task.id) }}" class="btn btn-primary btn-sm"><i class="fas fa-play"></i> {{ _('Timer') }}</a>
         </div>
     </div>
-    {% else %}
-    <div class="text-center py-5">
-        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-        <h3 class="text-success">{{ _('No Overdue Tasks!') }}</h3>
-        <p class="text-muted">{{ _('Great job! All tasks are currently on schedule.') }}</p>
-        <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-primary">
-            <i class="fas fa-list"></i> {{ _('View All Tasks') }}
-        </a>
-    </div>
-    {% endif %}
+    {% endfor %}
 </div>
+
+<!-- Bulk Actions -->
+<div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-border-light dark:border-border-dark">
+        <h3 class="text-lg font-semibold text-text-light dark:text-text-dark"><i class="fas fa-tools mr-2"></i>{{ _('Bulk Actions') }}</h3>
+    </div>
+    <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+            <h4 class="text-sm font-semibold text-text-light dark:text-text-dark mb-1">{{ _('Update Due Dates') }}</h4>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('Extend due dates for multiple tasks at once') }}</p>
+            <button type="button" class="btn btn-secondary" onclick="extendDueDates()"><i class="fas fa-calendar-plus"></i> {{ _('Extend Due Dates') }}</button>
+        </div>
+        <div>
+            <h4 class="text-sm font-semibold text-text-light dark:text-text-dark mb-1">{{ _('Priority Management') }}</h4>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('Adjust priorities for overdue tasks') }}</p>
+            <button type="button" class="btn btn-secondary" onclick="adjustPriorities()"><i class="fas fa-arrow-up"></i> {{ _('Adjust Priorities') }}</button>
+        </div>
+    </div>
+</div>
+{% else %}
+{% set actions %}
+<a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-primary"><i class="fas fa-list"></i> {{ _('View All Tasks') }}</a>
+{% endset %}
+{{ empty_state('fas fa-check-circle', _('No Overdue Tasks!'), _('Great job! All tasks are currently on schedule.'), actions, type='success') }}
+{% endif %}
 
 <script type="application/json" id="i18n-json-tasks-overdue">
 {
@@ -186,7 +147,11 @@ async function extendDueDates() {
         });
         var data = await r.json().catch(function() { return {}; });
         if (r.ok && data.success) {
-            alert((data.message || data.updated + ' updated') + ' ' + (i18n_overdue.updated_success || 'Reloading...'));
+            if (window.toastManager && typeof window.toastManager.show === 'function') {
+                window.toastManager.show({ message: (data.message || data.updated + ' updated'), type: 'success' });
+            } else {
+                alert((data.message || data.updated + ' updated') + ' ' + (i18n_overdue.updated_success || 'Reloading...'));
+            }
             window.location.reload();
         } else {
             alert(data.message || i18n_overdue.error_message || 'Update failed.');
@@ -218,7 +183,11 @@ async function adjustPriorities() {
         });
         var data = await r.json().catch(function() { return {}; });
         if (r.ok && data.success) {
-            alert((data.message || data.updated + ' updated') + ' ' + (i18n_overdue.updated_success || 'Reloading...'));
+            if (window.toastManager && typeof window.toastManager.show === 'function') {
+                window.toastManager.show({ message: (data.message || data.updated + ' updated'), type: 'success' });
+            } else {
+                alert((data.message || data.updated + ' updated') + ' ' + (i18n_overdue.updated_success || 'Reloading...'));
+            }
             window.location.reload();
         } else {
             alert(data.message || i18n_overdue.error_message || 'Update failed.');
@@ -228,57 +197,10 @@ async function adjustPriorities() {
     }
 }
 </script>
-
 <style>
-.task-card {
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.task-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.priority-badge {
-    font-size: 0.75rem;
-}
-
-.priority-low {
-    background-color: #28a745 !important;
-}
-
-.priority-medium {
-    background-color: #ffc107 !important;
-    color: #212529 !important;
-}
-
-.priority-high {
-    background-color: #fd7e14 !important;
-}
-
-.priority-urgent {
-    background-color: #dc3545 !important;
-}
-
-.task-meta small {
-    display: block;
-    margin-bottom: 0.25rem;
-}
-
-.progress {
-    background-color: #e9ecef;
-}
-
-.progress-bar {
-    background-color: #007bff;
-}
-
-.btn-group .btn {
-    flex: 1;
-}
-
-.border-danger {
-    border-width: 2px !important;
-}
+.priority-badge.priority-low { @apply bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300; }
+.priority-badge.priority-medium { @apply bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300; }
+.priority-badge.priority-high { @apply bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300; }
+.priority-badge.priority-urgent { @apply bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300; }
 </style>
 {% endblock %}

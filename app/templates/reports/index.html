@@ -94,6 +94,15 @@
         <div>
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('Comparison View') }}</h3>
             <div class="space-y-3">
+                <a href="{{ url_for('reports.week_in_review') }}" class="block w-full px-4 py-3 rounded-lg text-left bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors no-underline">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="font-medium text-text-light dark:text-text-dark">{{ _('Week in Review') }}</div>
+                            <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('This week\'s hours, top projects, billable vs non-billable') }}</div>
+                        </div>
+                        <i class="fas fa-chevron-right text-text-muted-light dark:text-text-muted-dark"></i>
+                    </div>
+                </a>
                 <button type="button" onclick="showComparisonView('month')" class="w-full px-4 py-3 rounded-lg text-left bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <div class="flex items-center justify-between">
                         <div>

@@ -362,6 +362,32 @@ TimeTracker - Time Tracking & Project Management
     send_email(subject, user.email, text_body, html_body)
 
 
+def send_remind_to_log_email(user):
+    """Send a one-line reminder to log time (e.g. end-of-day reminder).
+
+    Args:
+        user: User object (must have email and email_notifications True).
+    """
+    if not user.email or not user.email_notifications or not getattr(user, "notification_remind_to_log", False):
+        return
+    subject = "Reminder: log your time today"
+    dashboard_url = url_for("main.dashboard", _external=True)
+    text_body = f"""Hello {getattr(user, 'full_name', None) or user.username},
+
+You haven't logged any time today yet. Don't forget to log your work in TimeTracker.
+
+Dashboard: {dashboard_url}
+
+---
+TimeTracker
+"""
+    html_body = f"""<p>Hello {getattr(user, 'full_name', None) or user.username},</p>
+<p>You haven't logged any time today yet. Don't forget to log your work in TimeTracker.</p>
+<p><a href="{dashboard_url}">Open Dashboard</a></p>
+<p style="color:#64748b;font-size:0.875rem;">— TimeTracker</p>"""
+    send_email(subject, user.email, text_body, html_body)
+
+
 def send_comment_notification(comment, task, mentioned_users):
     """Send notification about a new comment
 
