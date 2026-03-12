@@ -460,7 +460,13 @@ Stock can be devalued when recording **return** or **waste** movements so that i
    - The system first revalues that quantity into a devalued lot (FIFO consume from existing lots, create a devalued lot at the new cost), then records the waste movement consuming from that devalued lot.
    - Use this when writing off damaged or obsolete stock at a lower value for accounting.
 
-**Requirements**: The stock item must be **trackable** and have a **default cost** set. Devaluation options are available on the Record Movement form when movement type is Return, Waste, or Devaluation (standalone revaluation of quantity in place).
+**Requirements**: The stock item must be **trackable** and have a **default cost** set. Devaluation options are available on the Record Movement form when movement type is Return, Waste, or Devaluation (standalone revaluation of quantity in place). If the selected item is not trackable or has no default cost, the form shows a message and disables the "Apply devaluation" option.
+
+**How to use (UI)**:
+- **Return with devaluation**: Go to Inventory → Stock Movements → Record Movement. Choose movement type **Return**, select the stock item and warehouse, enter a **positive** quantity. Check **Apply devaluation**, then set either a percent off default cost or a fixed new unit cost. Submit. The returned quantity is booked into a devalued lot at that cost; no new stock item is created.
+- **Waste with devaluation**: Same form; choose movement type **Waste**, enter a **negative** quantity. Check **Apply devaluation** and set the devalued cost. Submit. The system revalues that quantity into a devalued lot, then records the waste from that lot.
+
+**API**: `POST /api/v1/inventory/movements` accepts `devalue_enabled`, `devalue_method` (`"percent"` or `"fixed"`), `devalue_percent`, and `devalue_unit_cost` for return and waste movements. See the endpoint implementation for validation rules.
 
 ---
 
