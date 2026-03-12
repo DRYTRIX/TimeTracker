@@ -33,6 +33,7 @@ This feature lets you account for break time when tracking work: either by pausi
 ### Break field
 
 - On **Log Time** (manual entry) and **Edit time entry** you can enter **Break** in HH:MM (e.g. `0:30` for 30 minutes).
+- **Worked time** is recalculated automatically whenever you change start/end date or time (including when using past dates); see [Manual Entry Worked Time Fix (#559)](implementation-notes/MANUAL_ENTRY_WORKED_TIME_FIX_559.md).
 - **Effective duration** (what is stored and shown) = (end − start) − break. If you also use **Worked time**, that value is treated as net (after break); break can still be entered and is subtracted when both are present.
 - Break is optional; leave it empty for no break.
 

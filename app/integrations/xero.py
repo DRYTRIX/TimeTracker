@@ -38,7 +38,7 @@ class XeroConnector(BaseConnector):
         if not client_id:
             raise ValueError("XERO_CLIENT_ID not configured")
 
-        scopes = ["accounting.transactions", "accounting.contacts", "accounting.settings", "offline_access"]
+        scopes = ["accounting.invoices", "accounting.payments", "accounting.contacts", "accounting.settings", "offline_access"]
 
         auth_url = "https://login.xero.com/identity/connect/authorize"
         params = {
@@ -180,7 +180,14 @@ class XeroConnector(BaseConnector):
         except Exception as e:
             return {"success": False, "message": f"Connection test failed: {str(e)}"}
 
-    def _api_request(self, method: str, endpoint: str, access_token: str, tenant_id: str) -> Optional[Dict]:
+    def _api_request(
+        self,
+        method: str,
+        endpoint: str,
+        access_token: str,
+        tenant_id: str,
+        json_body: Optional[Dict] = None,
+    ) -> Optional[Dict]:
         """Make API request to Xero"""
         url = f"{self.BASE_URL}{endpoint}"
 
@@ -195,7 +202,7 @@ class XeroConnector(BaseConnector):
             if method.upper() == "GET":
                 response = requests.get(url, headers=headers, timeout=10)
             elif method.upper() == "POST":
-                response = requests.post(url, headers=headers, timeout=10, json={})
+                response = requests.post(url, headers=headers, timeout=10, json=json_body or {})
             else:
                 response = requests.request(method, url, headers=headers, timeout=10)
 
@@ -251,7 +258,7 @@ class XeroConnector(BaseConnector):
                         if xero_expense:
                             if not hasattr(expense, "metadata") or not expense.metadata:
                                 expense.metadata = {}
-                            expense.metadata["xero_expense_id"] = xero_expense.get("Expenses", [{}])[0].get("ExpenseID")
+                            expense.metadata["xero_expense_id"] = xero_expense.get("ExpenseClaims", [{}])[0].get("ExpenseClaimID")
                             synced_count += 1
                     except Exception as e:
                         errors.append(f"Error syncing expense {expense.id}: {str(e)}")
@@ -316,7 +323,7 @@ class XeroConnector(BaseConnector):
             xero_invoice["LineItems"].append(line_item)
 
         endpoint = "/api.xro/2.0/Invoices"
-        return self._api_request("POST", endpoint, access_token, tenant_id)
+        return self._api_request("POST", endpoint, access_token, tenant_id, json_body={"Invoices": [xero_invoice]})
 
     def _create_xero_expense(self, expense, access_token: str, tenant_id: str) -> Optional[Dict]:
         """Create expense in Xero"""
@@ -346,8 +353,8 @@ class XeroConnector(BaseConnector):
             ],
         }
 
-        endpoint = "/api.xro/2.0/Expenses"
-        return self._api_request("POST", endpoint, access_token, tenant_id)
+        endpoint = "/api.xro/2.0/ExpenseClaims"
+        return self._api_request("POST", endpoint, access_token, tenant_id, json_body={"ExpenseClaims": [xero_expense]})
 
     def get_config_schema(self) -> Dict[str, Any]:
         """Get configuration schema."""

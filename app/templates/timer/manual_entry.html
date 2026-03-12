@@ -321,6 +321,25 @@ document.addEventListener('DOMContentLoaded', async function(){
         else updateWorkedFromStartEnd();
     }
 
+    // Defer recalculation so the DOM has the latest date/time values (Issue #559)
+    let scheduledWorkedTime = false;
+    let pendingStart = false;
+    let pendingEnd = false;
+    function scheduleWorkedTimeUpdate(isStart) {
+        if (isStart) pendingStart = true; else pendingEnd = true;
+        if (scheduledWorkedTime) return;
+        scheduledWorkedTime = true;
+        queueMicrotask(function() {
+            scheduledWorkedTime = false;
+            const runStart = pendingStart;
+            const runEnd = pendingEnd;
+            pendingStart = false;
+            pendingEnd = false;
+            if (runStart) onStartChange();
+            if (runEnd) updateWorkedFromStartEnd();
+        });
+    }
+
     // Dynamic task loading when a project is chosen
     const projectSelect = document.getElementById('project_id');
     const clientSelect = document.getElementById('client_id');
@@ -466,19 +485,23 @@ document.addEventListener('DOMContentLoaded', async function(){
         });
     }
     if (startDate) {
-        startDate.addEventListener('change', () => { timeFieldsUserEdited = true; onStartChange(); });
+        startDate.addEventListener('change', () => { timeFieldsUserEdited = true; scheduleWorkedTimeUpdate(true); });
+        startDate.addEventListener('input', () => { timeFieldsUserEdited = true; scheduleWorkedTimeUpdate(true); });
         startDate.addEventListener('focus', () => { if (startDate.disabled) { setDurationOnlyMode(false); ensureStartEndDefaultsIfEmpty(); } });
     }
     if (startTime) {
-        startTime.addEventListener('change', () => { timeFieldsUserEdited = true; onStartChange(); });
+        startTime.addEventListener('change', () => { timeFieldsUserEdited = true; scheduleWorkedTimeUpdate(true); });
+        startTime.addEventListener('input', () => { timeFieldsUserEdited = true; scheduleWorkedTimeUpdate(true); });
         startTime.addEventListener('focus', () => { if (startTime.disabled) { setDurationOnlyMode(false); ensureStartEndDefaultsIfEmpty(); } });
     }
     if (endDate) {
-        endDate.addEventListener('change', () => { timeFieldsUserEdited = true; updateWorkedFromStartEnd(); });
+        endDate.addEventListener('change', () => { timeFieldsUserEdited = true; scheduleWorkedTimeUpdate(false); });
+        endDate.addEventListener('input', () => { timeFieldsUserEdited = true; scheduleWorkedTimeUpdate(false); });
         endDate.addEventListener('focus', () => { if (endDate.disabled) { setDurationOnlyMode(false); ensureStartEndDefaultsIfEmpty(); } });
     }
     if (endTime) {
-        endTime.addEventListener('change', () => { timeFieldsUserEdited = true; updateWorkedFromStartEnd(); });
+        endTime.addEventListener('change', () => { timeFieldsUserEdited = true; scheduleWorkedTimeUpdate(false); });
+        endTime.addEventListener('input', () => { timeFieldsUserEdited = true; scheduleWorkedTimeUpdate(false); });
         endTime.addEventListener('focus', () => { if (endTime.disabled) { setDurationOnlyMode(false); ensureStartEndDefaultsIfEmpty(); } });
     }
     

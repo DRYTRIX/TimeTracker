@@ -22,7 +22,8 @@
           data-hint-devaluation="{{ _('Quantity to revalue (positive)') }}"
           data-hint-default="{{ _('Use positive values for additions, negative for removals') }}"
           data-msg-return-positive="{{ _('Return requires a positive quantity.') }}"
-          data-msg-waste-negative="{{ _('Waste requires a negative quantity.') }}">
+          data-msg-waste-negative="{{ _('Waste requires a negative quantity.') }}"
+          data-msg-devaluation-unsupported="{{ _('Devaluation requires a trackable item with a default cost.') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="space-y-6">
             <div>
@@ -44,7 +45,7 @@
                 <select name="stock_item_id" id="stock_item_id" class="form-input" required>
                     <option value="">{{ _('Select Item') }}</option>
                     {% for item in stock_items %}
-                    <option value="{{ item.id }}">{{ item.sku }} - {{ item.name }}</option>
+                    <option value="{{ item.id }}" data-devaluation-supported="{{ 'true' if (item.is_trackable and item.default_cost is not none and (item.default_cost|float) > 0) else 'false' }}">{{ item.sku }} - {{ item.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -66,6 +67,7 @@
 
             <!-- Devaluation options (Return / Waste / Devaluation) -->
             <div id="devaluation_section" class="hidden border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <p class="text-sm text-amber-600 dark:text-amber-400 hidden mt-0 mb-2" id="devaluation_unsupported_msg" role="alert"></p>
                 <div class="flex items-center justify-between">
                     <div>
                         <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ _('Devaluation') }}</h3>
@@ -133,6 +135,14 @@
         const devaluePercent = document.getElementById('devalue_percent');
         const devalueUnitCost = document.getElementById('devalue_unit_cost');
         const discoveryHint = document.getElementById('devaluation_discovery_hint');
+        const unsupportedMsg = document.getElementById('devaluation_unsupported_msg');
+
+        function selectedItemSupportsDevaluation() {
+            const sel = document.getElementById('stock_item_id');
+            const opt = sel.options[sel.selectedIndex];
+            if (!opt || !opt.value) return true;
+            return opt.getAttribute('data-devaluation-supported') === 'true';
+        }
 
         function refreshVisibility() {
             const type = (movementType.value || '').toLowerCase();
@@ -142,14 +152,34 @@
             const showDiscoveryHint = (type === 'return' || type === 'waste');
             if (discoveryHint) discoveryHint.classList.toggle('hidden', !showDiscoveryHint);
 
+            const canDevalue = selectedItemSupportsDevaluation();
+            const isReturnOrWaste = (type === 'return' || type === 'waste');
+
             if (type === 'devaluation') {
                 enabled.checked = true;
                 enabled.disabled = true;
+                if (unsupportedMsg) {
+                    if (!canDevalue) {
+                        unsupportedMsg.textContent = form.dataset.msgDevaluationUnsupported || 'Devaluation requires a trackable item with a default cost.';
+                        unsupportedMsg.classList.remove('hidden');
+                    } else {
+                        unsupportedMsg.classList.add('hidden');
+                        unsupportedMsg.textContent = '';
+                    }
+                }
+            } else if (isReturnOrWaste && !canDevalue) {
+                enabled.checked = false;
+                enabled.disabled = true;
+                if (unsupportedMsg) {
+                    unsupportedMsg.textContent = form.dataset.msgDevaluationUnsupported || 'Devaluation requires a trackable item with a default cost.';
+                    unsupportedMsg.classList.remove('hidden');
+                }
             } else {
                 enabled.disabled = false;
+                if (unsupportedMsg) { unsupportedMsg.classList.add('hidden'); unsupportedMsg.textContent = ''; }
             }
 
-            const showFields = showSection && enabled.checked;
+            const showFields = showSection && enabled.checked && !enabled.disabled;
             fields.classList.toggle('hidden', !showFields);
 
             const m = (method.value || 'percent');
@@ -185,6 +215,7 @@
         });
 
         movementType.addEventListener('change', refreshVisibility);
+        document.getElementById('stock_item_id').addEventListener('change', refreshVisibility);
         enabled.addEventListener('change', refreshVisibility);
         method.addEventListener('change', refreshVisibility);
         refreshVisibility();
