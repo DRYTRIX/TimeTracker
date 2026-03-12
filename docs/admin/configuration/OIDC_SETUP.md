@@ -96,6 +96,9 @@ Also ensure the standard app settings are configured (database, secret key, etc.
   - Issuer: `https://accounts.google.com`
   - Groups generally not available by default; prefer admin mapping via emails.
 
+- Authentik
+  - TimeTracker does **not** support JWE-encrypted ID tokens. If using Authentik, leave the **Encryption Key** field **empty** on the OAuth2/OpenID provider. If an Encryption Key is set, Authentik sends the ID token as JWE and login will fail with an error about unsupported algorithm or encrypted tokens.
+
 ### 4) Behavior and Mapping
 
 - When a user completes SSO:
@@ -191,6 +194,9 @@ services:
 - “User is not admin”
   - Verify `OIDC_ADMIN_GROUP` matches the group claim value, or add the user’s email to `OIDC_ADMIN_EMAILS`.
 
+- **“SSO failed” with “unsupported algorithm” or “encrypted ID token” in logs**
+  - The IdP is sending an encrypted ID token (JWE). TimeTracker does not support JWE-encrypted ID tokens. Disable ID token encryption at the provider. For Authentik, clear the **Encryption Key** on the OAuth2/OpenID provider so it returns a signed (e.g. RS256) JWT instead.
+
 - "Logout keeps me signed in" or "Logout redirects to provider error page"
   - Not all IdPs support RP-Initiated Logout (end-session). If your provider doesn't support it (e.g., Authelia), **do not set** `OIDC_POST_LOGOUT_REDIRECT_URI`. TimeTracker will then perform local logout only and redirect to the login page.
   - If your provider supports end-session and you want to log out from the IdP too, set `OIDC_POST_LOGOUT_REDIRECT_URI` to your desired post-logout landing page.
@@ -201,7 +207,7 @@ services:
   - **Cookie attributes**: Ensure `SESSION_COOKIE_SECURE`, `SESSION_COOKIE_SAMESITE`, and domain match how users access the app (e.g. HTTPS, same domain).
   - **Proxy headers**: Behind a reverse proxy, ensure `X-Forwarded-Proto` and `X-Forwarded-Host` are set correctly so redirect URLs and cookies use the same host/scheme the user sees.
   - **Callback URL**: The callback URL must match exactly (no trailing slash, same scheme and host) between TimeTracker (`OIDC_REDIRECT_URI`) and the IdP client configuration.
-  - **Logs**: TimeTracker logs a line like `OIDC callback redirect to login: reason=...` before each redirect to login. Use this to see the exact cause (e.g. `reason=token_exchange_failed` for session/state issues, `reason=missing_issuer_sub` for claim issues).
+  - **Logs**: TimeTracker logs a line like `OIDC callback redirect to login: reason=...` before each redirect to login. Use this to see the exact cause (e.g. `reason=token_exchange_failed` for session/state issues, `reason=unsupported_algorithm_or_jwe` for encrypted/unsupported ID tokens, `reason=missing_issuer_sub` for claim issues).
 
 ### 9) Routes Reference
 
