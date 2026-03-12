@@ -2268,6 +2268,10 @@ msgstr ""
 msgid "Stock item must have a default cost to perform devaluation"
 msgstr ""
 
+#: app/templates/inventory/movements/form.html
+msgid "Devaluation requires a trackable item with a default cost."
+msgstr ""
+
 #: app/routes/inventory.py:938
 msgid "Devaluation percent is required when using percent method"
 msgstr ""
