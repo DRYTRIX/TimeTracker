@@ -758,15 +758,38 @@ def oidc_callback():
         try:
             token = client.authorize_access_token()
         except Exception as token_err:
-            current_app.logger.warning(
-                "OIDC token exchange failed (state/code_verifier mismatch or invalid code). "
-                "Session may have been lost between redirect and callback – check cookie size, domain, Secure, SameSite and proxy headers: %s",
-                token_err,
+            err_str = str(token_err).lower()
+            err_type_name = type(token_err).__name__
+            is_algorithm_or_jwe = (
+                "unsupported_algorithm" in err_str
+                or "unsupportedalgorithmerror" in err_type_name.lower()
+                or "jwe" in err_str
+                or "authlib.jose" in (getattr(token_err, "__module__", "") or "")
             )
-            current_app.logger.info("OIDC callback redirect to login: reason=token_exchange_failed")
-            flash(
-                _("SSO failed. If this repeats, check session cookie and proxy configuration."), "error"
-            )
+            if is_algorithm_or_jwe:
+                current_app.logger.warning(
+                    "OIDC token exchange failed: unsupported token algorithm or encrypted ID token (JWE). "
+                    "IdP may have ID token encryption enabled: %s",
+                    token_err,
+                )
+                current_app.logger.info("OIDC callback redirect to login: reason=unsupported_algorithm_or_jwe")
+                flash(
+                    _(
+                        "SSO failed: encrypted or unsupported ID tokens. "
+                        "Disable ID token encryption on your provider (e.g. in Authentik, leave the Encryption Key empty)."
+                    ),
+                    "error",
+                )
+            else:
+                current_app.logger.warning(
+                    "OIDC token exchange failed (state/code_verifier mismatch or invalid code). "
+                    "Session may have been lost between redirect and callback – check cookie size, domain, Secure, SameSite and proxy headers: %s",
+                    token_err,
+                )
+                current_app.logger.info("OIDC callback redirect to login: reason=token_exchange_failed")
+                flash(
+                    _("SSO failed. If this repeats, check session cookie and proxy configuration."), "error"
+                )
             return redirect(url_for("auth.login"))
 
         current_app.logger.info(
