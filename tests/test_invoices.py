@@ -765,32 +765,33 @@ def test_invoice_sorted_payments_property(app, sample_invoice, sample_user):
 @pytest.mark.invoices
 def test_invoice_sorted_payments_with_same_date(app, sample_invoice, sample_user):
     """Test that sorted_payments handles payments with same payment_date correctly."""
+    from unittest.mock import patch
     from app.models.payments import Payment
-    import time
 
-    # Create payments with the same payment_date but different created_at times
-    same_date = date.today()
+    # Deterministic created_at ordering without time.sleep (freezegun incompatible with Py3.14)
+    t0 = datetime(2024, 1, 1, 10, 0, 0)
+    t1 = datetime(2024, 1, 1, 10, 0, 1)
+    with patch("app.models.payments.datetime") as mock_dt:
+        mock_dt.utcnow.side_effect = [t0, t0, t1, t1]  # created_at, updated_at per payment
+        same_date = date.today()
 
-    payment1 = PaymentFactory(
-        invoice_id=sample_invoice.id,
-        amount=Decimal("100.00"),
-        payment_date=same_date,
-        method="bank_transfer",
-        received_by=sample_user.id,
-    )
-    db.session.commit()
+        payment1 = PaymentFactory(
+            invoice_id=sample_invoice.id,
+            amount=Decimal("100.00"),
+            payment_date=same_date,
+            method="bank_transfer",
+            received_by=sample_user.id,
+        )
+        db.session.commit()
 
-    # Small delay to ensure different created_at
-    time.sleep(0.01)
-
-    payment2 = PaymentFactory(
-        invoice_id=sample_invoice.id,
-        amount=Decimal("200.00"),
-        payment_date=same_date,
-        method="credit_card",
-        received_by=sample_user.id,
-    )
-    db.session.commit()
+        payment2 = PaymentFactory(
+            invoice_id=sample_invoice.id,
+            amount=Decimal("200.00"),
+            payment_date=same_date,
+            method="credit_card",
+            received_by=sample_user.id,
+        )
+        db.session.commit()
 
     # Get sorted payments
     sorted_payments = sample_invoice.sorted_payments

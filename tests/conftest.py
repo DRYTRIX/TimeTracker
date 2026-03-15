@@ -44,6 +44,7 @@ from app.models import (
     TimeEntryTemplate,
     Activity,
     UserFavoriteProject,
+    UserClient,
     ClientNote,
     WeeklyTimeGoal,
     Expense,
@@ -190,6 +191,7 @@ def app(app_config):
             TimeEntryTemplate,
             Activity,
             UserFavoriteProject,
+            UserClient,
             ClientNote,
             WeeklyTimeGoal,
             Expense,
@@ -813,6 +815,93 @@ def auth_headers(user):
     # Note: For tests that use headers, they should use authenticated_client instead
     # This fixture is here for backward compatibility
     return {}
+
+
+# Default scopes for API token (full access to common resources)
+DEFAULT_API_TOKEN_SCOPES = (
+    "read:projects,write:projects,read:time_entries,write:time_entries,"
+    "read:tasks,write:tasks,read:clients,write:clients,read:reports,read:users"
+)
+
+
+@pytest.fixture
+def api_token(app, user):
+    """Create an API token for the given user with default full scopes. Returns (token_model, plain_token)."""
+    with app.app_context():
+        token, plain_token = ApiToken.create_token(
+            user_id=user.id,
+            name="Test API Token",
+            scopes=DEFAULT_API_TOKEN_SCOPES,
+            expires_days=30,
+        )
+        db.session.add(token)
+        db.session.commit()
+        return token, plain_token
+
+
+@pytest.fixture
+def client_with_token(app, api_token):
+    """Test client with Authorization: Bearer <token>. Use for API tests."""
+    token_model, plain_token = api_token
+    test_client = app.test_client()
+    test_client.environ_base["HTTP_AUTHORIZATION"] = f"Bearer {plain_token}"
+    return test_client
+
+
+@pytest.fixture
+def scope_restricted_user(app, test_client):
+    """
+    User with subcontractor role and one assigned client (scope-restricted).
+    Use with project fixture that uses this client so user_can_access_project is True for that project only.
+    """
+    role = Role.query.filter_by(name="subcontractor").first()
+    if not role:
+        role = Role(name="subcontractor", description="Restricted to assigned clients")
+        db.session.add(role)
+        db.session.flush()
+
+    sub_user = User(
+        username="scope_restricted_user",
+        email="sub@example.com",
+        role="user",
+    )
+    sub_user.is_active = True
+    sub_user.set_password("password123")
+    db.session.add(sub_user)
+    db.session.flush()
+
+    if role not in sub_user.roles:
+        sub_user.roles.append(role)
+    db.session.flush()
+
+    # Assign the single test client so this user can only access that client and its projects
+    uc = UserClient(user_id=sub_user.id, client_id=test_client.id)
+    db.session.add(uc)
+    db.session.commit()
+    db.session.refresh(sub_user)
+    # Force load relationships so they are available when user is used in tests
+    _ = list(sub_user.roles)
+    _ = list(sub_user.assigned_clients.all())
+    return sub_user
+
+
+@pytest.fixture
+def scope_restricted_authenticated_client(client, scope_restricted_user):
+    """Test client logged in as scope_restricted_user (subcontractor with one assigned client)."""
+    login_data = {"username": scope_restricted_user.username, "password": "password123"}
+    headers = {}
+    try:
+        from flask import current_app
+
+        if current_app.config.get("WTF_CSRF_ENABLED"):
+            resp = client.get("/auth/csrf-token")
+            token = (resp.get_json() or {}).get("csrf_token", "") if resp.is_json else ""
+            login_data["csrf_token"] = token
+            headers["X-CSRFToken"] = token
+    except Exception:
+        pass
+    client.post("/login", data=login_data, headers=headers or None, follow_redirects=True)
+    return client
 
 
 @pytest.fixture

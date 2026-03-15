@@ -144,34 +144,34 @@ class TestProjectArchiveMethod:
 
     def test_archive_updates_updated_at(self, app, project):
         """Test that archive() updates the updated_at timestamp"""
+        from unittest.mock import patch
         from app import db
+        from datetime import datetime as dt
 
         original_updated_at = project.updated_at
-        # Wait a tiny bit to ensure timestamp difference
-        import time
-
-        time.sleep(0.01)
-
-        project.archive()
+        t1 = dt(2030, 1, 1, 10, 0, 1)  # Future so clearly > original_updated_at
+        with patch("app.models.project.datetime") as mock_dt:
+            mock_dt.utcnow.return_value = t1
+            project.archive()
         db.session.commit()
 
         assert project.updated_at > original_updated_at
 
     def test_archive_can_be_called_multiple_times(self, app, project, admin_user):
         """Test that archive() can be called multiple times (re-archiving)"""
+        from unittest.mock import patch
         from app import db
+        from datetime import datetime as dt
 
-        # First archive
-        project.archive(user_id=admin_user.id, reason="First time")
+        with patch("app.models.project.datetime") as mock_dt:
+            mock_dt.utcnow.return_value = dt(2024, 1, 1, 10, 0, 0)
+            project.archive(user_id=admin_user.id, reason="First time")
         db.session.commit()
         first_archived_at = project.archived_at
 
-        import time
-
-        time.sleep(0.01)
-
-        # Second archive with different reason
-        project.archive(user_id=admin_user.id, reason="Second time")
+        with patch("app.models.project.datetime") as mock_dt2:
+            mock_dt2.utcnow.return_value = dt(2024, 1, 1, 10, 0, 1)
+            project.archive(user_id=admin_user.id, reason="Second time")
         db.session.commit()
 
         assert project.status == "archived"
@@ -236,17 +236,17 @@ class TestProjectUnarchiveMethod:
 
     def test_unarchive_updates_updated_at(self, app, project, admin_user):
         """Test that unarchive() updates the updated_at timestamp"""
+        from unittest.mock import patch
         from app import db
+        from datetime import datetime as dt
 
         project.archive(user_id=admin_user.id, reason="Test")
         db.session.commit()
         original_updated_at = project.updated_at
 
-        import time
-
-        time.sleep(0.01)
-
-        project.unarchive()
+        with patch("app.models.project.datetime") as mock_dt:
+            mock_dt.utcnow.return_value = dt(2030, 1, 1, 10, 0, 1)  # Future so updated_at increases
+            project.unarchive()
         db.session.commit()
 
         assert project.updated_at > original_updated_at

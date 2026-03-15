@@ -136,3 +136,24 @@ class TestTimeEntryRepository:
 
         assert len(entries) == 1
         assert entries[0].id == entry1.id
+
+    def test_get_distinct_project_ids_for_user(self, repository, db_session, sample_user, sample_project):
+        """Test getting distinct project IDs for a user from their time entries"""
+        # Create entries on one project
+        for _ in range(2):
+            repository.create_manual_entry(
+                user_id=sample_user.id,
+                project_id=sample_project.id,
+                start_time=datetime.now() - timedelta(hours=1),
+                end_time=datetime.now(),
+            )
+        db_session.commit()
+
+        project_ids = repository.get_distinct_project_ids_for_user(sample_user.id)
+        assert project_ids == [sample_project.id]
+
+        # User with no entries returns empty list
+        other_user = User(username="otheruser", role="user")
+        db_session.add(other_user)
+        db_session.commit()
+        assert repository.get_distinct_project_ids_for_user(other_user.id) == []

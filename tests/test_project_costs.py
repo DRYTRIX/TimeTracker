@@ -16,6 +16,8 @@ from app import create_app, db
 from app.models import User, Project, Client, Invoice, ProjectCost
 from factories import InvoiceFactory
 
+pytestmark = [pytest.mark.unit, pytest.mark.models]
+
 
 @pytest.fixture
 def app():
@@ -291,31 +293,36 @@ class TestProjectCostMethods:
 
     def test_mark_as_invoiced(self, app, test_project, test_user, test_invoice):
         """Test marking a cost as invoiced."""
+        from unittest.mock import patch
+        from datetime import datetime as dt
+
+        t0 = dt(2024, 1, 1, 10, 0, 0)
+        t1 = dt(2024, 1, 1, 10, 0, 1)
         with app.app_context():
-            cost = ProjectCost(
-                project_id=test_project,
-                user_id=test_user,
-                description="Test cost",
-                category="materials",
-                amount=Decimal("75.00"),
-                cost_date=date.today(),
-            )
-            db.session.add(cost)
-            db.session.commit()
+            with patch("app.models.project_cost.datetime") as mock_dt:
+                mock_dt.utcnow.side_effect = [t0, t1]  # initial updated_at, then in mark_as_invoiced
+                cost = ProjectCost(
+                    project_id=test_project,
+                    user_id=test_user,
+                    description="Test cost",
+                    category="materials",
+                    amount=Decimal("75.00"),
+                    cost_date=date.today(),
+                )
+                db.session.add(cost)
+                db.session.commit()
 
             original_updated_at = cost.updated_at
 
-            # Small delay to ensure timestamp changes
-            import time
-
-            time.sleep(0.01)
-
-            cost.mark_as_invoiced(test_invoice)
+            with patch("app.models.project_cost.datetime") as mock_dt2:
+                mock_dt2.utcnow.return_value = t1
+                cost.mark_as_invoiced(test_invoice)
             db.session.commit()
 
             assert cost.invoiced is True
             assert cost.invoice_id == test_invoice
-            # Note: updated_at might not change in all databases
+            # updated_at should be later after mark_as_invoiced
+            assert cost.updated_at > original_updated_at
 
     def test_unmark_as_invoiced(self, app, test_project, test_user, test_invoice):
         """Test unmarking a cost as invoiced."""
