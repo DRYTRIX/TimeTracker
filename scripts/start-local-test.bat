@@ -21,7 +21,7 @@ if %errorlevel% neq 0 (
 )
 
 echo Building and starting containers...
-docker-compose -f docker-compose.local-test.yml up --build
+docker-compose -f docker/docker-compose.local-test.yml up --build
 
 echo.
 echo Local test environment stopped.
