@@ -1,7 +1,9 @@
 # TimeTracker - Complete Features Documentation
 
-**Version:** 4.20.6 (see `setup.py` for single source of truth)  
+**Version:** See `setup.py` for current version (single source of truth).  
 **Last Updated:** 2025-02-20
+
+**Navigation:** Many features are optional (see Admin → Module Management). Reports are available from the top-level **Reports** sidebar link (or **Finance & Expenses → Reports** for Report Builder, Saved Views, Scheduled Reports). Time entries export is under **Time entries** (overview page).
 
 ---
 

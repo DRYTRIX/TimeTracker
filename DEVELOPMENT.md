@@ -1,6 +1,6 @@
 # TimeTracker Development Guide
 
-Quick reference for running the project locally, running tests, and contributing. For full guidelines, see [Contributing](CONTRIBUTING.md) and the [developer documentation](docs/development/CONTRIBUTING.md).
+Quick reference for running the project locally, running tests, and contributing. For a single-page contributor overview (workflows, adding routes/services/templates), see [Contributor Guide](docs/development/CONTRIBUTOR_GUIDE.md). For full guidelines, see [Contributing](CONTRIBUTING.md) and the [developer documentation](docs/development/CONTRIBUTING.md).
 
 ## Running Locally
 

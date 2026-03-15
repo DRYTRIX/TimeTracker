@@ -1,5 +1,7 @@
 # 🚀 Quick Wins Implementation - Deployment Guide
 
+> **For deployment steps** (Docker, production, HTTPS), see [Docker Compose Setup](../admin/configuration/DOCKER_COMPOSE_SETUP.md) and [Docker Public Setup](../admin/configuration/DOCKER_PUBLIC_SETUP.md). This document is a **feature implementation checklist**, not a deployment how-to.
+
 ## ✅ **IMPLEMENTATION STATUS: 100% COMPLETE**
 
 All 10 "Quick Win" features have been successfully implemented and are ready for deployment!

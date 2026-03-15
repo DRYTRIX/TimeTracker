@@ -21,14 +21,15 @@ TimeTracker/
 ├── 📁 .github/                # GitHub workflows and configurations
 ├── 📁 logs/                   # Application logs (with .gitkeep)
 ├── 🐳 Dockerfile              # Main Dockerfile
-├── 📄 docker-compose.yml          # Local development compose
+├── 📄 docker-compose.yml          # Default stack (HTTPS via nginx)
+├── 📄 docker-compose.example.yml # HTTP on port 8080 (no nginx)
+├── 📄 docker-compose.local-test.yml # SQLite, HTTP 8080 (quick test)
 ├── 📄 docker-compose.remote.yml   # Remote/production compose (ghcr.io)
 ├── 📄 docker-compose.remote-dev.yml # Remote dev/testing compose (ghcr.io)
 ├── 📄 requirements.txt         # Python dependencies
 ├── 📄 app.py                  # Application entry point
 ├── 📄 env.example             # Environment variables template
 ├── 📄 README.md               # Main project documentation
-├── 📄 PROJECT_STRUCTURE.md    # This file
 ├── 📄 CONTRIBUTING.md         # Contribution guidelines
 ├── 📄 CODE_OF_CONDUCT.md      # Community code of conduct
 ├── 📄 LICENSE                 # GPL v3 license
@@ -83,17 +84,21 @@ TimeTracker/
 
 ## 🚀 Deployment Options
 
-### 1. Local Development
+### 1. Default stack (HTTPS)
 - **File**: `docker-compose.yml`
 - **Image**: Built from local source
-- **Use case**: Developer workstation
+- **Use case**: Quick start and production; serves **https://localhost** (nginx + self-signed cert).
 
-### 2. Remote/Production
+### 2. HTTP (no HTTPS)
+- **File**: `docker-compose.example.yml` — app on **http://localhost:8080** (published image or build).
+- **File**: `docker-compose.local-test.yml` — SQLite, **http://localhost:8080** (no PostgreSQL).
+
+### 3. Remote/Production
 - **File**: `docker-compose.remote.yml`
 - **Image**: `ghcr.io/drytrix/timetracker:latest` (or versioned tag)
 - **Use case**: Production deployment
 
-### 3. Remote Dev/Testing
+### 4. Remote Dev/Testing
 - **File**: `docker-compose.remote-dev.yml`
 - **Image**: `ghcr.io/drytrix/timetracker:development`
 - **Use case**: Pre-release testing
@@ -107,7 +112,7 @@ TimeTracker/
 - **INSTALLATION.md** (root): [Installation guide](../../INSTALLATION.md)
 - **DEVELOPMENT.md** (root): [Development guide](../../DEVELOPMENT.md)
 - **API.md** (root): [API quick reference](../../API.md)
-- **PROJECT_STRUCTURE.md**: This file — project structure overview
+- **PROJECT_STRUCTURE.md** (this folder): Project structure overview
 - **TASK_MANAGEMENT_README.md** (docs/): Detailed Task Management feature documentation
 
 ## ✅ Workforce & Timesheet Governance
@@ -163,7 +168,7 @@ The Task Management feature is fully integrated into the application with automa
 
 ## Versioning
 
-- **Canonical app version**: Defined in `setup.py` (`version='4.20.9'`). Use this as the single source of truth for the web app release.
+- **Canonical app version**: Defined in `setup.py` (single source of truth). Do not duplicate the version in other docs.
 - **Desktop**: `desktop/package.json` version should align with the app version when the desktop client ships with that release.
 - **Frontend build**: Root `package.json` is for Tailwind/build tooling and may use a separate semver (e.g. 1.0.0).
 - **API docs**: OpenAPI info version in `app/routes/api_docs.py` can match the app version for consistency.

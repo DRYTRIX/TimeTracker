@@ -55,7 +55,8 @@ docs/
 - **[Requirements](REQUIREMENTS.md)** — System requirements and dependencies
 
 ### User Guides
-- **[Deployment Guide](guides/DEPLOYMENT_GUIDE.md)** — How to deploy TimeTracker
+- **How to deploy**: [Docker Compose Setup](admin/configuration/DOCKER_COMPOSE_SETUP.md) · [Docker Public Setup](admin/configuration/DOCKER_PUBLIC_SETUP.md)
+- **[Quick Wins Implementation (Deployment Checklist)](guides/DEPLOYMENT_GUIDE.md)** — Feature implementation status (not deployment steps)
 - **[Quick Start Guide](guides/QUICK_START_GUIDE.md)** — Get started quickly
 - **[Quick Start Local Development](guides/QUICK_START_LOCAL_DEVELOPMENT.md)** — Local development setup
 
@@ -114,7 +115,12 @@ See [features/](features/) for additional feature documentation.
 
 ## 👨‍💻 Developer Documentation
 
+### Terminology
+
+Use consistent terms in code, API, and user-facing copy: **time entry** / **time entries**, **client**, **project**, **task**, **invoice**. See [Product/UX Audit](PRODUCT_UX_AUDIT.md) for full context and naming recommendations.
+
 ### Getting Started
+- **[Contributor Guide](development/CONTRIBUTOR_GUIDE.md)** — Architecture, local dev, testing, adding routes/services/templates, versioning
 - **[Contributing](../CONTRIBUTING.md)** — How to contribute (root; quick overview)
 - **[Contributing Guidelines (full)](development/CONTRIBUTING.md)** — Setup, standards, PR process
 - **[Development Guide](../DEVELOPMENT.md)** — Run locally, tests, releases (root)
@@ -323,6 +329,12 @@ docs/
 └── cicd/                              # CI/CD documentation
     └── ...
 ```
+
+---
+
+## 📋 Documentation Audit
+
+A summary of doc accuracy, outdated content, gaps, and contradictions is in [DOCS_AUDIT.md](DOCS_AUDIT.md). Use it when updating or reorganizing docs.
 
 ---
 

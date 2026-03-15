@@ -76,7 +76,7 @@ TimeTracker is built with modern, reliable technologies:
 
 ## 🖥️ UI overview
 
-The web app uses a **single main layout** with a sidebar and top header. Content is centered with a max width for readability. **Getting around:** **Dashboard** — overview, today’s stats, and the main **Timer** widget (start/stop, quick start, repeat last). **Timer** and **Time entries** are first-class in the sidebar for fast access. **Time entries** is the place to filter, review, and export all logged time. **Reports**, **Projects**, **Finance**, and **Settings** are available from the sidebar and navigation. For design and component conventions, see [UI Guidelines](docs/UI_GUIDELINES.md).
+The web app uses a **single main layout** with a sidebar and top header. Content is centered with a max width for readability. **Getting around:** **Dashboard** — overview, today’s stats, and the main **Timer** widget (start/stop, quick start, repeat last). **Timer** and **Time entries** are first-class in the sidebar for fast access. **Time entries** is the place to filter, review, and export all logged time. **Reports** (time, project, finance) are available from the sidebar (top-level **Reports** link or **Finance & Expenses → Reports** for Report Builder, Saved Views, Scheduled Reports), and from the bottom bar on mobile. **Projects**, **Finance**, and **Settings** are available from the sidebar and navigation. For design and component conventions, see [UI Guidelines](docs/UI_GUIDELINES.md).
 
 ---
 
@@ -86,20 +86,12 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 > **📋 For complete release history, see [CHANGELOG.md](CHANGELOG.md)**
 
-**Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for release history.
+**Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 - 📱 **Native Mobile & Desktop Apps** — Flutter mobile app (iOS/Android) and Electron desktop app with time tracking, offline support, and API integration ([Build Guide](BUILD.md), [Docs](docs/mobile-desktop-apps/README.md))
 - 📋 **Project Analysis & Documentation** — Comprehensive project analysis and documentation updates
 - 🔧 **Version Consistency** — Fixed version inconsistencies across documentation files
 
-**Previous Releases:**
-- **v4.14.0** (January 2025) — Documentation and technology stack updates
-- **v4.6.0** (December 2025) — Comprehensive Issue/Bug Tracking System
-
-**Recent Releases:**
-- **v4.5.1** — Performance optimizations and version management improvements
-- **v4.5.0** — Advanced Report Builder, quick task creation, Kanban enhancements, and PWA improvements
-- **v4.4.1** — Dashboard cache fixes and custom reports enhancements
-- **v4.4.0** — Project custom fields, file attachments, and salesman-based report splitting
+See [CHANGELOG.md](CHANGELOG.md) for all release notes and version history.
 
 ### 🎯 **Major Feature Additions**
 
@@ -437,7 +429,7 @@ docker-compose up -d
 # Click "Advanced" → "Proceed to localhost" to continue
 ```
 
-**First login creates the admin account** — just enter your username!
+**First login creates the admin account** — just enter your username! For setup problems, see [INSTALLATION.md](INSTALLATION.md).
 
 **📖 See the complete setup guide:** [`docs/admin/configuration/DOCKER_COMPOSE_SETUP.md`](docs/admin/configuration/DOCKER_COMPOSE_SETUP.md)
 

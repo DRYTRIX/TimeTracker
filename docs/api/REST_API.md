@@ -75,7 +75,7 @@ API tokens use scopes to control access to resources. When creating a token, sel
 
 ## Pagination
 
-List endpoints support pagination to handle large datasets efficiently:
+List endpoints support pagination to handle large datasets efficiently. For performance and benchmark targets, see [PERFORMANCE.md](../PERFORMANCE.md).
 
 ### Query Parameters
 
@@ -84,9 +84,11 @@ List endpoints support pagination to handle large datasets efficiently:
 
 ### Response Format
 
+List responses use a **resource-named key** (e.g. `time_entries`, `projects`, `clients`) plus a top-level `pagination` object:
+
 ```json
 {
-  "items": [...],
+  "time_entries": [...],
   "pagination": {
     "page": 1,
     "per_page": 50,
@@ -121,20 +123,35 @@ All timestamps use ISO 8601 format:
 
 ### Error Response Format
 
+All error responses (4xx/5xx) include at least `error` (user-facing message) and `message`. Optional `error_code` (e.g. `unauthorized`, `forbidden`, `not_found`, `validation_error`) allows machine-readable handling. Validation errors include an `errors` object with field-level messages.
+
+Example (401):
 ```json
 {
   "error": "Invalid token",
-  "message": "The provided API token is invalid or expired"
+  "message": "The provided API token is invalid or expired",
+  "error_code": "unauthorized"
 }
 ```
 
-For scope errors:
+For scope errors (403):
 ```json
 {
   "error": "Insufficient permissions",
   "message": "This endpoint requires the 'write:projects' scope",
+  "error_code": "forbidden",
   "required_scope": "write:projects",
   "available_scopes": ["read:projects", "read:time_entries"]
+}
+```
+
+For validation errors (400):
+```json
+{
+  "error": "Validation failed",
+  "message": "Validation failed",
+  "error_code": "validation_error",
+  "errors": { "name": ["Name is required"], "project_id": ["project_id is required"] }
 }
 ```
 

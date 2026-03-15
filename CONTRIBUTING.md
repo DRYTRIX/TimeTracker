@@ -12,6 +12,7 @@ Thank you for your interest in contributing to TimeTracker. This page gives you 
 
 For development setup, coding standards, testing, pull request process, and commit conventions, see:
 
+- **[Contributor Guide](docs/development/CONTRIBUTOR_GUIDE.md)** — Architecture, local dev, testing, how to add routes/services/templates, versioning
 - **[Contributing guidelines (full)](docs/development/CONTRIBUTING.md)** — Development setup, coding standards, testing, PR process
 - **[Code of Conduct](docs/development/CODE_OF_CONDUCT.md)** — Community standards and expected behavior
 - **[CHANGELOG.md](CHANGELOG.md)** — How we track changes; update the *Unreleased* section for user-facing changes

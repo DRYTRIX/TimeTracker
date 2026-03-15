@@ -13,6 +13,7 @@ Thank you for your interest in contributing to TimeTracker! This document provid
 - [Reporting Bugs](#reporting-bugs)
 - [Feature Requests](#feature-requests)
 - [Questions and Discussion](#questions-and-discussion)
+- [Terminology](#terminology)
 
 ## Code of Conduct
 
@@ -99,7 +100,9 @@ This project and everyone participating in it is governed by our [Code of Conduc
    docker-compose up --build
    ```
 
-2. Access the application at `http://localhost:8080`
+2. Access the application:
+   - **Default (docker-compose.yml)**: **https://localhost** (self-signed cert; accept the browser warning).
+   - For **http://localhost:8080** instead, use: `docker-compose -f docker-compose.example.yml up -d` or `docker-compose -f docker-compose.local-test.yml up -d` (SQLite, no PostgreSQL).
 
 ## Pull Request Process
 
@@ -231,6 +234,10 @@ If you need help:
 2. Search existing issues and discussions
 3. Create a new issue or discussion
 4. Join our community channels (if available)
+
+## Terminology
+
+Use consistent terms in code, API, and user-facing copy: **time entry** / **time entries**, **client**, **project**, **task**, **invoice**. For full product and naming context, see the [Product/UX Audit](../PRODUCT_UX_AUDIT.md).
 
 ## License
 
