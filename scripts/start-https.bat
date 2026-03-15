@@ -92,16 +92,16 @@ if "%CERT_METHOD%"=="2" (
     where mkcert >nul 2>&1
     if %errorlevel% equ 0 (
         echo [INFO] Using mkcert for trusted certificates...
-        docker-compose -f docker-compose.yml -f docker-compose.https-mkcert.yml up -d
+        docker-compose -f docker-compose.yml -f docker/docker-compose.https-mkcert.yml up -d
     ) else (
         echo [WARNING] mkcert not found. Using self-signed certificates instead.
         echo    Install mkcert: choco install mkcert
         echo.
-        docker-compose -f docker-compose.yml -f docker-compose.https-auto.yml up -d
+        docker-compose -f docker-compose.yml -f docker/docker-compose.https-auto.yml up -d
     )
 ) else (
     echo [INFO] Using self-signed certificates...
-    docker-compose -f docker-compose.yml -f docker-compose.https-auto.yml up -d
+    docker-compose -f docker-compose.yml -f docker/docker-compose.https-auto.yml up -d
 )
 
 echo.

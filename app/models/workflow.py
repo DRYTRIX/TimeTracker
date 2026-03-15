@@ -3,8 +3,10 @@ Workflow automation models for rule-based automation
 """
 
 from datetime import datetime
-from app import db
+
 from sqlalchemy import JSON
+
+from app import db
 
 
 class WorkflowRule(db.Model):

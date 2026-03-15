@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, date, timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from datetime import date, datetime, timedelta
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Iterable, List, Optional, Set
 
 from app import db
-from app.models import Client, TimeEntry, ClientPrepaidConsumption, Invoice
+from app.models import Client, ClientPrepaidConsumption, Invoice, TimeEntry
 
 SECONDS_IN_HOUR = Decimal("3600")
 TWO_DECIMALS = Decimal("0.01")

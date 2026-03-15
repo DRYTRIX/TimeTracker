@@ -1,8 +1,10 @@
 """Link Template model for storing URL templates with field placeholders"""
 
 from datetime import datetime
-from app import db
+
 from sqlalchemy.exc import ProgrammingError
+
+from app import db
 
 
 class LinkTemplate(db.Model):
@@ -30,7 +32,7 @@ class LinkTemplate(db.Model):
 
     def render_url(self, field_value):
         """Render the URL template with the given field value
-        
+
         Supports both {value} and %value% placeholder formats
         """
         if not field_value:
@@ -67,7 +69,7 @@ class LinkTemplate(db.Model):
     @classmethod
     def get_active_templates(cls, field_key=None):
         """Get active link templates, optionally filtered by field_key.
-        
+
         Returns empty list if table doesn't exist (migration not run yet).
         """
         try:
@@ -80,6 +82,7 @@ class LinkTemplate(db.Model):
             if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
                 try:
                     from flask import current_app
+
                     if current_app:
                         current_app.logger.warning(
                             "link_templates table does not exist. Run migration: flask db upgrade"
@@ -98,10 +101,9 @@ class LinkTemplate(db.Model):
             # For other database errors, return empty list to prevent breaking the app
             try:
                 from flask import current_app
+
                 if current_app:
-                    current_app.logger.warning(
-                        "Could not query link_templates. Returning empty list."
-                    )
+                    current_app.logger.warning("Could not query link_templates. Returning empty list.")
             except RuntimeError:
                 pass  # No application context
             # Rollback the failed transaction

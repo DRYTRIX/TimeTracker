@@ -2,12 +2,13 @@
 Service for project template business logic.
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
+
 from app import db
-from app.models import ProjectTemplate, Project, Task, User
+from app.constants import WebhookEvent
+from app.models import Project, ProjectTemplate, Task, User
 from app.utils.db import safe_commit
 from app.utils.event_bus import emit_event
-from app.constants import WebhookEvent
 
 
 class ProjectTemplateService:
@@ -35,7 +36,7 @@ class ProjectTemplateService:
         try:
             # Ensure tasks is a list
             tasks_list = tasks if tasks and isinstance(tasks, list) else []
-            
+
             template = ProjectTemplate(
                 name=name,
                 description=description,
@@ -124,13 +125,20 @@ class ProjectTemplateService:
 
             # Create tasks from template
             # Check if tasks exist and is a non-empty list
-            tasks_to_create = template.tasks if template.tasks and isinstance(template.tasks, list) and len(template.tasks) > 0 else []
-            
+            tasks_to_create = (
+                template.tasks
+                if template.tasks and isinstance(template.tasks, list) and len(template.tasks) > 0
+                else []
+            )
+
             if tasks_to_create:
                 import logging
+
                 logger = logging.getLogger(__name__)
-                logger.info(f"Creating {len(tasks_to_create)} tasks from template {template_id} for project {project.id}")
-                
+                logger.info(
+                    f"Creating {len(tasks_to_create)} tasks from template {template_id} for project {project.id}"
+                )
+
                 from app.services.task_service import TaskService
 
                 task_service = TaskService()
@@ -143,14 +151,14 @@ class ProjectTemplateService:
                         logger.warning(f"Invalid task config (not a dict): {task_config}")
                         failed_count += 1
                         continue
-                    
+
                     # Get task name - required field
                     task_name = task_config.get("name", "").strip()
                     if not task_name:
                         logger.warning(f"Skipping task with empty name: {task_config}")
                         failed_count += 1
                         continue
-                    
+
                     # Convert estimated_hours to float if it's a string or number
                     estimated_hours = task_config.get("estimated_hours")
                     if estimated_hours:
@@ -169,18 +177,25 @@ class ProjectTemplateService:
                         estimated_hours=estimated_hours,
                         created_by=created_by,
                     )
-                    
+
                     # Log if task creation failed but don't stop the process
                     if not result.get("success"):
-                        logger.warning(f"Failed to create task '{task_name}' from template: {result.get('message', 'Unknown error')}")
+                        logger.warning(
+                            f"Failed to create task '{task_name}' from template: {result.get('message', 'Unknown error')}"
+                        )
                         failed_count += 1
                     else:
                         created_count += 1
-                        logger.info(f"Successfully created task '{task_name}' (ID: {result.get('task', {}).id if result.get('task') else 'unknown'})")
-                
-                logger.info(f"Task creation summary: {created_count} created, {failed_count} failed out of {len(tasks_to_create)} tasks")
+                        logger.info(
+                            f"Successfully created task '{task_name}' (ID: {result.get('task', {}).id if result.get('task') else 'unknown'})"
+                        )
+
+                logger.info(
+                    f"Task creation summary: {created_count} created, {failed_count} failed out of {len(tasks_to_create)} tasks"
+                )
             else:
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.info(f"No tasks to create from template {template_id} (tasks: {template.tasks})")
 
@@ -261,6 +276,7 @@ class ProjectTemplateService:
                     tasks = []
                 elif not isinstance(tasks, list):
                     import logging
+
                     logging.getLogger(__name__).warning(f"Tasks is not a list: {type(tasks)}, value: {tasks}")
                     tasks = []
                 template.tasks = tasks

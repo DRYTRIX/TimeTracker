@@ -1,16 +1,18 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, current_app
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db, log_event, track_event
-from app.models import PerDiem, PerDiemRate, Project, Client, Settings
-from app.constants import SUPPORTED_CURRENCIES
-from datetime import datetime, date, time
-from decimal import Decimal
-from app.utils.db import safe_commit
-from app.utils.permissions import admin_or_permission_required
-from app.utils.module_helpers import module_enabled
 import csv
 import io
+from datetime import date, datetime, time
+from decimal import Decimal
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
+from app import db, log_event, track_event
+from app.constants import SUPPORTED_CURRENCIES
+from app.models import Client, PerDiem, PerDiemRate, Project, Settings
+from app.utils.db import safe_commit
+from app.utils.module_helpers import module_enabled
+from app.utils.permissions import admin_or_permission_required
 
 per_diem_bp = Blueprint("per_diem", __name__)
 
@@ -112,6 +114,7 @@ def list_per_diem():
 def _per_diem_export_query():
     """Build the same filtered query as list_per_diem (no pagination)."""
     from sqlalchemy.orm import joinedload
+
     from app.utils.client_lock import enforce_locked_client_id
 
     status = request.args.get("status", "").strip()
@@ -242,6 +245,7 @@ def export_per_diem_pdf():
 
     try:
         from app.utils.per_diem_pdf import build_per_diem_pdf
+
         pdf_bytes = build_per_diem_pdf(
             entries,
             start_date=start_date,
@@ -287,6 +291,7 @@ def create_per_diem():
 
     try:
         from app.utils.client_lock import enforce_locked_client_id, get_locked_client_id
+
         # Get form data
         trip_purpose = request.form.get("trip_purpose", "").strip()
         start_date_str = request.form.get("start_date", "").strip()
@@ -471,6 +476,7 @@ def edit_per_diem(per_diem_id):
 
     try:
         from app.utils.client_lock import enforce_locked_client_id
+
         # Update fields
         per_diem.trip_purpose = request.form.get("trip_purpose", "").strip()
         per_diem.description = request.form.get("description", "").strip()

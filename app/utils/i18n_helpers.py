@@ -5,7 +5,8 @@ This module provides translation functions for all enum-based fields in models,
 ensuring consistent translations across the application.
 """
 
-from flask_babel import lazy_gettext as _l, gettext as _
+from flask_babel import gettext as _
+from flask_babel import lazy_gettext as _l
 
 
 # Task Status Translations

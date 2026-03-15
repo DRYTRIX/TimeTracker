@@ -11,9 +11,12 @@ Two modes:
    Code = HMAC-SHA256(secret, system_id) as 64 hex chars. Requires the
    secret on the server (env or file).
 """
+
 import base64
-import hmac
 import hashlib
+import hmac
+
+
 def compute_donate_hide_code(secret: str, system_id: str) -> str:
     """Compute the donate-hide code (HMAC mode) for a given secret and system ID.
 
@@ -43,9 +46,9 @@ def verify_ed25519_signature(signature_b64: str, system_id: str, public_key_pem:
         True if the signature is valid for this system_id and public key.
     """
     try:
+        from cryptography.exceptions import InvalidSignature
         from cryptography.hazmat.primitives import serialization
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-        from cryptography.exceptions import InvalidSignature
 
         sig = base64.standard_b64decode(signature_b64)
         message = system_id.encode("utf-8")

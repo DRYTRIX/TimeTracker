@@ -3,8 +3,9 @@ API v1 - Projects sub-blueprint.
 Routes under /api/v1/projects.
 """
 
-from flask import Blueprint, jsonify, request, g
+from flask import Blueprint, g, jsonify, request
 from marshmallow import ValidationError
+
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import (
     error_response,
@@ -151,9 +152,7 @@ def delete_project(project_id):
     from app.services import ProjectService
 
     project_service = ProjectService()
-    result = project_service.archive_project(
-        project_id=project_id, user_id=g.api_user.id, reason="Archived via API"
-    )
+    result = project_service.archive_project(project_id=project_id, user_id=g.api_user.id, reason="Archived via API")
 
     if not result.get("success"):
         return error_response(result.get("message", "Could not archive project"), status_code=404)

@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
-from app import db
+
 from sqlalchemy import func
+
+from app import db
 
 
 def local_now():
@@ -25,7 +27,9 @@ class WeeklyTimeGoal(db.Model):
     target_hours = db.Column(db.Float, nullable=False)  # Target hours for the week
     week_start_date = db.Column(db.Date, nullable=False, index=True)  # Monday of the week
     week_end_date = db.Column(db.Date, nullable=False)  # Sunday of the week (or Friday if exclude_weekends is True)
-    exclude_weekends = db.Column(db.Boolean, default=False, nullable=False)  # If True, only count weekdays (5-day work week)
+    exclude_weekends = db.Column(
+        db.Boolean, default=False, nullable=False
+    )  # If True, only count weekdays (5-day work week)
     status = db.Column(db.String(20), default="active", nullable=False)  # 'active', 'completed', 'failed', 'cancelled'
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=local_now, nullable=False)
@@ -90,12 +94,12 @@ class WeeklyTimeGoal(db.Model):
             func.date(TimeEntry.start_time) >= self.week_start_date,
             func.date(TimeEntry.start_time) <= self.week_end_date,
         ).all()
-        
+
         # If exclude_weekends is True, filter out Saturday (5) and Sunday (6)
         # Python weekday: Monday=0, Tuesday=1, ..., Sunday=6
         if self.exclude_weekends:
             entries = [e for e in entries if e.start_time.date().weekday() < 5]
-        
+
         total_seconds = sum(entry.duration_seconds for entry in entries)
         return round(total_seconds / 3600, 2)
 
@@ -130,7 +134,7 @@ class WeeklyTimeGoal(db.Model):
         today = local_now().date()
         if today > self.week_end_date:
             return 0
-        
+
         if self.exclude_weekends:
             # Count only weekdays (Monday-Friday)
             days = 0
@@ -156,7 +160,9 @@ class WeeklyTimeGoal(db.Model):
     def week_label(self):
         """Get a human-readable label for the week"""
         if self.exclude_weekends:
-            return f"{self.week_start_date.strftime('%b %d')} - {self.week_end_date.strftime('%b %d, %Y')} (Weekdays only)"
+            return (
+                f"{self.week_start_date.strftime('%b %d')} - {self.week_end_date.strftime('%b %d, %Y')} (Weekdays only)"
+            )
         return f"{self.week_start_date.strftime('%b %d')} - {self.week_end_date.strftime('%b %d, %Y')}"
 
     def update_status(self):

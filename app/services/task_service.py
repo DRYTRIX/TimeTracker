@@ -2,14 +2,14 @@
 Service for task business logic.
 """
 
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
 from app import db
-from app.repositories import TaskRepository, ProjectRepository
+from app.constants import TaskStatus, WebhookEvent
 from app.models import Task
-from app.constants import TaskStatus
+from app.repositories import ProjectRepository, TaskRepository
 from app.utils.db import safe_commit
 from app.utils.event_bus import emit_event
-from app.constants import WebhookEvent
 
 
 class TaskService:
@@ -82,11 +82,7 @@ class TaskService:
         if not project:
             return {"success": False, "message": "Invalid project", "error": "invalid_project"}
 
-        task_status = (
-            status
-            if status and status in self.VALID_STATUSES
-            else TaskStatus.TODO.value
-        )
+        task_status = status if status and status in self.VALID_STATUSES else TaskStatus.TODO.value
 
         # Create task
         task = self.task_repo.create(
@@ -138,7 +134,8 @@ class TaskService:
             Task with eagerly loaded relations, or None if not found
         """
         from sqlalchemy.orm import joinedload
-        from app.models import TimeEntry, Comment, TaskActivity
+
+        from app.models import Comment, TaskActivity, TimeEntry
 
         query = self.task_repo.query().filter_by(id=task_id)
 
@@ -209,9 +206,11 @@ class TaskService:
         Returns:
             dict with 'tasks', 'pagination', and 'total' keys
         """
-        import time
         import logging
+        import time
+
         from sqlalchemy.orm import joinedload
+
         from app.utils.timezone import now_in_app_timezone
 
         logger = logging.getLogger(__name__)
@@ -219,18 +218,19 @@ class TaskService:
         step_start = time.time()
 
         query = self.task_repo.query()
-        logger.debug(f"[TaskService.list_tasks] Step 1: Initial query creation took {(time.time() - step_start) * 1000:.2f}ms")
+        logger.debug(
+            f"[TaskService.list_tasks] Step 1: Initial query creation took {(time.time() - step_start) * 1000:.2f}ms"
+        )
 
         step_start = time.time()
         # Eagerly load relations to prevent N+1
         # Use selectinload for better performance with many tasks (avoids cartesian product)
         from sqlalchemy.orm import selectinload
-        query = query.options(
-            selectinload(Task.project),
-            selectinload(Task.assigned_user),
-            selectinload(Task.creator)
+
+        query = query.options(selectinload(Task.project), selectinload(Task.assigned_user), selectinload(Task.creator))
+        logger.debug(
+            f"[TaskService.list_tasks] Step 2: Eager loading setup took {(time.time() - step_start) * 1000:.2f}ms"
         )
-        logger.debug(f"[TaskService.list_tasks] Step 2: Eager loading setup took {(time.time() - step_start) * 1000:.2f}ms")
 
         step_start = time.time()
         # Apply filters
@@ -270,7 +270,9 @@ class TaskService:
         # Permission filter - users without view_all_tasks permission only see their tasks
         if not has_view_all_tasks and user_id:
             query = query.filter(db.or_(Task.assigned_to == user_id, Task.created_by == user_id))
-        logger.debug(f"[TaskService.list_tasks] Step 3: Applying filters took {(time.time() - step_start) * 1000:.2f}ms")
+        logger.debug(
+            f"[TaskService.list_tasks] Step 3: Applying filters took {(time.time() - step_start) * 1000:.2f}ms"
+        )
 
         step_start = time.time()
         # Order by priority, due date, created date
@@ -281,11 +283,11 @@ class TaskService:
         # Optimize pagination: fetch one extra item to check for next page without full count
         offset = (page - 1) * per_page
         tasks_with_extra = query.limit(per_page + 1).offset(offset).all()
-        
+
         # Check if there's a next page
         has_next = len(tasks_with_extra) > per_page
         tasks = tasks_with_extra[:per_page]  # Remove extra item if present
-        
+
         # For count, use a simpler query without joins (much faster)
         # Only count if we're on first page or we detected a next page
         if page == 1 or has_next:
@@ -315,7 +317,9 @@ class TaskService:
                     count_query = count_query.filter(db.or_(*tag_conditions))
             if overdue:
                 today_local = now_in_app_timezone().date()
-                count_query = count_query.filter(Task.due_date < today_local, Task.status.in_(["todo", "in_progress", "review"]))
+                count_query = count_query.filter(
+                    Task.due_date < today_local, Task.status.in_(["todo", "in_progress", "review"])
+                )
             if not has_view_all_tasks and user_id:
                 count_query = count_query.filter(db.or_(Task.assigned_to == user_id, Task.created_by == user_id))
             total = count_query.count()
@@ -323,9 +327,10 @@ class TaskService:
         else:
             # Estimate: we know there's no next page, so total is at most current page items
             total = (page - 1) * per_page + len(tasks)
-        
+
         # Create pagination-like object compatible with Flask-SQLAlchemy pagination
         from types import SimpleNamespace
+
         pagination = SimpleNamespace()
         pagination.items = tasks
         pagination.page = page
@@ -334,38 +339,41 @@ class TaskService:
         pagination.pages = (total + per_page - 1) // per_page if total else 1
         pagination.has_next = has_next
         pagination.has_prev = page > 1
-        
-        logger.debug(f"[TaskService.list_tasks] Step 5: Pagination query execution took {(time.time() - step_start) * 1000:.2f}ms (total: {pagination.total} tasks, page: {page}, per_page: {per_page})")
+
+        logger.debug(
+            f"[TaskService.list_tasks] Step 5: Pagination query execution took {(time.time() - step_start) * 1000:.2f}ms (total: {pagination.total} tasks, page: {page}, per_page: {per_page})"
+        )
 
         step_start = time.time()
         # Pre-calculate total_hours for all tasks in a single query to avoid N+1
         # This prevents the template from triggering individual queries for each task
         tasks = pagination.items
-        logger.debug(f"[TaskService.list_tasks] Step 6: Getting pagination items took {(time.time() - step_start) * 1000:.2f}ms ({len(tasks)} tasks)")
-        
+        logger.debug(
+            f"[TaskService.list_tasks] Step 6: Getting pagination items took {(time.time() - step_start) * 1000:.2f}ms ({len(tasks)} tasks)"
+        )
+
         if tasks:
-            from app.models import TimeEntry, KanbanColumn
+            from app.models import KanbanColumn, TimeEntry
+
             step_start = time.time()
             task_ids = [task.id for task in tasks]
-            logger.debug(f"[TaskService.list_tasks] Step 7: Extracting task IDs took {(time.time() - step_start) * 1000:.2f}ms")
-            
+            logger.debug(
+                f"[TaskService.list_tasks] Step 7: Extracting task IDs took {(time.time() - step_start) * 1000:.2f}ms"
+            )
+
             step_start = time.time()
             # Calculate total hours for all tasks in one query
             results = (
-                db.session.query(
-                    TimeEntry.task_id,
-                    db.func.sum(TimeEntry.duration_seconds).label('total_seconds')
-                )
-                .filter(
-                    TimeEntry.task_id.in_(task_ids),
-                    TimeEntry.end_time.isnot(None)
-                )
+                db.session.query(TimeEntry.task_id, db.func.sum(TimeEntry.duration_seconds).label("total_seconds"))
+                .filter(TimeEntry.task_id.in_(task_ids), TimeEntry.end_time.isnot(None))
                 .group_by(TimeEntry.task_id)
                 .all()
             )
             total_hours_map = {task_id: total_seconds for task_id, total_seconds in results}
-            logger.debug(f"[TaskService.list_tasks] Step 8: Calculating total hours query took {(time.time() - step_start) * 1000:.2f}ms ({len(results)} results)")
-            
+            logger.debug(
+                f"[TaskService.list_tasks] Step 8: Calculating total hours query took {(time.time() - step_start) * 1000:.2f}ms ({len(results)} results)"
+            )
+
             step_start = time.time()
             # Pre-load kanban columns to avoid N+1 queries in status_display property
             # Load global columns (project_id is None) since tasks don't have project-specific columns
@@ -373,8 +381,10 @@ class TaskService:
             status_display_map = {}
             for col in kanban_columns:
                 status_display_map[col.key] = col.label
-            logger.debug(f"[TaskService.list_tasks] Step 9: Loading kanban columns took {(time.time() - step_start) * 1000:.2f}ms ({len(kanban_columns)} columns)")
-            
+            logger.debug(
+                f"[TaskService.list_tasks] Step 9: Loading kanban columns took {(time.time() - step_start) * 1000:.2f}ms ({len(kanban_columns)} columns)"
+            )
+
             # Fallback status map if no columns found
             fallback_status_map = {
                 "todo": "To Do",
@@ -383,21 +393,24 @@ class TaskService:
                 "done": "Done",
                 "cancelled": "Cancelled",
             }
-            
+
             step_start = time.time()
             # Cache the calculated values on task objects to avoid property queries
             for task in tasks:
                 total_seconds = total_hours_map.get(task.id, 0) or 0
                 task._cached_total_hours = round(total_seconds / 3600, 2) if total_seconds else 0.0
-                
+
                 # Cache status_display to avoid N+1 queries
                 task._cached_status_display = status_display_map.get(
-                    task.status,
-                    fallback_status_map.get(task.status, task.status.replace("_", " ").title())
+                    task.status, fallback_status_map.get(task.status, task.status.replace("_", " ").title())
                 )
-            logger.debug(f"[TaskService.list_tasks] Step 10: Caching task properties took {(time.time() - step_start) * 1000:.2f}ms")
-        
+            logger.debug(
+                f"[TaskService.list_tasks] Step 10: Caching task properties took {(time.time() - step_start) * 1000:.2f}ms"
+            )
+
         total_time = (time.time() - start_time) * 1000
-        logger.info(f"[TaskService.list_tasks] Total time: {total_time:.2f}ms (tasks: {len(tasks) if tasks else 0}, page: {page}, per_page: {per_page})")
+        logger.info(
+            f"[TaskService.list_tasks] Total time: {total_time:.2f}ms (tasks: {len(tasks) if tasks else 0}, page: {page}, per_page: {per_page})"
+        )
 
         return {"tasks": tasks, "pagination": pagination, "total": pagination.total}

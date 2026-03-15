@@ -9,9 +9,10 @@ This module provides utilities for using PostHog's advanced features:
 """
 
 import os
-import posthog
-from typing import Optional, Any, Dict
 from functools import wraps
+from typing import Any, Dict, Optional
+
+import posthog
 from flask import request
 
 
@@ -106,8 +107,8 @@ def feature_flag_required(flag_key: str, redirect_to: Optional[str] = None):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            from flask_login import current_user
             from flask import abort, redirect, url_for
+            from flask_login import current_user
 
             if not current_user.is_authenticated:
                 # Can't check feature flags for anonymous users

@@ -3,21 +3,15 @@ Mileage PDF export – professional report using ReportLab.
 Same visual style as time_entries_pdf: header, table, totals, page numbers.
 """
 
-from io import BytesIO
 from datetime import datetime
+from io import BytesIO
 
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, landscape
-from reportlab.lib.units import cm
-from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_LEFT
-from reportlab.platypus import (
-    SimpleDocTemplate,
-    Table,
-    TableStyle,
-    Spacer,
-    Paragraph,
-)
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 # Reuse same palette as time_entries_pdf
 BRAND_COLOR = colors.HexColor("#1e3a5f")
@@ -94,13 +88,17 @@ def _build_report_header(start_date=None, end_date=None, filters=None):
     elements.append(Spacer(1, 4))
 
     accent = Table([[""]], colWidths=[USABLE_WIDTH_CM * cm], rowHeights=[2])
-    accent.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), BRAND_COLOR),
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-    ]))
+    accent.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), BRAND_COLOR),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
     elements.append(accent)
     elements.append(Spacer(1, 8))
 
@@ -123,6 +121,7 @@ def _build_report_header(start_date=None, end_date=None, filters=None):
 
     try:
         from app.utils.timezone import get_user_datetime_format
+
         gen_fmt = get_user_datetime_format()
     except Exception:
         gen_fmt = "%Y-%m-%d %H:%M"
@@ -135,13 +134,17 @@ def _build_report_header(start_date=None, end_date=None, filters=None):
         [[meta_left, meta_right]],
         colWidths=[USABLE_WIDTH_CM * 0.6 * cm, USABLE_WIDTH_CM * 0.4 * cm],
     )
-    meta_table.setStyle(TableStyle([
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-    ]))
+    meta_table.setStyle(
+        TableStyle(
+            [
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ]
+        )
+    )
     elements.append(meta_table)
 
     if filters:

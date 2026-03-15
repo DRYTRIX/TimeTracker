@@ -2,8 +2,10 @@
 Schemas for time entry serialization and validation.
 """
 
-from marshmallow import Schema, fields, validate, validates, ValidationError
 from datetime import datetime
+
+from marshmallow import Schema, ValidationError, fields, validate, validates
+
 from app.constants import TimeEntrySource
 
 

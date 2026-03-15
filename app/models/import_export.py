@@ -3,6 +3,7 @@ Import/Export tracking models for data import/export operations
 """
 
 from datetime import datetime
+
 from app import db
 
 
@@ -66,6 +67,7 @@ class DataImport(db.Model):
                 except (json.JSONDecodeError, TypeError, ValueError) as e:
                     # If error_log is corrupted, start fresh
                     import logging
+
                     logging.getLogger(__name__).warning(f"Could not parse error_log: {e}")
                     pass
             errors.append({"error": error_message, "timestamp": datetime.utcnow().isoformat()})
@@ -100,6 +102,7 @@ class DataImport(db.Model):
             except (json.JSONDecodeError, TypeError, ValueError) as e:
                 # If error_log is corrupted, start fresh
                 import logging
+
                 logging.getLogger(__name__).warning(f"Could not parse error_log: {e}")
                 pass
 

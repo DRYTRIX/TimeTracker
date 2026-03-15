@@ -1,7 +1,13 @@
 #!/usr/bin/env python
-"""Simple test runner to check model tests."""
+"""Simple test runner to check model tests. Run from project root: python scripts/run_model_tests.py"""
+import os
 import subprocess
 import sys
+
+# Run from project root (parent of scripts/)
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+_project_root = os.path.dirname(_script_dir)
+os.chdir(_project_root)
 
 result = subprocess.run(
     [sys.executable, "-m", "pytest", "-m", "unit and models", "-v", "--tb=short"],

@@ -23,9 +23,9 @@ TimeTracker/
 ├── 🐳 Dockerfile              # Main Dockerfile
 ├── 📄 docker-compose.yml          # Default stack (HTTPS via nginx)
 ├── 📄 docker-compose.example.yml # HTTP on port 8080 (no nginx)
-├── 📄 docker-compose.local-test.yml # SQLite, HTTP 8080 (quick test)
-├── 📄 docker-compose.remote.yml   # Remote/production compose (ghcr.io)
-├── 📄 docker-compose.remote-dev.yml # Remote dev/testing compose (ghcr.io)
+├── 📄 docker/docker-compose.local-test.yml # SQLite, HTTP 8080 (quick test)
+├── 📄 docker/docker-compose.remote.yml   # Remote/production compose (ghcr.io)
+├── 📄 docker/docker-compose.remote-dev.yml # Remote dev/testing compose (ghcr.io)
 ├── 📄 requirements.txt         # Python dependencies
 ├── 📄 app.py                  # Application entry point
 ├── 📄 env.example             # Environment variables template
@@ -57,7 +57,7 @@ TimeTracker/
 
 ### Files Consolidated
 - **Dockerfiles**: Primary `Dockerfile` at repo root; additional Dockerfiles in `docker/` as needed
-- **Docker Compose**: `docker-compose.yml` (local), `docker-compose.remote.yml`, `docker-compose.remote-dev.yml`
+- **Docker Compose**: `docker-compose.yml` (local), `docker/docker-compose.remote.yml`, `docker/docker-compose.remote-dev.yml`
 - **Deployment**: `deploy-public.bat`, `deploy-public.sh`
 
 ## 🏗️ Core Components
@@ -91,15 +91,15 @@ TimeTracker/
 
 ### 2. HTTP (no HTTPS)
 - **File**: `docker-compose.example.yml` — app on **http://localhost:8080** (published image or build).
-- **File**: `docker-compose.local-test.yml` — SQLite, **http://localhost:8080** (no PostgreSQL).
+- **File**: `docker/docker-compose.local-test.yml` — SQLite, **http://localhost:8080** (no PostgreSQL).
 
 ### 3. Remote/Production
-- **File**: `docker-compose.remote.yml`
+- **File**: `docker/docker-compose.remote.yml`
 - **Image**: `ghcr.io/drytrix/timetracker:latest` (or versioned tag)
 - **Use case**: Production deployment
 
 ### 4. Remote Dev/Testing
-- **File**: `docker-compose.remote-dev.yml`
+- **File**: `docker/docker-compose.remote-dev.yml`
 - **Image**: `ghcr.io/drytrix/timetracker:development`
 - **Use case**: Pre-release testing
 
@@ -108,10 +108,10 @@ TimeTracker/
 - **README.md** (root): Main project documentation and quick start guide
 - **CONTRIBUTING.md** (root): [Contributing](../../CONTRIBUTING.md) — quick overview; full guidelines in [CONTRIBUTING.md](CONTRIBUTING.md) (this folder)
 - **CODE_OF_CONDUCT.md** (this folder): [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — community guidelines
-- **ARCHITECTURE.md** (root): [Architecture overview](../../ARCHITECTURE.md)
+- **ARCHITECTURE.md**: [Architecture overview](../ARCHITECTURE.md)
 - **INSTALLATION.md** (root): [Installation guide](../../INSTALLATION.md)
-- **DEVELOPMENT.md** (root): [Development guide](../../DEVELOPMENT.md)
-- **API.md** (root): [API quick reference](../../API.md)
+- **DEVELOPMENT.md**: [Development guide](../DEVELOPMENT.md)
+- **API.md**: [API quick reference](../API.md)
 - **PROJECT_STRUCTURE.md** (this folder): Project structure overview
 - **TASK_MANAGEMENT_README.md** (docs/): Detailed Task Management feature documentation
 
@@ -163,7 +163,7 @@ The Task Management feature is fully integrated into the application with automa
 
 1. **Choose deployment type**: Local dev, remote, or remote-dev
 2. **Follow README.md**: Complete setup instructions
-3. **Use appropriate compose file**: `docker-compose.yml`, `docker-compose.remote.yml`, or `docker-compose.remote-dev.yml`
+3. **Use appropriate compose file**: `docker-compose.yml`, `docker/docker-compose.remote.yml`, or `docker/docker-compose.remote-dev.yml`
 4. **Configure timezone**: Access admin settings to set your local timezone
 
 ## Versioning

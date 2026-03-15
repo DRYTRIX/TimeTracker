@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 """Check if export routes are registered"""
+import os
+import sys
+
+# Add the project root to the path (parent of scripts/)
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+_project_root = os.path.dirname(_script_dir)
+sys.path.insert(0, _project_root)
+
 from app import create_app
 
 app = create_app()

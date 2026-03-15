@@ -3,13 +3,15 @@ API v1 - Mileage sub-blueprint.
 Routes under /api/v1/mileage.
 """
 
-from flask import Blueprint, jsonify, request, g
 from decimal import Decimal
+
+from flask import Blueprint, g, jsonify, request
+
 from app import db
 from app.models import Mileage
+from app.routes.api_v1_common import _parse_date
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import error_response, forbidden_response, validation_error_response
-from app.routes.api_v1_common import _parse_date
 
 api_v1_mileage_bp = Blueprint("api_v1_mileage", __name__, url_prefix="/api/v1")
 
@@ -32,9 +34,7 @@ def list_mileage():
     end_date = _parse_date(request.args.get("end_date"))
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
-    query = Mileage.query.options(
-        joinedload(Mileage.user), joinedload(Mileage.project), joinedload(Mileage.client)
-    )
+    query = Mileage.query.options(joinedload(Mileage.user), joinedload(Mileage.project), joinedload(Mileage.client))
     if user_id:
         query = query.filter(Mileage.user_id == user_id)
     if project_id:
@@ -65,9 +65,7 @@ def get_mileage(entry_id):
     from sqlalchemy.orm import joinedload
 
     entry = (
-        Mileage.query.options(
-            joinedload(Mileage.user), joinedload(Mileage.project), joinedload(Mileage.client)
-        )
+        Mileage.query.options(joinedload(Mileage.user), joinedload(Mileage.project), joinedload(Mileage.client))
         .filter_by(id=entry_id)
         .first_or_404()
     )
@@ -99,7 +97,10 @@ def create_mileage():
         rate_per_km = Decimal(str(data["rate_per_km"]))
     except Exception:
         return validation_error_response(
-            errors={"distance_km": ["Invalid distance_km or rate_per_km"], "rate_per_km": ["Invalid distance_km or rate_per_km"]},
+            errors={
+                "distance_km": ["Invalid distance_km or rate_per_km"],
+                "rate_per_km": ["Invalid distance_km or rate_per_km"],
+            },
             message="Invalid distance_km or rate_per_km",
         )
     entry = Mileage(
@@ -127,9 +128,7 @@ def update_mileage(entry_id):
     from sqlalchemy.orm import joinedload
 
     entry = (
-        Mileage.query.options(
-            joinedload(Mileage.user), joinedload(Mileage.project), joinedload(Mileage.client)
-        )
+        Mileage.query.options(joinedload(Mileage.user), joinedload(Mileage.project), joinedload(Mileage.client))
         .filter_by(id=entry_id)
         .first_or_404()
     )
@@ -137,8 +136,16 @@ def update_mileage(entry_id):
         return forbidden_response("Access denied")
     data = request.get_json() or {}
     for field in (
-        "purpose", "start_location", "end_location", "description",
-        "vehicle_type", "vehicle_description", "license_plate", "currency_code", "status", "notes",
+        "purpose",
+        "start_location",
+        "end_location",
+        "description",
+        "vehicle_type",
+        "vehicle_description",
+        "license_plate",
+        "currency_code",
+        "status",
+        "notes",
     ):
         if field in data:
             setattr(entry, field, data[field])
@@ -169,9 +176,7 @@ def delete_mileage(entry_id):
     from sqlalchemy.orm import joinedload
 
     entry = (
-        Mileage.query.options(
-            joinedload(Mileage.user), joinedload(Mileage.project), joinedload(Mileage.client)
-        )
+        Mileage.query.options(joinedload(Mileage.user), joinedload(Mileage.project), joinedload(Mileage.client))
         .filter_by(id=entry_id)
         .first_or_404()
     )

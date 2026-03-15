@@ -1,6 +1,6 @@
-from datetime import datetime
 import os
 import threading
+from datetime import datetime
 
 from app import db
 from app.config import Config
@@ -16,9 +16,10 @@ def _session_in_flush(session):
         if getattr(session, "_flushing", False):
             return True
         # Fallback: in a transaction and inside a flush context (if exposed)
-        if getattr(session, "in_transaction", lambda: False)() and getattr(
-            session, "_current_flush_context", None
-        ) is not None:
+        if (
+            getattr(session, "in_transaction", lambda: False)()
+            and getattr(session, "_current_flush_context", None) is not None
+        ):
             return True
         return False
     except Exception:
@@ -32,7 +33,9 @@ class Settings(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     timezone = db.Column(db.String(50), default="Europe/Rome", nullable=False)
-    date_format = db.Column(db.String(20), default="YYYY-MM-DD", nullable=False)  # YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY, DD.MM.YYYY
+    date_format = db.Column(
+        db.String(20), default="YYYY-MM-DD", nullable=False
+    )  # YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY, DD.MM.YYYY
     time_format = db.Column(db.String(10), default="24h", nullable=False)  # 24h or 12h
     currency = db.Column(db.String(3), default="EUR", nullable=False)
     rounding_minutes = db.Column(db.Integer, default=1, nullable=False)
@@ -513,8 +516,26 @@ class Settings(db.Model):
             # #region agent log
             try:
                 import json
-                log_data = {"location": "settings.py:422", "message": "Settings query result", "data": {"settings_is_none": settings is None, "settings_has_id": settings is not None and hasattr(settings, "id") and settings.id is not None, "invoice_prefix": getattr(settings, "invoice_prefix", "MISSING") if settings else "N/A", "invoice_start_number": getattr(settings, "invoice_start_number", "MISSING") if settings else "N/A"}, "timestamp": int(datetime.utcnow().timestamp() * 1000), "sessionId": "debug-session", "runId": "run1", "hypothesisId": "D"}
-                log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".cursor", "debug.log")
+
+                log_data = {
+                    "location": "settings.py:422",
+                    "message": "Settings query result",
+                    "data": {
+                        "settings_is_none": settings is None,
+                        "settings_has_id": settings is not None and hasattr(settings, "id") and settings.id is not None,
+                        "invoice_prefix": getattr(settings, "invoice_prefix", "MISSING") if settings else "N/A",
+                        "invoice_start_number": (
+                            getattr(settings, "invoice_start_number", "MISSING") if settings else "N/A"
+                        ),
+                    },
+                    "timestamp": int(datetime.utcnow().timestamp() * 1000),
+                    "sessionId": "debug-session",
+                    "runId": "run1",
+                    "hypothesisId": "D",
+                }
+                log_path = os.path.join(
+                    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".cursor", "debug.log"
+                )
                 with open(log_path, "a", encoding="utf-8") as f:
                     f.write(json.dumps(log_data) + "\n")
             except (OSError, IOError, TypeError, ValueError):
@@ -528,11 +549,11 @@ class Settings(db.Model):
             error_str = str(e)
             # Also check the underlying exception if it's a SQLAlchemy exception
             underlying_error = ""
-            if hasattr(e, 'orig'):
+            if hasattr(e, "orig"):
                 underlying_error = str(e.orig)
-            elif hasattr(e, '__cause__') and e.__cause__:
+            elif hasattr(e, "__cause__") and e.__cause__:
                 underlying_error = str(e.__cause__)
-            
+
             combined_error = f"{error_str} {underlying_error}".lower()
             is_schema_error = (
                 "undefinedcolumn" in combined_error
@@ -540,7 +561,8 @@ class Settings(db.Model):
                 or "no such column" in combined_error
                 or "no such table" in combined_error
                 or ("relation" in combined_error and "does not exist" in combined_error)
-                or "operationalerror" in combined_error and ("no such table" in combined_error or "does not exist" in combined_error)
+                or "operationalerror" in combined_error
+                and ("no such table" in combined_error or "does not exist" in combined_error)
             )
 
             import logging
@@ -599,7 +621,16 @@ class Settings(db.Model):
         # #region agent log
         try:
             import json
-            log_data = {"location": "settings.py:493", "message": "Returning fallback Settings instance", "data": {"fallback": True}, "timestamp": int(datetime.utcnow().timestamp() * 1000), "sessionId": "debug-session", "runId": "run1", "hypothesisId": "E"}
+
+            log_data = {
+                "location": "settings.py:493",
+                "message": "Returning fallback Settings instance",
+                "data": {"fallback": True},
+                "timestamp": int(datetime.utcnow().timestamp() * 1000),
+                "sessionId": "debug-session",
+                "runId": "run1",
+                "hypothesisId": "E",
+            }
             log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".cursor", "debug.log")
             with open(log_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(log_data) + "\n")

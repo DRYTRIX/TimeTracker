@@ -4,12 +4,13 @@ Initial setup routes for TimeTracker
 Handles first-time setup and telemetry opt-in.
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_babel import _
-from app.utils.installation import get_installation_config
-from app import log_event, db
+
+from app import db, log_event
 from app.models import Settings
 from app.utils.db import safe_commit
+from app.utils.installation import get_installation_config
 from app.utils.timezone import get_available_timezones
 
 setup_bp = Blueprint("setup", __name__)

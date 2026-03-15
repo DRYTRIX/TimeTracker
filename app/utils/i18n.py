@@ -1,5 +1,5 @@
-import os
 import io
+import os
 import time
 from typing import Optional
 
@@ -19,8 +19,8 @@ def compile_po_to_mo(po_path: str, mo_path: str) -> bool:
     Returns True on success, False otherwise.
     """
     try:
-        from babel.messages.pofile import read_po
         from babel.messages.mofile import write_mo
+        from babel.messages.pofile import read_po
 
         with open(po_path, "r", encoding="utf-8") as po_file:
             catalog = read_po(po_file)

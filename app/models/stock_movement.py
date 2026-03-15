@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from decimal import Decimal
+
 from app import db
 
 
@@ -104,9 +105,9 @@ class StockMovement(db.Model):
         Returns:
             tuple: (StockMovement instance, updated WarehouseStock instance or None)
         """
-        from .warehouse_stock import WarehouseStock
         from .stock_item import StockItem
         from .stock_lot import StockLot, StockLotAllocation
+        from .warehouse_stock import WarehouseStock
 
         movement = cls(
             movement_type=movement_type,
@@ -198,7 +199,9 @@ class StockMovement(db.Model):
         db.session.add(legacy)
 
     @classmethod
-    def _apply_lot_changes(cls, movement, item, updated_stock=None, unit_cost=None, lot_type=None, consume_from_lot_id=None):
+    def _apply_lot_changes(
+        cls, movement, item, updated_stock=None, unit_cost=None, lot_type=None, consume_from_lot_id=None
+    ):
         """
         Apply the movement to StockLots and create StockLotAllocations.
 
@@ -213,7 +216,12 @@ class StockMovement(db.Model):
             return
 
         # Handle inbound transfer: replicate allocations from the outbound paired movement if available.
-        if qty > 0 and movement.movement_type == "transfer" and movement.reference_type == "transfer" and movement.reference_id:
+        if (
+            qty > 0
+            and movement.movement_type == "transfer"
+            and movement.reference_type == "transfer"
+            and movement.reference_id
+        ):
             out_move = (
                 cls.query.filter(
                     cls.movement_type == "transfer",
@@ -268,7 +276,9 @@ class StockMovement(db.Model):
 
                 # If allocations didn't cover full qty (older data), fall back to a normal inbound lot.
                 if remaining > 0:
-                    inbound_cost = Decimal(str(unit_cost)) if unit_cost is not None else (item.default_cost or Decimal("0"))
+                    inbound_cost = (
+                        Decimal(str(unit_cost)) if unit_cost is not None else (item.default_cost or Decimal("0"))
+                    )
                     inbound_type = lot_type or "normal"
                     lot = StockLot(
                         stock_item_id=movement.stock_item_id,
@@ -344,15 +354,16 @@ class StockMovement(db.Model):
             preferred_lot = StockLot.query.get(int(consume_from_lot_id))
 
         lots = (
-            lots_q.filter(StockLot.quantity_on_hand != 0)
-            .order_by(StockLot.created_at.asc(), StockLot.id.asc())
-            .all()
+            lots_q.filter(StockLot.quantity_on_hand != 0).order_by(StockLot.created_at.asc(), StockLot.id.asc()).all()
         )
 
         if preferred_lot:
             # Put preferred lot first if it matches scope and has non-zero quantity.
             lots = [l for l in lots if l.id != preferred_lot.id]
-            if preferred_lot.stock_item_id == movement.stock_item_id and preferred_lot.warehouse_id == movement.warehouse_id:
+            if (
+                preferred_lot.stock_item_id == movement.stock_item_id
+                and preferred_lot.warehouse_id == movement.warehouse_id
+            ):
                 if Decimal(str(preferred_lot.quantity_on_hand or 0)) != 0:
                     lots = [preferred_lot] + lots
 
@@ -436,8 +447,8 @@ class StockMovement(db.Model):
             tuple: (StockMovement instance, StockLot instance)
         """
         from .stock_item import StockItem
-        from .warehouse_stock import WarehouseStock
         from .stock_lot import StockLot, StockLotAllocation
+        from .warehouse_stock import WarehouseStock
 
         qty = Decimal(str(quantity))
         if qty <= 0:

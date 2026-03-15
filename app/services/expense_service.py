@@ -2,12 +2,13 @@
 Service for expense business logic.
 """
 
-from typing import Optional, Dict, Any, List
 from datetime import date
 from decimal import Decimal
+from typing import Any, Dict, List, Optional
+
 from app import db
-from app.repositories import ExpenseRepository, ProjectRepository
 from app.models import Expense
+from app.repositories import ExpenseRepository, ProjectRepository
 from app.utils.db import safe_commit
 
 

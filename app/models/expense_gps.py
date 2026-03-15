@@ -4,8 +4,10 @@ GPS tracking models for mileage expenses
 
 from datetime import datetime
 from typing import Optional
-from app import db
+
 from sqlalchemy import Index
+
+from app import db
 
 
 class MileageTrack(db.Model):
@@ -79,7 +81,7 @@ class MileageTrack(db.Model):
         if not all([self.start_latitude, self.start_longitude, self.end_latitude, self.end_longitude]):
             return None
 
-        from math import radians, sin, cos, sqrt, atan2
+        from math import atan2, cos, radians, sin, sqrt
 
         # Haversine formula
         R = 6371  # Earth radius in km
@@ -108,7 +110,7 @@ class MileageTrack(db.Model):
         if not self.track_points or len(self.track_points) < 2:
             return None
 
-        from math import radians, sin, cos, sqrt, atan2
+        from math import atan2, cos, radians, sin, sqrt
 
         R = 6371  # Earth radius in km
         total_distance = 0.0

@@ -2,13 +2,15 @@
 Gamification Service for badges and leaderboards
 """
 
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta, date
-from app import db
-from app.models.gamification import Badge, UserBadge, Leaderboard, LeaderboardEntry
-from app.models import TimeEntry, Task, Project, User
-from sqlalchemy import func, and_, desc
 import logging
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import and_, desc, func
+
+from app import db
+from app.models import Project, Task, TimeEntry, User
+from app.models.gamification import Badge, Leaderboard, LeaderboardEntry, UserBadge
 
 logger = logging.getLogger(__name__)
 

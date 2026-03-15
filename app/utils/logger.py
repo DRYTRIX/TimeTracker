@@ -2,9 +2,11 @@
 Enhanced logging utilities.
 """
 
-from typing import Any, Dict, Optional
 import logging
-from flask import current_app, request, g
+from typing import Any, Dict, Optional
+
+from flask import current_app, g, request
+
 from app.utils.performance import get_performance_metrics
 
 

@@ -1,14 +1,16 @@
 """Routes for contact management"""
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db
-from app.models import Contact, Client, ContactCommunication
-from app.utils.db import safe_commit
-from app.utils.timezone import parse_local_datetime
-from app.utils.module_helpers import module_enabled
 from datetime import datetime
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
+from app import db
+from app.models import Client, Contact, ContactCommunication
+from app.utils.db import safe_commit
+from app.utils.module_helpers import module_enabled
+from app.utils.timezone import parse_local_datetime
 
 contacts_bp = Blueprint("contacts", __name__)
 

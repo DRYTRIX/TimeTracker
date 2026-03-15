@@ -1,11 +1,13 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db, log_event, track_event
-from app.models import WeeklyTimeGoal, TimeEntry
-from app.utils.db import safe_commit
 from datetime import datetime, timedelta
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
 from sqlalchemy import func
+
+from app import db, log_event, track_event
+from app.models import TimeEntry, WeeklyTimeGoal
+from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
 
 weekly_goals_bp = Blueprint("weekly_goals", __name__)
@@ -101,11 +103,11 @@ def create():
 
     # Create new goal
     goal = WeeklyTimeGoal(
-        user_id=current_user.id, 
-        target_hours=target_hours, 
-        week_start_date=week_start_date, 
+        user_id=current_user.id,
+        target_hours=target_hours,
+        week_start_date=week_start_date,
         notes=notes,
-        exclude_weekends=exclude_weekends
+        exclude_weekends=exclude_weekends,
     )
 
     db.session.add(goal)
@@ -228,7 +230,7 @@ def edit(goal_id):
     goal.target_hours = target_hours
     goal.notes = notes
     goal.exclude_weekends = exclude_weekends
-    
+
     # If exclude_weekends changed, recalculate week_end_date
     if old_exclude_weekends != exclude_weekends:
         if exclude_weekends:

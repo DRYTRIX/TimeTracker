@@ -1,7 +1,8 @@
+import os
 from datetime import datetime
+
 from app import db
 from app.utils.timezone import now_in_app_timezone
-import os
 
 
 def local_now():
@@ -130,4 +131,3 @@ class ProjectAttachment(db.Model):
             query = query.filter_by(is_visible_to_client=False)
 
         return query.order_by(cls.uploaded_at.desc()).all()
-

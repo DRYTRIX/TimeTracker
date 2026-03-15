@@ -6,13 +6,16 @@ This service provides methods to:
 - Filter by client custom fields (e.g., salesman)
 - Group by salesman for report generation
 """
-from typing import Optional, Dict, Any, List
+
 from datetime import datetime
 from decimal import Decimal
-from sqlalchemy import func, or_, and_
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import joinedload
+
 from app import db
-from app.models import TimeEntry, InvoiceItem, Client, Project
+from app.models import Client, InvoiceItem, Project, TimeEntry
 
 
 class UnpaidHoursService:
@@ -29,12 +32,12 @@ class UnpaidHoursService:
     ) -> List[TimeEntry]:
         """
         Get unpaid (unbilled) time entries.
-        
+
         Unpaid means:
         - billable = True
         - paid = False
         - Not referenced in any InvoiceItem.time_entry_ids
-        
+
         Args:
             start_date: Filter entries from this date
             end_date: Filter entries until this date
@@ -43,7 +46,7 @@ class UnpaidHoursService:
             user_id: Filter by user
             custom_field_filter: Dict with field name and value to filter by client custom fields
                                e.g., {"salesman": "MM"} or {"field_name": "value"}
-        
+
         Returns:
             List of TimeEntry objects that are unpaid
         """
@@ -91,15 +94,17 @@ class UnpaidHoursService:
 
         return unpaid_entries
 
-    def _filter_by_custom_fields(self, entries: List[TimeEntry], custom_field_filter: Dict[str, Any]) -> List[TimeEntry]:
+    def _filter_by_custom_fields(
+        self, entries: List[TimeEntry], custom_field_filter: Dict[str, Any]
+    ) -> List[TimeEntry]:
         """
         Filter entries by client custom fields.
-        
+
         Args:
             entries: List of TimeEntry objects
             custom_field_filter: Dict with field name and value
                                e.g., {"salesman": "MM"}
-        
+
         Returns:
             Filtered list of TimeEntry objects
         """
@@ -140,7 +145,7 @@ class UnpaidHoursService:
     ) -> Dict[str, Any]:
         """
         Get summary of unpaid hours.
-        
+
         Returns:
             Dict with total_hours, total_entries, and breakdown by client/project
         """
@@ -151,11 +156,11 @@ class UnpaidHoursService:
         )
 
         total_hours = sum(entry.duration_hours or 0 for entry in entries)
-        
+
         # Group by client
         by_client = {}
         by_project = {}
-        
+
         for entry in entries:
             client = None
             if entry.project and entry.project.client:
@@ -191,11 +196,11 @@ class UnpaidHoursService:
     ) -> Dict[str, List[TimeEntry]]:
         """
         Group unpaid hours by salesman initial from client custom fields.
-        
+
         Args:
             entries: List of TimeEntry objects
             salesman_field_name: Name of the custom field containing salesman info
-        
+
         Returns:
             Dict mapping salesman initial to list of TimeEntry objects
         """
@@ -221,10 +226,10 @@ class UnpaidHoursService:
 
             # Normalize salesman initial (uppercase, strip)
             salesman_initial = str(salesman_value).upper().strip()
-            
+
             if salesman_initial not in grouped:
                 grouped[salesman_initial] = []
-            
+
             grouped[salesman_initial].append(entry)
 
         # Add unassigned entries to a special key
@@ -241,7 +246,7 @@ class UnpaidHoursService:
     ) -> Dict[str, Dict[str, Any]]:
         """
         Get unpaid hours grouped by salesman.
-        
+
         Returns:
             Dict mapping salesman initial to summary dict with:
             - entries: List of TimeEntry objects
@@ -259,7 +264,7 @@ class UnpaidHoursService:
         result = {}
         for salesman_initial, salesman_entries in grouped_entries.items():
             total_hours = sum(entry.duration_hours or 0 for entry in salesman_entries)
-            
+
             # Get unique clients and projects
             clients = set()
             projects = set()
@@ -285,4 +290,3 @@ class UnpaidHoursService:
             }
 
         return result
-

@@ -2,11 +2,13 @@
 Currency conversion service with automatic rate fetching
 """
 
-from typing import Dict, Optional, Decimal
-from datetime import datetime, date
-from decimal import Decimal as D
-import requests
 import logging
+from datetime import date, datetime
+from decimal import Decimal as D
+from typing import Decimal, Dict, Optional
+
+import requests
+
 from app import db
 from app.models.currency import Currency, ExchangeRate
 

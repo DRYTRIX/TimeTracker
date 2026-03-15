@@ -1,13 +1,14 @@
-from flask import g, request, current_app
+from flask import current_app, g, request
 from flask_babel import get_locale
 from flask_login import current_user
+
 from app.models import Settings
 from app.utils.license_utils import is_license_activated
 from app.utils.timezone import (
-    get_timezone_offset_for_timezone,
     get_resolved_date_format_key,
     get_resolved_time_format_key,
     get_resolved_week_start_day,
+    get_timezone_offset_for_timezone,
 )
 
 
@@ -109,12 +110,13 @@ def register_context_processors(app):
 
         # Determine app version from setup.py (single source of truth)
         try:
-            from app.config.analytics_defaults import get_version_from_setup
             import os
+
+            from app.config.analytics_defaults import get_version_from_setup
 
             # Get version from setup.py
             version_value = get_version_from_setup()
-            
+
             # If version is "unknown", fall back to environment variable for dev mode
             if version_value == "unknown":
                 env_version = os.getenv("APP_VERSION")
@@ -123,7 +125,7 @@ def register_context_processors(app):
                 else:
                     # Last resort: use "dev-0" for development
                     version_value = "dev-0"
-            
+
             # Strip any leading 'v' prefix to avoid double 'v' in template (e.g., vv3.5.0)
             if version_value and version_value.startswith("v"):
                 version_value = version_value[1:]
@@ -163,6 +165,7 @@ def register_context_processors(app):
         if getattr(current_user, "is_authenticated", False):
             try:
                 from app.models import DonationInteraction
+
                 user_stats = DonationInteraction.get_user_engagement_metrics(current_user.id)
                 support_banner_suppressed = DonationInteraction.has_recent_donation_click(current_user.id, days=30)
                 # Stable A/B variant per user for support CTA experiments (control | key_first | cta_alt)

@@ -1,11 +1,13 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db, log_event
-from app.models import RecurringInvoice, Project, Client, Settings, Invoice
+import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
-import logging
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
+from app import db, log_event
+from app.models import Client, Invoice, Project, RecurringInvoice, Settings
 from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
 

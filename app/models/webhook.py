@@ -1,10 +1,11 @@
 """Webhook models for enabling integrations"""
 
-import secrets
 import hashlib
 import hmac
 import json
+import secrets
 from datetime import datetime
+
 from app import db
 from app.utils.timezone import now_in_app_timezone
 
@@ -57,12 +58,9 @@ class Webhook(db.Model):
     created_at = db.Column(db.DateTime, default=now_in_app_timezone, nullable=False)
     updated_at = db.Column(db.DateTime, default=now_in_app_timezone, onupdate=now_in_app_timezone, nullable=False)
 
-    # Indexes
-    __table_args__ = (
-        db.Index("ix_webhooks_user_id", "user_id"),
-        db.Index("ix_webhooks_is_active", "is_active"),
-        db.Index("ix_webhooks_created_at", "created_at"),
-    )
+    # Indexes (user_id and is_active already have index=True on their columns;
+    # only created_at needs an explicit index here)
+    __table_args__ = (db.Index("ix_webhooks_created_at", "created_at"),)
 
     def __repr__(self):
         return f"<Webhook {self.name} ({self.url})>"
@@ -209,14 +207,9 @@ class WebhookDelivery(db.Model):
     next_retry_at = db.Column(db.DateTime, nullable=True, index=True)
     retry_count = db.Column(db.Integer, default=0, nullable=False)
 
-    # Indexes
-    __table_args__ = (
-        db.Index("ix_webhook_deliveries_webhook_id", "webhook_id"),
-        db.Index("ix_webhook_deliveries_status", "status"),
-        db.Index("ix_webhook_deliveries_event_type", "event_type"),
-        db.Index("ix_webhook_deliveries_next_retry_at", "next_retry_at"),
-        db.Index("ix_webhook_deliveries_started_at", "started_at"),
-    )
+    # Indexes (webhook_id, event_type, status, next_retry_at already have index=True;
+    # only started_at needs an explicit index here)
+    __table_args__ = (db.Index("ix_webhook_deliveries_started_at", "started_at"),)
 
     def __repr__(self):
         return f"<WebhookDelivery {self.webhook_id} {self.event_type} {self.status}>"

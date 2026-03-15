@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from app import db
 from app.utils.timezone import now_in_app_timezone
 
@@ -12,23 +13,25 @@ class Issue(db.Model):
     client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=False, index=True)
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=True, index=True)
     task_id = db.Column(db.Integer, db.ForeignKey("tasks.id"), nullable=True, index=True)
-    
+
     title = db.Column(db.String(200), nullable=False, index=True)
     description = db.Column(db.Text, nullable=True)
     status = db.Column(
         db.String(20), default="open", nullable=False, index=True
     )  # 'open', 'in_progress', 'resolved', 'closed', 'cancelled'
     priority = db.Column(db.String(20), default="medium", nullable=False)  # 'low', 'medium', 'high', 'urgent'
-    
+
     # Client submission info
     submitted_by_client = db.Column(db.Boolean, default=True, nullable=False)  # True if submitted via client portal
     client_submitter_name = db.Column(db.String(200), nullable=True)  # Name of person who submitted (if not a user)
     client_submitter_email = db.Column(db.String(200), nullable=True)  # Email of submitter
-    
+
     # Internal assignment
     assigned_to = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
-    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)  # Internal user who created/imported
-    
+    created_by = db.Column(
+        db.Integer, db.ForeignKey("users.id"), nullable=True, index=True
+    )  # Internal user who created/imported
+
     # Timestamps
     created_at = db.Column(db.DateTime, default=now_in_app_timezone, nullable=False)
     updated_at = db.Column(db.DateTime, default=now_in_app_timezone, onupdate=now_in_app_timezone, nullable=False)
@@ -155,30 +158,31 @@ class Issue(db.Model):
     def link_to_task(self, task_id):
         """Link this issue to a task"""
         from .task import Task
+
         task = Task.query.get(task_id)
         if not task:
             raise ValueError("Task not found")
-        
+
         # Verify task belongs to same client (through project)
         if task.project.client_id != self.client_id:
             raise ValueError("Task must belong to a project from the same client")
-        
+
         self.task_id = task_id
         self.updated_at = now_in_app_timezone()
         db.session.commit()
 
     def create_task_from_issue(self, project_id, assigned_to=None, created_by=None):
         """Create a new task from this issue"""
-        from .task import Task
-        
         # Verify project belongs to same client
         from .project import Project
+        from .task import Task
+
         project = Project.query.get(project_id)
         if not project:
             raise ValueError("Project not found")
         if project.client_id != self.client_id:
             raise ValueError("Project must belong to the same client")
-        
+
         # Create task
         task = Task(
             project_id=project_id,
@@ -191,12 +195,12 @@ class Issue(db.Model):
         )
         db.session.add(task)
         db.session.flush()  # Get task ID
-        
+
         # Link issue to task
         self.task_id = task.id
         self.updated_at = now_in_app_timezone()
         db.session.commit()
-        
+
         return task
 
     def reassign(self, user_id):

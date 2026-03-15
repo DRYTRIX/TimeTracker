@@ -3,12 +3,13 @@ Caching utilities with Redis support.
 Falls back to in-memory cache if Redis is not available.
 """
 
-from typing import Any, Optional, Callable, Dict
-from functools import wraps
-import time
 import hashlib
 import json
 import pickle
+import time
+from functools import wraps
+from typing import Any, Callable, Dict, Optional
+
 from flask import current_app
 
 # Try to import Redis

@@ -2,14 +2,16 @@
 Client Notification models for client portal notifications
 """
 
+import enum
 from datetime import datetime
+
 from app import db
 from app.utils.timezone import now_in_app_timezone
-import enum
 
 
 class NotificationType(enum.Enum):
     """Client notification types"""
+
     INVOICE_CREATED = "invoice_created"
     INVOICE_PAID = "invoice_paid"
     INVOICE_OVERDUE = "invoice_overdue"
@@ -30,28 +32,32 @@ class ClientNotification(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True)
-    
+
     # Notification details
     type = db.Column(db.String(50), nullable=False, index=True)  # NotificationType enum value
     title = db.Column(db.String(200), nullable=False)
     message = db.Column(db.Text, nullable=False)
-    
+
     # Link/action
     link_url = db.Column(db.String(500), nullable=True)  # URL to related resource
     link_text = db.Column(db.String(100), nullable=True)  # Text for the link
-    
+
     # Status
     is_read = db.Column(db.Boolean, default=False, nullable=False, index=True)
     read_at = db.Column(db.DateTime, nullable=True)
-    
+
     # Metadata (renamed from 'metadata' to avoid SQLAlchemy reserved word conflict)
     extra_data = db.Column(db.JSON, nullable=True)  # Additional data (invoice_id, project_id, etc.)
-    
+
     # Timestamps
     created_at = db.Column(db.DateTime, default=now_in_app_timezone, nullable=False, index=True)
-    
+
     # Relationships
-    client = db.relationship("Client", backref=db.backref("notifications", lazy="dynamic", order_by="desc(ClientNotification.created_at)"), passive_deletes=True)
+    client = db.relationship(
+        "Client",
+        backref=db.backref("notifications", lazy="dynamic", order_by="desc(ClientNotification.created_at)"),
+        passive_deletes=True,
+    )
 
     def __repr__(self):
         return f"<ClientNotification {self.id} for client {self.client_id} - {self.type}>"
@@ -95,8 +101,10 @@ class ClientNotificationPreferences(db.Model):
     __tablename__ = "client_notification_preferences"
 
     id = db.Column(db.Integer, primary_key=True)
-    client_id = db.Column(db.Integer, db.ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
-    
+    client_id = db.Column(
+        db.Integer, db.ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
+    )
+
     # Email preferences
     email_enabled = db.Column(db.Boolean, default=True, nullable=False)
     email_invoice_created = db.Column(db.Boolean, default=True, nullable=False)
@@ -107,16 +115,18 @@ class ClientNotificationPreferences(db.Model):
     email_time_entry_approval = db.Column(db.Boolean, default=True, nullable=False)
     email_project_status_change = db.Column(db.Boolean, default=False, nullable=False)
     email_quote_available = db.Column(db.Boolean, default=True, nullable=False)
-    
+
     # In-app preferences
     in_app_enabled = db.Column(db.Boolean, default=True, nullable=False)
-    
+
     # Timestamps
     created_at = db.Column(db.DateTime, default=now_in_app_timezone, nullable=False)
     updated_at = db.Column(db.DateTime, default=now_in_app_timezone, onupdate=now_in_app_timezone, nullable=False)
-    
+
     # Relationships
-    client = db.relationship("Client", backref=db.backref("notification_preferences", uselist=False), passive_deletes=True)
+    client = db.relationship(
+        "Client", backref=db.backref("notification_preferences", uselist=False), passive_deletes=True
+    )
 
     def __repr__(self):
         return f"<ClientNotificationPreferences client={self.client_id}>"
@@ -125,7 +135,7 @@ class ClientNotificationPreferences(db.Model):
         """Check if email should be sent for this notification type"""
         if not self.email_enabled:
             return False
-        
+
         type_map = {
             NotificationType.INVOICE_CREATED: self.email_invoice_created,
             NotificationType.INVOICE_PAID: self.email_invoice_paid,
@@ -136,7 +146,7 @@ class ClientNotificationPreferences(db.Model):
             NotificationType.PROJECT_STATUS_CHANGE: self.email_project_status_change,
             NotificationType.QUOTE_AVAILABLE: self.email_quote_available,
         }
-        
+
         return type_map.get(notification_type, True)
 
     def to_dict(self):

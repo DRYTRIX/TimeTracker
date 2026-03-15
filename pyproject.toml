@@ -4,25 +4,7 @@ line-length = 120
 [tool.isort]
 profile = "black"
 line_length = 120
-target-version = ['py311']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | venv
-  | _build
-  | buck-out
-  | build
-  | dist
-  | migrations
-)/
-'''
+skip = [".eggs", ".git", ".hg", ".mypy_cache", ".tox", ".venv", "venv", "_build", "buck-out", "build", "dist", "migrations"]
 
 [tool.pylint.messages_control]
 disable = [

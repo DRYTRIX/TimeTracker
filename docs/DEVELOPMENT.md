@@ -51,7 +51,7 @@ Quick reference for running the project locally, running tests, and contributing
 For a quick run without installing Python locally:
 
 ```bash
-docker-compose -f docker-compose.local-test.yml up --build
+docker-compose -f docker/docker-compose.local-test.yml up --build
 ```
 
 Then open http://localhost:8080. See [Local Testing with SQLite](docs/development/LOCAL_TESTING_WITH_SQLITE.md) for details.
@@ -83,7 +83,7 @@ TimeTracker/
 └── requirements.txt # Python dependencies
 ```
 
-For more detail, see [ARCHITECTURE.md](ARCHITECTURE.md) and [Project Structure](docs/development/PROJECT_STRUCTURE.md).
+For more detail, see [ARCHITECTURE.md](ARCHITECTURE.md) and [Project Structure](development/PROJECT_STRUCTURE.md).
 
 ## Coding Conventions
 
@@ -119,7 +119,7 @@ See [Contributing – Testing](docs/development/CONTRIBUTING.md#testing) for mor
 
 - **Web app:** No separate frontend build required; Tailwind and static assets are served as-is (or built via your pipeline if you use one). Run the app with `flask run` or `python app.py`.
 - **Docker image:** `docker build -t timetracker .` from repo root. See [Docker Compose Setup](docs/admin/configuration/DOCKER_COMPOSE_SETUP.md).
-- **Mobile/Desktop:** See [BUILD.md](BUILD.md) and [docs/mobile-desktop-apps/README.md](docs/mobile-desktop-apps/README.md) for Flutter and Electron build steps.
+- **Mobile/Desktop:** See [BUILD.md](build/BUILD.md) and [mobile-desktop-apps/README.md](mobile-desktop-apps/README.md) for Flutter and Electron build steps.
 
 ## Contributing
 

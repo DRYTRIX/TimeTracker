@@ -2,13 +2,15 @@
 Activity Feed routes
 """
 
-from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_required, current_user
+from datetime import datetime, timedelta
+
+from flask import Blueprint, jsonify, render_template, request
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+from sqlalchemy import and_
+
 from app import db
 from app.models import Activity
-from flask_babel import gettext as _
-from sqlalchemy import and_
-from datetime import datetime, timedelta
 from app.utils.module_helpers import module_enabled
 
 activity_feed_bp = Blueprint("activity_feed", __name__)

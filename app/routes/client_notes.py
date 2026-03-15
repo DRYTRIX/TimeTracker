@@ -1,8 +1,9 @@
-from flask import Blueprint, request, redirect, url_for, flash, jsonify, render_template
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_babel import gettext as _
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
+
 from app import db, log_event, track_event
-from app.models import ClientNote, Client, Settings
+from app.models import Client, ClientNote, Settings
 from app.utils.db import safe_commit
 from app.utils.module_registry import ModuleRegistry
 

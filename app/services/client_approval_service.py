@@ -3,12 +3,13 @@ Client Time Entry Approval Service
 Handles client-side approval workflow for time entries
 """
 
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
-from app import db
-from app.models.client_time_approval import ClientTimeApproval, ClientApprovalPolicy, ClientApprovalStatus
-from app.models import TimeEntry, Client
 import logging
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+from app import db
+from app.models import Client, TimeEntry
+from app.models.client_time_approval import ClientApprovalPolicy, ClientApprovalStatus, ClientTimeApproval
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +53,11 @@ class ClientApprovalService:
 
         # Notify client contacts
         self._notify_client_contacts(client, approval)
-        
+
         # Create in-app notification
         try:
             from app.services.client_notification_service import ClientNotificationService
+
             notification_service = ClientNotificationService()
             notification_service.notify_time_entry_approval(approval.id, client.id)
         except Exception as e:

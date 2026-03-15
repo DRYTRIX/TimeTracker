@@ -1,7 +1,8 @@
+import os
 from datetime import datetime
+
 from app import db
 from app.utils.timezone import now_in_app_timezone
-import os
 
 
 def local_now():
@@ -29,7 +30,9 @@ class CommentAttachment(db.Model):
     uploaded_at = db.Column(db.DateTime, default=local_now, nullable=False)
 
     # Relationships
-    comment = db.relationship("Comment", backref=db.backref("attachments", lazy="dynamic", cascade="all, delete-orphan"))
+    comment = db.relationship(
+        "Comment", backref=db.backref("attachments", lazy="dynamic", cascade="all, delete-orphan")
+    )
     uploader = db.relationship("User", backref="uploaded_comment_attachments")
 
     def __init__(self, comment_id, filename, original_filename, file_path, file_size, uploaded_by, **kwargs):

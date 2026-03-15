@@ -4,9 +4,11 @@ Provides decorators and context managers for database transactions.
 """
 
 from functools import wraps
-from typing import Callable, Any
-from app import db
+from typing import Any, Callable
+
 from flask import current_app
+
+from app import db
 
 
 def transactional(func: Callable) -> Callable:

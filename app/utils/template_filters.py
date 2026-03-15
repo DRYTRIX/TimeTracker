@@ -1,16 +1,17 @@
 from flask import Blueprint
+
 from app.utils.timezone import (
-    utc_to_local,
     format_local_datetime,
     format_user_datetime,
     get_user_date_format,
-    get_user_time_format,
     get_user_datetime_format,
+    get_user_time_format,
+    utc_to_local,
 )
 
 try:
-    import markdown as _md
     import bleach
+    import markdown as _md
 except Exception:
     _md = None
     bleach = None
@@ -330,15 +331,37 @@ def register_template_filters(app):
         if currency_code is None:
             try:
                 from app.models import Settings
+
                 settings = Settings.get_settings()
                 currency_code = settings.currency if settings else "EUR"
             except Exception:
                 currency_code = "EUR"
         currency_symbols = {
-            "USD": "$", "EUR": "€", "GBP": "£", "JPY": "¥", "CNY": "¥", "INR": "₹",
-            "AUD": "A$", "CAD": "C$", "CHF": "CHF", "SEK": "kr", "NOK": "kr", "DKK": "kr",
-            "PLN": "zł", "CZK": "Kč", "RUB": "₽", "BRL": "R$", "ZAR": "R", "MXN": "MX$",
-            "SGD": "S$", "HKD": "HK$", "NZD": "NZ$", "KRW": "₩", "TRY": "₺", "AED": "د.إ", "SAR": "﷼",
+            "USD": "$",
+            "EUR": "€",
+            "GBP": "£",
+            "JPY": "¥",
+            "CNY": "¥",
+            "INR": "₹",
+            "AUD": "A$",
+            "CAD": "C$",
+            "CHF": "CHF",
+            "SEK": "kr",
+            "NOK": "kr",
+            "DKK": "kr",
+            "PLN": "zł",
+            "CZK": "Kč",
+            "RUB": "₽",
+            "BRL": "R$",
+            "ZAR": "R",
+            "MXN": "MX$",
+            "SGD": "S$",
+            "HKD": "HK$",
+            "NZD": "NZ$",
+            "KRW": "₩",
+            "TRY": "₺",
+            "AED": "د.إ",
+            "SAR": "﷼",
         }
         symbol = currency_symbols.get((currency_code or "").upper(), currency_code or "EUR")
         return f"{symbol} {num_str}"
@@ -406,6 +429,7 @@ def register_template_filters(app):
         if not currency_code:
             try:
                 from app.models import Settings
+
                 settings = Settings.get_settings()
                 currency_code = settings.currency if settings else "EUR"
             except Exception:
@@ -447,6 +471,7 @@ def register_template_filters(app):
         if not currency_code:
             try:
                 from app.models import Settings
+
                 settings = Settings.get_settings()
                 currency_code = settings.currency if settings else "EUR"
             except Exception:
@@ -498,11 +523,11 @@ def get_logo_base64(logo_path):
 
 def get_image_base64(image_path):
     """Convert image file to base64 data URI for PDF embedding
-    
+
     Args:
         image_path: Relative path to image file (e.g., 'app/static/uploads/invoice_images/file.png')
                     or absolute path
-    
+
     Returns:
         Base64 data URI string or empty string on error
     """
@@ -510,6 +535,7 @@ def get_image_base64(image_path):
         return ""
 
     import os
+
     from flask import current_app
 
     # Handle relative paths - Issue #537: try multiple resolutions for deployment flexibility

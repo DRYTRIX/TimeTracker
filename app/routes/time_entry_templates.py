@@ -5,16 +5,16 @@ This module provides routes for managing reusable time entry templates.
 Templates allow users to quickly create time entries with pre-filled data.
 """
 
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
-from flask_login import login_required, current_user
-from flask_babel import _
-from app import db
-from app.models import TimeEntryTemplate, Project, Task
-from app.utils.db import safe_commit
-from app import log_event, track_event
-from app.models import Activity
-from sqlalchemy import desc
 import logging
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask_babel import _
+from flask_login import current_user, login_required
+from sqlalchemy import desc
+
+from app import db, log_event, track_event
+from app.models import Activity, Project, Task, TimeEntryTemplate
+from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
 
 logger = logging.getLogger(__name__)

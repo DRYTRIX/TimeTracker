@@ -4,7 +4,8 @@ Ensures required configuration is present and valid.
 """
 
 import os
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
+
 from flask import current_app
 
 

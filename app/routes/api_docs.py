@@ -227,8 +227,15 @@ Example: `2024-01-15T14:30:00Z`
                     "properties": {
                         "error": {"type": "string", "description": "User-facing error message"},
                         "message": {"type": "string", "description": "Detailed error message"},
-                        "error_code": {"type": "string", "description": "Machine-readable code (e.g. unauthorized, forbidden, not_found, validation_error)"},
-                        "errors": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string"}}, "description": "Field-level validation errors"},
+                        "error_code": {
+                            "type": "string",
+                            "description": "Machine-readable code (e.g. unauthorized, forbidden, not_found, validation_error)",
+                        },
+                        "errors": {
+                            "type": "object",
+                            "additionalProperties": {"type": "array", "items": {"type": "string"}},
+                            "description": "Field-level validation errors",
+                        },
                         "required_scope": {"type": "string"},
                         "available_scopes": {"type": "array", "items": {"type": "string"}},
                     },
@@ -493,7 +500,11 @@ Example: `2024-01-15T14:30:00Z`
                     "description": "Get forecasted hours for the next 7 days based on moving average",
                     "parameters": [
                         {"name": "days", "in": "query", "schema": {"type": "integer", "default": 30}},
-                        {"name": "forecast_days", "in": "query", "schema": {"type": "integer", "default": 7, "maximum": 14}},
+                        {
+                            "name": "forecast_days",
+                            "in": "query",
+                            "schema": {"type": "integer", "default": 7, "maximum": 14},
+                        },
                     ],
                     "responses": {"200": {"description": "Historical and forecast data"}},
                 }
@@ -511,7 +522,9 @@ Example: `2024-01-15T14:30:00Z`
                 "get": {
                     "tags": ["Invoices"],
                     "summary": "Get invoice",
-                    "parameters": [{"name": "invoice_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                    "parameters": [
+                        {"name": "invoice_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
                     "responses": {"200": {"description": "Invoice details"}, "404": {"description": "Not found"}},
                 }
             },

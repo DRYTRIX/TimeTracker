@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from app import db
 from app.utils.timezone import now_in_app_timezone
 
@@ -81,9 +82,9 @@ class Task(db.Model):
     def total_hours(self):
         """Calculate total hours spent on this task"""
         # Use cached value if available (set by TaskService.list_tasks for performance)
-        if hasattr(self, '_cached_total_hours'):
+        if hasattr(self, "_cached_total_hours"):
             return self._cached_total_hours
-            
+
         try:
             from .time_entry import TimeEntry
 
@@ -130,9 +131,9 @@ class Task(db.Model):
     def status_display(self):
         """Get human-readable status from kanban columns"""
         # Use cached value if available (set by TaskService.list_tasks for performance)
-        if hasattr(self, '_cached_status_display'):
+        if hasattr(self, "_cached_status_display"):
             return self._cached_status_display
-            
+
         from .kanban_column import KanbanColumn
 
         column = KanbanColumn.get_column_by_key(self.status)

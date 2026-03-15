@@ -1,8 +1,10 @@
 """Webhook event dispatcher - integrates with Activity system to trigger webhooks"""
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 from flask import current_app
+
 from app import db
 from app.models.webhook import Webhook
 from app.utils.webhook_service import WebhookService

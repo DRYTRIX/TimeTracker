@@ -3,11 +3,13 @@ API v1 - Expenses sub-blueprint.
 Routes under /api/v1/expenses.
 """
 
-from flask import Blueprint, jsonify, request, g
 from decimal import Decimal
+
+from flask import Blueprint, g, jsonify, request
+
+from app.routes.api_v1_common import _parse_date
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import error_response, forbidden_response, validation_error_response
-from app.routes.api_v1_common import _parse_date
 
 api_v1_expenses_bp = Blueprint("api_v1_expenses", __name__, url_prefix="/api/v1")
 
@@ -65,6 +67,7 @@ def list_expenses():
 def get_expense(expense_id):
     """Get an expense."""
     from sqlalchemy.orm import joinedload
+
     from app.models import Expense
 
     expense = (
@@ -170,9 +173,7 @@ def delete_expense(expense_id):
     from app.services import ExpenseService
 
     expense_service = ExpenseService()
-    result = expense_service.delete_expense(
-        expense_id=expense_id, user_id=g.api_user.id, is_admin=g.api_user.is_admin
-    )
+    result = expense_service.delete_expense(expense_id=expense_id, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
     if not result.get("success"):
         return error_response(result.get("message", "Could not reject expense"), status_code=400)
     return jsonify({"message": "Expense rejected successfully"})

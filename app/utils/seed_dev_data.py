@@ -8,30 +8,29 @@ tax rules, invoices, payments) for realistic local testing.
 """
 
 import os
-from datetime import datetime, timedelta, date, time
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
 from app import db
 from app.models import (
-    User,
     Client,
-    Project,
-    Task,
-    TimeEntry,
+    Comment,
+    Currency,
     Expense,
     ExpenseCategory,
-    Comment,
-    Warehouse,
-    StockItem,
-    WarehouseStock,
-    StockMovement,
-    Currency,
-    TaxRule,
     Invoice,
     InvoiceItem,
     Payment,
+    Project,
+    StockItem,
+    StockMovement,
+    Task,
+    TaxRule,
+    TimeEntry,
+    User,
+    Warehouse,
+    WarehouseStock,
 )
-
 
 # Default password for seeded dev users (development only)
 DEV_USER_PASSWORD = "dev"
@@ -50,24 +49,72 @@ def _ensure_development():
 
 # Deterministic data for reproducible seeds
 CLIENT_NAMES = [
-    "Acme Corp", "Beta Industries", "Gamma Labs", "Delta Solutions", "Epsilon Ltd",
-    "Zeta Consulting", "Eta Design", "Theta Systems", "Iota Media", "Kappa Finance",
-    "Lambda Software", "Mu Analytics", "Nu Robotics", "Xi Healthcare", "Omicron Retail",
-    "Pi Networks", "Rho Logistics", "Sigma Legal", "Tau Construction", "Upsilon Foods",
-    "Phi Education", "Chi Marketing", "Psi Energy", "Omega Manufacturing",
+    "Acme Corp",
+    "Beta Industries",
+    "Gamma Labs",
+    "Delta Solutions",
+    "Epsilon Ltd",
+    "Zeta Consulting",
+    "Eta Design",
+    "Theta Systems",
+    "Iota Media",
+    "Kappa Finance",
+    "Lambda Software",
+    "Mu Analytics",
+    "Nu Robotics",
+    "Xi Healthcare",
+    "Omicron Retail",
+    "Pi Networks",
+    "Rho Logistics",
+    "Sigma Legal",
+    "Tau Construction",
+    "Upsilon Foods",
+    "Phi Education",
+    "Chi Marketing",
+    "Psi Energy",
+    "Omega Manufacturing",
 ]
 
 PROJECT_NAME_PARTS = [
-    "Website", "Mobile App", "API", "Dashboard", "Integration", "Migration",
-    "Redesign", "Maintenance", "Consulting", "Audit", "Training", "Support",
-    "Phase 1", "Phase 2", "Q1 Campaign", "Q2 Campaign", "Backend", "Frontend",
+    "Website",
+    "Mobile App",
+    "API",
+    "Dashboard",
+    "Integration",
+    "Migration",
+    "Redesign",
+    "Maintenance",
+    "Consulting",
+    "Audit",
+    "Training",
+    "Support",
+    "Phase 1",
+    "Phase 2",
+    "Q1 Campaign",
+    "Q2 Campaign",
+    "Backend",
+    "Frontend",
 ]
 
 TASK_NAME_TEMPLATES = [
-    "Requirements review", "Design mockups", "Implementation", "Code review",
-    "Testing", "Documentation", "Deployment", "Bug fixes", "Refactoring",
-    "Meeting", "Research", "Sprint planning", "Retrospective", "Client call",
-    "API design", "Database schema", "UI components", "E2E tests",
+    "Requirements review",
+    "Design mockups",
+    "Implementation",
+    "Code review",
+    "Testing",
+    "Documentation",
+    "Deployment",
+    "Bug fixes",
+    "Refactoring",
+    "Meeting",
+    "Research",
+    "Sprint planning",
+    "Retrospective",
+    "Client call",
+    "API design",
+    "Database schema",
+    "UI components",
+    "E2E tests",
 ]
 
 EXPENSE_CATEGORIES_SEED = [
@@ -81,8 +128,16 @@ EXPENSE_CATEGORIES_SEED = [
 ]
 
 TAG_LISTS = [
-    "dev,backend", "frontend,ui", "meeting", "urgent", "review", "bugfix",
-    "feature", "docs", "testing", "sprint",
+    "dev,backend",
+    "frontend,ui",
+    "meeting",
+    "urgent",
+    "review",
+    "bugfix",
+    "feature",
+    "docs",
+    "testing",
+    "sprint",
 ]
 
 # Inventory seed data
@@ -94,7 +149,7 @@ WAREHOUSE_NAMES = [
 
 STOCK_ITEM_SEED = [
     ("LAPTOP-001", "Laptop Pro 15", "Electronics", 899.00, 1099.00),
-    ("MONITOR-01", "24\" Monitor", "Electronics", 180.00, 249.00),
+    ("MONITOR-01", '24" Monitor', "Electronics", 180.00, 249.00),
     ("KEYB-001", "Wireless Keyboard", "Peripherals", 45.00, 69.00),
     ("MOUSE-001", "Wireless Mouse", "Peripherals", 25.00, 39.00),
     ("CABLE-HDMI", "HDMI Cable 2m", "Cables", 8.00, 14.00),
@@ -111,9 +166,12 @@ STOCK_ITEM_SEED = [
 ]
 
 
-def _make_time_entry(user_id, project_id, task_id, client_id, day_offset, hour_start, duration_minutes, notes=None, tags=None):
+def _make_time_entry(
+    user_id, project_id, task_id, client_id, day_offset, hour_start, duration_minutes, notes=None, tags=None
+):
     """Create a closed time entry (with end_time) for a given day (naive local datetimes)."""
     from app.utils.timezone import get_timezone_obj
+
     tz = get_timezone_obj()
     base_date = (datetime.now(tz) - timedelta(days=day_offset)).date()
     start_naive = datetime.combine(base_date, time(hour_start, 0))
@@ -135,11 +193,24 @@ def _make_time_entry(user_id, project_id, task_id, client_id, day_offset, hour_s
     return entry
 
 
-def run_seed(extra_users=4, clients_count=20, projects_per_client=4, tasks_per_project=12,
-             time_entries_per_task_approx=8, days_back=120, expense_categories=True,
-             expenses_count=50, comments_count=80, warehouses_count=3, stock_items_count=15,
-             stock_movements_count=40, currencies=True, tax_rules_count=2, invoices_count=25,
-             payments_per_invoice_approx=1):
+def run_seed(
+    extra_users=4,
+    clients_count=20,
+    projects_per_client=4,
+    tasks_per_project=12,
+    time_entries_per_task_approx=8,
+    days_back=120,
+    expense_categories=True,
+    expenses_count=50,
+    comments_count=80,
+    warehouses_count=3,
+    stock_items_count=15,
+    stock_movements_count=40,
+    currencies=True,
+    tax_rules_count=2,
+    invoices_count=25,
+    payments_per_invoice_approx=1,
+):
     """
     Seed the database with development test data.
 
@@ -503,7 +574,11 @@ def run_seed(extra_users=4, clients_count=20, projects_per_client=4, tasks_per_p
     db.session.flush()
 
     # Record Payment rows for paid/partially paid invoices
-    paid_invoices = [inv for inv in Invoice.query.filter(Invoice.status.in_(["paid", "sent"])).all() if inv.total_amount and inv.total_amount > 0]
+    paid_invoices = [
+        inv
+        for inv in Invoice.query.filter(Invoice.status.in_(["paid", "sent"])).all()
+        if inv.total_amount and inv.total_amount > 0
+    ]
     for inv in paid_invoices[: min(20, len(paid_invoices))]:
         num_payments = min(1 + (inv.id % 2), payments_per_invoice_approx)
         amount_per = (inv.total_amount or 0) / num_payments

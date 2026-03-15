@@ -1,12 +1,14 @@
 import os
+import shutil
+from datetime import datetime, timedelta
+
 import click
 from flask.cli import with_appcontext
+
 from app import db
-from app.models import User, Project, TimeEntry, Settings, Client, RecurringBlock
-from datetime import datetime, timedelta
-import shutil
+from app.models import Client, Project, RecurringBlock, Settings, TimeEntry, User
 from app.utils.backup import create_backup, restore_backup
-from app.utils.permissions_seed import seed_all, seed_permissions, seed_roles, migrate_legacy_users
+from app.utils.permissions_seed import migrate_legacy_users, seed_all, seed_permissions, seed_roles
 
 
 def register_cli_commands(app):
@@ -179,6 +181,7 @@ def register_cli_commands(app):
     def generate_recurring(days):
         """Expand active recurring time blocks into concrete time entries for the next N days."""
         from datetime import date, time
+
         from app.utils.timezone import get_timezone_obj
 
         tz = get_timezone_obj()
@@ -283,6 +286,7 @@ def register_cli_commands(app):
         """
         try:
             from app.utils.seed_dev_data import run_seed
+
             counts = run_seed(
                 extra_users=users,
                 clients_count=clients,

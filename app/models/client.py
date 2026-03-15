@@ -1,11 +1,14 @@
+import json
+import secrets
 from datetime import datetime, timedelta
 from decimal import Decimal
-from werkzeug.security import generate_password_hash, check_password_hash
+
 from sqlalchemy.orm.attributes import flag_modified
+from werkzeug.security import check_password_hash, generate_password_hash
+
 from app import db
+
 from .client_prepaid_consumption import ClientPrepaidConsumption
-import secrets
-import json
 
 
 class Client(db.Model):
@@ -33,7 +36,9 @@ class Client(db.Model):
     portal_password_hash = db.Column(db.String(255), nullable=True)  # Hashed password for portal access
     password_setup_token = db.Column(db.String(100), nullable=True, index=True)  # Token for password setup/reset
     password_setup_token_expires = db.Column(db.DateTime, nullable=True)  # Token expiration time
-    portal_issues_enabled = db.Column(db.Boolean, default=True, nullable=False)  # Enable/disable issue reporting in portal
+    portal_issues_enabled = db.Column(
+        db.Boolean, default=True, nullable=False
+    )  # Enable/disable issue reporting in portal
 
     # Custom fields for flexible data storage (e.g., debtor_number, ERP IDs, etc.)
     custom_fields = db.Column(db.JSON, nullable=True)
@@ -310,8 +315,8 @@ class Client(db.Model):
         if not self.has_portal_access:
             return None
 
-        from .project import Project
         from .invoice import Invoice
+        from .project import Project
         from .time_entry import TimeEntry
 
         # Get active projects for this client

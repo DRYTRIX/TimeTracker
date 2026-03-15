@@ -2,9 +2,11 @@
 Search utilities for full-text search across the application.
 """
 
-from typing import List, Dict, Any, Optional
-from sqlalchemy import or_, and_
-from app.models import Project, TimeEntry, Task, Invoice, Client, Comment
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import and_, or_
+
+from app.models import Client, Comment, Invoice, Project, Task, TimeEntry
 
 
 def search_projects(query: str, user_id: Optional[int] = None, status: Optional[str] = None) -> List[Project]:

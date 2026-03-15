@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from app import db
 
 
@@ -12,8 +13,12 @@ class SavedReportView(db.Model):
     owner_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     scope = db.Column(db.String(20), default="private", nullable=False)  # private, team, public
     config_json = db.Column(db.Text, nullable=False)  # JSON for filters, columns, groupings
-    iterative_report_generation = db.Column(db.Boolean, default=False, nullable=False)  # Generate one report per custom field value
-    iterative_custom_field_name = db.Column(db.String(50), nullable=True)  # Custom field name for iteration (e.g., 'salesman')
+    iterative_report_generation = db.Column(
+        db.Boolean, default=False, nullable=False
+    )  # Generate one report per custom field value
+    iterative_custom_field_name = db.Column(
+        db.String(50), nullable=True
+    )  # Custom field name for iteration (e.g., 'salesman')
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -36,10 +41,14 @@ class ReportEmailSchedule(db.Model):
     last_run_at = db.Column(db.DateTime, nullable=True)
     active = db.Column(db.Boolean, default=True, nullable=False)
     split_by_salesman = db.Column(db.Boolean, default=False, nullable=False)  # Split report by salesman
-    salesman_field_name = db.Column(db.String(50), nullable=True)  # Custom field name for salesman (default: 'salesman')
+    salesman_field_name = db.Column(
+        db.String(50), nullable=True
+    )  # Custom field name for salesman (default: 'salesman')
     email_distribution_mode = db.Column(db.String(20), nullable=True)  # 'mapping', 'template', 'single'
     recipient_email_template = db.Column(db.String(255), nullable=True)  # e.g., '{value}@test.de' for template mode
-    use_last_month_dates = db.Column(db.Boolean, default=False, nullable=False)  # For monthly: use previous calendar month as date range
+    use_last_month_dates = db.Column(
+        db.Boolean, default=False, nullable=False
+    )  # For monthly: use previous calendar month as date range
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

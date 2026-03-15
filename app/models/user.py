@@ -1,8 +1,10 @@
-from datetime import datetime
-from flask_login import UserMixin
-from werkzeug.security import generate_password_hash, check_password_hash
-from app import db
 import os
+from datetime import datetime
+
+from flask_login import UserMixin
+from werkzeug.security import check_password_hash, generate_password_hash
+
+from app import db
 
 
 class User(UserMixin, db.Model):
@@ -35,8 +37,12 @@ class User(UserMixin, db.Model):
     notification_task_assigned = db.Column(db.Boolean, default=True, nullable=False)  # Notify when assigned to task
     notification_task_comments = db.Column(db.Boolean, default=True, nullable=False)  # Notify about task comments
     notification_weekly_summary = db.Column(db.Boolean, default=False, nullable=False)  # Send weekly time summary
-    notification_remind_to_log = db.Column(db.Boolean, default=False, nullable=False)  # Remind to log time at end of day
-    reminder_to_log_time = db.Column(db.String(5), nullable=True)  # Time of day "HH:MM" (24h) for reminder, e.g. "17:00"
+    notification_remind_to_log = db.Column(
+        db.Boolean, default=False, nullable=False
+    )  # Remind to log time at end of day
+    reminder_to_log_time = db.Column(
+        db.String(5), nullable=True
+    )  # Time of day "HH:MM" (24h) for reminder, e.g. "17:00"
     timezone = db.Column(db.String(50), nullable=True)  # User-specific timezone override
     date_format = db.Column(db.String(20), default=None, nullable=True)  # None = use system default
     time_format = db.Column(db.String(10), default=None, nullable=True)  # None = use system default
@@ -57,9 +63,7 @@ class User(UserMixin, db.Model):
     overtime_calculation_mode = db.Column(
         db.String(10), default="daily", nullable=False
     )  # 'daily' | 'weekly': overtime by daily cap vs weekly cap
-    standard_hours_per_week = db.Column(
-        db.Float, nullable=True
-    )  # Used when overtime_calculation_mode is 'weekly'
+    standard_hours_per_week = db.Column(db.Float, nullable=True)  # Used when overtime_calculation_mode is 'weekly'
 
     # Client portal settings
     client_portal_enabled = db.Column(db.Boolean, default=False, nullable=False)  # Enable/disable client portal access
@@ -252,6 +256,7 @@ class User(UserMixin, db.Model):
         if not self.last_login:
             return False
         from datetime import timedelta
+
         threshold = datetime.utcnow() - timedelta(minutes=15)
         return self.last_login >= threshold
 
@@ -259,11 +264,12 @@ class User(UserMixin, db.Model):
         """Get user status: 'online', 'offline', or 'away'"""
         if not self.last_login:
             return "offline"
-        
+
         from datetime import timedelta
+
         now = datetime.utcnow()
         time_since_login = now - self.last_login
-        
+
         # Online if active within last 15 minutes
         if time_since_login <= timedelta(minutes=15):
             return "online"
@@ -280,11 +286,12 @@ class User(UserMixin, db.Model):
         total_hours_override: optional precomputed total hours (avoids N+1 when serializing many users).
         """
         from app.utils.timezone import (
+            get_app_timezone,
             get_resolved_date_format_key,
             get_resolved_time_format_key,
             get_user_timezone_name,
-            get_app_timezone,
         )
+
         try:
             resolved_date = get_resolved_date_format_key(self)
             resolved_time = get_resolved_time_format_key(self)
@@ -377,7 +384,7 @@ class User(UserMixin, db.Model):
         # Auto-assign role from legacy role field if user has no roles assigned
         if not self.roles and self.role:
             self._auto_assign_role_from_legacy()
-        
+
         # Super admin users have all permissions
         if self.role == "admin" and not self.roles:
             # Legacy admin users without roles have all permissions
@@ -387,23 +394,25 @@ class User(UserMixin, db.Model):
         for role in self.roles:
             if role.has_permission(permission_name):
                 return True
-        
+
         # Fallback: Check legacy role field if no roles assigned
         # This handles cases where role assignment failed or user is in transition
         if not self.roles and self.role:
             from app.models import Role
+
             legacy_role = Role.query.filter_by(name=self.role).first()
             if legacy_role and legacy_role.has_permission(permission_name):
                 return True
-        
+
         return False
-    
+
     def _auto_assign_role_from_legacy(self):
         """Auto-assign role from legacy role field if user has no roles assigned"""
         if self.roles or not self.role:
             return
-        
+
         from app.models import Role
+
         role_obj = Role.query.filter_by(name=self.role).first()
         if role_obj:
             self.roles.append(role_obj)
@@ -490,10 +499,10 @@ class User(UserMixin, db.Model):
         if not self.is_client_portal_user:
             return None
 
-        from .project import Project
-        from .invoice import Invoice
-        from .time_entry import TimeEntry
         from .client import Client
+        from .invoice import Invoice
+        from .project import Project
+        from .time_entry import TimeEntry
 
         # Get client - try relationship first, then query by ID if needed
         client = self.client

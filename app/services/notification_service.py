@@ -2,10 +2,12 @@
 Service for notifications and event handling.
 """
 
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 from flask import current_app
+
+from app.constants import NotificationType, WebhookEvent
 from app.utils.webhook_dispatcher import dispatch_webhook
-from app.constants import WebhookEvent, NotificationType
 
 
 class NotificationService:

@@ -2,11 +2,13 @@
 Jira integration connector.
 """
 
-from typing import Dict, Any, Optional
-from datetime import datetime, timedelta
-from app.integrations.base import BaseConnector
-import requests
 import os
+from datetime import datetime, timedelta
+from typing import Any, Dict, Optional
+
+import requests
+
+from app.integrations.base import BaseConnector
 
 
 class JiraConnector(BaseConnector):
@@ -147,9 +149,10 @@ class JiraConnector(BaseConnector):
 
     def sync_data(self, sync_type: str = "full") -> Dict[str, Any]:
         """Sync issues from Jira and create tasks."""
-        from app.models import Task, Project
-        from app import db
         from datetime import datetime, timedelta
+
+        from app import db
+        from app.models import Project, Task
 
         token = self.get_access_token()
         if not token:
@@ -257,7 +260,7 @@ class JiraConnector(BaseConnector):
         status_mapping = self.get_status_mappings()
         if status_mapping and jira_status in status_mapping:
             return status_mapping[jira_status]
-        
+
         # Default mapping
         status_map = {
             "To Do": "todo",
@@ -267,12 +270,14 @@ class JiraConnector(BaseConnector):
         }
         return status_map.get(jira_status, "todo")
 
-    def handle_webhook(self, payload: Dict[str, Any], headers: Dict[str, str], raw_body: Optional[bytes] = None) -> Dict[str, Any]:
+    def handle_webhook(
+        self, payload: Dict[str, Any], headers: Dict[str, str], raw_body: Optional[bytes] = None
+    ) -> Dict[str, Any]:
         """Handle incoming webhook from Jira."""
         import logging
-        
+
         logger = logging.getLogger(__name__)
-        
+
         try:
             event_type = payload.get("webhookEvent")
             issue = payload.get("issue", {})

@@ -1,6 +1,7 @@
 """Calendar integration models"""
 
 from datetime import datetime
+
 from app import db
 
 

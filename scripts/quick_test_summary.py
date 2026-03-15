@@ -4,17 +4,20 @@ import sys
 import os
 import subprocess
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+_project_root = os.path.dirname(_script_dir)
+sys.path.insert(0, _project_root)
+os.chdir(_project_root)
 
 test_files = [
-    "test_basic.py",
-    "test_analytics.py", 
-    "test_invoices.py",
-    "test_models_comprehensive.py",
-    "test_new_features.py",
-    "test_routes.py",
-    "test_security.py",
-    "test_timezone.py"
+    "tests/test_basic.py",
+    "tests/test_analytics.py",
+    "tests/test_invoices.py",
+    "tests/test_models_comprehensive.py",
+    "tests/test_new_features.py",
+    "tests/test_routes.py",
+    "tests/test_security.py",
+    "tests/test_timezone.py",
 ]
 
 print("=" * 80)
@@ -26,7 +29,7 @@ results = []
 for test_file in test_files:
     print(f"\nTesting: {test_file}...", end=" ", flush=True)
     
-    cmd = [sys.executable, "-m", "pytest", f"tests/{test_file}", "-q", "--tb=no", "--no-header"]
+    cmd = [sys.executable, "-m", "pytest", test_file, "-q", "--tb=no", "--no-header"]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
     
     # Parse output for pass/fail counts

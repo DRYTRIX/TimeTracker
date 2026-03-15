@@ -14,6 +14,7 @@ Sources ending with _key are key-purchase clicks; others are donate/learn-more.
 """
 
 from datetime import datetime, timedelta
+
 from app import db
 
 
@@ -33,15 +34,15 @@ class DonationInteraction(db.Model):
 
     # A/B test variant for experiments (e.g. control | key_first | cta_alt)
     variant = db.Column(db.String(50), nullable=True)
-    
+
     # User metrics at time of interaction (for smart prompts)
     time_entries_count = db.Column(db.Integer, nullable=True)  # Total time entries
     days_since_signup = db.Column(db.Integer, nullable=True)  # Days since user created account
     total_hours = db.Column(db.Float, nullable=True)  # Total hours tracked
-    
+
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    
+
     # Relationships
     user = db.relationship("User", backref="donation_interactions")
 
@@ -68,7 +69,7 @@ class DonationInteraction(db.Model):
             interaction.time_entries_count = user_metrics.get("time_entries_count")
             interaction.days_since_signup = user_metrics.get("days_since_signup")
             interaction.total_hours = user_metrics.get("total_hours")
-        
+
         db.session.add(interaction)
         db.session.commit()
         return interaction
@@ -78,16 +79,12 @@ class DonationInteraction(db.Model):
         """Check if user clicked donation link in last N days"""
         cutoff = datetime.utcnow() - timedelta(days=days)
         return (
-            DonationInteraction.query.filter_by(
-                user_id=user_id, interaction_type="banner_clicked"
-            )
+            DonationInteraction.query.filter_by(user_id=user_id, interaction_type="banner_clicked")
             .filter(DonationInteraction.created_at >= cutoff)
             .first()
             is not None
         ) or (
-            DonationInteraction.query.filter_by(
-                user_id=user_id, interaction_type="link_clicked"
-            )
+            DonationInteraction.query.filter_by(user_id=user_id, interaction_type="link_clicked")
             .filter(DonationInteraction.created_at >= cutoff)
             .first()
             is not None
@@ -97,23 +94,22 @@ class DonationInteraction(db.Model):
     def get_user_engagement_metrics(user_id: int) -> dict:
         """Get user engagement metrics for smart prompts"""
         from app.models import TimeEntry, User
-        
+
         user = User.query.get(user_id)
         if not user:
             return {}
-        
+
         # Days since signup
         days_since_signup = (datetime.utcnow() - user.created_at).days if user.created_at else 0
-        
+
         # Time entries count
         time_entries_count = TimeEntry.query.filter_by(user_id=user_id).count()
-        
+
         # Total hours
         total_hours = user.total_hours if hasattr(user, "total_hours") else 0.0
-        
+
         return {
             "days_since_signup": days_since_signup,
             "time_entries_count": time_entries_count,
             "total_hours": total_hours,
         }
-

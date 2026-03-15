@@ -5,16 +5,18 @@ This is used when WeasyPrint is not available due to system dependencies
 
 import os
 from datetime import datetime
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import cm
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
-from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
-from reportlab.pdfgen import canvas
-from app.models import Settings
+
 from flask import current_app
 from flask_babel import gettext as _
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import cm
+from reportlab.pdfgen import canvas
+from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+from app.models import Settings
 
 
 class InvoicePDFGeneratorFallback:
@@ -64,8 +66,8 @@ class InvoicePDFGeneratorFallback:
     def generate_pdf(self):
         """Generate PDF content and return as bytes"""
         # Create a temporary file to store the PDF
-        import tempfile
         import io
+        import tempfile
 
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_file:
             tmp_path = tmp_file.name
@@ -348,23 +350,23 @@ class InvoicePDFGeneratorFallback:
         """Add page number at the bottom-right of each page."""
         page_num = canv.getPageNumber()
         text = f"Page {page_num}"
-        
+
         # Get page dimensions for boundary checking
         page_width = doc.pagesize[0]
         page_height = doc.pagesize[1]
-        
+
         canv.saveState()
         canv.setFont("Helvetica", 9)
         try:
             canv.setFillColor(colors.HexColor("#666666"))
         except Exception:
             pass
-        
+
         # Ensure page number is within page boundaries
         x = min(doc.leftMargin + doc.width, page_width - 10)
         y = max(doc.bottomMargin - 0.5 * cm, 10)
         canv.drawRightString(x, y, text)
-        
+
         canv.restoreState()
 
     def _build_additional_info(self):
@@ -446,8 +448,8 @@ class QuotePDFGeneratorFallback:
 
     def generate_pdf(self):
         """Generate PDF content and return as bytes"""
-        import tempfile
         import io
+        import tempfile
 
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_file:
             tmp_path = tmp_file.name
@@ -643,16 +645,16 @@ class QuotePDFGeneratorFallback:
         """Add page number to PDF"""
         page_num = canv.getPageNumber()
         text = f"{_('Page')} {page_num}"
-        
+
         # Get page dimensions for boundary checking
         page_width = doc.pagesize[0]
         page_height = doc.pagesize[1]
-        
+
         canv.saveState()
         canv.setFont("Helvetica", 9)
         # Ensure page number is within page boundaries
         x = min(page_width - 2 * cm, page_width - 10)
         y = max(1 * cm, 10)
         canv.drawRightString(x, y, text)
-        
+
         canv.restoreState()

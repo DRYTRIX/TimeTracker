@@ -5,7 +5,7 @@ Provides functions to calculate overtime hours based on user's standard working 
 per day or per week (configurable via user.overtime_calculation_mode).
 """
 
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 
@@ -64,9 +64,9 @@ def calculate_period_overtime(
 
     if include_weekends is None:
         include_weekends = getattr(user, "overtime_include_weekends", True)
-    from app.models import TimeEntry
-
     from datetime import datetime as dt
+
+    from app.models import TimeEntry
 
     start_datetime = dt.combine(start_date, dt.min.time())
     end_datetime = dt.combine(end_date, dt.max.time())
@@ -122,9 +122,9 @@ def _calculate_period_overtime_weekly(
     """Overtime for a period in weekly mode: group by week, cap at standard_hours_per_week."""
     if include_weekends is None:
         include_weekends = getattr(user, "overtime_include_weekends", True)
-    from app.models import TimeEntry
-
     from datetime import datetime as dt
+
+    from app.models import TimeEntry
 
     standard_weekly = getattr(user, "standard_hours_per_week", None)
     if standard_weekly is None or standard_weekly <= 0:
@@ -187,9 +187,7 @@ def _calculate_period_overtime_weekly(
     }
 
 
-def get_daily_breakdown(
-    user, start_date: date, end_date: date, include_weekends: Optional[bool] = None
-) -> List[Dict]:
+def get_daily_breakdown(user, start_date: date, end_date: date, include_weekends: Optional[bool] = None) -> List[Dict]:
     """
     Get a daily breakdown of regular and overtime hours.
 
@@ -209,9 +207,9 @@ def get_daily_breakdown(
     mode = getattr(user, "overtime_calculation_mode", "daily") or "daily"
     if include_weekends is None:
         include_weekends = getattr(user, "overtime_include_weekends", True)
-    from app.models import TimeEntry
-
     from datetime import datetime as dt
+
+    from app.models import TimeEntry
 
     start_datetime = dt.combine(start_date, dt.min.time())
     end_datetime = dt.combine(end_date, dt.max.time())

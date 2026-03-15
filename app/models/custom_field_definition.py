@@ -1,8 +1,10 @@
 """Custom Field Definition model for global custom field management"""
 
 from datetime import datetime
-from app import db
+
 from sqlalchemy.exc import ProgrammingError
+
+from app import db
 
 
 class CustomFieldDefinition(db.Model):
@@ -45,7 +47,7 @@ class CustomFieldDefinition(db.Model):
     @classmethod
     def get_active_definitions(cls):
         """Get all active custom field definitions ordered by order and label.
-        
+
         Returns empty list if table doesn't exist (migration not run yet).
         """
         try:
@@ -55,6 +57,7 @@ class CustomFieldDefinition(db.Model):
             if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
                 try:
                     from flask import current_app
+
                     if current_app:
                         current_app.logger.warning(
                             "custom_field_definitions table does not exist. Run migration: flask db upgrade"
@@ -73,10 +76,9 @@ class CustomFieldDefinition(db.Model):
             # For other database errors, return empty list to prevent breaking the app
             try:
                 from flask import current_app
+
                 if current_app:
-                    current_app.logger.warning(
-                        "Could not query custom_field_definitions. Returning empty list."
-                    )
+                    current_app.logger.warning("Could not query custom_field_definitions. Returning empty list.")
             except RuntimeError:
                 pass  # No application context
             # Rollback the failed transaction
@@ -89,7 +91,7 @@ class CustomFieldDefinition(db.Model):
     @classmethod
     def get_mandatory_definitions(cls):
         """Get all active mandatory custom field definitions.
-        
+
         Returns empty list if table doesn't exist (migration not run yet).
         """
         try:
@@ -99,6 +101,7 @@ class CustomFieldDefinition(db.Model):
             if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
                 try:
                     from flask import current_app
+
                     if current_app:
                         current_app.logger.warning(
                             "custom_field_definitions table does not exist. Run migration: flask db upgrade"
@@ -117,10 +120,9 @@ class CustomFieldDefinition(db.Model):
             # For other database errors, return empty list to prevent breaking the app
             try:
                 from flask import current_app
+
                 if current_app:
-                    current_app.logger.warning(
-                        "Could not query custom_field_definitions. Returning empty list."
-                    )
+                    current_app.logger.warning("Could not query custom_field_definitions. Returning empty list.")
             except RuntimeError:
                 pass  # No application context
             # Rollback the failed transaction
@@ -133,7 +135,7 @@ class CustomFieldDefinition(db.Model):
     @classmethod
     def get_by_key(cls, field_key):
         """Get a custom field definition by its key.
-        
+
         Returns None if table doesn't exist (migration not run yet).
         """
         try:
@@ -143,6 +145,7 @@ class CustomFieldDefinition(db.Model):
             if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
                 try:
                     from flask import current_app
+
                     if current_app:
                         current_app.logger.warning(
                             "custom_field_definitions table does not exist. Run migration: flask db upgrade"
@@ -161,10 +164,9 @@ class CustomFieldDefinition(db.Model):
             # For other database errors, return None to prevent breaking the app
             try:
                 from flask import current_app
+
                 if current_app:
-                    current_app.logger.warning(
-                        "Could not query custom_field_definitions. Returning None."
-                    )
+                    current_app.logger.warning("Could not query custom_field_definitions. Returning None.")
             except RuntimeError:
                 pass  # No application context
             # Rollback the failed transaction
@@ -176,9 +178,10 @@ class CustomFieldDefinition(db.Model):
 
     def count_clients_with_value(self):
         """Count how many clients have a value for this custom field"""
-        from app.models import Client
         from sqlalchemy import func
-        
+
+        from app.models import Client
+
         # Query clients that have this field key in their custom_fields JSON
         # This works for both SQLite and PostgreSQL
         count = 0

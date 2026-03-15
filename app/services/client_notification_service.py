@@ -3,13 +3,14 @@ Client Notification Service
 Handles notifications for client portal users
 """
 
-from typing import Dict, List, Any, Optional
-from datetime import datetime
-from app import db
-from app.models.client_notification import ClientNotification, ClientNotificationPreferences, NotificationType
-from app.models import Client, Contact
-from app.utils.email import send_email
 import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from app import db
+from app.models import Client, Contact
+from app.models.client_notification import ClientNotification, ClientNotificationPreferences, NotificationType
+from app.utils.email import send_email
 
 logger = logging.getLogger(__name__)
 

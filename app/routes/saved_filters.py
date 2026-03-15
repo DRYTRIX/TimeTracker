@@ -5,16 +5,16 @@ This module provides routes for managing saved filters/searches.
 Users can save commonly used filters for quick access.
 """
 
-from flask import Blueprint, request, jsonify, render_template, flash, redirect, url_for
-from flask_login import login_required, current_user
-from flask_babel import _
-from app import db
-from app.models import SavedFilter
-from app.utils.db import safe_commit
-from app import log_event, track_event
-from app.models import Activity
-import logging
 import json
+import logging
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask_babel import _
+from flask_login import current_user, login_required
+
+from app import db, log_event, track_event
+from app.models import Activity, SavedFilter
+from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
 
 logger = logging.getLogger(__name__)

@@ -2,9 +2,11 @@
 Pagination utilities for consistent pagination across the application.
 """
 
-from typing import List, Any, Dict, Optional
+from typing import Any, Dict, List, Optional
+
 from flask import request
 from sqlalchemy.orm import Query
+
 from app.constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 
 

@@ -70,7 +70,7 @@ TimeTracker is built with modern, reliable technologies:
 - **flake8** — Linting
 - **coverage** — Test coverage analysis
 
-**📖 Documentation:** [Architecture overview](ARCHITECTURE.md) · [Project Structure](docs/development/PROJECT_STRUCTURE.md) · [UI Guidelines](docs/UI_GUIDELINES.md)
+**📖 Documentation:** [Architecture overview](docs/ARCHITECTURE.md) · [Project Structure](docs/development/PROJECT_STRUCTURE.md) · [UI Guidelines](docs/UI_GUIDELINES.md)
 
 ---
 
@@ -87,7 +87,7 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 > **📋 For complete release history, see [CHANGELOG.md](CHANGELOG.md)**
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
-- 📱 **Native Mobile & Desktop Apps** — Flutter mobile app (iOS/Android) and Electron desktop app with time tracking, offline support, and API integration ([Build Guide](BUILD.md), [Docs](docs/mobile-desktop-apps/README.md))
+- 📱 **Native Mobile & Desktop Apps** — Flutter mobile app (iOS/Android) and Electron desktop app with time tracking, offline support, and API integration ([Build Guide](docs/build/BUILD.md), [Docs](docs/mobile-desktop-apps/README.md))
 - 📋 **Project Analysis & Documentation** — Comprehensive project analysis and documentation updates
 - 🔧 **Version Consistency** — Fixed version inconsistencies across documentation files
 
@@ -288,7 +288,7 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 - **Docker Ready** — Deploy in minutes with Docker Compose
 - **Database Flexibility** — PostgreSQL for production, SQLite for testing
 - **Responsive Design** — Mobile-first design works perfectly on desktop, tablet, and mobile
-- **Native Mobile & Desktop Apps** — Flutter mobile app (iOS/Android) and Electron desktop app with time tracking, offline support, and API integration ([Build Guide](BUILD.md), [Docs](docs/mobile-desktop-apps/README.md))
+- **Native Mobile & Desktop Apps** — Flutter mobile app (iOS/Android) and Electron desktop app with time tracking, offline support, and API integration ([Build Guide](docs/build/BUILD.md), [Docs](docs/mobile-desktop-apps/README.md))
 - **Real-time Sync** — WebSocket support for live updates across devices
 - **Automatic Backups** — Scheduled database backups (configurable)
 - **Progressive Web App (PWA)** — Install as mobile app with offline support and background sync
@@ -466,7 +466,7 @@ git clone https://github.com/drytrix/TimeTracker.git
 cd TimeTracker
 
 # 2. Start with the local test configuration (uses SQLite, no PostgreSQL)
-docker-compose -f docker-compose.local-test.yml up --build
+docker-compose -f docker/docker-compose.local-test.yml up --build
 
 # 3. Access at http://localhost:8080
 ```
@@ -592,10 +592,10 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory. See 
 **For Developers:**
 - **[Contributing](CONTRIBUTING.md)** — How to contribute (quick link)
 - **[Contributing Guidelines (full)](docs/development/CONTRIBUTING.md)** — Setup, standards, PR process
-- **[Development Guide](DEVELOPMENT.md)** — Run locally, test, release process
-- **[Architecture](ARCHITECTURE.md)** — System overview and design
+- **[Development Guide](docs/DEVELOPMENT.md)** — Run locally, test, release process
+- **[Architecture](docs/ARCHITECTURE.md)** — System overview and design
 - **[Project Structure](docs/development/PROJECT_STRUCTURE.md)** — Codebase layout
-- **[API Documentation](API.md)** — API quick reference · [Full REST API](docs/api/REST_API.md)
+- **[API Documentation](docs/API.md)** — API quick reference · [Full REST API](docs/api/REST_API.md)
 - **[Database Migrations](migrations/README.md)** — Schema management
 - **[CI/CD Documentation](docs/cicd/CI_CD_DOCUMENTATION.md)** — Build and deployment
 
@@ -629,7 +629,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory. See 
 
 **Integrations & Apps:**
 - **[Mobile & Desktop Apps](docs/mobile-desktop-apps/README.md)** — Flutter mobile and Electron desktop apps
-- **[Build Guide (Mobile & Desktop)](BUILD.md)** — Build scripts for Android, iOS, Windows, macOS, Linux
+- **[Build Guide (Mobile & Desktop)](docs/build/BUILD.md)** — Build scripts for Android, iOS, Windows, macOS, Linux
 - **[Peppol & ZugFerd e-Invoicing](docs/admin/configuration/PEPPOL_EINVOICING.md)** — Peppol sending and ZugFerd/Factur-X PDF embedding (EN 16931)
 - **[API Documentation](docs/api/REST_API.md)** — REST API reference
 - **[API Token Scopes](docs/api/API_TOKEN_SCOPES.md)** — Token permissions
@@ -697,7 +697,7 @@ docker-compose up -d
 #### Option 2: Use Pre-built Images
 ```bash
 # Use the remote compose file with published images
-docker-compose -f docker-compose.remote.yml up -d
+docker-compose -f docker/docker-compose.remote.yml up -d
 ```
 
 > **⚠️ Security Note:** Always set a unique `SECRET_KEY` in production! See [CSRF Configuration](docs/admin/security/CSRF_CONFIGURATION.md) for details.
@@ -721,14 +721,16 @@ docker-compose up -d
 #### Manual HTTPS with mkcert (No Browser Warnings)
 ```bash
 # Use mkcert for locally-trusted certificates
-docker-compose -f docker-compose.https-mkcert.yml up -d
+docker-compose -f docker/docker-compose.https-mkcert.yml up -d
 ```
-**📖 See [HTTPS Setup Guide](docs/admin/security/README_HTTPS.md) for detailed instructions**
+**📖 See [HTTPS Setup Guide](docs/admin/security/README_HTTPS.md) for detailed instructions.** HTTPS helper scripts live in `scripts/` (e.g. from project root: `bash scripts/setup-https-mkcert.sh`, `bash scripts/start-https.sh`).
 
 ### Monitoring & Analytics
 ```bash
+# Alternate compose files (local-test, remote, analytics, https) are in docker/; use -f docker/docker-compose.xxx.yml
+
 # Deploy with full monitoring stack (Prometheus, Grafana, Loki)
-docker-compose up -d
+docker-compose -f docker-compose.yml -f docker/docker-compose.analytics.yml --profile monitoring up -d
 # Grafana: http://localhost:3000
 # Prometheus: http://localhost:9090
 ```
@@ -928,7 +930,7 @@ This starts:
 #### 📱 Native Mobile & Desktop Apps
 - ✅ **Flutter Mobile App** — Native iOS and Android apps with time tracking, calendar view, offline sync, and API token authentication
 - ✅ **Electron Desktop App** — Windows, macOS, and Linux desktop app with system tray, time tracking, and offline support
-- ✅ **Build Scripts** — Cross-platform build scripts for mobile and desktop ([BUILD.md](BUILD.md))
+- ✅ **Build Scripts** — Cross-platform build scripts for mobile and desktop ([BUILD.md](docs/build/BUILD.md))
 
 #### 🏗️ Architecture & Performance
 - ✅ **Service Layer Migration** — Routes migrated to service layer pattern
@@ -959,7 +961,7 @@ We welcome contributions! Whether it's:
 2. **Set Up Development Environment**
    ```bash
    # Use SQLite for quick local testing
-   docker-compose -f docker-compose.local-test.yml up -d
+   docker-compose -f docker/docker-compose.local-test.yml up -d
    ```
 
 3. **Make Your Changes**
@@ -974,7 +976,7 @@ We welcome contributions! Whether it's:
 
 **📖 [CONTRIBUTING.md](CONTRIBUTING.md)** — Quick contributing overview  
 **📖 [Full Contributing Guidelines](docs/development/CONTRIBUTING.md)** — Setup, standards, PR process  
-**📖 [DEVELOPMENT.md](DEVELOPMENT.md)** — Run locally, tests, releases  
+**📖 [DEVELOPMENT.md](docs/DEVELOPMENT.md)** — Run locally, tests, releases  
 **📖 [Local Testing with SQLite](docs/development/LOCAL_TESTING_WITH_SQLITE.md)** — Docker SQLite setup
 
 ---

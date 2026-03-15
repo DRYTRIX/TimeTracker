@@ -3,8 +3,11 @@ API v1 - Time Entries and Timer endpoints.
 Sub-blueprint for /api/v1/time-entries and /api/v1/timer/*.
 """
 
-from flask import Blueprint, jsonify, request, g
+from flask import Blueprint, g, jsonify, request
 from marshmallow import ValidationError
+
+from app.routes.api_v1_common import _parse_date_range, paginate_query, parse_datetime
+from app.schemas.time_entry_schema import TimeEntryCreateSchema, TimeEntryUpdateSchema
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import (
     error_response,
@@ -12,8 +15,6 @@ from app.utils.api_responses import (
     handle_validation_error,
     validation_error_response,
 )
-from app.routes.api_v1_common import paginate_query, parse_datetime, _parse_date_range
-from app.schemas.time_entry_schema import TimeEntryCreateSchema, TimeEntryUpdateSchema
 
 api_v1_time_entries_bp = Blueprint("api_v1_time_entries", __name__, url_prefix="/api/v1")
 
@@ -23,6 +24,7 @@ api_v1_time_entries_bp = Blueprint("api_v1_time_entries", __name__, url_prefix="
 def list_time_entries():
     """List time entries with filters."""
     from sqlalchemy.orm import joinedload
+
     from app.models import TimeEntry
 
     project_id = request.args.get("project_id", type=int)
@@ -73,6 +75,7 @@ def list_time_entries():
 def get_time_entry(entry_id):
     """Get a specific time entry."""
     from sqlalchemy.orm import joinedload
+
     from app.models import TimeEntry
 
     entry = (

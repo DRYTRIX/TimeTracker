@@ -2,15 +2,16 @@
 Service for payment business logic.
 """
 
-from typing import Optional, Dict, Any, List
 from datetime import date
 from decimal import Decimal
+from typing import Any, Dict, List, Optional
+
 from app import db
-from app.repositories import PaymentRepository, InvoiceRepository
-from app.models import Payment, Invoice
+from app.constants import WebhookEvent
+from app.models import Invoice, Payment
+from app.repositories import InvoiceRepository, PaymentRepository
 from app.utils.db import safe_commit
 from app.utils.event_bus import emit_event
-from app.constants import WebhookEvent
 
 
 class PaymentService:
@@ -98,10 +99,12 @@ class PaymentService:
         if invoice.client_id and status == "completed":
             try:
                 from app.services.client_notification_service import ClientNotificationService
+
                 notification_service = ClientNotificationService()
                 notification_service.notify_invoice_paid(invoice_id, invoice.client_id, float(amount))
             except Exception as e:
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send client notification for payment {payment.id}: {e}", exc_info=True)
 

@@ -1,16 +1,18 @@
 """Routes for deal/sales pipeline management"""
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_babel import gettext as _
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
+
 from app import db
-from app.models import Deal, DealActivity, Client, Contact, Lead, Quote, Project
+from app.models import Client, Contact, Deal, DealActivity, Lead, Project, Quote
 from app.models.audit_log import AuditLog
 from app.utils.db import safe_commit
-from app.utils.timezone import parse_local_datetime_from_string
 from app.utils.module_helpers import module_enabled
-from datetime import datetime, date
-from decimal import Decimal, InvalidOperation
+from app.utils.timezone import parse_local_datetime_from_string
 
 deals_bp = Blueprint("deals", __name__)
 
@@ -298,7 +300,9 @@ def create_activity(deal_id):
     if request.method == "POST":
         try:
             activity_date_str = request.form.get("activity_date", "")
-            activity_date = parse_local_datetime_from_string(activity_date_str) if activity_date_str else datetime.utcnow()
+            activity_date = (
+                parse_local_datetime_from_string(activity_date_str) if activity_date_str else datetime.utcnow()
+            )
             if activity_date is None:
                 activity_date = datetime.utcnow()
 

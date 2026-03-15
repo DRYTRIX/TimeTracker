@@ -7,14 +7,15 @@ The active routes live in app/routes/projects.py. Do not register this blueprint
 use it as reference when refactoring or when adding new project routes.
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_babel import gettext as _
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
 from sqlalchemy.orm import joinedload
+
 from app import db
+from app.models import Client, Project, TimeEntry, UserFavoriteProject
+from app.repositories import ClientRepository, ProjectRepository, TimeEntryRepository
 from app.services import ProjectService
-from app.repositories import ProjectRepository, ClientRepository, TimeEntryRepository
-from app.models import Project, Client, UserFavoriteProject, TimeEntry
 from app.utils.permissions import admin_or_permission_required
 
 projects_bp = Blueprint("projects", __name__)
@@ -99,9 +100,10 @@ def view_project(project_id):
 
     This version uses the service layer and fixes N+1 queries.
     """
-    from app.repositories import TimeEntryRepository
-    from app.models import Task, Comment, ProjectCost, KanbanColumn
     from sqlalchemy.orm import joinedload
+
+    from app.models import Comment, KanbanColumn, ProjectCost, Task
+    from app.repositories import TimeEntryRepository
 
     # Use repository to get project with relations
     project_repo = ProjectRepository()

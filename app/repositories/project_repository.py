@@ -3,11 +3,13 @@ Repository for project data access operations.
 """
 
 from typing import List, Optional
+
 from sqlalchemy.orm import joinedload
+
 from app import db
-from app.models import Project, Client
-from app.repositories.base_repository import BaseRepository
 from app.constants import ProjectStatus
+from app.models import Client, Project
+from app.repositories.base_repository import BaseRepository
 
 
 class ProjectRepository(BaseRepository[Project]):

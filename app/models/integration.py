@@ -3,8 +3,10 @@ Integration models for third-party service connections.
 """
 
 from datetime import datetime
-from app import db
+
 from sqlalchemy import JSON
+
+from app import db
 
 
 class Integration(db.Model):

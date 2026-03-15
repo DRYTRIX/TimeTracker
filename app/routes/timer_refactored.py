@@ -7,17 +7,18 @@ app/routes/timer.py. Do not register this blueprint; use it as reference when
 refactoring or when adding new timer routes.
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db, socketio, log_event, track_event
-from app.services import TimeTrackingService
-from app.repositories import TimeEntryRepository
-from app.models import Project, Task, Activity
-from app.utils.db import safe_commit
-from app.utils.api_responses import success_response, error_response
-from app.utils.event_bus import emit_event
+from flask_login import current_user, login_required
+
+from app import db, log_event, socketio, track_event
 from app.constants import WebhookEvent
+from app.models import Activity, Project, Task
+from app.repositories import TimeEntryRepository
+from app.services import TimeTrackingService
+from app.utils.api_responses import error_response, success_response
+from app.utils.db import safe_commit
+from app.utils.event_bus import emit_event
 from app.utils.posthog_funnels import track_onboarding_first_timer
 
 timer_bp = Blueprint("timer", __name__)
@@ -194,8 +195,8 @@ def api_timer_status():
 @login_required
 def api_start_timer():
     """Start timer via API - REFACTORED VERSION"""
-    from app.utils.validation import validate_json_request
     from app.schemas import TimerStartSchema
+    from app.utils.validation import validate_json_request
 
     try:
         data = validate_json_request()

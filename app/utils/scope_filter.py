@@ -1,6 +1,6 @@
 """Scope filtering for subcontractor role: restrict data to assigned clients/projects."""
 
-from typing import Tuple, Set
+from typing import Set, Tuple
 
 from flask_login import current_user
 
@@ -81,8 +81,8 @@ def get_accessible_project_and_client_ids_for_user(user_id: int) -> Tuple[Set[in
     projects the user has time entries for or is assigned to tasks on, and clients of those projects.
     Used to filter issues for non-admin users without view_all_issues permission.
     """
+    from app.models import Project, Task
     from app.repositories import TimeEntryRepository
-    from app.models import Task, Project
 
     time_entry_repo = TimeEntryRepository()
     user_project_ids = set(time_entry_repo.get_distinct_project_ids_for_user(user_id))

@@ -3,6 +3,7 @@ Schemas for user serialization and validation.
 """
 
 from marshmallow import Schema, fields, validate
+
 from app.constants import UserRole
 
 

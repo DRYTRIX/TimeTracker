@@ -2,9 +2,11 @@
 Repository for expense data access operations.
 """
 
+from datetime import date, datetime
 from typing import List, Optional
-from datetime import datetime, date
+
 from sqlalchemy.orm import joinedload
+
 from app import db
 from app.models import Expense
 from app.repositories.base_repository import BaseRepository
@@ -33,9 +35,7 @@ class ExpenseRepository(BaseRepository[Expense]):
             query = query.filter(Expense.expense_date <= end_date)
 
         if include_relations:
-            query = query.options(
-                joinedload(Expense.project), joinedload(Expense.user)
-            )
+            query = query.options(joinedload(Expense.project), joinedload(Expense.user))
 
         return query.order_by(Expense.expense_date.desc()).all()
 

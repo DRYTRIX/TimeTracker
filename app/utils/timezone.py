@@ -1,9 +1,9 @@
 import os
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo, available_timezones, ZoneInfoNotFoundError
 from functools import lru_cache
-from flask import current_app
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError, available_timezones
 
+from flask import current_app
 
 # ---- Date/time format preference mappings ----
 
@@ -28,10 +28,12 @@ def _get_system_date_format_key():
     """Return the system-wide date_format key from Settings, or the hardcoded default."""
     try:
         from flask import has_app_context
+
         if not has_app_context():
             return _DEFAULT_DATE_FORMAT_KEY
-        from app.models import Settings
         from app import db
+        from app.models import Settings
+
         try:
             if db.session.is_active and not getattr(db.session, "_flushing", False):
                 settings = Settings.get_settings()
@@ -50,10 +52,12 @@ def _get_system_time_format_key():
     """Return the system-wide time_format key from Settings, or the hardcoded default."""
     try:
         from flask import has_app_context
+
         if not has_app_context():
             return _DEFAULT_TIME_FORMAT_KEY
-        from app.models import Settings
         from app import db
+        from app.models import Settings
+
         try:
             if db.session.is_active and not getattr(db.session, "_flushing", False):
                 settings = Settings.get_settings()
@@ -165,8 +169,8 @@ def get_app_timezone():
             return os.getenv("TZ", "Europe/Rome")
 
         # Try to get timezone from database settings first
-        from app.models import Settings
         from app import db
+        from app.models import Settings
 
         # Check if we have a database connection
         try:

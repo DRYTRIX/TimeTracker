@@ -1,19 +1,21 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, session
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db, socketio, log_event, track_event
-from app.constants import TimeEntrySource
-from app.models import User, Project, TimeEntry, Task, Settings, Activity, Client
-from app.utils.timezone import parse_local_datetime, parse_user_local_datetime, utc_to_local
-from datetime import datetime, timedelta
 import json
-from app.utils.db import safe_commit
-from app.utils.posthog_funnels import track_onboarding_first_timer, track_onboarding_first_time_entry
+from datetime import datetime, timedelta
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import ProgrammingError
-from app.services.project_service import ProjectService
+
+from app import db, log_event, socketio, track_event
+from app.constants import TimeEntrySource
+from app.models import Activity, Client, Project, Settings, Task, TimeEntry, User
 from app.services.client_service import ClientService
-from app.utils.scope_filter import user_can_access_project, user_can_access_client
+from app.services.project_service import ProjectService
+from app.utils.db import safe_commit
+from app.utils.posthog_funnels import track_onboarding_first_time_entry, track_onboarding_first_timer
+from app.utils.scope_filter import user_can_access_client, user_can_access_project
+from app.utils.timezone import parse_local_datetime, parse_user_local_datetime, utc_to_local
 
 _project_service = ProjectService()
 _client_service = ClientService()
@@ -36,6 +38,7 @@ def _parse_optional_int(value):
 def start_timer():
     """Start a new timer for the current user"""
     from app.utils.client_lock import enforce_locked_client_id, get_locked_client_id
+
     project_id = _parse_optional_int(request.form.get("project_id"))
     client_id = _parse_optional_int(request.form.get("client_id"))
     client_id = enforce_locked_client_id(client_id)
@@ -267,6 +270,7 @@ def start_timer():
     # Invalidate dashboard cache so timer appears immediately
     try:
         from app.utils.cache import invalidate_dashboard_for_user
+
         invalidate_dashboard_for_user(current_user.id)
         current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
     except Exception as e:
@@ -357,6 +361,7 @@ def start_timer_from_template(template_id):
     # Invalidate dashboard cache so timer appears immediately
     try:
         from app.utils.cache import invalidate_dashboard_for_user
+
         invalidate_dashboard_for_user(current_user.id)
         current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
     except Exception as e:
@@ -441,6 +446,7 @@ def start_timer_for_project(project_id):
     # Invalidate dashboard cache so timer appears immediately
     try:
         from app.utils.cache import invalidate_dashboard_for_user
+
         invalidate_dashboard_for_user(current_user.id)
         current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
     except Exception as e:
@@ -535,13 +541,18 @@ def stop_timer():
         # Invalidate dashboard cache so timer disappears immediately
         try:
             from app.utils.cache import invalidate_dashboard_for_user
+
             invalidate_dashboard_for_user(current_user.id)
             current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
         except Exception as e:
             current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
 
         # Pass data for post-timer toast (message + link to time entries; no flash to avoid duplicate)
-        project_name = active_timer.project.name if active_timer.project else (active_timer.client.name if active_timer.client else _("No project"))
+        project_name = (
+            active_timer.project.name
+            if active_timer.project
+            else (active_timer.client.name if active_timer.client else _("No project"))
+        )
         session["timer_stopped_toast"] = {
             "duration": active_timer.duration_formatted,
             "project_name": project_name,
@@ -555,7 +566,10 @@ def stop_timer():
         return redirect(url_for("main.dashboard"))
     except Exception as e:
         current_app.logger.exception("Error stopping timer: %s", e)
-        flash(_("Could not stop timer due to an error. Please try again or contact support if the problem persists."), "error")
+        flash(
+            _("Could not stop timer due to an error. Please try again or contact support if the problem persists."),
+            "error",
+        )
         return redirect(url_for("main.dashboard"))
 
 
@@ -577,6 +591,7 @@ def pause_timer():
         flash(_("Could not pause timer. Please try again."), "error")
     try:
         from app.utils.cache import invalidate_dashboard_for_user
+
         invalidate_dashboard_for_user(current_user.id)
     except Exception:
         pass
@@ -601,6 +616,7 @@ def resume_timer():
         flash(_("Could not resume timer. Please try again."), "error")
     try:
         from app.utils.cache import invalidate_dashboard_for_user
+
         invalidate_dashboard_for_user(current_user.id)
     except Exception:
         pass
@@ -640,6 +656,7 @@ def adjust_timer():
 
     try:
         from app.utils.cache import invalidate_dashboard_for_user
+
         invalidate_dashboard_for_user(current_user.id)
     except Exception:
         pass
@@ -693,11 +710,12 @@ def edit_timer(timer_id):
 
         # Get reason for change
         reason = sanitize_input(request.form.get("reason", "").strip(), max_length=500) or None
-        
+
         # Use service layer for update to get enhanced audit logging
         from app.services import TimeTrackingService
+
         service = TimeTrackingService()
-        
+
         # Prepare update parameters
         notes_raw = request.form.get("notes", "").strip()
         tags_raw = request.form.get("tags", "").strip()
@@ -711,7 +729,7 @@ def edit_timer(timer_id):
             "paid": request.form.get("paid") == "on",
             "reason": reason,
         }
-        
+
         # Update invoice number
         invoice_number = request.form.get("invoice_number", "").strip()
         update_params["invoice_number"] = invoice_number if invoice_number else None
@@ -746,7 +764,9 @@ def edit_timer(timer_id):
             new_task_id = request.form.get("task_id", type=int)
             if new_task_id != timer.task_id:
                 if new_task_id:
-                    new_task = Task.query.filter_by(id=new_task_id, project_id=update_params.get("project_id") or timer.project_id).first()
+                    new_task = Task.query.filter_by(
+                        id=new_task_id, project_id=update_params.get("project_id") or timer.project_id
+                    ).first()
                     if new_task:
                         update_params["task_id"] = new_task_id
                     else:
@@ -831,6 +851,7 @@ def edit_timer(timer_id):
 
             # Parse break time (HH:MM) to seconds; empty clears break
             import re
+
             if break_time:
                 m = re.match(r"^(\d{1,3}):([0-5]\d)$", break_time.strip())
                 update_params["break_seconds"] = (int(m.group(1)) * 3600 + int(m.group(2)) * 60) if m else 0
@@ -839,30 +860,38 @@ def edit_timer(timer_id):
 
         # Call service layer to update
         result = service.update_entry(**update_params)
-        
+
         if not result.get("success"):
             flash(_(result.get("message", "Could not update timer")), "error")
             return render_template(
                 "timer/edit_timer.html",
                 timer=timer,
-                projects=Project.query.filter_by(status="active").order_by(Project.name).all() if current_user.is_admin else [],
-                tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all() if current_user.is_admin and timer.project_id else [],
+                projects=(
+                    Project.query.filter_by(status="active").order_by(Project.name).all()
+                    if current_user.is_admin
+                    else []
+                ),
+                tasks=(
+                    Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all()
+                    if current_user.is_admin and timer.project_id
+                    else []
+                ),
             )
 
         entry = result.get("entry")
-        
+
         # Log activity
         if entry:
             entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
             task_name = entry.task.name if entry.task else None
-            
+
             Activity.log(
                 user_id=current_user.id,
                 action="updated",
                 entity_type="time_entry",
                 entity_id=entry.id,
                 entity_name=f"{entity_name}" + (f" - {task_name}" if task_name else ""),
-                description=f'Updated time entry for {entity_name}' + (f" - {task_name}" if task_name else ""),
+                description=f"Updated time entry for {entity_name}" + (f" - {task_name}" if task_name else ""),
                 extra_data={
                     "project_name": entry.project.name if entry.project else None,
                     "client_name": entry.client.name if entry.client else None,
@@ -875,6 +904,7 @@ def edit_timer(timer_id):
         # Invalidate dashboard cache for the timer owner so changes appear immediately
         try:
             from app.utils.cache import invalidate_dashboard_for_user
+
             invalidate_dashboard_for_user(timer.user_id)
             current_app.logger.debug("Invalidated dashboard cache for user %s after timer edit", timer.user_id)
         except Exception as e:
@@ -887,6 +917,7 @@ def edit_timer(timer_id):
     projects = []
     tasks = []
     from app.utils.scope_filter import apply_project_scope_to_model
+
     projects_query = Project.query.filter_by(status="active").order_by(Project.name)
     scope_p = apply_project_scope_to_model(Project, current_user)
     if scope_p is not None:
@@ -914,30 +945,32 @@ def view_timer(timer_id):
         return redirect(url_for("main.dashboard"))
 
     # Get link templates for invoice_number (for clickable values)
-    from app.models import LinkTemplate
     from sqlalchemy.exc import ProgrammingError
+
+    from app.models import LinkTemplate
+
     link_templates_by_field = {}
     try:
         for template in LinkTemplate.get_active_templates():
-            if template.field_key == 'invoice_number':
-                link_templates_by_field['invoice_number'] = template
+            if template.field_key == "invoice_number":
+                link_templates_by_field["invoice_number"] = template
     except ProgrammingError as e:
         # Handle case where link_templates table doesn't exist (migration not run)
         if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
-            current_app.logger.warning(
-                "link_templates table does not exist. Run migration: flask db upgrade"
-            )
+            current_app.logger.warning("link_templates table does not exist. Run migration: flask db upgrade")
             link_templates_by_field = {}
         else:
             raise
 
     # Time entry approvals: can current user request approval for this entry?
     from app.utils.module_helpers import is_module_enabled
+
     time_approvals_enabled = is_module_enabled("time_approvals")
     can_request_approval = False
     if time_approvals_enabled and timer.user_id == current_user.id and timer.end_time:
         try:
-            from app.models.time_entry_approval import TimeEntryApproval, ApprovalStatus
+            from app.models.time_entry_approval import ApprovalStatus, TimeEntryApproval
+
             pending = TimeEntryApproval.query.filter_by(
                 time_entry_id=timer.id,
                 status=ApprovalStatus.PENDING,
@@ -991,18 +1024,17 @@ def delete_timer(timer_id):
     # This prevents errors when the table doesn't exist but the relationship is defined
     inspector = inspect(db.engine)
     approvals_table_exists = "time_entry_approvals" in inspector.get_table_names()
-    
+
     # If the approvals table exists, manually delete related approvals first
     # to avoid SQLAlchemy trying to query a non-existent table
     if approvals_table_exists:
         try:
             # Delete related approvals if they exist
             from app.models.time_entry_approval import TimeEntryApproval
+
             TimeEntryApproval.query.filter_by(time_entry_id=entry_id).delete()
         except Exception as e:
-            current_app.logger.warning(
-                f"Could not delete related approvals for time entry {entry_id}: {e}"
-            )
+            current_app.logger.warning(f"Could not delete related approvals for time entry {entry_id}: {e}")
             # Continue with deletion anyway
 
     # If the approvals table doesn't exist, we need to prevent SQLAlchemy from
@@ -1012,10 +1044,7 @@ def delete_timer(timer_id):
             # Expunge the object from the session to prevent relationship queries
             db.session.expunge(timer)
             # Use a direct SQL delete to avoid relationship queries
-            db.session.execute(
-                text("DELETE FROM time_entries WHERE id = :id"),
-                {"id": entry_id}
-            )
+            db.session.execute(text("DELETE FROM time_entries WHERE id = :id"), {"id": entry_id})
         except Exception as e:
             current_app.logger.error(f"Error deleting time entry {entry_id} with direct SQL: {e}")
             flash(_("Could not delete timer due to a database error. Please check server logs."), "error")
@@ -1023,7 +1052,7 @@ def delete_timer(timer_id):
     else:
         # Normal deletion path when the table exists
         db.session.delete(timer)
-    
+
     if not safe_commit("delete_timer", {"timer_id": entry_id}):
         flash(_("Could not delete timer due to a database error. Please check server logs."), "error")
         return redirect(url_for("main.dashboard"))
@@ -1031,6 +1060,7 @@ def delete_timer(timer_id):
     # Invalidate dashboard cache for the timer owner so changes appear immediately
     try:
         from app.utils.cache import invalidate_dashboard_for_user
+
         invalidate_dashboard_for_user(timer_user_id)
         current_app.logger.debug("Invalidated dashboard cache for user %s after timer deletion", timer_user_id)
     except Exception as e:
@@ -1043,7 +1073,7 @@ def delete_timer(timer_id):
         entity_type="time_entry",
         entity_id=entry_id,
         entity_name=entity_name,
-        description=f'Deleted time entry for {entity_name} - {duration_formatted}',
+        description=f"Deleted time entry for {entity_name} - {duration_formatted}",
         extra_data={"project_name": project_name, "client_name": client_name, "duration_formatted": duration_formatted},
         ip_address=request.remote_addr,
         user_agent=request.headers.get("User-Agent"),
@@ -1052,15 +1082,17 @@ def delete_timer(timer_id):
     # Invalidate dashboard cache so deleted entry disappears immediately
     try:
         from app.utils.cache import invalidate_dashboard_for_user
+
         invalidate_dashboard_for_user(current_user.id)
         current_app.logger.debug("Invalidated dashboard cache for user %s after deleting timer", current_user.id)
     except Exception as e:
         current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
 
     flash(f"Timer for {target_name} deleted successfully", "success")
-    
+
     # Add cache-busting parameter to ensure fresh page load
     import time
+
     dashboard_url = url_for("main.dashboard")
     separator = "&" if "?" in dashboard_url else "?"
     redirect_url = f"{dashboard_url}{separator}_refresh={int(time.time())}"
@@ -1072,45 +1104,45 @@ def delete_timer(timer_id):
 def bulk_delete_time_entries():
     """Bulk delete time entries"""
     from app.services import TimeTrackingService
-    
+
     entry_ids = request.form.getlist("entry_ids[]")
     reason = request.form.get("reason", "").strip() or None  # Optional reason for bulk deletion
-    
+
     if not entry_ids:
         flash(_("No time entries selected"), "warning")
         return redirect(url_for("timer.time_entries_overview"))
-    
+
     # Load entries
     entry_ids_int = [int(eid) for eid in entry_ids if eid.isdigit()]
     if not entry_ids_int:
         flash(_("Invalid entry IDs"), "error")
         return redirect(url_for("timer.time_entries_overview"))
-    
+
     entries = TimeEntry.query.filter(TimeEntry.id.in_(entry_ids_int)).all()
-    
+
     if not entries:
         flash(_("No time entries found"), "error")
         return redirect(url_for("timer.time_entries_overview"))
-    
+
     # Permission check
     can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     deleted_count = 0
     skipped_count = 0
-    
+
     # Use service layer for proper audit logging
     service = TimeTrackingService()
-    
+
     for entry in entries:
         # Check permissions
         if not can_view_all and entry.user_id != current_user.id:
             skipped_count += 1
             continue
-        
+
         # Don't allow deletion of active timers
         if entry.is_active:
             skipped_count += 1
             continue
-        
+
         # Delete using service layer to get enhanced audit logging
         result = service.delete_entry(
             user_id=current_user.id,
@@ -1118,31 +1150,21 @@ def bulk_delete_time_entries():
             is_admin=current_user.is_admin,
             reason=reason,  # Use same reason for all entries in bulk delete
         )
-        
+
         if result.get("success"):
             deleted_count += 1
         else:
             skipped_count += 1
-    
+
     if deleted_count > 0:
-        flash(
-            _("Successfully deleted %(count)d time entry/entries", count=deleted_count),
-            "success"
-        )
-    
+        flash(_("Successfully deleted %(count)d time entry/entries", count=deleted_count), "success")
+
     if skipped_count > 0:
-        flash(
-            _("Skipped %(count)d time entry/entries (no permission or active timer)", count=skipped_count),
-            "warning"
-        )
-    
+        flash(_("Skipped %(count)d time entry/entries (no permission or active timer)", count=skipped_count), "warning")
+
     # Track event
-    track_event(
-        current_user.id,
-        "time_entries.bulk_delete",
-        {"count": deleted_count}
-    )
-    
+    track_event(current_user.id, "time_entries.bulk_delete", {"count": deleted_count})
+
     # Preserve filters in redirect
     redirect_url = url_for("timer.time_entries_overview")
     filters = {}
@@ -1150,10 +1172,10 @@ def bulk_delete_time_entries():
         value = request.form.get(key) or request.args.get(key)
         if value:
             filters[key] = value
-    
+
     if filters:
         redirect_url += "?" + "&".join(f"{k}={v}" for k, v in filters.items())
-    
+
     return redirect(redirect_url)
 
 
@@ -1167,6 +1189,7 @@ def manual_entry():
 
     # Get active projects and clients for dropdown (scoped for subcontractors)
     from app.utils.scope_filter import apply_client_scope_to_model, apply_project_scope_to_model
+
     projects_query = Project.query.filter_by(status="active").order_by(Project.name)
     scope_p = apply_project_scope_to_model(Project, current_user)
     if scope_p is not None:
@@ -1230,6 +1253,7 @@ def manual_entry():
             if not s:
                 return None
             import re
+
             m = re.match(r"^(\d{1,3}):([0-5]\d)$", s)
             if not m:
                 return None
@@ -1310,6 +1334,7 @@ def manual_entry():
         # If duration only (no start): end=now, start=end-duration.
         # Break is subtracted from span to get worked duration.
         from datetime import timedelta
+
         try:
             if has_all_times:
                 start_time_parsed = parse_user_local_datetime(start_date, start_time, current_user)
@@ -1326,6 +1351,7 @@ def manual_entry():
             else:
                 # Duration-only: no start given → end=now, start=end-duration
                 from app.models.time_entry import local_now as _local_now_db
+
                 end_time_parsed = _local_now_db()
                 start_time_parsed = end_time_parsed - timedelta(minutes=worked_minutes)
                 duration_seconds_override = worked_minutes * 60
@@ -1445,21 +1471,23 @@ def manual_entry():
             # Log activity
             entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
             task_name = entry.task.name if entry.task else None
-            duration_formatted = entry.duration_formatted if hasattr(entry, 'duration_formatted') else "0:00"
-            
+            duration_formatted = entry.duration_formatted if hasattr(entry, "duration_formatted") else "0:00"
+
             Activity.log(
                 user_id=current_user.id,
                 action="created",
                 entity_type="time_entry",
                 entity_id=entry.id,
                 entity_name=f"{entity_name}" + (f" - {task_name}" if task_name else ""),
-                description=f'Created time entry for {entity_name}' + (f" - {task_name}" if task_name else "") + f' - {duration_formatted}',
+                description=f"Created time entry for {entity_name}"
+                + (f" - {task_name}" if task_name else "")
+                + f" - {duration_formatted}",
                 extra_data={
                     "project_name": entry.project.name if entry.project else None,
                     "client_name": entry.client.name if entry.client else None,
                     "task_name": task_name,
                     "duration_formatted": duration_formatted,
-                    "duration_hours": entry.duration_hours if hasattr(entry, 'duration_hours') else None,
+                    "duration_hours": entry.duration_hours if hasattr(entry, "duration_hours") else None,
                 },
                 ip_address=request.remote_addr,
                 user_agent=request.headers.get("User-Agent"),
@@ -1468,8 +1496,11 @@ def manual_entry():
         # Invalidate dashboard cache so new entry appears immediately
         try:
             from app.utils.cache import invalidate_dashboard_for_user
+
             invalidate_dashboard_for_user(current_user.id)
-            current_app.logger.debug("Invalidated dashboard cache for user %s after manual entry creation", current_user.id)
+            current_app.logger.debug(
+                "Invalidated dashboard cache for user %s after manual entry creation", current_user.id
+            )
         except Exception as e:
             current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
 
@@ -1477,6 +1508,7 @@ def manual_entry():
 
     # Pre-fill start/end date with today in user's timezone (Issue #489)
     from app.utils.timezone import now_in_user_timezone
+
     today_local = now_in_user_timezone(current_user)
     today_str = today_local.strftime("%Y-%m-%d")
 
@@ -1516,6 +1548,7 @@ def manual_entry_for_project(project_id):
     single_client = active_clients[0] if only_one_client else None
 
     from app.utils.timezone import now_in_user_timezone
+
     today_local = now_in_user_timezone(current_user)
     today_str = today_local.strftime("%Y-%m-%d")
 
@@ -1825,9 +1858,10 @@ def timer_page():
         )
 
     # Get user's time entry templates (most recently used first)
-    from app.models import TimeEntryTemplate
     from sqlalchemy import desc
     from sqlalchemy.orm import joinedload
+
+    from app.models import TimeEntryTemplate
 
     templates = (
         TimeEntryTemplate.query.options(joinedload(TimeEntryTemplate.project), joinedload(TimeEntryTemplate.task))
@@ -2116,6 +2150,7 @@ def resume_timer_by_id(timer_id):
     # Invalidate dashboard cache so timer appears immediately
     try:
         from app.utils.cache import invalidate_dashboard_for_user
+
         invalidate_dashboard_for_user(current_user.id)
         current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
     except Exception as e:
@@ -2139,11 +2174,12 @@ def resume_timer_by_id(timer_id):
 @login_required
 def time_entries_overview():
     """Overview page showing all time entries with filters and bulk actions"""
-    from sqlalchemy import or_, func, desc
+    from sqlalchemy import desc, func, or_
     from sqlalchemy.orm import joinedload
-    from app.repositories import TimeEntryRepository, ProjectRepository, UserRepository
+
+    from app.repositories import ProjectRepository, TimeEntryRepository, UserRepository
     from app.utils.client_lock import enforce_locked_client_id
-    
+
     # Get filter parameters
     user_id = request.args.get("user_id", type=int)
     project_id = request.args.get("project_id", type=int)
@@ -2156,26 +2192,27 @@ def time_entries_overview():
     search = request.args.get("search", "").strip()
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
-    
+
     # Get custom field filters for clients
     # Format: custom_field_<field_key>=value
     client_custom_field = {}
     from app.models import CustomFieldDefinition
+
     active_definitions = CustomFieldDefinition.get_active_definitions()
     for definition in active_definitions:
         field_value = request.args.get(f"custom_field_{definition.field_key}", "").strip()
         if field_value:
             client_custom_field[definition.field_key] = field_value
-    
+
     # Permission check: can user view all entries?
     can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
-    
+
     # Build query with eager loading to avoid N+1 queries
     query = TimeEntry.query.options(
         joinedload(TimeEntry.user),
         joinedload(TimeEntry.project),
         joinedload(TimeEntry.client),
-        joinedload(TimeEntry.task)
+        joinedload(TimeEntry.task),
     ).filter(
         # Completed entries OR duration-only entries (duration_seconds set but end_time missing).
         # This keeps duration-only manual logs visible even if end_time is absent for any reason.
@@ -2184,7 +2221,7 @@ def time_entries_overview():
             db.and_(TimeEntry.duration_seconds.isnot(None), TimeEntry.source == TimeEntrySource.MANUAL.value),
         )
     )
-    
+
     # Filter by user
     if user_id:
         if can_view_all:
@@ -2197,51 +2234,55 @@ def time_entries_overview():
     elif not can_view_all:
         # Non-admin users can only see their own entries
         query = query.filter(TimeEntry.user_id == current_user.id)
-    
+
     # Filter by project
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
-    
+
     # Filter by client
     if client_id:
         query = query.filter(TimeEntry.client_id == client_id)
-    
+
     # Filter by client custom fields
     if client_custom_field:
         # Join Client table to filter by custom fields
         query = query.join(Client, TimeEntry.client_id == Client.id)
-        
+
         # Determine database type for custom field filtering
         is_postgres = False
         try:
             from sqlalchemy import inspect
+
             engine = db.engine
-            is_postgres = 'postgresql' in str(engine.url).lower()
+            is_postgres = "postgresql" in str(engine.url).lower()
         except Exception as e:
             # Log but continue - database type detection failure is not critical
             current_app.logger.debug(f"Failed to detect database type: {e}")
-        
+
         # Build custom field filter conditions
         custom_field_conditions = []
         for field_key, field_value in client_custom_field.items():
             if not field_key or not field_value:
                 continue
-            
+
             if is_postgres:
                 # PostgreSQL: Use JSONB operators
                 try:
-                    from sqlalchemy import cast, String
+                    from sqlalchemy import String, cast
+
                     # Match exact value in custom_fields JSONB
                     custom_field_conditions.append(
                         db.cast(Client.custom_fields[field_key].astext, String) == str(field_value)
                     )
                 except Exception as e:
                     # Fallback to Python filtering if JSONB fails
-                    current_app.logger.debug(f"JSONB filtering failed for field {field_key}, will use Python filtering: {e}")
-        
+                    current_app.logger.debug(
+                        f"JSONB filtering failed for field {field_key}, will use Python filtering: {e}"
+                    )
+
         if custom_field_conditions:
             query = query.filter(db.or_(*custom_field_conditions))
-    
+
     # Filter by date range
     if start_date:
         try:
@@ -2249,7 +2290,7 @@ def time_entries_overview():
             query = query.filter(TimeEntry.start_time >= start_dt)
         except ValueError:
             pass
-    
+
     if end_date:
         try:
             end_dt = datetime.strptime(end_date, "%Y-%m-%d")
@@ -2258,64 +2299,60 @@ def time_entries_overview():
             query = query.filter(TimeEntry.start_time <= end_dt)
         except ValueError:
             pass
-    
+
     # Filter by paid status
     if paid_filter == "true":
         query = query.filter(TimeEntry.paid == True)
     elif paid_filter == "false":
         query = query.filter(TimeEntry.paid == False)
-    
+
     # Filter by billable status
     if billable_filter == "true":
         query = query.filter(TimeEntry.billable == True)
     elif billable_filter == "false":
         query = query.filter(TimeEntry.billable == False)
-    
+
     # Search in notes and tags
     if search:
         search_pattern = f"%{search}%"
-        query = query.filter(
-            or_(
-                TimeEntry.notes.ilike(search_pattern),
-                TimeEntry.tags.ilike(search_pattern)
-            )
-        )
-    
+        query = query.filter(or_(TimeEntry.notes.ilike(search_pattern), TimeEntry.tags.ilike(search_pattern)))
+
     # Order by start time (most recent first)
     query = query.order_by(desc(TimeEntry.start_time))
-    
+
     # Pagination
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     time_entries = pagination.items
-    
+
     # For SQLite or if JSONB filtering didn't work, filter by custom fields in Python
     if client_custom_field:
         try:
             from sqlalchemy import inspect
+
             engine = db.engine
-            is_postgres = 'postgresql' in str(engine.url).lower()
-            
+            is_postgres = "postgresql" in str(engine.url).lower()
+
             if not is_postgres:
                 # SQLite: Filter in Python
                 filtered_entries = []
                 for entry in time_entries:
                     if not entry.client:
                         continue
-                    
+
                     # Check if client matches all custom field filters
                     matches = True
                     for field_key, field_value in client_custom_field.items():
                         if not field_key or not field_value:
                             continue
-                        
+
                         client_value = entry.client.custom_fields.get(field_key) if entry.client.custom_fields else None
                         if str(client_value) != str(field_value):
                             matches = False
                             break
-                    
+
                     if matches:
                         filtered_entries.append(entry)
-                
+
                 # Update pagination with filtered results
                 time_entries = filtered_entries
                 # Recalculate pagination manually
@@ -2323,25 +2360,20 @@ def time_entries_overview():
                 start = (page - 1) * per_page
                 end = start + per_page
                 time_entries = filtered_entries[start:end]
-                
+
                 # Create a pagination-like object
                 from flask_sqlalchemy import Pagination
-                pagination = Pagination(
-                    query=None,
-                    page=page,
-                    per_page=per_page,
-                    total=total,
-                    items=time_entries
-                )
+
+                pagination = Pagination(query=None, page=page, per_page=per_page, total=total, items=time_entries)
         except Exception:
             # If filtering fails, use original results
             pass
-    
+
     # Get filter options
     projects = []
     clients = []
     users = []
-    
+
     if can_view_all:
         project_repo = ProjectRepository()
         projects = project_repo.get_active_projects()
@@ -2354,32 +2386,42 @@ def time_entries_overview():
         time_entry_repo = TimeEntryRepository()
         user_project_ids = time_entry_repo.get_distinct_project_ids_for_user(current_user.id)
         if user_project_ids:
-            projects = Project.query.filter(Project.id.in_(user_project_ids), Project.status == "active").order_by(Project.name).all()
+            projects = (
+                Project.query.filter(Project.id.in_(user_project_ids), Project.status == "active")
+                .order_by(Project.name)
+                .all()
+            )
             # Get clients from user's projects
             client_ids = set(p.client_id for p in projects if p.client_id)
             if client_ids:
-                clients = Client.query.filter(Client.id.in_(client_ids), Client.status == "active").order_by(Client.name).all()
+                clients = (
+                    Client.query.filter(Client.id.in_(client_ids), Client.status == "active")
+                    .order_by(Client.name)
+                    .all()
+                )
         users = [current_user]
 
     only_one_client = len(clients) == 1
     single_client = clients[0] if only_one_client else None
-    
+
     # Calculate totals
     total_hours = sum(entry.duration_hours for entry in time_entries)
     total_billable_hours = sum(entry.duration_hours for entry in time_entries if entry.billable)
     total_paid_hours = sum(entry.duration_hours for entry in time_entries if entry.paid)
-    
+
     # Track page view
     track_event(
         current_user.id,
         "time_entries_overview.viewed",
         {
-            "has_filters": bool(user_id or project_id or client_id or start_date or end_date or paid_filter or billable_filter or search),
+            "has_filters": bool(
+                user_id or project_id or client_id or start_date or end_date or paid_filter or billable_filter or search
+            ),
             "page": page,
-            "per_page": per_page
-        }
+            "per_page": per_page,
+        },
     )
-    
+
     filters_dict = {
         "user_id": user_id,
         "project_id": project_id,
@@ -2391,50 +2433,51 @@ def time_entries_overview():
         "search": search,
         "client_custom_field": client_custom_field,
         "page": page,
-        "per_page": per_page
+        "per_page": per_page,
     }
-    
+
     # Build URL-safe filters for url_for (exclude dict and page; expand client_custom_field).
     # Passing client_custom_field (a dict) or page into url_for breaks URL building and can
     # cause 500s. Pagination links pass page explicitly, so we omit it here.
     url_filters = {
-        k: v
-        for k, v in filters_dict.items()
-        if k not in ("client_custom_field", "page") and v is not None and v != ""
+        k: v for k, v in filters_dict.items() if k not in ("client_custom_field", "page") and v is not None and v != ""
     }
     for k, v in (filters_dict.get("client_custom_field") or {}).items():
         if v:
             url_filters[f"custom_field_{k}"] = v
-    
+
     # Get custom field definitions for filter UI
     from app.models import CustomFieldDefinition
+
     custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-    
+
     # Get link templates for invoice_number (for clickable values)
-    from app.models import LinkTemplate
     from sqlalchemy.exc import ProgrammingError
+
+    from app.models import LinkTemplate
+
     link_templates_by_field = {}
     try:
         for template in LinkTemplate.get_active_templates():
-            if template.field_key == 'invoice_number':
-                link_templates_by_field['invoice_number'] = template
+            if template.field_key == "invoice_number":
+                link_templates_by_field["invoice_number"] = template
     except ProgrammingError as e:
         # Handle case where link_templates table doesn't exist (migration not run)
         if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
-            current_app.logger.warning(
-                "link_templates table does not exist. Run migration: flask db upgrade"
-            )
+            current_app.logger.warning("link_templates table does not exist. Run migration: flask db upgrade")
             link_templates_by_field = {}
         else:
             raise
-    
+
     # Time entry approvals: which entries on this page have a pending approval?
     from app.utils.module_helpers import is_module_enabled
+
     time_approvals_enabled = is_module_enabled("time_approvals")
     entry_ids_with_pending_approval = set()
     if time_approvals_enabled and time_entries:
         try:
-            from app.models.time_entry_approval import TimeEntryApproval, ApprovalStatus
+            from app.models.time_entry_approval import ApprovalStatus, TimeEntryApproval
+
             entry_ids = [e.id for e in time_entries]
             pending = TimeEntryApproval.query.filter(
                 TimeEntryApproval.time_entry_id.in_(entry_ids),
@@ -2443,26 +2486,29 @@ def time_entries_overview():
             entry_ids_with_pending_approval = {a.time_entry_id for a in pending}
         except Exception:
             entry_ids_with_pending_approval = set()
-    
+
     # Check if this is an AJAX request
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         # Return only the time entries list HTML for AJAX requests
         from flask import make_response
-        response = make_response(render_template(
-            "timer/_time_entries_list.html",
-            time_entries=time_entries,
-            pagination=pagination,
-            can_view_all=can_view_all,
-            filters=filters_dict,
-            url_filters=url_filters,
-            custom_field_definitions=custom_field_definitions,
-            link_templates_by_field=link_templates_by_field,
-            time_approvals_enabled=time_approvals_enabled,
-            entry_ids_with_pending_approval=entry_ids_with_pending_approval,
-        ))
+
+        response = make_response(
+            render_template(
+                "timer/_time_entries_list.html",
+                time_entries=time_entries,
+                pagination=pagination,
+                can_view_all=can_view_all,
+                filters=filters_dict,
+                url_filters=url_filters,
+                custom_field_definitions=custom_field_definitions,
+                link_templates_by_field=link_templates_by_field,
+                time_approvals_enabled=time_approvals_enabled,
+                entry_ids_with_pending_approval=entry_ids_with_pending_approval,
+            )
+        )
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         return response
-    
+
     return render_template(
         "timer/time_entries_overview.html",
         time_entries=time_entries,
@@ -2483,8 +2529,8 @@ def time_entries_overview():
             "total_hours": round(total_hours, 2),
             "total_billable_hours": round(total_billable_hours, 2),
             "total_paid_hours": round(total_paid_hours, 2),
-            "total_entries": len(time_entries)
-        }
+            "total_entries": len(time_entries),
+        },
     )
 
 
@@ -2492,12 +2538,14 @@ def time_entries_overview():
 @login_required
 def export_time_entries_csv():
     """Export (filtered) time entries as CSV. Mirrors the /time-entries filters."""
-    from sqlalchemy import or_, desc
-    from sqlalchemy.orm import joinedload
-    from app.utils.client_lock import enforce_locked_client_id
-    from flask import abort, send_file
     import csv
     import io
+
+    from flask import abort, send_file
+    from sqlalchemy import desc, or_
+    from sqlalchemy.orm import joinedload
+
+    from app.utils.client_lock import enforce_locked_client_id
 
     # Get filter parameters (same as time_entries_overview)
     user_id = request.args.get("user_id", type=int)
@@ -2513,6 +2561,7 @@ def export_time_entries_csv():
     # Custom client-field filters
     client_custom_field = {}
     from app.models import CustomFieldDefinition
+
     active_definitions = CustomFieldDefinition.get_active_definitions()
     for definition in active_definitions:
         field_value = request.args.get(f"custom_field_{definition.field_key}", "").strip()
@@ -2565,7 +2614,8 @@ def export_time_entries_csv():
                 if not field_key or not field_value:
                     continue
                 try:
-                    from sqlalchemy import cast, String
+                    from sqlalchemy import String, cast
+
                     custom_field_conditions.append(
                         db.cast(Client.custom_fields[field_key].astext, String) == str(field_value)
                     )
@@ -2657,10 +2707,7 @@ def export_time_entries_csv():
 
         for entry in entries:
             # Project.client is a property returning the client name string
-            client_name = (
-                (entry.client.name if entry.client else "")
-                or (entry.project.client if entry.project else "")
-            )
+            client_name = (entry.client.name if entry.client else "") or (entry.project.client if entry.project else "")
             writer.writerow(
                 [
                     entry.id,
@@ -2704,11 +2751,13 @@ def export_time_entries_csv():
 @login_required
 def export_time_entries_pdf():
     """Export (filtered) time entries as PDF. Mirrors the /time-entries filters."""
-    from sqlalchemy import or_, desc
-    from sqlalchemy.orm import joinedload
-    from app.utils.client_lock import enforce_locked_client_id
-    from flask import abort, send_file
     import io
+
+    from flask import abort, send_file
+    from sqlalchemy import desc, or_
+    from sqlalchemy.orm import joinedload
+
+    from app.utils.client_lock import enforce_locked_client_id
 
     # Get filter parameters (same as time_entries_overview)
     user_id = request.args.get("user_id", type=int)
@@ -2724,6 +2773,7 @@ def export_time_entries_pdf():
     # Custom client-field filters
     client_custom_field = {}
     from app.models import CustomFieldDefinition
+
     active_definitions = CustomFieldDefinition.get_active_definitions()
     for definition in active_definitions:
         field_value = request.args.get(f"custom_field_{definition.field_key}", "").strip()
@@ -2776,7 +2826,8 @@ def export_time_entries_pdf():
                 if not field_key or not field_value:
                     continue
                 try:
-                    from sqlalchemy import cast, String
+                    from sqlalchemy import String, cast
+
                     custom_field_conditions.append(
                         db.cast(Client.custom_fields[field_key].astext, String) == str(field_value)
                     )
@@ -2860,6 +2911,7 @@ def export_time_entries_pdf():
     # Generate professional PDF report with ReportLab.
     try:
         from app.utils.time_entries_pdf import build_time_entries_pdf
+
         pdf_bytes = build_time_entries_pdf(
             entries,
             start_date=start_date or None,
@@ -2889,56 +2941,56 @@ def export_time_entries_pdf():
 def bulk_mark_paid():
     """Bulk mark time entries as paid or unpaid"""
     from app.utils.db import safe_commit
-    
+
     entry_ids = request.form.getlist("entry_ids[]")
     paid_status = request.form.get("paid", "").strip().lower()
     invoice_reference = request.form.get("invoice_reference", "").strip()
-    
+
     if not entry_ids:
         flash(_("No time entries selected"), "warning")
         return redirect(url_for("timer.time_entries_overview"))
-    
+
     if paid_status not in ("true", "false"):
         flash(_("Invalid paid status"), "error")
         return redirect(url_for("timer.time_entries_overview"))
-    
+
     is_paid = paid_status == "true"
-    
+
     # Load entries
     entry_ids_int = [int(eid) for eid in entry_ids if eid.isdigit()]
     if not entry_ids_int:
         flash(_("Invalid entry IDs"), "error")
         return redirect(url_for("timer.time_entries_overview"))
-    
+
     entries = TimeEntry.query.filter(TimeEntry.id.in_(entry_ids_int)).all()
-    
+
     if not entries:
         flash(_("No time entries found"), "error")
         return redirect(url_for("timer.time_entries_overview"))
-    
+
     # Permission check
     can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     updated_count = 0
     skipped_count = 0
-    
+
     for entry in entries:
         # Check permissions
         if not can_view_all and entry.user_id != current_user.id:
             skipped_count += 1
             continue
-        
+
         # Skip active timers
         if entry.is_active:
             skipped_count += 1
             continue
-        
+
         # Update paid status with invoice reference if provided
         if is_paid and invoice_reference:
             entry.set_paid(is_paid, invoice_number=invoice_reference)
         else:
             entry.set_paid(is_paid)
         updated_count += 1
-        
+
         # Log activity
         Activity.log(
             user_id=current_user.id,
@@ -2951,30 +3003,27 @@ def bulk_mark_paid():
             ip_address=request.remote_addr,
             user_agent=request.headers.get("User-Agent"),
         )
-    
+
     if updated_count > 0:
         if not safe_commit("bulk_mark_paid", {"count": updated_count, "paid": is_paid}):
             flash(_("Could not update time entries due to a database error. Please check server logs."), "error")
             return redirect(url_for("timer.time_entries_overview"))
-        
+
         flash(
-            _("Successfully marked %(count)d time entry/entries as %(status)s", count=updated_count, status=_("paid") if is_paid else _("unpaid")),
-            "success"
+            _(
+                "Successfully marked %(count)d time entry/entries as %(status)s",
+                count=updated_count,
+                status=_("paid") if is_paid else _("unpaid"),
+            ),
+            "success",
         )
-    
+
     if skipped_count > 0:
-        flash(
-            _("Skipped %(count)d time entry/entries (no permission or active timer)", count=skipped_count),
-            "warning"
-        )
-    
+        flash(_("Skipped %(count)d time entry/entries (no permission or active timer)", count=skipped_count), "warning")
+
     # Track event
-    track_event(
-        current_user.id,
-        "time_entries.bulk_mark_paid",
-        {"count": updated_count, "paid": is_paid}
-    )
-    
+    track_event(current_user.id, "time_entries.bulk_mark_paid", {"count": updated_count, "paid": is_paid})
+
     # Preserve filters in redirect
     redirect_url = url_for("timer.time_entries_overview")
     filters = {}
@@ -2982,8 +3031,8 @@ def bulk_mark_paid():
         value = request.form.get(key) or request.args.get(key)
         if value:
             filters[key] = value
-    
+
     if filters:
         redirect_url += "?" + "&".join(f"{k}={v}" for k, v in filters.items())
-    
+
     return redirect(redirect_url)

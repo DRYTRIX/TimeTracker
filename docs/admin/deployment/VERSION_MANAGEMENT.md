@@ -2,7 +2,7 @@
 
 This document describes the comprehensive version management system for TimeTracker that provides flexible versioning for both GitHub releases and build numbers.
 
-**For contributors:** Application version is defined only in **setup.py**. Do not duplicate it in README or other docs. Desktop and mobile builds may use their own version numbers; see [BUILD.md](../../../BUILD.md) and repo scripts.
+**For contributors:** Application version is defined only in **setup.py**. Do not duplicate it in README or other docs. Desktop and mobile builds may use their own version numbers; see [BUILD.md](../../build/BUILD.md) and repo scripts.
 
 ## Overview
 

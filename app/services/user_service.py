@@ -2,11 +2,12 @@
 Service for user business logic.
 """
 
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
 from app import db
-from app.repositories import UserRepository
-from app.models import User
 from app.constants import UserRole
+from app.models import User
+from app.repositories import UserRepository
 from app.utils.db import safe_commit
 
 

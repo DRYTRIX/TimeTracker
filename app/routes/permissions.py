@@ -1,15 +1,16 @@
 """Routes for role and permission management (admin only)"""
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_babel import gettext as _
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
+from sqlalchemy.exc import IntegrityError
+
 from app import db, limiter
 from app.models import Permission, Role, User
-from app.utils.permissions import admin_or_permission_required
 from app.utils.db import safe_commit
+from app.utils.module_registry import ModuleCategory, ModuleRegistry
+from app.utils.permissions import admin_or_permission_required
 from app.utils.permissions_seed import sync_permissions_and_roles
-from app.utils.module_registry import ModuleRegistry, ModuleCategory
-from sqlalchemy.exc import IntegrityError
 
 permissions_bp = Blueprint("permissions", __name__)
 
@@ -312,14 +313,14 @@ def manage_user_roles(user_id):
         is_super_admin = current_user.is_super_admin
         selected_roles = [Role.query.get(int(role_id)) for role_id in role_ids if role_id]
         selected_roles = [r for r in selected_roles if r]  # Remove None values
-        
+
         # Check if trying to assign super_admin role
         has_super_admin = any(r.name == "super_admin" for r in selected_roles)
         if has_super_admin and not is_super_admin:
             flash(_("Only Super Admins can assign the super_admin role"), "error")
             all_roles = Role.query.order_by(Role.name).all()
             return render_template("admin/users/roles.html", user=user, all_roles=all_roles)
-        
+
         # Check if trying to remove admin role from self
         current_has_admin = any(r.name == "admin" for r in user.roles)
         new_has_admin = any(r.name == "admin" for r in selected_roles)
@@ -327,7 +328,7 @@ def manage_user_roles(user_id):
             flash(_("Only Super Admins can remove the admin role from themselves"), "error")
             all_roles = Role.query.order_by(Role.name).all()
             return render_template("admin/users/roles.html", user=user, all_roles=all_roles)
-        
+
         # Check if trying to remove admin role from another user
         if current_has_admin and not new_has_admin and user.id != current_user.id and not is_super_admin:
             flash(_("Only Super Admins can remove the admin role from other users"), "error")

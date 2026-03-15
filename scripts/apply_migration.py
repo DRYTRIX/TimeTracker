@@ -6,8 +6,10 @@ Simple script to apply the time rounding preferences migration
 import os
 import sys
 
-# Add the project root to the path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add the project root to the path (parent of scripts/)
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+_project_root = os.path.dirname(_script_dir)
+sys.path.insert(0, _project_root)
 
 from app import create_app, db
 from sqlalchemy import inspect, text

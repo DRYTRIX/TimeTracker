@@ -3,14 +3,16 @@ API v1 - Leads (CRM) sub-blueprint.
 Routes under /api/v1/leads.
 """
 
-from flask import Blueprint, jsonify, request, g
 from decimal import Decimal
+
+from flask import Blueprint, g, jsonify, request
 from sqlalchemy import or_
+
 from app import db
 from app.models import Lead
+from app.routes.api_v1_common import _require_module_enabled_for_api
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import error_response, forbidden_response
-from app.routes.api_v1_common import _require_module_enabled_for_api
 
 api_v1_leads_bp = Blueprint("api_v1_leads", __name__, url_prefix="/api/v1")
 
@@ -128,14 +130,27 @@ def update_lead(lead_id):
     if not g.api_user.is_admin and lead.owner_id != g.api_user.id:
         return forbidden_response("Access denied")
     data = request.get_json() or {}
-    for field in ("first_name", "last_name", "company_name", "email", "phone", "title", "source", "status", "notes", "tags"):
+    for field in (
+        "first_name",
+        "last_name",
+        "company_name",
+        "email",
+        "phone",
+        "title",
+        "source",
+        "status",
+        "notes",
+        "tags",
+    ):
         if field in data and data[field] is not None:
             setattr(lead, field, str(data[field]).strip() if isinstance(data[field], str) else data[field])
     if "score" in data:
         lead.score = int(data["score"])
     if "estimated_value" in data:
         try:
-            lead.estimated_value = Decimal(str(data["estimated_value"])) if data["estimated_value"] is not None else None
+            lead.estimated_value = (
+                Decimal(str(data["estimated_value"])) if data["estimated_value"] is not None else None
+            )
         except Exception:
             pass
     if "owner_id" in data:

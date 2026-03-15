@@ -7,10 +7,11 @@ and simple CRUD needs. Existing domain services do not use it. See
 docs/development/SERVICE_LAYER_AND_BASE_CRUD.md for the chosen service pattern.
 """
 
-from typing import TypeVar, Generic, Optional, Dict, Any, List
+from typing import Any, Dict, Generic, List, Optional, TypeVar
+
 from app import db
-from app.utils.db import safe_commit
 from app.utils.api_responses import error_response
+from app.utils.db import safe_commit
 
 ModelType = TypeVar("ModelType")
 RepositoryType = TypeVar("RepositoryType")

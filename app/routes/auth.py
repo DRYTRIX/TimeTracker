@@ -1,25 +1,24 @@
 from flask import (
     Blueprint,
+    current_app,
+    flash,
+    redirect,
     render_template,
     request,
-    redirect,
-    url_for,
-    flash,
-    session,
-    current_app,
     send_from_directory,
+    session,
+    url_for,
 )
-from flask_login import login_user, logout_user, login_required, current_user
-from app import db, log_event, track_event
-from app.models import User
-from app.config import Config
-from app.utils.db import safe_commit
-from app.utils.config_manager import ConfigManager
 from flask_babel import gettext as _
-from app import oauth, limiter
-from app.utils.posthog_funnels import track_onboarding_started
-from app.utils.cache import get_cache
+from flask_login import current_user, login_required, login_user, logout_user
 
+from app import db, limiter, log_event, oauth, track_event
+from app.config import Config
+from app.models import User
+from app.utils.cache import get_cache
+from app.utils.config_manager import ConfigManager
+from app.utils.db import safe_commit
+from app.utils.posthog_funnels import track_onboarding_started
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -99,16 +98,18 @@ def login():
             )
 
             # Validate username input
-            from app.utils.validation import sanitize_input
             import re
+
+            from app.utils.validation import sanitize_input
+
             try:
                 if not username:
                     raise ValueError("Username is required")
-                
+
                 # Sanitize username to prevent injection
                 username = sanitize_input(username, max_length=100)
                 # Additional validation: only allow safe characters for usernames
-                if not re.match(r'^[a-z0-9._-]+$', username):
+                if not re.match(r"^[a-z0-9._-]+$", username):
                     raise ValueError("Username contains invalid characters")
                 if len(username) < 1 or len(username) > 100:
                     raise ValueError("Username must be between 1 and 100 characters")
@@ -121,7 +122,12 @@ def login():
             if current_app.config.get("DEMO_MODE"):
                 demo_username = (current_app.config.get("DEMO_USERNAME") or "demo").strip().lower()
                 if username != demo_username:
-                    log_event("auth.login_failed", username=username, reason="demo_mode_only_demo_user", auth_method=auth_method)
+                    log_event(
+                        "auth.login_failed",
+                        username=username,
+                        reason="demo_mode_only_demo_user",
+                        auth_method=auth_method,
+                    )
                     flash(_("Only the demo account can be used. Please use the credentials shown below."), "error")
                     return render_template("auth/login.html", **_login_template_vars())
 
@@ -154,8 +160,11 @@ def login():
                     # Apply company default for daily working hours (overtime)
                     try:
                         from app.models import Settings
+
                         settings = Settings.get_settings()
-                        user.standard_hours_per_day = float(getattr(settings, "default_daily_working_hours", 8.0) or 8.0)
+                        user.standard_hours_per_day = float(
+                            getattr(settings, "default_daily_working_hours", 8.0) or 8.0
+                        )
                     except Exception:
                         pass
 
@@ -225,13 +234,15 @@ def login():
                     # User doesn't have password set - require password to be provided
                     if not password:
                         # No password provided - prompt user to set one
-                        log_event("auth.login_failed", user_id=user.id, reason="no_password_set", auth_method=auth_method)
+                        log_event(
+                            "auth.login_failed", user_id=user.id, reason="no_password_set", auth_method=auth_method
+                        )
                         flash(
                             _("No password is set for your account. Please enter a password to set one and log in."),
                             "error",
                         )
                         return render_template("auth/login.html", **_login_template_vars())
-                    
+
                     # Password provided - validate and set it
                     if len(password) < 8:
                         log_event(
@@ -239,11 +250,13 @@ def login():
                         )
                         flash(_("Password must be at least 8 characters long."), "error")
                         return render_template("auth/login.html", **_login_template_vars())
-                    
+
                     # Set the password and continue to login
                     user.set_password(password)
                     if not safe_commit("set_initial_password", {"user_id": user.id, "username": user.username}):
-                        current_app.logger.error("Failed to set initial password for '%s' due to DB error", user.username)
+                        current_app.logger.error(
+                            "Failed to set initial password for '%s' due to DB error", user.username
+                        )
                         flash(_("Could not set password due to a database error. Please try again."), "error")
                         return render_template("auth/login.html", **_login_template_vars())
                     current_app.logger.info("User '%s' set initial password during login", user.username)
@@ -255,13 +268,16 @@ def login():
 
             # Log in the user (password validation passed or password not required)
             login_user(user, remember=True)
-            
+
             # Auto-migrate user from legacy role to new role system if needed
             if not user.roles and user.role:
                 from app.utils.role_migration import migrate_single_user
+
                 if migrate_single_user(user.id):
-                    current_app.logger.info("Auto-migrated user '%s' from legacy role '%s' to new role system", user.username, user.role)
-            
+                    current_app.logger.info(
+                        "Auto-migrated user '%s' from legacy role '%s' to new role system", user.username, user.role
+                    )
+
             user.update_last_login()
             current_app.logger.info("User '%s' logged in successfully", user.username)
 
@@ -269,11 +285,13 @@ def login():
             log_event("auth.login", user_id=user.id, auth_method=auth_method)
             # Defer track_event to avoid blocking redirect - PostHog calls can be slow/timeout
             import threading
+
             def track_login_async():
                 try:
                     track_event(user.id, "auth.login", {"auth_method": auth_method})
                 except Exception:
                     pass  # Don't let analytics errors affect login
+
             threading.Thread(target=track_login_async, daemon=True).start()
 
             # Note: identify_user_with_segments and set_super_properties are deferred to dashboard
@@ -446,8 +464,8 @@ def edit_profile():
                 return redirect(url_for("auth.edit_profile"))
 
             # Generate unique filename and save
-            import uuid
             import os
+            import uuid
 
             ext = filename.rsplit(".", 1)[1].lower()
             unique_name = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
@@ -592,7 +610,9 @@ def update_theme_preference():
 def login_oidc():
     """Start OIDC login using Authlib."""
     if current_app.config.get("DEMO_MODE"):
-        flash(_("Demo mode: only the demo account can be used. Please use the credentials on the login page."), "warning")
+        flash(
+            _("Demo mode: only the demo account can be used. Please use the credentials on the login page."), "warning"
+        )
         return redirect(url_for("auth.login"))
 
     try:
@@ -604,29 +624,27 @@ def login_oidc():
         return redirect(url_for("auth.login"))
 
     client = oauth.create_client("oidc")
-    
+
     # If client doesn't exist, try lazy loading (for DNS resolution failures at startup)
     if not client:
         issuer = current_app.config.get("OIDC_ISSUER_FOR_LAZY_LOAD")
         client_id = current_app.config.get("OIDC_CLIENT_ID_FOR_LAZY_LOAD")
         client_secret = current_app.config.get("OIDC_CLIENT_SECRET_FOR_LAZY_LOAD")
         scopes = current_app.config.get("OIDC_SCOPES_FOR_LAZY_LOAD", "openid profile email")
-        
+
         if issuer and client_id and client_secret:
             # Try to fetch metadata and register client now
             from app.utils.oidc_metadata import fetch_oidc_metadata
-            
+
             max_retries = int(current_app.config.get("OIDC_METADATA_RETRY_ATTEMPTS", 3))
             retry_delay = int(current_app.config.get("OIDC_METADATA_RETRY_DELAY", 2))
             timeout = int(current_app.config.get("OIDC_METADATA_FETCH_TIMEOUT", 10))
             dns_strategy = current_app.config.get("OIDC_DNS_RESOLUTION_STRATEGY", "auto")
             use_ip_directly = current_app.config.get("OIDC_USE_IP_DIRECTLY", True)
             use_docker_internal = current_app.config.get("OIDC_USE_DOCKER_INTERNAL", True)
-            
-            current_app.logger.info(
-                "Attempting lazy OIDC client registration for issuer %s", issuer
-            )
-            
+
+            current_app.logger.info("Attempting lazy OIDC client registration for issuer %s", issuer)
+
             metadata, metadata_error, diagnostics = fetch_oidc_metadata(
                 issuer,
                 max_retries=max_retries,
@@ -637,7 +655,7 @@ def login_oidc():
                 use_ip_directly=use_ip_directly,
                 use_docker_internal=use_docker_internal,
             )
-            
+
             if metadata:
                 try:
                     oauth.register(
@@ -660,9 +678,7 @@ def login_oidc():
                     current_app.config.pop("OIDC_SCOPES_FOR_LAZY_LOAD", None)
                     client = oauth.create_client("oidc")
                 except Exception as e:
-                    current_app.logger.error(
-                        "Failed to register OIDC client during lazy loading: %s", e
-                    )
+                    current_app.logger.error("Failed to register OIDC client during lazy loading: %s", e)
                     flash(
                         _(
                             "Failed to connect to Single Sign-On provider. Please contact an administrator. Error: %(error)s",
@@ -673,9 +689,7 @@ def login_oidc():
                     return redirect(url_for("auth.login"))
             else:
                 # Still can't fetch metadata
-                current_app.logger.error(
-                    "Lazy OIDC metadata fetch failed: %s", metadata_error
-                )
+                current_app.logger.error("Lazy OIDC metadata fetch failed: %s", metadata_error)
                 flash(
                     _(
                         "Cannot connect to Single Sign-On provider. DNS resolution may be failing. "
@@ -688,7 +702,7 @@ def login_oidc():
         else:
             flash(_("Single Sign-On is not configured yet. Please contact an administrator."), "warning")
             return redirect(url_for("auth.login"))
-    
+
     # Check if client has metadata loaded (for cases where registration succeeded but metadata fetch failed)
     if client:
         try:
@@ -697,14 +711,14 @@ def login_oidc():
                 issuer = current_app.config.get("OIDC_ISSUER") or current_app.config.get("OIDC_ISSUER_FOR_LAZY_LOAD")
                 if issuer:
                     from app.utils.oidc_metadata import fetch_oidc_metadata
-                    
+
                     max_retries = int(current_app.config.get("OIDC_METADATA_RETRY_ATTEMPTS", 3))
                     retry_delay = int(current_app.config.get("OIDC_METADATA_RETRY_DELAY", 2))
                     timeout = int(current_app.config.get("OIDC_METADATA_FETCH_TIMEOUT", 10))
                     dns_strategy = current_app.config.get("OIDC_DNS_RESOLUTION_STRATEGY", "auto")
                     use_ip_directly = current_app.config.get("OIDC_USE_IP_DIRECTLY", True)
                     use_docker_internal = current_app.config.get("OIDC_USE_DOCKER_INTERNAL", True)
-                    
+
                     metadata, metadata_error, diagnostics = fetch_oidc_metadata(
                         issuer,
                         max_retries=max_retries,
@@ -715,19 +729,17 @@ def login_oidc():
                         use_ip_directly=use_ip_directly,
                         use_docker_internal=use_docker_internal,
                     )
-                    
+
                     if metadata:
                         try:
                             # Load metadata into existing client
                             client.load_server_metadata()
                             current_app.logger.info("Successfully loaded OIDC metadata for existing client")
                         except Exception as e:
-                            current_app.logger.warning(
-                                "Failed to load metadata into existing client: %s", e
-                            )
+                            current_app.logger.warning("Failed to load metadata into existing client: %s", e)
         except Exception as e:
             current_app.logger.debug("Error checking client metadata: %s", e)
-    
+
     if not client:
         flash(_("Single Sign-On is not configured yet. Please contact an administrator."), "warning")
         return redirect(url_for("auth.login"))
@@ -787,9 +799,7 @@ def oidc_callback():
                     token_err,
                 )
                 current_app.logger.info("OIDC callback redirect to login: reason=token_exchange_failed")
-                flash(
-                    _("SSO failed. If this repeats, check session cookie and proxy configuration."), "error"
-                )
+                flash(_("SSO failed. If this repeats, check session cookie and proxy configuration."), "error")
             return redirect(url_for("auth.login"))
 
         current_app.logger.info(
@@ -879,6 +889,7 @@ def oidc_callback():
         if not issuer and isinstance(token, dict) and token.get("id_token"):
             try:
                 import jwt
+
                 unverified = jwt.decode(token["id_token"], options={"verify_signature": False})
                 if unverified.get("iss"):
                     issuer = (unverified.get("iss") or "").strip()
@@ -957,7 +968,10 @@ def oidc_callback():
             # Demo mode: do not create users via OIDC
             if current_app.config.get("DEMO_MODE"):
                 current_app.logger.info("OIDC callback redirect to login: reason=demo_mode_no_oidc_create")
-                flash(_("Demo mode: only the demo account can be used. Please use the credentials on the login page."), "error")
+                flash(
+                    _("Demo mode: only the demo account can be used. Please use the credentials on the login page."),
+                    "error",
+                )
                 return redirect(url_for("auth.login"))
             # Create if allowed (use ConfigManager to respect database settings)
             allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
@@ -974,6 +988,7 @@ def oidc_callback():
                 # Apply company default for daily working hours (overtime)
                 try:
                     from app.models import Settings
+
                     settings = Settings.get_settings()
                     user.standard_hours_per_day = float(getattr(settings, "default_daily_working_hours", 8.0) or 8.0)
                 except Exception:
@@ -1060,7 +1075,9 @@ def oidc_callback():
                 key = secrets.token_urlsafe(24)
                 cache_key = f"oidc:id_token:{key}"
                 try:
-                    ttl = int(getattr(current_app.config.get("PERMANENT_SESSION_LIFETIME"), "total_seconds", lambda: 86400)())
+                    ttl = int(
+                        getattr(current_app.config.get("PERMANENT_SESSION_LIFETIME"), "total_seconds", lambda: 86400)()
+                    )
                 except Exception:
                     ttl = 86400
 
@@ -1074,13 +1091,16 @@ def oidc_callback():
 
         # Login
         login_user(user, remember=True)
-        
+
         # Auto-migrate user from legacy role to new role system if needed
         if not user.roles and user.role:
             from app.utils.role_migration import migrate_single_user
+
             if migrate_single_user(user.id):
-                current_app.logger.info("Auto-migrated OIDC user '%s' from legacy role '%s' to new role system", user.username, user.role)
-        
+                current_app.logger.info(
+                    "Auto-migrated OIDC user '%s' from legacy role '%s' to new role system", user.username, user.role
+                )
+
         try:
             user.update_last_login()
         except Exception:
@@ -1090,11 +1110,13 @@ def oidc_callback():
         log_event("auth.login", user_id=user.id, auth_method="oidc")
         # Defer track_event to avoid blocking redirect - PostHog calls can be slow/timeout
         import threading
+
         def track_login_async():
             try:
                 track_event(user.id, "auth.login", {"auth_method": "oidc"})
             except Exception:
                 pass  # Don't let analytics errors affect login
+
         threading.Thread(target=track_login_async, daemon=True).start()
 
         # Note: identify_user_with_segments and set_super_properties are deferred to dashboard

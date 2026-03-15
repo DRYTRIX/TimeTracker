@@ -1,15 +1,17 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, current_app
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db, log_event, track_event
-from app.models import Mileage, Project, Client, Expense, Settings
-from app.constants import SUPPORTED_CURRENCIES
-from datetime import datetime, date, timedelta
-from decimal import Decimal
-from app.utils.db import safe_commit
-from app.utils.module_helpers import module_enabled
 import csv
 import io
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
+from app import db, log_event, track_event
+from app.constants import SUPPORTED_CURRENCIES
+from app.models import Client, Expense, Mileage, Project, Settings
+from app.utils.db import safe_commit
+from app.utils.module_helpers import module_enabled
 
 mileage_bp = Blueprint("mileage", __name__)
 
@@ -19,8 +21,8 @@ mileage_bp = Blueprint("mileage", __name__)
 @module_enabled("mileage")
 def list_mileage():
     """List all mileage entries with filters"""
-    from app.utils.client_lock import enforce_locked_client_id
     from app import track_page_view
+    from app.utils.client_lock import enforce_locked_client_id
 
     track_page_view("mileage_list")
 
@@ -144,8 +146,9 @@ def list_mileage():
 
 def _mileage_export_query():
     """Build the same filtered query as list_mileage (no pagination). Caller must apply .all()."""
-    from app.utils.client_lock import enforce_locked_client_id
     from sqlalchemy.orm import joinedload
+
+    from app.utils.client_lock import enforce_locked_client_id
 
     status = request.args.get("status", "").strip()
     project_id = request.args.get("project_id", type=int)
@@ -288,6 +291,7 @@ def export_mileage_pdf():
 
     try:
         from app.utils.mileage_pdf import build_mileage_pdf
+
         pdf_bytes = build_mileage_pdf(
             entries,
             start_date=start_date,
@@ -474,6 +478,7 @@ def edit_mileage(mileage_id):
 
     try:
         from app.utils.client_lock import enforce_locked_client_id
+
         # Update fields
         trip_date = request.form.get("trip_date", "").strip()
         mileage.trip_date = datetime.strptime(trip_date, "%Y-%m-%d").date()

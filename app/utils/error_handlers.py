@@ -4,12 +4,14 @@ Provides consistent error handling across the application.
 """
 
 import sys
-from typing import Dict, Any, Optional
-from flask import jsonify, request, current_app
-from werkzeug.exceptions import HTTPException
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from typing import Any, Dict, Optional
+
+from flask import current_app, jsonify, request
 from marshmallow import ValidationError
-from app.utils.api_responses import error_response, validation_error_response, handle_validation_error
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from werkzeug.exceptions import HTTPException
+
+from app.utils.api_responses import error_response, handle_validation_error, validation_error_response
 
 
 def register_error_handlers(app):
@@ -160,7 +162,7 @@ def register_error_handlers(app):
                     message="An internal error occurred", error_code="internal_error", status_code=500
                 )
 
-        from flask import render_template, flash
+        from flask import flash, render_template
 
         flash("An error occurred. Please try again.", "error")
         return (

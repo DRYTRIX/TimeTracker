@@ -2,8 +2,10 @@
 Schemas for invoice serialization and validation.
 """
 
-from marshmallow import Schema, fields, validate
 from datetime import date
+
+from marshmallow import Schema, fields, validate
+
 from app.constants import InvoiceStatus, PaymentStatus
 
 

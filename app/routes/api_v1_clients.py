@@ -3,11 +3,12 @@ API v1 - Clients sub-blueprint.
 Routes under /api/v1/clients.
 """
 
-from flask import Blueprint, jsonify, request, g
+from flask import Blueprint, g, jsonify, request
+
 from app.models import Client
+from app.routes.api_v1_common import _require_module_enabled_for_api
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import error_response, forbidden_response, validation_error_response
-from app.routes.api_v1_common import _require_module_enabled_for_api
 
 api_v1_clients_bp = Blueprint("api_v1_clients", __name__, url_prefix="/api/v1")
 
@@ -51,6 +52,7 @@ def get_client(client_id):
     if blocked:
         return blocked
     from sqlalchemy.orm import joinedload
+
     from app.utils.scope_filter import user_can_access_client
 
     client = Client.query.options(joinedload(Client.projects)).filter_by(id=client_id).first_or_404()
@@ -67,6 +69,7 @@ def create_client():
     if blocked:
         return blocked
     from decimal import Decimal
+
     from app.services import ClientService
 
     data = request.get_json() or {}

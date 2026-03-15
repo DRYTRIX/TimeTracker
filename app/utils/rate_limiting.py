@@ -2,9 +2,10 @@
 Rate limiting utilities and helpers.
 """
 
-from typing import Callable, Optional, Dict, Any
 from functools import wraps
-from flask import request, current_app
+from typing import Any, Callable, Dict, Optional
+
+from flask import current_app, request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 

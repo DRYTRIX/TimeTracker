@@ -2,13 +2,15 @@
 Repository for payment data access operations.
 """
 
-from typing import List, Optional
 from datetime import date
 from decimal import Decimal
-from sqlalchemy.orm import joinedload
+from typing import List, Optional
+
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
+
 from app import db
-from app.models import Payment, Invoice
+from app.models import Invoice, Payment
 from app.repositories.base_repository import BaseRepository
 
 

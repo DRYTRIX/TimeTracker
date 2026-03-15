@@ -70,6 +70,7 @@ def get_smp_url(participant_id: str, scheme_id: str, sml_base_url: Optional[str]
     actor_urn = f"iso6523-actorid-up::{scheme_id}::{participant_id}"
     # URL-encode the URN for path
     import urllib.parse
+
     path = "/" + urllib.parse.quote(actor_urn, safe="")
     url = base + path
 
@@ -120,6 +121,7 @@ def get_recipient_endpoint_url(
     """
     # SMP 2.0: GET {smp_url}/services/{doc_type}/processes/{process_id}
     import urllib.parse
+
     doc_encoded = urllib.parse.quote(document_type_id, safe="")
     proc_encoded = urllib.parse.quote(process_id, safe="")
     path = f"/services/{doc_encoded}/processes/{proc_encoded}"

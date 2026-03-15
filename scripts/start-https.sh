@@ -102,16 +102,16 @@ if [ "$CERT_METHOD" = "2" ]; then
     # Check if mkcert is available
     if command -v mkcert >/dev/null 2>&1; then
         echo "🔐 Using mkcert for trusted certificates..."
-        docker-compose -f docker-compose.yml -f docker-compose.https-mkcert.yml up -d
+        docker-compose -f docker-compose.yml -f docker/docker-compose.https-mkcert.yml up -d
     else
         echo "⚠️  mkcert not found on host. Using self-signed certificates instead."
         echo "   Install mkcert for trusted certificates: brew install mkcert (Mac) or choco install mkcert (Windows)"
         echo ""
-        docker-compose -f docker-compose.yml -f docker-compose.https-auto.yml up -d
+        docker-compose -f docker-compose.yml -f docker/docker-compose.https-auto.yml up -d
     fi
 else
     echo "🔐 Using self-signed certificates..."
-    docker-compose -f docker-compose.yml -f docker-compose.https-auto.yml up -d
+    docker-compose -f docker-compose.yml -f docker/docker-compose.https-auto.yml up -d
 fi
 
 echo ""

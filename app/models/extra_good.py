@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+
 from app import db
 
 

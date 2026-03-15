@@ -1,24 +1,26 @@
-from typing import Optional, Dict, Any, Callable, TypeVar
+from typing import Any, Callable, Dict, Optional, TypeVar
+
 from flask import current_app
-from sqlalchemy.exc import SQLAlchemyError, ProgrammingError
+from sqlalchemy.exc import ProgrammingError, SQLAlchemyError
+
 from app import db
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def safe_query(query_func: Callable[[], T], default: Optional[T] = None) -> Optional[T]:
     """Execute a database query with automatic transaction rollback on failure.
-    
+
     This function handles the case where a transaction has been aborted by PostgreSQL
     (e.g., due to a previous failed query) by rolling back and retrying the query.
-    
+
     Args:
         query_func: A callable that executes the database query
         default: Optional default value to return if query fails (default: None)
-    
+
     Returns:
         The result of the query, or the default value if query fails
-    
+
     Example:
         user = safe_query(lambda: User.query.get(user_id))
     """
@@ -37,9 +39,7 @@ def safe_query(query_func: Callable[[], T], default: Optional[T] = None) -> Opti
             # Retry also failed - rollback again and return default
             try:
                 db.session.rollback()
-                current_app.logger.warning(
-                    f"Query failed after rollback retry: {retry_error} (original: {e})"
-                )
+                current_app.logger.warning(f"Query failed after rollback retry: {retry_error} (original: {e})")
             except Exception:
                 pass
             return default
@@ -67,10 +67,9 @@ def safe_commit(action: Optional[str] = None, context: Optional[Dict[str, Any]] 
     except ProgrammingError as e:
         # Check if this is a "relation does not exist" error for optional tables
         # (time_entry_approvals, donation_interactions) - model has relationship but table missing
-        error_str = str(e.orig) if hasattr(e, 'orig') else str(e)
-        missing_table = (
-            ('time_entry_approvals' in error_str and 'does not exist' in error_str)
-            or ('donation_interactions' in error_str and 'does not exist' in error_str)
+        error_str = str(e.orig) if hasattr(e, "orig") else str(e)
+        missing_table = ("time_entry_approvals" in error_str and "does not exist" in error_str) or (
+            "donation_interactions" in error_str and "does not exist" in error_str
         )
         if missing_table:
             # Try to rollback and retry the commit

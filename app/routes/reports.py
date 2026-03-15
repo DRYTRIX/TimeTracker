@@ -1,29 +1,31 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, jsonify, current_app
-from flask_login import login_required, current_user
-from flask_babel import _
-from app import db, log_event, track_event
-from app.models import (
-    User,
-    Project,
-    TimeEntry,
-    Settings,
-    Task,
-    ProjectCost,
-    Client,
-    Payment,
-    Invoice,
-    ReportEmailSchedule,
-    SavedReportView,
-)
-from app.services.scheduled_report_service import ScheduledReportService
-from app.repositories import TimeEntryRepository
-from datetime import datetime, timedelta
-from sqlalchemy import or_, func, case
-from sqlalchemy.orm import joinedload
 import csv
 import io
 import time
-from app.utils.excel_export import create_time_entries_excel, create_project_report_excel
+from datetime import datetime, timedelta
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
+from flask_babel import _
+from flask_login import current_user, login_required
+from sqlalchemy import case, func, or_
+from sqlalchemy.orm import joinedload
+
+from app import db, log_event, track_event
+from app.models import (
+    Client,
+    Invoice,
+    Payment,
+    Project,
+    ProjectCost,
+    ReportEmailSchedule,
+    SavedReportView,
+    Settings,
+    Task,
+    TimeEntry,
+    User,
+)
+from app.repositories import TimeEntryRepository
+from app.services.scheduled_report_service import ScheduledReportService
+from app.utils.excel_export import create_project_report_excel, create_time_entries_excel
 from app.utils.posthog_monitoring import track_error, track_export_performance, track_validation_error
 
 # Optional PowerPoint export - only import if available
@@ -70,9 +72,7 @@ def week_in_review():
     from app.services import ReportingService
 
     reporting_service = ReportingService()
-    data = reporting_service.get_week_in_review(
-        user_id=current_user.id, is_admin=current_user.is_admin
-    )
+    data = reporting_service.get_week_in_review(user_id=current_user.id, is_admin=current_user.is_admin)
     if data.get("error"):
         flash(data["error"], "error")
         return redirect(url_for("reports.reports"))
@@ -88,9 +88,7 @@ def comparison_view():
 
     period = request.args.get("period", "month")
     can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
-    data = ReportingService().get_comparison_data(
-        period=period, user_id=current_user.id, can_view_all=can_view_all
-    )
+    data = ReportingService().get_comparison_data(period=period, user_id=current_user.id, can_view_all=can_view_all)
     return jsonify(data)
 
 
@@ -99,8 +97,8 @@ def comparison_view():
 @module_enabled("reports")
 def project_report():
     """Project-based time report"""
-    from app.utils.scope_filter import apply_project_scope_to_model
     from app.services import ReportingService
+    from app.utils.scope_filter import apply_project_scope_to_model
 
     project_id = request.args.get("project_id", type=int)
     start_date = request.args.get("start_date")
@@ -166,6 +164,7 @@ def user_report():
     # Get users for filter
     users = User.query.filter_by(is_active=True).order_by(User.username).all()
     from app.utils.scope_filter import apply_project_scope_to_model
+
     projects_query = Project.query.filter_by(status="active").order_by(Project.name)
     scope_p = apply_project_scope_to_model(Project, current_user)
     if scope_p is not None:
@@ -207,10 +206,14 @@ def user_report():
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
 
-    entries = query.options(
-        joinedload(TimeEntry.project),
-        joinedload(TimeEntry.user),
-    ).order_by(TimeEntry.start_time.desc()).all()
+    entries = (
+        query.options(
+            joinedload(TimeEntry.project),
+            joinedload(TimeEntry.user),
+        )
+        .order_by(TimeEntry.start_time.desc())
+        .all()
+    )
 
     # Calculate totals
     total_hours = sum(entry.duration_hours for entry in entries)
@@ -283,6 +286,7 @@ def export_form():
 
     # Get all active projects (scoped for subcontractors)
     from app.utils.scope_filter import apply_client_scope_to_model, apply_project_scope_to_model
+
     projects_query = Project.query.filter_by(status="active").order_by(Project.name)
     scope_p = apply_project_scope_to_model(Project, current_user)
     if scope_p is not None:
@@ -326,6 +330,7 @@ def export_form():
 def export_csv():
     """Export time entries as CSV with enhanced filters"""
     from app.utils.client_lock import enforce_locked_client_id
+
     start_time = time.time()  # Start performance tracking
 
     # Get all filter parameters
@@ -380,11 +385,15 @@ def export_csv():
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
 
-    entries = query.options(
-        joinedload(TimeEntry.project).joinedload(Project.client_obj),
-        joinedload(TimeEntry.user),
-        joinedload(TimeEntry.task),
-    ).order_by(TimeEntry.start_time.desc()).all()
+    entries = (
+        query.options(
+            joinedload(TimeEntry.project).joinedload(Project.client_obj),
+            joinedload(TimeEntry.user),
+            joinedload(TimeEntry.task),
+        )
+        .order_by(TimeEntry.start_time.desc())
+        .all()
+    )
 
     try:
         # Get settings for delimiter
@@ -419,10 +428,7 @@ def export_csv():
         # Write data (null-safe: user/project/client can be missing)
         for entry in entries:
             # Project.client is a property returning the client name string; use client_obj for the relationship
-            client_name = (
-                (entry.client.name if entry.client else "")
-                or (entry.project.client if entry.project else "")
-            )
+            client_name = (entry.client.name if entry.client else "") or (entry.project.client if entry.project else "")
             writer.writerow(
                 [
                     entry.id,
@@ -493,7 +499,11 @@ def export_csv():
             duration_ms = (time.time() - start_time) * 1000
             csv_content = output.getvalue().encode("utf-8")
             track_export_performance(
-                current_user.id, "csv", row_count=len(entries), duration_ms=duration_ms, file_size_bytes=len(csv_content)
+                current_user.id,
+                "csv",
+                row_count=len(entries),
+                duration_ms=duration_ms,
+                file_size_bytes=len(csv_content),
             )
         except Exception:
             # Don't let tracking errors break the export
@@ -522,6 +532,7 @@ def export_summary_pdf():
         start_date=start_date.date(), user_id=current_user.id if not current_user.is_admin else None
     )
     from app.utils.scope_filter import apply_project_scope_to_model
+
     scope_p = apply_project_scope_to_model(Project, current_user)
     projects_query = Project.query.filter_by(status="active")
     if scope_p is not None:
@@ -529,7 +540,11 @@ def export_summary_pdf():
     elif not current_user.is_admin:
         time_entry_repo = TimeEntryRepository()
         project_ids = time_entry_repo.get_distinct_project_ids_for_user(current_user.id)
-        projects_query = projects_query.filter(Project.id.in_(project_ids)) if project_ids else projects_query.filter(Project.id.in_([]))
+        projects_query = (
+            projects_query.filter(Project.id.in_(project_ids))
+            if project_ids
+            else projects_query.filter(Project.id.in_([]))
+        )
     projects = projects_query.all()
     project_stats = []
     for project in projects:
@@ -544,6 +559,7 @@ def export_summary_pdf():
     project_stats = project_stats[:10]
     try:
         from app.utils.summary_report_pdf import build_summary_report_pdf
+
         pdf_bytes = build_summary_report_pdf(today_hours, week_hours, month_hours, project_stats)
     except Exception as e:
         current_app.logger.warning("Summary report PDF export failed: %s", e, exc_info=True)
@@ -582,6 +598,7 @@ def summary_report():
 
     # Get top projects (scoped for subcontractors)
     from app.utils.scope_filter import apply_project_scope_to_model
+
     scope_p = apply_project_scope_to_model(Project, current_user)
     projects_query = Project.query.filter_by(status="active")
     if scope_p is not None:
@@ -589,7 +606,11 @@ def summary_report():
     elif not current_user.is_admin:
         time_entry_repo = TimeEntryRepository()
         project_ids = time_entry_repo.get_distinct_project_ids_for_user(current_user.id)
-        projects_query = projects_query.filter(Project.id.in_(project_ids)) if project_ids else projects_query.filter(Project.id.in_([]))
+        projects_query = (
+            projects_query.filter(Project.id.in_(project_ids))
+            if project_ids
+            else projects_query.filter(Project.id.in_([]))
+        )
     projects = projects_query.all()
 
     # Sort projects by total hours
@@ -612,6 +633,7 @@ def summary_report():
 
     # Daily trend for last 14 days (for line chart)
     from app.services import AnalyticsService
+
     analytics_service = AnalyticsService()
     trend_result = analytics_service.get_trends(
         user_id=current_user.id if not current_user.is_admin else None,
@@ -646,6 +668,7 @@ def task_report():
 
     # Filters data (scoped for subcontractors)
     from app.utils.scope_filter import apply_project_scope_to_model
+
     projects_query = Project.query.order_by(Project.name)
     scope_p = apply_project_scope_to_model(Project, current_user)
     if scope_p is not None:
@@ -668,9 +691,7 @@ def task_report():
 
     # Base tasks query: all tasks that have time entries within the date range
     tasks_query = Task.query.join(TimeEntry, TimeEntry.task_id == Task.id).filter(
-        TimeEntry.end_time.isnot(None),
-        TimeEntry.start_time >= start_dt,
-        TimeEntry.start_time <= end_dt
+        TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
     )
 
     if project_id:
@@ -694,9 +715,7 @@ def task_report():
     from app.repositories import TimeEntryRepository
 
     time_entry_repo = TimeEntryRepository()
-    aggregates = time_entry_repo.get_task_aggregates(
-        task_ids, start_dt, end_dt, project_id=project_id, user_id=user_id
-    )
+    aggregates = time_entry_repo.get_task_aggregates(task_ids, start_dt, end_dt, project_id=project_id, user_id=user_id)
     agg_by_task = {tid: (total_sec, cnt) for tid, total_sec, cnt in aggregates}
 
     task_rows = []
@@ -738,7 +757,8 @@ def task_report():
 def _time_entries_report_query(request, require_dates=True, return_query=False):
     """Shared query logic for time entries report and its exports.
     When return_query=False: returns (entries, start_dt, end_dt, start_date, end_date) or (None, None, None, start_date, end_date) on date error.
-    When return_query=True: returns (query, start_dt, end_dt, start_date, end_date) with query having filters applied (no options/order_by/execution)."""
+    When return_query=True: returns (query, start_dt, end_dt, start_date, end_date) with query having filters applied (no options/order_by/execution).
+    """
     from app.utils.client_lock import enforce_locked_client_id
 
     start_date = request.args.get("start_date")
@@ -791,12 +811,11 @@ def _time_entries_report_query(request, require_dates=True, return_query=False):
 
     if client_id:
         project_ids_for_client = db.session.query(Project.id).filter(Project.client_id == client_id)
-        query = query.filter(
-            or_(TimeEntry.client_id == client_id, TimeEntry.project_id.in_(project_ids_for_client))
-        )
+        query = query.filter(or_(TimeEntry.client_id == client_id, TimeEntry.project_id.in_(project_ids_for_client)))
 
     # Subcontractor scope: restrict to allowed projects
     from app.utils.scope_filter import get_allowed_project_ids
+
     allowed_project_ids = get_allowed_project_ids(current_user)
     if allowed_project_ids is not None:
         if not allowed_project_ids:
@@ -807,12 +826,16 @@ def _time_entries_report_query(request, require_dates=True, return_query=False):
     if return_query:
         return query, start_dt, end_dt, start_date, end_date
 
-    entries = query.options(
-        joinedload(TimeEntry.project).joinedload(Project.client_obj),
-        joinedload(TimeEntry.user),
-        joinedload(TimeEntry.task),
-        joinedload(TimeEntry.client),
-    ).order_by(TimeEntry.start_time.desc()).all()
+    entries = (
+        query.options(
+            joinedload(TimeEntry.project).joinedload(Project.client_obj),
+            joinedload(TimeEntry.user),
+            joinedload(TimeEntry.task),
+            joinedload(TimeEntry.client),
+        )
+        .order_by(TimeEntry.start_time.desc())
+        .all()
+    )
 
     return entries, start_dt, end_dt, start_date, end_date
 
@@ -831,6 +854,7 @@ def time_entries_report():
         return redirect(url_for("reports.time_entries_report"))
 
     from app.utils.scope_filter import apply_client_scope_to_model, apply_project_scope_to_model
+
     projects_query = Project.query.filter_by(status="active").order_by(Project.name)
     scope_p = apply_project_scope_to_model(Project, current_user)
     if scope_p is not None:
@@ -936,9 +960,7 @@ def time_entries_export_excel():
     columns = ["date", "start_time", "end_time", "duration_hours", "project", "task", "notes", "billed", "client"]
     if can_view_all:
         columns.insert(2, "user")  # insert user after end_time for multi-user export
-    output, filename = create_time_entries_excel(
-        entries, filename_prefix="time_entries_report", columns=columns
-    )
+    output, filename = create_time_entries_excel(entries, filename_prefix="time_entries_report", columns=columns)
     log_event(
         "export.excel",
         user_id=current_user.id,
@@ -979,15 +1001,23 @@ def time_entries_export_csv():
     delimiter = settings.export_delimiter
     output = io.StringIO()
     writer = csv.writer(output, delimiter=delimiter)
-    headers = [_("Date"), _("Start"), _("End"), _("Duration (hours)"), _("Project"), _("Task"), _("Notes"), _("Billed"), _("Client")]
+    headers = [
+        _("Date"),
+        _("Start"),
+        _("End"),
+        _("Duration (hours)"),
+        _("Project"),
+        _("Task"),
+        _("Notes"),
+        _("Billed"),
+        _("Client"),
+    ]
     if can_view_all:
         headers.insert(2, _("User"))  # after End
     writer.writerow(headers)
     for entry in entries:
         client_name = (
-            (entry.client.name if entry.client else "")
-            or (entry.project.client if entry.project else "")
-            or ""
+            (entry.client.name if entry.client else "") or (entry.project.client if entry.project else "") or ""
         )
         row = [
             entry.start_time.date().isoformat() if entry.start_time else "",
@@ -1057,11 +1087,15 @@ def export_excel():
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
 
-    entries = query.options(
-        joinedload(TimeEntry.project).joinedload(Project.client_obj),
-        joinedload(TimeEntry.user),
-        joinedload(TimeEntry.task),
-    ).order_by(TimeEntry.start_time.desc()).all()
+    entries = (
+        query.options(
+            joinedload(TimeEntry.project).joinedload(Project.client_obj),
+            joinedload(TimeEntry.user),
+            joinedload(TimeEntry.task),
+        )
+        .order_by(TimeEntry.start_time.desc())
+        .all()
+    )
 
     # Create Excel file
     output, filename = create_time_entries_excel(entries, filename_prefix="timetracker_export")
@@ -1220,9 +1254,13 @@ def export_user_excel():
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
 
-    entries = query.options(
-        joinedload(TimeEntry.user),
-    ).order_by(TimeEntry.start_time.desc()).all()
+    entries = (
+        query.options(
+            joinedload(TimeEntry.user),
+        )
+        .order_by(TimeEntry.start_time.desc())
+        .all()
+    )
 
     # Group by user
     user_totals = {}
@@ -1258,7 +1296,7 @@ def export_user_excel():
 
     # Create Excel file
     from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
 
     wb = Workbook()
@@ -1280,7 +1318,16 @@ def export_user_excel():
     title_cell.alignment = Alignment(horizontal="center")
 
     # Headers
-    headers = ["User", "Total Hours", "Regular Hours", "Overtime Hours", "Undertime Hours", "Billable Hours", "Days with Overtime", "Days Under"]
+    headers = [
+        "User",
+        "Total Hours",
+        "Regular Hours",
+        "Overtime Hours",
+        "Undertime Hours",
+        "Billable Hours",
+        "Days with Overtime",
+        "Days Under",
+    ]
     for col_num, header in enumerate(headers, 1):
         cell = ws.cell(row=3, column=col_num)
         cell.value = header
@@ -1382,11 +1429,15 @@ def export_user_entries_excel():
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
 
-    entries = query.options(
-        joinedload(TimeEntry.project).joinedload(Project.client_obj),
-        joinedload(TimeEntry.user),
-        joinedload(TimeEntry.task),
-    ).order_by(TimeEntry.start_time.desc()).all()
+    entries = (
+        query.options(
+            joinedload(TimeEntry.project).joinedload(Project.client_obj),
+            joinedload(TimeEntry.user),
+            joinedload(TimeEntry.task),
+        )
+        .order_by(TimeEntry.start_time.desc())
+        .all()
+    )
 
     # Create Excel file (row-per-entry)
     output, filename = create_time_entries_excel(entries, filename_prefix="user_entries", columns=columns)
@@ -1438,9 +1489,7 @@ def export_task_excel():
 
     # Get tasks: all tasks that have time entries within the date range (eager load to avoid N+1)
     tasks_query = Task.query.join(TimeEntry, TimeEntry.task_id == Task.id).filter(
-        TimeEntry.end_time.isnot(None),
-        TimeEntry.start_time >= start_dt,
-        TimeEntry.start_time <= end_dt
+        TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
     )
 
     if project_id:
@@ -1461,14 +1510,12 @@ def export_task_excel():
     from app.repositories import TimeEntryRepository
 
     time_entry_repo = TimeEntryRepository()
-    aggregates = time_entry_repo.get_task_aggregates(
-        task_ids, start_dt, end_dt, project_id=project_id, user_id=user_id
-    )
+    aggregates = time_entry_repo.get_task_aggregates(task_ids, start_dt, end_dt, project_id=project_id, user_id=user_id)
     agg_by_task = {tid: (int(total_sec or 0), cnt) for tid, total_sec, cnt in aggregates}
 
     task_rows = []
     for task in tasks:
-        total_seconds, _ = agg_by_task.get(task.id, (0, 0))
+        total_seconds, _entry_count = agg_by_task.get(task.id, (0, 0))
         hours = round(total_seconds / 3600, 2)
         task_rows.append(
             {
@@ -1482,7 +1529,7 @@ def export_task_excel():
 
     # Create Excel file
     from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
 
     wb = Workbook()
@@ -1561,6 +1608,7 @@ def export_task_excel():
 def unpaid_hours_report():
     """Report showing unpaid hours per client"""
     from app.utils.client_lock import enforce_locked_client_id
+
     start_date = request.args.get("start_date")
     end_date = request.args.get("end_date")
     client_id = request.args.get("client_id", type=int)
@@ -1568,6 +1616,7 @@ def unpaid_hours_report():
 
     # Get clients for filter (scoped for subcontractors)
     from app.utils.scope_filter import apply_client_scope_to_model
+
     clients_query = Client.query.filter_by(status="active").order_by(Client.name)
     scope_c = apply_client_scope_to_model(Client, current_user)
     if scope_c is not None:
@@ -1608,37 +1657,44 @@ def unpaid_hours_report():
     summary = data["summary"]
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("format") == "json":
-        return jsonify({
-            "summary": summary,
-            "client_data": [
-                {
-                    "client_id": d["client"].id,
-                    "client_name": d["client"].name,
-                    "client_email": getattr(d["client"], "email", None),
-                    "total_hours": d["total_hours"],
-                    "billable_hours": d["billable_hours"],
-                    "estimated_amount": d["estimated_amount"],
-                    "projects": [
-                        {"project_id": p["project"].id, "project_name": p["project"].name, "hours": p["hours"], "rate": p["rate"]}
-                        for p in d["projects"]
-                    ],
-                    "entries": [
-                        {
-                            "id": e.id,
-                            "user": e.user.display_name if e.user else "Unknown",
-                            "project": e.project.name if e.project else "No Project",
-                            "task": e.task.name if e.task else None,
-                            "start_time": e.start_time.isoformat() if e.start_time else None,
-                            "end_time": e.end_time.isoformat() if e.end_time else None,
-                            "duration_hours": round(e.duration_hours, 2),
-                            "notes": e.notes or "",
-                        }
-                        for e in d["entries"]
-                    ],
-                }
-                for d in client_data
-            ],
-        })
+        return jsonify(
+            {
+                "summary": summary,
+                "client_data": [
+                    {
+                        "client_id": d["client"].id,
+                        "client_name": d["client"].name,
+                        "client_email": getattr(d["client"], "email", None),
+                        "total_hours": d["total_hours"],
+                        "billable_hours": d["billable_hours"],
+                        "estimated_amount": d["estimated_amount"],
+                        "projects": [
+                            {
+                                "project_id": p["project"].id,
+                                "project_name": p["project"].name,
+                                "hours": p["hours"],
+                                "rate": p["rate"],
+                            }
+                            for p in d["projects"]
+                        ],
+                        "entries": [
+                            {
+                                "id": e.id,
+                                "user": e.user.display_name if e.user else "Unknown",
+                                "project": e.project.name if e.project else "No Project",
+                                "task": e.task.name if e.task else None,
+                                "start_time": e.start_time.isoformat() if e.start_time else None,
+                                "end_time": e.end_time.isoformat() if e.end_time else None,
+                                "duration_hours": round(e.duration_hours, 2),
+                                "notes": e.notes or "",
+                            }
+                            for e in d["entries"]
+                        ],
+                    }
+                    for d in client_data
+                ],
+            }
+        )
 
     return render_template(
         "reports/unpaid_hours_report.html",
@@ -1659,6 +1715,7 @@ def unpaid_hours_report():
 def export_unpaid_hours_excel():
     """Export unpaid hours report as Excel file, organized by project"""
     from app.utils.client_lock import enforce_locked_client_id
+
     start_date = request.args.get("start_date")
     end_date = request.args.get("end_date")
     client_id = request.args.get("client_id", type=int)
@@ -1698,20 +1755,21 @@ def export_unpaid_hours_excel():
         query = query.filter(TimeEntry.user_id == current_user.id)
 
     all_entries = query.all()
-    
+
     # Filter by client if specified (check both entry.client_id and project.client_id)
     if client_id:
         all_entries = [
-            e for e in all_entries
-            if (e.client_id == client_id) or (e.project and e.project.client_id == client_id)
+            e for e in all_entries if (e.client_id == client_id) or (e.project and e.project.client_id == client_id)
         ]
 
     # Get all invoice items to check which time entries are already invoiced
     from app.models.invoice import InvoiceItem
 
-    all_invoice_items = InvoiceItem.query.join(Invoice).filter(
-        InvoiceItem.time_entry_ids.isnot(None), InvoiceItem.time_entry_ids != ""
-    ).all()
+    all_invoice_items = (
+        InvoiceItem.query.join(Invoice)
+        .filter(InvoiceItem.time_entry_ids.isnot(None), InvoiceItem.time_entry_ids != "")
+        .all()
+    )
 
     # Build a set of time entry IDs that are in fully paid invoices
     billed_entry_ids = set()
@@ -1726,7 +1784,7 @@ def export_unpaid_hours_excel():
 
     # Filter entries: only include those that are NOT in fully paid invoices
     unpaid_entries = [e for e in all_entries if e.id not in billed_entry_ids]
-    
+
     # Debug: Check if we have any entries
     if not unpaid_entries:
         # Still create a file with empty data to show the issue
@@ -1771,7 +1829,7 @@ def export_unpaid_hours_excel():
 
     # Create Excel file
     from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
 
     wb = Workbook()
@@ -1807,14 +1865,19 @@ def export_unpaid_hours_excel():
     row_num = 4
     total_hours = 0.0
     total_amount = 0.0
-    
+
     if not project_data:
         # No data message
         summary_ws.cell(row=4, column=1, value="No unpaid hours found for the selected period.")
         summary_ws.merge_cells("A4:D4")
     else:
-        for project_id, data in sorted(project_data.items(), key=lambda x: (x[1]["client"].name if x[1]["client"] and x[1]["client"].name else "", x[1]["project"].name)):
-            summary_ws.cell(row=row_num, column=1, value=data["client"].name if data["client"] else "N/A").border = border
+        for project_id, data in sorted(
+            project_data.items(),
+            key=lambda x: (x[1]["client"].name if x[1]["client"] and x[1]["client"].name else "", x[1]["project"].name),
+        ):
+            summary_ws.cell(row=row_num, column=1, value=data["client"].name if data["client"] else "N/A").border = (
+                border
+            )
             summary_ws.cell(row=row_num, column=2, value=data["project"].name).border = border
             summary_ws.cell(row=row_num, column=3, value=round(data["total_hours"], 2)).border = border
             summary_ws.cell(row=row_num, column=3).number_format = "0.00"
@@ -1840,14 +1903,25 @@ def export_unpaid_hours_excel():
 
     # Create a sheet for each project
     if project_data:
-        for project_id, data in sorted(project_data.items(), key=lambda x: (x[1]["client"].name if x[1]["client"] and x[1]["client"].name else "", x[1]["project"].name)):
+        for project_id, data in sorted(
+            project_data.items(),
+            key=lambda x: (x[1]["client"].name if x[1]["client"] and x[1]["client"].name else "", x[1]["project"].name),
+        ):
             project = data["project"]
             client = data["client"]
-            
+
             # Create sheet name (Excel has 31 char limit for sheet names)
             sheet_name = f"{client.name[:15]}-{project.name[:15]}" if client else project.name[:31]
-            sheet_name = sheet_name.replace("/", "-").replace("\\", "-").replace("?", "-").replace("*", "-").replace("[", "-").replace("]", "-").replace(":", "-")
-            
+            sheet_name = (
+                sheet_name.replace("/", "-")
+                .replace("\\", "-")
+                .replace("?", "-")
+                .replace("*", "-")
+                .replace("[", "-")
+                .replace("]", "-")
+                .replace(":", "-")
+            )
+
             ws = wb.create_sheet(sheet_name)
 
             # Title
@@ -1881,11 +1955,19 @@ def export_unpaid_hours_excel():
             # Data rows
             row_num = 8
             for entry in sorted(data["entries"], key=lambda x: x.start_time if x.start_time else datetime.min):
-                ws.cell(row=row_num, column=1, value=entry.user.display_name if entry.user else "Unknown").border = border
+                ws.cell(row=row_num, column=1, value=entry.user.display_name if entry.user else "Unknown").border = (
+                    border
+                )
                 ws.cell(row=row_num, column=2, value=entry.task.name if entry.task else "-").border = border
-                ws.cell(row=row_num, column=3, value=entry.start_time.strftime("%Y-%m-%d") if entry.start_time else "-").border = border
-                ws.cell(row=row_num, column=4, value=entry.start_time.strftime("%H:%M:%S") if entry.start_time else "-").border = border
-                ws.cell(row=row_num, column=5, value=entry.end_time.strftime("%H:%M:%S") if entry.end_time else "-").border = border
+                ws.cell(
+                    row=row_num, column=3, value=entry.start_time.strftime("%Y-%m-%d") if entry.start_time else "-"
+                ).border = border
+                ws.cell(
+                    row=row_num, column=4, value=entry.start_time.strftime("%H:%M:%S") if entry.start_time else "-"
+                ).border = border
+                ws.cell(
+                    row=row_num, column=5, value=entry.end_time.strftime("%H:%M:%S") if entry.end_time else "-"
+                ).border = border
                 ws.cell(row=row_num, column=6, value=round(entry.duration_hours, 2)).border = border
                 ws.cell(row=row_num, column=6).number_format = "0.00"
                 ws.cell(row=row_num, column=7, value=entry.notes or "-").border = border
@@ -1920,8 +2002,12 @@ def export_unpaid_hours_excel():
     filename = f"unpaid_hours_report_{start_date}_{end_date}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
 
     # Track event
-    log_event("export.excel", user_id=current_user.id, export_type="unpaid_hours_report", num_projects=len(project_data))
-    track_event(current_user.id, "export.excel", {"export_type": "unpaid_hours_report", "num_projects": len(project_data)})
+    log_event(
+        "export.excel", user_id=current_user.id, export_type="unpaid_hours_report", num_projects=len(project_data)
+    )
+    track_event(
+        current_user.id, "export.excel", {"export_type": "unpaid_hours_report", "num_projects": len(project_data)}
+    )
 
     return send_file(
         output,

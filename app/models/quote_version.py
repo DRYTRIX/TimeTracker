@@ -1,7 +1,8 @@
+import json
 from datetime import datetime
+
 from app import db
 from app.utils.timezone import now_in_app_timezone
-import json
 
 
 def local_now():

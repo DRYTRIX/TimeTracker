@@ -2,14 +2,16 @@
 Service for analytics and insights business logic.
 """
 
-from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from decimal import Decimal
-from sqlalchemy import func, case, and_
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import and_, case, func
 from sqlalchemy.orm import joinedload
+
 from app import db
-from app.models import TimeEntry, Project
-from app.repositories import TimeEntryRepository, ProjectRepository, InvoiceRepository, ExpenseRepository
+from app.models import Project, TimeEntry
+from app.repositories import ExpenseRepository, InvoiceRepository, ProjectRepository, TimeEntryRepository
 
 
 class AnalyticsService:
@@ -70,9 +72,7 @@ class AnalyticsService:
             },
         }
 
-    def get_dashboard_top_projects(
-        self, user_id: int, days: int = 30, limit: int = 5
-    ) -> List[Dict[str, Any]]:
+    def get_dashboard_top_projects(self, user_id: int, days: int = 30, limit: int = 5) -> List[Dict[str, Any]]:
         """
         Get top projects by hours for the dashboard (DB GROUP BY to avoid loading all entries).
         Returns list of dicts with keys: project, hours, billable_hours (sorted by hours desc, limited).
@@ -102,7 +102,9 @@ class AnalyticsService:
             .all()
         )
         project_ids = [r.project_id for r in rows]
-        projects_by_id = {p.id: p for p in Project.query.filter(Project.id.in_(project_ids)).all()} if project_ids else {}
+        projects_by_id = (
+            {p.id: p for p in Project.query.filter(Project.id.in_(project_ids)).all()} if project_ids else {}
+        )
         result = []
         for r in rows:
             project = projects_by_id.get(r.project_id)
@@ -119,9 +121,7 @@ class AnalyticsService:
             )
         return result[:limit]
 
-    def get_time_by_project_chart(
-        self, user_id: int, days: int = 7, limit: int = 10
-    ) -> Dict[str, Any]:
+    def get_time_by_project_chart(self, user_id: int, days: int = 7, limit: int = 10) -> Dict[str, Any]:
         """
         Get time-by-project series for dashboard chart (DB GROUP BY to avoid loading all entries).
         Returns dict with keys: series (list of {label, hours}), chart_labels, chart_hours.
@@ -143,10 +143,7 @@ class AnalyticsService:
             .limit(limit)
             .all()
         )
-        series = [
-            {"label": r.name or "", "hours": round((r.total_seconds or 0) / 3600, 2)}
-            for r in rows
-        ]
+        series = [{"label": r.name or "", "hours": round((r.total_seconds or 0) / 3600, 2)} for r in rows]
         return {
             "series": series,
             "chart_labels": [x["label"] for x in series],

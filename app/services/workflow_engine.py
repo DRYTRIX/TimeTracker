@@ -3,14 +3,15 @@ Workflow Engine Service
 Handles workflow rule evaluation and execution
 """
 
-from typing import Dict, List, Any, Optional
-from datetime import datetime
-from app import db
-from app.models.workflow import WorkflowRule, WorkflowExecution
-from app.models import TimeEntry, Task, Project, User
-from app.utils.db import safe_commit
-import time
 import logging
+import time
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from app import db
+from app.models import Project, Task, TimeEntry, User
+from app.models.workflow import WorkflowExecution, WorkflowRule
+from app.utils.db import safe_commit
 
 logger = logging.getLogger(__name__)
 

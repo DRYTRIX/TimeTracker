@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, timezone
+
 from app import db
 from app.config import Config
-from app.utils.timezone import utc_to_local, local_to_utc
+from app.utils.timezone import local_to_utc, utc_to_local
 
 
 def local_now():
@@ -201,6 +202,7 @@ class TimeEntry(db.Model):
         if dt.tzinfo is None:
             return dt
         from app.utils.timezone import get_timezone_obj
+
         tz = get_timezone_obj()
         return dt.astimezone(tz).replace(tzinfo=None)
 

@@ -1,7 +1,8 @@
-﻿from datetime import datetime
-import enum
+﻿import enum
+from datetime import datetime
 
-from sqlalchemy import Enum as SQLEnum, Index
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import Index
 
 from app import db
 
@@ -33,12 +34,12 @@ class LeaveType(db.Model):
             "name": self.name,
             "code": self.code,
             "is_paid": self.is_paid,
-            "annual_allowance_hours": float(self.annual_allowance_hours)
-            if self.annual_allowance_hours is not None
-            else None,
-            "accrual_hours_per_month": float(self.accrual_hours_per_month)
-            if self.accrual_hours_per_month is not None
-            else None,
+            "annual_allowance_hours": (
+                float(self.annual_allowance_hours) if self.annual_allowance_hours is not None else None
+            ),
+            "accrual_hours_per_month": (
+                float(self.accrual_hours_per_month) if self.accrual_hours_per_month is not None else None
+            ),
             "enabled": self.enabled,
         }
 

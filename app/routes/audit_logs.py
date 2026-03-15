@@ -1,13 +1,15 @@
-from flask import Blueprint, render_template, request, jsonify, abort
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db
-from app.models.audit_log import AuditLog
-from app.models import User
-from app.utils.permissions import admin_or_permission_required
-from app.utils.audit import check_audit_table_exists, reset_audit_table_cache
-from sqlalchemy import inspect as sqlalchemy_inspect
 from datetime import datetime, timedelta
+
+from flask import Blueprint, abort, jsonify, render_template, request
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+from sqlalchemy import inspect as sqlalchemy_inspect
+
+from app import db
+from app.models import User
+from app.models.audit_log import AuditLog
+from app.utils.audit import check_audit_table_exists, reset_audit_table_cache
+from app.utils.permissions import admin_or_permission_required
 
 audit_logs_bp = Blueprint("audit_logs", __name__)
 
@@ -133,23 +135,23 @@ def entity_history(entity_type, entity_id):
     try:
         # Import models dynamically
         from app.models import (
+            BudgetAlert,
+            CalendarEvent,
+            Client,
+            ClientNote,
+            Comment,
+            Deal,
+            Expense,
+            Invoice,
+            KanbanColumn,
+            Payment,
             Project,
+            ProjectCost,
             Task,
             TimeEntry,
-            Invoice,
-            Client,
-            Deal,
-            User,
-            Expense,
-            Payment,
-            Comment,
-            ProjectCost,
-            KanbanColumn,
             TimeEntryTemplate,
-            ClientNote,
+            User,
             WeeklyTimeGoal,
-            CalendarEvent,
-            BudgetAlert,
         )
 
         model_map = {

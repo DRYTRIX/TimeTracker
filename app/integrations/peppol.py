@@ -16,14 +16,13 @@ from __future__ import annotations
 
 import hashlib
 import os
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from typing import Any, Dict, Optional, Tuple
 
 import requests
-import xml.etree.ElementTree as ET
-
 
 PEPPOL_BIS3_CUSTOMIZATION_ID = "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0"
 PEPPOL_BIS3_PROFILE_ID = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
@@ -272,7 +271,12 @@ def build_peppol_ubl_invoice_xml(invoice: Any, supplier: PeppolParty, customer: 
             desc = getattr(ex, "title", "Expense")
             if getattr(ex, "vendor", None):
                 desc = f"{desc} ({ex.vendor})"
-            _add_line(description=desc, quantity=1, unit_price=getattr(ex, "total_amount", 0), line_total=getattr(ex, "total_amount", 0))
+            _add_line(
+                description=desc,
+                quantity=1,
+                unit_price=getattr(ex, "total_amount", 0),
+                line_total=getattr(ex, "total_amount", 0),
+            )
     except Exception:
         pass
 
@@ -334,7 +338,9 @@ def send_ubl_via_access_point(
     if not url:
         raise PeppolAccessPointError("PEPPOL_ACCESS_POINT_URL is not set")
 
-    token = (access_point_token if access_point_token is not None else os.getenv("PEPPOL_ACCESS_POINT_TOKEN") or "").strip()
+    token = (
+        access_point_token if access_point_token is not None else os.getenv("PEPPOL_ACCESS_POINT_TOKEN") or ""
+    ).strip()
     timeout_s = (
         float(access_point_timeout_s)
         if access_point_timeout_s is not None
@@ -363,4 +369,3 @@ def send_ubl_via_access_point(
         raise PeppolAccessPointError(f"Access point returned HTTP {resp.status_code}: {data}")
 
     return {"status_code": resp.status_code, "data": data}
-

@@ -13,8 +13,10 @@ Example:
             return self.model.query.filter_by(status='active').all()
 """
 
-from typing import TypeVar, Generic, List, Optional, Dict, Any
+from typing import Any, Dict, Generic, List, Optional, TypeVar
+
 from sqlalchemy.orm import Query
+
 from app import db
 
 ModelType = TypeVar("ModelType")

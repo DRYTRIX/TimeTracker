@@ -4,7 +4,7 @@ Shared validation for time entry requirements (task, description).
 Used when creating/updating time entries and when starting timers.
 """
 
-from typing import Optional, Dict, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 if TYPE_CHECKING:
     from app.models.settings import Settings

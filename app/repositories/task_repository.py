@@ -3,11 +3,13 @@ Repository for task data access operations.
 """
 
 from typing import List, Optional
+
 from sqlalchemy.orm import joinedload
+
 from app import db
+from app.constants import TaskStatus
 from app.models import Task
 from app.repositories.base_repository import BaseRepository
-from app.constants import TaskStatus
 
 
 class TaskRepository(BaseRepository[Task]):

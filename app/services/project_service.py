@@ -2,14 +2,14 @@
 Service for project business logic.
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
+
 from app import db
-from app.repositories import ProjectRepository, ClientRepository
+from app.constants import ProjectStatus, WebhookEvent
 from app.models import Project, TimeEntry
-from app.constants import ProjectStatus
+from app.repositories import ClientRepository, ProjectRepository
 from app.utils.db import safe_commit
 from app.utils.event_bus import emit_event
-from app.constants import WebhookEvent
 
 
 class ProjectService:
@@ -99,8 +99,9 @@ class ProjectService:
             normalized_code = None
 
         # Create project using model directly (repository doesn't support all fields yet)
-        from app.models import Project
         from decimal import Decimal
+
+        from app.models import Project
 
         project = Project(
             name=name,
@@ -200,7 +201,8 @@ class ProjectService:
             Project with eagerly loaded relations, or None if not found
         """
         from sqlalchemy.orm import joinedload
-        from app.models import Task, Comment, ProjectCost
+
+        from app.models import Comment, ProjectCost, Task
 
         query = self.project_repo.query().filter_by(id=project_id)
 
@@ -239,7 +241,8 @@ class ProjectService:
             dict with 'projects', 'pagination', and 'total' keys
         """
         from sqlalchemy.orm import joinedload
-        from app.models import UserFavoriteProject, Client, CustomFieldDefinition
+
+        from app.models import Client, CustomFieldDefinition, UserFavoriteProject
 
         query = self.project_repo.query()
 
@@ -283,13 +286,14 @@ class ProjectService:
             # Ensure Client is joined
             if not client_joined:
                 query = query.join(Client, Project.client_id == Client.id)
-            
+
             # Determine database type for custom field filtering
             is_postgres = False
             try:
                 from sqlalchemy import inspect
+
                 engine = db.engine
-                is_postgres = 'postgresql' in str(engine.url).lower()
+                is_postgres = "postgresql" in str(engine.url).lower()
             except Exception:
                 pass
 
@@ -298,11 +302,12 @@ class ProjectService:
             for field_key, field_value in client_custom_field.items():
                 if not field_key or not field_value:
                     continue
-                
+
                 if is_postgres:
                     # PostgreSQL: Use JSONB operators
                     try:
-                        from sqlalchemy import cast, String
+                        from sqlalchemy import String, cast
+
                         # Match exact value in custom_fields JSONB
                         custom_field_conditions.append(
                             db.cast(Client.custom_fields[field_key].astext, String) == str(field_value)
@@ -313,7 +318,7 @@ class ProjectService:
                 else:
                     # SQLite: Will filter in Python after query
                     pass
-            
+
             if custom_field_conditions:
                 query = query.filter(db.or_(*custom_field_conditions))
 
@@ -325,8 +330,7 @@ class ProjectService:
                 # Use ilike for case-insensitive search on name and description
                 # Handle NULL descriptions properly
                 search_filter = db.or_(
-                    Project.name.ilike(like),
-                    db.and_(Project.description.isnot(None), Project.description.ilike(like))
+                    Project.name.ilike(like), db.and_(Project.description.isnot(None), Project.description.ilike(like))
                 )
                 query = query.filter(search_filter)
 
@@ -342,21 +346,25 @@ class ProjectService:
                 for project in projects:
                     if not project.client_obj:
                         continue
-                    
+
                     # Check if client matches all custom field filters
                     matches = True
                     for field_key, field_value in client_custom_field.items():
                         if not field_key or not field_value:
                             continue
-                        
-                        client_value = project.client_obj.custom_fields.get(field_key) if project.client_obj.custom_fields else None
+
+                        client_value = (
+                            project.client_obj.custom_fields.get(field_key)
+                            if project.client_obj.custom_fields
+                            else None
+                        )
                         if str(client_value) != str(field_value):
                             matches = False
                             break
-                    
+
                     if matches:
                         filtered_projects.append(project)
-                
+
                 # Update pagination with filtered results
                 # Note: This affects pagination accuracy, but is necessary for SQLite
                 projects = filtered_projects
@@ -365,16 +373,11 @@ class ProjectService:
                 start = (page - 1) * per_page
                 end = start + per_page
                 projects = filtered_projects[start:end]
-                
+
                 # Create a pagination-like object
                 from flask_sqlalchemy import Pagination
-                pagination = Pagination(
-                    query=None,
-                    page=page,
-                    per_page=per_page,
-                    total=total,
-                    items=projects
-                )
+
+                pagination = Pagination(query=None, page=page, per_page=per_page, total=total, items=projects)
             except Exception:
                 # If filtering fails, use original results
                 pass
@@ -393,7 +396,8 @@ class ProjectService:
             'recent_costs', 'total_costs_count', 'user_totals', 'kanban_columns'
         """
         from sqlalchemy.orm import joinedload
-        from app.models import Task, Comment, ProjectCost, KanbanColumn
+
+        from app.models import Comment, KanbanColumn, ProjectCost, Task
         from app.repositories import TimeEntryRepository
 
         # Get project with eager loading

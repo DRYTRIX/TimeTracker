@@ -1,11 +1,12 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, make_response
+from flask import Blueprint, flash, jsonify, make_response, redirect, render_template, request, url_for
 from flask_babel import gettext as _
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
+
 from app import db, socketio
 from app.models import KanbanColumn, Task
 from app.utils.db import safe_commit
-from app.utils.permissions import admin_or_permission_required
 from app.utils.module_helpers import module_enabled
+from app.utils.permissions import admin_or_permission_required
 
 kanban_bp = Blueprint("kanban", __name__)
 
@@ -15,14 +16,15 @@ kanban_bp = Blueprint("kanban", __name__)
 @module_enabled("kanban")
 def board():
     """Kanban board page with optional project and user filters (supports multi-select)"""
+
     # Parse filter parameters - support both single ID (backward compatibility) and multi-select
     def parse_ids(param_name):
         """Parse comma-separated IDs or single ID into a list of integers"""
         # Try multi-select parameter first (e.g., project_ids)
-        multi_param = request.args.get(param_name + 's', '').strip()
+        multi_param = request.args.get(param_name + "s", "").strip()
         if multi_param:
             try:
-                return [int(x.strip()) for x in multi_param.split(',') if x.strip()]
+                return [int(x.strip()) for x in multi_param.split(",") if x.strip()]
             except (ValueError, AttributeError):
                 return []
         # Fall back to single parameter for backward compatibility (e.g., project_id)
@@ -30,20 +32,20 @@ def board():
         if single_param:
             return [single_param]
         return []
-    
-    project_ids = parse_ids('project_id')
-    user_ids = parse_ids('user_id')
-    
+
+    project_ids = parse_ids("project_id")
+    user_ids = parse_ids("user_id")
+
     # Build query with filters
     query = Task.query
     if project_ids:
         query = query.filter(Task.project_id.in_(project_ids))
     if user_ids:
         query = query.filter(Task.assigned_to.in_(user_ids))
-    
+
     # Order tasks for stable rendering
     tasks = query.order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc()).all()
-    
+
     # Fresh columns - use project-specific columns if single project is selected
     db.session.expire_all()
     if KanbanColumn:
@@ -60,26 +62,26 @@ def board():
                 columns = KanbanColumn.get_active_columns(project_id=None)
     else:
         columns = []
-    
+
     # Provide projects for filter dropdown
     from app.models import Project, User
 
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()
     # Provide users for filter dropdown (active users only)
     users = User.query.filter_by(is_active=True).order_by(User.full_name, User.username).all()
-    
+
     # No-cache
     response = render_template(
-        "kanban/board.html", 
-        tasks=tasks, 
-        kanban_columns=columns, 
-        projects=projects, 
-        users=users, 
+        "kanban/board.html",
+        tasks=tasks,
+        kanban_columns=columns,
+        projects=projects,
+        users=users,
         project_ids=project_ids,
         user_ids=user_ids,
         # Keep old single params for backward compatibility in templates
         project_id=project_ids[0] if len(project_ids) == 1 else None,
-        user_id=user_ids[0] if len(user_ids) == 1 else None
+        user_id=user_ids[0] if len(user_ids) == 1 else None,
     )
     resp = make_response(response)
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"

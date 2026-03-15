@@ -2,10 +2,11 @@
 Push Subscription model for storing browser push notification subscriptions.
 """
 
+import json
 from datetime import datetime
+
 from app import db
 from app.utils.timezone import now_in_app_timezone
-import json
 
 
 class PushSubscription(db.Model):
@@ -15,17 +16,17 @@ class PushSubscription(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    
+
     # Push subscription data (JSON format from browser Push API)
     endpoint = db.Column(db.Text, nullable=False)  # Push service endpoint URL
     keys = db.Column(db.JSON, nullable=False)  # p256dh and auth keys
-    
+
     # Metadata
     user_agent = db.Column(db.String(500), nullable=True)  # Browser user agent
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     last_used_at = db.Column(db.DateTime, nullable=True)  # Last time subscription was used
-    
+
     # Relationships
     user = db.relationship("User", backref="push_subscriptions", lazy="joined")
 
@@ -67,4 +68,3 @@ class PushSubscription(db.Model):
     def find_by_endpoint(cls, user_id, endpoint):
         """Find a subscription by user and endpoint"""
         return cls.query.filter_by(user_id=user_id, endpoint=endpoint).first()
-

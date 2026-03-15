@@ -3,9 +3,11 @@ Database query optimization utilities.
 Helps identify and fix N+1 query problems.
 """
 
-from typing import List, Type, Optional
-from sqlalchemy.orm import Query, joinedload, selectinload, subqueryload
+from typing import List, Optional, Type
+
 from sqlalchemy import inspect
+from sqlalchemy.orm import Query, joinedload, selectinload, subqueryload
+
 from app import db
 
 
@@ -109,6 +111,7 @@ class QueryProfiler:
     def count_queries(func):
         """Decorator to count database queries in a function"""
         from functools import wraps
+
         from sqlalchemy import event
         from sqlalchemy.engine import Engine
 

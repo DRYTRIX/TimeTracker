@@ -3,9 +3,11 @@ Event bus for domain events.
 Provides decoupled event-driven architecture.
 """
 
-from typing import Callable, Dict, Any, List
 from functools import wraps
+from typing import Any, Callable, Dict, List
+
 from flask import current_app
+
 from app.constants import WebhookEvent
 
 

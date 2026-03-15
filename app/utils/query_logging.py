@@ -5,12 +5,12 @@ Helps identify slow queries and N+1 problems.
 
 import logging
 import time
-from typing import Optional, Dict, Any
 from contextlib import contextmanager
+from typing import Any, Dict, Optional
+
 from flask import current_app, g
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
-
 
 logger = logging.getLogger(__name__)
 SLOW_QUERY_THRESHOLD = 0.1  # Log queries slower than 100ms

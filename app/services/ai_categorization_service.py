@@ -3,13 +3,15 @@ AI-powered categorization service for automatic project/task categorization
 Uses pattern matching and heuristics (can be extended with actual AI APIs)
 """
 
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
-from app import db
-from app.models import TimeEntry, Project, Task, Client
-from sqlalchemy import func
 import logging
 import re
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import func
+
+from app import db
+from app.models import Client, Project, Task, TimeEntry
 
 logger = logging.getLogger(__name__)
 

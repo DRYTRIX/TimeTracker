@@ -2,20 +2,20 @@
 Service for time tracking business logic.
 """
 
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from flask_login import current_user
+
 from app import db
-from app.repositories import TimeEntryRepository, ProjectRepository
-from app.models import TimeEntry, Project, Task
-from app.constants import TimeEntrySource, TimeEntryStatus
-from app.utils.timezone import parse_local_datetime
+from app.constants import TimeEntrySource, TimeEntryStatus, WebhookEvent
+from app.models import Project, Settings, Task, TimeEntry
 from app.models.time_entry import local_now
+from app.repositories import ProjectRepository, TimeEntryRepository
 from app.utils.db import safe_commit
 from app.utils.event_bus import emit_event
-from app.constants import WebhookEvent
-from app.models import Settings
 from app.utils.time_entry_validation import validate_time_entry_requirements
+from app.utils.timezone import parse_local_datetime
 
 
 class TimeTrackingService:
@@ -439,7 +439,9 @@ class TimeTrackingService:
             return {"success": False, "message": "Access denied", "error": "access_denied"}
 
         # Block non-admin edits in closed periods
-        if (not is_admin) and self._is_locked_period(entry.user_id, entry.start_time, entry.end_time or entry.start_time):
+        if (not is_admin) and self._is_locked_period(
+            entry.user_id, entry.start_time, entry.end_time or entry.start_time
+        ):
             return {
                 "success": False,
                 "message": "Timesheet period is closed for this entry",
@@ -455,7 +457,8 @@ class TimeTrackingService:
             }
 
         # Capture old state before changes
-        from app.utils.audit import capture_timeentry_state, capture_timeentry_metadata
+        from app.utils.audit import capture_timeentry_metadata, capture_timeentry_state
+
         full_old_state = capture_timeentry_state(entry)
         entity_metadata = capture_timeentry_metadata(entry)
 
@@ -530,16 +533,13 @@ class TimeTrackingService:
 
         # Check for overlapping entries (exclude this entry) when times were changed
         if entry.end_time and (start_time is not None or end_time is not None):
-            overlapping = (
-                TimeEntry.query.filter(
-                    TimeEntry.user_id == entry.user_id,
-                    TimeEntry.id != entry_id,
-                    TimeEntry.start_time < entry.end_time,
-                    TimeEntry.end_time > entry.start_time,
-                    TimeEntry.end_time.isnot(None),
-                )
-                .first()
-            )
+            overlapping = TimeEntry.query.filter(
+                TimeEntry.user_id == entry.user_id,
+                TimeEntry.id != entry_id,
+                TimeEntry.start_time < entry.end_time,
+                TimeEntry.end_time > entry.start_time,
+                TimeEntry.end_time.isnot(None),
+            ).first()
             if overlapping:
                 db.session.rollback()
                 return {
@@ -563,13 +563,14 @@ class TimeTrackingService:
             db.session.refresh(entry)
             full_new_state = capture_timeentry_state(entry)
             updated_metadata = capture_timeentry_metadata(entry)
-            
+
             from app.models.audit_log import AuditLog
             from app.utils.audit import get_request_info
+
             ip_address, user_agent, request_path = get_request_info()
-            
+
             entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
-            
+
             AuditLog.log_change(
                 user_id=user_id,
                 action="updated",
@@ -589,11 +590,14 @@ class TimeTrackingService:
         except Exception as e:
             # Don't fail update if audit logging fails
             import logging
+
             logging.getLogger(__name__).warning(f"Failed to create audit log for TimeEntry update: {e}")
 
         return {"success": True, "message": "Time entry updated successfully", "entry": entry}
 
-    def delete_entry(self, user_id: int, entry_id: int, is_admin: bool = False, reason: Optional[str] = None) -> Dict[str, Any]:
+    def delete_entry(
+        self, user_id: int, entry_id: int, is_admin: bool = False, reason: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Delete a time entry.
 
@@ -616,7 +620,9 @@ class TimeTrackingService:
             return {"success": False, "message": "Access denied", "error": "access_denied"}
 
         # Block non-admin deletes in closed periods
-        if (not is_admin) and self._is_locked_period(entry.user_id, entry.start_time, entry.end_time or entry.start_time):
+        if (not is_admin) and self._is_locked_period(
+            entry.user_id, entry.start_time, entry.end_time or entry.start_time
+        ):
             return {
                 "success": False,
                 "message": "Timesheet period is closed for this entry",
@@ -638,9 +644,9 @@ class TimeTrackingService:
         duration_formatted = entry.duration_formatted
 
         # Capture full state and metadata for audit logging
-        from app.utils.audit import capture_timeentry_state, capture_timeentry_metadata, get_request_info
         from app.models.audit_log import AuditLog
-        
+        from app.utils.audit import capture_timeentry_metadata, capture_timeentry_state, get_request_info
+
         full_old_state = capture_timeentry_state(entry)
         entity_metadata = capture_timeentry_metadata(entry)
         ip_address, user_agent, request_path = get_request_info()
@@ -667,19 +673,27 @@ class TimeTrackingService:
                 except Exception as e:
                     # Don't fail deletion if audit logging fails
                     import logging
+
                     logging.getLogger(__name__).warning(f"Failed to create audit log for TimeEntry deletion: {e}")
 
                 # Log activity
-                from app.models import Activity
                 from flask import request
+
+                from app.models import Activity
+
                 Activity.log(
                     user_id=user_id,
                     action="deleted",
                     entity_type="time_entry",
                     entity_id=entry_id,
                     entity_name=entity_name,
-                    description=f'Deleted time entry for {entity_name} - {duration_formatted}',
-                    extra_data={"project_name": project_name, "client_name": client_name, "duration_formatted": duration_formatted, "reason": reason},
+                    description=f"Deleted time entry for {entity_name} - {duration_formatted}",
+                    extra_data={
+                        "project_name": project_name,
+                        "client_name": client_name,
+                        "duration_formatted": duration_formatted,
+                        "reason": reason,
+                    },
                     ip_address=ip_address,
                     user_agent=user_agent,
                 )

@@ -2,11 +2,13 @@
 GitHub integration connector.
 """
 
-from typing import Dict, Any, Optional
-from datetime import datetime, timedelta
-from app.integrations.base import BaseConnector
-import requests
 import os
+from datetime import datetime, timedelta
+from typing import Any, Dict, Optional
+
+import requests
+
+from app.integrations.base import BaseConnector
 
 
 class GitHubConnector(BaseConnector):
@@ -134,10 +136,11 @@ class GitHubConnector(BaseConnector):
 
     def sync_data(self, sync_type: str = "full") -> Dict[str, Any]:
         """Sync issues from GitHub repositories and create tasks."""
-        from app.models import Task, Project
-        from app import db
-        from datetime import datetime, timedelta
         import logging
+        from datetime import datetime, timedelta
+
+        from app import db
+        from app.models import Project, Task
 
         logger = logging.getLogger(__name__)
 
@@ -153,15 +156,20 @@ class GitHubConnector(BaseConnector):
                 repos_response = requests.get(
                     "https://api.github.com/user/repos",
                     headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"},
-                    timeout=30
+                    timeout=30,
                 )
                 if repos_response.status_code == 200:
                     repos = repos_response.json()
                     repos_list = [f"{r['owner']['login']}/{r['name']}" for r in repos[:10]]  # Limit to 10 repos
                 elif repos_response.status_code == 401:
-                    return {"success": False, "message": "GitHub authentication failed. Please reconnect the integration."}
+                    return {
+                        "success": False,
+                        "message": "GitHub authentication failed. Please reconnect the integration.",
+                    }
                 else:
-                    error_msg = f"Could not fetch repositories: {repos_response.status_code} - {repos_response.text[:200]}"
+                    error_msg = (
+                        f"Could not fetch repositories: {repos_response.status_code} - {repos_response.text[:200]}"
+                    )
                     logger.error(error_msg)
                     return {"success": False, "message": error_msg}
             except requests.exceptions.Timeout:
@@ -186,7 +194,7 @@ class GitHubConnector(BaseConnector):
                     if "/" not in repo:
                         errors.append(f"Invalid repository format: {repo} (expected owner/repo)")
                         continue
-                    
+
                     owner, repo_name = repo.split("/", 1)
 
                     # Find or create project
@@ -213,7 +221,7 @@ class GitHubConnector(BaseConnector):
                             f"https://api.github.com/repos/{repo}/issues",
                             headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"},
                             params={"state": "open", "per_page": 100},
-                            timeout=30
+                            timeout=30,
                         )
 
                         if issues_response.status_code == 404:
@@ -224,7 +232,9 @@ class GitHubConnector(BaseConnector):
                             continue
                         elif issues_response.status_code != 200:
                             error_text = issues_response.text[:200] if issues_response.text else ""
-                            errors.append(f"Error fetching issues for {repo}: {issues_response.status_code} - {error_text}")
+                            errors.append(
+                                f"Error fetching issues for {repo}: {issues_response.status_code} - {error_text}"
+                            )
                             continue
 
                         issues = issues_response.json()
@@ -265,7 +275,9 @@ class GitHubConnector(BaseConnector):
                                     db.session.flush()
                                 except Exception as e:
                                     errors.append(f"Error creating task for issue #{issue_number} in {repo}: {str(e)}")
-                                    logger.error(f"Error creating task for issue #{issue_number} in {repo}: {e}", exc_info=True)
+                                    logger.error(
+                                        f"Error creating task for issue #{issue_number} in {repo}: {e}", exc_info=True
+                                    )
                                     continue
 
                             # Store GitHub issue info in task metadata
@@ -282,7 +294,9 @@ class GitHubConnector(BaseConnector):
                             synced_count += 1
                         except Exception as e:
                             errors.append(f"Error syncing issue #{issue.get('number', 'unknown')} in {repo}: {str(e)}")
-                            logger.error(f"Error syncing issue #{issue.get('number', 'unknown')} in {repo}: {e}", exc_info=True)
+                            logger.error(
+                                f"Error syncing issue #{issue.get('number', 'unknown')} in {repo}: {e}", exc_info=True
+                            )
                 except ValueError as e:
                     errors.append(f"Invalid repository format: {repo} - {str(e)}")
                 except Exception as e:
@@ -305,7 +319,7 @@ class GitHubConnector(BaseConnector):
                     "synced_items": synced_count,
                     "errors": errors,
                 }
-            
+
             return {
                 "success": True,
                 "message": f"Sync completed. Synced {synced_count} issues.",
@@ -320,73 +334,62 @@ class GitHubConnector(BaseConnector):
                 pass
             return {"success": False, "message": f"Sync failed: {str(e)}", "errors": errors}
 
-    def handle_webhook(self, payload: Dict[str, Any], headers: Dict[str, str], raw_body: Optional[bytes] = None) -> Dict[str, Any]:
+    def handle_webhook(
+        self, payload: Dict[str, Any], headers: Dict[str, str], raw_body: Optional[bytes] = None
+    ) -> Dict[str, Any]:
         """Handle incoming webhook from GitHub."""
-        import hmac
         import hashlib
+        import hmac
         import logging
-        
+
         logger = logging.getLogger(__name__)
-        
+
         try:
             # Verify webhook signature if secret is configured
             signature = headers.get("X-Hub-Signature-256", "")
             if signature:
                 # Get webhook secret from integration config
                 webhook_secret = self.integration.config.get("webhook_secret") if self.integration else None
-                
+
                 if webhook_secret:
                     # GitHub sends signature as "sha256=<hash>"
                     if not signature.startswith("sha256="):
                         logger.warning("GitHub webhook signature format invalid (expected sha256= prefix)")
-                        return {
-                            "success": False,
-                            "message": "Invalid webhook signature format"
-                        }
-                    
+                        return {"success": False, "message": "Invalid webhook signature format"}
+
                     signature_hash = signature[7:]  # Remove "sha256=" prefix
-                    
+
                     # GitHub signs the raw request body bytes, not the parsed JSON
                     # This is critical for signature verification to work correctly
                     if raw_body is None:
                         # Fallback: try to reconstruct from payload (not ideal but better than nothing)
                         import json
-                        raw_body = json.dumps(payload, sort_keys=True, separators=(',', ':')).encode('utf-8')
-                        logger.warning("GitHub webhook: Using reconstructed payload for signature verification (raw body not available)")
-                    
+
+                        raw_body = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+                        logger.warning(
+                            "GitHub webhook: Using reconstructed payload for signature verification (raw body not available)"
+                        )
+
                     # Compute expected signature using raw body bytes
-                    expected_signature = hmac.new(
-                        webhook_secret.encode('utf-8'),
-                        raw_body,
-                        hashlib.sha256
-                    ).hexdigest()
-                    
+                    expected_signature = hmac.new(webhook_secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+
                     # Use constant-time comparison to prevent timing attacks
                     if not hmac.compare_digest(signature_hash, expected_signature):
                         logger.warning("GitHub webhook signature verification failed")
-                        return {
-                            "success": False,
-                            "message": "Webhook signature verification failed"
-                        }
-                    
+                        return {"success": False, "message": "Webhook signature verification failed"}
+
                     logger.debug("GitHub webhook signature verified successfully")
                 else:
                     # Signature provided but no secret configured - reject for security
                     logger.warning("GitHub webhook signature provided but no secret configured - rejecting webhook")
-                    return {
-                        "success": False,
-                        "message": "Webhook secret not configured"
-                    }
+                    return {"success": False, "message": "Webhook secret not configured"}
             else:
                 # No signature provided - check if secret is configured
                 webhook_secret = self.integration.config.get("webhook_secret") if self.integration else None
                 if webhook_secret:
                     # Secret configured but no signature - reject for security
                     logger.warning("GitHub webhook secret configured but no signature provided - rejecting webhook")
-                    return {
-                        "success": False,
-                        "message": "Webhook signature required but not provided"
-                    }
+                    return {"success": False, "message": "Webhook signature required but not provided"}
 
             # Process webhook event
             action = payload.get("action")

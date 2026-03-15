@@ -10,8 +10,8 @@ Note: The legacy api_bp is imported from the api.py module file
 to maintain backward compatibility.
 """
 
-import os
 import importlib.util
+import os
 
 # Import versioned blueprints
 from app.routes.api.v1 import api_v1_bp

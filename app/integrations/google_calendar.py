@@ -3,16 +3,18 @@ Google Calendar integration connector.
 Provides two-way sync between TimeTracker and Google Calendar.
 """
 
-from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta, timezone
-from app.integrations.base import BaseConnector
-import requests
 import os
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
+
+import requests
+from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
-from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+
+from app.integrations.base import BaseConnector
 
 
 class GoogleCalendarConnector(BaseConnector):
@@ -60,9 +62,9 @@ class GoogleCalendarConnector(BaseConnector):
 
         authorization_url, _ = flow.authorization_url(
             state=state,  # Explicitly pass state parameter
-            access_type="offline", 
-            include_granted_scopes="true", 
-            prompt="consent"  # Force consent to get refresh token
+            access_type="offline",
+            include_granted_scopes="true",
+            prompt="consent",  # Force consent to get refresh token
         )
 
         return authorization_url
@@ -113,6 +115,7 @@ class GoogleCalendarConnector(BaseConnector):
         except Exception as e:
             # Log error but don't fail - user info is optional
             import logging
+
             logger = logging.getLogger(__name__)
             logger.debug(f"Could not fetch Google user info: {e}")
 
@@ -167,7 +170,7 @@ class GoogleCalendarConnector(BaseConnector):
         """Test connection to Google Calendar."""
         if not self.credentials:
             return {"success": False, "message": "No credentials available. Please connect the integration first."}
-        
+
         try:
             service = self._get_calendar_service()
             calendar_list = service.calendarList().list().execute()
@@ -195,10 +198,10 @@ class GoogleCalendarConnector(BaseConnector):
         """Get Google Calendar API service."""
         if not self.credentials:
             raise ValueError("No credentials available. Please connect the integration first.")
-        
+
         if not self.credentials.access_token:
             raise ValueError("No access token available. Please reconnect the integration.")
-        
+
         from app.models import Settings
         from app.utils.db import safe_commit
 
@@ -230,13 +233,14 @@ class GoogleCalendarConnector(BaseConnector):
 
     def sync_data(self, sync_type: str = "full") -> Dict[str, Any]:
         """Sync time entries and calendar events with Google Calendar (bidirectional)."""
-        from app.models import TimeEntry, CalendarEvent
-        from app.models.integration_external_event_link import IntegrationExternalEventLink
-        from app import db
-        from datetime import datetime, timedelta
-        from app.utils.timezone import now_in_app_timezone
         import logging
-        
+        from datetime import datetime, timedelta
+
+        from app import db
+        from app.models import CalendarEvent, TimeEntry
+        from app.models.integration_external_event_link import IntegrationExternalEventLink
+        from app.utils.timezone import now_in_app_timezone
+
         logger = logging.getLogger(__name__)
 
         try:
@@ -246,8 +250,10 @@ class GoogleCalendarConnector(BaseConnector):
             # Default to bidirectional for better user experience (allows both directions)
             sync_direction = self.integration.config.get("sync_direction", "bidirectional")
             calendar_id = self.integration.config.get("calendar_id", "primary")
-            
-            logger.info(f"Sync configuration: sync_direction='{sync_direction}', calendar_id='{calendar_id}', sync_type='{sync_type}'")
+
+            logger.info(
+                f"Sync configuration: sync_direction='{sync_direction}', calendar_id='{calendar_id}', sync_type='{sync_type}'"
+            )
 
             # Initialize counters for both sync directions
             time_tracker_to_calendar_count = 0
@@ -268,7 +274,9 @@ class GoogleCalendarConnector(BaseConnector):
                 else:
                     start_date = datetime.utcnow() - timedelta(days=90)
 
-                logger.info(f"TimeTracker→Calendar sync starting: sync_direction='{sync_direction}', sync_type='{sync_type}'")
+                logger.info(
+                    f"TimeTracker→Calendar sync starting: sync_direction='{sync_direction}', sync_type='{sync_type}'"
+                )
                 logger.info(f"  Calendar ID: {calendar_id}")
                 logger.info(f"  Time range: from {start_date}")
 
@@ -286,21 +294,24 @@ class GoogleCalendarConnector(BaseConnector):
                     CalendarEvent.all_day == False,  # Skip all-day events
                 ).all()
 
-                logger.info(f"Found {len(time_entries)} time entries and {len(calendar_events)} calendar events to sync to Google Calendar")
+                logger.info(
+                    f"Found {len(time_entries)} time entries and {len(calendar_events)} calendar events to sync to Google Calendar"
+                )
 
                 # Sync time entries
                 for entry in time_entries:
                     try:
                         # Check if already synced using IntegrationExternalEventLink
                         existing_link = IntegrationExternalEventLink.query.filter_by(
-                            integration_id=self.integration.id,
-                            time_entry_id=entry.id
+                            integration_id=self.integration.id, time_entry_id=entry.id
                         ).first()
                         existing_event_id = existing_link.external_uid if existing_link else None
 
                         if existing_event_id:
                             # Update existing event
-                            logger.debug(f"Updating existing calendar event {existing_event_id} for time entry {entry.id}")
+                            logger.debug(
+                                f"Updating existing calendar event {existing_event_id} for time entry {entry.id}"
+                            )
                             self._update_calendar_event(service, calendar_id, existing_event_id, entry)
                         else:
                             # Create new event
@@ -331,31 +342,38 @@ class GoogleCalendarConnector(BaseConnector):
                     try:
                         # Skip calendar events that were imported FROM Google Calendar (to avoid circular sync)
                         if calendar_event.description and "[Google Calendar:" in calendar_event.description:
-                            logger.debug(f"Skipping calendar event {calendar_event.id} - it was imported from Google Calendar, avoiding circular sync")
+                            logger.debug(
+                                f"Skipping calendar event {calendar_event.id} - it was imported from Google Calendar, avoiding circular sync"
+                            )
                             continue
 
                         # Check if already synced by querying Google Calendar for events with our marker
                         # Note: IntegrationExternalEventLink requires time_entry_id, so we can't use it for CalendarEvent
                         marker = f"TimeTracker: Created from calendar event [CalendarEvent: {calendar_event.id}]"
-                        
+
                         # Query Google Calendar to find existing events with this marker
                         # Use a time range around the calendar event to find it
                         from app.utils.timezone import local_to_utc
+
                         event_start_utc = local_to_utc(calendar_event.start_time)
                         time_min = (event_start_utc - timedelta(days=1)).isoformat() + "Z"
                         time_max = (event_start_utc + timedelta(days=1)).isoformat() + "Z"
-                        
+
                         try:
-                            existing_events_result = service.events().list(
-                                calendarId=calendar_id,
-                                timeMin=time_min,
-                                timeMax=time_max,
-                                maxResults=50,
-                                singleEvents=True,
-                                orderBy="startTime",
-                            ).execute()
+                            existing_events_result = (
+                                service.events()
+                                .list(
+                                    calendarId=calendar_id,
+                                    timeMin=time_min,
+                                    timeMax=time_max,
+                                    maxResults=50,
+                                    singleEvents=True,
+                                    orderBy="startTime",
+                                )
+                                .execute()
+                            )
                             existing_events = existing_events_result.get("items", [])
-                            
+
                             # Find event with our marker
                             existing_event_id = None
                             for gc_event in existing_events:
@@ -369,8 +387,12 @@ class GoogleCalendarConnector(BaseConnector):
 
                         if existing_event_id:
                             # Update existing event
-                            logger.debug(f"Updating existing Google Calendar event {existing_event_id} for CalendarEvent {calendar_event.id}")
-                            self._update_calendar_event_from_event(service, calendar_id, existing_event_id, calendar_event)
+                            logger.debug(
+                                f"Updating existing Google Calendar event {existing_event_id} for CalendarEvent {calendar_event.id}"
+                            )
+                            self._update_calendar_event_from_event(
+                                service, calendar_id, existing_event_id, calendar_event
+                            )
                         else:
                             # Create new event
                             logger.debug(f"Creating new Google Calendar event for CalendarEvent {calendar_event.id}")
@@ -383,8 +405,10 @@ class GoogleCalendarConnector(BaseConnector):
                         error_msg = f"Error syncing calendar event {calendar_event.id}: {str(e)}"
                         errors.append(error_msg)
                         logger.warning(f"{error_msg}", exc_info=True)
-                
-                logger.info(f"TimeTracker→Calendar sync completed: synced {time_tracker_to_calendar_count} items ({len(time_entries)} time entries + {len(calendar_events)} calendar events)")
+
+                logger.info(
+                    f"TimeTracker→Calendar sync completed: synced {time_tracker_to_calendar_count} items ({len(time_entries)} time entries + {len(calendar_events)} calendar events)"
+                )
 
             # Sync Google Calendar → TimeTracker
             if sync_direction in ["calendar_to_time_tracker", "bidirectional"]:
@@ -393,7 +417,9 @@ class GoogleCalendarConnector(BaseConnector):
                 if sync_type == "incremental" and self.integration.last_sync_at:
                     time_min = self.integration.last_sync_at
 
-                logger.info(f"Google Calendar sync starting: sync_direction='{sync_direction}', sync_type='{sync_type}'")
+                logger.info(
+                    f"Google Calendar sync starting: sync_direction='{sync_direction}', sync_type='{sync_type}'"
+                )
                 logger.info(f"  Calendar ID: {calendar_id}")
                 logger.info(f"  Time range: from {time_min}")
 
@@ -411,20 +437,26 @@ class GoogleCalendarConnector(BaseConnector):
 
                 events = events_result.get("items", [])
                 logger.info(f"Fetched {len(events)} events from Google Calendar (calendar_id: {calendar_id})")
-                
+
                 if len(events) == 0:
                     logger.info("No events found in Google Calendar for the specified time range")
-                
+
                 # Reset counters for calendar-to-tracker sync (already initialized above)
                 imported = 0
                 skipped = 0
-                skipped_reasons = {"time_tracker_created": 0, "already_imported": 0, "invalid_time": 0, "all_day": 0, "other": 0}
+                skipped_reasons = {
+                    "time_tracker_created": 0,
+                    "already_imported": 0,
+                    "invalid_time": 0,
+                    "all_day": 0,
+                    "other": 0,
+                }
 
                 for event in events:
                     try:
                         event_id = event.get("id")
                         event_summary = event.get("summary", "No title")
-                        
+
                         # Skip events we created (check description for marker)
                         description = event.get("description") or ""
                         if description.startswith("TimeTracker:"):
@@ -436,18 +468,17 @@ class GoogleCalendarConnector(BaseConnector):
                         # Check if we already have this event (using CalendarEvent marker, like CalDAV)
                         from app.models import CalendarEvent
                         from app.models.integration_external_event_link import IntegrationExternalEventLink
-                        
+
                         existing_calendar_event = CalendarEvent.query.filter(
                             CalendarEvent.user_id == self.integration.user_id,
-                            CalendarEvent.description.like(f"%[Google Calendar: {event_id}]%")
+                            CalendarEvent.description.like(f"%[Google Calendar: {event_id}]%"),
                         ).first()
-                        
+
                         # Also check link table in case it was previously imported as TimeEntry (for backward compatibility)
                         existing_link = IntegrationExternalEventLink.query.filter_by(
-                            integration_id=self.integration.id,
-                            external_uid=event_id
+                            integration_id=self.integration.id, external_uid=event_id
                         ).first()
-                        
+
                         if existing_calendar_event or existing_link:
                             logger.debug(f"Event {event_id} ({event_summary}) already imported, skipping")
                             skipped += 1
@@ -457,12 +488,14 @@ class GoogleCalendarConnector(BaseConnector):
                         # Get start and end times - handle both dateTime (timed events) and date (all-day events)
                         start_data = event.get("start", {})
                         end_data = event.get("end", {})
-                        
+
                         start_str = start_data.get("dateTime")
                         end_str = end_data.get("dateTime")
                         # Skip all-day events (they only have "date", not "dateTime")
                         if not start_str or not end_str:
-                            logger.debug(f"Skipping all-day event {event_id} ({event_summary}) - only timed events are imported")
+                            logger.debug(
+                                f"Skipping all-day event {event_id} ({event_summary}) - only timed events are imported"
+                            )
                             skipped += 1
                             skipped_reasons["all_day"] += 1
                             continue
@@ -472,11 +505,13 @@ class GoogleCalendarConnector(BaseConnector):
                             # Handle Z suffix and convert to +00:00 for fromisoformat
                             start_str_normalized = start_str.replace("Z", "+00:00")
                             end_str_normalized = end_str.replace("Z", "+00:00")
-                            
+
                             start_time_utc = datetime.fromisoformat(start_str_normalized)
                             end_time_utc = datetime.fromisoformat(end_str_normalized)
                         except (ValueError, AttributeError) as parse_error:
-                            logger.warning(f"Event {event_id} has invalid datetime format: start={start_str}, end={end_str}, error={parse_error}")
+                            logger.warning(
+                                f"Event {event_id} has invalid datetime format: start={start_str}, end={end_str}, error={parse_error}"
+                            )
                             skipped += 1
                             skipped_reasons["invalid_time"] += 1
                             continue
@@ -486,20 +521,23 @@ class GoogleCalendarConnector(BaseConnector):
                             start_time_utc = start_time_utc.replace(tzinfo=timezone.utc)
                         else:
                             start_time_utc = start_time_utc.astimezone(timezone.utc)
-                        
+
                         if end_time_utc.tzinfo is None:
                             end_time_utc = end_time_utc.replace(tzinfo=timezone.utc)
                         else:
                             end_time_utc = end_time_utc.astimezone(timezone.utc)
 
                         if end_time_utc <= start_time_utc:
-                            logger.warning(f"Event {event_id} has invalid time range: start={start_time_utc}, end={end_time_utc}")
+                            logger.warning(
+                                f"Event {event_id} has invalid time range: start={start_time_utc}, end={end_time_utc}"
+                            )
                             skipped += 1
                             skipped_reasons["invalid_time"] += 1
                             continue
 
                         # Convert UTC to local naive datetime (CalendarEvent stores local naive datetimes)
                         from app.utils.timezone import utc_to_local
+
                         start_time_local = utc_to_local(start_time_utc).replace(tzinfo=None)
                         end_time_local = utc_to_local(end_time_utc).replace(tzinfo=None)
 
@@ -544,21 +582,23 @@ class GoogleCalendarConnector(BaseConnector):
                         # Note: We don't create IntegrationExternalEventLink for CalendarEvent since it requires time_entry_id
                         # We track imports by checking for the [Google Calendar: event_id] marker in the description field
                         imported += 1
-                        logger.info(f"Imported event {event_id} ({event_summary}) as CalendarEvent {calendar_event.id} (start: {start_time_local}, end: {end_time_local})")
+                        logger.info(
+                            f"Imported event {event_id} ({event_summary}) as CalendarEvent {calendar_event.id} (start: {start_time_local}, end: {end_time_local})"
+                        )
                     except Exception as e:
                         error_msg = f"Error syncing calendar event {event.get('id', 'unknown')}: {str(e)}"
                         errors.append(error_msg)
                         logger.warning(f"{error_msg}", exc_info=True)
                         skipped += 1
                         skipped_reasons["other"] += 1
-                
+
                 # Log detailed summary
                 logger.info(
                     f"Calendar→TimeTracker sync completed: "
                     f"total_events={len(events)}, imported={imported}, skipped={skipped} "
                     f"(reasons: {dict(skipped_reasons)})"
                 )
-                
+
                 if imported == 0 and len(events) > 0:
                     logger.warning(
                         f"No events were imported despite {len(events)} events found. "
@@ -574,7 +614,9 @@ class GoogleCalendarConnector(BaseConnector):
             # Commit all changes in a single transaction (time entries, links, integration status)
             try:
                 db.session.commit()
-                logger.info(f"Committed sync results: TimeTracker→Calendar={time_tracker_to_calendar_count}, Calendar→TimeTracker imported={imported}")
+                logger.info(
+                    f"Committed sync results: TimeTracker→Calendar={time_tracker_to_calendar_count}, Calendar→TimeTracker imported={imported}"
+                )
             except Exception as commit_error:
                 db.session.rollback()
                 logger.error(f"Failed to commit sync results: {commit_error}", exc_info=True)
@@ -596,7 +638,7 @@ class GoogleCalendarConnector(BaseConnector):
                 if skipped > 0:
                     skipped_summary = ", ".join([f"{k}={v}" for k, v in skipped_reasons.items() if v > 0])
                     message_parts.append(f"({skipped} skipped: {skipped_summary})")
-            
+
             total_synced = time_tracker_to_calendar_count + imported
             message = " | ".join(message_parts) if message_parts else f"Synced {total_synced} items"
 
@@ -645,6 +687,7 @@ class GoogleCalendarConnector(BaseConnector):
 
         # Convert local naive datetimes to UTC for Google Calendar API
         from app.utils.timezone import local_to_utc
+
         start_time_utc = local_to_utc(time_entry.start_time)
         end_time_utc = local_to_utc(time_entry.end_time)
 
@@ -699,6 +742,7 @@ class GoogleCalendarConnector(BaseConnector):
 
         # Convert local naive datetimes to UTC for Google Calendar API
         from app.utils.timezone import local_to_utc
+
         start_time_utc = local_to_utc(time_entry.start_time)
         end_time_utc = local_to_utc(time_entry.end_time)
 
@@ -720,31 +764,36 @@ class GoogleCalendarConnector(BaseConnector):
     def _create_calendar_event_from_event(self, service, calendar_id: str, calendar_event) -> str:
         """Create a Google Calendar event from a CalendarEvent object."""
         import re
-        
+
         # Use calendar event title
         title = calendar_event.title or "Calendar Event"
-        
+
         # Build description - remove import markers if present
         description_parts = []
         description_parts.append(f"TimeTracker: Created from calendar event [CalendarEvent: {calendar_event.id}]")
-        
+
         if calendar_event.description:
             # Remove the [Google Calendar: event_id] marker if present (it's only for tracking imports)
             desc = calendar_event.description
-            desc = re.sub(r'\[Google Calendar: [^\]]+\]\s*\n?\n?', '', desc).strip()
+            desc = re.sub(r"\[Google Calendar: [^\]]+\]\s*\n?\n?", "", desc).strip()
             if desc:
                 description_parts.append(desc)
-        
+
         if calendar_event.location:
             description_parts.append(f"Location: {calendar_event.location}")
-        
+
         if calendar_event.event_type:
             description_parts.append(f"Type: {calendar_event.event_type}")
-        
-        description = "\n\n".join(description_parts) if description_parts else f"TimeTracker: Created from calendar event [CalendarEvent: {calendar_event.id}]"
+
+        description = (
+            "\n\n".join(description_parts)
+            if description_parts
+            else f"TimeTracker: Created from calendar event [CalendarEvent: {calendar_event.id}]"
+        )
 
         # Convert local naive datetimes to UTC for Google Calendar API
         from app.utils.timezone import local_to_utc
+
         start_time_utc = local_to_utc(calendar_event.start_time)
         end_time_utc = local_to_utc(calendar_event.end_time)
 
@@ -768,34 +817,39 @@ class GoogleCalendarConnector(BaseConnector):
     def _update_calendar_event_from_event(self, service, calendar_id: str, event_id: str, calendar_event):
         """Update an existing Google Calendar event from a CalendarEvent object."""
         import re
-        
+
         # Use calendar event title
         title = calendar_event.title or "Calendar Event"
-        
+
         # Build description - remove import markers if present
         description_parts = []
         description_parts.append(f"TimeTracker: Created from calendar event [CalendarEvent: {calendar_event.id}]")
-        
+
         if calendar_event.description:
             # Remove the [Google Calendar: event_id] marker if present (it's only for tracking imports)
             desc = calendar_event.description
-            desc = re.sub(r'\[Google Calendar: [^\]]+\]\s*\n?\n?', '', desc).strip()
+            desc = re.sub(r"\[Google Calendar: [^\]]+\]\s*\n?\n?", "", desc).strip()
             if desc:
                 description_parts.append(desc)
-        
+
         if calendar_event.location:
             description_parts.append(f"Location: {calendar_event.location}")
-        
+
         if calendar_event.event_type:
             description_parts.append(f"Type: {calendar_event.event_type}")
-        
-        description = "\n\n".join(description_parts) if description_parts else f"TimeTracker: Created from calendar event [CalendarEvent: {calendar_event.id}]"
+
+        description = (
+            "\n\n".join(description_parts)
+            if description_parts
+            else f"TimeTracker: Created from calendar event [CalendarEvent: {calendar_event.id}]"
+        )
 
         # Get existing event
         event = service.events().get(calendarId=calendar_id, eventId=event_id).execute()
 
         # Convert local naive datetimes to UTC for Google Calendar API
         from app.utils.timezone import local_to_utc
+
         start_time_utc = local_to_utc(calendar_event.start_time)
         end_time_utc = local_to_utc(calendar_event.end_time)
 
@@ -907,7 +961,14 @@ class GoogleCalendarConnector(BaseConnector):
                 {
                     "title": "Sync Settings",
                     "description": "Configure what and how to sync",
-                    "fields": ["sync_direction", "sync_items", "auto_sync", "sync_interval", "sync_past_days", "sync_future_days"],
+                    "fields": [
+                        "sync_direction",
+                        "sync_items",
+                        "auto_sync",
+                        "sync_interval",
+                        "sync_past_days",
+                        "sync_future_days",
+                    ],
                 },
                 {
                     "title": "Display Settings",

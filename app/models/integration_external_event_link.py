@@ -21,7 +21,9 @@ class IntegrationExternalEventLink(db.Model):
     integration_id = db.Column(
         db.Integer, db.ForeignKey("integrations.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    time_entry_id = db.Column(db.Integer, db.ForeignKey("time_entries.id", ondelete="CASCADE"), nullable=False, index=True)
+    time_entry_id = db.Column(
+        db.Integer, db.ForeignKey("time_entries.id", ondelete="CASCADE"), nullable=False, index=True
+    )
 
     # External identifiers
     external_uid = db.Column(db.String(255), nullable=False, index=True)
@@ -29,10 +31,10 @@ class IntegrationExternalEventLink(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-    integration = db.relationship("Integration", backref=db.backref("external_event_links", cascade="all, delete-orphan"))
+    integration = db.relationship(
+        "Integration", backref=db.backref("external_event_links", cascade="all, delete-orphan")
+    )
     time_entry = db.relationship("TimeEntry", backref=db.backref("external_event_links", cascade="all, delete-orphan"))
 
     def __repr__(self):
         return f"<IntegrationExternalEventLink integration_id={self.integration_id} uid={self.external_uid}>"
-
-

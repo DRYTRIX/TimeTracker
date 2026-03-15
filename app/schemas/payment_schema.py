@@ -2,9 +2,10 @@
 Schemas for payment serialization and validation.
 """
 
-from marshmallow import Schema, fields, validate
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
+
+from marshmallow import Schema, fields, validate
 
 
 class PaymentSchema(Schema):

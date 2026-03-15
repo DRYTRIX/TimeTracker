@@ -1,7 +1,8 @@
+import json
 from datetime import datetime
+
 from app import db
 from app.utils.timezone import now_in_app_timezone
-import json
 
 
 class AuditLog(db.Model):
@@ -122,7 +123,7 @@ class AuditLog(db.Model):
         # Encode values as JSON if they're not already strings
         old_val_str = cls._encode_value(old_value)
         new_val_str = cls._encode_value(new_value)
-        
+
         # entity_metadata is stored as JSON type, so pass dict/list directly (not encoded)
         # full_old_state and full_new_state are Text columns, so encode as JSON strings
         full_old_str = cls._encode_value(full_old_state) if full_old_state else None
@@ -166,8 +167,15 @@ class AuditLog(db.Model):
             logger = logging.getLogger(__name__)
             # Check if it's a table doesn't exist error
             error_str = str(e).lower()
-            if "does not exist" in error_str or "no such table" in error_str or "relation" in error_str and "does not exist" in error_str:
-                logger.warning(f"audit_logs table does not exist - run migration 044_add_audit_logs_table.py. Error: {e}")
+            if (
+                "does not exist" in error_str
+                or "no such table" in error_str
+                or "relation" in error_str
+                and "does not exist" in error_str
+            ):
+                logger.warning(
+                    f"audit_logs table does not exist - run migration 044_add_audit_logs_table.py. Error: {e}"
+                )
             else:
                 logger.warning(f"Failed to log audit change (non-critical): {e}")
 

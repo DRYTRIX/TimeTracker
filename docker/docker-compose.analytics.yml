@@ -103,16 +103,16 @@ volumes:
 # Usage:
 # 
 # 1. Base setup with analytics enabled (Sentry, PostHog):
-#    docker-compose -f docker-compose.yml -f docker-compose.analytics.yml up -d
+#    docker-compose -f docker-compose.yml -f docker/docker-compose.analytics.yml up -d
 #
 # 2. With self-hosted monitoring (Prometheus + Grafana):
-#    docker-compose -f docker-compose.yml -f docker-compose.analytics.yml --profile monitoring up -d
+#    docker-compose -f docker-compose.yml -f docker/docker-compose.analytics.yml --profile monitoring up -d
 #
 # 3. With log aggregation (Loki + Promtail):
-#    docker-compose -f docker-compose.yml -f docker-compose.analytics.yml --profile logging up -d
+#    docker-compose -f docker-compose.yml -f docker/docker-compose.analytics.yml --profile logging up -d
 #
 # 4. With everything (monitoring + logging):
-#    docker-compose -f docker-compose.yml -f docker-compose.analytics.yml --profile monitoring --profile logging up -d
+#    docker-compose -f docker-compose.yml -f docker/docker-compose.analytics.yml --profile monitoring --profile logging up -d
 #
 # Configuration:
 # - Copy env.example to .env and configure analytics variables

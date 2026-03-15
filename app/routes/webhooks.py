@@ -1,14 +1,15 @@
 """Routes for webhook management"""
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_babel import gettext as _
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
+from sqlalchemy.exc import IntegrityError
+
 from app import db
 from app.models import Webhook, WebhookDelivery
-from app.utils.permissions import admin_or_permission_required
 from app.utils.db import safe_commit
+from app.utils.permissions import admin_or_permission_required
 from app.utils.webhook_service import WebhookService
-from sqlalchemy.exc import IntegrityError
 
 webhooks_bp = Blueprint("webhooks", __name__)
 

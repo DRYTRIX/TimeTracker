@@ -3,11 +3,13 @@ Microsoft Teams integration connector.
 Send notifications and sync with Microsoft Teams.
 """
 
-from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta
-from app.integrations.base import BaseConnector
-import requests
 import os
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+import requests
+
+from app.integrations.base import BaseConnector
 
 
 class MicrosoftTeamsConnector(BaseConnector):
@@ -115,6 +117,7 @@ class MicrosoftTeamsConnector(BaseConnector):
             except Exception as e:
                 # Log error but don't fail - user info is optional
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.debug(f"Could not fetch Microsoft Teams user info: {e}")
 
@@ -351,7 +354,13 @@ class MicrosoftTeamsConnector(BaseConnector):
                 {
                     "title": "Notification Settings",
                     "description": "Configure when to send Teams notifications",
-                    "fields": ["notify_on_time_entry_start", "notify_on_time_entry_complete", "notify_on_task_complete", "notify_on_invoice_sent", "notify_on_project_create"],
+                    "fields": [
+                        "notify_on_time_entry_start",
+                        "notify_on_time_entry_complete",
+                        "notify_on_task_complete",
+                        "notify_on_invoice_sent",
+                        "notify_on_project_create",
+                    ],
                 },
             ],
             "sync_settings": {

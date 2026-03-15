@@ -4,24 +4,16 @@ Produces a clean, readable PDF with a report header, date-grouped table,
 summary totals, and page numbers.
 """
 
-from io import BytesIO
-from datetime import datetime
 from collections import OrderedDict
+from datetime import datetime
+from io import BytesIO
 
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, landscape
-from reportlab.lib.units import cm
-from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_LEFT
-from reportlab.platypus import (
-    SimpleDocTemplate,
-    Table,
-    TableStyle,
-    Spacer,
-    Paragraph,
-    KeepTogether,
-)
-
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 # ---------------------------------------------------------------------------
 # Color palette
@@ -59,14 +51,14 @@ USABLE_WIDTH_CM = 27.7
 
 # Column widths (8 columns)  –  must sum to ~USABLE_WIDTH_CM
 COL_WIDTHS_CM = [
-    2.6,   # User
-    3.0,   # Client
-    3.4,   # Project
-    2.8,   # Task
-    3.2,   # Time (start – end)
-    1.6,   # Duration
-    9.5,   # Notes
-    1.6,   # Billable
+    2.6,  # User
+    3.0,  # Client
+    3.4,  # Project
+    2.8,  # Task
+    3.2,  # Time (start – end)
+    1.6,  # Duration
+    9.5,  # Notes
+    1.6,  # Billable
 ]
 COL_WIDTHS = [w * cm for w in COL_WIDTHS_CM]
 NUM_COLS = len(COL_WIDTHS)
@@ -87,6 +79,7 @@ NOTES_STYLE = ParagraphStyle(
 # Helper functions
 # ---------------------------------------------------------------------------
 
+
 def _fmt_time(dt):
     """Format datetime using the current user's time format preference."""
     if dt is None:
@@ -94,6 +87,7 @@ def _fmt_time(dt):
     if isinstance(dt, datetime):
         try:
             from app.utils.timezone import get_user_time_format
+
             return dt.strftime(get_user_time_format())
         except Exception:
             return dt.strftime("%H:%M")
@@ -106,6 +100,7 @@ def _fmt_date_group(dt):
         return "Unknown date"
     try:
         from app.utils.timezone import get_user_date_format
+
         date_fmt = get_user_date_format()
         return dt.strftime(f"%A, {date_fmt}")
     except Exception:
@@ -149,6 +144,7 @@ def _make_notes_paragraph(text):
 # Page callback for page numbers
 # ---------------------------------------------------------------------------
 
+
 def _page_footer(canvas, doc):
     """Draw page number at bottom-right of every page."""
     canvas.saveState()
@@ -168,6 +164,7 @@ def _page_footer(canvas, doc):
 # Report header builder
 # ---------------------------------------------------------------------------
 
+
 def _build_report_header(start_date=None, end_date=None, filters=None):
     """Build the story elements for the report header section."""
     elements = []
@@ -185,13 +182,17 @@ def _build_report_header(start_date=None, end_date=None, filters=None):
 
     # Accent line (drawn via a thin colored table)
     accent = Table([[""]], colWidths=[USABLE_WIDTH_CM * cm], rowHeights=[2])
-    accent.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), BRAND_COLOR),
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-    ]))
+    accent.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), BRAND_COLOR),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
     elements.append(accent)
     elements.append(Spacer(1, 8))
 
@@ -216,6 +217,7 @@ def _build_report_header(start_date=None, end_date=None, filters=None):
 
     try:
         from app.utils.timezone import get_user_datetime_format
+
         gen_fmt = get_user_datetime_format()
     except Exception:
         gen_fmt = "%Y-%m-%d %H:%M"
@@ -233,13 +235,17 @@ def _build_report_header(start_date=None, end_date=None, filters=None):
         [[meta_left, meta_right]],
         colWidths=[USABLE_WIDTH_CM * 0.6 * cm, USABLE_WIDTH_CM * 0.4 * cm],
     )
-    meta_table.setStyle(TableStyle([
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-    ]))
+    meta_table.setStyle(
+        TableStyle(
+            [
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ]
+        )
+    )
     elements.append(meta_table)
 
     # Filter summary
@@ -266,6 +272,7 @@ def _build_report_header(start_date=None, end_date=None, filters=None):
 # ---------------------------------------------------------------------------
 # Main PDF builder
 # ---------------------------------------------------------------------------
+
 
 def build_time_entries_pdf(entries, start_date=None, end_date=None, filters=None):
     """
@@ -379,21 +386,18 @@ def build_time_entries_pdf(entries, start_date=None, end_date=None, filters=None
                 ("TOPPADDING", (0, 0), (-1, 0), HEADER_PAD_V),
                 ("BOTTOMPADDING", (0, 0), (-1, 0), HEADER_PAD_V),
                 ("LINEBELOW", (0, 0), (-1, 0), 1.5, GRID_HEADER),
-
                 # Global cell styles
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ("ALIGN", (0, 0), (-1, -1), "LEFT"),
                 ("ALIGN", (5, 1), (5, -1), "CENTER"),  # Duration centered
-                ("ALIGN", (7, 0), (7, -1), "CENTER"),   # Billable centered
+                ("ALIGN", (7, 0), (7, -1), "CENTER"),  # Billable centered
                 ("LEFTPADDING", (0, 0), (-1, -1), CELL_PAD_H),
                 ("RIGHTPADDING", (0, 0), (-1, -1), CELL_PAD_H),
                 ("TOPPADDING", (0, 1), (-1, -1), CELL_PAD_V),
                 ("BOTTOMPADDING", (0, 1), (-1, -1), CELL_PAD_V),
-
                 # Body font size
                 ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
                 ("FONTSIZE", (0, 1), (-1, -1), FONT_SIZE),
-
                 # Grid
                 ("LINEBELOW", (0, 0), (-1, -2), 0.5, GRID_LIGHT),
                 ("BOX", (0, 0), (-1, -1), 0.75, GRID_HEADER),
@@ -428,6 +432,7 @@ def build_time_entries_pdf(entries, start_date=None, end_date=None, filters=None
 # Helpers for grouping and summary
 # ---------------------------------------------------------------------------
 
+
 def _group_entries_by_date(entries):
     """Group entries by their start date, preserving order."""
     grouped = OrderedDict()
@@ -458,28 +463,34 @@ def _build_summary_totals(entry_count, total_seconds, billable_seconds):
     )
 
     # Build a single-row summary table spanning full width
-    summary_data = [[
-        Paragraph(f"Total: {entry_count} entries", summary_style),
-        Paragraph(f"Total Duration: {total_dur}", summary_style),
-        Paragraph(f"Billable: {billable_dur}", summary_style),
-    ]]
+    summary_data = [
+        [
+            Paragraph(f"Total: {entry_count} entries", summary_style),
+            Paragraph(f"Total Duration: {total_dur}", summary_style),
+            Paragraph(f"Billable: {billable_dur}", summary_style),
+        ]
+    ]
 
     third = USABLE_WIDTH_CM / 3.0
     summary_table = Table(
         summary_data,
         colWidths=[third * cm, third * cm, third * cm],
     )
-    summary_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), TOTALS_BG),
-        ("TEXTCOLOR", (0, 0), (-1, -1), TOTALS_FG),
-        ("ALIGN", (0, 0), (0, 0), "LEFT"),
-        ("ALIGN", (1, 0), (1, 0), "CENTER"),
-        ("ALIGN", (2, 0), (2, 0), "RIGHT"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 10),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-        ("TOPPADDING", (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-        ("ROUNDEDCORNERS", [4, 4, 4, 4]),
-    ]))
+    summary_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), TOTALS_BG),
+                ("TEXTCOLOR", (0, 0), (-1, -1), TOTALS_FG),
+                ("ALIGN", (0, 0), (0, 0), "LEFT"),
+                ("ALIGN", (1, 0), (1, 0), "CENTER"),
+                ("ALIGN", (2, 0), (2, 0), "RIGHT"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                ("ROUNDEDCORNERS", [4, 4, 4, 4]),
+            ]
+        )
+    )
     elements.append(summary_table)
     return elements

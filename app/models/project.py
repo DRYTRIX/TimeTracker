@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+
 from app import db
 
 
@@ -359,12 +360,14 @@ class Project(db.Model):
                 if field_value:
                     rendered_url = template.render_url(field_value)
                     if rendered_url:
-                        links.append({
-                            "name": template.name,
-                            "url": rendered_url,
-                            "icon": template.icon,
-                            "description": template.description
-                        })
+                        links.append(
+                            {
+                                "name": template.name,
+                                "url": rendered_url,
+                                "icon": template.icon,
+                                "description": template.description,
+                            }
+                        )
 
         return links
 

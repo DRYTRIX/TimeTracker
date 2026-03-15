@@ -30,6 +30,7 @@ ENV APP_VERSION=${APP_VERSION}
 ENV TZ=Europe/Rome
 # Support visibility: if donate_hide_public.pem is in project root it is copied to /app; set path so app finds it (override in compose if needed)
 ENV DONATE_HIDE_PUBLIC_KEY_FILE=/app/donate_hide_public.pem
+LABEL org.opencontainers.image.description="Self-hosted time tracking web application for projects, clients, and reports."
 
 # Install all system dependencies in a single layer
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \

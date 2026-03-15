@@ -2,16 +2,16 @@
 Service for invoice business logic.
 """
 
-from typing import Optional, Dict, Any, List
 from datetime import date
 from decimal import Decimal
+from typing import Any, Dict, List, Optional
+
 from app import db
-from app.repositories import InvoiceRepository, ProjectRepository
+from app.constants import InvoiceStatus, PaymentStatus, WebhookEvent
 from app.models import Invoice, InvoiceItem, TimeEntry
-from app.constants import InvoiceStatus, PaymentStatus
+from app.repositories import InvoiceRepository, ProjectRepository
 from app.utils.db import safe_commit
 from app.utils.event_bus import emit_event
-from app.constants import WebhookEvent
 
 
 class InvoiceService:
@@ -91,7 +91,7 @@ class InvoiceService:
                 hours = Decimal(str(entry.duration_seconds / 3600))
                 if hours <= 0:
                     continue
-                    
+
                 # Group by task if available, otherwise by project
                 if entry.task_id:
                     key = f"task_{entry.task_id}"
@@ -99,24 +99,24 @@ class InvoiceService:
                 else:
                     key = f"project_{entry.project_id}"
                     description = f"Project: {project.name}"
-                
+
                 if key not in grouped_entries:
                     grouped_entries[key] = {
                         "description": description,
                         "entries": [],
                         "total_hours": Decimal("0"),
                     }
-                
+
                 grouped_entries[key]["entries"].append(entry)
                 grouped_entries[key]["total_hours"] += hours
-        
+
         # Create invoice items from grouped entries
         for group in grouped_entries.values():
             rate = project.hourly_rate or Decimal("0.00")
-            
+
             # Store all time entry IDs as comma-separated string
             time_entry_ids = ",".join(str(entry.id) for entry in group["entries"])
-            
+
             item = InvoiceItem(
                 invoice_id=invoice.id,
                 description=group["description"],
@@ -210,10 +210,12 @@ class InvoiceService:
         if client_id:
             try:
                 from app.services.client_notification_service import ClientNotificationService
+
                 notification_service = ClientNotificationService()
                 notification_service.notify_invoice_created(invoice.id, client_id)
             except Exception as e:
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send client notification for invoice {invoice.id}: {e}", exc_info=True)
 
@@ -272,35 +274,35 @@ class InvoiceService:
     def mark_time_entries_as_paid(self, invoice: Invoice) -> int:
         """
         Mark all time entries associated with an invoice as paid.
-        
+
         Args:
             invoice: The Invoice object
-            
+
         Returns:
             Number of time entries marked as paid
         """
         time_entry_ids = set()
-        
+
         # Collect all time entry IDs from invoice items
         for item in invoice.items:
             if item.time_entry_ids:
                 # Parse comma-separated IDs
                 ids = [int(id_str.strip()) for id_str in item.time_entry_ids.split(",") if id_str.strip().isdigit()]
                 time_entry_ids.update(ids)
-        
+
         if not time_entry_ids:
             return 0
-        
+
         # Mark all time entries as paid
         entries = TimeEntry.query.filter(TimeEntry.id.in_(time_entry_ids)).all()
         marked_count = 0
-        
+
         for entry in entries:
             if not entry.paid:
                 entry.paid = True
                 entry.invoice_number = invoice.invoice_number
                 marked_count += 1
-        
+
         return marked_count
 
     def update_invoice(self, invoice_id: int, user_id: int, **kwargs) -> Dict[str, Any]:
@@ -397,8 +399,9 @@ class InvoiceService:
         Returns:
             dict with 'invoices', 'summary' keys
         """
-        from sqlalchemy.orm import joinedload
         from datetime import date
+
+        from sqlalchemy.orm import joinedload
 
         query = self.invoice_repo.query()
 
@@ -487,7 +490,7 @@ class InvoiceService:
             dict with time_entries, grouped_time_entries, project_costs, expenses, extra_goods,
             total_available_* totals, prepaid_summary, prepaid_plan_hours, currency.
         """
-        from app.models import ProjectCost, Expense, ExtraGood, Settings
+        from app.models import Expense, ExtraGood, ProjectCost, Settings
 
         time_entries = (
             TimeEntry.query.filter(
@@ -550,13 +553,15 @@ class InvoiceService:
             summaries = allocator.build_summary(unbilled_entries)
             for summary in summaries:
                 allocation_month = summary.allocation_month
-                prepaid_summary.append({
-                    "allocation_month": allocation_month,
-                    "allocation_month_label": allocation_month.strftime("%Y-%m-%d") if allocation_month else "",
-                    "plan_hours": float(summary.plan_hours),
-                    "consumed_hours": float(summary.consumed_hours),
-                    "remaining_hours": float(summary.remaining_hours),
-                })
+                prepaid_summary.append(
+                    {
+                        "allocation_month": allocation_month,
+                        "allocation_month_label": allocation_month.strftime("%Y-%m-%d") if allocation_month else "",
+                        "plan_hours": float(summary.plan_hours),
+                        "consumed_hours": float(summary.consumed_hours),
+                        "remaining_hours": float(summary.remaining_hours),
+                    }
+                )
             prepaid_plan_hours = float(getattr(invoice.client, "prepaid_hours_decimal", 0) or 0)
 
         settings = Settings.get_settings()

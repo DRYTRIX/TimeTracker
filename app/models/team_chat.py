@@ -3,8 +3,10 @@ Team Chat models for real-time messaging
 """
 
 from datetime import datetime
-from app import db
+
 from sqlalchemy import Index
+
+from app import db
 
 
 class ChatChannel(db.Model):

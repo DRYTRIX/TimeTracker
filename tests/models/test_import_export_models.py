@@ -13,29 +13,22 @@ from app.models import User, DataImport, DataExport
 
 @pytest.fixture
 def app():
-    """Create application for testing"""
+    """Create application for testing (minimal config to avoid circular imports)."""
     app = create_app(
         {
             "TESTING": True,
             "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
             "WTF_CSRF_ENABLED": False,
-            # Ensure fail-fast production checks are bypassed for tests
             "FLASK_ENV": "testing",
-            # Provide a sufficiently strong secret for any residual checks
             "SECRET_KEY": "test-secret-key-do-not-use-in-production-1234567890",
         }
     )
-
     with app.app_context():
         db.create_all()
-
-        # Create test user
         user = User(username="testuser", role="user")
         db.session.add(user)
         db.session.commit()
-
         yield app
-
         db.session.remove()
         db.drop_all()
 
@@ -65,7 +58,6 @@ class TestDataImportModel:
         """Test import record lifecycle"""
         with app.app_context():
             user = User.query.filter_by(username="testuser").first()
-
             # Create import
             data_import = DataImport(user_id=user.id, import_type="toggl", source_file="Toggl Workspace 12345")
             db.session.add(data_import)
@@ -90,7 +82,6 @@ class TestDataImportModel:
         """Test import completion"""
         with app.app_context():
             user = User.query.filter_by(username="testuser").first()
-
             data_import = DataImport(user_id=user.id, import_type="harvest")
             db.session.add(data_import)
             db.session.commit()
@@ -106,7 +97,6 @@ class TestDataImportModel:
         """Test import failure"""
         with app.app_context():
             user = User.query.filter_by(username="testuser").first()
-
             data_import = DataImport(user_id=user.id, import_type="csv")
             db.session.add(data_import)
             db.session.commit()
@@ -122,7 +112,6 @@ class TestDataImportModel:
         """Test adding errors to import"""
         with app.app_context():
             user = User.query.filter_by(username="testuser").first()
-
             data_import = DataImport(user_id=user.id, import_type="csv")
             db.session.add(data_import)
             db.session.commit()
@@ -140,7 +129,6 @@ class TestDataImportModel:
         """Test setting import summary"""
         with app.app_context():
             user = User.query.filter_by(username="testuser").first()
-
             data_import = DataImport(user_id=user.id, import_type="csv")
             db.session.add(data_import)
             db.session.commit()
@@ -158,7 +146,6 @@ class TestDataImportModel:
         """Test converting import to dictionary"""
         with app.app_context():
             user = User.query.filter_by(username="testuser").first()
-
             data_import = DataImport(user_id=user.id, import_type="csv", source_file="test.csv")
             db.session.add(data_import)
             db.session.commit()
@@ -182,7 +169,6 @@ class TestDataExportModel:
         """Test creating a data export record"""
         with app.app_context():
             user = User.query.filter_by(username="testuser").first()
-
             data_export = DataExport(user_id=user.id, export_type="gdpr", export_format="json")
             db.session.add(data_export)
             db.session.commit()
@@ -197,7 +183,6 @@ class TestDataExportModel:
         """Test export record lifecycle"""
         with app.app_context():
             user = User.query.filter_by(username="testuser").first()
-
             # Create export
             data_export = DataExport(user_id=user.id, export_type="filtered", export_format="csv")
             db.session.add(data_export)
@@ -220,7 +205,6 @@ class TestDataExportModel:
         """Test export failure"""
         with app.app_context():
             user = User.query.filter_by(username="testuser").first()
-
             data_export = DataExport(user_id=user.id, export_type="backup", export_format="json")
             db.session.add(data_export)
             db.session.commit()
@@ -236,7 +220,6 @@ class TestDataExportModel:
         """Test export with filters"""
         with app.app_context():
             user = User.query.filter_by(username="testuser").first()
-
             filters = {"start_date": "2024-01-01", "end_date": "2024-12-31", "project_id": 5, "billable_only": True}
 
             data_export = DataExport(user_id=user.id, export_type="filtered", export_format="json", filters=filters)
@@ -253,7 +236,6 @@ class TestDataExportModel:
         """Test export expiration"""
         with app.app_context():
             user = User.query.filter_by(username="testuser").first()
-
             data_export = DataExport(user_id=user.id, export_type="gdpr", export_format="json")
             db.session.add(data_export)
             db.session.commit()
@@ -275,7 +257,6 @@ class TestDataExportModel:
         """Test converting export to dictionary"""
         with app.app_context():
             user = User.query.filter_by(username="testuser").first()
-
             data_export = DataExport(user_id=user.id, export_type="gdpr", export_format="zip")
             db.session.add(data_export)
             db.session.commit()

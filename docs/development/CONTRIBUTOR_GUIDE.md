@@ -18,7 +18,7 @@ flowchart LR
   Models --> DB[(DB)]
 ```
 
-**More**: [ARCHITECTURE.md](../../ARCHITECTURE.md) · [Project Structure](PROJECT_STRUCTURE.md)
+**More**: [ARCHITECTURE.md](../ARCHITECTURE.md) · [Project Structure](PROJECT_STRUCTURE.md)
 
 ---
 
@@ -32,11 +32,11 @@ flowchart LR
 6. **Run**: `flask run` → http://127.0.0.1:5000.
 
 **Docker (no local Python)**:
-- **SQLite (quick test)**: `docker-compose -f docker-compose.local-test.yml up --build` → http://localhost:8080.
+- **SQLite (quick test)**: `docker-compose -f docker/docker-compose.local-test.yml up --build` → http://localhost:8080.
 - **Default (HTTPS)**: `docker-compose up -d` → https://localhost (self-signed cert).
 - **HTTP 8080**: `docker-compose -f docker-compose.example.yml up -d` → http://localhost:8080.
 
-**More**: [Local Testing with SQLite](LOCAL_TESTING_WITH_SQLITE.md) · [DEVELOPMENT.md](../../DEVELOPMENT.md)
+**More**: [Local Testing with SQLite](LOCAL_TESTING_WITH_SQLITE.md) · [DEVELOPMENT.md](../DEVELOPMENT.md)
 
 ---
 
@@ -71,7 +71,7 @@ Run the full test suite before opening a PR. Add tests for new behavior (e.g. in
 3. Follow existing patterns (see [Service Layer and Base CRUD](SERVICE_LAYER_AND_BASE_CRUD.md)); use `BaseCRUDService` only when the domain is simple CRUD with an existing repository.
 4. Call the service from routes; add tests in `tests/test_services/` or `tests/test_repositories/`.
 
-**More**: [SERVICE_LAYER_AND_BASE_CRUD.md](SERVICE_LAYER_AND_BASE_CRUD.md) · [ARCHITECTURE.md](../../ARCHITECTURE.md)
+**More**: [SERVICE_LAYER_AND_BASE_CRUD.md](SERVICE_LAYER_AND_BASE_CRUD.md) · [ARCHITECTURE.md](../ARCHITECTURE.md)
 
 ---
 
@@ -87,7 +87,7 @@ Run the full test suite before opening a PR. Add tests for new behavior (e.g. in
 ## Versioning
 
 - **Application version**: Defined **only** in `setup.py`. Do not duplicate it in README or other docs.
-- **Desktop / mobile**: Desktop and mobile builds may use their own version numbers; see [BUILD.md](../../BUILD.md) and repo scripts. Align with app version when releasing together.
+- **Desktop / mobile**: Desktop and mobile builds may use their own version numbers; see [BUILD.md](../build/BUILD.md) and repo scripts. Align with app version when releasing together.
 - **Releases and Docker images**: Tagging, GitHub releases, and image publishing are in [VERSION_MANAGEMENT.md](../admin/deployment/VERSION_MANAGEMENT.md) and [RELEASE_PROCESS.md](../admin/deployment/RELEASE_PROCESS.md).
 
 **For contributors**: When updating the app version, change only `setup.py`. Do not add the version number to README, FEATURES_COMPLETE, or PROJECT_STRUCTURE.

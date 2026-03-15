@@ -2,15 +2,17 @@
 Data import utilities for importing time tracking data from various sources
 """
 
-import json
 import csv
+import json
 import logging
-import requests
 from datetime import datetime, timedelta
 from io import StringIO
+
+import requests
 from flask import current_app
+
 from app import db
-from app.models import User, Project, TimeEntry, Task, Client, Expense, ExpenseCategory, Contact
+from app.models import Client, Contact, Expense, ExpenseCategory, Project, Task, TimeEntry, User
 from app.utils.db import safe_commit
 
 logger = logging.getLogger(__name__)
@@ -596,7 +598,7 @@ def import_csv_clients(user_id, csv_content, import_record, skip_duplicates=True
         Dictionary with import statistics
     """
     from decimal import Decimal, InvalidOperation
-    
+
     user = User.query.get(user_id)
     if not user:
         raise ImportError(f"User {user_id} not found")
@@ -629,24 +631,24 @@ def import_csv_clients(user_id, csv_content, import_record, skip_duplicates=True
             # Check for duplicates if skip_duplicates is True
             if skip_duplicates:
                 existing_client = None
-                
+
                 # Determine which fields to use for duplicate detection
                 if duplicate_detection_fields is not None:
                     # Use explicitly specified fields
                     detection_fields = duplicate_detection_fields
                 else:
                     # Default: check by name + all custom fields found in CSV
-                    detection_fields = ['name']
+                    detection_fields = ["name"]
                     # Add all custom fields found in CSV
                     for key in row.keys():
                         if key.startswith("custom_field_"):
                             field_name = key.replace("custom_field_", "")
                             if field_name not in detection_fields:
                                 detection_fields.append(field_name)
-                
+
                 # Check each specified field for duplicates
                 for field in detection_fields:
-                    if field == 'name':
+                    if field == "name":
                         # Check by client name
                         existing_client = Client.query.filter_by(name=client_name).first()
                         if existing_client:
@@ -664,7 +666,7 @@ def import_csv_clients(user_id, csv_content, import_record, skip_duplicates=True
                                     break
                             if existing_client:
                                 break
-                
+
                 if existing_client:
                     skipped += 1
                     errors.append(f"Row {idx + 1}: Client '{client_name}' already exists (skipped)")
@@ -673,7 +675,7 @@ def import_csv_clients(user_id, csv_content, import_record, skip_duplicates=True
             # Get or create client
             client = Client.query.filter_by(name=client_name).first()
             is_new = False
-            
+
             if not client:
                 client = Client(
                     name=client_name,
@@ -732,7 +734,7 @@ def import_csv_clients(user_id, csv_content, import_record, skip_duplicates=True
                     field_value = value.strip() if value else None
                     if field_value:
                         custom_fields[field_name] = field_value
-            
+
             if custom_fields:
                 if client.custom_fields:
                     client.custom_fields.update(custom_fields)
@@ -756,7 +758,7 @@ def import_csv_clients(user_id, csv_content, import_record, skip_duplicates=True
             for contact_num in sorted(contact_numbers):
                 first_name = row.get(f"contact_{contact_num}_first_name", "").strip()
                 last_name = row.get(f"contact_{contact_num}_last_name", "").strip()
-                
+
                 if not first_name and not last_name:
                     continue  # Skip if no name provided
 
@@ -770,9 +772,7 @@ def import_csv_clients(user_id, csv_content, import_record, skip_duplicates=True
 
                 # Check if contact already exists
                 existing_contact = Contact.query.filter_by(
-                    client_id=client.id,
-                    first_name=first_name,
-                    last_name=last_name
+                    client_id=client.id, first_name=first_name, last_name=last_name
                 ).first()
 
                 if existing_contact:
@@ -781,10 +781,7 @@ def import_csv_clients(user_id, csv_content, import_record, skip_duplicates=True
                 else:
                     # Create new contact
                     contact = Contact(
-                        client_id=client.id,
-                        first_name=first_name,
-                        last_name=last_name,
-                        created_by=user_id
+                        client_id=client.id, first_name=first_name, last_name=last_name, created_by=user_id
                     )
                     db.session.add(contact)
 
@@ -851,7 +848,7 @@ def import_csv_clients(user_id, csv_content, import_record, skip_duplicates=True
         "successful": successful,
         "failed": failed,
         "skipped": skipped,
-        "errors": errors[:10]  # First 10 errors
+        "errors": errors[:10],  # First 10 errors
     }
     import_record.set_summary(summary)
 
