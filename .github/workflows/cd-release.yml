@@ -365,6 +365,8 @@ jobs:
             type=semver,pattern={{major}},value=${{ needs.determine-version.outputs.version }}
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=stable,enable=${{ needs.determine-version.outputs.is_prerelease == 'false' }}
+          labels: |
+            org.opencontainers.image.description=Self-hosted time tracking web application for projects, clients, and reports.
 
       - name: Inject analytics configuration from GitHub Secrets
         env:
@@ -1017,15 +1019,15 @@ jobs:
         working-directory: mobile
         run: flutter pub get
       
+      - name: Generate iOS platform files
+        working-directory: mobile
+        run: flutter create --platforms=ios .
+      
       - name: Generate launcher icons
         working-directory: mobile
         run: |
           dart run flutter_launcher_icons
           dart run flutter_launcher_icons -f flutter_launcher_icons_ios.yaml
-      
-      - name: Generate iOS platform files
-        working-directory: mobile
-        run: flutter create --platforms=ios .
       
       - name: Configure iOS project for device build without code signing
         working-directory: mobile

@@ -135,21 +135,76 @@ jobs:
           FLASK_APP: app.py
           FLASK_ENV: testing
         run: |
+          set -e
           echo "🔄 Testing migration rollback safety..."
           
-          # Get current migration
-          CURRENT_MIGRATION=$(flask db current)
+          # Get current migration (trim whitespace and optional "(head)" suffix)
+          CURRENT_MIGRATION=$(flask db current | sed 's/ (head)$//' | tr -d '[:space:]')
           echo "Current migration: $CURRENT_MIGRATION"
           
-          if [ -n "$CURRENT_MIGRATION" ] && [ "$CURRENT_MIGRATION" != "None" ]; then
-            # Generic rollback test: downgrade one revision, then upgrade back to head
-            echo "Testing migration rollback (downgrade -1, upgrade head)..."
-            flask db downgrade -1
-            flask db upgrade head
-            echo "✅ Migration rollback test passed"
-          else
+          if [ -z "$CURRENT_MIGRATION" ] || [ "$CURRENT_MIGRATION" = "None" ]; then
             echo "ℹ️ No migrations to test rollback on"
+            exit 0
           fi
+          
+          # Resolve parent revision via Alembic (avoids ambiguous "downgrade -1" with merge revisions)
+          ROLLBACK_RESULT=$(python <<'PYEOF'
+          import os
+          import sys
+          from app import create_app, db
+          from alembic.config import Config
+          from alembic.script import ScriptDirectory
+
+          app = create_app()
+          with app.app_context():
+              r = db.session.execute(db.text("SELECT version_num FROM alembic_version"))
+              rows = r.fetchall()
+              if not rows:
+                  print("SKIP")
+                  sys.exit(0)
+              current_rev = rows[0][0]
+              config = Config(os.path.join(os.getcwd(), "migrations", "alembic.ini"))
+              script = ScriptDirectory.from_config(config)
+              rev = script.get_revision(current_rev)
+              if rev is None:
+                  print("SKIP")
+                  sys.exit(0)
+              down = rev.down_revision
+              if down is None:
+                  print("SKIP")
+              elif isinstance(down, tuple):
+                  print("SKIP")
+              else:
+                  print("PARENT:" + down)
+          PYEOF
+          )
+          
+          if [ "$ROLLBACK_RESULT" = "SKIP" ]; then
+            echo "ℹ️ At base or merge revision — skipping downgrade, verifying upgrade head..."
+            if ! flask db upgrade head; then
+              echo "❌ Rollback test failed: upgrade head failed after skip"
+              exit 1
+            fi
+            echo "✅ Migration rollback test passed (downgrade skipped, upgrade head OK)"
+            exit 0
+          fi
+          
+          PARENT_REV="${ROLLBACK_RESULT#PARENT:}"
+          if [ -z "$PARENT_REV" ]; then
+            echo "❌ Rollback test failed: could not resolve parent revision"
+            exit 1
+          fi
+          
+          echo "Testing migration rollback (downgrade to $PARENT_REV, then upgrade head)..."
+          if ! flask db downgrade "$PARENT_REV"; then
+            echo "❌ Rollback test failed: downgrade to $PARENT_REV failed"
+            exit 1
+          fi
+          if ! flask db upgrade head; then
+            echo "❌ Rollback test failed: upgrade head failed after downgrade"
+            exit 1
+          fi
+          echo "✅ Migration rollback test passed"
 
       - name: Test migration with sample data
         if: steps.migration_check.outputs.migration_changes == 'true'

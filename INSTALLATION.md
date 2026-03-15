@@ -57,7 +57,7 @@ To try TimeTracker without PostgreSQL:
 ```bash
 git clone https://github.com/drytrix/TimeTracker.git
 cd TimeTracker
-docker-compose -f docker-compose.local-test.yml up --build
+docker-compose -f docker/docker-compose.local-test.yml up --build
 ```
 
 Then open **http://localhost:8080**. No `.env` is required for this compose file. SQLite is for evaluation only; use PostgreSQL for production.

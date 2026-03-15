@@ -157,6 +157,8 @@ jobs:
             type=raw,value=develop
             type=raw,value=dev-{{date 'YYYYMMDD-HHmmss'}}
             type=sha,prefix=dev-,format=short
+          labels: |
+            org.opencontainers.image.description=Self-hosted time tracking web application for projects, clients, and reports.
       
       - name: Determine version
         id: version
