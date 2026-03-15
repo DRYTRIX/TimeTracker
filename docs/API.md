@@ -47,7 +47,7 @@ curl -H "X-API-Key: YOUR_API_TOKEN" \
 | **Search** | `/api/v1/search` | Global search across projects, tasks, clients |
 | **Time approvals** | `/api/v1/time-entry-approvals` | Approve, reject, request approval for time entries |
 
-Access is controlled by **scopes** (e.g. `read:projects`, `write:time_entries`). Create a token with the scopes you need; see [API Token Scopes](docs/api/API_TOKEN_SCOPES.md).
+Access is controlled by **scopes** (e.g. `read:projects`, `write:time_entries`). Create a token with the scopes you need; see [API Token Scopes](api/API_TOKEN_SCOPES.md).
 
 ## Quick Examples
 
@@ -71,7 +71,7 @@ Replace `your-domain.com` with your TimeTracker host and `YOUR_API_TOKEN` with y
 
 ## Full Documentation
 
-- **[REST API reference](docs/api/REST_API.md)** — All endpoints, request/response formats, pagination, errors
-- **[API Consistency Audit](docs/api/API_CONSISTENCY_AUDIT.md)** — Response contracts, error format, pagination
-- **[API Token Scopes](docs/api/API_TOKEN_SCOPES.md)** — Scopes and permissions
-- **[API Versioning](docs/api/API_VERSIONING.md)** — Versioning policy and usage
+- **[REST API reference](api/REST_API.md)** — All endpoints, request/response formats, pagination, errors
+- **[API Consistency Audit](api/API_CONSISTENCY_AUDIT.md)** — Response contracts, error format, pagination
+- **[API Token Scopes](api/API_TOKEN_SCOPES.md)** — Scopes and permissions
+- **[API Versioning](api/API_VERSIONING.md)** — Versioning policy and usage

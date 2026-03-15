@@ -32,7 +32,7 @@ scripts\start-local-test.bat
 ### Option 2: Manual Docker Compose
 
 ```bash
-docker-compose -f docker-compose.local-test.yml up --build
+docker-compose -f docker/docker-compose.local-test.yml up --build
 ```
 
 ## Configuration
@@ -63,7 +63,7 @@ export ADMIN_USERNAMES=admin,testuser
 export SECRET_KEY=your-local-test-secret-key
 
 # Start with custom settings
-docker-compose -f docker-compose.local-test.yml up --build
+docker-compose -f docker/docker-compose.local-test.yml up --build
 ```
 
 ## Data Persistence
@@ -76,10 +76,10 @@ docker-compose -f docker-compose.local-test.yml up --build
 
 ```bash
 # Stop containers
-docker-compose -f docker-compose.local-test.yml down
+docker-compose -f docker/docker-compose.local-test.yml down
 
 # Stop and remove volumes (WARNING: This will delete all data)
-docker-compose -f docker-compose.local-test.yml down -v
+docker-compose -f docker/docker-compose.local-test.yml down -v
 ```
 
 ## Accessing the Application
@@ -110,10 +110,10 @@ To start with a fresh database:
 
 ```bash
 # Stop and remove volumes
-docker-compose -f docker-compose.local-test.yml down -v
+docker-compose -f docker/docker-compose.local-test.yml down -v
 
 # Start again
-docker-compose -f docker-compose.local-test.yml up --build
+docker-compose -f docker/docker-compose.local-test.yml up --build
 ```
 
 ## Troubleshooting
@@ -132,7 +132,7 @@ docker-compose -f docker-compose.local-test.yml up --build
 
 3. **View container logs**:
    ```bash
-   docker-compose -f docker-compose.local-test.yml logs app
+   docker-compose -f docker/docker-compose.local-test.yml logs app
    ```
 
 ### Database Issues
@@ -144,8 +144,8 @@ docker-compose -f docker-compose.local-test.yml up --build
 
 2. **Reset database**:
    ```bash
-   docker-compose -f docker-compose.local-test.yml down -v
-   docker-compose -f docker-compose.local-test.yml up --build
+   docker-compose -f docker/docker-compose.local-test.yml down -v
+   docker-compose -f docker/docker-compose.local-test.yml up --build
    ```
 
 ### Permission Issues
@@ -154,7 +154,7 @@ The local test setup includes a custom entrypoint that automatically handles per
 
 ```bash
 # Check container logs for permission errors
-docker-compose -f docker-compose.local-test.yml logs app
+docker-compose -f docker/docker-compose.local-test.yml logs app
 
 # If needed, fix permissions manually
 docker exec timetracker-app-local-test chown -R timetracker:timetracker /data
@@ -164,7 +164,7 @@ docker exec timetracker-app-local-test chown -R timetracker:timetracker /data
 
 If you encounter issues with the entrypoint script (like `su-exec: not found`), you can use the simplified entrypoint:
 
-1. **Edit docker-compose.local-test.yml** and change the entrypoint line:
+1. **Edit docker/docker-compose.local-test.yml** and change the entrypoint line:
    ```yaml
    # Change this line:
    entrypoint: ["/app/docker/entrypoint-local-test.sh"]
@@ -175,8 +175,8 @@ If you encounter issues with the entrypoint script (like `su-exec: not found`), 
 
 2. **Restart the container**:
    ```bash
-   docker-compose -f docker-compose.local-test.yml down
-   docker-compose -f docker-compose.local-test.yml up --build
+   docker-compose -f docker/docker-compose.local-test.yml down
+   docker-compose -f docker/docker-compose.local-test.yml up --build
    ```
 
 The simplified entrypoint runs everything as root, which avoids user switching issues but is less secure (fine for local testing).

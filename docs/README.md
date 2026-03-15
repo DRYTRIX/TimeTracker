@@ -9,9 +9,9 @@ Welcome to the comprehensive TimeTracker documentation. Everything you need to i
 - **[🚀 Getting Started Guide](GETTING_STARTED.md)** — Complete beginner tutorial (⭐ Start here!)
 - **[Main README](../README.md)** — Product overview and quick start
 - **[Installation Guide](../INSTALLATION.md)** — Step-by-step installation (Docker, SQLite)
-- **[Architecture](../ARCHITECTURE.md)** — System overview and design
-- **[Development Guide](../DEVELOPMENT.md)** — Run locally, tests, releases
-- **[API Quick Reference](../API.md)** — REST API overview and examples
+- **[Architecture](ARCHITECTURE.md)** — System overview and design
+- **[Development Guide](DEVELOPMENT.md)** — Run locally, tests, releases
+- **[API Quick Reference](API.md)** — REST API overview and examples
 - **[Installation & Deployment](#-installation--deployment)** — Get TimeTracker running
 - **[Feature Guides](#-feature-documentation)** — Learn what TimeTracker can do
 - **[Troubleshooting](#-troubleshooting)** — Solve common issues
@@ -123,8 +123,8 @@ Use consistent terms in code, API, and user-facing copy: **time entry** / **time
 - **[Contributor Guide](development/CONTRIBUTOR_GUIDE.md)** — Architecture, local dev, testing, adding routes/services/templates, versioning
 - **[Contributing](../CONTRIBUTING.md)** — How to contribute (root; quick overview)
 - **[Contributing Guidelines (full)](development/CONTRIBUTING.md)** — Setup, standards, PR process
-- **[Development Guide](../DEVELOPMENT.md)** — Run locally, tests, releases (root)
-- **[Architecture](../ARCHITECTURE.md)** — System overview and design (root)
+- **[Development Guide](DEVELOPMENT.md)** — Run locally, tests, releases
+- **[Architecture](ARCHITECTURE.md)** — System overview and design
 - **[Code of Conduct](development/CODE_OF_CONDUCT.md)** — Community standards
 - **[Project Structure](development/PROJECT_STRUCTURE.md)** — Codebase organization and architecture
 
@@ -159,7 +159,7 @@ Use consistent terms in code, API, and user-facing copy: **time entry** / **time
 
 ## 📚 API Documentation
 
-- **[API Quick Reference](../API.md)** — Overview and quick examples (root)
+- **[API Quick Reference](API.md)** — Overview and quick examples
 - **[REST API](api/REST_API.md)** — Complete API reference with all endpoints (⭐ Full reference!)
 - **[API Token Scopes](api/API_TOKEN_SCOPES.md)** — Understanding token permissions and scopes
 - **[API Versioning](api/API_VERSIONING.md)** — API versioning strategy

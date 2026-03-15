@@ -62,7 +62,7 @@ Want to try it without setting up a database?
 
 ```bash
 # Start with SQLite (no database setup needed)
-docker-compose -f docker-compose.local-test.yml up --build
+docker-compose -f docker/docker-compose.local-test.yml up --build
 
 # Access at: http://localhost:8080
 ```

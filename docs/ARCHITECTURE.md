@@ -74,27 +74,27 @@ API endpoints are versioned under `/api/v1/`. Authentication is session-based fo
 - **Base URL:** `/api/v1/`
 - **Auth:** API token in header `Authorization: Bearer <token>` or `X-API-Key: <token>`. Tokens are created in Admin → Api-tokens and have scopes (e.g. `read:projects`, `write:time_entries`).
 - **Sub-blueprints (all under `/api/v1/`):** `api_v1` (info, health, auth/login), `api_v1_time_entries`, `api_v1_projects`, `api_v1_tasks`, `api_v1_clients`, `api_v1_invoices`, `api_v1_expenses`, `api_v1_payments`, `api_v1_mileage`, `api_v1_deals`, `api_v1_leads`, `api_v1_contacts`, plus remaining routes in `api_v1` (time-entry-approvals, per-diems, budget-alerts, calendar, kanban, saved-filters, etc.).
-- **Full reference:** [REST API](docs/api/REST_API.md).
+- **Full reference:** [REST API](api/REST_API.md).
 
 ## Backend vs Frontend
 
 - **Backend:** Flask (Python), Jinja2, SQLAlchemy, Flask-Migrate, Flask-Login, Authlib (OIDC), Flask-SocketIO, APScheduler. Configuration via environment variables (see `env.example`).
 - **Frontend:** Server-rendered HTML from Jinja2, styled with **Tailwind CSS**. JavaScript is used for interactivity (e.g. Chart.js, command palette, forms). The app can be used as a **PWA** (offline and installable). There is no separate SPA; the main UI is server-rendered with JS enhancements.
-- **UI layer:** The base layout is `app/templates/base.html` (sidebar, header, main content area). Styling uses **Tailwind** and design tokens in `app/static/src/input.css`. Reusable UI is built from **component macros** in `app/templates/components/ui.html` and `app/templates/components/cards.html` (page headers, stat cards, empty states, modals, buttons). Layout uses a max-width content container and consistent grid and spacing. See [UI Guidelines](docs/UI_GUIDELINES.md) and [Project Structure](docs/development/PROJECT_STRUCTURE.md) for templates and static assets.
+- **UI layer:** The base layout is `app/templates/base.html` (sidebar, header, main content area). Styling uses **Tailwind** and design tokens in `app/static/src/input.css`. Reusable UI is built from **component macros** in `app/templates/components/ui.html` and `app/templates/components/cards.html` (page headers, stat cards, empty states, modals, buttons). Layout uses a max-width content container and consistent grid and spacing. See [UI Guidelines](UI_GUIDELINES.md) and [Project Structure](development/PROJECT_STRUCTURE.md) for templates and static assets.
 - **Native clients:** The **desktop** (Electron) and **mobile** (Flutter) apps are separate codebases that consume the REST API.
 
 ## Design Decisions
 
-- **Service layer:** Business logic lives in `app/services/` so routes stay thin and logic is reusable and testable. See [Service Layer and Base CRUD](docs/development/SERVICE_LAYER_AND_BASE_CRUD.md) and the [Architecture Migration Guide](docs/implementation-notes/ARCHITECTURE_MIGRATION_GUIDE.md).
+- **Service layer:** Business logic lives in `app/services/` so routes stay thin and logic is reusable and testable. See [Service Layer and Base CRUD](development/SERVICE_LAYER_AND_BASE_CRUD.md) and the [Architecture Migration Guide](implementation-notes/ARCHITECTURE_MIGRATION_GUIDE.md).
 - **API v1 split:** Core resources (projects, tasks, clients, invoices, expenses, payments, mileage, deals, leads, contacts) are in separate sub-blueprints (`api_v1_*.py`) under `/api/v1/` for maintainability; the main `api_v1` module keeps info, health, auth, and remaining endpoints.
 - **Bootstrap:** Logging is configured in `app/utils/setup_logging.py`; legacy migration helpers (task management, issues tables) are in `app/utils/legacy_migrations.py`. `app/__init__.py` creates the app and wires extensions.
 - **Blueprint registry:** All blueprints are registered from `app/blueprint_registry.py` to keep registration in one place and simplify adding new modules.
-- **Database:** **PostgreSQL** is recommended for production; **SQLite** is supported for development and testing (e.g. `docker-compose.local-test.yml`).
+- **Database:** **PostgreSQL** is recommended for production; **SQLite** is supported for development and testing (e.g. `docker/docker-compose.local-test.yml`).
 - **API auth:** The REST API uses API tokens (created in Admin → Api-tokens) with scopes; no session cookies for API access.
 - **Single codebase for web UI:** No separate frontend repo; templates and static assets live in the main repo under `app/templates/` and `app/static/`.
 
 ## Further Reading
 
-- [Project Structure](docs/development/PROJECT_STRUCTURE.md) — Folder layout and file roles
-- [Architecture Migration Guide](docs/implementation-notes/ARCHITECTURE_MIGRATION_GUIDE.md) — Moving routes to the service layer
-- [REST API](docs/api/REST_API.md) — API reference and authentication
+- [Project Structure](development/PROJECT_STRUCTURE.md) — Folder layout and file roles
+- [Architecture Migration Guide](implementation-notes/ARCHITECTURE_MIGRATION_GUIDE.md) — Moving routes to the service layer
+- [REST API](api/REST_API.md) — API reference and authentication
