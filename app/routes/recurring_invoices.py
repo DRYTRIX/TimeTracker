@@ -18,24 +18,20 @@ logger = logging.getLogger(__name__)
 @module_enabled("recurring_invoices")
 def list_recurring_invoices():
     """List all recurring invoices"""
-    # Get filter parameters
-    is_active = request.args.get("is_active", "").strip()
+    from app.services.recurring_invoice_service import RecurringInvoiceService
 
-    # Build query
-    if current_user.is_admin:
-        query = RecurringInvoice.query
-    else:
-        query = RecurringInvoice.query.filter_by(created_by=current_user.id)
+    is_active_param = request.args.get("is_active", "").strip()
+    is_active = None
+    if is_active_param == "true":
+        is_active = True
+    elif is_active_param == "false":
+        is_active = False
 
-    # Apply active filter
-    if is_active == "true":
-        query = query.filter_by(is_active=True)
-    elif is_active == "false":
-        query = query.filter_by(is_active=False)
-
-    # Get recurring invoices
-    recurring_invoices = query.order_by(RecurringInvoice.next_run_date.asc()).all()
-
+    recurring_invoices = RecurringInvoiceService().list_recurring_invoices(
+        user_id=current_user.id,
+        is_admin=current_user.is_admin,
+        is_active=is_active,
+    )
     return render_template("recurring_invoices/list.html", recurring_invoices=recurring_invoices)
 
 

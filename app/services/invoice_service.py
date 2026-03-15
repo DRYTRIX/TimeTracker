@@ -477,3 +477,103 @@ class InvoiceService:
             Invoice with eagerly loaded relations, or None if not found
         """
         return self.invoice_repo.get_with_relations(invoice_id)
+
+    def get_unbilled_data_for_invoice(self, invoice: Invoice) -> Dict[str, Any]:
+        """
+        Get unbilled time entries, costs, expenses, and extra goods for an invoice's project,
+        plus grouped time entries and totals. Used by the generate-from-time view.
+
+        Returns:
+            dict with time_entries, grouped_time_entries, project_costs, expenses, extra_goods,
+            total_available_* totals, prepaid_summary, prepaid_plan_hours, currency.
+        """
+        from app.models import ProjectCost, Expense, ExtraGood, Settings
+
+        time_entries = (
+            TimeEntry.query.filter(
+                TimeEntry.project_id == invoice.project_id,
+                TimeEntry.end_time.isnot(None),
+                TimeEntry.billable == True,
+            )
+            .order_by(TimeEntry.start_time.asc())
+            .all()
+        )
+        unbilled_entries = []
+        for entry in time_entries:
+            already_billed = False
+            for other_invoice in invoice.project.invoices:
+                if other_invoice.id != invoice.id:
+                    for item in other_invoice.items:
+                        if item.time_entry_ids and str(entry.id) in item.time_entry_ids.split(","):
+                            already_billed = True
+                            break
+                if already_billed:
+                    break
+            if not already_billed:
+                unbilled_entries.append(entry)
+
+        unbilled_costs = ProjectCost.get_uninvoiced_costs(invoice.project_id)
+        unbilled_expenses = Expense.get_uninvoiced_expenses(project_id=invoice.project_id)
+        project_goods = (
+            ExtraGood.query.filter(
+                ExtraGood.project_id == invoice.project_id,
+                ExtraGood.invoice_id.is_(None),
+                ExtraGood.billable == True,
+            )
+            .order_by(ExtraGood.created_at.desc())
+            .all()
+        )
+
+        grouped_time_entries = []
+        current_date = None
+        current_bucket = None
+        for entry in unbilled_entries:
+            entry_date = entry.start_time.date() if entry.start_time else None
+            if entry_date != current_date:
+                current_date = entry_date
+                current_bucket = {"date": current_date, "entries": [], "total_hours": 0.0}
+                grouped_time_entries.append(current_bucket)
+            current_bucket["entries"].append(entry)
+            current_bucket["total_hours"] += float(entry.duration_hours or 0)
+
+        total_available_hours = sum(entry.duration_hours for entry in unbilled_entries)
+        total_available_costs = sum(float(c.amount) for c in unbilled_costs)
+        total_available_expenses = sum(float(e.total_amount) for e in unbilled_expenses)
+        total_available_goods = sum(float(g.total_amount) for g in project_goods)
+
+        prepaid_summary = []
+        prepaid_plan_hours = None
+        if invoice.client and getattr(invoice.client, "prepaid_plan_enabled", False):
+            from app.utils.prepaid_hours_allocator import PrepaidHoursAllocator
+
+            allocator = PrepaidHoursAllocator(client=invoice.client)
+            summaries = allocator.build_summary(unbilled_entries)
+            for summary in summaries:
+                allocation_month = summary.allocation_month
+                prepaid_summary.append({
+                    "allocation_month": allocation_month,
+                    "allocation_month_label": allocation_month.strftime("%Y-%m-%d") if allocation_month else "",
+                    "plan_hours": float(summary.plan_hours),
+                    "consumed_hours": float(summary.consumed_hours),
+                    "remaining_hours": float(summary.remaining_hours),
+                })
+            prepaid_plan_hours = float(getattr(invoice.client, "prepaid_hours_decimal", 0) or 0)
+
+        settings = Settings.get_settings()
+        currency = settings.currency if settings else "USD"
+
+        return {
+            "time_entries": unbilled_entries,
+            "grouped_time_entries": grouped_time_entries,
+            "project_costs": unbilled_costs,
+            "expenses": unbilled_expenses,
+            "extra_goods": project_goods,
+            "total_available_hours": total_available_hours,
+            "total_available_costs": total_available_costs,
+            "total_available_expenses": total_available_expenses,
+            "total_available_goods": total_available_goods,
+            "prepaid_summary": prepaid_summary,
+            "prepaid_plan_hours": prepaid_plan_hours,
+            "currency": currency,
+            "prepaid_reset_day": invoice.client.prepaid_reset_day if invoice.client else None,
+        }

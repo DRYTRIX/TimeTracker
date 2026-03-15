@@ -72,5 +72,6 @@ Replace `your-domain.com` with your TimeTracker host and `YOUR_API_TOKEN` with y
 ## Full Documentation
 
 - **[REST API reference](docs/api/REST_API.md)** — All endpoints, request/response formats, pagination, errors
+- **[API Consistency Audit](docs/api/API_CONSISTENCY_AUDIT.md)** — Response contracts, error format, pagination
 - **[API Token Scopes](docs/api/API_TOKEN_SCOPES.md)** — Scopes and permissions
 - **[API Versioning](docs/api/API_VERSIONING.md)** — Versioning policy and usage

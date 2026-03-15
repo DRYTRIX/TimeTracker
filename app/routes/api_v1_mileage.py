@@ -8,6 +8,7 @@ from decimal import Decimal
 from app import db
 from app.models import Mileage
 from app.utils.api_auth import require_api_token
+from app.utils.api_responses import error_response, forbidden_response, validation_error_response
 from app.routes.api_v1_common import _parse_date
 
 api_v1_mileage_bp = Blueprint("api_v1_mileage", __name__, url_prefix="/api/v1")
@@ -22,7 +23,7 @@ def list_mileage():
     user_id = request.args.get("user_id", type=int)
     if user_id:
         if not g.api_user.is_admin and user_id != g.api_user.id:
-            return jsonify({"error": "Access denied"}), 403
+            return forbidden_response("Access denied")
     else:
         if not g.api_user.is_admin:
             user_id = g.api_user.id
@@ -71,7 +72,7 @@ def get_mileage(entry_id):
         .first_or_404()
     )
     if not g.api_user.is_admin and entry.user_id != g.api_user.id:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
     return jsonify({"mileage": entry.to_dict()})
 
 
@@ -80,18 +81,27 @@ def get_mileage(entry_id):
 def create_mileage():
     """Create a mileage entry."""
     data = request.get_json() or {}
+    errors = {}
     required = ["trip_date", "purpose", "start_location", "end_location", "distance_km", "rate_per_km"]
     missing = [f for f in required if not data.get(f)]
     if missing:
-        return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
+        for f in missing:
+            errors[f] = [f"{f} is required"]
+        return validation_error_response(errors=errors, message=f"Missing required fields: {', '.join(missing)}")
     trip_date = _parse_date(data.get("trip_date"))
     if not trip_date:
-        return jsonify({"error": "Invalid trip_date format, expected YYYY-MM-DD"}), 400
+        return validation_error_response(
+            errors={"trip_date": ["Invalid trip_date format, expected YYYY-MM-DD"]},
+            message="Invalid trip_date format, expected YYYY-MM-DD",
+        )
     try:
         distance_km = Decimal(str(data["distance_km"]))
         rate_per_km = Decimal(str(data["rate_per_km"]))
     except Exception:
-        return jsonify({"error": "Invalid distance_km or rate_per_km"}), 400
+        return validation_error_response(
+            errors={"distance_km": ["Invalid distance_km or rate_per_km"], "rate_per_km": ["Invalid distance_km or rate_per_km"]},
+            message="Invalid distance_km or rate_per_km",
+        )
     entry = Mileage(
         user_id=g.api_user.id,
         trip_date=trip_date,
@@ -124,7 +134,7 @@ def update_mileage(entry_id):
         .first_or_404()
     )
     if not g.api_user.is_admin and entry.user_id != g.api_user.id:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
     data = request.get_json() or {}
     for field in (
         "purpose", "start_location", "end_location", "description",
@@ -166,7 +176,7 @@ def delete_mileage(entry_id):
         .first_or_404()
     )
     if not g.api_user.is_admin and entry.user_id != g.api_user.id:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
     entry.status = "rejected"
     db.session.commit()
     return jsonify({"message": "Mileage entry rejected successfully"})

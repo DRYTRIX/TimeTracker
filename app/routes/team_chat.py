@@ -67,12 +67,19 @@ def chat_channel(channel_id):
     # Get channel members
     members = ChatChannelMember.query.filter_by(channel_id=channel_id).all()
 
-    # Mark messages as read
+    # Mark messages as read (batch load receipts to avoid N+1)
+    message_ids = [m.id for m in messages]
+    existing_receipts = (
+        ChatReadReceipt.query.filter(
+            ChatReadReceipt.message_id.in_(message_ids),
+            ChatReadReceipt.user_id == current_user.id,
+        ).all()
+        if message_ids else []
+    )
+    receipt_by_message = {r.message_id: r for r in existing_receipts}
     for message in messages:
-        receipt = ChatReadReceipt.query.filter_by(message_id=message.id, user_id=current_user.id).first()
-        if not receipt:
-            receipt = ChatReadReceipt(message_id=message.id, user_id=current_user.id)
-            db.session.add(receipt)
+        if message.id not in receipt_by_message:
+            db.session.add(ChatReadReceipt(message_id=message.id, user_id=current_user.id))
 
     db.session.commit()
 
@@ -277,12 +284,19 @@ def api_messages(channel_id):
     messages = query.order_by(ChatMessage.created_at.desc()).limit(limit).all()
     messages.reverse()  # Return in chronological order
 
-    # Mark as read
+    # Mark as read (batch load receipts to avoid N+1)
+    message_ids = [m.id for m in messages]
+    existing_receipts = (
+        ChatReadReceipt.query.filter(
+            ChatReadReceipt.message_id.in_(message_ids),
+            ChatReadReceipt.user_id == current_user.id,
+        ).all()
+        if message_ids else []
+    )
+    receipt_by_message = {r.message_id: r for r in existing_receipts}
     for message in messages:
-        receipt = ChatReadReceipt.query.filter_by(message_id=message.id, user_id=current_user.id).first()
-        if not receipt:
-            receipt = ChatReadReceipt(message_id=message.id, user_id=current_user.id)
-            db.session.add(receipt)
+        if message.id not in receipt_by_message:
+            db.session.add(ChatReadReceipt(message_id=message.id, user_id=current_user.id))
 
     db.session.commit()
 

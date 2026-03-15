@@ -569,10 +569,27 @@ def view_project(project_id):
         current_app.logger.warning(f"Could not load attachments for project {project_id}: {e}")
         attachments = []
 
+    # Precompute budget status for template (business rule: over/critical/warning/healthy)
+    project = result["project"]
+    budget_status = None
+    if project.budget_amount and float(project.budget_amount) > 0:
+        consumed = float(project.budget_consumed_amount or 0)
+        budget_amt = float(project.budget_amount)
+        pct = (consumed / budget_amt * 100)
+        threshold = int(project.budget_threshold_percent or 80)
+        if pct >= 100:
+            budget_status = "over"
+        elif pct >= threshold:
+            budget_status = "critical"
+        elif pct >= (threshold * 0.8):
+            budget_status = "warning"
+        else:
+            budget_status = "healthy"
+
     # Prevent browser caching of kanban board
     response = render_template(
         "projects/view.html",
-        project=result["project"],
+        project=project,
         entries=result["time_entries_pagination"].items,
         pagination=result["time_entries_pagination"],
         tasks=result["tasks"],
@@ -584,6 +601,7 @@ def view_project(project_id):
         custom_field_definitions_by_key=custom_field_definitions_by_key,
         link_templates_by_field=link_templates_by_field,
         attachments=attachments,
+        budget_status=budget_status,
     )
     resp = make_response(response)
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"

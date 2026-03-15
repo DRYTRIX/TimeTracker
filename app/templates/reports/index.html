@@ -15,6 +15,13 @@
     actions_html=None
 ) }}
 
+{% if not is_license_activated and current_user.is_authenticated %}
+<p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+    {{ _('Enjoying TimeTracker?') }} {{ _('You can support development by purchasing a license key.') }}
+    <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline font-medium">{{ _('Support the project') }}</a>
+</p>
+{% endif %}
+
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
     {{ info_card(_("Total Hours"), "%.2f"|format(summary.total_hours), _("All time")) }}
     {{ info_card(_("Billable Hours"), "%.2f"|format(summary.billable_hours), _("All time")) }}

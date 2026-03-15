@@ -51,11 +51,12 @@ from app.models import (
 from app.models.time_entry_approval import TimeEntryApproval, ApprovalStatus
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import (
-    success_response,
     error_response,
-    paginated_response,
     forbidden_response,
     not_found_response,
+    paginated_response,
+    success_response,
+    validation_error_response,
 )
 from datetime import datetime, timedelta, date
 from sqlalchemy import func, or_
@@ -414,7 +415,7 @@ def get_per_diem(pd_id):
     pd = PerDiem.query.options(joinedload(PerDiem.user)).filter_by(id=pd_id).first_or_404()
 
     if not g.api_user.is_admin and pd.user_id != g.api_user.id:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     return jsonify({"per_diem": pd.to_dict()})
 
@@ -479,7 +480,7 @@ def update_per_diem(pd_id):
     pd = PerDiem.query.options(joinedload(PerDiem.user)).filter_by(id=pd_id).first_or_404()
 
     if not g.api_user.is_admin and pd.user_id != g.api_user.id:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     data = request.get_json() or {}
     for field in ("trip_purpose", "description", "country", "city", "currency_code", "status", "notes"):
@@ -525,7 +526,7 @@ def delete_per_diem(pd_id):
     pd = PerDiem.query.options(joinedload(PerDiem.user)).filter_by(id=pd_id).first_or_404()
 
     if not g.api_user.is_admin and pd.user_id != g.api_user.id:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     pd.status = "rejected"
     db.session.commit()
@@ -735,7 +736,7 @@ def get_calendar_event(event_id):
     ev = CalendarEvent.query.options(joinedload(CalendarEvent.user)).filter_by(id=event_id).first_or_404()
 
     if not g.api_user.is_admin and ev.user_id != g.api_user.id:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     return jsonify({"event": ev.to_dict()})
 
@@ -791,7 +792,7 @@ def update_calendar_event(event_id):
     ev = CalendarEvent.query.options(joinedload(CalendarEvent.user)).filter_by(id=event_id).first_or_404()
 
     if not g.api_user.is_admin and ev.user_id != g.api_user.id:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     data = request.get_json() or {}
     for field in ("title", "description", "location", "event_type", "color", "is_private", "reminder_minutes"):
@@ -822,7 +823,7 @@ def delete_calendar_event(event_id):
     ev = CalendarEvent.query.options(joinedload(CalendarEvent.user)).filter_by(id=event_id).first_or_404()
 
     if not g.api_user.is_admin and ev.user_id != g.api_user.id:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     db.session.delete(ev)
     db.session.commit()
@@ -983,7 +984,7 @@ def get_saved_filter(filter_id):
     sf = SavedFilter.query.options(joinedload(SavedFilter.user)).filter_by(id=filter_id).first_or_404()
 
     if sf.user_id != g.api_user.id and not (sf.is_shared or g.api_user.is_admin):
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     return jsonify({"filter": sf.to_dict()})
 
@@ -1026,7 +1027,7 @@ def update_saved_filter(filter_id):
     sf = SavedFilter.query.options(joinedload(SavedFilter.user)).filter_by(id=filter_id).first_or_404()
 
     if sf.user_id != g.api_user.id and not g.api_user.is_admin:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     data = request.get_json() or {}
     for field in ("name", "scope", "payload", "is_shared"):
@@ -1049,7 +1050,7 @@ def delete_saved_filter(filter_id):
     sf = SavedFilter.query.options(joinedload(SavedFilter.user)).filter_by(id=filter_id).first_or_404()
 
     if sf.user_id != g.api_user.id and not g.api_user.is_admin:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     db.session.delete(sf)
     db.session.commit()
@@ -1108,7 +1109,7 @@ def get_time_entry_template(tpl_id):
     )
 
     if tpl.user_id != g.api_user.id and not g.api_user.is_admin:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     return jsonify({"template": tpl.to_dict()})
 
@@ -1159,7 +1160,7 @@ def update_time_entry_template(tpl_id):
     )
 
     if tpl.user_id != g.api_user.id and not g.api_user.is_admin:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     data = request.get_json() or {}
     for field in (
@@ -1195,7 +1196,7 @@ def delete_time_entry_template(tpl_id):
     )
 
     if tpl.user_id != g.api_user.id and not g.api_user.is_admin:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     db.session.delete(tpl)
     db.session.commit()
@@ -1489,7 +1490,7 @@ def delete_quote(quote_id):
 
     # Check permissions
     if not g.api_user.is_admin and quote.created_by != g.api_user.id:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     db.session.delete(quote)
     db.session.commit()
@@ -1513,7 +1514,7 @@ def update_comment(comment_id):
     )
 
     if cmt.user_id != g.api_user.id and not g.api_user.is_admin:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     data = request.get_json() or {}
     new_content = (data.get("content") or "").strip()
@@ -1522,7 +1523,7 @@ def update_comment(comment_id):
     try:
         cmt.edit_content(new_content, g.api_user)
     except PermissionError:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
     return jsonify({"message": "Comment updated successfully", "comment": cmt.to_dict()})
 
 
@@ -1545,7 +1546,7 @@ def delete_comment(comment_id):
     try:
         cmt.delete_comment(g.api_user)
     except PermissionError:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
     return jsonify({"message": "Comment deleted successfully"})
 
 
@@ -1638,7 +1639,7 @@ def update_client_note(note_id):
     if not new_content:
         return jsonify({"error": "content is required"}), 400
     if not (g.api_user.is_admin or note.user_id == g.api_user.id):
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
     note.content = new_content
     if "is_important" in data:
         note.is_important = bool(data["is_important"])
@@ -1661,7 +1662,7 @@ def delete_client_note(note_id):
     )
 
     if not (g.api_user.is_admin or note.user_id == g.api_user.id):
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     db.session.delete(note)
     db.session.commit()
@@ -2654,7 +2655,7 @@ def report_summary():
         if g.api_user.is_admin or user_id == g.api_user.id:
             query = query.filter_by(user_id=user_id)
         else:
-            return jsonify({"error": "Access denied"}), 403
+            return forbidden_response("Access denied")
     elif not g.api_user.is_admin:
         query = query.filter_by(user_id=g.api_user.id)
 
@@ -2914,7 +2915,7 @@ def get_webhook(webhook_id):
 
     # Check permissions
     if not g.api_user.is_admin and webhook.user_id != g.api_user.id:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     return jsonify({"webhook": webhook.to_dict()})
 
@@ -2945,7 +2946,7 @@ def update_webhook(webhook_id):
 
     # Check permissions
     if not g.api_user.is_admin and webhook.user_id != g.api_user.id:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     data = request.get_json() or {}
 
@@ -3028,7 +3029,7 @@ def delete_webhook(webhook_id):
 
     # Check permissions
     if not g.api_user.is_admin and webhook.user_id != g.api_user.id:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     db.session.delete(webhook)
     db.session.commit()
@@ -3070,7 +3071,7 @@ def list_webhook_deliveries(webhook_id):
 
     # Check permissions
     if not g.api_user.is_admin and webhook.user_id != g.api_user.id:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     query = WebhookDelivery.query.filter_by(webhook_id=webhook_id)
 
@@ -4223,7 +4224,7 @@ def approve_timesheet_period(period_id):
     from app.services.workforce_governance_service import WorkforceGovernanceService
 
     if not _is_api_approver(g.api_user):
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     data = request.get_json() or {}
     result = WorkforceGovernanceService().approve_period(period_id=period_id, approver_id=g.api_user.id, comment=data.get("comment"))
@@ -4238,7 +4239,7 @@ def reject_timesheet_period(period_id):
     from app.services.workforce_governance_service import WorkforceGovernanceService
 
     if not _is_api_approver(g.api_user):
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     data = request.get_json() or {}
     reason = (data.get("reason") or "").strip()
@@ -4283,7 +4284,7 @@ def get_timesheet_policy():
     from app.services.workforce_governance_service import WorkforceGovernanceService
 
     if not _is_api_approver(g.api_user):
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
     policy = WorkforceGovernanceService().get_or_create_default_policy()
     return jsonify({"timesheet_policy": policy.to_dict()})
 
@@ -4294,7 +4295,7 @@ def update_timesheet_policy():
     from app.services.workforce_governance_service import WorkforceGovernanceService
 
     if not g.api_user.is_admin:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     service = WorkforceGovernanceService()
     policy = service.get_or_create_default_policy()
@@ -4338,7 +4339,7 @@ def create_leave_type_api():
     from app.models.time_off import LeaveType
 
     if not g.api_user.is_admin:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     data = request.get_json() or {}
     name = (data.get("name") or "").strip()
@@ -4365,7 +4366,7 @@ def delete_leave_type_api(leave_type_id):
     from app.services.workforce_governance_service import WorkforceGovernanceService
 
     if not g.api_user.is_admin:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
     result = WorkforceGovernanceService().delete_leave_type(leave_type_id)
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not delete leave type")}), 400
@@ -4441,7 +4442,7 @@ def approve_time_off_request_api(request_id):
     from app.services.workforce_governance_service import WorkforceGovernanceService
 
     if not _is_api_approver(g.api_user):
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     data = request.get_json() or {}
     result = WorkforceGovernanceService().review_leave_request(
@@ -4458,7 +4459,7 @@ def reject_time_off_request_api(request_id):
     from app.services.workforce_governance_service import WorkforceGovernanceService
 
     if not _is_api_approver(g.api_user):
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     data = request.get_json() or {}
     result = WorkforceGovernanceService().review_leave_request(
@@ -4518,7 +4519,7 @@ def create_holiday_api():
     from app.models.time_off import CompanyHoliday
 
     if not g.api_user.is_admin:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     data = request.get_json() or {}
     name = (data.get("name") or "").strip()
@@ -4539,7 +4540,7 @@ def delete_holiday_api(holiday_id):
     from app.services.workforce_governance_service import WorkforceGovernanceService
 
     if not g.api_user.is_admin:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
     result = WorkforceGovernanceService().delete_holiday(holiday_id)
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not delete holiday")}), 400
@@ -4652,7 +4653,7 @@ def compliance_locked_periods_api():
     from app.services.workforce_governance_service import WorkforceGovernanceService
 
     if not _is_api_approver(g.api_user):
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     start = _parse_date(request.args.get("start_date"))
     end = _parse_date(request.args.get("end_date"))
@@ -4666,7 +4667,7 @@ def compliance_audit_events_api():
     from app.services.workforce_governance_service import WorkforceGovernanceService
 
     if not _is_api_approver(g.api_user):
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
 
     start = _parse_date(request.args.get("start_date"))
     end = _parse_date(request.args.get("end_date"))

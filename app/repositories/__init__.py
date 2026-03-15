@@ -13,6 +13,7 @@ from .task_repository import TaskRepository
 from .expense_repository import ExpenseRepository
 from .payment_repository import PaymentRepository
 from .comment_repository import CommentRepository
+from .recurring_invoice_repository import RecurringInvoiceRepository
 
 __all__ = [
     "TimeEntryRepository",
@@ -24,4 +25,5 @@ __all__ = [
     "ExpenseRepository",
     "PaymentRepository",
     "CommentRepository",
+    "RecurringInvoiceRepository",
 ]

@@ -16,6 +16,7 @@ from app.models import (
     SavedReportView,
 )
 from app.services.scheduled_report_service import ScheduledReportService
+from app.repositories import TimeEntryRepository
 from datetime import datetime, timedelta
 from sqlalchemy import or_, func, case
 from sqlalchemy.orm import joinedload
@@ -83,46 +84,14 @@ def week_in_review():
 @module_enabled("reports")
 def comparison_view():
     """Get comparison data for reports"""
+    from app.services import ReportingService
+
     period = request.args.get("period", "month")
-    now = datetime.utcnow()
-
-    if period == "month":
-        # This month vs last month
-        this_period_start = datetime(now.year, now.month, 1)
-        last_period_start = (this_period_start - timedelta(days=1)).replace(day=1)
-        last_period_end = this_period_start - timedelta(seconds=1)
-    else:  # year
-        # This year vs last year
-        this_period_start = datetime(now.year, 1, 1)
-        last_period_start = datetime(now.year - 1, 1, 1)
-        last_period_end = datetime(now.year, 1, 1) - timedelta(seconds=1)
-
-    # Get hours for current period
     can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
-    current_query = db.session.query(db.func.sum(TimeEntry.duration_seconds)).filter(
-        TimeEntry.end_time.isnot(None), TimeEntry.start_time >= this_period_start, TimeEntry.start_time <= now
+    data = ReportingService().get_comparison_data(
+        period=period, user_id=current_user.id, can_view_all=can_view_all
     )
-    if not can_view_all:
-        current_query = current_query.filter(TimeEntry.user_id == current_user.id)
-    current_seconds = current_query.scalar() or 0
-
-    # Get hours for previous period
-    previous_query = db.session.query(db.func.sum(TimeEntry.duration_seconds)).filter(
-        TimeEntry.end_time.isnot(None),
-        TimeEntry.start_time >= last_period_start,
-        TimeEntry.start_time <= last_period_end,
-    )
-    if not can_view_all:
-        previous_query = previous_query.filter(TimeEntry.user_id == current_user.id)
-    previous_seconds = previous_query.scalar() or 0
-
-    current_hours = round(current_seconds / 3600, 2)
-    previous_hours = round(previous_seconds / 3600, 2)
-    change = ((current_hours - previous_hours) / previous_hours * 100) if previous_hours > 0 else 0
-
-    return jsonify(
-        {"current": {"hours": current_hours}, "previous": {"hours": previous_hours}, "change": round(change, 1)}
-    )
+    return jsonify(data)
 
 
 @reports_bp.route("/reports/project")
@@ -130,13 +99,14 @@ def comparison_view():
 @module_enabled("reports")
 def project_report():
     """Project-based time report"""
+    from app.utils.scope_filter import apply_project_scope_to_model
+    from app.services import ReportingService
+
     project_id = request.args.get("project_id", type=int)
     start_date = request.args.get("start_date")
     end_date = request.args.get("end_date")
     user_id = request.args.get("user_id", type=int)
 
-    # Get projects for filter (scoped for subcontractors)
-    from app.utils.scope_filter import apply_client_scope_to_model, apply_project_scope_to_model
     projects_query = Project.query.filter_by(status="active").order_by(Project.name)
     scope_p = apply_project_scope_to_model(Project, current_user)
     if scope_p is not None:
@@ -144,7 +114,6 @@ def project_report():
     projects = projects_query.all()
     users = User.query.filter_by(is_active=True).order_by(User.username).all()
 
-    # Parse dates
     if not start_date:
         start_date = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
     if not end_date:
@@ -157,132 +126,26 @@ def project_report():
         flash(_("Invalid date format"), "error")
         return render_template("reports/project_report.html", projects=projects, users=users)
 
-    # Get time entries
     can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
-    query = TimeEntry.query.filter(
-        TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
+    if user_id and not can_view_all and user_id != current_user.id:
+        flash(_("You do not have permission to view other users' time entries"), "error")
+        return render_template("reports/project_report.html", projects=projects, users=users)
+
+    data = ReportingService().get_project_report_data(
+        start_dt=start_dt,
+        end_dt=end_dt,
+        project_id=project_id,
+        user_id_filter=user_id,
+        current_user_id=current_user.id,
+        can_view_all=can_view_all,
     )
-
-    # Filter by user if no permission to view all
-    if not can_view_all:
-        query = query.filter(TimeEntry.user_id == current_user.id)
-
-    if project_id:
-        query = query.filter(TimeEntry.project_id == project_id)
-
-    if user_id:
-        # Only allow filtering by other users if they have permission
-        if can_view_all:
-            query = query.filter(TimeEntry.user_id == user_id)
-        elif user_id != current_user.id:
-            # User doesn't have permission to view other users' entries
-            flash(_("You do not have permission to view other users' time entries"), "error")
-            return render_template("reports/project_report.html", projects=projects, users=users)
-
-    entries = query.options(
-        joinedload(TimeEntry.project).joinedload(Project.client_obj),
-        joinedload(TimeEntry.user),
-    ).order_by(TimeEntry.start_time.desc()).all()
-
-    # Aggregate by project for template expectations
-    projects_map = {}
-    for entry in entries:
-        project = entry.project
-        if not project:
-            continue
-        if project.id not in projects_map:
-            projects_map[project.id] = {
-                "id": project.id,
-                "name": project.name,
-                "client": project.client,
-                "description": project.description,
-                "billable": project.billable,
-                "hourly_rate": float(project.hourly_rate) if project.hourly_rate else None,
-                "total_hours": 0.0,
-                "billable_hours": 0.0,
-                "billable_amount": 0.0,
-                "total_costs": 0.0,
-                "billable_costs": 0.0,
-                "total_value": 0.0,
-                "user_totals": {},
-            }
-        agg = projects_map[project.id]
-        hours = entry.duration_hours
-        agg["total_hours"] += hours
-        if entry.billable and project.billable:
-            agg["billable_hours"] += hours
-            if project.hourly_rate:
-                agg["billable_amount"] += hours * float(project.hourly_rate)
-        # per-user totals
-        username = entry.user.display_name if entry.user else "Unknown"
-        agg["user_totals"][username] = agg["user_totals"].get(username, 0.0) + hours
-
-    # Add project costs to the aggregated data
-    for project_id, agg in projects_map.items():
-        # Get costs for this project within the date range
-        costs_query = ProjectCost.query.filter(
-            ProjectCost.project_id == project_id,
-            ProjectCost.cost_date >= start_dt.date(),
-            ProjectCost.cost_date <= end_dt.date(),
-        )
-
-        if user_id:
-            costs_query = costs_query.filter(ProjectCost.user_id == user_id)
-
-        costs = costs_query.all()
-
-        for cost in costs:
-            agg["total_costs"] += float(cost.amount)
-            if cost.billable:
-                agg["billable_costs"] += float(cost.amount)
-
-        # Calculate total project value (billable hours + billable costs)
-        agg["total_value"] = agg["billable_amount"] + agg["billable_costs"]
-
-    # Finalize structures
-    projects_data = []
-    total_hours = 0.0
-    billable_hours = 0.0
-    total_billable_amount = 0.0
-    total_costs = 0.0
-    total_billable_costs = 0.0
-    total_project_value = 0.0
-    for agg in projects_map.values():
-        total_hours += agg["total_hours"]
-        billable_hours += agg["billable_hours"]
-        total_billable_amount += agg["billable_amount"]
-        total_costs += agg["total_costs"]
-        total_billable_costs += agg["billable_costs"]
-        total_project_value += agg["total_value"]
-        agg["total_hours"] = round(agg["total_hours"], 1)
-        agg["billable_hours"] = round(agg["billable_hours"], 1)
-        agg["billable_amount"] = round(agg["billable_amount"], 2)
-        agg["total_costs"] = round(agg["total_costs"], 2)
-        agg["billable_costs"] = round(agg["billable_costs"], 2)
-        agg["total_value"] = round(agg["total_value"], 2)
-        agg["user_totals"] = [
-            {"username": username, "hours": round(hours, 1)} for username, hours in agg["user_totals"].items()
-        ]
-        projects_data.append(agg)
-
-    # Summary section expected by template
-    summary = {
-        "total_hours": round(total_hours, 1),
-        "billable_hours": round(billable_hours, 1),
-        "total_billable_amount": round(total_billable_amount, 2),
-        "total_costs": round(total_costs, 2),
-        "total_billable_costs": round(total_billable_costs, 2),
-        "total_project_value": round(total_project_value, 2),
-        "projects_count": len(projects_data),
-    }
-
     return render_template(
         "reports/project_report.html",
         projects=projects,
         users=users,
-        entries=entries,
-        projects_data=projects_data,
-        summary=summary,
+        entries=data["entries"],
+        projects_data=data["projects_data"],
+        summary=data["summary"],
         start_date=start_date,
         end_date=end_date,
         selected_project=project_id,
@@ -664,10 +527,8 @@ def export_summary_pdf():
     if scope_p is not None:
         projects_query = projects_query.filter(scope_p)
     elif not current_user.is_admin:
-        project_ids = (
-            db.session.query(TimeEntry.project_id).filter(TimeEntry.user_id == current_user.id).distinct().all()
-        )
-        project_ids = [pid[0] for pid in project_ids]
+        time_entry_repo = TimeEntryRepository()
+        project_ids = time_entry_repo.get_distinct_project_ids_for_user(current_user.id)
         projects_query = projects_query.filter(Project.id.in_(project_ids)) if project_ids else projects_query.filter(Project.id.in_([]))
     projects = projects_query.all()
     project_stats = []
@@ -726,10 +587,8 @@ def summary_report():
     if scope_p is not None:
         projects_query = projects_query.filter(scope_p)
     elif not current_user.is_admin:
-        project_ids = (
-            db.session.query(TimeEntry.project_id).filter(TimeEntry.user_id == current_user.id).distinct().all()
-        )
-        project_ids = [pid[0] for pid in project_ids]
+        time_entry_repo = TimeEntryRepository()
+        project_ids = time_entry_repo.get_distinct_project_ids_for_user(current_user.id)
         projects_query = projects_query.filter(Project.id.in_(project_ids)) if project_ids else projects_query.filter(Project.id.in_([]))
     projects = projects_query.all()
 
@@ -823,30 +682,29 @@ def task_report():
 
     # Get distinct task IDs (PostgreSQL requires ORDER BY cols in SELECT when using DISTINCT)
     task_ids_subq = tasks_query.with_entities(Task.id).distinct()
-    tasks = Task.query.filter(Task.id.in_(task_ids_subq)).order_by(
-        case((Task.status == "done", 0), else_=1),
-        Task.name
-    ).all()
+    tasks = (
+        Task.query.options(joinedload(Task.project), joinedload(Task.assigned_user))
+        .filter(Task.id.in_(task_ids_subq))
+        .order_by(case((Task.status == "done", 0), else_=1), Task.name)
+        .all()
+    )
+    task_ids = [t.id for t in tasks]
 
-    # Compute hours per task (sum of entry durations; respect user/project filters and date range)
+    # Single aggregation query for hours/entry count per task (avoids N+1)
+    from app.repositories import TimeEntryRepository
+
+    time_entry_repo = TimeEntryRepository()
+    aggregates = time_entry_repo.get_task_aggregates(
+        task_ids, start_dt, end_dt, project_id=project_id, user_id=user_id
+    )
+    agg_by_task = {tid: (total_sec, cnt) for tid, total_sec, cnt in aggregates}
+
     task_rows = []
     total_hours = 0.0
     for task in tasks:
-        te_query = TimeEntry.query.filter(
-            TimeEntry.task_id == task.id,
-            TimeEntry.end_time.isnot(None),
-            TimeEntry.start_time >= start_dt,
-            TimeEntry.start_time <= end_dt,
-        )
-        if project_id:
-            te_query = te_query.filter(TimeEntry.project_id == project_id)
-        if user_id:
-            te_query = te_query.filter(TimeEntry.user_id == user_id)
-
-        entries = te_query.all()
-        hours = sum(e.duration_hours for e in entries)
+        total_seconds, entries_count = agg_by_task.get(task.id, (0, 0))
+        hours = round(total_seconds / 3600, 2)
         total_hours += hours
-
         task_rows.append(
             {
                 "task": task,
@@ -854,8 +712,8 @@ def task_report():
                 "assignee": task.assigned_user,
                 "status": task.status,
                 "completed_at": task.completed_at,
-                "hours": round(hours, 2),
-                "entries_count": len(entries),
+                "hours": hours,
+                "entries_count": entries_count,
             }
         )
 
@@ -877,8 +735,10 @@ def task_report():
     )
 
 
-def _time_entries_report_query(request, require_dates=True):
-    """Shared query logic for time entries report and its exports. Returns (entries, start_dt, end_dt, start_date, end_date) or (None, None, None, start_date, end_date) on date error."""
+def _time_entries_report_query(request, require_dates=True, return_query=False):
+    """Shared query logic for time entries report and its exports.
+    When return_query=False: returns (entries, start_dt, end_dt, start_date, end_date) or (None, None, None, start_date, end_date) on date error.
+    When return_query=True: returns (query, start_dt, end_dt, start_date, end_date) with query having filters applied (no options/order_by/execution)."""
     from app.utils.client_lock import enforce_locked_client_id
 
     start_date = request.args.get("start_date")
@@ -944,6 +804,9 @@ def _time_entries_report_query(request, require_dates=True):
         else:
             query = query.filter(TimeEntry.project_id.in_(allowed_project_ids))
 
+    if return_query:
+        return query, start_dt, end_dt, start_date, end_date
+
     entries = query.options(
         joinedload(TimeEntry.project).joinedload(Project.client_obj),
         joinedload(TimeEntry.user),
@@ -981,8 +844,10 @@ def time_entries_report():
     clients = clients_query.all()
     tasks = Task.query.order_by(Task.name).all()
 
-    entries, start_dt, end_dt, start_date, end_date = _time_entries_report_query(request, require_dates=True)
-    if entries is None:
+    base_query, start_dt, end_dt, start_date, end_date = _time_entries_report_query(
+        request, require_dates=True, return_query=True
+    )
+    if base_query is None:
         flash(_("Invalid date format"), "error")
         return render_template(
             "reports/time_entries_report.html",
@@ -999,10 +864,39 @@ def time_entries_report():
             selected_client=enforce_locked_client_id(request.args.get("client_id", type=int)),
             selected_task=request.args.get("task_id", type=int),
             selected_billed=request.args.get("billed", "all"),
+            pagination=None,
         )
 
-    total_hours = sum(e.duration_hours or 0 for e in entries)
-    summary = {"entries_count": len(entries), "total_hours": round(total_hours, 2)}
+    from app.constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
+
+    page = request.args.get("page", 1, type=int)
+    per_page = min(request.args.get("per_page", DEFAULT_PAGE_SIZE, type=int), MAX_PAGE_SIZE)
+    per_page = max(1, per_page)
+
+    # Summary from aggregation (same filters, not just current page)
+    total_count = base_query.with_entities(func.count(TimeEntry.id)).scalar() or 0
+    total_seconds = base_query.with_entities(func.sum(TimeEntry.duration_seconds)).scalar() or 0
+    summary = {"entries_count": total_count, "total_hours": round((total_seconds or 0) / 3600, 2)}
+
+    entries_query = base_query.options(
+        joinedload(TimeEntry.project).joinedload(Project.client_obj),
+        joinedload(TimeEntry.user),
+        joinedload(TimeEntry.task),
+        joinedload(TimeEntry.client),
+    ).order_by(TimeEntry.start_time.desc())
+    paginated = entries_query.paginate(page=page, per_page=per_page, error_out=False)
+    entries = paginated.items
+
+    pagination = {
+        "page": paginated.page,
+        "per_page": paginated.per_page,
+        "total": paginated.total,
+        "pages": paginated.pages,
+        "has_next": paginated.has_next,
+        "has_prev": paginated.has_prev,
+        "next_page": paginated.page + 1 if paginated.has_next else None,
+        "prev_page": paginated.page - 1 if paginated.has_prev else None,
+    }
 
     return render_template(
         "reports/time_entries_report.html",
@@ -1019,6 +913,7 @@ def time_entries_report():
         selected_client=enforce_locked_client_id(request.args.get("client_id", type=int)),
         selected_task=request.args.get("task_id", type=int),
         selected_billed=request.args.get("billed", "all"),
+        pagination=pagination,
     )
 
 
@@ -1541,7 +1436,7 @@ def export_task_excel():
         flash(_("Invalid date format"), "error")
         return redirect(url_for("reports.task_report"))
 
-    # Get tasks: all tasks that have time entries within the date range
+    # Get tasks: all tasks that have time entries within the date range (eager load to avoid N+1)
     tasks_query = Task.query.join(TimeEntry, TimeEntry.task_id == Task.id).filter(
         TimeEntry.end_time.isnot(None),
         TimeEntry.start_time >= start_dt,
@@ -1554,37 +1449,34 @@ def export_task_excel():
     if user_id:
         tasks_query = tasks_query.filter(TimeEntry.user_id == user_id)
 
-    # Get distinct task IDs (PostgreSQL requires ORDER BY cols in SELECT when using DISTINCT)
     task_ids_subq = tasks_query.with_entities(Task.id).distinct()
-    tasks = Task.query.filter(Task.id.in_(task_ids_subq)).order_by(
-        case((Task.status == "done", 0), else_=1),
-        Task.name
-    ).all()
+    tasks = (
+        Task.query.options(joinedload(Task.project), joinedload(Task.assigned_user))
+        .filter(Task.id.in_(task_ids_subq))
+        .order_by(case((Task.status == "done", 0), else_=1), Task.name)
+        .all()
+    )
+    task_ids = [t.id for t in tasks]
 
-    # Compute hours per task
+    from app.repositories import TimeEntryRepository
+
+    time_entry_repo = TimeEntryRepository()
+    aggregates = time_entry_repo.get_task_aggregates(
+        task_ids, start_dt, end_dt, project_id=project_id, user_id=user_id
+    )
+    agg_by_task = {tid: (int(total_sec or 0), cnt) for tid, total_sec, cnt in aggregates}
+
     task_rows = []
     for task in tasks:
-        te_query = TimeEntry.query.filter(
-            TimeEntry.task_id == task.id,
-            TimeEntry.end_time.isnot(None),
-            TimeEntry.start_time >= start_dt,
-            TimeEntry.start_time <= end_dt,
-        )
-        if project_id:
-            te_query = te_query.filter(TimeEntry.project_id == project_id)
-        if user_id:
-            te_query = te_query.filter(TimeEntry.user_id == user_id)
-
-        entries = te_query.all()
-        hours = sum(e.duration_hours for e in entries)
-
+        total_seconds, _ = agg_by_task.get(task.id, (0, 0))
+        hours = round(total_seconds / 3600, 2)
         task_rows.append(
             {
                 "task": task,
                 "project": task.project,
                 "status": task.status,
                 "completed_at": task.completed_at,
-                "hours": round(hours, 2),
+                "hours": hours,
             }
         )
 
@@ -1702,163 +1594,49 @@ def unpaid_hours_report():
             single_client=single_client,
         )
 
-    # Get all billable time entries in the date range
     can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
-    from sqlalchemy.orm import joinedload
-    
-    query = TimeEntry.query.options(
-        joinedload(TimeEntry.user),
-        joinedload(TimeEntry.project),
-        joinedload(TimeEntry.task),
-        joinedload(TimeEntry.client),
-    ).filter(
-        TimeEntry.end_time.isnot(None),
-        TimeEntry.billable == True,
-        TimeEntry.start_time >= start_dt,
-        TimeEntry.start_time <= end_dt,
+    from app.services import ReportingService
+
+    data = ReportingService().get_unpaid_hours_report_data(
+        start_dt=start_dt,
+        end_dt=end_dt,
+        client_id=client_id,
+        current_user_id=current_user.id,
+        can_view_all=can_view_all,
     )
+    client_data = data["client_data"]
+    summary = data["summary"]
 
-    # Filter by user if no permission to view all
-    if not can_view_all:
-        query = query.filter(TimeEntry.user_id == current_user.id)
-
-    if client_id:
-        query = query.filter(TimeEntry.client_id == client_id)
-
-    all_entries = query.all()
-
-    # Get all invoice items to check which time entries are already invoiced
-    from app.models.invoice import InvoiceItem
-
-    all_invoice_items = InvoiceItem.query.join(Invoice).filter(
-        InvoiceItem.time_entry_ids.isnot(None), InvoiceItem.time_entry_ids != ""
-    ).all()
-
-    # Build a set of time entry IDs that are in fully paid invoices
-    billed_entry_ids = set()
-    unpaid_entry_ids = set()  # Entries in unpaid/partially paid invoices
-
-    for item in all_invoice_items:
-        if not item.time_entry_ids:
-            continue
-        entry_ids = [int(eid.strip()) for eid in item.time_entry_ids.split(",") if eid.strip().isdigit()]
-        invoice = item.invoice
-        if invoice and invoice.payment_status == "fully_paid":
-            billed_entry_ids.update(entry_ids)
-        elif invoice and invoice.payment_status in ("unpaid", "partially_paid"):
-            unpaid_entry_ids.update(entry_ids)
-
-    # Filter entries: only include those that are NOT in fully paid invoices
-    unpaid_entries = [e for e in all_entries if e.id not in billed_entry_ids]
-
-    # Group by client
-    client_totals = {}
-    for entry in unpaid_entries:
-        # Get client from entry or from project
-        client = None
-        if entry.client_id:
-            client = entry.client
-        elif entry.project and entry.project.client_id:
-            client = entry.project.client_obj
-
-        if not client:
-            continue
-
-        if client.id not in client_totals:
-            client_totals[client.id] = {
-                "client": client,
-                "total_hours": 0.0,
-                "billable_hours": 0.0,
-                "estimated_amount": 0.0,
-                "entries": [],
-                "projects": {},
-            }
-
-        hours = entry.duration_hours
-        client_totals[client.id]["total_hours"] += hours
-        client_totals[client.id]["billable_hours"] += hours
-        client_totals[client.id]["entries"].append(entry)
-
-        # Track by project
-        if entry.project:
-            project_id = entry.project.id
-            if project_id not in client_totals[client.id]["projects"]:
-                client_totals[client.id]["projects"][project_id] = {
-                    "project": entry.project,
-                    "hours": 0.0,
-                    "rate": float(entry.project.hourly_rate) if entry.project.hourly_rate else 0.0,
-                }
-            client_totals[client.id]["projects"][project_id]["hours"] += hours
-
-        # Calculate estimated amount
-        rate = 0.0
-        if entry.project and entry.project.hourly_rate:
-            rate = float(entry.project.hourly_rate)
-        elif client.default_hourly_rate:
-            rate = float(client.default_hourly_rate)
-        client_totals[client.id]["estimated_amount"] += hours * rate
-
-    # Convert to list and round values
-    client_data = []
-    total_unpaid_hours = 0.0
-    total_estimated_amount = 0.0
-
-    for client_id, data in client_totals.items():
-        data["total_hours"] = round(data["total_hours"], 2)
-        data["billable_hours"] = round(data["billable_hours"], 2)
-        data["estimated_amount"] = round(data["estimated_amount"], 2)
-        data["projects"] = list(data["projects"].values())
-        for proj in data["projects"]:
-            proj["hours"] = round(proj["hours"], 2)
-        client_data.append(data)
-        total_unpaid_hours += data["total_hours"]
-        total_estimated_amount += data["estimated_amount"]
-
-    # Sort by total hours descending
-    client_data.sort(key=lambda x: x["total_hours"], reverse=True)
-
-    summary = {
-        "total_unpaid_hours": round(total_unpaid_hours, 2),
-        "total_estimated_amount": round(total_estimated_amount, 2),
-        "clients_count": len(client_data),
-    }
-
-    # Check if this is an Ajax request
     if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("format") == "json":
         return jsonify({
             "summary": summary,
             "client_data": [
                 {
-                    "client_id": data["client"].id,
-                    "client_name": data["client"].name,
-                    "client_email": data["client"].email,
-                    "total_hours": data["total_hours"],
-                    "billable_hours": data["billable_hours"],
-                    "estimated_amount": data["estimated_amount"],
+                    "client_id": d["client"].id,
+                    "client_name": d["client"].name,
+                    "client_email": getattr(d["client"], "email", None),
+                    "total_hours": d["total_hours"],
+                    "billable_hours": d["billable_hours"],
+                    "estimated_amount": d["estimated_amount"],
                     "projects": [
-                        {
-                            "project_id": proj["project"].id,
-                            "project_name": proj["project"].name,
-                            "hours": proj["hours"],
-                            "rate": proj["rate"],
-                        }
-                        for proj in data["projects"]
+                        {"project_id": p["project"].id, "project_name": p["project"].name, "hours": p["hours"], "rate": p["rate"]}
+                        for p in d["projects"]
                     ],
                     "entries": [
                         {
-                            "id": entry.id,
-                            "user": entry.user.display_name if entry.user else "Unknown",
-                            "project": entry.project.name if entry.project else "No Project",
-                            "task": entry.task.name if entry.task else None,
-                            "start_time": entry.start_time.isoformat() if entry.start_time else None,
-                            "end_time": entry.end_time.isoformat() if entry.end_time else None,
-                            "duration_hours": round(entry.duration_hours, 2),
-                            "notes": entry.notes or "",
+                            "id": e.id,
+                            "user": e.user.display_name if e.user else "Unknown",
+                            "project": e.project.name if e.project else "No Project",
+                            "task": e.task.name if e.task else None,
+                            "start_time": e.start_time.isoformat() if e.start_time else None,
+                            "end_time": e.end_time.isoformat() if e.end_time else None,
+                            "duration_hours": round(e.duration_hours, 2),
+                            "notes": e.notes or "",
                         }
-                        for entry in data["entries"]
+                        for e in d["entries"]
                     ],
                 }
-                for data in client_data
+                for d in client_data
             ],
         })
 

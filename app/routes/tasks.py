@@ -1425,6 +1425,12 @@ def my_tasks():
     db.session.expire_all()
     kanban_columns = KanbanColumn.get_active_columns() if KanbanColumn else []
 
+    # Precompute task counts by status for summary cards (avoid template selectattr iteration)
+    task_counts = {"todo": 0, "in_progress": 0, "review": 0, "done": 0}
+    for task in tasks.items:
+        if task.status in task_counts:
+            task_counts[task.status] += 1
+
     # Prevent browser caching of kanban board
     response = render_template(
         "tasks/my_tasks.html",
@@ -1439,6 +1445,7 @@ def my_tasks():
         tags=tags,
         task_type=task_type,
         overdue=overdue,
+        task_counts=task_counts,
     )
     resp = make_response(response)
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"

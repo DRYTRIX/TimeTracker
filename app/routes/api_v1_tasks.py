@@ -6,6 +6,7 @@ Routes under /api/v1/tasks.
 from flask import Blueprint, jsonify, request, g
 from app import db
 from app.utils.api_auth import require_api_token
+from app.utils.api_responses import error_response, not_found_response, validation_error_response
 
 api_v1_tasks_bp = Blueprint("api_v1_tasks", __name__, url_prefix="/api/v1")
 
@@ -68,10 +69,13 @@ def create_task():
     from app.services import TaskService
 
     data = request.get_json() or {}
+    errors = {}
     if not data.get("name"):
-        return jsonify({"error": "Task name is required"}), 400
+        errors["name"] = ["Task name is required"]
     if not data.get("project_id"):
-        return jsonify({"error": "project_id is required"}), 400
+        errors["project_id"] = ["project_id is required"]
+    if errors:
+        return validation_error_response(errors=errors, message="Validation failed")
 
     task_service = TaskService()
     result = task_service.create_task(
@@ -86,7 +90,7 @@ def create_task():
         tags=data.get("tags"),
     )
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not create task")}), 400
+        return error_response(result.get("message", "Could not create task"), status_code=400)
     return jsonify({"message": "Task created successfully", "task": result["task"].to_dict()}), 201
 
 
@@ -118,7 +122,7 @@ def update_task(task_id):
 
     result = task_service.update_task(task_id=task_id, user_id=g.api_user.id, **update_kwargs)
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not update task")}), 400
+        return error_response(result.get("message", "Could not update task"), status_code=400)
     return jsonify({"message": "Task updated successfully", "task": result["task"].to_dict()})
 
 
@@ -131,7 +135,7 @@ def delete_task(task_id):
     task_repo = TaskRepository()
     task = task_repo.get_by_id(task_id)
     if not task:
-        return jsonify({"error": "Task not found"}), 404
+        return not_found_response("Task", task_id)
     db.session.delete(task)
     db.session.commit()
     return jsonify({"message": "Task deleted successfully"})

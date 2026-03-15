@@ -4,8 +4,15 @@ Routes under /api/v1/projects.
 """
 
 from flask import Blueprint, jsonify, request, g
+from marshmallow import ValidationError
 from app.utils.api_auth import require_api_token
-from app.utils.api_responses import error_response, not_found_response
+from app.utils.api_responses import (
+    error_response,
+    forbidden_response,
+    handle_validation_error,
+    not_found_response,
+    validation_error_response,
+)
 
 api_v1_projects_bp = Blueprint("api_v1_projects", __name__, url_prefix="/api/v1")
 
@@ -20,7 +27,7 @@ def list_projects():
     status = request.args.get("status", "active")
     client_id = request.args.get("client_id", type=int)
     page = request.args.get("page", 1, type=int)
-    per_page = request.args.get("per_page", 20, type=int)
+    per_page = min(request.args.get("per_page", 50, type=int), 100)
     scope_client_ids = get_allowed_client_ids(g.api_user)
 
     project_service = ProjectService()
@@ -58,7 +65,7 @@ def get_project(project_id):
     if not result:
         return not_found_response("Project", project_id)
     if not user_can_access_project(g.api_user, project_id):
-        return jsonify({"error": "Access denied", "message": "You do not have access to this project"}), 403
+        return forbidden_response("You do not have access to this project")
 
     return jsonify({"project": result.to_dict()})
 
@@ -67,24 +74,32 @@ def get_project(project_id):
 @require_api_token("write:projects")
 def create_project():
     """Create a new project."""
+    from app.schemas import ProjectCreateSchema
     from app.services import ProjectService
 
     data = request.get_json() or {}
     if not data.get("name"):
-        return jsonify({"error": "Project name is required"}), 400
+        return validation_error_response(
+            errors={"name": ["Project name is required"]},
+            message="Project name is required",
+        )
+    try:
+        loaded = ProjectCreateSchema(partial=True).load(data)
+    except ValidationError as err:
+        return handle_validation_error(err)
 
     project_service = ProjectService()
     result = project_service.create_project(
-        name=data["name"],
-        client_id=data.get("client_id"),
+        name=loaded["name"],
+        client_id=loaded.get("client_id"),
         created_by=g.api_user.id,
-        description=data.get("description"),
-        billable=data.get("billable", True),
-        hourly_rate=data.get("hourly_rate"),
-        code=data.get("code"),
-        budget_amount=data.get("budget_amount"),
-        budget_threshold_percent=data.get("budget_threshold_percent"),
-        billing_ref=data.get("billing_ref"),
+        description=loaded.get("description"),
+        billable=loaded.get("billable", True),
+        hourly_rate=loaded.get("hourly_rate"),
+        code=loaded.get("code"),
+        budget_amount=loaded.get("budget_amount"),
+        budget_threshold_percent=loaded.get("budget_threshold_percent"),
+        billing_ref=loaded.get("billing_ref"),
     )
 
     if not result.get("success"):

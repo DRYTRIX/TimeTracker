@@ -86,6 +86,7 @@ def _require_module_enabled_for_api(module_id: str):
                     {
                         "error": "module_disabled",
                         "message": f"{module_id} module is disabled by the administrator.",
+                        "error_code": "forbidden",
                     }
                 ),
                 403,

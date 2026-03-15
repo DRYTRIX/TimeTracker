@@ -6,6 +6,7 @@ Routes under /api/v1/invoices.
 from flask import Blueprint, jsonify, request, g, current_app
 from app import db
 from app.utils.api_auth import require_api_token
+from app.utils.api_responses import error_response, validation_error_response
 from app.routes.api_v1_common import _parse_date
 
 api_v1_invoices_bp = Blueprint("api_v1_invoices", __name__, url_prefix="/api/v1")
@@ -64,18 +65,27 @@ def create_invoice():
     from app.services import InvoiceService
 
     data = request.get_json() or {}
+    errors = {}
     required = ["project_id", "client_id", "client_name", "due_date"]
     missing = [f for f in required if not data.get(f)]
     if missing:
-        return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
+        for f in missing:
+            errors[f] = [f"{f} is required"]
+        return validation_error_response(errors=errors, message=f"Missing required fields: {', '.join(missing)}")
     due_dt = _parse_date(data.get("due_date"))
     if not due_dt:
-        return jsonify({"error": "Invalid due_date format, expected YYYY-MM-DD"}), 400
+        return validation_error_response(
+            errors={"due_date": ["Invalid due_date format, expected YYYY-MM-DD"]},
+            message="Invalid due_date format, expected YYYY-MM-DD",
+        )
     issue_dt = None
     if data.get("issue_date"):
         issue_dt = _parse_date(data.get("issue_date"))
         if not issue_dt:
-            return jsonify({"error": "Invalid issue_date format, expected YYYY-MM-DD"}), 400
+            return validation_error_response(
+                errors={"issue_date": ["Invalid issue_date format, expected YYYY-MM-DD"]},
+                message="Invalid issue_date format, expected YYYY-MM-DD",
+            )
     invoice_service = InvoiceService()
     result = invoice_service.create_invoice(
         project_id=data["project_id"],
@@ -93,7 +103,7 @@ def create_invoice():
         issue_date=issue_dt,
     )
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not create invoice")}), 400
+        return error_response(result.get("message", "Could not create invoice"), status_code=400)
     return jsonify({"message": "Invoice created successfully", "invoice": result["invoice"].to_dict()}), 201
 
 
@@ -126,7 +136,7 @@ def update_invoice(invoice_id):
     invoice_service = InvoiceService()
     result = invoice_service.update_invoice(invoice_id=invoice_id, user_id=g.api_user.id, **update_kwargs)
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not update invoice")}), 400
+        return error_response(result.get("message", "Could not update invoice"), status_code=400)
     if "amount_paid" in data:
         result["invoice"].update_payment_status()
         db.session.commit()
@@ -142,5 +152,5 @@ def delete_invoice(invoice_id):
     invoice_service = InvoiceService()
     result = invoice_service.update_invoice(invoice_id=invoice_id, user_id=g.api_user.id, status="cancelled")
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not cancel invoice")}), 400
+        return error_response(result.get("message", "Could not cancel invoice"), status_code=400)
     return jsonify({"message": "Invoice cancelled successfully"})

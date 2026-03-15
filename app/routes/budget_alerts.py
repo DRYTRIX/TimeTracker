@@ -9,6 +9,7 @@ from flask_login import login_required, current_user
 from flask_babel import _
 from app import db, log_event, track_event
 from app.models import Project, BudgetAlert, User
+from app.repositories import TimeEntryRepository
 from app.utils.budget_forecasting import (
     calculate_burn_rate,
     estimate_completion_date,
@@ -39,13 +40,8 @@ def budget_dashboard():
         )
     else:
         # For non-admin users, show only projects they've worked on
-        from sqlalchemy import distinct
-        from app.models import TimeEntry
-
-        user_project_ids_result = (
-            db.session.query(distinct(TimeEntry.project_id)).filter(TimeEntry.user_id == current_user.id).all()
-        )
-        user_project_ids = [pid[0] for pid in user_project_ids_result]
+        time_entry_repo = TimeEntryRepository()
+        user_project_ids = time_entry_repo.get_distinct_project_ids_for_user(current_user.id)
 
         projects = (
             Project.query.filter(
@@ -242,13 +238,8 @@ def get_alerts():
         alerts = BudgetAlert.get_active_alerts(project_id=project_id, acknowledged=acknowledged)
     else:
         # For non-admin, get alerts for their projects
-        from sqlalchemy import distinct
-        from app.models import TimeEntry
-
-        user_project_ids = (
-            db.session.query(distinct(TimeEntry.project_id)).filter(TimeEntry.user_id == current_user.id).all()
-        )
-        user_project_ids = [pid[0] for pid in user_project_ids]
+        time_entry_repo = TimeEntryRepository()
+        user_project_ids = time_entry_repo.get_distinct_project_ids_for_user(current_user.id)
 
         query = BudgetAlert.query.filter(
             BudgetAlert.is_acknowledged == acknowledged, BudgetAlert.project_id.in_(user_project_ids)
@@ -388,13 +379,8 @@ def get_budget_summary():
         projects = Project.query.filter(Project.budget_amount.isnot(None), Project.status == "active").all()
     else:
         # For non-admin, get projects they've worked on
-        from sqlalchemy import distinct
-        from app.models import TimeEntry
-
-        user_project_ids = (
-            db.session.query(distinct(TimeEntry.project_id)).filter(TimeEntry.user_id == current_user.id).all()
-        )
-        user_project_ids = [pid[0] for pid in user_project_ids]
+        time_entry_repo = TimeEntryRepository()
+        user_project_ids = time_entry_repo.get_distinct_project_ids_for_user(current_user.id)
 
         projects = Project.query.filter(
             Project.id.in_(user_project_ids), Project.budget_amount.isnot(None), Project.status == "active"
@@ -423,13 +409,8 @@ def get_budget_summary():
     if current_user.is_admin:
         alert_stats = BudgetAlert.get_alert_summary()
     else:
-        from sqlalchemy import distinct
-        from app.models import TimeEntry
-
-        user_project_ids = (
-            db.session.query(distinct(TimeEntry.project_id)).filter(TimeEntry.user_id == current_user.id).all()
-        )
-        user_project_ids = [pid[0] for pid in user_project_ids]
+        time_entry_repo = TimeEntryRepository()
+        user_project_ids = time_entry_repo.get_distinct_project_ids_for_user(current_user.id)
 
         total_alerts = BudgetAlert.query.filter(BudgetAlert.project_id.in_(user_project_ids)).count()
 

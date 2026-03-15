@@ -266,10 +266,8 @@ def start_timer():
 
     # Invalidate dashboard cache so timer appears immediately
     try:
-        from app.utils.cache import get_cache
-        cache = get_cache()
-        cache_key = f"dashboard:{current_user.id}"
-        cache.delete(cache_key)
+        from app.utils.cache import invalidate_dashboard_for_user
+        invalidate_dashboard_for_user(current_user.id)
         current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
     except Exception as e:
         current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
@@ -358,10 +356,8 @@ def start_timer_from_template(template_id):
 
     # Invalidate dashboard cache so timer appears immediately
     try:
-        from app.utils.cache import get_cache
-        cache = get_cache()
-        cache_key = f"dashboard:{current_user.id}"
-        cache.delete(cache_key)
+        from app.utils.cache import invalidate_dashboard_for_user
+        invalidate_dashboard_for_user(current_user.id)
         current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
     except Exception as e:
         current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
@@ -444,10 +440,8 @@ def start_timer_for_project(project_id):
 
     # Invalidate dashboard cache so timer appears immediately
     try:
-        from app.utils.cache import get_cache
-        cache = get_cache()
-        cache_key = f"dashboard:{current_user.id}"
-        cache.delete(cache_key)
+        from app.utils.cache import invalidate_dashboard_for_user
+        invalidate_dashboard_for_user(current_user.id)
         current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
     except Exception as e:
         current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
@@ -540,10 +534,8 @@ def stop_timer():
 
         # Invalidate dashboard cache so timer disappears immediately
         try:
-            from app.utils.cache import get_cache
-            cache = get_cache()
-            cache_key = f"dashboard:{current_user.id}"
-            cache.delete(cache_key)
+            from app.utils.cache import invalidate_dashboard_for_user
+            invalidate_dashboard_for_user(current_user.id)
             current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
         except Exception as e:
             current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
@@ -584,9 +576,8 @@ def pause_timer():
         current_app.logger.exception("Error pausing timer: %s", e)
         flash(_("Could not pause timer. Please try again."), "error")
     try:
-        from app.utils.cache import get_cache
-        cache = get_cache()
-        cache.delete(f"dashboard:{current_user.id}")
+        from app.utils.cache import invalidate_dashboard_for_user
+        invalidate_dashboard_for_user(current_user.id)
     except Exception:
         pass
     return redirect(url_for("main.dashboard"))
@@ -609,9 +600,8 @@ def resume_timer():
         current_app.logger.exception("Error resuming timer: %s", e)
         flash(_("Could not resume timer. Please try again."), "error")
     try:
-        from app.utils.cache import get_cache
-        cache = get_cache()
-        cache.delete(f"dashboard:{current_user.id}")
+        from app.utils.cache import invalidate_dashboard_for_user
+        invalidate_dashboard_for_user(current_user.id)
     except Exception:
         pass
     return redirect(url_for("main.dashboard"))
@@ -649,9 +639,8 @@ def adjust_timer():
     db.session.commit()
 
     try:
-        from app.utils.cache import get_cache
-        cache = get_cache()
-        cache.delete(f"dashboard:{current_user.id}")
+        from app.utils.cache import invalidate_dashboard_for_user
+        invalidate_dashboard_for_user(current_user.id)
     except Exception:
         pass
 
@@ -885,10 +874,8 @@ def edit_timer(timer_id):
 
         # Invalidate dashboard cache for the timer owner so changes appear immediately
         try:
-            from app.utils.cache import get_cache
-            cache = get_cache()
-            cache_key = f"dashboard:{timer.user_id}"
-            cache.delete(cache_key)
+            from app.utils.cache import invalidate_dashboard_for_user
+            invalidate_dashboard_for_user(timer.user_id)
             current_app.logger.debug("Invalidated dashboard cache for user %s after timer edit", timer.user_id)
         except Exception as e:
             current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
@@ -1043,10 +1030,8 @@ def delete_timer(timer_id):
 
     # Invalidate dashboard cache for the timer owner so changes appear immediately
     try:
-        from app.utils.cache import get_cache
-        cache = get_cache()
-        cache_key = f"dashboard:{timer_user_id}"
-        cache.delete(cache_key)
+        from app.utils.cache import invalidate_dashboard_for_user
+        invalidate_dashboard_for_user(timer_user_id)
         current_app.logger.debug("Invalidated dashboard cache for user %s after timer deletion", timer_user_id)
     except Exception as e:
         current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
@@ -1066,10 +1051,8 @@ def delete_timer(timer_id):
 
     # Invalidate dashboard cache so deleted entry disappears immediately
     try:
-        from app.utils.cache import get_cache
-        cache = get_cache()
-        cache_key = f"dashboard:{current_user.id}"
-        cache.delete(cache_key)
+        from app.utils.cache import invalidate_dashboard_for_user
+        invalidate_dashboard_for_user(current_user.id)
         current_app.logger.debug("Invalidated dashboard cache for user %s after deleting timer", current_user.id)
     except Exception as e:
         current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
@@ -1484,10 +1467,8 @@ def manual_entry():
 
         # Invalidate dashboard cache so new entry appears immediately
         try:
-            from app.utils.cache import get_cache
-            cache = get_cache()
-            cache_key = f"dashboard:{current_user.id}"
-            cache.delete(cache_key)
+            from app.utils.cache import invalidate_dashboard_for_user
+            invalidate_dashboard_for_user(current_user.id)
             current_app.logger.debug("Invalidated dashboard cache for user %s after manual entry creation", current_user.id)
         except Exception as e:
             current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
@@ -2134,10 +2115,8 @@ def resume_timer_by_id(timer_id):
 
     # Invalidate dashboard cache so timer appears immediately
     try:
-        from app.utils.cache import get_cache
-        cache = get_cache()
-        cache_key = f"dashboard:{current_user.id}"
-        cache.delete(cache_key)
+        from app.utils.cache import invalidate_dashboard_for_user
+        invalidate_dashboard_for_user(current_user.id)
         current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
     except Exception as e:
         current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
@@ -2372,13 +2351,8 @@ def time_entries_overview():
     else:
         # For non-admin users, only show their projects
         # Get projects from user's time entries
-        user_project_ids = (
-            db.session.query(TimeEntry.project_id)
-            .filter(TimeEntry.user_id == current_user.id, TimeEntry.project_id.isnot(None))
-            .distinct()
-            .all()
-        )
-        user_project_ids = [pid[0] for pid in user_project_ids]
+        time_entry_repo = TimeEntryRepository()
+        user_project_ids = time_entry_repo.get_distinct_project_ids_for_user(current_user.id)
         if user_project_ids:
             projects = Project.query.filter(Project.id.in_(user_project_ids), Project.status == "active").order_by(Project.name).all()
             # Get clients from user's projects

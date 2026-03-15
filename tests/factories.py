@@ -20,6 +20,8 @@ from app.models import (
     Task,
     Payment,
     ExpenseCategory,
+    ApiToken,
+    RecurringInvoice,
 )
 
 
@@ -174,3 +176,50 @@ class ExpenseCategoryFactory(_SessionFactory):
     requires_receipt = True
     requires_approval = True
     is_active = True
+
+
+class ApiTokenFactory:
+    """
+    Factory for API tokens. ApiToken must be created via create_token() for correct hashing.
+    Returns (token_model, plain_token). Usage:
+        token, plain = ApiTokenFactory.create(user_id=user.id, scopes="read:projects")
+    """
+
+    @classmethod
+    def create(
+        cls,
+        user_id,
+        name="Test API Token",
+        description="",
+        scopes="read:projects,write:projects,read:time_entries,write:time_entries",
+        expires_days=30,
+    ):
+        token, plain = ApiToken.create_token(
+            user_id=user_id,
+            name=name,
+            description=description,
+            scopes=scopes,
+            expires_days=expires_days,
+        )
+        db.session.add(token)
+        db.session.flush()
+        return token, plain
+
+
+class RecurringInvoiceFactory(_SessionFactory):
+    class Meta:
+        model = RecurringInvoice
+
+    name = factory.Sequence(lambda n: f"Recurring {n}")
+    project_fk = factory.SubFactory(ProjectFactory)
+    project_id = factory.SelfAttribute("project_fk.id")
+    client_id = factory.SelfAttribute("project_fk.client_id")
+    client_name = factory.LazyAttribute(lambda o: f"Client {o.client_id}")
+    frequency = "monthly"
+    interval = 1
+    next_run_date = factory.LazyFunction(lambda: _dt.date.today() + _dt.timedelta(days=1))
+    due_date_days = 30
+    tax_rate = Decimal("20.00")
+    currency_code = "EUR"
+    is_active = True
+    created_by = factory.LazyAttribute(lambda _: UserFactory().id)

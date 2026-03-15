@@ -241,6 +241,8 @@ Break your project into manageable tasks:
 
 ## 🎯 Core Workflows
 
+Time entries feed into Projects and Invoices; use **Reports** to see time and billing summaries.
+
 ### Workflow 1: Track Time with Timer
 
 **Quick time tracking for active work:**
@@ -260,7 +262,7 @@ Break your project into manageable tasks:
 
 **Add historical or bulk time entries:**
 
-1. Go to **Timer → Log Time**
+1. Go to **Timer** (sidebar) or use the timer on the Dashboard
 
 2. **Choose entry type**:
    - Single entry

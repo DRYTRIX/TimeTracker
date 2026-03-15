@@ -631,16 +631,15 @@ def test_needs_compile_po_newer():
         po_path = os.path.join(tmpdir, "messages.po")
         mo_path = os.path.join(tmpdir, "messages.mo")
 
-        # Create mo file first
         with open(mo_path, "wb") as f:
             f.write(b"old")
-
-        # Wait a bit and create po file
-        import time
-
-        time.sleep(0.01)
         with open(po_path, "w") as f:
             f.write("# new")
+
+        # Set deterministic mtimes: po newer than mo (no time.sleep)
+        base = 1000000000
+        os.utime(mo_path, (base, base))
+        os.utime(po_path, (base + 1, base + 1))
 
         assert _needs_compile(po_path, mo_path) is True
 
@@ -653,16 +652,15 @@ def test_needs_compile_mo_current():
         po_path = os.path.join(tmpdir, "messages.po")
         mo_path = os.path.join(tmpdir, "messages.mo")
 
-        # Create po file first
         with open(po_path, "w") as f:
             f.write("# test")
-
-        # Wait and create mo file
-        import time
-
-        time.sleep(0.01)
         with open(mo_path, "wb") as f:
             f.write(b"compiled")
+
+        # Set deterministic mtimes: mo newer than po (no time.sleep)
+        base = 1000000000
+        os.utime(po_path, (base, base))
+        os.utime(mo_path, (base + 1, base + 1))
 
         assert _needs_compile(po_path, mo_path) is False
 

@@ -672,6 +672,14 @@ def create_app(config=None):
         except Exception as e:
             app.logger.warning(f"Could not enable query logging: {e}")
 
+    # Optional performance instrumentation (slow-request log, query-count when PERF_QUERY_PROFILE=1)
+    try:
+        from app.utils.performance import init_performance_logging
+
+        init_performance_logging(app)
+    except Exception as e:
+        app.logger.warning(f"Could not init performance logging: {e}")
+
     # Load analytics configuration (embedded at build time)
     from app.config.analytics_defaults import get_analytics_config, has_analytics_configured
 

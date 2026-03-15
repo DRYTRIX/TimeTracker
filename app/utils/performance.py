@@ -1,92 +1,60 @@
 """
-Performance monitoring utilities.
+Optional performance instrumentation: slow-request logging and query-count profiling.
+
+Enable via config:
+- PERF_LOG_SLOW_REQUESTS_MS: log when request duration exceeds this many ms (0 = disabled)
+- PERF_QUERY_PROFILE: when true, track DB query count per request and include in slow-request logs
 """
 
-from typing import Callable, Any
-from functools import wraps
-import time
-from flask import current_app, g
+import logging
+from flask import g, request
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+
+logger = logging.getLogger("timetracker.perf")
 
 
-def measure_time(func: Callable) -> Callable:
+def init_performance_logging(app):
     """
-    Decorator to measure function execution time.
-
-    Usage:
-        @measure_time
-        def slow_function():
-            # Code
+    Register slow-request logging and optional query-count profiling.
+    No overhead when PERF_LOG_SLOW_REQUESTS_MS is 0 and PERF_QUERY_PROFILE is False.
     """
+    slow_ms = app.config.get("PERF_LOG_SLOW_REQUESTS_MS", 0) or 0
+    query_profile = app.config.get("PERF_QUERY_PROFILE", False)
 
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
+    if query_profile:
+
+        @app.before_request
+        def _perf_set_query_count():
+            g._perf_query_count = 0
+
+        @event.listens_for(Engine, "before_cursor_execute")
+        def _perf_count_query(conn, cursor, statement, parameters, context, executemany):
+            if hasattr(g, "_perf_query_count"):
+                g._perf_query_count += 1
+
+    @app.after_request
+    def _perf_log_slow_requests(response):
+        if slow_ms <= 0:
+            return response
         try:
-            result = func(*args, **kwargs)
-            return result
-        finally:
-            elapsed = time.time() - start_time
-            current_app.logger.debug(f"{func.__name__} took {elapsed:.4f} seconds")
-            # Store in request context if available
-            if hasattr(g, "performance_metrics"):
-                g.performance_metrics[func.__name__] = elapsed
+            start = getattr(g, "_start_time", None)
+            if start is None:
+                return response
+            duration_ms = (__import__("time").time() - start) * 1000
+            if duration_ms < slow_ms:
+                return response
+            query_count = getattr(g, "_perf_query_count", getattr(g, "query_count", None))
+            if query_count is not None:
+                logger.warning(
+                    "slow_request path=%s duration_ms=%.0f status=%s query_count=%s",
+                    request.path, duration_ms, response.status_code, query_count,
+                )
             else:
-                g.performance_metrics = {func.__name__: elapsed}
-
-    return wrapper
-
-
-def log_slow_queries(threshold: float = 1.0):
-    """
-    Decorator to log slow database queries.
-
-    Args:
-        threshold: Time threshold in seconds
-    """
-
-    def decorator(func: Callable) -> Callable:
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            start_time = time.time()
-            try:
-                result = func(*args, **kwargs)
-                return result
-            finally:
-                elapsed = time.time() - start_time
-                if elapsed > threshold:
-                    current_app.logger.warning(
-                        f"Slow query in {func.__name__}: {elapsed:.4f} seconds " f"(threshold: {threshold}s)"
-                    )
-
-        return wrapper
-
-    return decorator
-
-
-class PerformanceMonitor:
-    """Context manager for performance monitoring"""
-
-    def __init__(self, operation_name: str):
-        self.operation_name = operation_name
-        self.start_time = None
-
-    def __enter__(self):
-        self.start_time = time.time()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        elapsed = time.time() - self.start_time
-        current_app.logger.info(f"Performance: {self.operation_name} took {elapsed:.4f} seconds")
-        return False
-
-
-def get_performance_metrics() -> dict:
-    """
-    Get performance metrics from request context.
-
-    Returns:
-        dict with performance metrics
-    """
-    if hasattr(g, "performance_metrics"):
-        return g.performance_metrics
-    return {}
+                logger.warning(
+                    "slow_request path=%s duration_ms=%.0f status=%s",
+                    request.path, duration_ms, response.status_code,
+                )
+        except Exception:
+            pass
+        return response

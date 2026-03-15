@@ -838,6 +838,12 @@
                 {% endif %}
             </div>
         </div>
+        {% if not is_license_activated and current_user.is_authenticated %}
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-6 pt-4 border-t border-border-light dark:border-border-dark">
+            {{ _('Enjoying TimeTracker?') }} {{ _('You can support development by purchasing a license key.') }}
+            <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline font-medium">{{ _('Support the project') }}</a>
+        </p>
+        {% endif %}
     </section>
 </div>
 {% endblock %}

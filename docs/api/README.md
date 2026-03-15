@@ -9,13 +9,14 @@ TimeTracker provides a comprehensive REST API for programmatic access to all fea
 ## 📚 Documentation
 
 - **[REST API](REST_API.md)** - Complete API reference with all endpoints
+- **[Response Format](RESPONSE_FORMAT.md)** - Standard error envelope and success/legacy response shapes
 - **[API Token Scopes](API_TOKEN_SCOPES.md)** - Understanding token permissions and scopes
 - **[API Versioning](API_VERSIONING.md)** - API versioning strategy and best practices
 - **[API Enhancements](API_ENHANCEMENTS.md)** - Recent API improvements and additions
 
 ## 🔑 Quick Start
 
-1. Generate an API token in your user settings
+1. Create an API token in **Admin → Security & Access → Api-tokens** (or `/admin/api-tokens`)
 2. Include the token in the `Authorization` header: `Bearer YOUR_TOKEN`
 3. Make requests to the API endpoints
 4. Review the [API Token Scopes](API_TOKEN_SCOPES.md) to ensure your token has the required permissions
