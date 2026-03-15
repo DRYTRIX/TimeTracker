@@ -11,7 +11,7 @@
 
 {% block content %}
 <div class="container mt-4">
-    {% from "_components.html" import page_header %}
+    {% from "components/ui.html" import page_header %}
     <div class="container-fluid">
         <div class="row">
             <div class="col-12">
@@ -38,7 +38,7 @@
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <div class="summary-label">{{ _('To Do') }}</div>
-                            <div class="summary-value">{{ tasks|selectattr('status', 'equalto', 'todo')|list|length }}</div>
+                            <div class="summary-value">{{ task_counts.get('todo', 0) if task_counts is defined and task_counts else (tasks|selectattr('status', 'equalto', 'todo')|list|length) }}</div>
                         </div>
                     </div>
                 </div>
@@ -55,7 +55,7 @@
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <div class="summary-label">{{ _('In Progress') }}</div>
-                            <div class="summary-value">{{ tasks|selectattr('status', 'equalto', 'in_progress')|list|length }}</div>
+                            <div class="summary-value">{{ task_counts.get('in_progress', 0) if task_counts is defined and task_counts else (tasks|selectattr('status', 'equalto', 'in_progress')|list|length) }}</div>
                         </div>
                     </div>
                 </div>
@@ -72,7 +72,7 @@
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <div class="summary-label">{{ _('Review') }}</div>
-                            <div class="summary-value">{{ tasks|selectattr('status', 'equalto', 'review')|list|length }}</div>
+                            <div class="summary-value">{{ task_counts.get('review', 0) if task_counts is defined and task_counts else (tasks|selectattr('status', 'equalto', 'review')|list|length) }}</div>
                         </div>
                     </div>
                 </div>
@@ -89,7 +89,7 @@
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <div class="summary-label">{{ _('Completed') }}</div>
-                            <div class="summary-value">{{ tasks|selectattr('status', 'equalto', 'done')|list|length }}</div>
+                            <div class="summary-value">{{ task_counts.get('done', 0) if task_counts is defined and task_counts else (tasks|selectattr('status', 'equalto', 'done')|list|length) }}</div>
                         </div>
                     </div>
                 </div>

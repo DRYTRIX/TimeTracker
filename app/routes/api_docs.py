@@ -94,10 +94,10 @@ List endpoints support pagination with the following query parameters:
 - `page` - Page number (default: 1)
 - `per_page` - Items per page (default: 50, max: 100)
 
-Responses include pagination metadata:
+List responses use a **resource-named key** plus `pagination` (e.g. `time_entries`, `projects`, `clients`). Example:
 ```json
 {
-  "items": [...],
+  "time_entries": [...],
   "pagination": {
     "page": 1,
     "per_page": 50,
@@ -123,11 +123,21 @@ The API uses standard HTTP status codes:
 - **404 Not Found** - Resource not found
 - **500 Internal Server Error** - Server error
 
-Error responses include a JSON body:
+Error responses include a JSON body with at least `error` (user-facing message) and `message`; optional `error_code` (e.g. unauthorized, forbidden, not_found, validation_error) and `errors` (field-level validation):
 ```json
 {
-  "error": "Error type",
-  "message": "Detailed error message"
+  "error": "Invalid token",
+  "message": "The provided API token is invalid or expired",
+  "error_code": "unauthorized"
+}
+```
+Validation errors (400):
+```json
+{
+  "error": "Validation failed",
+  "message": "Validation failed",
+  "error_code": "validation_error",
+  "errors": { "field_name": ["message1", "message2"] }
 }
 ```
 
@@ -212,7 +222,17 @@ Example: `2024-01-15T14:30:00Z`
                         "phone": {"type": "string", "nullable": True},
                     },
                 },
-                "Error": {"type": "object", "properties": {"error": {"type": "string"}, "message": {"type": "string"}}},
+                "Error": {
+                    "type": "object",
+                    "properties": {
+                        "error": {"type": "string", "description": "User-facing error message"},
+                        "message": {"type": "string", "description": "Detailed error message"},
+                        "error_code": {"type": "string", "description": "Machine-readable code (e.g. unauthorized, forbidden, not_found, validation_error)"},
+                        "errors": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string"}}, "description": "Field-level validation errors"},
+                        "required_scope": {"type": "string"},
+                        "available_scopes": {"type": "array", "items": {"type": "string"}},
+                    },
+                },
                 "Pagination": {
                     "type": "object",
                     "properties": {

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ _('License') }} - {{ _('Settings') }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-2xl">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ _('License') }}</h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-2">{{ _('View activation status and enter a license key') }}</p>
+    </div>
+
+    <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">{{ _('License status') }}</h2>
+        {% if is_license_activated %}
+        <p class="flex items-center gap-2 text-green-600 dark:text-green-400">
+            <i class="fas fa-check-circle" aria-hidden="true"></i>
+            {{ _('Active license') }}
+        </p>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">{{ _('Thank you for supporting TimeTracker.') }}</p>
+        {% else %}
+        <p class="flex items-center gap-2 text-text-muted-light dark:text-text-muted-dark">
+            <i class="fas fa-circle-info" aria-hidden="true"></i>
+            {{ _('Not activated') }}
+        </p>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
+            {{ _('Want to support development? You can purchase a license key for €25.') }}
+        </p>
+        <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-md text-sm font-medium transition">
+            {{ _('Buy license (€25)') }} <i class="fas fa-external-link-alt text-xs" aria-hidden="true"></i>
+        </a>
+        {% endif %}
+    </div>
+
+    {% if not is_license_activated %}
+    <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg shadow-md p-6">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">{{ _('Enter license key') }}</h2>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Paste the license key you received by email after purchase.') }}</p>
+        <form method="POST" action="{{ url_for('user.license') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="mb-4">
+                <label for="license_key" class="form-label">{{ _('License key') }}</label>
+                <input type="text" id="license_key" name="license_key" autocomplete="off"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 dark:text-white focus:ring-primary focus:border-primary"
+                       placeholder="{{ _('Paste your key here') }}">
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-check mr-2" aria-hidden="true"></i>{{ _('Validate') }}
+            </button>
+        </form>
+        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-4">
+            {{ _('Need a key?') }}
+            <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">{{ _('Purchase a license key') }}</a>
+        </p>
+    </div>
+    {% endif %}
+
+    <p class="mt-6">
+        <a href="{{ url_for('user.settings') }}" class="text-primary hover:underline">{{ _('Back to Settings') }}</a>
+    </p>
+</div>
+{% endblock %}

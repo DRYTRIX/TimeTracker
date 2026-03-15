@@ -274,22 +274,24 @@
                 <div class="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
                     <div class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Status') }}</div>
                     <div class="flex items-center gap-1">
-                        {% if percentage >= 100 %}
+                        {% if budget_status is defined and budget_status == 'over' %}
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300">
                             <i class="fas fa-exclamation-circle mr-1"></i>{{ _('Over') }}
                         </span>
-                        {% elif percentage >= threshold %}
+                        {% elif budget_status is defined and budget_status == 'critical' %}
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">
                             <i class="fas fa-exclamation-triangle mr-1"></i>{{ _('Critical') }}
                         </span>
-                        {% elif percentage >= (threshold * 0.8) %}
+                        {% elif budget_status is defined and budget_status == 'warning' %}
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
                             <i class="fas fa-info-circle mr-1"></i>{{ _('Warning') }}
                         </span>
-                        {% else %}
+                        {% elif budget_status is defined and budget_status == 'healthy' %}
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
                             <i class="fas fa-check-circle mr-1"></i>{{ _('Healthy') }}
                         </span>
+                        {% else %}
+                        <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                         {% endif %}
                     </div>
                 </div>

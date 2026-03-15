@@ -133,6 +133,7 @@ def require_api_token(required_scope=None):
                         {
                             "error": "Authentication required",
                             "message": "API token must be provided in Authorization header or X-API-Key header",
+                            "error_code": "unauthorized",
                         }
                     ),
                     401,
@@ -144,7 +145,11 @@ def require_api_token(required_scope=None):
             if not user or not api_token:
                 message = error_msg or "The provided API token is invalid or expired"
                 return (
-                    jsonify({"error": "Invalid token", "message": message}),
+                    jsonify({
+                        "error": "Invalid token",
+                        "message": message,
+                        "error_code": "unauthorized",
+                    }),
                     401,
                 )
 
@@ -155,6 +160,7 @@ def require_api_token(required_scope=None):
                         {
                             "error": "Insufficient permissions",
                             "message": f'This endpoint requires the "{required_scope}" scope',
+                            "error_code": "forbidden",
                             "required_scope": required_scope,
                             "available_scopes": api_token.scopes.split(",") if api_token.scopes else [],
                         }

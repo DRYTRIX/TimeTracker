@@ -1,12 +1,15 @@
 """User profile and settings routes"""
 
+import hmac
 import re
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from app import db
 from app.models import User, Activity, Settings
 from app.utils.db import safe_commit
+from app.utils.donate_hide_code import compute_donate_hide_code, verify_ed25519_signature
+from app.utils.license_utils import is_license_activated
 from flask_babel import gettext as _
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from app.utils.timezone import get_available_timezones
@@ -209,13 +212,48 @@ def settings():
     )
 
 
+@user_bp.route("/settings/license", methods=["GET", "POST"])
+@login_required
+def license():
+    """License management page: show status, enter key, validate (sets donate_ui_hidden for instance)."""
+    settings_obj = Settings.get_settings()
+    if request.method == "POST":
+        if is_license_activated(settings_obj):
+            flash(_("This instance is already licensed."), "info")
+            return redirect(url_for("user.license"))
+        code = (request.form.get("license_key") or request.form.get("code") or "").strip()
+        system_id = Settings.get_system_instance_id()
+        if not system_id:
+            flash(_("Invalid code."), "error")
+            return redirect(url_for("user.license"))
+        valid = False
+        public_key_pem = current_app.config.get("DONATE_HIDE_PUBLIC_KEY_PEM") or ""
+        if public_key_pem:
+            valid = verify_ed25519_signature(code, system_id, public_key_pem)
+        if not valid:
+            secret = current_app.config.get("DONATE_HIDE_UNLOCK_SECRET") or ""
+            if secret:
+                expected = compute_donate_hide_code(secret, system_id)
+                valid = bool(expected and hmac.compare_digest(code, expected))
+        if not valid:
+            flash(_("Invalid code."), "error")
+            return redirect(url_for("user.license"))
+        settings_obj.donate_ui_hidden = True
+        if safe_commit(db.session):
+            flash(_("License activated. Thank you for supporting TimeTracker!"), "success")
+        else:
+            flash(_("Error saving settings."), "error")
+        return redirect(url_for("user.license"))
+    return render_template(
+        "user/license.html",
+        is_license_activated=is_license_activated(settings_obj),
+    )
+
+
 @user_bp.route("/settings/verify-donate-hide-code", methods=["POST"])
 @login_required
 def verify_donate_hide_code():
     """Verify code (Ed25519 signature or HMAC) and set ui_show_donate=False."""
-    import hmac
-    from flask import current_app
-    from app.utils.donate_hide_code import compute_donate_hide_code, verify_ed25519_signature
 
     if not getattr(current_user, "ui_show_donate", True):
         return jsonify({"success": True})

@@ -8,7 +8,7 @@ from decimal import Decimal
 from app import db
 from app.models import Deal
 from app.utils.api_auth import require_api_token
-from app.utils.api_responses import error_response, forbidden_response
+from app.utils.api_responses import error_response, forbidden_response, validation_error_response
 from app.routes.api_v1_common import _parse_date, _require_module_enabled_for_api
 
 api_v1_deals_bp = Blueprint("api_v1_deals", __name__, url_prefix="/api/v1")
@@ -77,7 +77,10 @@ def create_deal():
     data = request.get_json() or {}
     name = (data.get("name") or "").strip()
     if not name:
-        return jsonify({"error": "name is required"}), 400
+        return validation_error_response(
+            errors={"name": ["name is required"]},
+            message="name is required",
+        )
     value = None
     if data.get("value") is not None:
         try:

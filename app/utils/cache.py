@@ -252,6 +252,16 @@ def invalidate_cache(pattern: str) -> None:
     cache.clear()  # For now, just clear all (can be improved)
 
 
+def invalidate_dashboard_for_user(user_id: int) -> None:
+    """Invalidate all dashboard-related cache keys for a user (stats, chart, legacy)."""
+    cache = get_cache()
+    for key in (f"dashboard:{user_id}", f"dashboard:stats:{user_id}", f"dashboard:chart:{user_id}"):
+        try:
+            cache.delete(key)
+        except Exception:
+            pass
+
+
 def invalidate_pattern(pattern: str) -> None:
     """
     Invalidate cache entries matching a pattern.

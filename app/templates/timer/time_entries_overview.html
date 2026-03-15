@@ -30,31 +30,33 @@
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold">{{ _('Filters') }}</h2>
         <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-xs text-text-muted-light dark:text-text-muted-dark self-center mr-1">{{ _('Exports use current filters') }}</span>
-            <button type="button" id="applyFiltersBtn" class="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
-                <i class="fas fa-filter mr-2"></i>{{ _('Apply filters') }}
+            <span class="text-xs text-text-muted-light dark:text-text-muted-dark self-center mr-1" title="{{ _('Exports use current filters') }}"><i class="fas fa-info-circle mr-0.5" aria-hidden="true"></i>{{ _('Exports use current filters') }}</span>
+            <button type="button" id="applyFiltersBtn" class="btn btn-primary btn-sm" aria-label="{{ _('Apply filters') }}">
+                <i class="fas fa-filter mr-2" aria-hidden="true"></i>{{ _('Apply filters') }}
             </button>
-            <button type="button" id="clearFiltersBtn" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-border-light dark:border-border-dark">
-                <i class="fas fa-times mr-1"></i>{{ _('Clear Filters') }}
+            <button type="button" id="clearFiltersBtn" class="btn btn-secondary btn-sm" aria-label="{{ _('Clear Filters') }}">
+                <i class="fas fa-times mr-1" aria-hidden="true"></i>{{ _('Clear Filters') }}
             </button>
             <a
                 id="exportCsvBtn"
                 data-export-base="{{ url_for('timer.export_time_entries_csv') }}"
                 href="{{ url_for('timer.export_time_entries_csv') }}"
-                class="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                class="btn btn-primary btn-sm"
+                aria-label="{{ _('Export CSV') }}"
             >
-                <i class="fas fa-file-csv mr-2"></i>{{ _('Export CSV') }}
+                <i class="fas fa-file-csv mr-2" aria-hidden="true"></i>{{ _('Export CSV') }}
             </a>
             <a
                 id="exportPdfBtn"
                 data-export-base="{{ url_for('timer.export_time_entries_pdf') }}"
                 href="{{ url_for('timer.export_time_entries_pdf') }}"
-                class="px-3 py-1.5 text-sm bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors"
+                class="btn btn-secondary btn-sm"
+                aria-label="{{ _('Export PDF') }}"
             >
-                <i class="fas fa-file-pdf mr-2"></i>{{ _('Export PDF') }}
+                <i class="fas fa-file-pdf mr-2" aria-hidden="true"></i>{{ _('Export PDF') }}
             </a>
-            <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" aria-label="{{ _('Toggle filters') }}">
-                <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
+            <button type="button" class="btn btn-ghost btn-sm" id="toggleFilters" aria-label="{{ _('Toggle filters') }}" aria-expanded="true">
+                <i class="fas fa-chevron-up" id="filterToggleIcon" aria-hidden="true"></i>
             </button>
         </div>
     </div>
@@ -128,8 +130,8 @@
             {% endfor %}
             {% endif %}
             <div class="flex items-end">
-                <button type="submit" class="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
-                    <i class="fas fa-filter mr-2"></i>{{ _('Apply filters') }}
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-filter mr-2" aria-hidden="true"></i>{{ _('Apply filters') }}
                 </button>
             </div>
         </form>
@@ -240,9 +242,11 @@ document.addEventListener('DOMContentLoaded', function() {
 function toggleFilterVisibility() {
     const filterBody = document.getElementById('filterBody');
     const icon = document.getElementById('filterToggleIcon');
+    const toggleBtn = document.getElementById('toggleFilters');
     filterBody.classList.toggle('hidden');
     icon.classList.toggle('fa-chevron-up');
     icon.classList.toggle('fa-chevron-down');
+    if (toggleBtn) toggleBtn.setAttribute('aria-expanded', filterBody.classList.contains('hidden') ? 'false' : 'true');
 }
 
 function clearAllFilters() {
@@ -668,6 +672,8 @@ function confirmBulkDelete() {
                 if (filterBody && filterBody.classList.contains('hidden')) {
                     filterBody.classList.remove('hidden');
                     if (icon) { icon.classList.remove('fa-chevron-down'); icon.classList.add('fa-chevron-up'); }
+                    var t = document.getElementById('toggleFilters');
+                    if (t) t.setAttribute('aria-expanded', 'true');
                 }
                 if (filterTimeout) clearTimeout(filterTimeout);
                 if (searchTimeout) clearTimeout(searchTimeout);

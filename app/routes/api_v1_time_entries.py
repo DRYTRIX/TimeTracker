@@ -6,7 +6,12 @@ Sub-blueprint for /api/v1/time-entries and /api/v1/timer/*.
 from flask import Blueprint, jsonify, request, g
 from marshmallow import ValidationError
 from app.utils.api_auth import require_api_token
-from app.utils.api_responses import validation_error_response, handle_validation_error
+from app.utils.api_responses import (
+    error_response,
+    forbidden_response,
+    handle_validation_error,
+    validation_error_response,
+)
 from app.routes.api_v1_common import paginate_query, parse_datetime, _parse_date_range
 from app.schemas.time_entry_schema import TimeEntryCreateSchema, TimeEntryUpdateSchema
 
@@ -24,7 +29,7 @@ def list_time_entries():
     user_id = request.args.get("user_id", type=int)
     if user_id:
         if not g.api_user.is_admin and user_id != g.api_user.id:
-            return jsonify({"error": "Access denied"}), 403
+            return forbidden_response("Access denied")
     else:
         if not g.api_user.is_admin:
             user_id = g.api_user.id
@@ -76,7 +81,7 @@ def get_time_entry(entry_id):
         .first_or_404()
     )
     if not g.api_user.is_admin and entry.user_id != g.api_user.id:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
     return jsonify({"time_entry": entry.to_dict()})
 
 
@@ -113,7 +118,10 @@ def create_time_entry():
     )
 
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not create time entry")}), 400
+        return error_response(
+            result.get("message", "Could not create time entry"),
+            status_code=400,
+        )
 
     entry = result.get("entry")
     if entry:
@@ -180,7 +188,10 @@ def update_time_entry(entry_id):
     )
 
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not update time entry")}), 400
+        return error_response(
+            result.get("message", "Could not update time entry"),
+            status_code=400,
+        )
 
     entry = result.get("entry")
     if entry:
@@ -225,7 +236,10 @@ def delete_time_entry(entry_id):
         reason=reason,
     )
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not delete time entry")}), 400
+        return error_response(
+            result.get("message", "Could not delete time entry"),
+            status_code=400,
+        )
     return jsonify({"message": "Time entry deleted successfully"})
 
 
@@ -248,12 +262,15 @@ def start_timer():
     data = request.get_json() or {}
     project_id = data.get("project_id")
     if not project_id:
-        return jsonify({"error": "project_id is required"}), 400
+        return validation_error_response(
+            errors={"project_id": ["project_id is required"]},
+            message="project_id is required",
+        )
 
     from app.utils.scope_filter import user_can_access_project
 
     if not user_can_access_project(g.api_user, project_id):
-        return jsonify({"error": "You do not have access to this project"}), 403
+        return forbidden_response("You do not have access to this project")
 
     time_tracking_service = TimeTrackingService()
     result = time_tracking_service.start_timer(
@@ -264,7 +281,10 @@ def start_timer():
         template_id=data.get("template_id"),
     )
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not start timer")}), 400
+        return error_response(
+            result.get("message", "Could not start timer"),
+            status_code=400,
+        )
     return jsonify({"message": "Timer started successfully", "timer": result["timer"].to_dict()}), 201
 
 
@@ -277,10 +297,11 @@ def pause_timer():
     time_tracking_service = TimeTrackingService()
     result = time_tracking_service.pause_timer(user_id=g.api_user.id)
     if not result.get("success"):
-        return jsonify({
-            "error": result.get("message", "Could not pause timer"),
-            "error_code": result.get("error", "pause_failed"),
-        }), 400
+        return error_response(
+            result.get("message", "Could not pause timer"),
+            error_code=result.get("error", "pause_failed"),
+            status_code=400,
+        )
     return jsonify({"message": "Timer paused", "time_entry": result["entry"].to_dict()})
 
 
@@ -293,10 +314,11 @@ def resume_timer():
     time_tracking_service = TimeTrackingService()
     result = time_tracking_service.resume_timer(user_id=g.api_user.id)
     if not result.get("success"):
-        return jsonify({
-            "error": result.get("message", "Could not resume timer"),
-            "error_code": result.get("error", "resume_failed"),
-        }), 400
+        return error_response(
+            result.get("message", "Could not resume timer"),
+            error_code=result.get("error", "resume_failed"),
+            status_code=400,
+        )
     return jsonify({"message": "Timer resumed", "time_entry": result["entry"].to_dict()})
 
 
@@ -308,12 +330,17 @@ def stop_timer():
 
     active_timer = g.api_user.active_timer
     if not active_timer:
-        return jsonify({"error": "No active timer to stop", "error_code": "no_active_timer"}), 400
+        return error_response(
+            "No active timer to stop",
+            error_code="no_active_timer",
+            status_code=400,
+        )
     time_tracking_service = TimeTrackingService()
     result = time_tracking_service.stop_timer(user_id=g.api_user.id, entry_id=active_timer.id)
     if not result.get("success"):
-        return jsonify({
-            "error": result.get("message", "Could not stop timer"),
-            "error_code": result.get("error", "stop_failed"),
-        }), 400
+        return error_response(
+            result.get("message", "Could not stop timer"),
+            error_code=result.get("error", "stop_failed"),
+            status_code=400,
+        )
     return jsonify({"message": "Timer stopped successfully", "time_entry": result["entry"].to_dict()})

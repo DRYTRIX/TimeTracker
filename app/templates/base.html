@@ -333,7 +333,7 @@
     <a href="#mainContentAnchor" class="sr-only focus:not-sr-only focus-ring absolute left-2 top-2 z-[1000] px-3 py-2 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded">{{ _('Skip to content') }}</a>
     <div id="appShell" class="flex min-h-screen">
         <!-- Sidebar -->
-        <aside id="sidebar" class="sidebar-scrollbar-hover w-64 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark p-4 flex-col hidden lg:flex transition-all duration-200 ease-in-out fixed top-0 left-0 h-screen overflow-y-auto z-10">
+        <aside id="sidebar" class="sidebar-scrollbar-hover w-64 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark p-4 flex-col hidden lg:flex transition-all duration-200 ease-in-out fixed top-0 left-0 h-screen overflow-y-auto z-10" aria-label="{{ _('Main navigation') }}">
             <div class="flex items-center mb-8">
                 <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="Logo" class="h-10 w-10 mr-2">
                 <h1 class="text-2xl font-bold text-primary sidebar-header-title"><a href="{{ url_for('main.dashboard') }}" class="no-underline">TimeTracker</a></h1>
@@ -379,6 +379,14 @@
                             <span class="ml-3 sidebar-label">{{ _('Time entries') }}</span>
                         </a>
                     </li>
+                    {% if is_module_enabled('reports') %}
+                    <li class="mt-1">
+                        <a href="{{ url_for('reports.reports') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg border-l-4 {% if ep.startswith('reports.') and not ep.startswith('scheduled_reports.') and not ep.startswith('custom_reports.') %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" title="{{ _('Reports') }}">
+                            <i class="fas fa-chart-line w-6 text-center"></i>
+                            <span class="ml-3 sidebar-label">{{ _('Reports') }}</span>
+                        </a>
+                    </li>
+                    {% endif %}
                     {% if is_module_enabled('calendar') %}
                     <li class="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
                         <button data-dropdown="calendarDropdown" class="sidebar-nav-item w-full flex items-center p-2 rounded-lg border-l-4 {% if calendar_open %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" title="{{ _('Calendar') }}">
@@ -422,11 +430,6 @@
                             {% set nav_active_goals = ep.startswith('weekly_goals.') %}
                             {% set nav_active_project_templates = ep.startswith('project_templates.') %}
                             {% set nav_active_workforce = ep.startswith('workforce.') %}
-                            <li>
-                                <a class="block px-2 py-1 rounded border-l-4 ml-2 pl-2 {% if nav_active_timer %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timer.manual_entry') }}">
-                                    <i class="fas fa-clock w-4 mr-2"></i>{{ _('Log Time') }}
-                                </a>
-                            </li>
                             {% if is_module_enabled('time_approvals') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_time_approvals %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('time_approvals.list_approvals') }}">
@@ -1146,7 +1149,12 @@
                             </li>
                             <li><a href="{{ url_for('auth.profile') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-user w-4"></i> {{ _('My Profile') }}</a></li>
                             <li><a href="{{ url_for('user.settings') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-cog w-4"></i> {{ _('My Settings') }}</a></li>
-                            {% if (not settings or not getattr(settings, 'donate_ui_hidden', false)) and current_user.ui_show_donate %}<li><a href="{{ url_for('main.donate') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-mug-saucer w-4"></i> {{ _('Support updates') }}</a></li>{% endif %}
+                            {% if current_user.is_authenticated %}
+                            <li><a href="{{ url_for('user.license') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-key w-4"></i> {{ _('License') }}</a></li>
+                            {% endif %}
+                            {% if not is_license_activated and current_user.is_authenticated %}
+                            <li><a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="flex flex-col gap-0.5 px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-100 dark:hover:bg-gray-700"><span class="font-medium"><i class="fas fa-heart w-4" aria-hidden="true"></i> {{ _('Support TimeTracker') }}</span><span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Buy a license key (€25)') }}</span></a></li>
+                            {% endif %}
                             <li class="border-t border-border-light dark:border-border-dark"><a href="{{ url_for('auth.logout') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-sign-out-alt w-4"></i> {{ _('Logout') }}</a></li>
                         </ul>
                     </div>
@@ -1240,6 +1248,10 @@
             <a href="{{ url_for('projects.list_projects') }}" class="flex flex-col items-center justify-center min-h-[48px] flex-1 py-2 rounded-t-lg transition-colors {% if _nav_ep and _nav_ep.startswith('projects.') %}text-primary bg-primary/10 dark:bg-primary/20 font-medium{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" aria-label="{{ _('Projects') }}" aria-current="{% if _nav_ep and _nav_ep.startswith('projects.') %}page{% endif %}">
                 <i class="fas fa-briefcase text-lg" aria-hidden="true"></i>
                 <span class="text-xs mt-0.5">{{ _('Projects') }}</span>
+            </a>
+            <a href="{{ url_for('timer.time_entries_overview') }}" class="flex flex-col items-center justify-center min-h-[48px] flex-1 py-2 rounded-t-lg transition-colors {% if _nav_ep == 'timer.time_entries_overview' %}text-primary bg-primary/10 dark:bg-primary/20 font-medium{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" aria-label="{{ _('Time entries') }}" aria-current="{% if _nav_ep == 'timer.time_entries_overview' %}page{% endif %}">
+                <i class="fas fa-list-alt text-lg" aria-hidden="true"></i>
+                <span class="text-xs mt-0.5">{{ _('Time entries') }}</span>
             </a>
             <a href="{{ url_for('timer.manual_entry') }}" class="flex items-center justify-center flex-shrink-0 w-14 h-14 -mt-5 rounded-full bg-primary text-white hover:bg-primary-dark shadow-lg active:scale-95 transition-all border-4 border-card-light dark:border-card-dark" aria-label="{{ _('New time entry') }}">
                 <i class="fas fa-plus text-xl" aria-hidden="true"></i>

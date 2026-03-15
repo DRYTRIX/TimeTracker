@@ -2,6 +2,7 @@ from flask import g, request, current_app
 from flask_babel import get_locale
 from flask_login import current_user
 from app.models import Settings
+from app.utils.license_utils import is_license_activated
 from app.utils.timezone import (
     get_timezone_offset_for_timezone,
     get_resolved_date_format_key,
@@ -37,6 +38,7 @@ def register_context_processors(app):
                     "resolved_date_format_key": resolved_date,
                     "resolved_time_format_key": resolved_time,
                     "resolved_week_start_day": resolved_week_start,
+                    "is_license_activated": is_license_activated(settings),
                 }
         except Exception as e:
             # Log the error but continue with defaults
@@ -66,6 +68,7 @@ def register_context_processors(app):
             "resolved_date_format_key": resolved_date,
             "resolved_time_format_key": resolved_time,
             "resolved_week_start_day": resolved_week_start,
+            "is_license_activated": False,
         }
 
     @app.context_processor

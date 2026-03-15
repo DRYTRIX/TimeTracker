@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_login import login_required, current_user
 from app.models import User, Project, TimeEntry, Settings, WeeklyTimeGoal, TimeEntryTemplate, Activity, Client
+from app.utils.license_utils import is_license_activated
 from datetime import datetime, timedelta
 from app import db, track_page_view
 from sqlalchemy import text
@@ -55,12 +56,32 @@ def dashboard():
     only_one_client = len(active_clients) == 1
     single_client = active_clients[0] if only_one_client else None
 
-    # Get user statistics and dashboard aggregations via analytics service
+    # Get user statistics and dashboard aggregations (cached 90s to reduce DB load)
     from app.services import AnalyticsService
     from app.utils.overtime import calculate_period_overtime, get_week_start_for_date, get_overtime_ytd
+    from app.utils.cache import get_cache
 
-    analytics_service = AnalyticsService()
-    stats = analytics_service.get_dashboard_stats(user_id=current_user.id)
+    dashboard_stats_key = f"dashboard:stats:{current_user.id}"
+    dashboard_chart_key = f"dashboard:chart:{current_user.id}"
+    cache = get_cache()
+    stats = cache.get(dashboard_stats_key)
+    chart_data = cache.get(dashboard_chart_key)
+
+    if stats is None or chart_data is None:
+        analytics_service = AnalyticsService()
+        if stats is None:
+            stats = analytics_service.get_dashboard_stats(user_id=current_user.id)
+            try:
+                cache.set(dashboard_stats_key, stats, ttl=90)
+            except Exception:
+                pass
+        if chart_data is None:
+            chart_data = analytics_service.get_time_by_project_chart(current_user.id, days=7, limit=10)
+            try:
+                cache.set(dashboard_chart_key, chart_data, ttl=90)
+            except Exception:
+                pass
+
     today_hours = stats["time_tracking"]["today_hours"]
     week_hours = stats["time_tracking"]["week_hours"]
     month_hours = stats["time_tracking"]["month_hours"]
@@ -73,9 +94,9 @@ def dashboard():
     overtime_ytd = get_overtime_ytd(current_user)
     standard_hours_per_day = float(getattr(current_user, "standard_hours_per_day", 8.0) or 8.0)
 
-    # Top projects (last 30 days) and time-by-project chart (last 7 days) from service
+    # Top projects (last 30 days) - not cached (contains ORM refs for template links)
+    analytics_service = AnalyticsService()
     top_projects = analytics_service.get_dashboard_top_projects(current_user.id, days=30, limit=5)
-    chart_data = analytics_service.get_time_by_project_chart(current_user.id, days=7, limit=10)
     time_by_project_7d = chart_data["series"]
     chart_labels_7d = chart_data["chart_labels"]
     chart_hours_7d = chart_data["chart_hours"]
@@ -128,7 +149,11 @@ def dashboard():
 
     # Last timer context: most recent completed time entry for "Repeat last" / quick start
     last_entry = (
-        TimeEntry.query.filter(
+        TimeEntry.query.options(
+            joinedload(TimeEntry.project),
+            joinedload(TimeEntry.client),
+        )
+        .filter(
             TimeEntry.user_id == current_user.id,
             TimeEntry.end_time.isnot(None),
         )
@@ -171,7 +196,16 @@ def dashboard():
     # Get donation widget stats (separate from user_stats for clarity)
     time_entries_count = user_stats.get("time_entries_count", 0)
     total_hours = user_stats.get("total_hours", 0.0)
-    
+
+    # Optional support reminder: show at most once per session for unlicensed instances
+    settings_obj = Settings.get_settings()
+    show_support_reminder = (
+        not is_license_activated(settings_obj)
+        and not session.get("support_reminder_shown", False)
+    )
+    if show_support_reminder:
+        session["support_reminder_shown"] = True
+
     # Prepare template data
     template_data = {
         "active_timer": active_timer,
@@ -203,6 +237,7 @@ def dashboard():
         "time_entries_count": time_entries_count,  # For donation widget
         "total_hours": total_hours,  # For donation widget
         "timer_stopped_toast": timer_stopped_toast,
+        "show_support_reminder": show_support_reminder,
     }
 
     return render_template("main/dashboard.html", **template_data)

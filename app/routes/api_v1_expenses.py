@@ -6,6 +6,7 @@ Routes under /api/v1/expenses.
 from flask import Blueprint, jsonify, request, g
 from decimal import Decimal
 from app.utils.api_auth import require_api_token
+from app.utils.api_responses import error_response, forbidden_response, validation_error_response
 from app.routes.api_v1_common import _parse_date
 
 api_v1_expenses_bp = Blueprint("api_v1_expenses", __name__, url_prefix="/api/v1")
@@ -20,7 +21,7 @@ def list_expenses():
     user_id = request.args.get("user_id", type=int)
     if user_id:
         if not g.api_user.is_admin and user_id != g.api_user.id:
-            return jsonify({"error": "Access denied"}), 403
+            return forbidden_response("Access denied")
     else:
         if not g.api_user.is_admin:
             user_id = g.api_user.id
@@ -72,7 +73,7 @@ def get_expense(expense_id):
         .first_or_404()
     )
     if not g.api_user.is_admin and expense.user_id != g.api_user.id:
-        return jsonify({"error": "Access denied"}), 403
+        return forbidden_response("Access denied")
     return jsonify({"expense": expense.to_dict()})
 
 
@@ -83,18 +84,27 @@ def create_expense():
     from app.services import ExpenseService
 
     data = request.get_json() or {}
+    errors = {}
     required = ["title", "category", "amount", "expense_date"]
     missing = [f for f in required if not data.get(f)]
     if missing:
-        return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
+        for f in missing:
+            errors[f] = [f"{f} is required"]
+        return validation_error_response(errors=errors, message=f"Missing required fields: {', '.join(missing)}")
     exp_date = _parse_date(data.get("expense_date"))
     if not exp_date:
-        return jsonify({"error": "Invalid expense_date format, expected YYYY-MM-DD"}), 400
+        return validation_error_response(
+            errors={"expense_date": ["Invalid expense_date format, expected YYYY-MM-DD"]},
+            message="Invalid expense_date format, expected YYYY-MM-DD",
+        )
     pay_date = _parse_date(data.get("payment_date")) if data.get("payment_date") else None
     try:
         amount = Decimal(str(data["amount"]))
     except Exception:
-        return jsonify({"error": "Invalid amount"}), 400
+        return validation_error_response(
+            errors={"amount": ["Invalid amount"]},
+            message="Invalid amount",
+        )
     expense_service = ExpenseService()
     result = expense_service.create_expense(
         amount=amount,
@@ -115,7 +125,7 @@ def create_expense():
         tags=data.get("tags"),
     )
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not create expense")}), 400
+        return error_response(result.get("message", "Could not create expense"), status_code=400)
     return jsonify({"message": "Expense created successfully", "expense": result["expense"].to_dict()}), 201
 
 
@@ -149,7 +159,7 @@ def update_expense(expense_id):
         expense_id=expense_id, user_id=g.api_user.id, is_admin=g.api_user.is_admin, **update_kwargs
     )
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not update expense")}), 400
+        return error_response(result.get("message", "Could not update expense"), status_code=400)
     return jsonify({"message": "Expense updated successfully", "expense": result["expense"].to_dict()})
 
 
@@ -164,5 +174,5 @@ def delete_expense(expense_id):
         expense_id=expense_id, user_id=g.api_user.id, is_admin=g.api_user.is_admin
     )
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not reject expense")}), 400
+        return error_response(result.get("message", "Could not reject expense"), status_code=400)
     return jsonify({"message": "Expense rejected successfully"})

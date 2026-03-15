@@ -71,6 +71,39 @@
 {% endmacro %}
 
 {# ============================================
+   PAGINATION (reusable for list pages)
+   ============================================ #}
+{% macro pagination_nav(pagination, route_name, url_params=None, aria_label=None) %}
+{% if pagination and pagination.pages > 1 %}
+{% set _params = url_params or {} %}
+<nav class="px-4 py-3 border-t border-border-light dark:border-border-dark flex items-center justify-between flex-wrap gap-2" aria-label="{{ aria_label or _('Pagination') }}">
+    <div class="text-sm text-text-light dark:text-text-dark">
+        {{ _('Showing %(start)s to %(end)s of %(total)s entries', start=pagination.page * pagination.per_page - pagination.per_page + 1, end=pagination.page * pagination.per_page if pagination.page * pagination.per_page < pagination.total else pagination.total, total=pagination.total) }}
+    </div>
+    <div class="flex gap-2 flex-wrap">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for(route_name, page=pagination.prev_num, **_params) }}" class="btn btn-secondary btn-sm">{{ _('Previous') }}</a>
+        {% endif %}
+        {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if page_num %}
+                {% if page_num == pagination.page %}
+                <span class="px-3 py-1.5 bg-primary text-white rounded-lg text-sm font-medium" aria-current="page">{{ page_num }}</span>
+                {% else %}
+                <a href="{{ url_for(route_name, page=page_num, **_params) }}" class="btn btn-ghost btn-sm">{{ page_num }}</a>
+                {% endif %}
+            {% else %}
+                <span class="px-3 py-1.5 text-text-muted-light dark:text-text-muted-dark">...</span>
+            {% endif %}
+        {% endfor %}
+        {% if pagination.has_next %}
+        <a href="{{ url_for(route_name, page=pagination.next_num, **_params) }}" class="btn btn-secondary btn-sm">{{ _('Next') }}</a>
+        {% endif %}
+    </div>
+</nav>
+{% endif %}
+{% endmacro %}
+
+{# ============================================
    STAT CARDS
    ============================================ #}
 {% macro stat_card(title, value, icon_class, color="primary", trend=None, subtitle=None) %}
@@ -441,19 +474,19 @@
    CONFIRMATION DIALOG
    ============================================ #}
 {% macro confirm_dialog(id, title, message, confirm_text="Confirm", cancel_text="Cancel", confirm_class="danger") %}
-<div id="{{ id }}" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+<div id="{{ id }}" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="{{ id }}-title" aria-describedby="{{ id }}-desc">
     <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 transition-opacity bg-black/50 dark:bg-gray-900 dark:bg-opacity-75" onclick="document.getElementById('{{ id }}').classList.add('hidden')"></div>
         <div class="relative bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full p-6 zoom-in">
             <div class="flex items-start mb-4">
                 <div class="flex-shrink-0">
                     <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                        <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-xl"></i>
+                        <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-xl" aria-hidden="true"></i>
                     </div>
                 </div>
                 <div class="ml-4 flex-1">
-                    <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-2">{{ _(title) }}</h3>
-                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _(message) }}</p>
+                    <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-2" id="{{ id }}-title">{{ _(title) }}</h3>
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark" id="{{ id }}-desc">{{ _(message) }}</p>
                 </div>
             </div>
             <div class="flex justify-end gap-3 mt-6">

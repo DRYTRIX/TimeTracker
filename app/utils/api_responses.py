@@ -59,7 +59,13 @@ def error_response(
     Returns:
         Flask JSON response
     """
-    response = {"success": False, "error": error_code or "error", "message": message}
+    # error = user-facing message (backward compat); error_code = machine-readable
+    response = {
+        "success": False,
+        "error": message,
+        "message": message,
+        "error_code": error_code or "error",
+    }
 
     if errors:
         response["errors"] = errors
@@ -191,7 +197,7 @@ def created_response(data: Any, message: Optional[str] = None, location: Optiona
     Returns:
         Flask JSON response
     """
-    response_data = {"data": data}
+    response_data = {"success": True, "data": data}
     if message:
         response_data["message"] = message
 

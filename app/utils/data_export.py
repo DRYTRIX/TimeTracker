@@ -10,6 +10,7 @@ from io import StringIO, BytesIO
 from zipfile import ZipFile
 from flask import current_app
 from app import db
+from app.repositories import TimeEntryRepository
 from app.models import (
     User,
     Project,
@@ -293,9 +294,8 @@ def _export_time_entries(user):
 
 def _export_user_projects(user):
     """Export projects user has worked on"""
-    # Get unique projects from time entries
-    project_ids = db.session.query(TimeEntry.project_id).filter_by(user_id=user.id).distinct().all()
-    project_ids = [pid[0] for pid in project_ids]
+    time_entry_repo = TimeEntryRepository()
+    project_ids = time_entry_repo.get_distinct_project_ids_for_user(user.id)
     projects = Project.query.filter(Project.id.in_(project_ids)).all()
     return [_project_to_dict(p) for p in projects]
 

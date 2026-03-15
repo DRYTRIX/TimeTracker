@@ -1,5 +1,7 @@
 """Scope filtering for subcontractor role: restrict data to assigned clients/projects."""
 
+from typing import Tuple, Set
+
 from flask_login import current_user
 
 
@@ -71,3 +73,35 @@ def user_can_access_project(user, project_id):
         return True
     allowed = user.get_allowed_project_ids()
     return allowed is not None and project_id in allowed
+
+
+def get_accessible_project_and_client_ids_for_user(user_id: int) -> Tuple[Set[int], Set[int]]:
+    """
+    Return (accessible_project_ids, accessible_client_ids) for issue-style access:
+    projects the user has time entries for or is assigned to tasks on, and clients of those projects.
+    Used to filter issues for non-admin users without view_all_issues permission.
+    """
+    from app.repositories import TimeEntryRepository
+    from app.models import Task, Project
+
+    time_entry_repo = TimeEntryRepository()
+    user_project_ids = set(time_entry_repo.get_distinct_project_ids_for_user(user_id))
+    task_project_rows = (
+        Task.query.with_entities(Task.project_id)
+        .filter_by(assigned_to=user_id)
+        .filter(Task.project_id.isnot(None))
+        .distinct()
+        .all()
+    )
+    task_project_ids = {r[0] for r in task_project_rows}
+    all_accessible_project_ids = user_project_ids | task_project_ids
+    if not all_accessible_project_ids:
+        return set(), set()
+    client_rows = (
+        Project.query.with_entities(Project.client_id)
+        .filter(Project.id.in_(all_accessible_project_ids), Project.client_id.isnot(None))
+        .distinct()
+        .all()
+    )
+    accessible_client_ids = {r[0] for r in client_rows}
+    return all_accessible_project_ids, accessible_client_ids

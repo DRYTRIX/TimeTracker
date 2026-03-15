@@ -8,6 +8,21 @@
         <p class="text-gray-600 dark:text-gray-400 mt-2">{{ _('Manage your account settings and preferences') }}</p>
     </div>
 
+    {% if not is_license_activated %}
+    <div class="mb-6 p-4 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <p class="text-sm text-text-light dark:text-text-dark">{{ _('TimeTracker is free and open-source. If you enjoy using it, you can support development by purchasing a license key.') }}</p>
+        <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-primary flex-shrink-0 w-full sm:w-auto text-center">
+            {{ _('Buy license (€25)') }} <i class="fas fa-external-link-alt ml-1 text-xs" aria-hidden="true"></i>
+        </a>
+    </div>
+    {% endif %}
+
+    <div class="mb-6">
+        <a href="{{ url_for('user.license') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-sm font-medium">
+            <i class="fas fa-key" aria-hidden="true"></i>{{ _('License') }}
+        </a>
+    </div>
+
     <form method="POST" class="space-y-8">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         

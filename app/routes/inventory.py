@@ -1472,12 +1472,23 @@ def stock_item_history(item_id):
 def low_stock_alerts():
     """View low stock alerts"""
     items = StockItem.query.filter_by(is_active=True, is_trackable=True).all()
+    items_with_reorder = [i for i in items if i.reorder_point]
+    item_ids = [i.id for i in items_with_reorder]
 
     low_stock_items = []
-    for item in items:
-        if item.reorder_point:
-            stock_levels = WarehouseStock.query.filter_by(stock_item_id=item.id).all()
-            for stock in stock_levels:
+    if item_ids:
+        from collections import defaultdict
+        from sqlalchemy.orm import joinedload
+        all_stock = (
+            WarehouseStock.query.options(joinedload(WarehouseStock.warehouse))
+            .filter(WarehouseStock.stock_item_id.in_(item_ids))
+            .all()
+        )
+        stock_by_item = defaultdict(list)
+        for s in all_stock:
+            stock_by_item[s.stock_item_id].append(s)
+        for item in items_with_reorder:
+            for stock in stock_by_item.get(item.id, []):
                 if stock.quantity_on_hand < item.reorder_point:
                     low_stock_items.append(
                         {
@@ -2129,13 +2140,23 @@ def reports_dashboard():
     items_with_reorder = StockItem.query.filter(
         StockItem.is_active == True, StockItem.is_trackable == True, StockItem.reorder_point.isnot(None)
     ).all()
-
-    for item in items_with_reorder:
-        stock_levels = WarehouseStock.query.filter_by(stock_item_id=item.id).all()
-        for stock in stock_levels:
-            if stock.quantity_on_hand < item.reorder_point:
-                low_stock_count += 1
-                break
+    item_ids = [i.id for i in items_with_reorder]
+    if item_ids:
+        from collections import defaultdict
+        from sqlalchemy.orm import joinedload
+        all_stock = (
+            WarehouseStock.query.options(joinedload(WarehouseStock.warehouse))
+            .filter(WarehouseStock.stock_item_id.in_(item_ids))
+            .all()
+        )
+        stock_by_item = defaultdict(list)
+        for s in all_stock:
+            stock_by_item[s.stock_item_id].append(s)
+        for item in items_with_reorder:
+            for stock in stock_by_item.get(item.id, []):
+                if stock.quantity_on_hand < item.reorder_point:
+                    low_stock_count += 1
+                    break
 
     settings = Settings.get_settings()
     currency = settings.currency if settings else "EUR"
@@ -2346,12 +2367,23 @@ def reports_turnover():
 def reports_low_stock():
     """Low stock report"""
     items = StockItem.query.filter_by(is_active=True, is_trackable=True).all()
+    items_with_reorder = [i for i in items if i.reorder_point]
+    item_ids = [i.id for i in items_with_reorder]
 
     low_stock_items = []
-    for item in items:
-        if item.reorder_point:
-            stock_levels = WarehouseStock.query.filter_by(stock_item_id=item.id).all()
-            for stock in stock_levels:
+    if item_ids:
+        from collections import defaultdict
+        from sqlalchemy.orm import joinedload
+        all_stock = (
+            WarehouseStock.query.options(joinedload(WarehouseStock.warehouse))
+            .filter(WarehouseStock.stock_item_id.in_(item_ids))
+            .all()
+        )
+        stock_by_item = defaultdict(list)
+        for s in all_stock:
+            stock_by_item[s.stock_item_id].append(s)
+        for item in items_with_reorder:
+            for stock in stock_by_item.get(item.id, []):
                 if stock.quantity_on_hand < item.reorder_point:
                     low_stock_items.append(
                         {

@@ -364,10 +364,8 @@ def create_client():
 
         # Invalidate dashboard cache so single-client state updates (Issue #467)
         try:
-            from app.utils.cache import get_cache
-            cache = get_cache()
-            if cache:
-                cache.delete(f"dashboard:{current_user.id}")
+            from app.utils.cache import invalidate_dashboard_for_user
+            invalidate_dashboard_for_user(current_user.id)
         except Exception:
             pass
 
@@ -769,9 +767,8 @@ def archive_client(client_id):
         flash(f'Client "{client.name}" archived successfully', "success")
         try:
             from app.utils.cache import get_cache
-            c = get_cache()
-            if c:
-                c.delete(f"dashboard:{current_user.id}")
+            from app.utils.cache import invalidate_dashboard_for_user
+            invalidate_dashboard_for_user(current_user.id)
         except Exception:
             pass
 
@@ -797,9 +794,8 @@ def activate_client(client_id):
         flash(f'Client "{client.name}" activated successfully', "success")
         try:
             from app.utils.cache import get_cache
-            c = get_cache()
-            if c:
-                c.delete(f"dashboard:{current_user.id}")
+            from app.utils.cache import invalidate_dashboard_for_user
+            invalidate_dashboard_for_user(current_user.id)
         except Exception:
             pass
 
@@ -850,10 +846,8 @@ def delete_client(client_id):
     app_module.track_event(current_user.id, "client.deleted", {"client_id": client_id_for_log})
 
     try:
-        from app.utils.cache import get_cache
-        c = get_cache()
-        if c:
-            c.delete(f"dashboard:{current_user.id}")
+        from app.utils.cache import invalidate_dashboard_for_user
+        invalidate_dashboard_for_user(current_user.id)
     except Exception:
         pass
 
@@ -934,9 +928,8 @@ def bulk_delete_clients():
         flash(f'Successfully deleted {deleted_count} client{"s" if deleted_count != 1 else ""}', "success")
         try:
             from app.utils.cache import get_cache
-            c = get_cache()
-            if c:
-                c.delete(f"dashboard:{current_user.id}")
+            from app.utils.cache import invalidate_dashboard_for_user
+            invalidate_dashboard_for_user(current_user.id)
         except Exception:
             pass
 

@@ -608,72 +608,91 @@ def admin_dashboard():
         # Log error but continue - OIDC user count is not critical for dashboard display
         current_app.logger.warning(f"Failed to count OIDC users: {e}", exc_info=True)
 
-    # Calculate chart data for last 30 days
-    from datetime import time as time_class
-    end_date = datetime.utcnow()
-    start_date = end_date - timedelta(days=30)
+    # Chart data for last 30 days (cached 10 min to reduce DB load)
+    from app.utils.cache import get_cache
+    _cache = get_cache()
+    chart_data = _cache.get("admin:dashboard:chart")
+    if chart_data is None:
+        from datetime import date as date_type
 
-    # User activity over time (daily user counts who created entries)
-    user_activity_data = []
-    for i in range(30):
-        date = (end_date - timedelta(days=i)).date()
-        date_start = datetime.combine(date, time_class(0, 0, 0))
-        date_end = datetime.combine(date, time_class(23, 59, 59, 999999))
-        
-        # Count distinct users who logged time on this date
-        user_count = (
-            db.session.query(func.count(func.distinct(TimeEntry.user_id)))
+        end_date = datetime.utcnow()
+        range_start = (end_date - timedelta(days=29)).replace(hour=0, minute=0, second=0, microsecond=0)
+        range_end = end_date
+        all_dates = [(end_date - timedelta(days=i)).date() for i in range(29, -1, -1)]
+
+        def _norm_date(v):
+            if v is None:
+                return None
+            if isinstance(v, date_type):
+                return v
+            if hasattr(v, "date") and callable(getattr(v, "date")):
+                return v.date()
+            if isinstance(v, str):
+                try:
+                    return date_type.fromisoformat(v[:10])
+                except (ValueError, TypeError):
+                    return v
+            return v
+
+        user_activity_rows = (
+            db.session.query(
+                func.date(TimeEntry.start_time).label("day"),
+                func.count(func.distinct(TimeEntry.user_id)).label("cnt"),
+            )
             .filter(
                 TimeEntry.end_time.isnot(None),
-                TimeEntry.start_time >= date_start,
-                TimeEntry.start_time <= date_end
+                TimeEntry.start_time >= range_start,
+                TimeEntry.start_time <= range_end,
             )
-            .scalar() or 0
+            .group_by(func.date(TimeEntry.start_time))
+            .all()
         )
-        
-        user_activity_data.append({
-            'date': date.strftime('%Y-%m-%d'),
-            'count': user_count
-        })
-    
-    user_activity_data.reverse()  # Oldest to newest
+        user_activity_by_date = {_norm_date(d.day): d.cnt for d in user_activity_rows}
+        user_activity_data = [
+            {"date": d.strftime("%Y-%m-%d"), "count": user_activity_by_date.get(d, 0)}
+            for d in all_dates
+        ]
 
-    # Project status distribution
-    project_status_data = {}
-    status_counts = (
-        db.session.query(Project.status, func.count(Project.id))
-        .group_by(Project.status)
-        .all()
-    )
-    for status, count in status_counts:
-        project_status_data[status or 'none'] = count
+        project_status_data = {}
+        status_counts = (
+            db.session.query(Project.status, func.count(Project.id))
+            .group_by(Project.status)
+            .all()
+        )
+        for status, count in status_counts:
+            project_status_data[status or "none"] = count
 
-    # Daily time entry hours for last 30 days
-    time_entries_daily = []
-    for i in range(30):
-        date = (end_date - timedelta(days=i)).date()
-        date_start = datetime.combine(date, time_class(0, 0, 0))
-        date_end = datetime.combine(date, time_class(23, 59, 59, 999999))
-        
-        # Get total hours for this day
-        total_seconds = (
-            db.session.query(func.sum(TimeEntry.duration_seconds))
+        time_hours_rows = (
+            db.session.query(
+                func.date(TimeEntry.start_time).label("day"),
+                func.sum(TimeEntry.duration_seconds).label("total_seconds"),
+            )
             .filter(
                 TimeEntry.end_time.isnot(None),
-                TimeEntry.start_time >= date_start,
-                TimeEntry.start_time <= date_end
+                TimeEntry.start_time >= range_start,
+                TimeEntry.start_time <= range_end,
             )
-            .scalar() or 0
+            .group_by(func.date(TimeEntry.start_time))
+            .all()
         )
-        
-        hours = round(total_seconds / 3600, 2) if total_seconds else 0
-        
-        time_entries_daily.append({
-            'date': date.strftime('%Y-%m-%d'),
-            'hours': hours
-        })
-    
-    time_entries_daily.reverse()  # Oldest to newest
+        time_hours_by_date = {}
+        for row in time_hours_rows:
+            day = _norm_date(row.day)
+            if day is not None:
+                time_hours_by_date[day] = round((row.total_seconds or 0) / 3600, 2)
+        time_entries_daily = [
+            {"date": d.strftime("%Y-%m-%d"), "hours": time_hours_by_date.get(d, 0)}
+            for d in all_dates
+        ]
+        chart_data = {
+            "user_activity": user_activity_data,
+            "project_status": project_status_data,
+            "time_entries_daily": time_entries_daily,
+        }
+        try:
+            _cache.set("admin:dashboard:chart", chart_data, ttl=600)
+        except Exception:
+            pass
 
     # Build stats object expected by the template
     stats = {
@@ -686,13 +705,6 @@ def admin_dashboard():
         "total_hours": TimeEntry.get_total_hours_for_period(),
         "billable_hours": TimeEntry.get_total_hours_for_period(billable_only=True),
         "last_backup": None,
-    }
-
-    # Chart data
-    chart_data = {
-        'user_activity': user_activity_data,
-        'project_status': project_status_data,
-        'time_entries_daily': time_entries_daily,
     }
 
     return render_template(
@@ -901,10 +913,10 @@ def edit_user(user_id):
         # Subcontractor: sync assigned clients (only when role is subcontractor)
         assigned_client_ids = [int(x) for x in request.form.getlist("assigned_client_ids") if x and x.isdigit()]
         UserClient.query.filter_by(user_id=user.id).delete()
-        if role_name == "subcontractor":
+        if role_name == "subcontractor" and assigned_client_ids:
+            valid_client_ids = {c.id for c in Client.query.filter(Client.id.in_(assigned_client_ids)).all()}
             for cid in assigned_client_ids:
-                client_obj = Client.query.get(cid)
-                if client_obj:
+                if cid in valid_client_ids:
                     db.session.add(UserClient(user_id=user.id, client_id=cid))
 
         if not safe_commit("admin_edit_user", {"user_id": user.id}):

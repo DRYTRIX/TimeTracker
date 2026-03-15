@@ -11,6 +11,7 @@ from app import db
 from app.models import Issue, Client, Project, Task, User
 from app.utils.db import safe_commit
 from app.utils.pagination import get_pagination_params
+from app.utils.scope_filter import get_accessible_project_and_client_ids_for_user
 from sqlalchemy import or_
 from app.utils.module_helpers import module_enabled
 
@@ -62,33 +63,14 @@ def list_issues():
         has_view_all_issues = current_user.has_permission("view_all_issues") if hasattr(current_user, 'has_permission') else False
         
         if not has_view_all_issues:
-            # Get user's accessible project IDs (projects they created or have time entries for)
-            from app.models.time_entry import TimeEntry
-            
-            # Projects the user has time entries for
-            user_project_ids = db.session.query(TimeEntry.project_id).filter_by(
-                user_id=current_user.id
-            ).distinct().subquery()
-            
-            # Get client IDs from accessible projects
-            accessible_client_ids = db.session.query(Project.client_id).filter(
-                db.or_(
-                    Project.id.in_(db.session.query(user_project_ids)),
-                    # Also include projects where user is assigned to tasks
-                    Project.id.in_(
-                        db.session.query(Task.project_id).filter_by(assigned_to=current_user.id).distinct().subquery()
-                    )
-                )
-            ).distinct().subquery()
-            
-            # Filter issues by:
-            # 1. Issues assigned to the user
-            # 2. Issues for clients/projects the user has access to
+            accessible_project_ids, accessible_client_ids = get_accessible_project_and_client_ids_for_user(
+                current_user.id
+            )
             query = query.filter(
                 db.or_(
                     Issue.assigned_to == current_user.id,
-                    Issue.client_id.in_(db.session.query(accessible_client_ids)),
-                    Issue.project_id.in_(db.session.query(user_project_ids))
+                    Issue.client_id.in_(accessible_client_ids),
+                    Issue.project_id.in_(accessible_project_ids),
                 )
             )
     
@@ -263,32 +245,14 @@ def view_issue(issue_id):
             if issue.assigned_to == current_user.id:
                 has_access = True
             else:
-                # Check if user has access through projects
-                from app.models.time_entry import TimeEntry
-                user_project_ids = db.session.query(TimeEntry.project_id).filter_by(
-                    user_id=current_user.id
-                ).distinct().all()
-                user_project_ids = [p[0] for p in user_project_ids]
-                
-                # Also check projects where user is assigned to tasks
-                user_task_project_ids = db.session.query(Task.project_id).filter_by(
-                    assigned_to=current_user.id
-                ).distinct().all()
-                user_task_project_ids = [p[0] for p in user_task_project_ids]
-                
-                all_accessible_project_ids = set(user_project_ids + user_task_project_ids)
-                
-                # Check if issue's project or client's projects are accessible
-                if issue.project_id and issue.project_id in all_accessible_project_ids:
-                    has_access = True
-                elif issue.client_id:
-                    # Check if any project for this client is accessible
-                    client_project_ids = db.session.query(Project.id).filter_by(
-                        client_id=issue.client_id
-                    ).all()
-                    client_project_ids = [p[0] for p in client_project_ids]
-                    if any(pid in all_accessible_project_ids for pid in client_project_ids):
-                        has_access = True
+                # Check if user has access through projects or clients
+                accessible_project_ids, accessible_client_ids = get_accessible_project_and_client_ids_for_user(
+                    current_user.id
+                )
+                has_access = (
+                    (issue.project_id and issue.project_id in accessible_project_ids)
+                    or (issue.client_id and issue.client_id in accessible_client_ids)
+                )
             
             if not has_access:
                 flash(_("You do not have permission to view this issue."), "error")
@@ -332,26 +296,13 @@ def edit_issue(issue_id):
             if issue.assigned_to == current_user.id:
                 has_access = True
             else:
-                from app.models.time_entry import TimeEntry
-                user_project_ids = db.session.query(TimeEntry.project_id).filter_by(
-                    user_id=current_user.id
-                ).distinct().all()
-                user_project_ids = [p[0] for p in user_project_ids]
-                user_task_project_ids = db.session.query(Task.project_id).filter_by(
-                    assigned_to=current_user.id
-                ).distinct().all()
-                user_task_project_ids = [p[0] for p in user_task_project_ids]
-                all_accessible_project_ids = set(user_project_ids + user_task_project_ids)
-                
-                if issue.project_id and issue.project_id in all_accessible_project_ids:
-                    has_access = True
-                elif issue.client_id:
-                    client_project_ids = db.session.query(Project.id).filter_by(
-                        client_id=issue.client_id
-                    ).all()
-                    client_project_ids = [p[0] for p in client_project_ids]
-                    if any(pid in all_accessible_project_ids for pid in client_project_ids):
-                        has_access = True
+                accessible_project_ids, accessible_client_ids = get_accessible_project_and_client_ids_for_user(
+                    current_user.id
+                )
+                has_access = (
+                    (issue.project_id and issue.project_id in accessible_project_ids)
+                    or (issue.client_id and issue.client_id in accessible_client_ids)
+                )
             
             if not has_access:
                 flash(_("You do not have permission to edit this issue."), "error")

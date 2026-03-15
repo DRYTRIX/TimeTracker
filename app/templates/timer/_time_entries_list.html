@@ -1,3 +1,4 @@
+{% from "components/ui.html" import empty_state_compact %}
 <div id="timeEntriesListContainer">
     <div class="p-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
         <div class="flex items-center gap-4">
@@ -171,20 +172,23 @@
                     </tr>
                     {% endfor %}
                 {% else %}
-                    <tr>
-                        <td colspan="{% if can_view_all %}11{% else %}10{% endif %}" class="px-4 py-12">
-                            <div class="flex flex-col items-center justify-center text-center">
-                                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 mb-3">
-                                    <i class="fas fa-clock text-2xl text-text-muted-light dark:text-text-muted-dark"></i>
-                                </div>
-                                <p class="text-text-muted-light dark:text-text-muted-dark font-medium mb-1">{{ _('No time entries found') }}</p>
-                                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('Try adjusting your filters or log a new time entry.') }}</p>
-                                <a href="{{ url_for('timer.manual_entry') }}" class="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium">
-                                    <i class="fas fa-play"></i>{{ _('Log Time') }}
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
+                    {% set has_filters = (filters.start_date or filters.end_date or filters.project_id or filters.client_id or filters.paid or filters.billable or (filters.search and filters.search|trim) or (filters.user_id if can_view_all else none) or (filters.client_custom_field and filters.client_custom_field|length > 0)) %}
+                    {% if has_filters %}
+                        {% set clear_filters_url = url_for('timer.time_entries_overview') %}
+                        {% set empty_actions = '<a href="' ~ clear_filters_url ~ '" class="btn btn-secondary btn-sm"><i class="fas fa-times mr-1" aria-hidden="true"></i>' ~ _('Clear filters') ~ '</a><a href="' ~ url_for('timer.manual_entry') ~ '" class="btn btn-primary btn-sm"><i class="fas fa-play mr-1" aria-hidden="true"></i>' ~ _('Log Time') ~ '</a>' %}
+                        <tr>
+                            <td colspan="{% if can_view_all %}11{% else %}10{% endif %}" class="px-4 py-12">
+                                {{ empty_state_compact('fas fa-search', _('No time entries match your filters'), _('Try adjusting your filters or clear them to see all entries. You can also log a new time entry.'), empty_actions, type='no-results') }}
+                            </td>
+                        </tr>
+                    {% else %}
+                        {% set log_time_actions = '<a href="' ~ url_for('timer.manual_entry') ~ '" class="btn btn-primary btn-sm"><i class="fas fa-play mr-1" aria-hidden="true"></i>' ~ _('Log Time') ~ '</a>' %}
+                        <tr>
+                            <td colspan="{% if can_view_all %}11{% else %}10{% endif %}" class="px-4 py-12">
+                                {{ empty_state_compact('fas fa-clock', _('No time entries yet'), _('Log time to see your entries here. Use the timer on the dashboard or log time manually.'), log_time_actions, type='no-data') }}
+                            </td>
+                        </tr>
+                    {% endif %}
                 {% endif %}
             </tbody>
         </table>
@@ -192,7 +196,7 @@
 
     <!-- Pagination -->
     {% if pagination.pages > 1 %}
-    <div class="px-4 py-3 border-t border-border-light dark:border-border-dark flex items-center justify-between">
+    <nav class="px-4 py-3 border-t border-border-light dark:border-border-dark flex items-center justify-between" aria-label="{{ _('Time entries pagination') }}">
         <div class="text-sm text-gray-700 dark:text-gray-300">
             {{ _('Showing %(start)s to %(end)s of %(total)s entries', start=pagination.page * pagination.per_page - pagination.per_page + 1, end=pagination.page * pagination.per_page if pagination.page * pagination.per_page < pagination.total else pagination.total, total=pagination.total) }}
         </div>
@@ -221,7 +225,7 @@
                 </a>
             {% endif %}
         </div>
-    </div>
+    </nav>
     {% endif %}
 </div>
 

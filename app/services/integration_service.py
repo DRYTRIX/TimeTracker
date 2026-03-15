@@ -161,9 +161,16 @@ class IntegrationService:
 
         integrations = query.order_by(Integration.is_global.desc(), Integration.created_at.desc()).all()
 
-        # Sync is_active status with credentials existence
+        # Sync is_active status with credentials existence (batch load to avoid N+1)
+        integration_ids = [i.id for i in integrations]
+        cred_integration_ids = set()
+        if integration_ids:
+            creds = IntegrationCredential.query.filter(
+                IntegrationCredential.integration_id.in_(integration_ids)
+            ).all()
+            cred_integration_ids = {c.integration_id for c in creds}
         for integration in integrations:
-            has_credentials = IntegrationCredential.query.filter_by(integration_id=integration.id).first() is not None
+            has_credentials = integration.id in cred_integration_ids
 
             # Update is_active if it doesn't match credentials status
             if integration.is_active != has_credentials:

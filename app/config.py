@@ -182,6 +182,12 @@ class Config:
         "Referrer-Policy": "strict-origin-when-cross-origin",
     }
 
+    # Performance instrumentation (optional; no production overhead when disabled)
+    # Log a single line when request duration exceeds this many milliseconds (0 = disabled)
+    PERF_LOG_SLOW_REQUESTS_MS = int(os.getenv("PERF_LOG_SLOW_REQUESTS_MS", "0"))
+    # When true, track DB query count per request and include in slow-request logs
+    PERF_QUERY_PROFILE = os.getenv("PERF_QUERY_PROFILE", "false").lower() == "true"
+
     # Rate limiting
     RATELIMIT_DEFAULT = os.getenv("RATELIMIT_DEFAULT", "")  # e.g., "200 per day;50 per hour"
     RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI", "memory://")

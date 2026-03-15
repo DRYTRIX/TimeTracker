@@ -7,7 +7,7 @@ from flask import Blueprint, jsonify, request, g
 from app import db
 from app.models import Client, Contact
 from app.utils.api_auth import require_api_token
-from app.utils.api_responses import error_response
+from app.utils.api_responses import error_response, forbidden_response
 from app.routes.api_v1_common import _require_module_enabled_for_api
 
 api_v1_contacts_bp = Blueprint("api_v1_contacts", __name__, url_prefix="/api/v1")
@@ -40,7 +40,7 @@ def create_contact(client_id):
 
     client = Client.query.filter_by(id=client_id).first_or_404()
     if not user_can_access_client(g.api_user, client_id):
-        return jsonify({"error": "Access denied", "message": "You do not have access to this client"}), 403
+        return forbidden_response("You do not have access to this client")
     data = request.get_json() or {}
     first_name = (data.get("first_name") or "").strip()
     last_name = (data.get("last_name") or "").strip()

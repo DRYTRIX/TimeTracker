@@ -138,5 +138,20 @@
             {% endfor %}
         </tbody>
     </table>
+    {% if pagination and pagination.pages > 1 %}
+    <nav class="mt-4 flex flex-wrap gap-2 items-center justify-between" aria-label="{{ _('Pagination') }}">
+        <span class="text-sm text-text-muted-light dark:text-text-muted-dark">
+            {{ _('Page') }} {{ pagination.page }} {{ _('of') }} {{ pagination.pages }}
+        </span>
+        <div class="flex gap-2">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('reports.time_entries_report', page=pagination.prev_page, start_date=start_date, end_date=end_date, user_id=selected_user or '', project_id=selected_project or '', client_id=selected_client or '', task_id=selected_task or '', billed=selected_billed, per_page=pagination.per_page) }}" class="px-3 py-1 rounded border border-border-light dark:border-border-dark hover:bg-gray-100 dark:hover:bg-gray-800">{{ _('Previous') }}</a>
+            {% endif %}
+            {% if pagination.has_next %}
+            <a href="{{ url_for('reports.time_entries_report', page=pagination.next_page, start_date=start_date, end_date=end_date, user_id=selected_user or '', project_id=selected_project or '', client_id=selected_client or '', task_id=selected_task or '', billed=selected_billed, per_page=pagination.per_page) }}" class="px-3 py-1 rounded border border-border-light dark:border-border-dark hover:bg-gray-100 dark:hover:bg-gray-800">{{ _('Next') }}</a>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
 </div>
 {% endblock %}

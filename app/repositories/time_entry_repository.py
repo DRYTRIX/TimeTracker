@@ -95,6 +95,29 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
 
         return query.order_by(TimeEntry.start_time.desc()).all()
 
+    def count_for_date_range(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        user_id: Optional[int] = None,
+        project_id: Optional[int] = None,
+        client_id: Optional[int] = None,
+    ) -> int:
+        """Count time entries in date range with optional filters (avoids loading all rows)."""
+        from sqlalchemy import func
+
+        query = db.session.query(func.count(TimeEntry.id)).filter(
+            and_(TimeEntry.start_time >= start_date, TimeEntry.start_time <= end_date)
+        )
+        if user_id:
+            query = query.filter_by(user_id=user_id)
+        if project_id:
+            query = query.filter_by(project_id=project_id)
+        if client_id:
+            query = query.filter_by(client_id=client_id)
+        result = query.scalar()
+        return int(result) if result else 0
+
     def get_billable_entries(
         self,
         user_id: Optional[int] = None,
@@ -194,6 +217,17 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
         db.session.add(entry)
         return entry
 
+    def get_distinct_project_ids_for_user(self, user_id: int) -> List[int]:
+        """Return distinct project IDs the user has time entries for (excludes None)."""
+        rows = (
+            self.model.query.with_entities(TimeEntry.project_id)
+            .filter_by(user_id=user_id)
+            .filter(TimeEntry.project_id.isnot(None))
+            .distinct()
+            .all()
+        )
+        return [r[0] for r in rows]
+
     def get_total_duration(
         self,
         user_id: Optional[int] = None,
@@ -228,3 +262,41 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
 
         result = query.scalar()
         return int(result) if result else 0
+
+    def get_task_aggregates(
+        self,
+        task_ids: List[int],
+        start_date: datetime,
+        end_date: datetime,
+        project_id: Optional[int] = None,
+        user_id: Optional[int] = None,
+    ) -> List[tuple]:
+        """
+        Return (task_id, total_seconds, entry_count) for each task in task_ids,
+        filtered by date range and optional project_id/user_id.
+        Use for task report to avoid N+1 per-task queries.
+        """
+        if not task_ids:
+            return []
+        from sqlalchemy import func
+
+        query = (
+            db.session.query(
+                TimeEntry.task_id,
+                func.sum(TimeEntry.duration_seconds).label("total_seconds"),
+                func.count(TimeEntry.id).label("entry_count"),
+            )
+            .filter(
+                TimeEntry.task_id.in_(task_ids),
+                TimeEntry.end_time.isnot(None),
+                TimeEntry.start_time >= start_date,
+                TimeEntry.start_time <= end_date,
+            )
+            .group_by(TimeEntry.task_id)
+        )
+        if project_id:
+            query = query.filter(TimeEntry.project_id == project_id)
+        if user_id:
+            query = query.filter(TimeEntry.user_id == user_id)
+        rows = query.all()
+        return [(r.task_id, int(r.total_seconds or 0), r.entry_count) for r in rows]

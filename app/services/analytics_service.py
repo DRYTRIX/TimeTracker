@@ -5,8 +5,10 @@ Service for analytics and insights business logic.
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from decimal import Decimal
+from sqlalchemy import func, case, and_
 from sqlalchemy.orm import joinedload
-from app.models import TimeEntry
+from app import db
+from app.models import TimeEntry, Project
 from app.repositories import TimeEntryRepository, ProjectRepository, InvoiceRepository, ExpenseRepository
 
 
@@ -72,65 +74,79 @@ class AnalyticsService:
         self, user_id: int, days: int = 30, limit: int = 5
     ) -> List[Dict[str, Any]]:
         """
-        Get top projects by hours for the dashboard (single query + in-memory aggregation).
-
-        Returns:
-            List of dicts with keys: project, hours, billable_hours (sorted by hours desc, limited).
+        Get top projects by hours for the dashboard (DB GROUP BY to avoid loading all entries).
+        Returns list of dicts with keys: project, hours, billable_hours (sorted by hours desc, limited).
         """
         period_start = datetime.utcnow().date() - timedelta(days=days)
-        entries = (
-            TimeEntry.query.options(joinedload(TimeEntry.project))
+        rows = (
+            db.session.query(
+                TimeEntry.project_id,
+                func.sum(TimeEntry.duration_seconds).label("total_seconds"),
+                func.sum(
+                    case(
+                        (and_(TimeEntry.billable == True, Project.billable == True), TimeEntry.duration_seconds),
+                        else_=0,
+                    )
+                ).label("billable_seconds"),
+            )
+            .join(Project, TimeEntry.project_id == Project.id)
             .filter(
                 TimeEntry.end_time.isnot(None),
                 TimeEntry.start_time >= period_start,
                 TimeEntry.user_id == user_id,
+                TimeEntry.project_id.isnot(None),
             )
+            .group_by(TimeEntry.project_id)
+            .order_by(func.sum(TimeEntry.duration_seconds).desc())
+            .limit(limit)
             .all()
         )
-        project_hours = {}
-        for e in entries:
-            if not e.project:
+        project_ids = [r.project_id for r in rows]
+        projects_by_id = {p.id: p for p in Project.query.filter(Project.id.in_(project_ids)).all()} if project_ids else {}
+        result = []
+        for r in rows:
+            project = projects_by_id.get(r.project_id)
+            if not project:
                 continue
-            key = e.project.id
-            if key not in project_hours:
-                project_hours[key] = {"project": e.project, "hours": 0.0, "billable_hours": 0.0}
-            project_hours[key]["hours"] += e.duration_hours
-            if e.billable and e.project.billable:
-                project_hours[key]["billable_hours"] += e.duration_hours
-        return sorted(project_hours.values(), key=lambda x: x["hours"], reverse=True)[:limit]
+            total_seconds = int(r.total_seconds or 0)
+            billable_seconds = int(r.billable_seconds or 0)
+            result.append(
+                {
+                    "project": project,
+                    "hours": round(total_seconds / 3600, 2),
+                    "billable_hours": round(billable_seconds / 3600, 2),
+                }
+            )
+        return result[:limit]
 
     def get_time_by_project_chart(
         self, user_id: int, days: int = 7, limit: int = 10
     ) -> Dict[str, Any]:
         """
-        Get time-by-project series for dashboard chart (single query + aggregation).
-
-        Returns:
-            dict with keys: series (list of {label, hours}), chart_labels, chart_hours.
+        Get time-by-project series for dashboard chart (DB GROUP BY to avoid loading all entries).
+        Returns dict with keys: series (list of {label, hours}), chart_labels, chart_hours.
         """
         period_start = datetime.utcnow().date() - timedelta(days=days)
-        entries = (
-            TimeEntry.query.options(joinedload(TimeEntry.project))
+        rows = (
+            db.session.query(
+                Project.name,
+                func.sum(TimeEntry.duration_seconds).label("total_seconds"),
+            )
+            .join(TimeEntry, TimeEntry.project_id == Project.id)
             .filter(
                 TimeEntry.end_time.isnot(None),
                 TimeEntry.start_time >= period_start,
                 TimeEntry.user_id == user_id,
             )
+            .group_by(TimeEntry.project_id, Project.name)
+            .order_by(func.sum(TimeEntry.duration_seconds).desc())
+            .limit(limit)
             .all()
         )
-        project_hours = {}
-        for e in entries:
-            if not e.project:
-                continue
-            key = e.project.id
-            if key not in project_hours:
-                project_hours[key] = {"name": e.project.name, "hours": 0.0}
-            project_hours[key]["hours"] += e.duration_hours
-        series = sorted(
-            [{"label": v["name"], "hours": round(v["hours"], 2)} for v in project_hours.values()],
-            key=lambda x: x["hours"],
-            reverse=True,
-        )[:limit]
+        series = [
+            {"label": r.name or "", "hours": round((r.total_seconds or 0) / 3600, 2)}
+            for r in rows
+        ]
         return {
             "series": series,
             "chart_labels": [x["label"] for x in series],

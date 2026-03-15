@@ -6,6 +6,7 @@ Routes under /api/v1/payments.
 from flask import Blueprint, jsonify, request, g
 from decimal import Decimal
 from app.utils.api_auth import require_api_token
+from app.utils.api_responses import error_response, validation_error_response
 from app.routes.api_v1_common import _parse_date
 
 api_v1_payments_bp = Blueprint("api_v1_payments", __name__, url_prefix="/api/v1")
@@ -58,14 +59,20 @@ def create_payment():
     from datetime import date
 
     data = request.get_json() or {}
+    errors = {}
     required = ["invoice_id", "amount"]
     missing = [f for f in required if not data.get(f)]
     if missing:
-        return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
+        for f in missing:
+            errors[f] = [f"{f} is required"]
+        return validation_error_response(errors=errors, message=f"Missing required fields: {', '.join(missing)}")
     try:
         amount = Decimal(str(data["amount"]))
     except Exception:
-        return jsonify({"error": "Invalid amount"}), 400
+        return validation_error_response(
+            errors={"amount": ["Invalid amount"]},
+            message="Invalid amount",
+        )
     pay_date = _parse_date(data.get("payment_date")) if data.get("payment_date") else date.today()
     payment_service = PaymentService()
     result = payment_service.create_payment(
@@ -107,7 +114,7 @@ def update_payment(payment_id):
     payment_service = PaymentService()
     result = payment_service.update_payment(payment_id=payment_id, user_id=g.api_user.id, **update_kwargs)
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not update payment")}), 400
+        return error_response(result.get("message", "Could not update payment"), status_code=400)
     return jsonify({"message": "Payment updated successfully", "payment": result["payment"].to_dict()})
 
 
@@ -120,5 +127,5 @@ def delete_payment(payment_id):
     payment_service = PaymentService()
     result = payment_service.delete_payment(payment_id=payment_id, user_id=g.api_user.id)
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not delete payment")}), 400
+        return error_response(result.get("message", "Could not delete payment"), status_code=400)
     return jsonify({"message": "Payment deleted successfully"})

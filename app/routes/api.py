@@ -925,10 +925,8 @@ def create_entry():
     
     # Invalidate dashboard cache for the entry owner so new entry appears immediately
     try:
-        from app.utils.cache import get_cache
-        cache = get_cache()
-        cache_key = f"dashboard:{entry.user_id}"
-        cache.delete(cache_key)
+        from app.utils.cache import invalidate_dashboard_for_user
+        invalidate_dashboard_for_user(entry.user_id)
         current_app.logger.debug("Invalidated dashboard cache for user %s after entry creation", entry.user_id)
     except Exception as e:
         current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
@@ -1618,10 +1616,8 @@ def update_entry(entry_id):
 
     # Invalidate dashboard cache for the entry owner so changes appear immediately
     try:
-        from app.utils.cache import get_cache
-        cache = get_cache()
-        cache_key = f"dashboard:{entry.user_id}"
-        cache.delete(cache_key)
+        from app.utils.cache import invalidate_dashboard_for_user
+        invalidate_dashboard_for_user(entry.user_id)
         current_app.logger.debug("Invalidated dashboard cache for user %s after entry update", entry.user_id)
     except Exception as e:
         current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
@@ -1654,10 +1650,8 @@ def delete_entry(entry_id):
 
     # Invalidate dashboard cache for the entry owner so changes appear immediately
     try:
-        from app.utils.cache import get_cache
-        cache = get_cache()
-        cache_key = f"dashboard:{current_user.id}"
-        cache.delete(cache_key)
+        from app.utils.cache import invalidate_dashboard_for_user
+        invalidate_dashboard_for_user(current_user.id)
         current_app.logger.debug("Invalidated dashboard cache for user %s after entry deletion", current_user.id)
     except Exception as e:
         current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
