@@ -27,9 +27,7 @@ def migrate_task_management_tables():
                 print("Task Management: Adding task_id column to time_entries table...")
                 try:
                     with db.engine.begin() as conn:
-                        conn.execute(
-                            text("ALTER TABLE time_entries ADD COLUMN task_id INTEGER REFERENCES tasks(id)")
-                        )
+                        conn.execute(text("ALTER TABLE time_entries ADD COLUMN task_id INTEGER REFERENCES tasks(id)"))
                     print("✓ task_id column added to time_entries table")
                 except Exception as e:
                     print(f"⚠ Warning: Could not add task_id column: {e}")

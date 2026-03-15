@@ -3,11 +3,13 @@ Outlook Calendar integration connector.
 Provides two-way sync between TimeTracker and Outlook Calendar.
 """
 
-from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta
-from app.integrations.base import BaseConnector
-import requests
 import os
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+import requests
+
+from app.integrations.base import BaseConnector
 
 
 class OutlookCalendarConnector(BaseConnector):
@@ -116,6 +118,7 @@ class OutlookCalendarConnector(BaseConnector):
             except Exception as e:
                 # Log error but don't fail - user info is optional
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.debug(f"Could not fetch Outlook user info: {e}")
 
@@ -199,9 +202,10 @@ class OutlookCalendarConnector(BaseConnector):
 
     def sync_data(self, sync_type: str = "full") -> Dict[str, Any]:
         """Sync time entries with Outlook Calendar."""
-        from app.models import TimeEntry
-        from app import db
         from datetime import datetime, timedelta
+
+        from app import db
+        from app.models import TimeEntry
 
         try:
             token = self.get_access_token()
@@ -437,7 +441,14 @@ class OutlookCalendarConnector(BaseConnector):
                 {
                     "title": "Sync Settings",
                     "description": "Configure what and how to sync",
-                    "fields": ["sync_direction", "sync_items", "auto_sync", "sync_interval", "sync_past_days", "sync_future_days"],
+                    "fields": [
+                        "sync_direction",
+                        "sync_items",
+                        "auto_sync",
+                        "sync_interval",
+                        "sync_past_days",
+                        "sync_future_days",
+                    ],
                 },
                 {
                     "title": "Display Settings",

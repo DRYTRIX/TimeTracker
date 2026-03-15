@@ -2,11 +2,13 @@
 Service for health check and system status.
 """
 
-from typing import Dict, Any
-from flask import current_app
-from app import db
-from sqlalchemy import text
 from datetime import datetime
+from typing import Any, Dict
+
+from flask import current_app
+from sqlalchemy import text
+
+from app import db
 
 
 class HealthService:

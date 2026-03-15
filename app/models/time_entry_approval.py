@@ -2,10 +2,12 @@
 Time Entry Approval models for manager approval workflow
 """
 
-from datetime import datetime
-from app import db
-from sqlalchemy import Enum as SQLEnum
 import enum
+from datetime import datetime
+
+from sqlalchemy import Enum as SQLEnum
+
+from app import db
 
 
 class ApprovalStatus(enum.Enum):

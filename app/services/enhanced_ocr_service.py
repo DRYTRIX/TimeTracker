@@ -2,12 +2,13 @@
 Enhanced OCR Service with better receipt scanning
 """
 
-from typing import Dict, List, Any, Optional
-from decimal import Decimal
-from datetime import datetime
 import logging
 import re
-from app.utils.ocr import scan_receipt, extract_text_from_image, is_ocr_available
+from datetime import datetime
+from decimal import Decimal
+from typing import Any, Dict, List, Optional
+
+from app.utils.ocr import extract_text_from_image, is_ocr_available, scan_receipt
 
 logger = logging.getLogger(__name__)
 

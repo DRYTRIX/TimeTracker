@@ -1,6 +1,7 @@
 """Invoice approval workflow models"""
 
 from datetime import datetime
+
 from app import db
 
 

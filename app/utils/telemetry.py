@@ -9,11 +9,12 @@ installation information via PostHog. All telemetry is:
 """
 
 import hashlib
-import platform
-import os
 import json
+import os
+import platform
 import time
 from typing import Optional
+
 import posthog
 
 

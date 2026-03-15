@@ -20,18 +20,17 @@ Integration.config fields used:
 
 from __future__ import annotations
 
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
-import xml.etree.ElementTree as ET
 
 import requests
 from icalendar import Calendar
 
 from app.integrations.base import BaseConnector
-from app.utils.timezone import get_timezone_obj, local_to_utc, utc_to_local, now_in_app_timezone
-
+from app.utils.timezone import get_timezone_obj, local_to_utc, now_in_app_timezone, utc_to_local
 
 DAV_NS = "DAV:"
 CALDAV_NS = "urn:ietf:params:xml:ns:caldav"
@@ -46,7 +45,7 @@ def _ensure_trailing_slash(u: str) -> str:
     if not u:
         return u
     # Don't add slash if URL has query string or fragment
-    if '?' in u or '#' in u:
+    if "?" in u or "#" in u:
         return u
     return u if u.endswith("/") else (u + "/")
 
@@ -115,11 +114,17 @@ class CalDAVClient:
             )
             return resp
         except requests.exceptions.SSLError as e:
-            raise ValueError(f"SSL certificate verification failed. If using a self-signed certificate, disable SSL verification in settings. Error: {str(e)}") from e
+            raise ValueError(
+                f"SSL certificate verification failed. If using a self-signed certificate, disable SSL verification in settings. Error: {str(e)}"
+            ) from e
         except requests.exceptions.Timeout as e:
-            raise ValueError(f"Request timeout after {self.timeout} seconds. The server may be slow or unreachable.") from e
+            raise ValueError(
+                f"Request timeout after {self.timeout} seconds. The server may be slow or unreachable."
+            ) from e
         except requests.exceptions.ConnectionError as e:
-            raise ValueError(f"Connection error: {str(e)}. Please check the server URL and network connectivity.") from e
+            raise ValueError(
+                f"Connection error: {str(e)}. Please check the server URL and network connectivity."
+            ) from e
 
     def _propfind(self, url: str, xml_body: str, depth: str = "0") -> ET.Element:
         resp = self._request(
@@ -190,7 +195,9 @@ class CalDAVClient:
             root = self._propfind(principal_url, body, depth="0")
             home_href = self._find_href(root, [(_ns("calendar-home-set", CALDAV_NS),)])
             if not home_href:
-                raise ValueError("Could not discover calendar-home-set from CalDAV server. The server may not support CalDAV or the credentials may be incorrect.")
+                raise ValueError(
+                    "Could not discover calendar-home-set from CalDAV server. The server may not support CalDAV or the credentials may be incorrect."
+                )
         except ValueError:
             raise
         except Exception as e:
@@ -240,12 +247,12 @@ class CalDAVClient:
         """
         Fetch VEVENTs within a time range using a calendar-query REPORT.
         Returns a list of dicts with uid, summary, description, start, end, href.
-        
+
         Note: Recurring events (RRULE) are not expanded - only instances that fall
         within the time range are returned if the server supports it.
         """
         calendar_url = _ensure_trailing_slash(calendar_url)
-        
+
         # Validate time range
         if time_max_utc <= time_min_utc:
             raise ValueError("time_max_utc must be after time_min_utc")
@@ -261,8 +268,8 @@ class CalDAVClient:
             "<c:calendar-data/>"
             "</d:prop>"
             "<c:filter>"
-            "<c:comp-filter name=\"VCALENDAR\">"
-            "<c:comp-filter name=\"VEVENT\">"
+            '<c:comp-filter name="VCALENDAR">'
+            '<c:comp-filter name="VEVENT">'
             f'<c:time-range start="{start_utc}" end="{end_utc}"/>'
             "</c:comp-filter>"
             "</c:comp-filter>"
@@ -274,16 +281,25 @@ class CalDAVClient:
 
         events: List[Dict[str, Any]] = []
         response_count = len(root.findall(_ns("response", DAV_NS)))
-        
+
         import logging
+
         logger = logging.getLogger(__name__)
         logger.info(f"CalDAV query returned {response_count} responses for time range {start_utc} to {end_utc}")
         logger.info(f"  Query time range: {time_min_utc} to {time_max_utc}")
         logger.info(f"  CalDAV format: {start_utc} to {end_utc}")
-        
+
         skipped_count = 0
-        skipped_reasons = {"no_href": 0, "no_caldata": 0, "parse_error": 0, "no_uid": 0, "no_dtstart": 0, "all_day": 0, "no_dtend": 0}
-        
+        skipped_reasons = {
+            "no_href": 0,
+            "no_caldata": 0,
+            "parse_error": 0,
+            "no_uid": 0,
+            "no_dtstart": 0,
+            "all_day": 0,
+            "no_dtend": 0,
+        }
+
         for resp in root.findall(_ns("response", DAV_NS)):
             href_el = resp.find(_ns("href", DAV_NS))
             href = href_el.text.strip() if href_el is not None and href_el.text else None
@@ -306,6 +322,7 @@ class CalDAVClient:
             except Exception as e:
                 # Log parsing errors but continue with other events
                 import logging
+
                 logger = logging.getLogger(__name__)
                 skipped_count += 1
                 skipped_reasons["parse_error"] += 1
@@ -350,7 +367,7 @@ class CalDAVClient:
                 # Handle DTEND or DURATION
                 dtend = comp.get("DTEND")
                 duration = comp.get("DURATION")
-                
+
                 if dtend:
                     end = dtend.dt
                     if not isinstance(end, datetime):
@@ -401,82 +418,86 @@ class CalDAVClient:
                 logger.info(f"Skipped {skipped_count} events: {skipped_reasons}")
         return events
 
-    def create_or_update_event(self, calendar_url: str, event_uid: str, ical_content: str, event_href: Optional[str] = None) -> bool:
+    def create_or_update_event(
+        self, calendar_url: str, event_uid: str, ical_content: str, event_href: Optional[str] = None
+    ) -> bool:
         """
         Create or update a calendar event using PUT request.
-        
+
         Args:
             calendar_url: Calendar collection URL
             event_uid: Unique identifier for the event
             ical_content: iCalendar content (VCALENDAR with VEVENT)
             event_href: Optional existing event href for updates
-        
+
         Returns:
             True if successful, False otherwise
         """
         import logging
+
         logger = logging.getLogger(__name__)
-        
+
         calendar_url = _ensure_trailing_slash(calendar_url)
         # Use provided href if available, otherwise construct from UID
         if event_href:
             # If event_href is absolute, validate it matches calendar_url base, otherwise reconstruct
-            if event_href.startswith('http://') or event_href.startswith('https://'):
+            if event_href.startswith("http://") or event_href.startswith("https://"):
                 # Parse both URLs to compare
                 from urllib.parse import urlparse
+
                 href_parsed = urlparse(event_href)
                 cal_parsed = urlparse(calendar_url)
-                
+
                 # If the href is from a different host/port, reconstruct using calendar_url base
-                if (href_parsed.scheme != cal_parsed.scheme or 
-                    href_parsed.netloc != cal_parsed.netloc):
+                if href_parsed.scheme != cal_parsed.scheme or href_parsed.netloc != cal_parsed.netloc:
                     logger.warning(f"Event href {event_href} doesn't match calendar URL {calendar_url}, reconstructing")
                     # Reconstruct using calendar_url base
                     filename = f"{event_uid}.ics"
-                    if calendar_url.endswith('/'):
+                    if calendar_url.endswith("/"):
                         event_url = calendar_url + filename
                     else:
-                        event_url = calendar_url + '/' + filename
+                        event_url = calendar_url + "/" + filename
                 else:
                     event_url = event_href
             else:
                 # Relative href - join with calendar_url base
-                event_url = urljoin(calendar_url, event_href.lstrip('/'))
+                event_url = urljoin(calendar_url, event_href.lstrip("/"))
         else:
             # Event URL is typically: calendar_url + event_uid + ".ics"
             # Use proper URL joining - ensure calendar_url ends with / and filename doesn't start with /
             filename = f"{event_uid}.ics"
-            if calendar_url.endswith('/'):
+            if calendar_url.endswith("/"):
                 event_url = calendar_url + filename
             else:
-                event_url = calendar_url + '/' + filename
-        
+                event_url = calendar_url + "/" + filename
+
         headers = {
             "Content-Type": "text/calendar; charset=utf-8",
         }
-        
+
         try:
             logger.info(f"PUT request to {event_url} for event {event_uid} (calendar_url: {calendar_url})")
             logger.info(f"  iCalendar content length: {len(ical_content)} bytes")
             logger.debug(f"  iCalendar content preview: {ical_content[:200]}...")
             resp = self._request("PUT", event_url, headers=headers, data=ical_content)
-            
+
             logger.info(f"  Response status: {resp.status_code}")
             logger.debug(f"  Response headers: {dict(resp.headers)}")
-            
+
             # Handle redirects manually for PUT requests
             if resp.status_code in (301, 302, 303, 307, 308):
-                redirect_url = resp.headers.get('Location')
+                redirect_url = resp.headers.get("Location")
                 if redirect_url:
                     logger.info(f"Following redirect from {event_url} to {redirect_url}")
                     # Make redirect URL absolute if it's relative
-                    if not redirect_url.startswith('http'):
+                    if not redirect_url.startswith("http"):
                         from urllib.parse import urljoin, urlparse
+
                         parsed = urlparse(event_url)
                         redirect_url = f"{parsed.scheme}://{parsed.netloc}{redirect_url}"
                     resp = self._request("PUT", redirect_url, headers=headers, data=ical_content)
                     logger.info(f"  Redirect response status: {resp.status_code}")
-            
+
             resp.raise_for_status()
             logger.info(f"Successfully created/updated event {event_uid} at {event_url} (status: {resp.status_code})")
             return True
@@ -486,17 +507,19 @@ class CalDAVClient:
                 error_detail += f": {e.response.text[:500]}"
             logger.warning(f"HTTP error creating/updating CalDAV event {event_uid} at {event_url}: {error_detail}")
             logger.debug(f"  Full response text: {e.response.text}")
-            
+
             if e.response.status_code == 404:
-                logger.info(f"CalDAV event {event_uid} not found at {event_url}, attempting to create with standard URL")
+                logger.info(
+                    f"CalDAV event {event_uid} not found at {event_url}, attempting to create with standard URL"
+                )
                 # Try creating with standard URL if custom href failed
                 if event_href:
                     # Try standard URL format
                     filename = f"{event_uid}.ics"
-                    if calendar_url.endswith('/'):
+                    if calendar_url.endswith("/"):
                         standard_url = calendar_url + filename
                     else:
-                        standard_url = calendar_url + '/' + filename
+                        standard_url = calendar_url + "/" + filename
                     if event_href != standard_url:
                         try:
                             logger.info(f"Trying standard URL: {standard_url}")
@@ -507,11 +530,15 @@ class CalDAVClient:
                             return True
                         except Exception as e2:
                             logger.warning(f"Failed to create event at standard URL {standard_url}: {e2}")
-                            if hasattr(e2, 'response') and e2.response:
-                                logger.warning(f"  Response status: {e2.response.status_code}, text: {e2.response.text[:200]}")
+                            if hasattr(e2, "response") and e2.response:
+                                logger.warning(
+                                    f"  Response status: {e2.response.status_code}, text: {e2.response.text[:200]}"
+                                )
                             return False
             elif e.response.status_code == 403:
-                logger.warning(f"Permission denied (403) when creating event {event_uid}. Check calendar write permissions.")
+                logger.warning(
+                    f"Permission denied (403) when creating event {event_uid}. Check calendar write permissions."
+                )
                 logger.warning(f"  Response: {e.response.text[:200]}")
             elif e.response.status_code == 401:
                 logger.warning(f"Authentication failed (401) when creating event {event_uid}. Check credentials.")
@@ -592,13 +619,16 @@ class CalDAVCalendarConnector(BaseConnector):
             # Check if credentials exist
             if not self.credentials:
                 return {"success": False, "message": "No credentials configured. Please set up username and password."}
-            
+
             # Check if we have username and password
             try:
                 username, password = self._get_basic_creds()
             except ValueError as e:
-                return {"success": False, "message": f"Missing credentials: {str(e)}. Please configure username and password."}
-            
+                return {
+                    "success": False,
+                    "message": f"Missing credentials: {str(e)}. Please configure username and password.",
+                }
+
             cfg = self.integration.config or {}
             server_url = cfg.get("server_url")
             calendar_url = cfg.get("calendar_url")
@@ -628,7 +658,11 @@ class CalDAVCalendarConnector(BaseConnector):
 
             return {
                 "success": True,
-                "message": f"Connected to CalDAV. Found {len(calendars)} calendars." if server_url else "Connected to CalDAV calendar.",
+                "message": (
+                    f"Connected to CalDAV. Found {len(calendars)} calendars."
+                    if server_url
+                    else "Connected to CalDAV calendar."
+                ),
                 "calendars": [{"url": c.href, "name": c.name} for c in calendars],
             }
         except Exception as e:
@@ -639,9 +673,10 @@ class CalDAVCalendarConnector(BaseConnector):
         Sync data between CalDAV and TimeTracker.
         MVP: calendar_to_time_tracker imports VEVENTs as TimeEntry records.
         """
-        from app import db
-        from app.models import TimeEntry, Project, IntegrationExternalEventLink
         import logging
+
+        from app import db
+        from app.models import IntegrationExternalEventLink, Project, TimeEntry
 
         logger = logging.getLogger(__name__)
 
@@ -652,16 +687,19 @@ class CalDAVCalendarConnector(BaseConnector):
             # Check credentials
             if not self.credentials:
                 return {"success": False, "message": "No credentials configured. Please set up username and password."}
-            
+
             try:
                 username, password = self._get_basic_creds()
             except ValueError as e:
-                return {"success": False, "message": f"Missing credentials: {str(e)}. Please configure username and password."}
+                return {
+                    "success": False,
+                    "message": f"Missing credentials: {str(e)}. Please configure username and password.",
+                }
 
             cfg = self.integration.config or {}
             calendar_url = cfg.get("calendar_url")
             server_url = cfg.get("server_url")
-            
+
             if not calendar_url:
                 if server_url:
                     # Try to discover and use first calendar
@@ -681,12 +719,21 @@ class CalDAVCalendarConnector(BaseConnector):
                             # Save the discovered calendar URL
                             db.session.commit()
                         else:
-                            return {"success": False, "message": "No calendars found on server. Please configure calendar URL manually."}
+                            return {
+                                "success": False,
+                                "message": "No calendars found on server. Please configure calendar URL manually.",
+                            }
                     except Exception as e:
                         logger.error(f"Could not discover calendars: {e}", exc_info=True)
-                        return {"success": False, "message": f"Could not discover calendars: {str(e)}. Please configure calendar URL manually."}
+                        return {
+                            "success": False,
+                            "message": f"Could not discover calendars: {str(e)}. Please configure calendar URL manually.",
+                        }
                 else:
-                    return {"success": False, "message": "No calendar selected. Please configure calendar URL or server URL first."}
+                    return {
+                        "success": False,
+                        "message": "No calendar selected. Please configure calendar URL or server URL first.",
+                    }
 
             sync_direction = cfg.get("sync_direction", "calendar_to_time_tracker")
             default_project_id = cfg.get("default_project_id")
@@ -698,7 +745,9 @@ class CalDAVCalendarConnector(BaseConnector):
 
             if sync_direction in ("calendar_to_time_tracker", "bidirectional"):
                 logger.info(f"Executing Calendar→TimeTracker sync (sync_direction: {sync_direction})")
-                calendar_result = self._sync_calendar_to_time_tracker(cfg, calendar_url, sync_type, default_project_id, lookback_days)
+                calendar_result = self._sync_calendar_to_time_tracker(
+                    cfg, calendar_url, sync_type, default_project_id, lookback_days
+                )
                 # If bidirectional, also do TimeTracker to Calendar sync
                 if sync_direction == "bidirectional":
                     logger.info(f"Executing TimeTracker→Calendar sync (bidirectional mode)")
@@ -707,7 +756,8 @@ class CalDAVCalendarConnector(BaseConnector):
                     if calendar_result.get("success") and tracker_result.get("success"):
                         return {
                             "success": True,
-                            "synced_items": calendar_result.get("synced_items", 0) + tracker_result.get("synced_items", 0),
+                            "synced_items": calendar_result.get("synced_items", 0)
+                            + tracker_result.get("synced_items", 0),
                             "imported": calendar_result.get("imported", 0),
                             "skipped": calendar_result.get("skipped", 0),
                             "errors": calendar_result.get("errors", []) + tracker_result.get("errors", []),
@@ -718,7 +768,10 @@ class CalDAVCalendarConnector(BaseConnector):
                     elif tracker_result.get("success"):
                         return tracker_result
                     else:
-                        return {"success": False, "message": f"Both sync directions failed. Calendar→TimeTracker: {calendar_result.get('message')}, TimeTracker→Calendar: {tracker_result.get('message')}"}
+                        return {
+                            "success": False,
+                            "message": f"Both sync directions failed. Calendar→TimeTracker: {calendar_result.get('message')}, TimeTracker→Calendar: {tracker_result.get('message')}",
+                        }
                 logger.info(f"Calendar→TimeTracker sync completed, returning result")
                 return calendar_result
 
@@ -726,7 +779,7 @@ class CalDAVCalendarConnector(BaseConnector):
             if sync_direction == "time_tracker_to_calendar":
                 logger.info(f"Executing TimeTracker→Calendar sync only (sync_direction: {sync_direction})")
                 return self._sync_time_tracker_to_calendar(cfg, calendar_url, sync_type)
-            
+
             logger.warning(f"Unknown sync direction: {sync_direction}")
             return {"success": False, "message": f"Unknown sync direction: {sync_direction}"}
         except Exception as e:
@@ -746,16 +799,24 @@ class CalDAVCalendarConnector(BaseConnector):
                 except Exception:
                     pass
             return {"success": False, "message": f"Sync failed: {str(e)}"}
-    
-    def _sync_calendar_to_time_tracker(self, cfg: Dict[str, Any], calendar_url: str, sync_type: str, default_project_id: Optional[int], lookback_days: int) -> Dict[str, Any]:
+
+    def _sync_calendar_to_time_tracker(
+        self,
+        cfg: Dict[str, Any],
+        calendar_url: str,
+        sync_type: str,
+        default_project_id: Optional[int],
+        lookback_days: int,
+    ) -> Dict[str, Any]:
         """Sync calendar events from CalDAV to TimeTracker CalendarEvent records."""
-        from app import db
-        from app.models import Project, CalendarEvent
-        from app.models.integration_external_event_link import IntegrationExternalEventLink
         import logging
-        
+
+        from app import db
+        from app.models import CalendarEvent, Project
+        from app.models.integration_external_event_link import IntegrationExternalEventLink
+
         logger = logging.getLogger(__name__)
-        
+
         # default_project_id is optional - if not provided, events will be imported without a project
 
         # Determine time window
@@ -767,7 +828,7 @@ class CalDAVCalendarConnector(BaseConnector):
             time_min_utc = now_utc - timedelta(days=lookback_days)
             logger.info(f"Full sync: using lookback_days={lookback_days}, calculated time_min_utc={time_min_utc}")
         time_max_utc = now_utc + timedelta(days=7)
-        
+
         logger.info(f"Time range calculation:")
         logger.info(f"  now_utc: {now_utc}")
         logger.info(f"  time_min_utc: {time_min_utc} (lookback: {lookback_days} days)")
@@ -779,10 +840,12 @@ class CalDAVCalendarConnector(BaseConnector):
         try:
             events = client.fetch_events(calendar_url, time_min_utc, time_max_utc)
             logger.info(f"Fetched {len(events)} events from CalDAV calendar")
-            
+
             # If no events found, try with an expanded time range (some servers are strict about time-range)
             if len(events) == 0:
-                logger.debug(f"No events found with initial time range, trying expanded range (extending by 1 day on each side)")
+                logger.debug(
+                    f"No events found with initial time range, trying expanded range (extending by 1 day on each side)"
+                )
                 expanded_min = time_min_utc - timedelta(days=1)
                 expanded_max = time_max_utc + timedelta(days=1)
                 try:
@@ -792,17 +855,20 @@ class CalDAVCalendarConnector(BaseConnector):
                     if events:
                         original_events = events
                         events = [
-                            e for e in original_events
-                            if (e["start"] <= time_max_utc and e["end"] >= time_min_utc)
+                            e for e in original_events if (e["start"] <= time_max_utc and e["end"] >= time_min_utc)
                         ]
                         logger.info(f"Filtered to {len(events)} events within original time range")
                 except Exception as e2:
                     logger.debug(f"Expanded time range query also failed: {e2}")
-            
+
             if len(events) == 0:
-                logger.warning(f"No events found in calendar {calendar_url} for time range {time_min_utc} to {time_max_utc}")
+                logger.warning(
+                    f"No events found in calendar {calendar_url} for time range {time_min_utc} to {time_max_utc}"
+                )
             else:
-                logger.debug(f"Event details (first 5): {[{'uid': e.get('uid', 'N/A')[:20], 'summary': e.get('summary', 'N/A')[:30], 'start': str(e.get('start', 'N/A')), 'end': str(e.get('end', 'N/A'))} for e in events[:5]]}")
+                logger.debug(
+                    f"Event details (first 5): {[{'uid': e.get('uid', 'N/A')[:20], 'summary': e.get('summary', 'N/A')[:30], 'start': str(e.get('start', 'N/A')), 'end': str(e.get('end', 'N/A'))} for e in events[:5]]}"
+                )
         except Exception as e:
             logger.error(f"Failed to fetch events from calendar: {e}", exc_info=True)
             return {"success": False, "message": f"Failed to fetch events from calendar: {str(e)}"}
@@ -832,20 +898,20 @@ class CalDAVCalendarConnector(BaseConnector):
         for ev in events:
             try:
                 uid = ev["uid"]
-                
+
                 # Check if this event was already imported
                 # Since CalendarEvent doesn't have time_entry_id for IntegrationExternalEventLink,
                 # we track imports by checking for CalendarEvent records with the [CalDAV: uid] marker in description
                 existing_calendar_event = CalendarEvent.query.filter(
                     CalendarEvent.user_id == self.integration.user_id,
-                    CalendarEvent.description.like(f"%[CalDAV: {uid}]%")
+                    CalendarEvent.description.like(f"%[CalDAV: {uid}]%"),
                 ).first()
-                
+
                 # Also check link table in case it was previously imported as TimeEntry (for backward compatibility)
                 existing_link = IntegrationExternalEventLink.query.filter_by(
                     integration_id=self.integration.id, external_uid=uid
                 ).first()
-                
+
                 if existing_calendar_event or existing_link:
                     logger.debug(f"Event {uid} already imported (CalendarEvent or link exists), skipping")
                     skipped += 1
@@ -854,13 +920,13 @@ class CalDAVCalendarConnector(BaseConnector):
 
                 start_dt: datetime = ev["start"]
                 end_dt: datetime = ev["end"]
-                
+
                 # Ensure both are timezone-aware UTC
                 if start_dt.tzinfo is None:
                     start_dt = start_dt.replace(tzinfo=timezone.utc)
                 else:
                     start_dt = start_dt.astimezone(timezone.utc)
-                    
+
                 if end_dt.tzinfo is None:
                     end_dt = end_dt.replace(tzinfo=timezone.utc)
                 else:
@@ -879,11 +945,11 @@ class CalDAVCalendarConnector(BaseConnector):
                 project_id = None
                 if default_project_id:
                     project_id = int(default_project_id)
-                
+
                 title = (ev.get("summary") or "").strip()
                 if not title:
                     title = "Imported Calendar Event"
-                
+
                 # Try to match project by name in title (only if we have projects loaded)
                 if not project_id:
                     for p in projects:
@@ -943,7 +1009,9 @@ class CalDAVCalendarConnector(BaseConnector):
             message = f"Imported {imported} events ({skipped} skipped: {skipped_reasons['already_imported']} duplicates, {skipped_reasons['invalid_time']} invalid time, {skipped_reasons['other']} other, {len(events)} total found)."
 
         logger.info(f"CalDAV sync completed: {message}")
-        logger.debug(f"Sync statistics: imported={imported}, skipped={skipped}, errors={len(errors)}, total_events={len(events)}")
+        logger.debug(
+            f"Sync statistics: imported={imported}, skipped={skipped}, errors={len(errors)}, total_events={len(events)}"
+        )
 
         return {
             "success": True,
@@ -953,19 +1021,20 @@ class CalDAVCalendarConnector(BaseConnector):
             "errors": errors,
             "message": message,
         }
-    
+
     def _sync_time_tracker_to_calendar(self, cfg: Dict[str, Any], calendar_url: str, sync_type: str) -> Dict[str, Any]:
         """Sync TimeTracker time entries and calendar events to CalDAV calendar."""
-        from app import db
-        from app.models import TimeEntry, Project, Task, CalendarEvent
-        from app.models.integration_external_event_link import IntegrationExternalEventLink
         import logging
-        
+
+        from app import db
+        from app.models import CalendarEvent, Project, Task, TimeEntry
+        from app.models.integration_external_event_link import IntegrationExternalEventLink
+
         logger = logging.getLogger(__name__)
-        
+
         lookback_days = int(cfg.get("lookback_days", 90))
         lookahead_days = int(cfg.get("lookahead_days", 7))
-        
+
         now_utc = datetime.now(timezone.utc)
         if sync_type == "incremental" and self.integration.last_sync_at:
             time_min = self.integration.last_sync_at.replace(tzinfo=timezone.utc)
@@ -974,18 +1043,20 @@ class CalDAVCalendarConnector(BaseConnector):
             time_min = now_utc - timedelta(days=lookback_days)
             logger.info(f"Full sync: using lookback_days={lookback_days}, calculated time_min={time_min}")
         time_max = now_utc + timedelta(days=lookahead_days)
-        
+
         logger.info(f"Time range calculation for TimeTracker→Calendar sync:")
         logger.info(f"  now_utc: {now_utc}")
         logger.info(f"  time_min (UTC): {time_min} (lookback: {lookback_days} days)")
         logger.info(f"  time_max (UTC): {time_max} (lookahead: {lookahead_days} days)")
         logger.info(f"  Time range span: {(time_max - time_min).days} days")
-        
+
         time_min_local = _to_local_naive(time_min)
         time_max_local = _to_local_naive(time_max)
-        
-        logger.info(f"Looking for time entries and calendar events for user {self.integration.user_id} between {time_min_local} and {time_max_local}")
-        
+
+        logger.info(
+            f"Looking for time entries and calendar events for user {self.integration.user_id} between {time_min_local} and {time_max_local}"
+        )
+
         # Get time entries
         # First, check how many entries exist for this user in the time range (without end_time filter)
         all_entries_in_range = TimeEntry.query.filter(
@@ -994,40 +1065,54 @@ class CalDAVCalendarConnector(BaseConnector):
             TimeEntry.start_time <= time_max_local,
         ).all()
         logger.info(f"  Total time entries in time range (including without end_time): {len(all_entries_in_range)}")
-        
+
         # Check how many have end_time
         entries_with_end_time = [e for e in all_entries_in_range if e.end_time is not None]
         logger.info(f"  Time entries with end_time: {len(entries_with_end_time)}")
         entries_without_end_time = [e for e in all_entries_in_range if e.end_time is None]
         if entries_without_end_time:
-            logger.info(f"  Time entries without end_time (will be skipped): {[e.id for e in entries_without_end_time]}")
-        
-        time_entries = TimeEntry.query.filter(
-            TimeEntry.user_id == self.integration.user_id,
-            TimeEntry.start_time >= time_min_local,
-            TimeEntry.start_time <= time_max_local,
-            TimeEntry.end_time.isnot(None),
-        ).order_by(TimeEntry.start_time).all()
-        
+            logger.info(
+                f"  Time entries without end_time (will be skipped): {[e.id for e in entries_without_end_time]}"
+            )
+
+        time_entries = (
+            TimeEntry.query.filter(
+                TimeEntry.user_id == self.integration.user_id,
+                TimeEntry.start_time >= time_min_local,
+                TimeEntry.start_time <= time_max_local,
+                TimeEntry.end_time.isnot(None),
+            )
+            .order_by(TimeEntry.start_time)
+            .all()
+        )
+
         logger.info(f"Found {len(time_entries)} time entries to sync to CalDAV calendar (with end_time)")
         if time_entries:
             logger.info(f"  Time entry IDs found: {[e.id for e in time_entries]}")
             for entry in time_entries:
-                logger.info(f"    Time Entry {entry.id}: start={entry.start_time}, end={entry.end_time}, project_id={entry.project_id}, source={getattr(entry, 'source', 'unknown')}")
-        
+                logger.info(
+                    f"    Time Entry {entry.id}: start={entry.start_time}, end={entry.end_time}, project_id={entry.project_id}, source={getattr(entry, 'source', 'unknown')}"
+                )
+
         # Get calendar events
-        calendar_events = CalendarEvent.query.filter(
-            CalendarEvent.user_id == self.integration.user_id,
-            CalendarEvent.start_time >= time_min_local,
-            CalendarEvent.start_time <= time_max_local,
-        ).order_by(CalendarEvent.start_time).all()
-        
+        calendar_events = (
+            CalendarEvent.query.filter(
+                CalendarEvent.user_id == self.integration.user_id,
+                CalendarEvent.start_time >= time_min_local,
+                CalendarEvent.start_time <= time_max_local,
+            )
+            .order_by(CalendarEvent.start_time)
+            .all()
+        )
+
         logger.info(f"Found {len(calendar_events)} calendar events to sync to CalDAV calendar")
         if calendar_events:
             logger.info(f"  Calendar event IDs found: {[e.id for e in calendar_events]}")
             for event in calendar_events:
-                logger.info(f"    Calendar Event {event.id}: start={event.start_time}, end={event.end_time}, title={event.title}, all_day={event.all_day}")
-        
+                logger.info(
+                    f"    Calendar Event {event.id}: start={event.start_time}, end={event.end_time}, title={event.title}, all_day={event.all_day}"
+                )
+
         if not time_entries and not calendar_events:
             self.integration.last_sync_at = datetime.utcnow()
             self.integration.last_sync_status = "success"
@@ -1039,54 +1124,65 @@ class CalDAVCalendarConnector(BaseConnector):
                 "errors": [],
                 "message": f"No time entries found in the specified time range ({time_min_local.date()} to {time_max_local.date()}).",
             }
-        
+
         client = self._client()
         synced = 0
         updated = 0
         skipped_count = 0
         errors: List[str] = []
-        
+
         total_items = len(time_entries) + len(calendar_events)
-        logger.info(f"Starting sync of {len(time_entries)} time entries and {len(calendar_events)} calendar events ({total_items} total) to CalDAV calendar")
-        
+        logger.info(
+            f"Starting sync of {len(time_entries)} time entries and {len(calendar_events)} calendar events ({total_items} total) to CalDAV calendar"
+        )
+
         # Sync time entries
         for time_entry in time_entries:
             try:
                 event_uid = f"timetracker-{time_entry.id}@timetracker.local"
-                
+
                 existing_link = IntegrationExternalEventLink.query.filter_by(
-                    integration_id=self.integration.id,
-                    time_entry_id=time_entry.id
+                    integration_id=self.integration.id, time_entry_id=time_entry.id
                 ).first()
-                
+
                 # Log entry details for debugging
-                logger.info(f"Processing time entry {time_entry.id}: start={time_entry.start_time}, end={time_entry.end_time}, project_id={time_entry.project_id}, source={getattr(time_entry, 'source', 'unknown')}")
+                logger.info(
+                    f"Processing time entry {time_entry.id}: start={time_entry.start_time}, end={time_entry.end_time}, project_id={time_entry.project_id}, source={getattr(time_entry, 'source', 'unknown')}"
+                )
                 if existing_link:
-                    logger.info(f"  Existing link found: external_uid={existing_link.external_uid}, external_href={existing_link.external_href}")
-                    logger.info(f"  Link external_uid starts with 'timetracker-': {existing_link.external_uid.startswith('timetracker-') if existing_link.external_uid else False}")
+                    logger.info(
+                        f"  Existing link found: external_uid={existing_link.external_uid}, external_href={existing_link.external_href}"
+                    )
+                    logger.info(
+                        f"  Link external_uid starts with 'timetracker-': {existing_link.external_uid.startswith('timetracker-') if existing_link.external_uid else False}"
+                    )
                 else:
                     logger.info(f"  No existing link found - will create new event")
-                
+
                 # Skip entries that were imported FROM CalDAV (to avoid circular sync)
                 # If there's a link but the external_uid doesn't start with "timetracker-",
                 # it means this entry was imported from CalDAV, not created by us
                 # Also handle case where external_uid is None or empty - treat as new sync
                 if existing_link and existing_link.external_uid:
                     if not existing_link.external_uid.startswith("timetracker-"):
-                        logger.info(f"Skipping time entry {time_entry.id} - it was imported from CalDAV (external_uid: {existing_link.external_uid}), avoiding circular sync")
+                        logger.info(
+                            f"Skipping time entry {time_entry.id} - it was imported from CalDAV (external_uid: {existing_link.external_uid}), avoiding circular sync"
+                        )
                         skipped_count += 1
                         continue
                     else:
                         logger.info(f"  Entry {time_entry.id} has timetracker- UID, will update existing event")
                 elif existing_link and not existing_link.external_uid:
                     # Link exists but external_uid is None/empty - treat as new sync, update the link
-                    logger.info(f"Time entry {time_entry.id} has link with empty external_uid - will create new event and update link")
+                    logger.info(
+                        f"Time entry {time_entry.id} has link with empty external_uid - will create new event and update link"
+                    )
                 else:
                     logger.info(f"  Entry {time_entry.id} has no link - will create new event")
-                
+
                 project = Project.query.get(time_entry.project_id) if time_entry.project_id else None
                 task = Task.query.get(time_entry.task_id) if time_entry.task_id else None
-                
+
                 title_parts = []
                 if project:
                     title_parts.append(project.name)
@@ -1095,40 +1191,50 @@ class CalDAVCalendarConnector(BaseConnector):
                 if not title_parts:
                     title_parts.append("Time Entry")
                 title = " - ".join(title_parts)
-                
+
                 description_parts = []
                 if time_entry.notes:
                     description_parts.append(time_entry.notes)
                 if time_entry.tags:
                     description_parts.append(f"Tags: {time_entry.tags}")
-                description = "\n\n".join(description_parts) if description_parts else "TimeTracker: Created from time entry"
-                
+                description = (
+                    "\n\n".join(description_parts) if description_parts else "TimeTracker: Created from time entry"
+                )
+
                 start_utc = local_to_utc(time_entry.start_time)
                 end_utc = local_to_utc(time_entry.end_time) if time_entry.end_time else start_utc + timedelta(hours=1)
-                
+
                 logger.info(f"Syncing time entry {time_entry.id}: {title} from {start_utc} to {end_utc}")
-                
+
                 ical_content = self._generate_icalendar_event(
                     uid=event_uid,
                     title=title,
                     description=description,
                     start=start_utc,
                     end=end_utc,
-                    created=time_entry.created_at.replace(tzinfo=timezone.utc) if time_entry.created_at else datetime.now(timezone.utc),
-                    updated=time_entry.updated_at.replace(tzinfo=timezone.utc) if time_entry.updated_at else datetime.now(timezone.utc),
+                    created=(
+                        time_entry.created_at.replace(tzinfo=timezone.utc)
+                        if time_entry.created_at
+                        else datetime.now(timezone.utc)
+                    ),
+                    updated=(
+                        time_entry.updated_at.replace(tzinfo=timezone.utc)
+                        if time_entry.updated_at
+                        else datetime.now(timezone.utc)
+                    ),
                 )
-                
+
                 # Always construct our standard event URL (don't use imported event hrefs)
                 filename = f"{event_uid}.ics"
-                if calendar_url.endswith('/'):
+                if calendar_url.endswith("/"):
                     event_href = calendar_url + filename
                 else:
-                    event_href = calendar_url + '/' + filename
-                
+                    event_href = calendar_url + "/" + filename
+
                 logger.info(f"  Event UID: {event_uid}")
                 logger.info(f"  Event href: {event_href}")
                 logger.info(f"  Calendar URL: {calendar_url}")
-                
+
                 # Check if we already synced this entry (has link with our UID)
                 if existing_link and existing_link.external_uid == event_uid:
                     # Update existing event we created
@@ -1136,7 +1242,9 @@ class CalDAVCalendarConnector(BaseConnector):
                     # Use the stored href if it exists and is valid, otherwise use our generated one
                     stored_href = existing_link.external_href if existing_link.external_href else event_href
                     logger.info(f"  Using stored href: {stored_href}")
-                    success = client.create_or_update_event(calendar_url, event_uid, ical_content, event_href=stored_href)
+                    success = client.create_or_update_event(
+                        calendar_url, event_uid, ical_content, event_href=stored_href
+                    )
                     if success:
                         # Update the stored href in case it changed
                         if existing_link.external_href != event_href:
@@ -1175,12 +1283,12 @@ class CalDAVCalendarConnector(BaseConnector):
                         error_msg = f"Failed to create time entry {time_entry.id} in calendar"
                         errors.append(error_msg)
                         logger.warning(f"{error_msg} - create_or_update_event returned False")
-                    
+
             except Exception as e:
                 error_msg = f"Time entry {time_entry.id}: {str(e)}"
                 errors.append(error_msg)
                 logger.warning(f"Failed to sync time entry {time_entry.id} to CalDAV: {e}")
-        
+
         # Sync calendar events
         # Note: IntegrationExternalEventLink requires time_entry_id, so for calendar events we track by external_uid only
         for calendar_event in calendar_events:
@@ -1188,40 +1296,48 @@ class CalDAVCalendarConnector(BaseConnector):
                 # Skip calendar events that were imported FROM CalDAV (to avoid circular sync)
                 # We check for the [CalDAV: uid] marker in the description
                 if calendar_event.description and "[CalDAV:" in calendar_event.description:
-                    logger.info(f"Skipping calendar event {calendar_event.id} - it was imported from CalDAV (has [CalDAV: marker in description), avoiding circular sync")
+                    logger.info(
+                        f"Skipping calendar event {calendar_event.id} - it was imported from CalDAV (has [CalDAV: marker in description), avoiding circular sync"
+                    )
                     skipped_count += 1
                     continue
-                
+
                 event_uid = f"timetracker-calendarevent-{calendar_event.id}@timetracker.local"
-                
+
                 # For calendar events, check by external_uid only (since IntegrationExternalEventLink
                 # requires time_entry_id which calendar events don't have)
                 existing_link_by_uid = IntegrationExternalEventLink.query.filter_by(
-                    integration_id=self.integration.id,
-                    external_uid=event_uid
+                    integration_id=self.integration.id, external_uid=event_uid
                 ).first()
-                
+
                 # Log event details for debugging
-                logger.info(f"Processing calendar event {calendar_event.id}: start={calendar_event.start_time}, end={calendar_event.end_time}, title={calendar_event.title}")
+                logger.info(
+                    f"Processing calendar event {calendar_event.id}: start={calendar_event.start_time}, end={calendar_event.end_time}, title={calendar_event.title}"
+                )
                 if existing_link_by_uid:
-                    logger.info(f"  Existing link found: external_uid={existing_link_by_uid.external_uid}, external_href={existing_link_by_uid.external_href}, time_entry_id={existing_link_by_uid.time_entry_id}")
+                    logger.info(
+                        f"  Existing link found: external_uid={existing_link_by_uid.external_uid}, external_href={existing_link_by_uid.external_href}, time_entry_id={existing_link_by_uid.time_entry_id}"
+                    )
                     # If link exists but has a time_entry_id, it might be for a different entry - we'll update it
                 else:
                     logger.info(f"  No existing link found - will create new event")
-                
+
                 # Skip all-day events for now (CalDAV sync currently only handles timed events)
                 if calendar_event.all_day:
-                    logger.info(f"Skipping calendar event {calendar_event.id} - all-day events not yet supported in CalDAV sync")
+                    logger.info(
+                        f"Skipping calendar event {calendar_event.id} - all-day events not yet supported in CalDAV sync"
+                    )
                     skipped_count += 1
                     continue
-                
+
                 title = calendar_event.title
                 description_parts = []
                 if calendar_event.description:
                     # Remove the [CalDAV: uid] marker if present (it's only for tracking imports)
                     desc = calendar_event.description
                     import re
-                    desc = re.sub(r'\[CalDAV: [^\]]+\]\s*\n?\n?', '', desc).strip()
+
+                    desc = re.sub(r"\[CalDAV: [^\]]+\]\s*\n?\n?", "", desc).strip()
                     if desc:
                         description_parts.append(desc)
                 if calendar_event.location:
@@ -1229,40 +1345,52 @@ class CalDAVCalendarConnector(BaseConnector):
                 if calendar_event.event_type:
                     description_parts.append(f"Type: {calendar_event.event_type}")
                 description = "\n\n".join(description_parts) if description_parts else "TimeTracker: Calendar event"
-                
+
                 # Convert to UTC
                 start_utc = local_to_utc(calendar_event.start_time)
                 end_utc = local_to_utc(calendar_event.end_time)
-                
+
                 logger.info(f"Syncing calendar event {calendar_event.id}: {title} from {start_utc} to {end_utc}")
-                
+
                 ical_content = self._generate_icalendar_event(
                     uid=event_uid,
                     title=title,
                     description=description,
                     start=start_utc,
                     end=end_utc,
-                    created=calendar_event.created_at.replace(tzinfo=timezone.utc) if calendar_event.created_at else datetime.now(timezone.utc),
-                    updated=calendar_event.updated_at.replace(tzinfo=timezone.utc) if calendar_event.updated_at else datetime.now(timezone.utc),
+                    created=(
+                        calendar_event.created_at.replace(tzinfo=timezone.utc)
+                        if calendar_event.created_at
+                        else datetime.now(timezone.utc)
+                    ),
+                    updated=(
+                        calendar_event.updated_at.replace(tzinfo=timezone.utc)
+                        if calendar_event.updated_at
+                        else datetime.now(timezone.utc)
+                    ),
                 )
-                
+
                 # Construct event URL
                 filename = f"{event_uid}.ics"
-                if calendar_url.endswith('/'):
+                if calendar_url.endswith("/"):
                     event_href = calendar_url + filename
                 else:
-                    event_href = calendar_url + '/' + filename
-                
+                    event_href = calendar_url + "/" + filename
+
                 logger.info(f"  Event UID: {event_uid}")
                 logger.info(f"  Event href: {event_href}")
-                
+
                 # Check if we already synced this event
                 if existing_link_by_uid and existing_link_by_uid.external_uid == event_uid:
                     # Update existing event
                     logger.info(f"Updating existing event for calendar event {calendar_event.id} at {event_href}")
-                    stored_href = existing_link_by_uid.external_href if existing_link_by_uid.external_href else event_href
+                    stored_href = (
+                        existing_link_by_uid.external_href if existing_link_by_uid.external_href else event_href
+                    )
                     logger.info(f"  Using stored href: {stored_href}")
-                    success = client.create_or_update_event(calendar_url, event_uid, ical_content, event_href=stored_href)
+                    success = client.create_or_update_event(
+                        calendar_url, event_uid, ical_content, event_href=stored_href
+                    )
                     if success:
                         if existing_link_by_uid.external_href != event_href:
                             existing_link_by_uid.external_href = event_href
@@ -1293,62 +1421,75 @@ class CalDAVCalendarConnector(BaseConnector):
                             # Can't create IntegrationExternalEventLink without time_entry_id
                             # So we'll just track by UID in future queries
                             # This means we'll try to sync every time, but the UID check prevents duplicates
-                            logger.info(f"  Event created but no link record (calendar events don't have time_entry_id)")
+                            logger.info(
+                                f"  Event created but no link record (calendar events don't have time_entry_id)"
+                            )
                         synced += 1
                         logger.info(f"Successfully created event for calendar event {calendar_event.id}")
                     else:
                         error_msg = f"Failed to create calendar event {calendar_event.id} in calendar"
                         errors.append(error_msg)
                         logger.warning(f"{error_msg} - create_or_update_event returned False")
-                    
+
             except Exception as e:
                 error_msg = f"Calendar event {calendar_event.id}: {str(e)}"
                 errors.append(error_msg)
                 logger.warning(f"Failed to sync calendar event {calendar_event.id} to CalDAV: {e}")
-        
+
         self.integration.last_sync_at = datetime.utcnow()
         self.integration.last_sync_status = "success" if not errors else "partial"
         self.integration.last_error = "; ".join(errors[:3]) if errors else None
-        
+
         db.session.commit()
-        
+
         total_processed = len(time_entries) + len(calendar_events)
         message = f"Synced {synced} new events, updated {updated} events to CalDAV calendar."
         logger.info(f"CalDAV TimeTracker→Calendar sync completed: {message}")
-        logger.info(f"  Summary: {total_processed} items processed ({len(time_entries)} time entries, {len(calendar_events)} calendar events), {synced} created, {updated} updated, {skipped_count} skipped, {len(errors)} errors")
-        
+        logger.info(
+            f"  Summary: {total_processed} items processed ({len(time_entries)} time entries, {len(calendar_events)} calendar events), {synced} created, {updated} updated, {skipped_count} skipped, {len(errors)} errors"
+        )
+
         return {
             "success": True,
             "synced_items": synced + updated,
             "errors": errors,
             "message": message,
         }
-    
-    def _generate_icalendar_event(self, uid: str, title: str, description: str, start: datetime, end: datetime, created: datetime, updated: datetime) -> str:
+
+    def _generate_icalendar_event(
+        self,
+        uid: str,
+        title: str,
+        description: str,
+        start: datetime,
+        end: datetime,
+        created: datetime,
+        updated: datetime,
+    ) -> str:
         """Generate iCalendar content for an event."""
         from icalendar import Event
-        
+
         event = Event()
-        event.add('uid', uid)
-        event.add('summary', title)
-        event.add('description', description)
-        event.add('dtstart', start)
-        event.add('dtend', end)
-        event.add('dtstamp', datetime.now(timezone.utc))
-        event.add('created', created)
-        event.add('last-modified', updated)
-        event.add('status', 'CONFIRMED')
-        event.add('transp', 'OPAQUE')
-        
+        event.add("uid", uid)
+        event.add("summary", title)
+        event.add("description", description)
+        event.add("dtstart", start)
+        event.add("dtend", end)
+        event.add("dtstamp", datetime.now(timezone.utc))
+        event.add("created", created)
+        event.add("last-modified", updated)
+        event.add("status", "CONFIRMED")
+        event.add("transp", "OPAQUE")
+
         cal = Calendar()
-        cal.add('prodid', '-//TimeTracker//CalDAV Integration//EN')
-        cal.add('version', '2.0')
-        cal.add('calscale', 'GREGORIAN')
-        cal.add('method', 'PUBLISH')
+        cal.add("prodid", "-//TimeTracker//CalDAV Integration//EN")
+        cal.add("version", "2.0")
+        cal.add("calscale", "GREGORIAN")
+        cal.add("method", "PUBLISH")
         cal.add_component(event)
-        
-        return cal.to_ical().decode('utf-8')
-    
+
+        return cal.to_ical().decode("utf-8")
+
     def get_config_schema(self) -> Dict[str, Any]:
         """Get configuration schema."""
         return {
@@ -1466,7 +1607,15 @@ class CalDAVCalendarConnector(BaseConnector):
                 {
                     "title": "Sync Settings",
                     "description": "Configure what and how to sync",
-                    "fields": ["sync_direction", "sync_items", "default_project_id", "lookback_days", "lookahead_days", "auto_sync", "sync_interval"],
+                    "fields": [
+                        "sync_direction",
+                        "sync_items",
+                        "default_project_id",
+                        "lookback_days",
+                        "lookahead_days",
+                        "auto_sync",
+                        "sync_interval",
+                    ],
                 },
             ],
             "sync_settings": {
@@ -1477,5 +1626,3 @@ class CalDAVCalendarConnector(BaseConnector):
                 "sync_items": ["events"],
             },
         }
-
-

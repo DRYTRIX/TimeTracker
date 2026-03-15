@@ -4,9 +4,9 @@ PostHog Segmentation Utilities
 Advanced user segmentation and identification with computed properties.
 """
 
-from typing import Optional, Dict, Any
-from datetime import datetime, timedelta
 import os
+from datetime import datetime, timedelta
+from typing import Any, Dict, Optional
 
 
 def is_segmentation_enabled() -> bool:
@@ -32,7 +32,7 @@ def identify_user_with_segments(user_id: Any, user) -> None:
         return
 
     from app import identify_user
-    from app.models import TimeEntry, Project
+    from app.models import Project, TimeEntry
 
     # Calculate engagement metrics
     engagement_metrics = calculate_engagement_metrics(user_id)
@@ -135,8 +135,9 @@ def calculate_usage_patterns(user_id: Any) -> Dict[str, Any]:
     Returns:
         Dict of usage pattern properties
     """
-    from app.models import Project, TimeEntry, Task
     from sqlalchemy import func
+
+    from app.models import Project, Task, TimeEntry
 
     # Project statistics
     active_projects = (

@@ -1,12 +1,14 @@
-from flask import Blueprint, request, redirect, url_for, flash, jsonify, render_template, send_file, current_app
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db, log_event, track_event
-from app.models import Comment, Project, Task, Quote, CommentAttachment
-from app.utils.db import safe_commit
-from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+from werkzeug.utils import secure_filename
+
+from app import db, log_event, track_event
+from app.models import Comment, CommentAttachment, Project, Quote, Task
+from app.utils.db import safe_commit
 
 comments_bp = Blueprint("comments", __name__)
 
@@ -266,7 +268,7 @@ def get_user_comments(user_id):
 def upload_comment_attachment(comment_id):
     """Upload an attachment to a comment"""
     comment = Comment.query.get_or_404(comment_id)
-    
+
     # Check permissions - user must be able to edit the comment
     if not comment.can_edit(current_user):
         flash(_("You do not have permission to add attachments to this comment"), "error")

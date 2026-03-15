@@ -1,6 +1,7 @@
 """Permission model for granular access control"""
 
 from datetime import datetime
+
 from app import db
 
 

@@ -5,10 +5,10 @@ This module handles first-time setup, installation-specific configuration,
 and telemetry salt generation.
 """
 
-import os
-import json
-import secrets
 import hashlib
+import json
+import os
+import secrets
 from pathlib import Path
 from typing import Dict, Optional
 

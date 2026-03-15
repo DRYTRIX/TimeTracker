@@ -2,20 +2,23 @@
 Service for data import operations.
 """
 
-from typing import List, Dict, Any, Optional
+import csv
 from datetime import datetime
 from decimal import Decimal
-import csv
 from io import TextIOWrapper
-from app.services import TimeTrackingService, ProjectService, ClientService
-from app.repositories import ProjectRepository, ClientRepository
-from app.models import Project, Client
+from typing import Any, Dict, List, Optional
+
+from app.models import Client, Project
+from app.repositories import ClientRepository, ProjectRepository
 
 
 class ImportService:
     """Service for import operations"""
 
     def __init__(self):
+        # Late import to avoid circular import (app.services -> import_service -> app.services)
+        from app.services import ClientService, ProjectService, TimeTrackingService
+
         self.time_tracking_service = TimeTrackingService()
         self.project_service = ProjectService()
         self.client_service = ClientService()

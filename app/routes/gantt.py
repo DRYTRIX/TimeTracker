@@ -4,9 +4,9 @@ Routes for Gantt chart visualization.
 
 from datetime import datetime, timedelta
 
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, jsonify, render_template, request
 from flask_babel import gettext as _
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
 
 from app.models import Project
 from app.services.gantt_service import GanttService

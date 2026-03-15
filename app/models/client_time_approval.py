@@ -3,10 +3,12 @@ Client Time Entry Approval models
 Similar to manager approval but for client-side approval
 """
 
-from datetime import datetime
-from app import db
-from sqlalchemy import Enum as SQLEnum
 import enum
+from datetime import datetime
+
+from sqlalchemy import Enum as SQLEnum
+
+from app import db
 
 
 class ClientApprovalStatus(enum.Enum):

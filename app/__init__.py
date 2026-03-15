@@ -1,30 +1,31 @@
-import os
-import tempfile
 import logging
-import uuid
+import os
+import re
+import tempfile
 import time
+import uuid
 from datetime import timedelta
-from flask import Flask, request, session, redirect, url_for, flash, jsonify, g
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_login import LoginManager
-from flask_socketio import SocketIO
+from urllib.parse import urlparse
+
+import posthog
+import sentry_sdk
+from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
+from flask import Flask, flash, g, jsonify, redirect, request, session, url_for
 from flask_babel import Babel, _
-from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from authlib.integrations.flask_client import OAuth
-import re
-from urllib.parse import urlparse
-from werkzeug.middleware.proxy_fix import ProxyFix
-from werkzeug.http import parse_options_header
+from flask_login import LoginManager
+from flask_migrate import Migrate
+from flask_socketio import SocketIO
+from flask_sqlalchemy import SQLAlchemy
+from flask_wtf.csrf import CSRFError, CSRFProtect
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from pythonjsonlogger import jsonlogger
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
-import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
-import posthog
 from sqlalchemy.pool import StaticPool
+from werkzeug.http import parse_options_header
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Load environment variables
 load_dotenv()
@@ -237,7 +238,10 @@ def create_app(config=None):
         app.config.update(config)
 
     # Production safety: refuse to start with default SECRET_KEY
-    if app.config.get("FLASK_ENV") == "production" and app.config.get("SECRET_KEY") == "dev-secret-key-change-in-production":
+    if (
+        app.config.get("FLASK_ENV") == "production"
+        and app.config.get("SECRET_KEY") == "dev-secret-key-change-in-production"
+    ):
         raise ValueError(
             "SECRET_KEY must be set explicitly in production. "
             "Set the SECRET_KEY environment variable to a secure random value."
@@ -282,7 +286,7 @@ def create_app(config=None):
     # BUT only if DATABASE_URL was not explicitly set to SQLite
     current_url = app.config.get("SQLALCHEMY_DATABASE_URI", "")
     explicit_database_url = os.getenv("DATABASE_URL", "")
-    
+
     # Only auto-switch to PostgreSQL if:
     # 1. Not in testing mode
     # 2. Current URL is SQLite
@@ -319,13 +323,14 @@ def create_app(config=None):
         except Exception:
             pass
         return app
-    
+
     # Initialize audit logging - register event listeners AFTER db.init_app()
     # Flask-SQLAlchemy uses its own session class, so we need to register with it
-    from app.utils import audit
     from sqlalchemy import event
     from sqlalchemy.orm import Session
-    
+
+    from app.utils import audit
+
     # Register with generic SQLAlchemy Session (catches all Session instances)
     event.listen(Session, "before_flush", audit.receive_before_flush)
     event.listen(Session, "after_flush", audit.receive_after_flush)
@@ -334,7 +339,7 @@ def create_app(config=None):
     # Flask-SQLAlchemy creates sessions from a sessionmaker, so we register with that
     try:
         # Get the sessionmaker from Flask-SQLAlchemy
-        if hasattr(db, 'session') and hasattr(db.session, 'registry'):
+        if hasattr(db, "session") and hasattr(db.session, "registry"):
             sessionmaker = db.session.registry()
             if sessionmaker:
                 # Register with the session class that the sessionmaker creates
@@ -342,13 +347,16 @@ def create_app(config=None):
                 if session_class:
                     event.listen(session_class, "before_flush", audit.receive_before_flush)
                     event.listen(session_class, "after_flush", audit.receive_after_flush)
-                    logger.info(f"Registered audit logging with Flask-SQLAlchemy session class: {session_class.__name__}")
+                    logger.info(
+                        f"Registered audit logging with Flask-SQLAlchemy session class: {session_class.__name__}"
+                    )
     except Exception as e:
         logger.debug(f"Could not register with Flask-SQLAlchemy sessionmaker: {e}")
 
     # Register with SignallingSession (Flask-SQLAlchemy 2.x)
     try:
         from flask_sqlalchemy import SignallingSession
+
         event.listen(SignallingSession, "before_flush", audit.receive_before_flush)
         event.listen(SignallingSession, "after_flush", audit.receive_after_flush)
         logger.info("Registered audit logging with Flask-SQLAlchemy SignallingSession")
@@ -477,12 +485,13 @@ def create_app(config=None):
 
     # Ensure gettext helpers available in Jinja
     try:
-        from flask_babel import gettext as _gettext, ngettext as _ngettext
+        from flask_babel import gettext as _gettext
+        from flask_babel import ngettext as _ngettext
 
         app.jinja_env.globals.update(_=_gettext, ngettext=_ngettext)
     except Exception:
         pass
-    
+
     # Add Python built-ins that are useful in templates
     app.jinja_env.globals.update(getattr=getattr)
 
@@ -529,6 +538,7 @@ def create_app(config=None):
         try:
             if app.config.get("TESTING"):
                 from flask_login import current_user, login_user
+
                 from app.utils.db import safe_query
 
                 if not getattr(current_user, "is_authenticated", False):
@@ -659,12 +669,13 @@ def create_app(config=None):
 
     # Setup logging (including JSON logging)
     from app.utils.setup_logging import setup_logging as _setup_logging
+
     _setup_logging(app)
 
     # Enable query logging in development mode
     if app.config.get("FLASK_DEBUG") or app.config.get("TESTING"):
         try:
-            from app.utils.query_logging import enable_query_logging, enable_query_counting
+            from app.utils.query_logging import enable_query_counting, enable_query_logging
 
             enable_query_logging(app, slow_query_threshold=0.1)
             enable_query_counting(app)
@@ -738,7 +749,7 @@ def create_app(config=None):
         if (not secret) or (secret in placeholder_values) or (isinstance(secret, str) and len(secret) < 32):
             app.logger.error("Invalid SECRET_KEY configured in production; refusing to start")
             raise RuntimeError("Invalid SECRET_KEY in production")
-        
+
         # Check for debug mode in production - this is a security risk
         flask_debug = app.config.get("FLASK_DEBUG", False)
         if flask_debug or app.debug:
@@ -991,22 +1002,24 @@ def create_app(config=None):
             pass
         return resp
 
-
     # Register blueprints (centralized in blueprint_registry)
     from app.blueprint_registry import register_all_blueprints
+
     register_all_blueprints(app, logger)
 
     # Register integration connectors
     try:
         from app.integrations import registry
+
         logger.info("Integration connectors registered")
     except Exception as e:
         logger.warning(f"Could not register integration connectors: {e}")
 
     # Exempt API blueprints from CSRF protection (requires api_bp, api_v1_bp, api_docs_bp)
     from app.routes.api import api_bp
-    from app.routes.api_v1 import api_v1_bp
     from app.routes.api_docs import api_docs_bp
+    from app.routes.api_v1 import api_v1_bp
+
     # Only if CSRF is enabled (JSON API uses token authentication, not CSRF tokens)
     if app.config.get("WTF_CSRF_ENABLED"):
         csrf.exempt(api_bp)
@@ -1015,6 +1028,7 @@ def create_app(config=None):
 
     # Initialize OIDC IP cache
     from app.utils.oidc_metadata import initialize_ip_cache
+
     ip_cache_ttl = int(app.config.get("OIDC_IP_CACHE_TTL", 300))
     initialize_ip_cache(ip_cache_ttl)
 
@@ -1032,7 +1046,7 @@ def create_app(config=None):
         if issuer and client_id and client_secret:
             # Try to fetch metadata first using our utility with better DNS handling
             from app.utils.oidc_metadata import fetch_oidc_metadata
-            
+
             # Get retry configuration from environment
             max_retries = int(app.config.get("OIDC_METADATA_RETRY_ATTEMPTS", 3))
             retry_delay = int(app.config.get("OIDC_METADATA_RETRY_DELAY", 2))
@@ -1040,7 +1054,7 @@ def create_app(config=None):
             dns_strategy = app.config.get("OIDC_DNS_RESOLUTION_STRATEGY", "auto")
             use_ip_directly = app.config.get("OIDC_USE_IP_DIRECTLY", True)
             use_docker_internal = app.config.get("OIDC_USE_DOCKER_INTERNAL", True)
-            
+
             metadata, metadata_error, diagnostics = fetch_oidc_metadata(
                 issuer,
                 max_retries=max_retries,
@@ -1051,7 +1065,7 @@ def create_app(config=None):
                 use_ip_directly=use_ip_directly,
                 use_docker_internal=use_docker_internal,
             )
-            
+
             # Log diagnostics if available
             if diagnostics:
                 app.logger.info(
@@ -1060,7 +1074,7 @@ def create_app(config=None):
                     diagnostics.get("dns_resolution", {}).get("ip_address", "none"),
                     len(diagnostics.get("strategies_tried", [])),
                 )
-            
+
             if metadata:
                 # Successfully fetched metadata - register with it
                 try:
@@ -1103,7 +1117,11 @@ def create_app(config=None):
                 except Exception as e:
                     error_msg = str(e)
                     # Check if it's a DNS resolution error
-                    if "NameResolutionError" in error_msg or "Failed to resolve" in error_msg or "[Errno -2]" in error_msg:
+                    if (
+                        "NameResolutionError" in error_msg
+                        or "Failed to resolve" in error_msg
+                        or "[Errno -2]" in error_msg
+                    ):
                         # Store config for lazy loading in login route
                         app.config["OIDC_ISSUER_FOR_LAZY_LOAD"] = issuer
                         app.config["OIDC_CLIENT_ID_FOR_LAZY_LOAD"] = client_id
@@ -1138,22 +1156,23 @@ def create_app(config=None):
                 "AUTH_METHOD is %s but OIDC envs are incomplete; OIDC login will not work",
                 auth_method,
             )
-        
+
         # Schedule background metadata refresh if enabled
         refresh_interval = int(app.config.get("OIDC_METADATA_REFRESH_INTERVAL", 3600))
         if refresh_interval > 0 and issuer and client_id and client_secret:
+
             def refresh_oidc_metadata():
                 """Background task to refresh OIDC metadata"""
                 try:
                     from app.utils.oidc_metadata import fetch_oidc_metadata
-                    
+
                     max_retries = int(app.config.get("OIDC_METADATA_RETRY_ATTEMPTS", 3))
                     retry_delay = int(app.config.get("OIDC_METADATA_RETRY_DELAY", 2))
                     timeout = int(app.config.get("OIDC_METADATA_FETCH_TIMEOUT", 10))
                     dns_strategy = app.config.get("OIDC_DNS_RESOLUTION_STRATEGY", "auto")
                     use_ip_directly = app.config.get("OIDC_USE_IP_DIRECTLY", True)
                     use_docker_internal = app.config.get("OIDC_USE_DOCKER_INTERNAL", True)
-                    
+
                     app.logger.info("Background OIDC metadata refresh started for issuer %s", issuer)
                     metadata, metadata_error, diagnostics = fetch_oidc_metadata(
                         issuer,
@@ -1165,12 +1184,16 @@ def create_app(config=None):
                         use_ip_directly=use_ip_directly,
                         use_docker_internal=use_docker_internal,
                     )
-                    
+
                     if metadata:
                         app.logger.info(
                             "Background OIDC metadata refresh successful (issuer: %s, strategy: %s)",
                             metadata.get("issuer"),
-                            diagnostics.get("dns_resolution", {}).get("strategy", "unknown") if diagnostics else "unknown",
+                            (
+                                diagnostics.get("dns_resolution", {}).get("strategy", "unknown")
+                                if diagnostics
+                                else "unknown"
+                            ),
                         )
                     else:
                         app.logger.warning(
@@ -1179,7 +1202,7 @@ def create_app(config=None):
                         )
                 except Exception as e:
                     app.logger.error("Error in background OIDC metadata refresh: %s", str(e))
-            
+
             # Schedule the refresh task
             try:
                 scheduler.add_job(
@@ -1190,9 +1213,7 @@ def create_app(config=None):
                     replace_existing=True,
                     max_instances=1,
                 )
-                app.logger.info(
-                    "Scheduled OIDC metadata refresh every %d seconds", refresh_interval
-                )
+                app.logger.info("Scheduled OIDC metadata refresh every %d seconds", refresh_interval)
             except Exception as e:
                 app.logger.warning("Failed to schedule OIDC metadata refresh: %s", str(e))
 
@@ -1261,22 +1282,14 @@ def create_app(config=None):
     def initialize_database():
         try:
             # Import models to ensure they are registered
-            from app.models import (
-                User,
-                Project,
-                TimeEntry,
-                Task,
-                Settings,
-                TaskActivity,
-                Comment,
-                Issue,
-            )
+            from app.models import Comment, Issue, Project, Settings, Task, TaskActivity, TimeEntry, User
 
             # Create database tables
             db.create_all()
 
             # Check and migrate Task Management tables if needed
-            from app.utils.legacy_migrations import migrate_task_management_tables, migrate_issues_table
+            from app.utils.legacy_migrations import migrate_issues_table, migrate_task_management_tables
+
             migrate_task_management_tables()
             migrate_issues_table()
 
@@ -1329,22 +1342,14 @@ def init_database(app):
     with app.app_context():
         try:
             # Import models to ensure they are registered
-            from app.models import (
-                User,
-                Project,
-                TimeEntry,
-                Task,
-                Settings,
-                TaskActivity,
-                Comment,
-                Issue,
-            )
+            from app.models import Comment, Issue, Project, Settings, Task, TaskActivity, TimeEntry, User
 
             # Create database tables
             db.create_all()
 
             # Check and migrate Task Management tables if needed
-            from app.utils.legacy_migrations import migrate_task_management_tables, migrate_issues_table
+            from app.utils.legacy_migrations import migrate_issues_table, migrate_task_management_tables
+
             migrate_task_management_tables()
             migrate_issues_table()
 

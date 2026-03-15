@@ -1,12 +1,13 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db, log_event, track_event
-from app.models import Payment, Invoice, User, Client
-from datetime import datetime, date
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
-from sqlalchemy import func, and_, or_
-from flask import send_file
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, send_file, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+from sqlalchemy import and_, func, or_
+
+from app import db, log_event, track_event
+from app.models import Client, Invoice, Payment, User
 from app.utils.db import safe_commit
 from app.utils.excel_export import create_payments_list_excel
 from app.utils.module_helpers import module_enabled
@@ -236,8 +237,9 @@ def create_payment():
                 invoice.status = "paid"
 
                 # Reduce stock when invoice is fully paid (if configured)
-                from app.models import StockMovement, StockReservation
                 import os
+
+                from app.models import StockMovement, StockReservation
 
                 reduce_on_paid = os.getenv("INVENTORY_REDUCE_ON_INVOICE_PAID", "false").lower() == "true"
                 if reduce_on_paid:

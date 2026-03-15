@@ -1,18 +1,20 @@
 """
 Routes for salesman-based report generation and email mapping management.
 """
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
+
+import json
+from datetime import datetime, timedelta
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_babel import gettext as _
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
+
 from app import db
-from app.models import SalesmanEmailMapping, Client
-from app.services.unpaid_hours_service import UnpaidHoursService
+from app.models import Client, SalesmanEmailMapping
 from app.services.scheduled_report_service import ScheduledReportService
+from app.services.unpaid_hours_service import UnpaidHoursService
 from app.utils.db import safe_commit
 from app.utils.email import send_email
-from datetime import datetime, timedelta
-import json
-
 
 salesman_reports_bp = Blueprint("salesman_reports", __name__)
 
@@ -183,7 +185,11 @@ def get_unpaid_hours_by_salesman():
                         "project": e.project.name if e.project else "",
                         # Project.client is a string property; relationship is Project.client_obj
                         "client": (
-                            (e.project.client_obj.name if (e.project and getattr(e.project, "client_obj", None)) else (e.project.client if e.project else ""))
+                            (
+                                e.project.client_obj.name
+                                if (e.project and getattr(e.project, "client_obj", None))
+                                else (e.project.client if e.project else "")
+                            )
                             or (e.client.name if e.client else "Unknown")
                         ),
                         "user": e.user.username if e.user else "",
@@ -292,7 +298,11 @@ def generate_salesman_reports():
                         "project": e.project.name if e.project else "",
                         # Project.client is a string property; relationship is Project.client_obj
                         "client": (
-                            (e.project.client_obj.name if (e.project and getattr(e.project, "client_obj", None)) else (e.project.client if e.project else ""))
+                            (
+                                e.project.client_obj.name
+                                if (e.project and getattr(e.project, "client_obj", None))
+                                else (e.project.client if e.project else "")
+                            )
                             or (e.client.name if e.client else "Unknown")
                         ),
                         "user": e.user.username if e.user else "",
@@ -333,15 +343,18 @@ Please review the attached report for details.
                     )
                     emails_sent.append({"salesman": salesman_initial, "email": email, "status": "sent"})
                 except Exception as e:
-                    emails_sent.append({"salesman": salesman_initial, "email": email, "status": "error", "error": str(e)})
+                    emails_sent.append(
+                        {"salesman": salesman_initial, "email": email, "status": "error", "error": str(e)}
+                    )
 
-        return jsonify({
-            "success": True,
-            "reports": reports,
-            "emails_sent": emails_sent,
-            "total_salesmen": len(reports),
-        })
+        return jsonify(
+            {
+                "success": True,
+                "reports": reports,
+                "emails_sent": emails_sent,
+                "total_salesmen": len(reports),
+            }
+        )
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
-

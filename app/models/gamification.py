@@ -3,8 +3,10 @@ Gamification models for badges and leaderboards
 """
 
 from datetime import datetime
-from app import db
+
 from sqlalchemy import Index
+
+from app import db
 
 
 class Badge(db.Model):

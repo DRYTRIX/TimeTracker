@@ -2,12 +2,13 @@
 GPS Tracking Service for mileage expenses
 """
 
-from typing import Dict, List, Any, Optional
-from datetime import datetime
-from app import db
-from app.models.expense_gps import MileageTrack
-from app.models import Expense
 import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from app import db
+from app.models import Expense
+from app.models.expense_gps import MileageTrack
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +124,7 @@ class GPSTrackingService:
         # Simple Haversine calculation (straight line)
         # In production, use Google Maps API or similar for actual route distance
 
-        from math import radians, sin, cos, sqrt, atan2
+        from math import atan2, cos, radians, sin, sqrt
 
         R = 6371  # Earth radius in km
 

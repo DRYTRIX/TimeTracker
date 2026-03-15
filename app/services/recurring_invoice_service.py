@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 from app import db
-from app.models import Invoice, InvoiceItem, TimeEntry, Settings, RecurringInvoice
+from app.models import Invoice, InvoiceItem, RecurringInvoice, Settings, TimeEntry
 from app.repositories.recurring_invoice_repository import RecurringInvoiceRepository
 
 

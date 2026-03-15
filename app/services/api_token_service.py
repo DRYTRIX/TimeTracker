@@ -2,13 +2,14 @@
 Service for API token management with enhanced security features.
 """
 
-from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple
+
 from app import db
+from app.constants import WebhookEvent
 from app.models import ApiToken, User
 from app.utils.db import safe_commit
 from app.utils.event_bus import emit_event
-from app.constants import WebhookEvent
 
 
 class ApiTokenService:

@@ -1,6 +1,7 @@
 """Warehouse model for inventory management"""
 
 from datetime import datetime
+
 from app import db
 
 

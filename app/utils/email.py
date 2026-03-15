@@ -1,13 +1,14 @@
 """Email utilities for sending notifications and reports"""
 
 import os
-from flask import current_app, render_template, url_for
-from jinja2 import Template as JinjaTemplate
-from flask_mail import Mail, Message
-from threading import Thread
 from datetime import datetime, timedelta
-from app import db
+from threading import Thread
 
+from flask import current_app, render_template, url_for
+from flask_mail import Mail, Message
+from jinja2 import Template as JinjaTemplate
+
+from app import db
 
 mail = Mail()
 
@@ -34,8 +35,8 @@ def init_mail(app):
     # (no request context yet), giving SQLite and PostgreSQL the same behavior.
     try:
         with app.app_context():
-            from app.models import Settings
             from app import db
+            from app.models import Settings
 
             if db.session.is_active:
                 settings = Settings.get_settings()
@@ -976,11 +977,11 @@ def send_quote_email(quote, recipient_email, sender_user=None, custom_message=No
         tuple: (success: bool, message: str)
     """
     try:
-        from app.models import Settings
-        from flask import current_app
+        from flask import current_app, render_template
         from flask_mail import Message
-        from flask import render_template
-        from app import mail, db
+
+        from app import db, mail
+        from app.models import Settings
 
         current_app.logger.info(f"[QUOTE EMAIL] Sending quote {quote.quote_number} to {recipient_email}")
 

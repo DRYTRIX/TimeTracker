@@ -1,18 +1,31 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, current_app, send_from_directory
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db, log_event, track_event
-from app.models import Expense, Project, Client, User
-from datetime import datetime, date, timedelta
-from decimal import Decimal
-from app.utils.db import safe_commit
-from app.utils.module_helpers import module_enabled
-from app.utils.ocr import scan_receipt, get_suggested_expense_data, is_ocr_available
 import csv
 import io
-import os
-from werkzeug.utils import secure_filename
 import json
+import os
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    send_from_directory,
+    url_for,
+)
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+from werkzeug.utils import secure_filename
+
+from app import db, log_event, track_event
+from app.models import Client, Expense, Project, User
+from app.utils.db import safe_commit
+from app.utils.module_helpers import module_enabled
+from app.utils.ocr import get_suggested_expense_data, is_ocr_available, scan_receipt
 
 expenses_bp = Blueprint("expenses", __name__)
 
@@ -31,31 +44,30 @@ def get_receipt_upload_folder():
     # Get base upload folder and normalize to absolute path
     base_folder = current_app.config.get("UPLOAD_FOLDER", "/data/uploads")
     base_folder = os.path.abspath(base_folder)  # Ensure absolute path
-    
+
     # Store receipts in receipts subdirectory to persist between container updates
     upload_folder = os.path.join(base_folder, "receipts")
-    
+
     try:
         # Create directory and parent directories if they don't exist
         # os.makedirs creates parent directories by default
         os.makedirs(upload_folder, mode=0o755, exist_ok=True)
-        
+
         # Verify directory exists
         if not os.path.exists(upload_folder):
             raise OSError(f"Failed to create directory {upload_folder}")
-        
+
         # Verify directory is writable
         if not os.access(upload_folder, os.W_OK):
             current_app.logger.warning(
-                f"Upload directory {upload_folder} exists but is not writable. "
-                f"Please check permissions."
+                f"Upload directory {upload_folder} exists but is not writable. " f"Please check permissions."
             )
             # Try to fix permissions (only works if we have permission to do so)
             try:
                 os.chmod(upload_folder, 0o755)
             except OSError:
                 pass
-        
+
         return upload_folder
     except OSError as e:
         current_app.logger.error(
@@ -70,9 +82,9 @@ def get_receipt_upload_folder():
 @module_enabled("expenses")
 def list_expenses():
     """List all expenses with filters"""
-    from app.utils.client_lock import enforce_locked_client_id
     # Track page view
     from app import track_page_view
+    from app.utils.client_lock import enforce_locked_client_id
 
     track_page_view("expenses_list")
 
@@ -337,7 +349,7 @@ def create_expense():
                     filename = secure_filename(file.filename)
                     if not filename:
                         raise ValueError("Invalid filename after sanitization")
-                    
+
                     # Add timestamp to filename to avoid collisions
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                     filename = f"{timestamp}_{filename}"
@@ -348,11 +360,11 @@ def create_expense():
 
                     file_path = os.path.join(upload_dir, filename)
                     file.save(file_path)
-                    
+
                     # Store relative path for database: "uploads/receipts/filename"
                     # This matches what serve_receipt() expects
                     receipt_path = os.path.join(UPLOAD_FOLDER, filename).replace("\\", "/")
-                    
+
                     current_app.logger.info(f"Receipt file saved: {file_path}, stored path: {receipt_path}")
                 except OSError as e:
                     current_app.logger.error(f"Error saving receipt file: {e}", exc_info=True)
@@ -438,12 +450,12 @@ def serve_receipt(filename):
     try:
         # Security: Extract just the filename to prevent path traversal
         filename = os.path.basename(filename)
-        
+
         # Find the expense that owns this receipt
         # Receipt paths are stored as "uploads/receipts/filename.jpg" (normalized with forward slashes)
         receipt_path_query = os.path.join(UPLOAD_FOLDER, filename).replace("\\", "/")
         expense = Expense.query.filter_by(receipt_path=receipt_path_query).first()
-        
+
         # If not found with exact match, try to find by filename only (backward compatibility)
         if not expense:
             # Try finding by just the filename part
@@ -455,24 +467,28 @@ def serve_receipt(filename):
                 expenses = Expense.query.filter(Expense.receipt_path.like(f"%{filename}")).all()
                 if expenses:
                     expense = expenses[0]
-        
+
         if not expense:
             current_app.logger.warning(f"Receipt file not found in database: {filename}")
             return "Receipt not found", 404
-        
+
         # Check permission - user must be able to view the expense
         if not current_user.is_admin and expense.user_id != current_user.id and expense.approved_by != current_user.id:
-            current_app.logger.warning(f"User {current_user.id} attempted to access receipt for expense {expense.id} without permission")
+            current_app.logger.warning(
+                f"User {current_user.id} attempted to access receipt for expense {expense.id} without permission"
+            )
             return "Permission denied", 403
-        
+
         # Serve the file from the actual upload folder
         upload_folder = get_receipt_upload_folder()
         file_path = os.path.join(upload_folder, filename)
-        
+
         if not os.path.exists(file_path):
-            current_app.logger.error(f"Receipt file not found on disk: {file_path} (expense.receipt_path: {expense.receipt_path})")
+            current_app.logger.error(
+                f"Receipt file not found on disk: {file_path} (expense.receipt_path: {expense.receipt_path})"
+            )
             return "Receipt file not found", 404
-        
+
         return send_from_directory(upload_folder, filename)
     except Exception as e:
         current_app.logger.error(f"Error serving receipt {filename}: {str(e)}", exc_info=True)
@@ -516,6 +532,7 @@ def edit_expense(expense_id):
 
     try:
         from app.utils.client_lock import enforce_locked_client_id
+
         # Get form data
         title = request.form.get("title", "").strip()
         description = request.form.get("description", "").strip()
@@ -583,7 +600,7 @@ def edit_expense(expense_id):
                     filename = secure_filename(file.filename)
                     if not filename:
                         raise ValueError("Invalid filename after sanitization")
-                    
+
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                     filename = f"{timestamp}_{filename}"
 
@@ -1388,6 +1405,7 @@ def create_expense_from_scan():
 
         # Create expense with OCR data
         from app.utils.client_lock import enforce_locked_client_id
+
         expense = Expense(
             user_id=current_user.id,
             title=title,

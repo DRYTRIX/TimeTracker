@@ -2,15 +2,17 @@
 Routes for custom report builder.
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db
-from app.models import SavedReportView, TimeEntry, Project, Task, User, Client, Expense, Invoice
-from app.utils.db import safe_commit
-from app.services.unpaid_hours_service import UnpaidHoursService
 import json
 from datetime import datetime, timedelta
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
+from app import db
+from app.models import Client, Expense, Invoice, Project, SavedReportView, Task, TimeEntry, User
+from app.services.unpaid_hours_service import UnpaidHoursService
+from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
 
 custom_reports_bp = Blueprint("custom_reports", __name__)
@@ -27,10 +29,10 @@ def report_builder(view_id=None):
     """Custom report builder page. If view_id is provided, load that saved view for editing."""
     # Also check for view_id in query parameters as fallback
     if not view_id:
-        view_id = request.args.get('view_id', type=int)
-    
+        view_id = request.args.get("view_id", type=int)
+
     saved_views = SavedReportView.query.filter_by(owner_id=current_user.id).all()
-    
+
     # Load saved view if editing
     saved_view = None
     if view_id:
@@ -39,7 +41,7 @@ def report_builder(view_id=None):
         if saved_view.owner_id != current_user.id and saved_view.scope == "private":
             flash(_("You do not have permission to edit this report."), "error")
             return redirect(url_for("custom_reports.report_builder"))
-        
+
         # Parse config
         try:
             config = json.loads(saved_view.config_json)
@@ -60,7 +62,7 @@ def report_builder(view_id=None):
 
     # Get available clients for custom field filtering
     clients = Client.query.filter_by(status="active").order_by(Client.name).all()
-    
+
     # Extract unique custom field keys from clients
     custom_field_keys = set()
     for client in clients:
@@ -86,11 +88,11 @@ def save_report_view():
         # Check if request has JSON data
         if not request.is_json:
             return jsonify({"success": False, "message": "Request must be JSON"}), 400
-        
+
         data = request.get_json(silent=False)
         if data is None:
             return jsonify({"success": False, "message": "Invalid JSON in request body"}), 400
-        
+
         name = data.get("name")
         config = data.get("config", {})
         scope = data.get("scope", "private")
@@ -108,18 +110,20 @@ def save_report_view():
         # Extract iterative report generation settings
         iterative_report_generation = data.get("iterative_report_generation", False)
         iterative_custom_field_name_raw = data.get("iterative_custom_field_name")
-        iterative_custom_field_name = (iterative_custom_field_name_raw or "").strip() or None if iterative_custom_field_name_raw else None
-        
+        iterative_custom_field_name = (
+            (iterative_custom_field_name_raw or "").strip() or None if iterative_custom_field_name_raw else None
+        )
+
         # If view_id is provided, update existing report
         if view_id:
             existing = SavedReportView.query.get(view_id)
             if not existing:
                 return jsonify({"success": False, "message": "Report not found"}), 404
-            
+
             # Check permission
             if existing.owner_id != current_user.id and existing.scope == "private":
                 return jsonify({"success": False, "message": "You do not have permission to edit this report"}), 403
-            
+
             # Update existing
             existing.name = name
             existing.config_json = json.dumps(config)
@@ -153,12 +157,14 @@ def save_report_view():
                 action = "created"
 
         if safe_commit("save_report_view", {"user_id": current_user.id}):
-            return jsonify({
-                "success": True, 
-                "message": _("Report %(action)s successfully", action=action),
-                "view_id": saved_view.id,
-                "action": action
-            })
+            return jsonify(
+                {
+                    "success": True,
+                    "message": _("Report %(action)s successfully", action=action),
+                    "view_id": saved_view.id,
+                    "action": action,
+                }
+            )
         else:
             db.session.rollback()
             return jsonify({"success": False, "message": "Failed to save report due to a database error"}), 500
@@ -168,6 +174,7 @@ def save_report_view():
     except Exception as e:
         db.session.rollback()
         from flask import current_app
+
         current_app.logger.error(f"Error saving report view: {str(e)}", exc_info=True)
         return jsonify({"success": False, "message": f"Error saving report: {str(e)}"}), 500
 
@@ -189,6 +196,7 @@ def view_custom_report(view_id):
         config = json.loads(saved_view.config_json)
     except (json.JSONDecodeError, TypeError, ValueError) as e:
         from flask import current_app
+
         current_app.logger.warning(f"Failed to parse saved_view config_json: {e}")
         config = {}
 
@@ -196,7 +204,7 @@ def view_custom_report(view_id):
     if saved_view.iterative_report_generation and saved_view.iterative_custom_field_name:
         # Generate reports for each custom field value
         return _generate_iterative_reports(saved_view, config, current_user.id)
-    
+
     # Generate single report data based on config
     report_data = generate_report_data(config, current_user.id)
 
@@ -212,13 +220,13 @@ def preview_report():
         # Validate JSON request
         if not request.is_json:
             return jsonify({"success": False, "message": "Request must be JSON"}), 400
-        
+
         data = request.get_json(silent=False)
         if data is None:
             return jsonify({"success": False, "message": "Invalid JSON in request body"}), 400
-        
+
         config = data.get("config", {})
-        
+
         # Validate that config is a dictionary
         if not isinstance(config, dict):
             return jsonify({"success": False, "message": "Config must be a dictionary"}), 400
@@ -230,6 +238,7 @@ def preview_report():
     except Exception as e:
         # Log the error for debugging
         from flask import current_app
+
         current_app.logger.error(f"Error in preview_report: {str(e)}", exc_info=True)
         return jsonify({"success": False, "message": str(e)}), 500
 
@@ -250,6 +259,7 @@ def get_report_data(view_id):
         config = json.loads(saved_view.config_json)
     except (json.JSONDecodeError, TypeError, ValueError) as e:
         from flask import current_app
+
         current_app.logger.warning(f"Failed to parse saved_view config_json: {e}")
         config = {}
 
@@ -271,19 +281,21 @@ def generate_report_data(config, user_id=None):
     end_date = filters.get("end_date")
 
     # Validate and parse start_date with stricter validation
-    from flask import current_app
-    from app.utils.validation import sanitize_input
     import re
-    
+
+    from flask import current_app
+
+    from app.utils.validation import sanitize_input
+
     start_dt = None
     end_dt = None
-    
+
     if start_date and isinstance(start_date, str) and start_date.strip():
         try:
             # Sanitize input and validate date format strictly
             sanitized_date = sanitize_input(start_date.strip(), max_length=10)
             # Validate date format: YYYY-MM-DD
-            if not re.match(r'^\d{4}-\d{2}-\d{2}$', sanitized_date):
+            if not re.match(r"^\d{4}-\d{2}-\d{2}$", sanitized_date):
                 raise ValueError(f"Invalid date format. Expected YYYY-MM-DD, got: {sanitized_date}")
             start_dt = datetime.strptime(sanitized_date, "%Y-%m-%d")
         except (ValueError, AttributeError, TypeError) as e:
@@ -298,7 +310,7 @@ def generate_report_data(config, user_id=None):
             # Sanitize input and validate date format strictly
             sanitized_date = sanitize_input(end_date.strip(), max_length=10)
             # Validate date format: YYYY-MM-DD
-            if not re.match(r'^\d{4}-\d{2}-\d{2}$', sanitized_date):
+            if not re.match(r"^\d{4}-\d{2}-\d{2}$", sanitized_date):
                 raise ValueError(f"Invalid date format. Expected YYYY-MM-DD, got: {sanitized_date}")
             end_dt = datetime.strptime(sanitized_date, "%Y-%m-%d") + timedelta(days=1) - timedelta(seconds=1)
             # Validate date range
@@ -353,8 +365,9 @@ def generate_report_data(config, user_id=None):
                     query = query.filter(TimeEntry.project_id == project_id)
                 except (ValueError, TypeError):
                     from flask import current_app
+
                     current_app.logger.warning(f"Invalid project_id: {project_id}, ignoring filter")
-            
+
             if filters.get("user_id"):
                 query = query.filter(TimeEntry.user_id == filters["user_id"])
 
@@ -385,6 +398,7 @@ def generate_report_data(config, user_id=None):
         # Summary: use SQL aggregate when standard path (no unpaid_only, no custom_field_filter)
         if not unpaid_only and not custom_field_filter:
             from sqlalchemy import func
+
             summary_query = db.session.query(
                 func.count(TimeEntry.id).label("total_entries"),
                 func.coalesce(func.sum(TimeEntry.duration_seconds), 0).label("total_seconds"),
@@ -395,6 +409,7 @@ def generate_report_data(config, user_id=None):
             )
             if user_id:
                 from app.models import User as U
+
                 u = U.query.get(user_id)
                 if u and not u.is_admin:
                     summary_query = summary_query.filter(TimeEntry.user_id == user_id)
@@ -412,14 +427,14 @@ def generate_report_data(config, user_id=None):
         # Build response data
         client_data = {}
         data_list = []
-        
+
         for e in entries:
             client = None
             if e.project and e.project.client_obj:
                 client = e.project.client_obj
             elif e.client:
                 client = e.client
-            
+
             client_name = client.name if client else "Unknown"
             salesman = None
             if client and client.custom_fields:
@@ -437,9 +452,9 @@ def generate_report_data(config, user_id=None):
                 "billable": e.billable,
                 "paid": e.paid,
             }
-            
+
             data_list.append(entry_data)
-            
+
             # Group by client for summary
             if client_name not in client_data:
                 client_data[client_name] = {"hours": 0, "entries": []}
@@ -505,11 +520,16 @@ def generate_report_data(config, user_id=None):
             except (ValueError, TypeError):
                 pass
 
-        expenses = query.options(
-            joinedload(Expense.project),
-            joinedload(Expense.user),
-            joinedload(Expense.client),
-        ).order_by(Expense.expense_date.desc()).limit(REPORT_DATA_LIMIT).all()
+        expenses = (
+            query.options(
+                joinedload(Expense.project),
+                joinedload(Expense.user),
+                joinedload(Expense.client),
+            )
+            .order_by(Expense.expense_date.desc())
+            .limit(REPORT_DATA_LIMIT)
+            .all()
+        )
 
         data_list = [
             {
@@ -571,10 +591,15 @@ def generate_report_data(config, user_id=None):
             except (ValueError, TypeError):
                 pass
 
-        invoices = query.options(
-            joinedload(Invoice.project),
-            joinedload(Invoice.client),
-        ).order_by(Invoice.issue_date.desc()).limit(REPORT_DATA_LIMIT).all()
+        invoices = (
+            query.options(
+                joinedload(Invoice.project),
+                joinedload(Invoice.client),
+            )
+            .order_by(Invoice.issue_date.desc())
+            .limit(REPORT_DATA_LIMIT)
+            .all()
+        )
 
         data_list = [
             {
@@ -610,8 +635,15 @@ def generate_report_data(config, user_id=None):
 def list_saved_views():
     """List all saved report views for the current user."""
     from app.utils.timezone import convert_app_datetime_to_user
-    saved_views = SavedReportView.query.filter_by(owner_id=current_user.id).order_by(SavedReportView.created_at.desc()).all()
-    return render_template("reports/saved_views_list.html", saved_views=saved_views, convert_app_datetime_to_user=convert_app_datetime_to_user)
+
+    saved_views = (
+        SavedReportView.query.filter_by(owner_id=current_user.id).order_by(SavedReportView.created_at.desc()).all()
+    )
+    return render_template(
+        "reports/saved_views_list.html",
+        saved_views=saved_views,
+        convert_app_datetime_to_user=convert_app_datetime_to_user,
+    )
 
 
 @custom_reports_bp.route("/reports/builder/<int:view_id>/edit", methods=["GET"])
@@ -620,12 +652,12 @@ def list_saved_views():
 def edit_saved_view(view_id):
     """Edit a saved report view - redirects to builder with view_id in path."""
     saved_view = SavedReportView.query.get_or_404(view_id)
-    
+
     # Check permission
     if saved_view.owner_id != current_user.id and saved_view.scope == "private":
         flash(_("You do not have permission to edit this report."), "error")
         return redirect(url_for("custom_reports.list_saved_views"))
-    
+
     # Redirect to builder with edit mode using the /edit path pattern
     return redirect(url_for("custom_reports.report_builder", view_id=view_id))
 
@@ -638,22 +670,18 @@ def get_custom_field_values():
     custom_field_name = request.args.get("field_name")
     if not custom_field_name:
         return jsonify({"success": False, "message": "field_name parameter is required"}), 400
-    
+
     # Get all active clients
     clients = Client.query.filter_by(status="active").all()
     unique_values = set()
-    
+
     for client in clients:
         if client.custom_fields and custom_field_name in client.custom_fields:
             value = client.custom_fields[custom_field_name]
             if value:
                 unique_values.add(str(value).strip())
-    
-    return jsonify({
-        "success": True,
-        "field_name": custom_field_name,
-        "values": sorted(list(unique_values))
-    })
+
+    return jsonify({"success": True, "field_name": custom_field_name, "values": sorted(list(unique_values))})
 
 
 @custom_reports_bp.route("/reports/builder/<int:view_id>/delete", methods=["POST"])
@@ -662,46 +690,50 @@ def get_custom_field_values():
 def delete_saved_view(view_id):
     """Delete a saved report view."""
     saved_view = SavedReportView.query.get_or_404(view_id)
-    
+
     # Check permission
     if saved_view.owner_id != current_user.id and not current_user.is_admin:
         flash(_("You do not have permission to delete this report view."), "error")
         return redirect(url_for("custom_reports.list_saved_views"))
-    
+
     view_name = saved_view.name
-    
+
     # Check if it's used in any schedules
     from app.models import ReportEmailSchedule
+
     schedules = ReportEmailSchedule.query.filter_by(saved_view_id=view_id).all()
     if schedules:
-        flash(_("Cannot delete report view: it is used in %(count)d scheduled report(s).", count=len(schedules)), "error")
+        flash(
+            _("Cannot delete report view: it is used in %(count)d scheduled report(s).", count=len(schedules)), "error"
+        )
         return redirect(url_for("custom_reports.list_saved_views"))
-    
+
     db.session.delete(saved_view)
     if safe_commit("delete_saved_view", {"view_id": view_id}):
         flash(_('Report view "%(name)s" deleted successfully.', name=view_name), "success")
     else:
         flash(_("Could not delete report view due to a database error"), "error")
-    
+
     return redirect(url_for("custom_reports.list_saved_views"))
 
 
 def _generate_iterative_reports(saved_view: SavedReportView, config: dict, user_id: int):
     """
     Generate multiple reports, one per custom field value.
-    
+
     Returns a template with all reports grouped by custom field value.
     """
-    from app.models import Client, TimeEntry
     from flask import render_template
-    
+
+    from app.models import Client, TimeEntry
+
     custom_field_name = saved_view.iterative_custom_field_name
-    
+
     # Get date range from config
     filters = config.get("filters", {})
     start_date = filters.get("start_date")
     end_date = filters.get("end_date")
-    
+
     try:
         if start_date and isinstance(start_date, str) and start_date.strip():
             start_dt = datetime.strptime(start_date.strip(), "%Y-%m-%d")
@@ -709,7 +741,7 @@ def _generate_iterative_reports(saved_view: SavedReportView, config: dict, user_
             start_dt = datetime.utcnow() - timedelta(days=30)
     except (ValueError, AttributeError):
         start_dt = datetime.utcnow() - timedelta(days=30)
-    
+
     try:
         if end_date and isinstance(end_date, str) and end_date.strip():
             end_dt = datetime.strptime(end_date.strip(), "%Y-%m-%d") + timedelta(days=1) - timedelta(seconds=1)
@@ -717,37 +749,35 @@ def _generate_iterative_reports(saved_view: SavedReportView, config: dict, user_
             end_dt = datetime.utcnow()
     except (ValueError, AttributeError):
         end_dt = datetime.utcnow()
-    
+
     # Get all unique values for the custom field
     clients = Client.query.filter_by(status="active").all()
     unique_values = set()
-    
+
     # Collect unique values from clients
     for client in clients:
         if client.custom_fields and custom_field_name in client.custom_fields:
             value = client.custom_fields[custom_field_name]
             if value:
                 unique_values.add(str(value).strip())
-    
+
     # Also check from time entries in the date range
     time_entries = TimeEntry.query.filter(
-        TimeEntry.end_time.isnot(None),
-        TimeEntry.start_time >= start_dt,
-        TimeEntry.start_time <= end_dt
+        TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_dt, TimeEntry.start_time <= end_dt
     ).all()
-    
+
     for entry in time_entries:
         client = None
         if entry.project and entry.project.client_obj:
             client = entry.project.client_obj
         elif entry.client:
             client = entry.client
-        
+
         if client and client.custom_fields and custom_field_name in client.custom_fields:
             value = client.custom_fields[custom_field_name]
             if value:
                 unique_values.add(str(value).strip())
-    
+
     # Generate report for each value
     iterative_reports = {}
     for field_value in sorted(unique_values):
@@ -756,11 +786,11 @@ def _generate_iterative_reports(saved_view: SavedReportView, config: dict, user_
         if "filters" not in modified_config:
             modified_config["filters"] = {}
         modified_config["filters"]["custom_field_filter"] = {custom_field_name: field_value}
-        
+
         # Generate report data
         report_data = generate_report_data(modified_config, user_id)
         iterative_reports[field_value] = report_data
-    
+
     return render_template(
         "reports/iterative_view.html",
         saved_view=saved_view,

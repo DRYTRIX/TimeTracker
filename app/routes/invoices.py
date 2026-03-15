@@ -1,36 +1,50 @@
-from flask import Blueprint, Response, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response, current_app
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db, log_event, track_event
-from app.utils.module_helpers import module_enabled
-from app.models import (
-    User,
-    Project,
-    TimeEntry,
-    Invoice,
-    InvoiceItem,
-    Settings,
-    RateOverride,
-    ProjectCost,
-    ExtraGood,
-    Expense,
-    InvoiceImage,
-)
-from datetime import datetime, timedelta, date
-from decimal import Decimal, InvalidOperation
-import io
 import csv
+import io
 import json
 import logging
+from datetime import date, datetime, timedelta
+from decimal import Decimal, InvalidOperation
+
+from flask import (
+    Blueprint,
+    Response,
+    current_app,
+    flash,
+    jsonify,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    url_for,
+)
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
+from app import db, log_event, track_event
+from app.models import (
+    Expense,
+    ExtraGood,
+    Invoice,
+    InvoiceImage,
+    InvoiceItem,
+    Project,
+    ProjectCost,
+    RateOverride,
+    Settings,
+    TimeEntry,
+    User,
+)
 from app.utils.db import safe_commit
 from app.utils.excel_export import create_invoices_list_excel
-from app.utils.prepaid_hours import PrepaidHoursAllocator
+from app.utils.module_helpers import module_enabled
 from app.utils.posthog_funnels import (
-    track_invoice_page_viewed,
-    track_invoice_project_selected,
-    track_invoice_previewed,
     track_invoice_generated,
+    track_invoice_page_viewed,
+    track_invoice_previewed,
+    track_invoice_project_selected,
 )
+from app.utils.prepaid_hours import PrepaidHoursAllocator
 
 invoices_bp = Blueprint("invoices", __name__)
 logger = logging.getLogger(__name__)
@@ -64,10 +78,12 @@ def list_invoices():
     # Check if this is an AJAX request
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         # Return only the invoices list HTML for AJAX requests
-        response = make_response(render_template(
-            "invoices/_invoices_list.html",
-            invoices=result["invoices"],
-        ))
+        response = make_response(
+            render_template(
+                "invoices/_invoices_list.html",
+                invoices=result["invoices"],
+            )
+        )
         response.headers["Content-Type"] = "text/html; charset=utf-8"
         return response
 
@@ -184,6 +200,7 @@ def create_invoice():
         if invoice.client_id:
             try:
                 from app.services.client_notification_service import ClientNotificationService
+
                 notification_service = ClientNotificationService()
                 notification_service.notify_invoice_created(invoice.id, invoice.client_id)
             except Exception as e:
@@ -194,6 +211,7 @@ def create_invoice():
 
     # GET request - show form (scoped for subcontractors)
     from app.utils.scope_filter import apply_project_scope_to_model
+
     projects_query = Project.query.filter_by(status="active", billable=True).order_by(Project.name)
     scope_p = apply_project_scope_to_model(Project, current_user)
     if scope_p is not None:
@@ -238,8 +256,8 @@ def view_invoice(invoice_id):
     peppol_enabled_flag = False
     peppol_recipient_ready = False
     try:
-        from app.models import InvoicePeppolTransmission
         from app.integrations.peppol import peppol_enabled as _peppol_enabled
+        from app.models import InvoicePeppolTransmission
 
         peppol_enabled_flag = bool(_peppol_enabled())
         peppol_history = (
@@ -250,9 +268,7 @@ def view_invoice(invoice_id):
         try:
             client = invoice.client
             peppol_recipient_ready = bool(
-                client
-                and client.get_custom_field("peppol_endpoint_id")
-                and client.get_custom_field("peppol_scheme_id")
+                client and client.get_custom_field("peppol_endpoint_id") and client.get_custom_field("peppol_scheme_id")
             )
         except Exception:
             peppol_recipient_ready = False
@@ -266,19 +282,31 @@ def view_invoice(invoice_id):
         settings_obj = Settings.get_settings()
         if getattr(settings_obj, "invoices_peppol_compliant", False):
             if not (getattr(settings_obj, "company_tax_id", None) or "").strip():
-                peppol_compliance_warnings.append(_("Company Tax ID (VAT) is missing in Admin → Settings → Company Branding."))
+                peppol_compliance_warnings.append(
+                    _("Company Tax ID (VAT) is missing in Admin → Settings → Company Branding.")
+                )
             if not (getattr(settings_obj, "peppol_sender_endpoint_id", None) or "").strip():
-                peppol_compliance_warnings.append(_("Sender Endpoint ID is missing in Admin → Settings → Peppol e-Invoicing."))
+                peppol_compliance_warnings.append(
+                    _("Sender Endpoint ID is missing in Admin → Settings → Peppol e-Invoicing.")
+                )
             if not (getattr(settings_obj, "peppol_sender_scheme_id", None) or "").strip():
-                peppol_compliance_warnings.append(_("Sender Scheme ID is missing in Admin → Settings → Peppol e-Invoicing."))
+                peppol_compliance_warnings.append(
+                    _("Sender Scheme ID is missing in Admin → Settings → Peppol e-Invoicing.")
+                )
             client = getattr(invoice, "client", None)
             if client:
                 if not (client.get_custom_field("peppol_endpoint_id", "") or "").strip():
-                    peppol_compliance_warnings.append(_("Client Peppol Endpoint ID is missing. Add peppol_endpoint_id to the client's custom fields."))
+                    peppol_compliance_warnings.append(
+                        _("Client Peppol Endpoint ID is missing. Add peppol_endpoint_id to the client's custom fields.")
+                    )
                 if not (client.get_custom_field("peppol_scheme_id", "") or "").strip():
-                    peppol_compliance_warnings.append(_("Client Peppol Scheme ID is missing. Add peppol_scheme_id to the client's custom fields."))
+                    peppol_compliance_warnings.append(
+                        _("Client Peppol Scheme ID is missing. Add peppol_scheme_id to the client's custom fields.")
+                    )
             else:
-                peppol_compliance_warnings.append(_("Invoice has no linked client; buyer PEPPOL identifiers cannot be checked."))
+                peppol_compliance_warnings.append(
+                    _("Invoice has no linked client; buyer PEPPOL identifiers cannot be checked.")
+                )
     except Exception:
         pass
 
@@ -289,19 +317,19 @@ def view_invoice(invoice_id):
     approval = approval_service.get_invoice_approval(invoice_id)
 
     # Get link templates for payment_reference (for clickable values)
-    from app.models import LinkTemplate
     from sqlalchemy.exc import ProgrammingError
+
+    from app.models import LinkTemplate
+
     link_templates_by_field = {}
     try:
         for template in LinkTemplate.get_active_templates():
-            if template.field_key == 'payment_reference':
-                link_templates_by_field['payment_reference'] = template
+            if template.field_key == "payment_reference":
+                link_templates_by_field["payment_reference"] = template
     except ProgrammingError as e:
         # Handle case where link_templates table doesn't exist (migration not run)
         if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
-            current_app.logger.warning(
-                "link_templates table does not exist. Run migration: flask db upgrade"
-            )
+            current_app.logger.warning("link_templates table does not exist. Run migration: flask db upgrade")
             link_templates_by_field = {}
         else:
             raise
@@ -510,8 +538,9 @@ def edit_invoice(invoice_id):
         return redirect(url_for("invoices.view_invoice", invoice_id=invoice.id))
 
     # GET request - show edit form
-    from app.models import InvoiceTemplate, StockItem, Warehouse
     import json
+
+    from app.models import InvoiceTemplate, StockItem, Warehouse
 
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()
     email_templates = InvoiceTemplate.query.order_by(InvoiceTemplate.name).all()
@@ -574,6 +603,7 @@ def update_invoice_status(invoice_id):
     # Mark time entries as paid when invoice is sent (non-external invoices)
     if new_status == "sent":
         from app.services import InvoiceService
+
         invoice_service = InvoiceService()
         marked_count = invoice_service.mark_time_entries_as_paid(invoice)
         if marked_count > 0:
@@ -582,8 +612,9 @@ def update_invoice_status(invoice_id):
             )
 
     # Reduce stock when invoice is sent or paid (if configured)
-    from app.models import StockMovement, StockReservation
     import os
+
+    from app.models import StockMovement, StockReservation
 
     reduce_on_sent = os.getenv("INVENTORY_REDUCE_ON_INVOICE_SENT", "true").lower() == "true"
     reduce_on_paid = os.getenv("INVENTORY_REDUCE_ON_INVOICE_PAID", "false").lower() == "true"
@@ -902,6 +933,7 @@ def generate_from_time(invoice_id):
         # If invoice is already sent (not draft), mark time entries as paid
         if invoice.status != "draft":
             from app.services import InvoiceService
+
             invoice_service = InvoiceService()
             marked_count = invoice_service.mark_time_entries_as_paid(invoice)
             if marked_count > 0:
@@ -1009,15 +1041,17 @@ def export_invoice_ubl(invoice_id):
         flash(_("You do not have permission to export this invoice"), "error")
         return redirect(request.referrer or url_for("invoices.list_invoices"))
     try:
-        from app.services.peppol_service import PeppolService
         from app.integrations.peppol import build_peppol_ubl_invoice_xml
+        from app.services.peppol_service import PeppolService
 
         svc = PeppolService()
         sender = svc._get_sender_party()
         recipient_party, _ign, _ign = svc._get_recipient_party(invoice)
         ubl_xml, _ign = build_peppol_ubl_invoice_xml(invoice=invoice, supplier=sender, customer=recipient_party)
         fn = f"invoice_{invoice.invoice_number}.xml"
-        return Response(ubl_xml, mimetype="application/xml", headers={"Content-Disposition": f"attachment; filename={fn}"})
+        return Response(
+            ubl_xml, mimetype="application/xml", headers={"Content-Disposition": f"attachment; filename={fn}"}
+        )
     except ValueError as e:
         flash(_("Cannot generate UBL: %(msg)s", msg=str(e)), "error")
         return redirect(url_for("invoices.view_invoice", invoice_id=invoice_id))
@@ -1031,19 +1065,31 @@ def export_invoice_ubl(invoice_id):
 @login_required
 def export_invoice_pdf(invoice_id):
     """Export invoice as PDF with optional page size selection"""
-    current_app.logger.info(f"[PDF_EXPORT] Action: export_request, InvoiceID: {invoice_id}, User: {current_user.username}")
-    
+    current_app.logger.info(
+        f"[PDF_EXPORT] Action: export_request, InvoiceID: {invoice_id}, User: {current_user.username}"
+    )
+
     invoice = Invoice.query.get_or_404(invoice_id)
     # Eager-load line item relationships so PDF generator has items, extra_goods, and expenses in session
     # (Invoice uses lazy="dynamic" so joinedload isn't applicable; trigger loads explicitly)
     _eager = invoice.items.all() if hasattr(invoice.items, "all") else list(invoice.items) if invoice.items else []
-    _eager = invoice.extra_goods.all() if hasattr(invoice.extra_goods, "all") else list(invoice.extra_goods) if invoice.extra_goods else []
+    _eager = (
+        invoice.extra_goods.all()
+        if hasattr(invoice.extra_goods, "all")
+        else list(invoice.extra_goods) if invoice.extra_goods else []
+    )
     if hasattr(invoice, "expenses"):
-        _eager = invoice.expenses.all() if hasattr(invoice.expenses, "all") else list(invoice.expenses) if invoice.expenses else []
+        _eager = (
+            invoice.expenses.all()
+            if hasattr(invoice.expenses, "all")
+            else list(invoice.expenses) if invoice.expenses else []
+        )
     current_app.logger.info(f"[PDF_EXPORT] Invoice found: {invoice.invoice_number}, Status: {invoice.status}")
 
     if not current_user.is_admin and invoice.created_by != current_user.id:
-        current_app.logger.warning(f"[PDF_EXPORT] Permission denied - InvoiceID: {invoice_id}, User: {current_user.username}")
+        current_app.logger.warning(
+            f"[PDF_EXPORT] Permission denied - InvoiceID: {invoice_id}, User: {current_user.username}"
+        )
         flash(_("You do not have permission to export this invoice"), "error")
         return redirect(request.referrer or url_for("invoices.list_invoices"))
 
@@ -1054,37 +1100,54 @@ def export_invoice_pdf(invoice_id):
     # Validate page size
     valid_sizes = ["A4", "Letter", "Legal", "A3", "A5", "Tabloid"]
     if page_size_raw not in valid_sizes:
-        current_app.logger.warning(f"[PDF_EXPORT] Invalid page size '{page_size_raw}', defaulting to A4, InvoiceID: {invoice_id}")
+        current_app.logger.warning(
+            f"[PDF_EXPORT] Invalid page size '{page_size_raw}', defaulting to A4, InvoiceID: {invoice_id}"
+        )
         page_size = "A4"
     else:
         page_size = page_size_raw
 
-    current_app.logger.info(f"[PDF_EXPORT] Final validated PageSize: '{page_size}', InvoiceID: {invoice_id}, InvoiceNumber: {invoice.invoice_number}")
+    current_app.logger.info(
+        f"[PDF_EXPORT] Final validated PageSize: '{page_size}', InvoiceID: {invoice_id}, InvoiceNumber: {invoice.invoice_number}"
+    )
 
     try:
         from app.utils.pdf_generator import InvoicePDFGenerator
 
         settings = Settings.get_settings()
-        current_app.logger.info(f"[PDF_EXPORT] Creating InvoicePDFGenerator - PageSize: '{page_size}', InvoiceID: {invoice_id}")
+        current_app.logger.info(
+            f"[PDF_EXPORT] Creating InvoicePDFGenerator - PageSize: '{page_size}', InvoiceID: {invoice_id}"
+        )
         pdf_generator = InvoicePDFGenerator(invoice, settings=settings, page_size=page_size)
-        current_app.logger.info(f"[PDF_EXPORT] Starting PDF generation - PageSize: '{page_size}', InvoiceID: {invoice_id}")
+        current_app.logger.info(
+            f"[PDF_EXPORT] Starting PDF generation - PageSize: '{page_size}', InvoiceID: {invoice_id}"
+        )
         pdf_bytes = pdf_generator.generate_pdf()
         # Optionally embed Factur-X CII XML in PDF (strict: fail export if embed fails)
         if getattr(settings, "invoices_zugferd_pdf", False):
             from app.utils.zugferd import embed_zugferd_xml_in_pdf
+
             pdf_bytes, embed_err = embed_zugferd_xml_in_pdf(pdf_bytes, invoice, settings)
             if embed_err:
-                current_app.logger.warning(f"[PDF_EXPORT] Factur-X embed failed - InvoiceID: {invoice_id}, Error: {embed_err}")
+                current_app.logger.warning(
+                    f"[PDF_EXPORT] Factur-X embed failed - InvoiceID: {invoice_id}, Error: {embed_err}"
+                )
                 flash(
-                    _("Factur-X embedding is enabled but failed: %(err)s. Export aborted so the PDF does not ship without embedded XML.", err=embed_err),
+                    _(
+                        "Factur-X embedding is enabled but failed: %(err)s. Export aborted so the PDF does not ship without embedded XML.",
+                        err=embed_err,
+                    ),
                     "error",
                 )
                 return redirect(request.referrer or url_for("invoices.view_invoice", invoice_id=invoice.id))
             if getattr(settings, "invoices_pdfa3_compliant", False):
                 from app.utils.pdfa3 import convert_to_pdfa3
+
                 pdf_bytes, pdfa_err = convert_to_pdfa3(pdf_bytes)
                 if pdfa_err:
-                    current_app.logger.warning(f"[PDF_EXPORT] PDF/A-3 conversion failed - InvoiceID: {invoice_id}, Error: {pdfa_err}")
+                    current_app.logger.warning(
+                        f"[PDF_EXPORT] PDF/A-3 conversion failed - InvoiceID: {invoice_id}, Error: {pdfa_err}"
+                    )
                     flash(
                         _("PDF/A-3 normalization failed: %(err)s. Export aborted.", err=pdfa_err),
                         "error",
@@ -1096,22 +1159,32 @@ def export_invoice_pdf(invoice_id):
             verapdf_path = (getattr(settings, "invoices_verapdf_path", "") or "").strip()
             if verapdf_path:
                 from app.utils.invoice_validators import validate_pdfa_verapdf
+
                 passed, msgs = validate_pdfa_verapdf(pdf_bytes, verapdf_path=verapdf_path)
                 if not passed and msgs:
                     flash(_("veraPDF validation reported issues: %(summary)s", summary="; ".join(msgs[:3])), "warning")
                 elif passed and msgs:
                     flash(_("veraPDF: %(summary)s", summary=msgs[0] if msgs else "check completed"), "info")
-        current_app.logger.info(f"[PDF_EXPORT] PDF generation completed successfully - PageSize: '{page_size}', InvoiceID: {invoice_id}, PDFSize: {pdf_size_bytes} bytes")
+        current_app.logger.info(
+            f"[PDF_EXPORT] PDF generation completed successfully - PageSize: '{page_size}', InvoiceID: {invoice_id}, PDFSize: {pdf_size_bytes} bytes"
+        )
         # Filename should be template+date+number (invoice number format)
         filename = f"{invoice.invoice_number}.pdf"
-        current_app.logger.info(f"[PDF_EXPORT] Returning PDF file - Filename: '{filename}', PageSize: '{page_size}', InvoiceID: {invoice_id}")
+        current_app.logger.info(
+            f"[PDF_EXPORT] Returning PDF file - Filename: '{filename}', PageSize: '{page_size}', InvoiceID: {invoice_id}"
+        )
         return send_file(io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=filename)
     except Exception as e:
         import traceback
 
-        current_app.logger.error(f"[PDF_EXPORT] Exception in PDF generation - PageSize: '{page_size}', InvoiceID: {invoice_id}, Error: {str(e)}", exc_info=True)
+        current_app.logger.error(
+            f"[PDF_EXPORT] Exception in PDF generation - PageSize: '{page_size}', InvoiceID: {invoice_id}, Error: {str(e)}",
+            exc_info=True,
+        )
         try:
-            current_app.logger.warning(f"[PDF_EXPORT] Falling back to InvoicePDFGeneratorFallback - PageSize: '{page_size}', InvoiceID: {invoice_id}")
+            current_app.logger.warning(
+                f"[PDF_EXPORT] Falling back to InvoicePDFGeneratorFallback - PageSize: '{page_size}', InvoiceID: {invoice_id}"
+            )
             from app.utils.pdf_generator_fallback import InvoicePDFGeneratorFallback
 
             settings = Settings.get_settings()
@@ -1119,9 +1192,12 @@ def export_invoice_pdf(invoice_id):
             pdf_bytes = pdf_generator.generate_pdf()
             if getattr(settings, "invoices_zugferd_pdf", False):
                 from app.utils.zugferd import embed_zugferd_xml_in_pdf
+
                 pdf_bytes, embed_err = embed_zugferd_xml_in_pdf(pdf_bytes, invoice, settings)
                 if embed_err:
-                    current_app.logger.warning(f"[PDF_EXPORT] Factur-X embed failed (fallback path) - InvoiceID: {invoice_id}, Error: {embed_err}")
+                    current_app.logger.warning(
+                        f"[PDF_EXPORT] Factur-X embed failed (fallback path) - InvoiceID: {invoice_id}, Error: {embed_err}"
+                    )
                     flash(
                         _("Factur-X embedding is enabled but failed: %(err)s. Export aborted.", err=embed_err),
                         "error",
@@ -1129,19 +1205,25 @@ def export_invoice_pdf(invoice_id):
                     return redirect(request.referrer or url_for("invoices.view_invoice", invoice_id=invoice.id))
                 if getattr(settings, "invoices_pdfa3_compliant", False):
                     from app.utils.pdfa3 import convert_to_pdfa3
+
                     pdf_bytes, pdfa_err = convert_to_pdfa3(pdf_bytes)
                     if pdfa_err:
                         flash(_("PDF/A-3 normalization failed: %(err)s. Export aborted.", err=pdfa_err), "error")
                         return redirect(request.referrer or url_for("invoices.view_invoice", invoice_id=invoice.id))
             pdf_size_bytes = len(pdf_bytes)
-            current_app.logger.info(f"[PDF_EXPORT] Fallback PDF generated successfully - PageSize: '{page_size}', InvoiceID: {invoice_id}, PDFSize: {pdf_size_bytes} bytes")
+            current_app.logger.info(
+                f"[PDF_EXPORT] Fallback PDF generated successfully - PageSize: '{page_size}', InvoiceID: {invoice_id}, PDFSize: {pdf_size_bytes} bytes"
+            )
             # Filename should be template+date+number (invoice number format)
             filename = f"{invoice.invoice_number}.pdf"
             return send_file(
                 io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=filename
             )
         except Exception as fallback_error:
-            current_app.logger.error(f"[PDF_EXPORT] Fallback PDF generation also failed - PageSize: '{page_size}', InvoiceID: {invoice_id}, Error: {str(fallback_error)}", exc_info=True)
+            current_app.logger.error(
+                f"[PDF_EXPORT] Fallback PDF generation also failed - PageSize: '{page_size}', InvoiceID: {invoice_id}, Error: {str(fallback_error)}",
+                exc_info=True,
+            )
             flash(
                 _("PDF generation failed: %(err)s. Fallback also failed: %(fb)s", err=str(e), fb=str(fallback_error)),
                 "error",
@@ -1418,10 +1500,11 @@ def resend_invoice_email(invoice_id, email_id):
 @login_required
 def upload_invoice_image(invoice_id):
     """Upload a decorative image to an invoice"""
-    from werkzeug.utils import secure_filename
     import os
     from datetime import datetime
     from decimal import Decimal
+
+    from werkzeug.utils import secure_filename
 
     invoice = Invoice.query.get_or_404(invoice_id)
 
@@ -1466,7 +1549,10 @@ def upload_invoice_image(invoice_id):
 
     if file_size > MAX_FILE_SIZE:
         if request.is_json:
-            return jsonify({"error": f"File size exceeds maximum allowed size ({MAX_FILE_SIZE / (1024*1024):.0f} MB)"}), 400
+            return (
+                jsonify({"error": f"File size exceeds maximum allowed size ({MAX_FILE_SIZE / (1024*1024):.0f} MB)"}),
+                400,
+            )
         flash(_("File size exceeds maximum allowed size (5 MB)"), "error")
         return redirect(url_for("invoices.edit_invoice", invoice_id=invoice_id))
 
@@ -1484,7 +1570,7 @@ def upload_invoice_image(invoice_id):
 
     # Get file info
     mime_type = file.content_type or "image/png"
-    
+
     # Get position from form (default to 0,0)
     position_x = Decimal(str(request.form.get("position_x", 0)))
     position_y = Decimal(str(request.form.get("position_y", 0)))
@@ -1538,7 +1624,7 @@ def upload_invoice_image(invoice_id):
 
     if request.is_json:
         return jsonify({"success": True, "image": image.to_dict()})
-    
+
     flash(_("Image uploaded successfully"), "success")
     return redirect(url_for("invoices.edit_invoice", invoice_id=invoice_id))
 
@@ -1558,7 +1644,7 @@ def update_invoice_image_position(invoice_id, image_id):
 
     # Get position data from request
     data = request.get_json() if request.is_json else request.form
-    
+
     if "position_x" in data:
         image.position_x = Decimal(str(data["position_x"]))
     if "position_y" in data:
@@ -1625,7 +1711,7 @@ def delete_invoice_image(invoice_id, image_id):
 
     if request.is_json:
         return jsonify({"success": True})
-    
+
     flash(_("Image deleted successfully"), "success")
     return redirect(url_for("invoices.edit_invoice", invoice_id=invoice_id))
 
@@ -1634,9 +1720,10 @@ def delete_invoice_image(invoice_id, image_id):
 @login_required
 def get_invoice_image_base64(invoice_id, image_id):
     """Get base64-encoded image for PDF embedding or serve image directly"""
-    import os
     import base64
     import mimetypes
+    import os
+
     from flask import send_file
 
     invoice = Invoice.query.get_or_404(invoice_id)
@@ -1661,21 +1748,23 @@ def get_invoice_image_base64(invoice_id, image_id):
             if not mime_type:
                 mime_type = image.mime_type or "image/png"
 
-            return jsonify({
-                "success": True,
-                "data_uri": f"data:{mime_type};base64,{image_data}",
-                "mime_type": mime_type,
-            })
+            return jsonify(
+                {
+                    "success": True,
+                    "data_uri": f"data:{mime_type};base64,{image_data}",
+                    "mime_type": mime_type,
+                }
+            )
         except Exception as e:
             current_app.logger.error(f"Error reading image file: {e}")
             return jsonify({"error": "Error reading image file"}), 500
-    
+
     # Otherwise, serve the image directly (for img src tags)
     try:
         mime_type, _ = mimetypes.guess_type(file_path)
         if not mime_type:
             mime_type = image.mime_type or "image/png"
-        
+
         return send_file(file_path, mimetype=mime_type)
     except Exception as e:
         current_app.logger.error(f"Error serving image file: {e}")

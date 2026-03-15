@@ -1,22 +1,36 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, Response, make_response, abort
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-import app as app_module
-from app import db, log_event, track_event
-from app.models import Client, Project, Contact, TimeEntry, CustomFieldDefinition, ClientAttachment, Settings
-from datetime import datetime, timedelta
-from decimal import Decimal, InvalidOperation
-from app.utils.db import safe_commit
-from app.utils.permissions import admin_or_permission_required
-from app.utils.timezone import convert_app_datetime_to_user
-from app.utils.email import send_client_portal_password_setup_email
-from app.utils.module_registry import ModuleRegistry
-from app.services.client_service import ClientService
-from sqlalchemy.orm import joinedload
-from sqlalchemy import or_
 import csv
 import io
 import json
+from datetime import datetime, timedelta
+from decimal import Decimal, InvalidOperation
+
+from flask import (
+    Blueprint,
+    Response,
+    abort,
+    current_app,
+    flash,
+    jsonify,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+from sqlalchemy import or_
+from sqlalchemy.orm import joinedload
+
+import app as app_module
+from app import db, log_event, track_event
+from app.models import Client, ClientAttachment, Contact, CustomFieldDefinition, Project, Settings, TimeEntry
+from app.services.client_service import ClientService
+from app.utils.db import safe_commit
+from app.utils.email import send_client_portal_password_setup_email
+from app.utils.module_registry import ModuleRegistry
+from app.utils.permissions import admin_or_permission_required
+from app.utils.timezone import convert_app_datetime_to_user
 
 _client_service = ClientService()
 
@@ -47,9 +61,10 @@ def _enforce_clients_module():
 
     # Non-admin users: block access. For AJAX/JSON requests, return JSON; otherwise redirect.
     if _wants_json_response():
-        return jsonify(
-            {"error": "module_disabled", "message": _("Clients module is disabled by the administrator.")}
-        ), 403
+        return (
+            jsonify({"error": "module_disabled", "message": _("Clients module is disabled by the administrator.")}),
+            403,
+        )
 
     flash(_("Clients module is disabled by the administrator."), "warning")
     return redirect(url_for("main.dashboard"))
@@ -64,6 +79,7 @@ def list_clients():
 
     # Validate search input with length limits
     from app.utils.validation import sanitize_input
+
     if search:
         # Limit search input to prevent long queries and potential DoS
         search = sanitize_input(search, max_length=200)
@@ -81,8 +97,9 @@ def list_clients():
     is_postgres = False
     try:
         from sqlalchemy import inspect
+
         engine = db.engine
-        is_postgres = 'postgresql' in str(engine.url).lower()
+        is_postgres = "postgresql" in str(engine.url).lower()
     except Exception:
         pass
 
@@ -90,7 +107,7 @@ def list_clients():
         # Escape special LIKE characters to prevent SQL injection
         # Note: SQLAlchemy parameterized queries already protect against SQL injection,
         # but we still escape % and _ for LIKE patterns to get expected search behavior
-        search_escaped = search.replace('%', '\\%').replace('_', '\\_')
+        search_escaped = search.replace("%", "\\%").replace("_", "\\_")
         like = f"%{search_escaped}%"
         search_conditions = [
             Client.name.ilike(like),
@@ -98,12 +115,13 @@ def list_clients():
             Client.contact_person.ilike(like),
             Client.email.ilike(like),
         ]
-        
+
         # Add custom fields to search based on database type
         if is_postgres:
             # PostgreSQL: Use JSONB operators for efficient search
             try:
-                from sqlalchemy import cast, String
+                from sqlalchemy import String, cast
+
                 active_definitions = CustomFieldDefinition.get_active_definitions()
                 for definition in active_definitions:
                     # PostgreSQL JSONB path query: custom_fields->>'field_key' ILIKE pattern
@@ -113,17 +131,18 @@ def list_clients():
             except Exception as e:
                 # If JSONB search fails, log and continue without custom field search in DB
                 current_app.logger.warning(f"Could not add JSONB search conditions: {e}")
-        
+
         query = query.filter(db.or_(*search_conditions))
 
     # Subcontractor scope: restrict to assigned clients
     from app.utils.scope_filter import apply_client_scope_to_model
+
     scope = apply_client_scope_to_model(Client, current_user)
     if scope is not None:
         query = query.filter(scope)
 
     clients = query.order_by(Client.name).all()
-    
+
     # For SQLite and other non-PostgreSQL databases, filter by custom fields in Python
     # (PostgreSQL already handles this in the query above)
     if search and not is_postgres:
@@ -131,16 +150,18 @@ def list_clients():
             search_lower = search.lower()
             filtered_clients = []
             active_definitions = CustomFieldDefinition.get_active_definitions()
-            
+
             for client in clients:
                 # Check if matches standard fields (already in results) or custom fields
-                matched_standard = any([
-                    (client.name and search_lower in client.name.lower()),
-                    (client.description and search_lower in (client.description or "").lower()),
-                    (client.contact_person and search_lower in (client.contact_person or "").lower()),
-                    (client.email and search_lower in (client.email or "").lower()),
-                ])
-                
+                matched_standard = any(
+                    [
+                        (client.name and search_lower in client.name.lower()),
+                        (client.description and search_lower in (client.description or "").lower()),
+                        (client.contact_person and search_lower in (client.contact_person or "").lower()),
+                        (client.email and search_lower in (client.email or "").lower()),
+                    ]
+                )
+
                 matched_custom = False
                 if client.custom_fields:
                     for definition in active_definitions:
@@ -148,10 +169,10 @@ def list_clients():
                         if field_value and search_lower in str(field_value).lower():
                             matched_custom = True
                             break
-                
+
                 if matched_standard or matched_custom:
                     filtered_clients.append(client)
-            
+
             clients = filtered_clients
         except Exception:
             # If filtering fails, just use the original results
@@ -159,10 +180,12 @@ def list_clients():
 
     # Get custom field definitions for the template
     custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-    
+
     # Get link templates for custom fields (for clickable values)
-    from app.models import LinkTemplate
     from sqlalchemy.exc import ProgrammingError
+
+    from app.models import LinkTemplate
+
     link_templates_by_field = {}
     try:
         for template in LinkTemplate.get_active_templates():
@@ -170,9 +193,7 @@ def list_clients():
     except ProgrammingError as e:
         # Handle case where link_templates table doesn't exist (migration not run)
         if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
-            current_app.logger.warning(
-                "link_templates table does not exist. Run migration: flask db upgrade"
-            )
+            current_app.logger.warning("link_templates table does not exist. Run migration: flask db upgrade")
             link_templates_by_field = {}
         else:
             raise
@@ -180,18 +201,27 @@ def list_clients():
     # Check if this is an AJAX request
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         # Return only the clients list HTML for AJAX requests
-        response = make_response(render_template(
-            "clients/_clients_list.html",
-            clients=clients,
-            status=status,
-            search=search,
-            custom_field_definitions=custom_field_definitions,
-            link_templates_by_field=link_templates_by_field,
-        ))
+        response = make_response(
+            render_template(
+                "clients/_clients_list.html",
+                clients=clients,
+                status=status,
+                search=search,
+                custom_field_definitions=custom_field_definitions,
+                link_templates_by_field=link_templates_by_field,
+            )
+        )
         response.headers["Content-Type"] = "text/html; charset=utf-8"
         return response
 
-    return render_template("clients/list.html", clients=clients, status=status, search=search, custom_field_definitions=custom_field_definitions, link_templates_by_field=link_templates_by_field)
+    return render_template(
+        "clients/list.html",
+        clients=clients,
+        status=status,
+        search=search,
+        custom_field_definitions=custom_field_definitions,
+        link_templates_by_field=link_templates_by_field,
+    )
 
 
 @clients_bp.route("/clients/create", methods=["GET", "POST"])
@@ -225,7 +255,8 @@ def create_client():
         return redirect(url_for("clients.list_clients"))
 
     if request.method == "POST":
-        from app.utils.validation import sanitize_input, validate_email as validate_email_format
+        from app.utils.validation import sanitize_input
+        from app.utils.validation import validate_email as validate_email_format
 
         name = sanitize_input(request.form.get("name", "").strip(), max_length=200)
         description = sanitize_input(request.form.get("description", "").strip(), max_length=2000)
@@ -321,7 +352,7 @@ def create_client():
         # Format: custom_field_<field_key> = value
         custom_fields = {}
         active_definitions = CustomFieldDefinition.get_active_definitions()
-        
+
         for definition in active_definitions:
             field_value = request.form.get(f"custom_field_{definition.field_key}", "").strip()
             if field_value:
@@ -329,7 +360,15 @@ def create_client():
             elif definition.is_mandatory:
                 # Validate mandatory fields
                 if wants_json:
-                    return jsonify({"error": "validation_error", "messages": [_("Custom field '%(field)s' is required", field=definition.label)]}), 400
+                    return (
+                        jsonify(
+                            {
+                                "error": "validation_error",
+                                "messages": [_("Custom field '%(field)s' is required", field=definition.label)],
+                            }
+                        ),
+                        400,
+                    )
                 flash(_("Custom field '%(field)s' is required", field=definition.label), "error")
                 return render_template("clients/create.html", custom_field_definitions=active_definitions)
 
@@ -365,6 +404,7 @@ def create_client():
         # Invalidate dashboard cache so single-client state updates (Issue #467)
         try:
             from app.utils.cache import invalidate_dashboard_for_user
+
             invalidate_dashboard_for_user(current_user.id)
         except Exception:
             pass
@@ -439,8 +479,10 @@ def view_client(client_id):
         }
 
     # Get link templates for custom fields (for clickable values)
-    from app.models import LinkTemplate
     from sqlalchemy.exc import ProgrammingError
+
+    from app.models import LinkTemplate
+
     link_templates_by_field = {}
     try:
         for template in LinkTemplate.get_active_templates():
@@ -448,9 +490,7 @@ def view_client(client_id):
     except ProgrammingError as e:
         # Handle case where link_templates table doesn't exist (migration not run)
         if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
-            current_app.logger.warning(
-                "link_templates table does not exist. Run migration: flask db upgrade"
-            )
+            current_app.logger.warning("link_templates table does not exist. Run migration: flask db upgrade")
             link_templates_by_field = {}
         else:
             raise
@@ -463,9 +503,7 @@ def view_client(client_id):
     except ProgrammingError as e:
         # Handle case where custom_field_definitions table doesn't exist (migration not run)
         if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
-            current_app.logger.warning(
-                "custom_field_definitions table does not exist. Run migration: flask db upgrade"
-            )
+            current_app.logger.warning("custom_field_definitions table does not exist. Run migration: flask db upgrade")
             custom_field_definitions_by_key = {}
         else:
             raise
@@ -473,25 +511,21 @@ def view_client(client_id):
     # Get recent time entries for this client
     # Include entries directly linked to client and entries through projects
     project_ids = [p.id for p in projects]
-    
+
     # Query time entries: either directly linked to client or through client's projects
     conditions = [TimeEntry.client_id == client.id]  # Direct client entries
-    
+
     if project_ids:
         conditions.append(TimeEntry.project_id.in_(project_ids))  # Project entries
-    
-    time_entries_query = TimeEntry.query.filter(
-        TimeEntry.end_time.isnot(None)  # Only completed entries
-    ).filter(
-        or_(*conditions)
-    ).options(
-        joinedload(TimeEntry.user),
-        joinedload(TimeEntry.project),
-        joinedload(TimeEntry.task)
-    ).order_by(
-        TimeEntry.start_time.desc()
-    ).limit(20)  # Limit to most recent 20 entries
-    
+
+    time_entries_query = (
+        TimeEntry.query.filter(TimeEntry.end_time.isnot(None))  # Only completed entries
+        .filter(or_(*conditions))
+        .options(joinedload(TimeEntry.user), joinedload(TimeEntry.project), joinedload(TimeEntry.task))
+        .order_by(TimeEntry.start_time.desc())
+        .limit(20)
+    )  # Limit to most recent 20 entries
+
     recent_time_entries = time_entries_query.all()
 
     # Get attachments for this client (if attachments table exists)
@@ -501,9 +535,7 @@ def view_client(client_id):
     except ProgrammingError as e:
         # Handle case where client_attachments table doesn't exist (migration not run)
         if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
-            current_app.logger.warning(
-                "client_attachments table does not exist. Run migration: flask db upgrade"
-            )
+            current_app.logger.warning("client_attachments table does not exist. Run migration: flask db upgrade")
             attachments = []
         else:
             raise
@@ -558,14 +590,18 @@ def edit_client(client_id):
         if not name:
             flash(_("Client name is required"), "error")
             custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-            return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
+            return render_template(
+                "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
+            )
 
         # Check if client name already exists (excluding current client)
         existing = Client.query.filter_by(name=name).first()
         if existing and existing.id != client.id:
             flash(_("A client with this name already exists"), "error")
             custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-            return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
+            return render_template(
+                "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
+            )
 
         # Validate hourly rate
         try:
@@ -573,7 +609,9 @@ def edit_client(client_id):
         except (InvalidOperation, ValueError):
             flash(_("Invalid hourly rate format"), "error")
             custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-            return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
+            return render_template(
+                "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
+            )
 
         try:
             prepaid_hours_monthly = Decimal(prepaid_hours_input) if prepaid_hours_input else None
@@ -582,7 +620,9 @@ def edit_client(client_id):
         except (InvalidOperation, ValueError):
             flash(_("Prepaid hours must be a positive number."), "error")
             custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-            return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
+            return render_template(
+                "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
+            )
 
         try:
             prepaid_reset_day = (
@@ -594,7 +634,9 @@ def edit_client(client_id):
         if prepaid_reset_day < 1 or prepaid_reset_day > 28:
             flash(_("Prepaid reset day must be between 1 and 28."), "error")
             custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-            return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
+            return render_template(
+                "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
+            )
 
         # Handle portal settings
         portal_enabled = request.form.get("portal_enabled") == "on"
@@ -607,20 +649,24 @@ def edit_client(client_id):
             if not portal_username:
                 flash(_("Portal username is required when enabling portal access."), "error")
                 custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-                return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
+                return render_template(
+                    "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
+                )
 
             # Check if portal username is already taken by another client
             existing_client = Client.query.filter_by(portal_username=portal_username).first()
             if existing_client and existing_client.id != client.id:
                 flash(_("This portal username is already in use by another client."), "error")
                 custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-                return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
+                return render_template(
+                    "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
+                )
 
         # Parse custom fields from global definitions
         # Format: custom_field_<field_key> = value
         custom_fields = {}
         active_definitions = CustomFieldDefinition.get_active_definitions()
-        
+
         for definition in active_definitions:
             field_value = request.form.get(f"custom_field_{definition.field_key}", "").strip()
             if field_value:
@@ -629,7 +675,9 @@ def edit_client(client_id):
                 # Validate mandatory fields
                 flash(_("Custom field '%(field)s' is required", field=definition.label), "error")
                 custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-                return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
+                return render_template(
+                    "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
+                )
 
         # Update client
         client.name = name
@@ -707,8 +755,8 @@ def send_portal_password_email(client_id):
     # Send email
     try:
         # Ensure we're using latest database email settings
-        from app.utils.email import reload_mail_config
         from app.models import Settings
+        from app.utils.email import reload_mail_config
 
         settings = Settings.get_settings()
         if settings.mail_enabled:
@@ -766,8 +814,8 @@ def archive_client(client_id):
         app_module.track_event(current_user.id, "client.archived", {"client_id": client.id})
         flash(f'Client "{client.name}" archived successfully', "success")
         try:
-            from app.utils.cache import get_cache
-            from app.utils.cache import invalidate_dashboard_for_user
+            from app.utils.cache import get_cache, invalidate_dashboard_for_user
+
             invalidate_dashboard_for_user(current_user.id)
         except Exception:
             pass
@@ -793,8 +841,8 @@ def activate_client(client_id):
         db.session.commit()
         flash(f'Client "{client.name}" activated successfully', "success")
         try:
-            from app.utils.cache import get_cache
-            from app.utils.cache import invalidate_dashboard_for_user
+            from app.utils.cache import get_cache, invalidate_dashboard_for_user
+
             invalidate_dashboard_for_user(current_user.id)
         except Exception:
             pass
@@ -806,9 +854,9 @@ def activate_client(client_id):
 @login_required
 def delete_client(client_id):
     """Delete a client (only if no projects or invoices exist)"""
-    from app.models.invoice import Invoice
     from app.models.client_notification import ClientNotification, ClientNotificationPreferences
-    
+    from app.models.invoice import Invoice
+
     client = Client.query.get_or_404(client_id)
 
     # Check permissions
@@ -824,18 +872,23 @@ def delete_client(client_id):
     # Check if client has invoices
     invoice_count = Invoice.query.filter_by(client_id=client_id).count()
     if invoice_count > 0:
-        flash(_("Cannot delete client with existing invoices. Please delete all invoices first before deleting the client."), "error")
+        flash(
+            _(
+                "Cannot delete client with existing invoices. Please delete all invoices first before deleting the client."
+            ),
+            "error",
+        )
         return redirect(url_for("clients.view_client", client_id=client_id))
 
     client_name = client.name
     client_id_for_log = client.id
-    
+
     # Manually delete notifications and preferences to avoid SQLAlchemy update issues
     # The database CASCADE will handle this, but we delete explicitly to prevent SQLAlchemy
     # from trying to update the foreign key to NULL
     ClientNotification.query.filter_by(client_id=client_id).delete()
     ClientNotificationPreferences.query.filter_by(client_id=client_id).delete()
-    
+
     db.session.delete(client)
     if not safe_commit("delete_client", {"client_id": client.id}):
         flash(_("Could not delete client due to a database error. Please check server logs."), "error")
@@ -847,6 +900,7 @@ def delete_client(client_id):
 
     try:
         from app.utils.cache import invalidate_dashboard_for_user
+
         invalidate_dashboard_for_user(current_user.id)
     except Exception:
         pass
@@ -859,9 +913,9 @@ def delete_client(client_id):
 @login_required
 def bulk_delete_clients():
     """Delete multiple clients at once"""
-    from app.models.invoice import Invoice
     from app.models.client_notification import ClientNotification, ClientNotificationPreferences
-    
+    from app.models.invoice import Invoice
+
     # Check permissions
     if not current_user.is_admin and not current_user.has_permission("delete_clients"):
         flash(_("You do not have permission to delete clients"), "error")
@@ -927,8 +981,8 @@ def bulk_delete_clients():
     if deleted_count > 0:
         flash(f'Successfully deleted {deleted_count} client{"s" if deleted_count != 1 else ""}', "success")
         try:
-            from app.utils.cache import get_cache
-            from app.utils.cache import invalidate_dashboard_for_user
+            from app.utils.cache import get_cache, invalidate_dashboard_for_user
+
             invalidate_dashboard_for_user(current_user.id)
         except Exception:
             pass
@@ -1047,7 +1101,7 @@ def export_clients():
     for client in clients:
         if client.custom_fields:
             all_custom_fields.update(client.custom_fields.keys())
-        contacts_count = len([c for c in client.contacts if c.is_active]) if hasattr(client, 'contacts') else 0
+        contacts_count = len([c for c in client.contacts if c.is_active]) if hasattr(client, "contacts") else 0
         max_contacts = max(max_contacts, contacts_count)
 
     # Sort custom fields for consistent column order
@@ -1070,28 +1124,30 @@ def export_clients():
         "prepaid_hours_monthly",
         "prepaid_reset_day",
     ]
-    
+
     # Add custom field columns
     for field_name in sorted_custom_fields:
         header.append(f"custom_field_{field_name}")
-    
+
     # Add contact columns (up to max_contacts, but at least 3 slots)
     max_contact_slots = max(max_contacts, 3)
     for i in range(1, max_contact_slots + 1):
-        header.extend([
-            f"contact_{i}_first_name",
-            f"contact_{i}_last_name",
-            f"contact_{i}_email",
-            f"contact_{i}_phone",
-            f"contact_{i}_mobile",
-            f"contact_{i}_title",
-            f"contact_{i}_department",
-            f"contact_{i}_role",
-            f"contact_{i}_is_primary",
-            f"contact_{i}_address",
-            f"contact_{i}_notes",
-            f"contact_{i}_tags",
-        ])
+        header.extend(
+            [
+                f"contact_{i}_first_name",
+                f"contact_{i}_last_name",
+                f"contact_{i}_email",
+                f"contact_{i}_phone",
+                f"contact_{i}_mobile",
+                f"contact_{i}_title",
+                f"contact_{i}_department",
+                f"contact_{i}_role",
+                f"contact_{i}_is_primary",
+                f"contact_{i}_address",
+                f"contact_{i}_notes",
+                f"contact_{i}_tags",
+            ]
+        )
 
     writer.writerow(header)
 
@@ -1109,37 +1165,39 @@ def export_clients():
             str(client.prepaid_hours_monthly) if client.prepaid_hours_monthly else "",
             str(client.prepaid_reset_day) if client.prepaid_reset_day else "",
         ]
-        
+
         # Add custom field values
         for field_name in sorted_custom_fields:
             value = ""
             if client.custom_fields and field_name in client.custom_fields:
                 value = str(client.custom_fields[field_name])
             row.append(value)
-        
+
         # Add contacts
-        active_contacts = [c for c in client.contacts if c.is_active] if hasattr(client, 'contacts') else []
+        active_contacts = [c for c in client.contacts if c.is_active] if hasattr(client, "contacts") else []
         for i in range(max_contact_slots):
             if i < len(active_contacts):
                 contact = active_contacts[i]
-                row.extend([
-                    contact.first_name or "",
-                    contact.last_name or "",
-                    contact.email or "",
-                    contact.phone or "",
-                    contact.mobile or "",
-                    contact.title or "",
-                    contact.department or "",
-                    contact.role or "",
-                    "true" if contact.is_primary else "false",
-                    contact.address or "",
-                    contact.notes or "",
-                    contact.tags or "",
-                ])
+                row.extend(
+                    [
+                        contact.first_name or "",
+                        contact.last_name or "",
+                        contact.email or "",
+                        contact.phone or "",
+                        contact.mobile or "",
+                        contact.title or "",
+                        contact.department or "",
+                        contact.role or "",
+                        "true" if contact.is_primary else "false",
+                        contact.address or "",
+                        contact.notes or "",
+                        contact.tags or "",
+                    ]
+                )
             else:
                 # Empty contact slot
                 row.extend([""] * 12)
-        
+
         writer.writerow(row)
 
     # Create response
@@ -1176,10 +1234,11 @@ def api_clients():
 @admin_or_permission_required("edit_clients")
 def upload_client_attachment(client_id):
     """Upload an attachment to a client"""
-    from werkzeug.utils import secure_filename
-    from flask import send_file
     import os
     from datetime import datetime
+
+    from flask import send_file
+    from werkzeug.utils import secure_filename
 
     client = Client.query.get_or_404(client_id)
 
@@ -1257,6 +1316,7 @@ def upload_client_attachment(client_id):
     except Exception as e:
         # Check if it's a table doesn't exist error
         from sqlalchemy.exc import ProgrammingError
+
         error_str = str(e)
         if "does not exist" in error_str or "relation" in error_str.lower() or isinstance(e, ProgrammingError):
             flash(_("The attachments feature requires a database migration. Please run: flask db upgrade"), "error")
@@ -1292,8 +1352,9 @@ def upload_client_attachment(client_id):
 @login_required
 def download_client_attachment(attachment_id):
     """Download a client attachment"""
-    from flask import send_file
     import os
+
+    from flask import send_file
 
     attachment = ClientAttachment.query.get_or_404(attachment_id)
     client = attachment.client

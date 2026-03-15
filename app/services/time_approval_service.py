@@ -3,12 +3,13 @@ Time Entry Approval Service
 Handles approval workflow for time entries
 """
 
-from typing import Dict, List, Any, Optional
-from datetime import datetime
-from app import db
-from app.models.time_entry_approval import TimeEntryApproval, ApprovalPolicy, ApprovalStatus
-from app.models import TimeEntry, User
 import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from app import db
+from app.models import TimeEntry, User
+from app.models.time_entry_approval import ApprovalPolicy, ApprovalStatus, TimeEntryApproval
 
 logger = logging.getLogger(__name__)
 

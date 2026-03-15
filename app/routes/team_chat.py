@@ -2,14 +2,16 @@
 Team Chat routes
 """
 
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
-from flask_login import login_required, current_user
-from app import db
-from app.models.team_chat import ChatChannel, ChatMessage, ChatChannelMember, ChatReadReceipt
-from app.models import Project, User
-from flask_babel import gettext as _
 from datetime import datetime
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
 from sqlalchemy import and_, or_
+
+from app import db
+from app.models import Project, User
+from app.models.team_chat import ChatChannel, ChatChannelMember, ChatMessage, ChatReadReceipt
 from app.utils.module_helpers import module_enabled
 
 team_chat_bp = Blueprint("team_chat", __name__)
@@ -74,7 +76,8 @@ def chat_channel(channel_id):
             ChatReadReceipt.message_id.in_(message_ids),
             ChatReadReceipt.user_id == current_user.id,
         ).all()
-        if message_ids else []
+        if message_ids
+        else []
     )
     receipt_by_message = {r.message_id: r for r in existing_receipts}
     for message in messages:
@@ -125,6 +128,7 @@ def send_message(channel_id):
             message_type = "file"
         except (json.JSONDecodeError, TypeError, ValueError, AttributeError) as e:
             from flask import current_app
+
             current_app.logger.debug(f"Could not parse attachment data: {e}")
             pass
 
@@ -291,7 +295,8 @@ def api_messages(channel_id):
             ChatReadReceipt.message_id.in_(message_ids),
             ChatReadReceipt.user_id == current_user.id,
         ).all()
-        if message_ids else []
+        if message_ids
+        else []
     )
     receipt_by_message = {r.message_id: r for r in existing_receipts}
     for message in messages:
@@ -367,8 +372,9 @@ def api_react(message_id):
 @module_enabled("team_chat")
 def download_attachment(channel_id, message_id):
     """Download an attachment from a chat message"""
-    from flask import send_file, current_app
     import os
+
+    from flask import current_app, send_file
 
     message = ChatMessage.query.get_or_404(message_id)
 
@@ -407,10 +413,11 @@ def download_attachment(channel_id, message_id):
 @module_enabled("team_chat")
 def upload_attachment(channel_id):
     """Upload an attachment for a chat message"""
-    from werkzeug.utils import secure_filename
-    from flask import current_app, jsonify
     import os
     from datetime import datetime
+
+    from flask import current_app, jsonify
+    from werkzeug.utils import secure_filename
 
     channel = ChatChannel.query.get_or_404(channel_id)
 
@@ -452,9 +459,10 @@ def upload_attachment(channel_id):
 
     # Use the file upload utility for proper validation
     from app.utils.file_upload import validate_file_upload
+
     # Normalize allowed extensions to include leading dots for validation
-    normalized_allowed = {ext if ext.startswith('.') else '.' + ext for ext in ALLOWED_EXTENSIONS}
-    
+    normalized_allowed = {ext if ext.startswith(".") else "." + ext for ext in ALLOWED_EXTENSIONS}
+
     is_valid, error_msg = validate_file_upload(file, allowed_extensions=normalized_allowed, max_size=MAX_FILE_SIZE)
     if not is_valid:
         return jsonify({"error": _(error_msg)}), 400
@@ -463,7 +471,7 @@ def upload_attachment(channel_id):
     original_filename = secure_filename(file.filename)
     if not original_filename:
         return jsonify({"error": _("Invalid filename")}), 400
-    
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{channel_id}_{timestamp}_{original_filename}"
 
@@ -508,7 +516,7 @@ def api_chat_users():
         .order_by(User.full_name, User.username)
         .all()
     )
-    
+
     return jsonify({"users": [user.to_dict() for user in users]})
 
 
@@ -520,13 +528,13 @@ def api_create_direct_message(user_id):
     # CSRF token is validated automatically for form submissions
     # Get target user
     target_user = User.query.get_or_404(user_id)
-    
+
     if target_user.id == current_user.id:
         return jsonify({"error": _("Cannot create direct message with yourself")}), 400
-    
+
     if not target_user.is_active:
         return jsonify({"error": _("User is not active")}), 400
-    
+
     # Check if direct message channel already exists
     # Direct messages have type='direct' and exactly 2 members
     existing_channels = (
@@ -534,22 +542,18 @@ def api_create_direct_message(user_id):
         .filter(
             ChatChannel.channel_type == "direct",
             ChatChannel.is_archived == False,
-            ChatChannelMember.user_id == current_user.id
+            ChatChannelMember.user_id == current_user.id,
         )
         .all()
     )
-    
+
     # Check each channel to see if it's a direct message with target_user
     for channel in existing_channels:
         members = [m.user_id for m in channel.members.all()]
         if len(members) == 2 and target_user.id in members:
             # Found existing direct message channel
-            return jsonify({
-                "success": True,
-                "channel_id": channel.id,
-                "channel": channel.to_dict()
-            })
-    
+            return jsonify({"success": True, "channel_id": channel.id, "channel": channel.to_dict()})
+
     # Create new direct message channel
     channel = ChatChannel(
         name=f"{current_user.display_name} & {target_user.display_name}",
@@ -558,17 +562,13 @@ def api_create_direct_message(user_id):
     )
     db.session.add(channel)
     db.session.flush()
-    
+
     # Add both users as members
     member1 = ChatChannelMember(channel_id=channel.id, user_id=current_user.id)
     member2 = ChatChannelMember(channel_id=channel.id, user_id=target_user.id)
     db.session.add(member1)
     db.session.add(member2)
-    
+
     db.session.commit()
-    
-    return jsonify({
-        "success": True,
-        "channel_id": channel.id,
-        "channel": channel.to_dict()
-    })
+
+    return jsonify({"success": True, "channel_id": channel.id, "channel": channel.to_dict()})

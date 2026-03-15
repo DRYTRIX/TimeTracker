@@ -3,8 +3,9 @@ Application logging setup.
 Extracted from app/__init__.py for clearer separation of concerns.
 """
 
-import os
 import logging
+import os
+
 from flask import Flask
 
 
@@ -31,9 +32,7 @@ def setup_logging(app: Flask) -> None:
 
         from logging.handlers import RotatingFileHandler
 
-        file_handler = RotatingFileHandler(
-            log_file, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
-        )
+        file_handler = RotatingFileHandler(log_file, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8")
         handlers.append(file_handler)
     except (PermissionError, OSError) as e:
         print(f"Warning: Could not create log file '{log_file}': {e}")
@@ -41,9 +40,7 @@ def setup_logging(app: Flask) -> None:
 
     for handler in handlers:
         handler.setLevel(getattr(logging, log_level.upper()))
-        handler.setFormatter(
-            logging.Formatter("%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]")
-        )
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"))
 
     app.logger.handlers.clear()
     app.logger.propagate = False
@@ -64,9 +61,7 @@ def setup_logging(app: Flask) -> None:
 
         from logging.handlers import RotatingFileHandler as _RotatingFileHandler
 
-        json_handler = _RotatingFileHandler(
-            json_log_path, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
-        )
+        json_handler = _RotatingFileHandler(json_log_path, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8")
         json_formatter = jsonlogger.JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s")
         json_handler.setFormatter(json_formatter)
         json_handler.setLevel(logging.INFO)

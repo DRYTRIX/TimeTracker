@@ -2,39 +2,41 @@
 Data export utilities for GDPR compliance and general export functionality
 """
 
-import json
 import csv
+import json
 import os
 from datetime import datetime, timedelta
-from io import StringIO, BytesIO
+from io import BytesIO, StringIO
 from zipfile import ZipFile
+
 from flask import current_app
+
 from app import db
-from app.repositories import TimeEntryRepository
 from app.models import (
-    User,
-    Project,
-    TimeEntry,
-    Task,
+    Activity,
+    BudgetAlert,
+    CalendarEvent,
     Client,
-    Invoice,
-    InvoiceItem,
+    Comment,
+    CreditNote,
     Expense,
     ExpenseCategory,
-    Mileage,
-    PerDiem,
-    Comment,
     FocusSession,
-    RecurringBlock,
+    Invoice,
+    InvoiceItem,
+    Mileage,
     Payment,
-    CreditNote,
-    SavedFilter,
+    PerDiem,
+    Project,
     ProjectCost,
+    RecurringBlock,
+    SavedFilter,
+    Task,
+    TimeEntry,
+    User,
     WeeklyTimeGoal,
-    Activity,
-    CalendarEvent,
-    BudgetAlert,
 )
+from app.repositories import TimeEntryRepository
 
 
 def export_user_data_gdpr(user_id, export_format="json"):

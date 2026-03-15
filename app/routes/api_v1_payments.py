@@ -3,11 +3,13 @@ API v1 - Payments sub-blueprint.
 Routes under /api/v1/payments.
 """
 
-from flask import Blueprint, jsonify, request, g
 from decimal import Decimal
+
+from flask import Blueprint, g, jsonify, request
+
+from app.routes.api_v1_common import _parse_date
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import error_response, validation_error_response
-from app.routes.api_v1_common import _parse_date
 
 api_v1_payments_bp = Blueprint("api_v1_payments", __name__, url_prefix="/api/v1")
 
@@ -17,6 +19,7 @@ api_v1_payments_bp = Blueprint("api_v1_payments", __name__, url_prefix="/api/v1"
 def list_payments():
     """List payments."""
     from sqlalchemy.orm import joinedload
+
     from app.models import Payment
 
     invoice_id = request.args.get("invoice_id", type=int)
@@ -45,6 +48,7 @@ def list_payments():
 def get_payment(payment_id):
     """Get a payment."""
     from sqlalchemy.orm import joinedload
+
     from app.models import Payment
 
     payment = Payment.query.options(joinedload(Payment.invoice)).filter_by(id=payment_id).first_or_404()
@@ -55,8 +59,9 @@ def get_payment(payment_id):
 @require_api_token("write:payments")
 def create_payment():
     """Create a payment."""
-    from app.services import PaymentService
     from datetime import date
+
+    from app.services import PaymentService
 
     data = request.get_json() or {}
     errors = {}

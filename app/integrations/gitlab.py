@@ -3,11 +3,13 @@ GitLab integration connector.
 Sync issues and track time from GitLab.
 """
 
-from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta
-from app.integrations.base import BaseConnector
-import requests
 import os
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+import requests
+
+from app.integrations.base import BaseConnector
 
 
 class GitLabConnector(BaseConnector):
@@ -107,6 +109,7 @@ class GitLabConnector(BaseConnector):
             except Exception as e:
                 # Log error but don't fail - user info is optional
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.debug(f"Could not fetch GitLab user info: {e}")
 

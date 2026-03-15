@@ -4,6 +4,7 @@ Allows branding and customization of the client portal
 """
 
 from datetime import datetime
+
 from app import db
 
 

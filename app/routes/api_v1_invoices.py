@@ -3,11 +3,12 @@ API v1 - Invoices sub-blueprint.
 Routes under /api/v1/invoices.
 """
 
-from flask import Blueprint, jsonify, request, g, current_app
+from flask import Blueprint, current_app, g, jsonify, request
+
 from app import db
+from app.routes.api_v1_common import _parse_date
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import error_response, validation_error_response
-from app.routes.api_v1_common import _parse_date
 
 api_v1_invoices_bp = Blueprint("api_v1_invoices", __name__, url_prefix="/api/v1")
 
@@ -48,6 +49,7 @@ def list_invoices():
 def get_invoice(invoice_id):
     """Get invoice by id."""
     from sqlalchemy.orm import joinedload
+
     from app.models import Invoice
 
     invoice = (
@@ -111,8 +113,9 @@ def create_invoice():
 @require_api_token("write:invoices")
 def update_invoice(invoice_id):
     """Update an invoice."""
-    from app.services import InvoiceService
     from decimal import Decimal, InvalidOperation
+
+    from app.services import InvoiceService
 
     data = request.get_json() or {}
     update_kwargs = {}
@@ -132,7 +135,9 @@ def update_invoice(invoice_id):
         try:
             update_kwargs["amount_paid"] = Decimal(str(data["amount_paid"]))
         except (ValueError, TypeError, InvalidOperation) as e:
-            current_app.logger.warning("Invalid amount_paid value in invoice update: %s - %s", data.get("amount_paid"), e)
+            current_app.logger.warning(
+                "Invalid amount_paid value in invoice update: %s - %s", data.get("amount_paid"), e
+            )
     invoice_service = InvoiceService()
     result = invoice_service.update_invoice(invoice_id=invoice_id, user_id=g.api_user.id, **update_kwargs)
     if not result.get("success"):

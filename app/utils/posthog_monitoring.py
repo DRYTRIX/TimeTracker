@@ -4,11 +4,11 @@ PostHog Monitoring Utilities
 Track errors, performance metrics, and application health through PostHog.
 """
 
-from typing import Optional, Dict, Any
-import time
 import os
-from functools import wraps
+import time
 from contextlib import contextmanager
+from functools import wraps
+from typing import Any, Dict, Optional
 
 
 def is_monitoring_enabled() -> bool:
@@ -49,8 +49,9 @@ def track_error(
     if not is_monitoring_enabled():
         return
 
-    from app import track_event
     from flask import request
+
+    from app import track_event
 
     error_properties = {
         "error_type": error_type,

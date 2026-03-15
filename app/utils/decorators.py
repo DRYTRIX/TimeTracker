@@ -1,9 +1,10 @@
 """Common decorators for route handlers"""
 
 from functools import wraps
+
 from flask import flash, redirect, url_for
-from flask_login import current_user
 from flask_babel import gettext as _
+from flask_login import current_user
 
 
 def admin_required(f):

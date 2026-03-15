@@ -2,11 +2,13 @@
 Service for email operations.
 """
 
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
+
 from flask import current_app, render_template
-from app.utils.email import send_email
-from app.repositories import InvoiceRepository
+
 from app.models import Invoice
+from app.repositories import InvoiceRepository
+from app.utils.email import send_email
 
 
 class EmailService:

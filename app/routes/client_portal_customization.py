@@ -2,26 +2,28 @@
 Client Portal Customization routes
 """
 
-from flask import (
-    Blueprint,
-    render_template,
-    request,
-    jsonify,
-    redirect,
-    url_for,
-    flash,
-    send_from_directory,
-    current_app,
-)
-from flask_login import login_required, current_user
-from werkzeug.utils import secure_filename
-from app import db
-from app.models.client_portal_customization import ClientPortalCustomization
-from app.models import Client
-from flask_babel import gettext as _
 import os
 import uuid
+
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_from_directory,
+    url_for,
+)
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
 from PIL import Image
+from werkzeug.utils import secure_filename
+
+from app import db
+from app.models import Client
+from app.models.client_portal_customization import ClientPortalCustomization
 
 client_portal_customization_bp = Blueprint("client_portal_customization", __name__)
 

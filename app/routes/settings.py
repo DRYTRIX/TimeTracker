@@ -3,9 +3,10 @@ Settings Routes
 Handles user and system settings
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from flask_login import login_required, current_user
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
 from app import db, track_page_view
 from app.utils.db import safe_commit
 

@@ -2,13 +2,14 @@
 Enhanced Pomodoro Timer Service
 """
 
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
-from app import db
-from app.models.focus_session import FocusSession
-from app.models import TimeEntry, Project, Task
-from app.services.time_approval_service import TimeApprovalService
 import logging
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+from app import db
+from app.models import Project, Task, TimeEntry
+from app.models.focus_session import FocusSession
+from app.services.time_approval_service import TimeApprovalService
 
 logger = logging.getLogger(__name__)
 

@@ -3,11 +3,13 @@ Asana integration connector.
 Sync tasks and projects with Asana.
 """
 
-from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta
-from app.integrations.base import BaseConnector
-import requests
 import os
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+import requests
+
+from app.integrations.base import BaseConnector
 
 
 class AsanaConnector(BaseConnector):
@@ -90,6 +92,7 @@ class AsanaConnector(BaseConnector):
             except Exception as e:
                 # Log error but don't fail - user info is optional
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.debug(f"Could not fetch Asana user info: {e}")
 
@@ -158,8 +161,8 @@ class AsanaConnector(BaseConnector):
 
     def sync_data(self, sync_type: str = "full") -> Dict[str, Any]:
         """Sync tasks and projects with Asana."""
-        from app.models import Task, Project
         from app import db
+        from app.models import Project, Task
 
         try:
             headers = {"Authorization": f"Bearer {self.get_access_token()}"}

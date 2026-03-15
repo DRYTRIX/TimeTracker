@@ -2,14 +2,16 @@
 Routes for invoice approval workflow.
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
+import json
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_babel import gettext as _
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
+
 from app.models import Invoice, InvoiceApproval, User
 from app.services.invoice_approval_service import InvoiceApprovalService
-from app.utils.permissions import admin_or_permission_required
-import json
 from app.utils.module_helpers import module_enabled
+from app.utils.permissions import admin_or_permission_required
 
 invoice_approvals_bp = Blueprint("invoice_approvals", __name__)
 

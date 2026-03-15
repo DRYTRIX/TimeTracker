@@ -5,9 +5,11 @@ import logging
 import time
 import uuid
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
+
 import requests
 from flask import current_app
+
 from app import db
 from app.models.webhook import Webhook, WebhookDelivery
 from app.utils.timezone import now_in_app_timezone

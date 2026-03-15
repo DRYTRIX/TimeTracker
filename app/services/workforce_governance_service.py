@@ -33,7 +33,9 @@ class WorkforceGovernanceService:
         end = start + timedelta(days=6)
         return {"period_start": start, "period_end": end}
 
-    def get_or_create_period_for_date(self, user_id: int, reference: date, period_type: str = "weekly") -> TimesheetPeriod:
+    def get_or_create_period_for_date(
+        self, user_id: int, reference: date, period_type: str = "weekly"
+    ) -> TimesheetPeriod:
         rng = self.resolve_period_range(reference, period_type=period_type)
         period = TimesheetPeriod.query.filter_by(
             user_id=user_id,
@@ -292,7 +294,9 @@ class WorkforceGovernanceService:
         ).first()
         return holiday is not None
 
-    def capacity_report(self, start_date: date, end_date: date, team_user_ids: Optional[List[int]] = None) -> List[Dict[str, Any]]:
+    def capacity_report(
+        self, start_date: date, end_date: date, team_user_ids: Optional[List[int]] = None
+    ) -> List[Dict[str, Any]]:
         user_query = User.query
         if team_user_ids:
             user_query = user_query.filter(User.id.in_(team_user_ids))
@@ -423,7 +427,9 @@ class WorkforceGovernanceService:
             key = (entry.user_id, entry.start_time.date().isocalendar()[:2])
 
             if approved_only or closed_only:
-                period = self.get_or_create_period_for_date(entry.user_id, entry.start_time.date(), period_type="weekly")
+                period = self.get_or_create_period_for_date(
+                    entry.user_id, entry.start_time.date(), period_type="weekly"
+                )
                 status_value = period.status.value if hasattr(period.status, "value") else str(period.status)
                 if approved_only and status_value != TimesheetPeriodStatus.APPROVED.value:
                     continue
@@ -480,9 +486,7 @@ class WorkforceGovernanceService:
         db.session.commit()
         return {"success": True}
 
-    def delete_leave_request(
-        self, request_id: int, actor_id: int, actor_can_approve: bool = False
-    ) -> Dict[str, Any]:
+    def delete_leave_request(self, request_id: int, actor_id: int, actor_can_approve: bool = False) -> Dict[str, Any]:
         """Delete a time-off request. Only draft, submitted, or cancelled; actor must be owner or approver."""
         req = TimeOffRequest.query.get(request_id)
         if not req:

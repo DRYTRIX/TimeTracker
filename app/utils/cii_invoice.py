@@ -12,22 +12,18 @@ the embedded-in-PDF use case only.
 from __future__ import annotations
 
 import hashlib
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from typing import Any, Optional, Tuple
-
-import xml.etree.ElementTree as ET
-
 
 NS_RSM = "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100"
 NS_RAM = "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
 NS_UDT = "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100"
 NS_QDT = "urn:un:unece:uncefact:data:standard:QualifiedDataType:100"
 
-FACTURX_GUIDELINE_EN16931 = (
-    "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:en16931"
-)
+FACTURX_GUIDELINE_EN16931 = "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:en16931"
 
 
 @dataclass(frozen=True)
@@ -298,7 +294,12 @@ def build_cii_invoice_xml(
 
     # If no lines were added, add a single placeholder line (CII requires at least one)
     if line_id == 1:
-        _add_line(description="Invoice", quantity=1, unit_price=getattr(invoice, "total_amount", 0), line_total=getattr(invoice, "total_amount", 0))
+        _add_line(
+            description="Invoice",
+            quantity=1,
+            unit_price=getattr(invoice, "total_amount", 0),
+            line_total=getattr(invoice, "total_amount", 0),
+        )
 
     xml_bytes = ET.tostring(root, encoding="utf-8", xml_declaration=True)
     sha256_hex = hashlib.sha256(xml_bytes).hexdigest()

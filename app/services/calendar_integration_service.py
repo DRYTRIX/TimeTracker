@@ -2,14 +2,15 @@
 Service for calendar integration business logic.
 """
 
-from typing import Optional, List, Dict, Any
+import logging
+from typing import Any, Dict, List, Optional
+
 from app import db
+from app.constants import WebhookEvent
 from app.models import CalendarIntegration, CalendarSyncEvent, TimeEntry
 from app.utils.db import safe_commit
 from app.utils.event_bus import emit_event
-from app.constants import WebhookEvent
 from app.utils.timezone import now_in_app_timezone
-import logging
 
 logger = logging.getLogger(__name__)
 

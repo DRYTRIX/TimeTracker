@@ -1,30 +1,32 @@
 """Inventory Management Routes"""
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db, log_event
-from app.models import (
-    Settings,
-    Warehouse,
-    StockItem,
-    WarehouseStock,
-    StockMovement,
-    StockReservation,
-    ProjectStockAllocation,
-    Project,
-    Supplier,
-    SupplierStockItem,
-    PurchaseOrder,
-    PurchaseOrderItem,
-    StockLot,
-)
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
-from app.utils.db import safe_commit
-from app.utils.permissions import admin_or_permission_required
-from app.utils.module_helpers import module_enabled
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
 from sqlalchemy import func, or_
+
+from app import db, log_event
+from app.models import (
+    Project,
+    ProjectStockAllocation,
+    PurchaseOrder,
+    PurchaseOrderItem,
+    Settings,
+    StockItem,
+    StockLot,
+    StockMovement,
+    StockReservation,
+    Supplier,
+    SupplierStockItem,
+    Warehouse,
+    WarehouseStock,
+)
+from app.utils.db import safe_commit
+from app.utils.module_helpers import module_enabled
+from app.utils.permissions import admin_or_permission_required
 
 inventory_bp = Blueprint("inventory", __name__)
 
@@ -166,8 +168,8 @@ def new_stock_item():
     """Create a new stock item"""
     if request.method == "POST":
         try:
-            from app.utils.validation import validate_string, sanitize_input
-            
+            from app.utils.validation import sanitize_input, validate_string
+
             sku = request.form.get("sku", "").strip().upper()
             name = request.form.get("name", "").strip()
 
@@ -175,7 +177,7 @@ def new_stock_item():
             if not sku:
                 flash(_("SKU is required"), "error")
                 return render_template("inventory/stock_items/form.html", item=None)
-            
+
             if not name:
                 flash(_("Name is required"), "error")
                 return render_template("inventory/stock_items/form.html", item=None)
@@ -204,11 +206,11 @@ def new_stock_item():
             description = request.form.get("description", "").strip() or None
             if description:
                 description = sanitize_input(description, max_length=5000)
-            
+
             category = request.form.get("category", "").strip() or None
             if category:
                 category = sanitize_input(category, max_length=100)
-            
+
             notes = request.form.get("notes", "").strip() or None
             if notes:
                 notes = sanitize_input(notes, max_length=5000)
@@ -315,9 +317,9 @@ def view_stock_item(item_id):
             .order_by(StockLot.warehouse_id, StockLot.created_at)
             .all()
         )
-        
+
         default_cost = Decimal(str(item.default_cost)) if item.default_cost else Decimal("0")
-        
+
         # Group lots by warehouse, then by characteristics (unit_cost, lot_type, created_at date)
         # to avoid duplicates in the display
         for lot, warehouse in lots_query:
@@ -328,9 +330,9 @@ def view_stock_item(item_id):
                     "lots": [],
                     "total_quantity": Decimal("0"),
                     "total_value": Decimal("0"),
-                    "lots_dict": {}  # Key: (unit_cost, lot_type, created_date) -> aggregated lot data
+                    "lots_dict": {},  # Key: (unit_cost, lot_type, created_date) -> aggregated lot data
                 }
-            
+
             # Calculate devaluation percentage
             lot_cost = Decimal(str(lot.unit_cost or 0))
             devaluation_percentage = None
@@ -340,16 +342,18 @@ def view_stock_item(item_id):
                 devaluation_percentage = float((Decimal("1") - (lot_cost / default_cost)) * Decimal("100"))
                 # Round to 2 decimal places
                 devaluation_percentage = round(devaluation_percentage, 2)
-            
+
             # Determine if lot is devalued (either marked as devalued or has positive devaluation %)
-            is_devalued = lot.lot_type == "devalued" or (devaluation_percentage is not None and devaluation_percentage > 0)
-            
+            is_devalued = lot.lot_type == "devalued" or (
+                devaluation_percentage is not None and devaluation_percentage > 0
+            )
+
             quantity = Decimal(str(lot.quantity_on_hand or 0))
-            
+
             # Create a key for grouping: same unit_cost, lot_type, and created_at date (date only, not time)
             created_date = lot.created_at.date() if lot.created_at else None
             group_key = (float(lot_cost), lot.lot_type, created_date)
-            
+
             # Aggregate lots with the same characteristics
             if group_key not in stock_lots_by_warehouse[warehouse_id]["lots_dict"]:
                 stock_lots_by_warehouse[warehouse_id]["lots_dict"][group_key] = {
@@ -361,35 +365,37 @@ def view_stock_item(item_id):
                     "is_devalued": is_devalued,
                     "created_at": lot.created_at,
                 }
-            
+
             # Sum quantities for lots with same characteristics
             stock_lots_by_warehouse[warehouse_id]["lots_dict"][group_key]["quantity"] += quantity
-        
+
         # Convert grouped lots to list and calculate totals
         for warehouse_id, warehouse_data in stock_lots_by_warehouse.items():
             for group_key, lot_data in warehouse_data["lots_dict"].items():
                 quantity = lot_data["quantity"]
                 unit_cost = Decimal(str(lot_data["unit_cost"]))
                 value = quantity * unit_cost
-                
+
                 warehouse_data["total_quantity"] += quantity
                 warehouse_data["total_value"] += value
-                
+
                 # Add to lots list for template rendering
-                warehouse_data["lots"].append({
-                    "lot": lot_data["lot"],
-                    "quantity": float(quantity),
-                    "unit_cost": lot_data["unit_cost"],
-                    "lot_type": lot_data["lot_type"],
-                    "devaluation_percentage": lot_data["devaluation_percentage"],
-                    "is_devalued": lot_data["is_devalued"],
-                    "created_at": lot_data["created_at"],
-                })
-            
+                warehouse_data["lots"].append(
+                    {
+                        "lot": lot_data["lot"],
+                        "quantity": float(quantity),
+                        "unit_cost": lot_data["unit_cost"],
+                        "lot_type": lot_data["lot_type"],
+                        "devaluation_percentage": lot_data["devaluation_percentage"],
+                        "is_devalued": lot_data["is_devalued"],
+                        "created_at": lot_data["created_at"],
+                    }
+                )
+
             # Convert totals to float for template
             warehouse_data["total_quantity"] = float(warehouse_data["total_quantity"])
             warehouse_data["total_value"] = float(warehouse_data["total_value"])
-            
+
             # Remove temporary dict
             del warehouse_data["lots_dict"]
 
@@ -960,8 +966,11 @@ def new_movement():
                 # Validate that devaluation cost is not greater than original cost
                 if unit_cost_override > base_cost:
                     raise ValueError(
-                        _("Devaluation cost (%(devalued)s) cannot be greater than original cost (%(original)s)",
-                          devalued=float(unit_cost_override), original=float(base_cost))
+                        _(
+                            "Devaluation cost (%(devalued)s) cannot be greater than original cost (%(original)s)",
+                            devalued=float(unit_cost_override),
+                            original=float(base_cost),
+                        )
                     )
 
                 # Check stock availability before devaluation
@@ -971,8 +980,11 @@ def new_movement():
                 available_qty = warehouse_stock.quantity_on_hand if warehouse_stock else Decimal("0")
                 if available_qty < quantity:
                     raise ValueError(
-                        _("Insufficient stock to devalue. Available: %(available)s, Requested: %(requested)s",
-                          available=float(available_qty), requested=float(quantity))
+                        _(
+                            "Insufficient stock to devalue. Available: %(available)s, Requested: %(requested)s",
+                            available=float(available_qty),
+                            requested=float(quantity),
+                        )
                     )
 
                 StockMovement.record_devaluation(
@@ -1001,7 +1013,7 @@ def new_movement():
                 if devalue_enabled:
                     if not item.is_trackable:
                         raise ValueError(_("Stock item is not trackable. Devaluation requires trackable items."))
-                    
+
                     base_cost = item.default_cost or Decimal("0")
                     if base_cost <= 0:
                         raise ValueError(_("Stock item must have a default cost to perform devaluation"))
@@ -1018,7 +1030,9 @@ def new_movement():
                             raise ValueError(_("Devaluation percent cannot be negative"))
                         if pct > 100:
                             raise ValueError(_("Devaluation percent cannot exceed 100%"))
-                        unit_cost_override = (base_cost * (Decimal("100") - pct) / Decimal("100")).quantize(Decimal("0.01"))
+                        unit_cost_override = (base_cost * (Decimal("100") - pct) / Decimal("100")).quantize(
+                            Decimal("0.01")
+                        )
                     elif devalue_method == "fixed":
                         if devalue_unit_cost_raw in [None, ""]:
                             raise ValueError(_("New unit cost is required when devaluation is enabled"))
@@ -1038,21 +1052,27 @@ def new_movement():
                         # Validate that devaluation cost is not greater than original cost
                         if unit_cost_override > base_cost:
                             raise ValueError(
-                                _("Devaluation cost (%(devalued)s) cannot be greater than original cost (%(original)s)",
-                                  devalued=float(unit_cost_override), original=float(base_cost))
+                                _(
+                                    "Devaluation cost (%(devalued)s) cannot be greater than original cost (%(original)s)",
+                                    devalued=float(unit_cost_override),
+                                    original=float(base_cost),
+                                )
                             )
 
                     # Waste: devalue existing stock first, then waste from the devalued lot
                     elif movement_type == "waste":
                         qty_to_waste = abs(quantity)
-                        
+
                         # Validate that devaluation cost is not greater than original cost
                         if unit_cost_override > base_cost:
                             raise ValueError(
-                                _("Devaluation cost (%(devalued)s) cannot be greater than original cost (%(original)s)",
-                                  devalued=float(unit_cost_override), original=float(base_cost))
+                                _(
+                                    "Devaluation cost (%(devalued)s) cannot be greater than original cost (%(original)s)",
+                                    devalued=float(unit_cost_override),
+                                    original=float(base_cost),
+                                )
                             )
-                        
+
                         # Check stock availability before devaluation
                         warehouse_stock = WarehouseStock.query.filter_by(
                             warehouse_id=warehouse_id, stock_item_id=stock_item_id
@@ -1060,8 +1080,11 @@ def new_movement():
                         available_qty = warehouse_stock.quantity_on_hand if warehouse_stock else Decimal("0")
                         if available_qty < qty_to_waste:
                             raise ValueError(
-                                _("Insufficient stock to waste. Available: %(available)s, Requested: %(requested)s",
-                                  available=float(available_qty), requested=float(qty_to_waste))
+                                _(
+                                    "Insufficient stock to waste. Available: %(available)s, Requested: %(requested)s",
+                                    available=float(available_qty),
+                                    requested=float(qty_to_waste),
+                                )
                             )
 
                         # Devalue the quantity first (creates a devalued lot)
@@ -1082,9 +1105,7 @@ def new_movement():
                         except Exception as e:
                             # If devaluation fails, rollback and re-raise
                             db.session.rollback()
-                            raise ValueError(
-                                _("Failed to devalue stock before waste: %(error)s", error=str(e))
-                            )
+                            raise ValueError(_("Failed to devalue stock before waste: %(error)s", error=str(e)))
 
             # Record the movement
             # For waste with devaluation, consume_from_lot_id is already set above
@@ -1106,9 +1127,7 @@ def new_movement():
             except Exception as e:
                 # If movement recording fails after devaluation, rollback the entire transaction
                 db.session.rollback()
-                raise ValueError(
-                    _("Failed to record movement: %(error)s", error=str(e))
-                )
+                raise ValueError(_("Failed to record movement: %(error)s", error=str(e)))
 
             safe_commit()
 
@@ -1119,7 +1138,7 @@ def new_movement():
                 stock_item_id=stock_item_id,
                 warehouse_id=warehouse_id,
             )
-            
+
             # Provide specific success message based on movement type and devaluation
             if movement_type == "return" and devalue_enabled:
                 flash(_("Return movement recorded successfully with devaluation applied."), "success")
@@ -1127,7 +1146,7 @@ def new_movement():
                 flash(_("Waste movement recorded successfully with devaluation applied."), "success")
             else:
                 flash(_("Stock movement recorded successfully."), "success")
-            
+
             return redirect(url_for("inventory.list_movements"))
 
         except ValueError as e:
@@ -1235,7 +1254,7 @@ def new_transfer():
             stock_item = StockItem.query.get(stock_item_id)
             from_warehouse = Warehouse.query.get(from_warehouse_id)
             to_warehouse = Warehouse.query.get(to_warehouse_id)
-            
+
             if not stock_item:
                 flash(_("Stock item not found."), "error")
                 return redirect(url_for("inventory.list_transfers"))
@@ -1245,7 +1264,7 @@ def new_transfer():
             if not to_warehouse:
                 flash(_("Destination warehouse not found."), "error")
                 return redirect(url_for("inventory.list_transfers"))
-            
+
             reason = f"Transfer from {from_warehouse.code} to {to_warehouse.code}"
 
             # Create negative movement (from source warehouse)
@@ -1478,7 +1497,9 @@ def low_stock_alerts():
     low_stock_items = []
     if item_ids:
         from collections import defaultdict
+
         from sqlalchemy.orm import joinedload
+
         all_stock = (
             WarehouseStock.query.options(joinedload(WarehouseStock.warehouse))
             .filter(WarehouseStock.stock_item_id.in_(item_ids))
@@ -1602,13 +1623,13 @@ def new_supplier():
     if request.method == "POST":
         try:
             code = request.form.get("code", "").strip()
-            
+
             # Check for duplicate code
             existing = Supplier.query.filter_by(code=code).first()
             if existing:
                 flash(_("Supplier with code '%(code)s' already exists", code=code), "error")
                 return render_template("inventory/suppliers/form.html", supplier=None)
-            
+
             supplier = Supplier(
                 code=code,
                 name=request.form.get("name", "").strip(),
@@ -1876,7 +1897,9 @@ def new_purchase_order():
     stock_items_q = StockItem.query.filter_by(is_active=True).order_by(StockItem.name).all()
     # JSON-serializable dicts for template script
     warehouses = [{"id": w.id, "code": w.code or "", "name": w.name or ""} for w in warehouses_q]
-    stock_items = [{"id": s.id, "sku": s.sku or "", "name": s.name or "", "unit": s.unit or "pcs"} for s in stock_items_q]
+    stock_items = [
+        {"id": s.id, "sku": s.sku or "", "name": s.name or "", "unit": s.unit or "pcs"} for s in stock_items_q
+    ]
 
     return render_template(
         "inventory/purchase_orders/form.html",
@@ -1993,7 +2016,9 @@ def edit_purchase_order(po_id):
     stock_items_q = StockItem.query.filter_by(is_active=True).order_by(StockItem.name).all()
     # JSON-serializable dicts for template script
     warehouses = [{"id": w.id, "code": w.code or "", "name": w.name or ""} for w in warehouses_q]
-    stock_items = [{"id": s.id, "sku": s.sku or "", "name": s.name or "", "unit": s.unit or "pcs"} for s in stock_items_q]
+    stock_items = [
+        {"id": s.id, "sku": s.sku or "", "name": s.name or "", "unit": s.unit or "pcs"} for s in stock_items_q
+    ]
 
     return render_template(
         "inventory/purchase_orders/form.html",
@@ -2126,7 +2151,7 @@ def receive_purchase_order(po_id):
 def reports_dashboard():
     """Inventory reports dashboard"""
     from app.services.inventory_report_service import InventoryReportService
-    
+
     total_items = StockItem.query.filter_by(is_active=True).count()
     total_warehouses = Warehouse.query.filter_by(is_active=True).count()
 
@@ -2143,7 +2168,9 @@ def reports_dashboard():
     item_ids = [i.id for i in items_with_reorder]
     if item_ids:
         from collections import defaultdict
+
         from sqlalchemy.orm import joinedload
+
         all_stock = (
             WarehouseStock.query.options(joinedload(WarehouseStock.warehouse))
             .filter(WarehouseStock.stock_item_id.in_(item_ids))
@@ -2216,12 +2243,14 @@ def reports_valuation():
             stock_item_id=item_detail["item_id"], warehouse_id=item_detail["warehouse_id"]
         ).first()
         if stock:
-            items_with_value.append({
-                "stock": stock, 
-                "value": item_detail["value"],
-                "quantity": item_detail.get("quantity"),
-                "cost": item_detail.get("cost")
-            })
+            items_with_value.append(
+                {
+                    "stock": stock,
+                    "value": item_detail["value"],
+                    "quantity": item_detail.get("quantity"),
+                    "cost": item_detail.get("cost"),
+                }
+            )
 
     settings = Settings.get_settings()
     currency = settings.currency if settings else "EUR"
@@ -2373,7 +2402,9 @@ def reports_low_stock():
     low_stock_items = []
     if item_ids:
         from collections import defaultdict
+
         from sqlalchemy.orm import joinedload
+
         all_stock = (
             WarehouseStock.query.options(joinedload(WarehouseStock.warehouse))
             .filter(WarehouseStock.stock_item_id.in_(item_ids))

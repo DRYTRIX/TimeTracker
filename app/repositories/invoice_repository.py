@@ -2,13 +2,15 @@
 Repository for invoice data access operations.
 """
 
+from datetime import date, datetime
 from typing import List, Optional
-from datetime import datetime, date
+
 from sqlalchemy.orm import joinedload
+
 from app import db
-from app.models import Invoice, Project, Client
-from app.repositories.base_repository import BaseRepository
 from app.constants import InvoiceStatus, PaymentStatus
+from app.models import Client, Invoice, Project
+from app.repositories.base_repository import BaseRepository
 
 
 class InvoiceRepository(BaseRepository[Invoice]):
@@ -68,6 +70,7 @@ class InvoiceRepository(BaseRepository[Invoice]):
     def generate_invoice_number(self) -> str:
         """Generate a unique invoice number"""
         from datetime import datetime
+
         from app.models import Settings
 
         # Get settings for invoice prefix and start number

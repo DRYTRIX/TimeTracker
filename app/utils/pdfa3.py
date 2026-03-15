@@ -71,7 +71,8 @@ def _minimal_srgb_icc_profile() -> bytes:
 
     def _xyz_tag(x: float, y: float, z: float) -> bytes:
         return (
-            b"XYZ " + b"\x00" * 4
+            b"XYZ "
+            + b"\x00" * 4
             + struct.pack(">i", int(x * 65536))
             + struct.pack(">i", int(y * 65536))
             + struct.pack(">i", int(z * 65536))
@@ -202,7 +203,7 @@ def convert_to_pdfa3(pdf_bytes: bytes) -> Tuple[bytes, Optional[str]]:
 
         if not has_intent:
             try:
-                from pikepdf import Name, Dictionary, Array, Stream
+                from pikepdf import Array, Dictionary, Name, Stream
 
                 icc_data = _minimal_srgb_icc_profile()
                 icc_stream = Stream(pdf, icc_data)
@@ -221,7 +222,8 @@ def convert_to_pdfa3(pdf_bytes: bytes) -> Tuple[bytes, Optional[str]]:
             except Exception:
                 # Fallback: intent without embedded profile (less compliant but still useful)
                 try:
-                    from pikepdf import Name, Dictionary, Array
+                    from pikepdf import Array, Dictionary, Name
+
                     intent = Dictionary(
                         Type=Name.OutputIntent,
                         S=Name("/GTS_PDFA1"),

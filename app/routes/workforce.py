@@ -1,18 +1,16 @@
-from datetime import datetime, date, timedelta
-
-from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
-from flask_login import login_required, current_user
-from flask_babel import gettext as _
-
-from app import db
-from app.models.time_off import TimeOffRequest, CompanyHoliday, LeaveType
-from app.services.workforce_governance_service import WorkforceGovernanceService
 import csv
 import io
+from datetime import date, datetime, timedelta
 
+from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
+from app import db
+from app.models.time_off import CompanyHoliday, LeaveType, TimeOffRequest
+from app.services.workforce_governance_service import WorkforceGovernanceService
 
 workforce_bp = Blueprint("workforce", __name__)
-
 
 
 def _parse_date(value):
@@ -22,7 +20,6 @@ def _parse_date(value):
         return datetime.strptime(value, "%Y-%m-%d").date()
     except ValueError:
         return None
-
 
 
 def _can_approve() -> bool:
@@ -67,7 +64,9 @@ def dashboard():
     today = date.today()
     cap_start = start or (today - timedelta(days=today.weekday()))
     cap_end = end or (cap_start + timedelta(days=6))
-    capacity = service.capacity_report(start_date=cap_start, end_date=cap_end, team_user_ids=None if current_user.is_admin else [current_user.id])
+    capacity = service.capacity_report(
+        start_date=cap_start, end_date=cap_end, team_user_ids=None if current_user.is_admin else [current_user.id]
+    )
 
     balances = service.get_leave_balance(selected_user_id)
 
@@ -115,7 +114,14 @@ def create_period():
         reference=ref,
         period_type="weekly",
     )
-    flash(_("Timesheet period ready: %(start)s to %(end)s", start=period.period_start.isoformat(), end=period.period_end.isoformat()), "success")
+    flash(
+        _(
+            "Timesheet period ready: %(start)s to %(end)s",
+            start=period.period_start.isoformat(),
+            end=period.period_end.isoformat(),
+        ),
+        "success",
+    )
     return redirect(url_for("workforce.dashboard"))
 
 
@@ -123,7 +129,14 @@ def create_period():
 @login_required
 def submit_period(period_id):
     result = WorkforceGovernanceService().submit_period(period_id=period_id, actor_id=current_user.id)
-    flash(_(result.get("message", "Timesheet period submitted")) if not result.get("success") else _("Timesheet period submitted"), "error" if not result.get("success") else "success")
+    flash(
+        (
+            _(result.get("message", "Timesheet period submitted"))
+            if not result.get("success")
+            else _("Timesheet period submitted")
+        ),
+        "error" if not result.get("success") else "success",
+    )
     return redirect(url_for("workforce.dashboard"))
 
 
@@ -138,7 +151,14 @@ def approve_period(period_id):
         approver_id=current_user.id,
         comment=request.form.get("comment"),
     )
-    flash(_(result.get("message", "Timesheet period approved")) if not result.get("success") else _("Timesheet period approved"), "error" if not result.get("success") else "success")
+    flash(
+        (
+            _(result.get("message", "Timesheet period approved"))
+            if not result.get("success")
+            else _("Timesheet period approved")
+        ),
+        "error" if not result.get("success") else "success",
+    )
     return redirect(url_for("workforce.dashboard"))
 
 
@@ -153,7 +173,14 @@ def reject_period(period_id):
         flash(_("Rejection reason is required"), "error")
         return redirect(url_for("workforce.dashboard"))
     result = WorkforceGovernanceService().reject_period(period_id=period_id, approver_id=current_user.id, reason=reason)
-    flash(_(result.get("message", "Timesheet period rejected")) if not result.get("success") else _("Timesheet period rejected"), "error" if not result.get("success") else "success")
+    flash(
+        (
+            _(result.get("message", "Timesheet period rejected"))
+            if not result.get("success")
+            else _("Timesheet period rejected")
+        ),
+        "error" if not result.get("success") else "success",
+    )
     return redirect(url_for("workforce.dashboard"))
 
 
@@ -168,7 +195,14 @@ def close_period(period_id):
         closer_id=current_user.id,
         reason=request.form.get("reason"),
     )
-    flash(_(result.get("message", "Timesheet period closed")) if not result.get("success") else _("Timesheet period closed"), "error" if not result.get("success") else "success")
+    flash(
+        (
+            _(result.get("message", "Timesheet period closed"))
+            if not result.get("success")
+            else _("Timesheet period closed")
+        ),
+        "error" if not result.get("success") else "success",
+    )
     return redirect(url_for("workforce.dashboard"))
 
 
@@ -176,7 +210,14 @@ def close_period(period_id):
 @login_required
 def delete_period(period_id):
     result = WorkforceGovernanceService().delete_period(period_id=period_id, actor_id=current_user.id)
-    flash(_(result.get("message", "Period deleted")) if result.get("success") else _(result.get("message", "Could not delete period")), "success" if result.get("success") else "error")
+    flash(
+        (
+            _(result.get("message", "Period deleted"))
+            if result.get("success")
+            else _(result.get("message", "Could not delete period"))
+        ),
+        "success" if result.get("success") else "error",
+    )
     return redirect(url_for("workforce.dashboard"))
 
 
@@ -237,7 +278,14 @@ def delete_leave_type(leave_type_id):
         flash(_("Access denied"), "error")
         return redirect(url_for("workforce.dashboard"))
     result = WorkforceGovernanceService().delete_leave_type(leave_type_id)
-    flash(_(result.get("message", "Leave type deleted")) if result.get("success") else _(result.get("message", "Could not delete leave type")), "success" if result.get("success") else "error")
+    flash(
+        (
+            _(result.get("message", "Leave type deleted"))
+            if result.get("success")
+            else _(result.get("message", "Could not delete leave type"))
+        ),
+        "success" if result.get("success") else "error",
+    )
     return redirect(url_for("workforce.dashboard"))
 
 
@@ -265,7 +313,14 @@ def create_time_off_request():
         submit_now=True,
     )
 
-    flash(_(result.get("message", "Time-off request submitted")) if not result.get("success") else _("Time-off request submitted"), "error" if not result.get("success") else "success")
+    flash(
+        (
+            _(result.get("message", "Time-off request submitted"))
+            if not result.get("success")
+            else _("Time-off request submitted")
+        ),
+        "error" if not result.get("success") else "success",
+    )
     return redirect(url_for("workforce.dashboard"))
 
 
@@ -282,7 +337,14 @@ def approve_time_off_request(request_id):
         approve=True,
         comment=request.form.get("comment"),
     )
-    flash(_(result.get("message", "Time-off request approved")) if not result.get("success") else _("Time-off request approved"), "error" if not result.get("success") else "success")
+    flash(
+        (
+            _(result.get("message", "Time-off request approved"))
+            if not result.get("success")
+            else _("Time-off request approved")
+        ),
+        "error" if not result.get("success") else "success",
+    )
     return redirect(url_for("workforce.dashboard"))
 
 
@@ -299,7 +361,14 @@ def reject_time_off_request(request_id):
         approve=False,
         comment=request.form.get("comment"),
     )
-    flash(_(result.get("message", "Time-off request rejected")) if not result.get("success") else _("Time-off request rejected"), "error" if not result.get("success") else "success")
+    flash(
+        (
+            _(result.get("message", "Time-off request rejected"))
+            if not result.get("success")
+            else _("Time-off request rejected")
+        ),
+        "error" if not result.get("success") else "success",
+    )
     return redirect(url_for("workforce.dashboard"))
 
 
@@ -311,7 +380,14 @@ def delete_time_off_request(request_id):
         actor_id=current_user.id,
         actor_can_approve=_can_approve(),
     )
-    flash(_(result.get("message", "Time-off request deleted")) if result.get("success") else _(result.get("message", "Could not delete request")), "success" if result.get("success") else "error")
+    flash(
+        (
+            _(result.get("message", "Time-off request deleted"))
+            if result.get("success")
+            else _(result.get("message", "Could not delete request"))
+        ),
+        "success" if result.get("success") else "error",
+    )
     return redirect(url_for("workforce.dashboard"))
 
 
@@ -343,7 +419,14 @@ def delete_holiday(holiday_id):
         flash(_("Access denied"), "error")
         return redirect(url_for("workforce.dashboard"))
     result = WorkforceGovernanceService().delete_holiday(holiday_id)
-    flash(_(result.get("message", "Holiday deleted")) if result.get("success") else _(result.get("message", "Could not delete holiday")), "success" if result.get("success") else "error")
+    flash(
+        (
+            _(result.get("message", "Holiday deleted"))
+            if result.get("success")
+            else _(result.get("message", "Could not delete holiday"))
+        ),
+        "success" if result.get("success") else "error",
+    )
     return redirect(url_for("workforce.dashboard"))
 
 
@@ -375,29 +458,33 @@ def payroll_export_csv():
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow([
-        "user_id",
-        "username",
-        "week_year",
-        "week_number",
-        "period_start",
-        "period_end",
-        "hours",
-        "billable_hours",
-        "non_billable_hours",
-    ])
+    writer.writerow(
+        [
+            "user_id",
+            "username",
+            "week_year",
+            "week_number",
+            "period_start",
+            "period_end",
+            "hours",
+            "billable_hours",
+            "non_billable_hours",
+        ]
+    )
     for row in rows:
-        writer.writerow([
-            row.get("user_id"),
-            row.get("username"),
-            row.get("week_year"),
-            row.get("week_number"),
-            row.get("period_start"),
-            row.get("period_end"),
-            row.get("hours"),
-            row.get("billable_hours"),
-            row.get("non_billable_hours"),
-        ])
+        writer.writerow(
+            [
+                row.get("user_id"),
+                row.get("username"),
+                row.get("week_year"),
+                row.get("week_number"),
+                row.get("period_start"),
+                row.get("period_end"),
+                row.get("hours"),
+                row.get("billable_hours"),
+                row.get("non_billable_hours"),
+            ]
+        )
 
     filename = f"payroll_export_{start.isoformat()}_{end.isoformat()}.csv"
     return Response(
@@ -439,25 +526,29 @@ def capacity_export_csv():
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow([
-        "user_id",
-        "username",
-        "expected_hours",
-        "allocated_hours",
-        "time_off_hours",
-        "available_hours",
-        "utilization_pct",
-    ])
+    writer.writerow(
+        [
+            "user_id",
+            "username",
+            "expected_hours",
+            "allocated_hours",
+            "time_off_hours",
+            "available_hours",
+            "utilization_pct",
+        ]
+    )
     for row in rows:
-        writer.writerow([
-            row.get("user_id"),
-            row.get("username"),
-            row.get("expected_hours"),
-            row.get("allocated_hours"),
-            row.get("time_off_hours"),
-            row.get("available_hours"),
-            row.get("utilization_pct"),
-        ])
+        writer.writerow(
+            [
+                row.get("user_id"),
+                row.get("username"),
+                row.get("expected_hours"),
+                row.get("allocated_hours"),
+                row.get("time_off_hours"),
+                row.get("available_hours"),
+                row.get("utilization_pct"),
+            ]
+        )
 
     filename = f"capacity_report_{start.isoformat()}_{end.isoformat()}.csv"
     return Response(
@@ -481,29 +572,33 @@ def locked_periods_export_csv():
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow([
-        "id",
-        "user_id",
-        "period_type",
-        "period_start",
-        "period_end",
-        "status",
-        "closed_at",
-        "closed_by",
-        "close_reason",
-    ])
+    writer.writerow(
+        [
+            "id",
+            "user_id",
+            "period_type",
+            "period_start",
+            "period_end",
+            "status",
+            "closed_at",
+            "closed_by",
+            "close_reason",
+        ]
+    )
     for row in rows:
-        writer.writerow([
-            row.get("id"),
-            row.get("user_id"),
-            row.get("period_type"),
-            row.get("period_start"),
-            row.get("period_end"),
-            row.get("status"),
-            row.get("closed_at"),
-            row.get("closed_by"),
-            row.get("close_reason"),
-        ])
+        writer.writerow(
+            [
+                row.get("id"),
+                row.get("user_id"),
+                row.get("period_type"),
+                row.get("period_start"),
+                row.get("period_end"),
+                row.get("status"),
+                row.get("closed_at"),
+                row.get("closed_by"),
+                row.get("close_reason"),
+            ]
+        )
 
     return Response(
         output.getvalue(),
@@ -531,29 +626,33 @@ def audit_events_export_csv():
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow([
-        "id",
-        "created_at",
-        "user_id",
-        "action",
-        "entity_type",
-        "entity_id",
-        "entity_name",
-        "change_description",
-        "reason",
-    ])
+    writer.writerow(
+        [
+            "id",
+            "created_at",
+            "user_id",
+            "action",
+            "entity_type",
+            "entity_id",
+            "entity_name",
+            "change_description",
+            "reason",
+        ]
+    )
     for row in rows:
-        writer.writerow([
-            row.get("id"),
-            row.get("created_at"),
-            row.get("user_id"),
-            row.get("action"),
-            row.get("entity_type"),
-            row.get("entity_id"),
-            row.get("entity_name"),
-            row.get("change_description"),
-            row.get("reason"),
-        ])
+        writer.writerow(
+            [
+                row.get("id"),
+                row.get("created_at"),
+                row.get("user_id"),
+                row.get("action"),
+                row.get("entity_type"),
+                row.get("entity_id"),
+                row.get("entity_name"),
+                row.get("change_description"),
+                row.get("reason"),
+            ]
+        )
 
     return Response(
         output.getvalue(),

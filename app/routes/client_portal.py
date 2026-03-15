@@ -4,18 +4,45 @@ Provides a simplified interface for clients to view their projects,
 invoices, and time entries. Uses separate authentication from regular users.
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, session, jsonify, current_app, send_from_directory
+from datetime import datetime, timedelta
+from functools import wraps
+
+from flask import (
+    Blueprint,
+    abort,
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_from_directory,
+    session,
+    url_for,
+)
 from flask_babel import gettext as _
+from sqlalchemy import func
+
 from app import db
-from app.models import Client, Project, Invoice, TimeEntry, User, Quote, Issue, Contact, Comment, ClientAttachment, ProjectAttachment, Activity
+from app.models import (
+    Activity,
+    Client,
+    ClientAttachment,
+    Comment,
+    Contact,
+    Invoice,
+    Issue,
+    Project,
+    ProjectAttachment,
+    Quote,
+    TimeEntry,
+    User,
+)
 from app.models.client_time_approval import ClientTimeApproval
 from app.services.client_approval_service import ClientApprovalService
-from app.services.payment_gateway_service import PaymentGatewayService
 from app.services.client_notification_service import ClientNotificationService
+from app.services.payment_gateway_service import PaymentGatewayService
 from app.utils.db import safe_commit
-from datetime import datetime, timedelta
-from sqlalchemy import func
-from functools import wraps
 from app.utils.module_helpers import module_enabled
 
 client_portal_bp = Blueprint("client_portal", __name__)
@@ -27,50 +54,59 @@ def handle_forbidden(error):
     """Handle 403 Forbidden errors in client portal with nice error page"""
     # Check if user is logged in as regular user (not client portal)
     from flask_login import current_user
+
     if current_user.is_authenticated:
         # User is logged in but accessing client portal - redirect to login
         # This clears their session and lets them log in as client portal user
         flash(_("Please log in to access the client portal."), "error")
         return redirect(url_for("client_portal.login", next=request.url))
-    
+
     current_client = get_current_client()
-    
+
     # If not authenticated, redirect to login instead of showing error
     if not current_client:
         flash(_("Please log in to access the client portal."), "error")
         return redirect(url_for("client_portal.login", next=request.url))
-    
+
     # User is authenticated but doesn't have access - show error page
-    return render_template(
-        "client_portal/error.html",
-        error_info={
-            "title": _("Access Denied"),
-            "subtitle": _("403 Forbidden"),
-            "message": _("You don't have permission to access this resource. Client portal access may not be enabled for your account."),
-            "details": [
-                _("Your account may not have client portal access enabled"),
-                _("Your account may be inactive"),
-                _("You may not be assigned to a client")
-            ],
-            "show_back": True
-        }
-    ), 403
+    return (
+        render_template(
+            "client_portal/error.html",
+            error_info={
+                "title": _("Access Denied"),
+                "subtitle": _("403 Forbidden"),
+                "message": _(
+                    "You don't have permission to access this resource. Client portal access may not be enabled for your account."
+                ),
+                "details": [
+                    _("Your account may not have client portal access enabled"),
+                    _("Your account may be inactive"),
+                    _("You may not be assigned to a client"),
+                ],
+                "show_back": True,
+            },
+        ),
+        403,
+    )
 
 
 @client_portal_bp.errorhandler(404)
 def handle_not_found(error):
     """Handle 404 Not Found errors in client portal with nice error page"""
     current_client = get_current_client()
-    
-    return render_template(
-        "client_portal/error.html",
-        error_info={
-            "title": _("Page Not Found"),
-            "subtitle": _("404 Not Found"),
-            "message": _("The page you're looking for doesn't exist or has been moved."),
-            "show_back": True
-        }
-    ), 404
+
+    return (
+        render_template(
+            "client_portal/error.html",
+            error_info={
+                "title": _("Page Not Found"),
+                "subtitle": _("404 Not Found"),
+                "message": _("The page you're looking for doesn't exist or has been moved."),
+                "show_back": True,
+            },
+        ),
+        404,
+    )
 
 
 @client_portal_bp.errorhandler(500)
@@ -78,16 +114,21 @@ def handle_internal_error(error):
     """Handle 500 Internal Server errors in client portal with nice error page"""
     current_app.logger.exception("Internal server error in client portal")
     current_client = get_current_client()
-    
-    return render_template(
-        "client_portal/error.html",
-        error_info={
-            "title": _("Server Error"),
-            "subtitle": _("500 Internal Server Error"),
-            "message": _("An unexpected error occurred. Please try again later or contact support if the problem persists."),
-            "show_back": True
-        }
-    ), 500
+
+    return (
+        render_template(
+            "client_portal/error.html",
+            error_info={
+                "title": _("Server Error"),
+                "subtitle": _("500 Internal Server Error"),
+                "message": _(
+                    "An unexpected error occurred. Please try again later or contact support if the problem persists."
+                ),
+                "show_back": True,
+            },
+        ),
+        500,
+    )
 
 
 def get_current_client():
@@ -114,7 +155,7 @@ def inject_get_current_client():
     client = get_current_client()
     pending_approvals_count = 0
     unread_notifications_count = 0
-    
+
     if client:
         try:
             # Get pending approvals count with error handling
@@ -124,7 +165,7 @@ def inject_get_current_client():
         except Exception as e:
             current_app.logger.error(f"Error getting pending approvals count: {e}", exc_info=True)
             pending_approvals_count = 0
-        
+
         try:
             # Get unread notifications count with error handling
             notification_service = ClientNotificationService()
@@ -132,11 +173,11 @@ def inject_get_current_client():
         except Exception as e:
             current_app.logger.error(f"Error getting unread notifications count: {e}", exc_info=True)
             unread_notifications_count = 0
-    
+
     return dict(
         get_current_client=get_current_client,
         pending_approvals_count=pending_approvals_count,
-        unread_notifications_count=unread_notifications_count
+        unread_notifications_count=unread_notifications_count,
     )
 
 
@@ -580,24 +621,24 @@ def issues():
     if not isinstance(result, Client):
         return result
     client = result
-    
+
     # Check if issue reporting is enabled
     if not client.has_portal_access or not client.portal_issues_enabled:
         flash(_("Issue reporting is not available."), "error")
         return redirect(url_for("client_portal.dashboard"))
-    
+
     # Get all issues for this client
     issues_list = Issue.get_issues_by_client(client.id)
-    
+
     # Filter by status if requested
     status_filter = request.args.get("status", "all")
     if status_filter != "all":
         issues_list = [issue for issue in issues_list if issue.status == status_filter]
-    
+
     # Get projects for filter dropdown
     portal_data = get_portal_data(client)
     projects = portal_data["projects"] if portal_data else []
-    
+
     return render_template(
         "client_portal/issues.html",
         client=client,
@@ -614,16 +655,16 @@ def new_issue():
     if not isinstance(result, Client):
         return result
     client = result
-    
+
     # Check if issue reporting is enabled
     if not client.has_portal_access or not client.portal_issues_enabled:
         flash(_("Issue reporting is not available."), "error")
         return redirect(url_for("client_portal.dashboard"))
-    
+
     # Get projects for dropdown
     portal_data = get_portal_data(client)
     projects = portal_data["projects"] if portal_data else []
-    
+
     if request.method == "POST":
         title = request.form.get("title", "").strip()
         description = request.form.get("description", "").strip()
@@ -631,7 +672,7 @@ def new_issue():
         priority = request.form.get("priority", "medium")
         submitter_name = request.form.get("submitter_name", "").strip()
         submitter_email = request.form.get("submitter_email", "").strip()
-        
+
         # Validate
         if not title:
             flash(_("Title is required."), "error")
@@ -646,7 +687,7 @@ def new_issue():
                 submitter_name=submitter_name,
                 submitter_email=submitter_email,
             )
-        
+
         # Validate project belongs to client
         if project_id:
             project = Project.query.get(project_id)
@@ -663,7 +704,7 @@ def new_issue():
                     submitter_name=submitter_name,
                     submitter_email=submitter_email,
                 )
-        
+
         # Create issue
         issue = Issue(
             client_id=client.id,
@@ -676,9 +717,9 @@ def new_issue():
             client_submitter_name=submitter_name if submitter_name else None,
             client_submitter_email=submitter_email if submitter_email else None,
         )
-        
+
         db.session.add(issue)
-        
+
         if not safe_commit("client_create_issue", {"client_id": client.id, "issue_id": issue.id}):
             flash(_("Could not create issue due to a database error."), "error")
             return render_template(
@@ -692,10 +733,10 @@ def new_issue():
                 submitter_name=submitter_name,
                 submitter_email=submitter_email,
             )
-        
+
         flash(_("Issue reported successfully. We will review it shortly."), "success")
         return redirect(url_for("client_portal.issues"))
-    
+
     return render_template("client_portal/new_issue.html", client=client, projects=projects)
 
 
@@ -706,22 +747,23 @@ def view_issue(issue_id):
     if not isinstance(result, Client):
         return result
     client = result
-    
+
     # Check if issue reporting is enabled
     if not client.has_portal_access or not client.portal_issues_enabled:
         flash(_("Issue reporting is not available."), "error")
         return redirect(url_for("client_portal.dashboard"))
-    
+
     # Verify issue belongs to this client
     issue = Issue.query.get_or_404(issue_id)
     if issue.client_id != client.id:
         flash(_("Issue not found."), "error")
         abort(404)
-    
+
     return render_template("client_portal/issue_detail.html", client=client, issue=issue)
 
 
 # ==================== Time Entry Approvals ====================
+
 
 @client_portal_bp.route("/client-portal/approvals")
 def time_entry_approvals():
@@ -730,13 +772,13 @@ def time_entry_approvals():
     if not isinstance(result, Client):
         return result
     client = result
-    
+
     approval_service = ClientApprovalService()
     from app.models.client_time_approval import ClientApprovalStatus
-    
+
     # Get pending approvals
     pending_approvals = approval_service.get_pending_approvals_for_client(client.id)
-    
+
     # Get all approvals (pending, approved, rejected)
     all_approvals = (
         db.session.query(ClientTimeApproval)
@@ -745,7 +787,7 @@ def time_entry_approvals():
         .limit(100)
         .all()
     )
-    
+
     # Get status filter
     status_filter = request.args.get("status", "pending")
     if status_filter == "pending":
@@ -756,7 +798,7 @@ def time_entry_approvals():
         approvals = [a for a in all_approvals if a.status == ClientApprovalStatus.REJECTED]
     else:
         approvals = all_approvals
-    
+
     return render_template(
         "client_portal/approvals.html",
         client=client,
@@ -773,15 +815,16 @@ def view_approval(approval_id):
     if not isinstance(result, Client):
         return result
     client = result
-    
+
     from app.models.client_time_approval import ClientTimeApproval
+
     approval = ClientTimeApproval.query.get_or_404(approval_id)
-    
+
     # Verify approval belongs to this client
     if approval.client_id != client.id:
         flash(_("Approval not found."), "error")
         abort(404)
-    
+
     return render_template("client_portal/approval_detail.html", client=client, approval=approval)
 
 
@@ -792,31 +835,36 @@ def approve_time_entry(approval_id):
     if not isinstance(result, Client):
         return result
     client = result
-    
+
     from app.models.client_time_approval import ClientTimeApproval
+
     approval = ClientTimeApproval.query.get_or_404(approval_id)
-    
+
     # Verify approval belongs to this client
     if approval.client_id != client.id:
         flash(_("Approval not found."), "error")
         abort(404)
-    
+
     # Get contact ID (use primary contact or first active contact)
-    contact = Contact.get_primary_contact(client.id) or Contact.get_active_contacts(client.id)[0] if Contact.get_active_contacts(client.id) else None
+    contact = (
+        Contact.get_primary_contact(client.id) or Contact.get_active_contacts(client.id)[0]
+        if Contact.get_active_contacts(client.id)
+        else None
+    )
     if not contact:
         flash(_("No contact found for approval."), "error")
         return redirect(url_for("client_portal.time_entry_approvals"))
-    
+
     comment = request.form.get("comment", "").strip()
-    
+
     approval_service = ClientApprovalService()
     result = approval_service.approve(approval_id, contact.id, comment)
-    
+
     if result["success"]:
         flash(_("Time entry approved successfully."), "success")
     else:
         flash(_("Error approving time entry: %(error)s", error=result.get("message", "Unknown error")), "error")
-    
+
     return redirect(url_for("client_portal.view_approval", approval_id=approval_id))
 
 
@@ -827,38 +875,44 @@ def reject_time_entry(approval_id):
     if not isinstance(result, Client):
         return result
     client = result
-    
+
     from app.models.client_time_approval import ClientTimeApproval
+
     approval = ClientTimeApproval.query.get_or_404(approval_id)
-    
+
     # Verify approval belongs to this client
     if approval.client_id != client.id:
         flash(_("Approval not found."), "error")
         abort(404)
-    
+
     reason = request.form.get("reason", "").strip()
     if not reason:
         flash(_("Rejection reason is required."), "error")
         return redirect(url_for("client_portal.view_approval", approval_id=approval_id))
-    
+
     # Get contact ID
-    contact = Contact.get_primary_contact(client.id) or Contact.get_active_contacts(client.id)[0] if Contact.get_active_contacts(client.id) else None
+    contact = (
+        Contact.get_primary_contact(client.id) or Contact.get_active_contacts(client.id)[0]
+        if Contact.get_active_contacts(client.id)
+        else None
+    )
     if not contact:
         flash(_("No contact found for approval."), "error")
         return redirect(url_for("client_portal.time_entry_approvals"))
-    
+
     approval_service = ClientApprovalService()
     result = approval_service.reject(approval_id, contact.id, reason)
-    
+
     if result["success"]:
         flash(_("Time entry rejected."), "info")
     else:
         flash(_("Error rejecting time entry: %(error)s", error=result.get("message", "Unknown error")), "error")
-    
+
     return redirect(url_for("client_portal.view_approval", approval_id=approval_id))
 
 
 # ==================== Quote Approval ====================
+
 
 @client_portal_bp.route("/client-portal/quotes/<int:quote_id>/accept", methods=["POST"])
 def accept_quote(quote_id):
@@ -867,25 +921,25 @@ def accept_quote(quote_id):
     if not isinstance(result, Client):
         return result
     client = result
-    
+
     quote = Quote.query.get_or_404(quote_id)
     if quote.client_id != client.id or not quote.visible_to_client:
         flash(_("Quote not found."), "error")
         abort(404)
-    
+
     if quote.status not in ["draft", "sent"]:
         flash(_("This quote cannot be accepted."), "error")
         return redirect(url_for("client_portal.view_quote", quote_id=quote_id))
-    
+
     # Update quote status
     quote.status = "accepted"
     quote.accepted_at = datetime.utcnow()
     quote.accepted_by = None  # Client acceptance, not user
-    
+
     # Notify admin users
-    from app.utils.email import send_email
     from app.models import User as UserModel
-    
+    from app.utils.email import send_email
+
     admins = UserModel.query.filter_by(role="admin", is_active=True).all()
     for admin in admins:
         if admin.email:
@@ -899,7 +953,7 @@ def accept_quote(quote_id):
                 )
             except Exception as e:
                 current_app.logger.error(f"Error sending quote acceptance email: {e}")
-    
+
     db.session.commit()
     flash(_("Quote accepted successfully. We will contact you shortly."), "success")
     return redirect(url_for("client_portal.view_quote", quote_id=quote_id))
@@ -912,27 +966,27 @@ def reject_quote(quote_id):
     if not isinstance(result, Client):
         return result
     client = result
-    
+
     quote = Quote.query.get_or_404(quote_id)
     if quote.client_id != client.id or not quote.visible_to_client:
         flash(_("Quote not found."), "error")
         abort(404)
-    
+
     if quote.status not in ["draft", "sent"]:
         flash(_("This quote cannot be rejected."), "error")
         return redirect(url_for("client_portal.view_quote", quote_id=quote_id))
-    
+
     reason = request.form.get("reason", "").strip()
-    
+
     # Update quote status
     quote.status = "rejected"
     quote.rejected_at = datetime.utcnow()
     quote.rejection_reason = reason
-    
+
     # Notify admin users
-    from app.utils.email import send_email
     from app.models import User as UserModel
-    
+    from app.utils.email import send_email
+
     admins = UserModel.query.filter_by(role="admin", is_active=True).all()
     for admin in admins:
         if admin.email:
@@ -947,13 +1001,14 @@ def reject_quote(quote_id):
                 )
             except Exception as e:
                 current_app.logger.error(f"Error sending quote rejection email: {e}")
-    
+
     db.session.commit()
     flash(_("Quote rejected. We appreciate your feedback."), "info")
     return redirect(url_for("client_portal.quotes"))
 
 
 # ==================== Invoice Payment ====================
+
 
 @client_portal_bp.route("/client-portal/invoices/<int:invoice_id>/pay")
 def pay_invoice(invoice_id):
@@ -962,25 +1017,25 @@ def pay_invoice(invoice_id):
     if not isinstance(result, Client):
         return result
     client = result
-    
+
     invoice = Invoice.query.get_or_404(invoice_id)
     if invoice.client_id != client.id:
         flash(_("Invoice not found."), "error")
         abort(404)
-    
+
     # Check if invoice is already paid
     if invoice.payment_status == "fully_paid":
         flash(_("This invoice is already paid."), "info")
         return redirect(url_for("client_portal.view_invoice", invoice_id=invoice_id))
-    
+
     # Get active payment gateway
     payment_service = PaymentGatewayService()
     gateway = payment_service.get_active_gateway()
-    
+
     if not gateway:
         flash(_("Online payment is not currently available. Please contact us for payment instructions."), "warning")
         return redirect(url_for("client_portal.view_invoice", invoice_id=invoice_id))
-    
+
     # Redirect to payment gateway
     if gateway.provider == "stripe":
         return redirect(url_for("payment_gateways.pay_invoice", invoice_id=invoice_id))
@@ -991,6 +1046,7 @@ def pay_invoice(invoice_id):
 
 # ==================== Project Comments ====================
 
+
 @client_portal_bp.route("/client-portal/projects/<int:project_id>/comments", methods=["GET", "POST"])
 def project_comments(project_id):
     """View and add comments to a project"""
@@ -998,24 +1054,28 @@ def project_comments(project_id):
     if not isinstance(result, Client):
         return result
     client = result
-    
+
     project = Project.query.get_or_404(project_id)
     if project.client_id != client.id:
         flash(_("Project not found."), "error")
         abort(404)
-    
+
     if request.method == "POST":
         comment_text = request.form.get("comment", "").strip()
         if not comment_text:
             flash(_("Comment cannot be empty."), "error")
             return redirect(url_for("client_portal.project_comments", project_id=project_id))
-        
+
         # Get contact for comment author
-        contact = Contact.get_primary_contact(client.id) or Contact.get_active_contacts(client.id)[0] if Contact.get_active_contacts(client.id) else None
+        contact = (
+            Contact.get_primary_contact(client.id) or Contact.get_active_contacts(client.id)[0]
+            if Contact.get_active_contacts(client.id)
+            else None
+        )
         if not contact:
             flash(_("No contact found for commenting."), "error")
             return redirect(url_for("client_portal.project_comments", project_id=project_id))
-        
+
         # Create comment with client contact
         comment = Comment(
             content=comment_text,
@@ -1025,20 +1085,24 @@ def project_comments(project_id):
         )
         db.session.add(comment)
         db.session.commit()
-        
+
         flash(_("Comment added successfully."), "success")
         return redirect(url_for("client_portal.project_comments", project_id=project_id))
-    
+
     # Get all comments for this project (only non-internal or client comments)
-    comments = Comment.query.filter(
-        Comment.project_id == project_id,
-        db.or_(Comment.is_internal == False, Comment.is_client_comment == True)
-    ).order_by(Comment.created_at.desc()).all()
-    
+    comments = (
+        Comment.query.filter(
+            Comment.project_id == project_id, db.or_(Comment.is_internal == False, Comment.is_client_comment == True)
+        )
+        .order_by(Comment.created_at.desc())
+        .all()
+    )
+
     return render_template("client_portal/project_comments.html", client=client, project=project, comments=comments)
 
 
 # ==================== Notifications ====================
+
 
 @client_portal_bp.route("/client-portal/notifications")
 def notifications():
@@ -1047,19 +1111,19 @@ def notifications():
     if not isinstance(result, Client):
         return result
     client = result
-    
-    from app.services.client_notification_service import ClientNotificationService
+
     from app.models.client_notification import ClientNotification
-    
+    from app.services.client_notification_service import ClientNotificationService
+
     service = ClientNotificationService()
-    
+
     # Get filter
     filter_type = request.args.get("filter", "all")
     unread_only = filter_type == "unread"
-    
+
     notifications_list = service.get_notifications(client.id, limit=100, unread_only=unread_only)
     unread_count = service.get_unread_count(client.id)
-    
+
     return render_template(
         "client_portal/notifications.html",
         client=client,
@@ -1076,10 +1140,11 @@ def mark_notification_read(notification_id):
     if not isinstance(result, Client):
         return result
     client = result
-    
+
     from app.services.client_notification_service import ClientNotificationService
+
     service = ClientNotificationService()
-    
+
     success = service.mark_as_read(notification_id, client.id)
     if success:
         return jsonify({"success": True})
@@ -1094,16 +1159,18 @@ def mark_all_notifications_read():
     if not isinstance(result, Client):
         return result
     client = result
-    
+
     from app.services.client_notification_service import ClientNotificationService
+
     service = ClientNotificationService()
-    
+
     count = service.mark_all_as_read(client.id)
     flash(_("Marked %(count)d notifications as read.", count=count), "success")
     return redirect(url_for("client_portal.notifications"))
 
 
 # ==================== Documents ====================
+
 
 @client_portal_bp.route("/client-portal/documents")
 def documents():
@@ -1112,33 +1179,45 @@ def documents():
     if not isinstance(result, Client):
         return result
     client = result
-    
+
     # Get client attachments
-    attachments = ClientAttachment.query.filter_by(
-        client_id=client.id,
-        is_visible_to_client=True
-    ).order_by(ClientAttachment.uploaded_at.desc()).all()
-    
+    attachments = (
+        ClientAttachment.query.filter_by(client_id=client.id, is_visible_to_client=True)
+        .order_by(ClientAttachment.uploaded_at.desc())
+        .all()
+    )
+
     # Get project attachments
-    from app.models import ProjectAttachment, Project
+    from app.models import Project, ProjectAttachment
+
     project_ids = [p.id for p in Project.query.filter_by(client_id=client.id).all()]
     project_attachments = []
     if project_ids:
-        project_attachments = ProjectAttachment.query.filter(
-            ProjectAttachment.project_id.in_(project_ids),
-            ProjectAttachment.is_visible_to_client == True
-        ).order_by(ProjectAttachment.uploaded_at.desc()).all()
-    
+        project_attachments = (
+            ProjectAttachment.query.filter(
+                ProjectAttachment.project_id.in_(project_ids), ProjectAttachment.is_visible_to_client == True
+            )
+            .order_by(ProjectAttachment.uploaded_at.desc())
+            .all()
+        )
+
     # Add project reference to project attachments for template
     for att in project_attachments:
         if att.project_id:
             att.project = Project.query.get(att.project_id)
-    
+
     # Combine and sort
     all_attachments = list(attachments) + list(project_attachments)
     # Sort by uploaded_at, handling None values
-    all_attachments.sort(key=lambda x: x.uploaded_at if x.uploaded_at else datetime.min.replace(tzinfo=None) if hasattr(datetime.min, 'tzinfo') else datetime.min, reverse=True)
-    
+    all_attachments.sort(
+        key=lambda x: (
+            x.uploaded_at
+            if x.uploaded_at
+            else datetime.min.replace(tzinfo=None) if hasattr(datetime.min, "tzinfo") else datetime.min
+        ),
+        reverse=True,
+    )
+
     return render_template("client_portal/documents.html", client=client, attachments=all_attachments)
 
 
@@ -1149,43 +1228,47 @@ def download_attachment(attachment_id):
     if not isinstance(result, Client):
         return result
     client = result
-    
+
     import os
-    
+
     # Try client attachment first
     attachment = ClientAttachment.query.get(attachment_id)
     if attachment and attachment.client_id == client.id and attachment.is_visible_to_client:
         # Get file directory - file_path is relative to static or uploads folder
-        if attachment.file_path.startswith('uploads/'):
-            file_dir = os.path.join(current_app.root_path, '..', 'uploads')
+        if attachment.file_path.startswith("uploads/"):
+            file_dir = os.path.join(current_app.root_path, "..", "uploads")
             filename = os.path.basename(attachment.file_path)
         else:
-            file_dir = os.path.join(current_app.root_path, 'static', os.path.dirname(attachment.file_path))
+            file_dir = os.path.join(current_app.root_path, "static", os.path.dirname(attachment.file_path))
             filename = os.path.basename(attachment.file_path)
-        
+
         return send_from_directory(file_dir, filename, as_attachment=True, download_name=attachment.original_filename)
-    
+
     # Try project attachment
-    from app.models import ProjectAttachment, Project
+    from app.models import Project, ProjectAttachment
+
     attachment = ProjectAttachment.query.get(attachment_id)
     if attachment:
         project = Project.query.get(attachment.project_id)
         if project and project.client_id == client.id and attachment.is_visible_to_client:
             # Get file directory
-            if attachment.file_path.startswith('uploads/'):
-                file_dir = os.path.join(current_app.root_path, '..', 'uploads')
+            if attachment.file_path.startswith("uploads/"):
+                file_dir = os.path.join(current_app.root_path, "..", "uploads")
                 filename = os.path.basename(attachment.file_path)
             else:
-                file_dir = os.path.join(current_app.root_path, 'static', os.path.dirname(attachment.file_path))
+                file_dir = os.path.join(current_app.root_path, "static", os.path.dirname(attachment.file_path))
                 filename = os.path.basename(attachment.file_path)
-            
-            return send_from_directory(file_dir, filename, as_attachment=True, download_name=attachment.original_filename)
-    
+
+            return send_from_directory(
+                file_dir, filename, as_attachment=True, download_name=attachment.original_filename
+            )
+
     flash(_("Attachment not found or access denied."), "error")
     return redirect(url_for("client_portal.documents"))
 
 
 # ==================== Reports ====================
+
 
 @client_portal_bp.route("/client-portal/reports")
 def reports():
@@ -1194,16 +1277,16 @@ def reports():
     if not isinstance(result, Client):
         return result
     client = result
-    
+
     portal_data = get_portal_data(client)
-    
+
     # Calculate report data
     from datetime import datetime, timedelta
     from decimal import Decimal
-    
+
     # Time tracking summary
     total_hours = sum(entry.duration_hours for entry in portal_data["time_entries"])
-    
+
     # Project hours breakdown
     project_hours = {}
     for entry in portal_data["time_entries"]:
@@ -1217,7 +1300,7 @@ def reports():
             project_hours[entry.project_id]["hours"] += entry.duration_hours
             if entry.billable:
                 project_hours[entry.project_id]["billable_hours"] += entry.duration_hours
-    
+
     # Invoice summary
     invoice_summary = {
         "total": sum(inv.total_amount for inv in portal_data["invoices"]),
@@ -1225,11 +1308,11 @@ def reports():
         "unpaid": sum(inv.outstanding_amount for inv in portal_data["invoices"] if inv.payment_status != "fully_paid"),
         "overdue": sum(inv.outstanding_amount for inv in portal_data["invoices"] if inv.is_overdue),
     }
-    
+
     # Recent activity (last 30 days)
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
     recent_entries = [e for e in portal_data["time_entries"] if e.start_time >= thirty_days_ago]
-    
+
     return render_template(
         "client_portal/reports.html",
         client=client,
@@ -1242,6 +1325,7 @@ def reports():
 
 # ==================== Activity Feed ====================
 
+
 @client_portal_bp.route("/client-portal/activity")
 def activity_feed():
     """View project activity feed"""
@@ -1249,18 +1333,20 @@ def activity_feed():
     if not isinstance(result, Client):
         return result
     client = result
-    
+
     from app.models import Activity, Project
-    
+
     # Get client's projects
     project_ids = [p.id for p in Project.query.filter_by(client_id=client.id).all()]
-    
+
     # Get activities for these projects
     activities = []
     if project_ids:
-        activities = Activity.query.filter(
-            Activity.entity_type == 'project',
-            Activity.entity_id.in_(project_ids)
-        ).order_by(Activity.created_at.desc()).limit(50).all()
-    
+        activities = (
+            Activity.query.filter(Activity.entity_type == "project", Activity.entity_id.in_(project_ids))
+            .order_by(Activity.created_at.desc())
+            .limit(50)
+            .all()
+        )
+
     return render_template("client_portal/activity_feed.html", client=client, activities=activities)

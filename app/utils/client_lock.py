@@ -78,4 +78,3 @@ def enforce_locked_client_id(submitted_client_id: Optional[int]) -> Optional[int
     """Return locked client id if configured, else the submitted one."""
     locked_client_id = get_locked_client_id()
     return locked_client_id if locked_client_id else submitted_client_id
-

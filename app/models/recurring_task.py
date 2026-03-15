@@ -3,8 +3,10 @@ Recurring Task model for automated task creation
 Similar to recurring invoices but for tasks
 """
 
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
+
 from dateutil.relativedelta import relativedelta
+
 from app import db
 
 

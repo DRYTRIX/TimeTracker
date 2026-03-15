@@ -2,10 +2,11 @@
 Service for comment business logic.
 """
 
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
 from app import db
-from app.repositories import CommentRepository, ProjectRepository, TaskRepository
 from app.models import Comment, Project, Task
+from app.repositories import CommentRepository, ProjectRepository, TaskRepository
 from app.utils.db import safe_commit
 from app.utils.event_bus import emit_event
 

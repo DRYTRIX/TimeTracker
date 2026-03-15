@@ -6,12 +6,13 @@ This schema allows storing template definitions that can be rendered by ReportLa
 without requiring HTML/CSS parsing.
 """
 
-from typing import Dict, List, Any, Optional, Union
 from enum import Enum
+from typing import Any, Dict, List, Optional, Union
 
 
 class PageSize(str, Enum):
     """Standard page sizes"""
+
     A4 = "A4"
     A5 = "A5"
     A3 = "A3"
@@ -22,6 +23,7 @@ class PageSize(str, Enum):
 
 class ElementType(str, Enum):
     """Types of elements that can be placed on a PDF template"""
+
     TEXT = "text"
     IMAGE = "image"
     RECTANGLE = "rectangle"
@@ -33,6 +35,7 @@ class ElementType(str, Enum):
 
 class TextAlign(str, Enum):
     """Text alignment options"""
+
     LEFT = "left"
     CENTER = "center"
     RIGHT = "right"
@@ -53,50 +56,50 @@ PAGE_SIZE_DIMENSIONS_MM = {
 def validate_template_json(template_json: Dict[str, Any]) -> tuple[bool, Optional[str]]:
     """
     Validate that a template JSON structure is correct.
-    
+
     Args:
         template_json: Dictionary containing template definition
-        
+
     Returns:
         tuple: (is_valid: bool, error_message: str or None)
     """
     if not isinstance(template_json, dict):
         return False, "Template must be a JSON object"
-    
+
     # Validate page configuration
     if "page" not in template_json:
         return False, "Template must contain 'page' configuration"
-    
+
     page = template_json["page"]
     if not isinstance(page, dict):
         return False, "Page configuration must be an object"
-    
+
     if "size" not in page:
         return False, "Page must specify 'size'"
-    
+
     page_size = page["size"]
     if page_size not in [ps.value for ps in PageSize]:
         return False, f"Invalid page size: {page_size}"
-    
+
     # Validate elements
     if "elements" not in template_json:
         return False, "Template must contain 'elements' array"
-    
+
     if not isinstance(template_json["elements"], list):
         return False, "Elements must be an array"
-    
+
     # Validate each element
     for idx, element in enumerate(template_json["elements"]):
         if not isinstance(element, dict):
             return False, f"Element {idx} must be an object"
-        
+
         if "type" not in element:
             return False, f"Element {idx} must specify 'type'"
-        
+
         element_type = element["type"]
         if element_type not in [et.value for et in ElementType]:
             return False, f"Element {idx} has invalid type: {element_type}"
-        
+
         # Type-specific validation
         if element_type == ElementType.TEXT:
             if "text" not in element:
@@ -107,17 +110,17 @@ def validate_template_json(template_json: Dict[str, Any]) -> tuple[bool, Optiona
         elif element_type == ElementType.TABLE:
             if "columns" not in element:
                 return False, f"Table element {idx} must specify 'columns'"
-    
+
     return True, None
 
 
 def get_default_template(page_size: str = "A4") -> Dict[str, Any]:
     """
     Get a default clean and simple template structure for invoices/quotes.
-    
+
     Args:
         page_size: Page size identifier (A4, A5, Letter, etc.)
-        
+
     Returns:
         Dictionary containing default template structure with clean layout
     """
@@ -125,68 +128,59 @@ def get_default_template(page_size: str = "A4") -> Dict[str, Any]:
     dims_pt = get_page_dimensions_points(page_size)
     page_width_pt = dims_pt["width"]
     page_height_pt = dims_pt["height"]
-    
+
     # Margins in mm, convert to points (20mm = 56.69 points)
     margin_mm = 20
     margin_pt = (margin_mm / 25.4) * 72
-    
+
     # Calculate usable area
     usable_width = page_width_pt - (margin_pt * 2)
-    
+
     # Layout positions (relative to top-left, accounting for margins)
     header_y = margin_pt
     client_y = header_y + 80
     table_y = client_y + 60
     totals_y = table_y + 200
     footer_y = totals_y + 60
-    
+
     # Build elements list
     elements = []
-    
+
     # Header: Title (works for both invoice and quote)
-    elements.append({
-        "type": "text",
-        "x": margin_pt,
-        "y": header_y + 10,
-        "text": "INVOICE",
-        "width": 300,
-        "style": {
-            "font": "Helvetica-Bold",
-            "size": 28,
-            "color": "#000000",
-            "align": "left"
+    elements.append(
+        {
+            "type": "text",
+            "x": margin_pt,
+            "y": header_y + 10,
+            "text": "INVOICE",
+            "width": 300,
+            "style": {"font": "Helvetica-Bold", "size": 28, "color": "#000000", "align": "left"},
         }
-    })
-    
+    )
+
     # Company info section (left side)
-    elements.append({
-        "type": "text",
-        "x": margin_pt,
-        "y": header_y + 50,
-        "text": "{{ settings.company_name if settings.company_name else 'Your Company Name' }}",
-        "width": 300,
-        "style": {
-            "font": "Helvetica-Bold",
-            "size": 12,
-            "color": "#000000",
-            "align": "left"
+    elements.append(
+        {
+            "type": "text",
+            "x": margin_pt,
+            "y": header_y + 50,
+            "text": "{{ settings.company_name if settings.company_name else 'Your Company Name' }}",
+            "width": 300,
+            "style": {"font": "Helvetica-Bold", "size": 12, "color": "#000000", "align": "left"},
         }
-    })
-    
-    elements.append({
-        "type": "text",
-        "x": margin_pt,
-        "y": header_y + 70,
-        "text": "{{ settings.company_address if settings.company_address else 'Company Address' }}",
-        "width": 300,
-        "style": {
-            "font": "Helvetica",
-            "size": 10,
-            "color": "#000000",
-            "align": "left"
+    )
+
+    elements.append(
+        {
+            "type": "text",
+            "x": margin_pt,
+            "y": header_y + 70,
+            "text": "{{ settings.company_address if settings.company_address else 'Company Address' }}",
+            "width": 300,
+            "style": {"font": "Helvetica", "size": 10, "color": "#000000", "align": "left"},
         }
-    })
-    
+    )
+
     # Invoice/Quote details (right side, no box - cleaner)
     details_x = page_width_pt - margin_pt - 200
     detail_items = [
@@ -194,200 +188,168 @@ def get_default_template(page_size: str = "A4") -> Dict[str, Any]:
         ("Date:", "{{ format_date(invoice.issue_date) if invoice.issue_date else 'N/A' }}", header_y + 50),
         ("Due Date:", "{{ format_date(invoice.due_date) if invoice.due_date else 'N/A' }}", header_y + 70),
     ]
-    
+
     for label, value, y_pos in detail_items:
         # Label
-        elements.append({
-            "type": "text",
-            "x": details_x,
-            "y": y_pos,
-            "text": label,
-            "width": 80,
-            "style": {
-                "font": "Helvetica-Bold",
-                "size": 9,
-                "color": "#000000",
-                "align": "right"
+        elements.append(
+            {
+                "type": "text",
+                "x": details_x,
+                "y": y_pos,
+                "text": label,
+                "width": 80,
+                "style": {"font": "Helvetica-Bold", "size": 9, "color": "#000000", "align": "right"},
             }
-        })
+        )
         # Value
-        elements.append({
-            "type": "text",
-            "x": details_x + 90,
-            "y": y_pos,
-            "text": value,
-            "width": 110,
-            "style": {
-                "font": "Helvetica",
-                "size": 9,
-                "color": "#000000",
-                "align": "left"
+        elements.append(
+            {
+                "type": "text",
+                "x": details_x + 90,
+                "y": y_pos,
+                "text": value,
+                "width": 110,
+                "style": {"font": "Helvetica", "size": 9, "color": "#000000", "align": "left"},
             }
-        })
-    
+        )
+
     # Client info section
-    elements.append({
-        "type": "text",
-        "x": margin_pt,
-        "y": client_y,
-        "text": "Bill To:",
-        "width": 300,
-        "style": {
-            "font": "Helvetica-Bold",
-            "size": 10,
-            "color": "#000000",
-            "align": "left"
+    elements.append(
+        {
+            "type": "text",
+            "x": margin_pt,
+            "y": client_y,
+            "text": "Bill To:",
+            "width": 300,
+            "style": {"font": "Helvetica-Bold", "size": 10, "color": "#000000", "align": "left"},
         }
-    })
-    
-    elements.append({
-        "type": "text",
-        "x": margin_pt,
-        "y": client_y + 20,
-        "text": "{{ invoice.client_name if invoice.client_name else 'Client Name' }}",
-        "width": 300,
-        "style": {
-            "font": "Helvetica",
-            "size": 10,
-            "color": "#000000",
-            "align": "left"
+    )
+
+    elements.append(
+        {
+            "type": "text",
+            "x": margin_pt,
+            "y": client_y + 20,
+            "text": "{{ invoice.client_name if invoice.client_name else 'Client Name' }}",
+            "width": 300,
+            "style": {"font": "Helvetica", "size": 10, "color": "#000000", "align": "left"},
         }
-    })
-    
-    elements.append({
-        "type": "text",
-        "x": margin_pt,
-        "y": client_y + 40,
-        "text": "{{ invoice.client_address if invoice.client_address else 'Client Address' }}",
-        "width": 300,
-        "style": {
-            "font": "Helvetica",
-            "size": 10,
-            "color": "#000000",
-            "align": "left"
+    )
+
+    elements.append(
+        {
+            "type": "text",
+            "x": margin_pt,
+            "y": client_y + 40,
+            "text": "{{ invoice.client_address if invoice.client_address else 'Client Address' }}",
+            "width": 300,
+            "style": {"font": "Helvetica", "size": 10, "color": "#000000", "align": "left"},
         }
-    })
-    
+    )
+
     # Items table (no separator lines - cleaner)
-    elements.append({
-        "type": "table",
-        "x": margin_pt,
-        "y": table_y,
-        "width": usable_width,
-        "columns": [
-            {"header": "Description", "width": 250, "field": "description", "align": "left"},
-            {"header": "Qty", "width": 70, "field": "quantity", "align": "center"},
-            {"header": "Unit Price", "width": 110, "field": "unit_price", "align": "right"},
-            {"header": "Total", "width": 110, "field": "total_amount", "align": "right"}
-        ],
-        "data": "{{ invoice.all_line_items }}",
-        "row_template": {
-            "description": "{{ item.description }}",
-            "quantity": "{{ item.quantity }}",
-            "unit_price": "{{ format_money(item.unit_price) }}",
-            "total_amount": "{{ format_money(item.total_amount) }}"
-        },
-        "style": {
-            "headerBackground": "#f8f9fa",
-            "headerTextColor": "#000000",
-            "rowBackground": "#ffffff",
-            "rowTextColor": "#000000"
+    elements.append(
+        {
+            "type": "table",
+            "x": margin_pt,
+            "y": table_y,
+            "width": usable_width,
+            "columns": [
+                {"header": "Description", "width": 250, "field": "description", "align": "left"},
+                {"header": "Qty", "width": 70, "field": "quantity", "align": "center"},
+                {"header": "Unit Price", "width": 110, "field": "unit_price", "align": "right"},
+                {"header": "Total", "width": 110, "field": "total_amount", "align": "right"},
+            ],
+            "data": "{{ invoice.all_line_items }}",
+            "row_template": {
+                "description": "{{ item.description }}",
+                "quantity": "{{ item.quantity }}",
+                "unit_price": "{{ format_money(item.unit_price) }}",
+                "total_amount": "{{ format_money(item.total_amount) }}",
+            },
+            "style": {
+                "headerBackground": "#f8f9fa",
+                "headerTextColor": "#000000",
+                "rowBackground": "#ffffff",
+                "rowTextColor": "#000000",
+            },
         }
-    })
-    
+    )
+
     # Totals section (right-aligned, no separator lines)
     totals_x = page_width_pt - margin_pt - 200
-    
+
     total_items = [
         ("Subtotal:", "{{ format_money(invoice.subtotal) if invoice.subtotal else '0.00' }}", totals_y),
         ("Tax:", "{{ format_money(invoice.tax_amount) if invoice.tax_amount else '0.00' }}", totals_y + 20),
         ("Total:", "{{ format_money(invoice.total_amount) if invoice.total_amount else '0.00' }}", totals_y + 45),
     ]
-    
+
     for label, value, y_pos in total_items:
         # Label
-        elements.append({
-            "type": "text",
-            "x": totals_x,
-            "y": y_pos,
-            "text": label,
-            "width": 100,
-            "style": {
-                "font": "Helvetica-Bold" if "Total:" in label else "Helvetica",
-                "size": 11 if "Total:" in label else 10,
-                "color": "#000000",
-                "align": "right"
+        elements.append(
+            {
+                "type": "text",
+                "x": totals_x,
+                "y": y_pos,
+                "text": label,
+                "width": 100,
+                "style": {
+                    "font": "Helvetica-Bold" if "Total:" in label else "Helvetica",
+                    "size": 11 if "Total:" in label else 10,
+                    "color": "#000000",
+                    "align": "right",
+                },
             }
-        })
+        )
         # Value
-        elements.append({
-            "type": "text",
-            "x": totals_x + 110,
-            "y": y_pos,
-            "text": value,
-            "width": 90,
-            "style": {
-                "font": "Helvetica-Bold" if "Total:" in label else "Helvetica",
-                "size": 11 if "Total:" in label else 10,
-                "color": "#000000",
-                "align": "right"
+        elements.append(
+            {
+                "type": "text",
+                "x": totals_x + 110,
+                "y": y_pos,
+                "text": value,
+                "width": 90,
+                "style": {
+                    "font": "Helvetica-Bold" if "Total:" in label else "Helvetica",
+                    "size": 11 if "Total:" in label else 10,
+                    "color": "#000000",
+                    "align": "right",
+                },
             }
-        })
-    
+        )
+
     # Footer notes section
     if footer_y + 40 < page_height_pt - margin_pt:
-        elements.append({
-            "type": "text",
-            "x": margin_pt,
-            "y": footer_y,
-            "text": "{{ invoice.notes if invoice.notes else 'Thank you for your business!' }}",
-            "width": usable_width,
-            "style": {
-                "font": "Helvetica",
-                "size": 9,
-                "color": "#666666",
-                "align": "left"
+        elements.append(
+            {
+                "type": "text",
+                "x": margin_pt,
+                "y": footer_y,
+                "text": "{{ invoice.notes if invoice.notes else 'Thank you for your business!' }}",
+                "width": usable_width,
+                "style": {"font": "Helvetica", "size": 9, "color": "#666666", "align": "left"},
             }
-        })
-    
+        )
+
     return {
-        "page": {
-            "size": page_size,
-            "margin": {
-                "top": 20,
-                "right": 20,
-                "bottom": 20,
-                "left": 20
-            }
-        },
+        "page": {"size": page_size, "margin": {"top": 20, "right": 20, "bottom": 20, "left": 20}},
         "elements": elements,
         "styles": {
-            "default": {
-                "font": "Helvetica",
-                "size": 10,
-                "color": "#000000"
-            },
-            "heading": {
-                "font": "Helvetica-Bold",
-                "size": 18,
-                "color": "#000000"
-            },
-            "normal": {
-                "font": "Helvetica",
-                "size": 10,
-                "color": "#000000"
-            }
-        }
+            "default": {"font": "Helvetica", "size": 10, "color": "#000000"},
+            "heading": {"font": "Helvetica-Bold", "size": 18, "color": "#000000"},
+            "normal": {"font": "Helvetica", "size": 10, "color": "#000000"},
+        },
     }
 
 
 def get_page_dimensions_mm(page_size: str) -> Dict[str, float]:
     """
     Get page dimensions in millimeters for a given page size.
-    
+
     Args:
         page_size: Page size identifier
-        
+
     Returns:
         Dictionary with 'width' and 'height' in mm
     """
@@ -398,10 +360,10 @@ def get_page_dimensions_points(page_size: str) -> Dict[str, float]:
     """
     Get page dimensions in points (ReportLab standard) for a given page size.
     1 point = 1/72 inch, 1 inch = 25.4 mm
-    
+
     Args:
         page_size: Page size identifier
-        
+
     Returns:
         Dictionary with 'width' and 'height' in points
     """

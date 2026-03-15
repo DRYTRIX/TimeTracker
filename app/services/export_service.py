@@ -2,12 +2,13 @@
 Service for data export operations.
 """
 
-from typing import List, Dict, Any, Optional
-from datetime import datetime, date
-from io import BytesIO
 import csv
-from app.repositories import TimeEntryRepository, ProjectRepository, InvoiceRepository, ExpenseRepository
-from app.models import TimeEntry, Project, Invoice, Expense
+from datetime import date, datetime
+from io import BytesIO
+from typing import Any, Dict, List, Optional
+
+from app.models import Expense, Invoice, Project, TimeEntry
+from app.repositories import ExpenseRepository, InvoiceRepository, ProjectRepository, TimeEntryRepository
 
 
 class ExportService:
@@ -119,7 +120,11 @@ class ExportService:
                 [
                     project.name,
                     # Project.client is a string property; relationship is Project.client_obj
-                    (project.client_obj.name if getattr(project, "client_obj", None) else project.client) if project else "",
+                    (
+                        (project.client_obj.name if getattr(project, "client_obj", None) else project.client)
+                        if project
+                        else ""
+                    ),
                     project.status,
                     "Yes" if project.billable else "No",
                     str(project.hourly_rate) if project.hourly_rate else "",

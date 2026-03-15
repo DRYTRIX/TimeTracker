@@ -5,14 +5,16 @@ This module provides automatic audit trail tracking for model changes.
 It uses SQLAlchemy event listeners to capture create, update, and delete operations.
 """
 
-from sqlalchemy import event
-from sqlalchemy.orm import Session
-from sqlalchemy.inspection import inspect
-from sqlalchemy import inspect as sqlalchemy_inspect
-from flask import request, has_request_context
-from flask_login import current_user
-from app import db
 import logging
+
+from flask import has_request_context, request
+from flask_login import current_user
+from sqlalchemy import event
+from sqlalchemy import inspect as sqlalchemy_inspect
+from sqlalchemy.inspection import inspect
+from sqlalchemy.orm import Session
+
+from app import db
 
 logger = logging.getLogger(__name__)
 
@@ -155,10 +157,10 @@ def serialize_value(value):
 
 def capture_timeentry_metadata(entry):
     """Capture TimeEntry metadata for audit logging
-    
+
     Args:
         entry: TimeEntry instance
-        
+
     Returns:
         dict with client_id, project_id, created_at, and related entity names
     """
@@ -178,10 +180,10 @@ def capture_timeentry_metadata(entry):
 
 def capture_timeentry_state(entry):
     """Capture full TimeEntry state for audit logging
-    
+
     Args:
         entry: TimeEntry instance
-        
+
     Returns:
         dict with all TimeEntry fields and related entity information
     """
@@ -235,7 +237,9 @@ def receive_before_flush(session, flush_context, instances=None):
         table_exists = check_audit_table_exists(force_check=force_check)
         if not table_exists:
             if _audit_call_count == 1 or force_check:
-                logger.warning("audit_logs table does not exist - audit logging disabled. Run migration: flask db upgrade")
+                logger.warning(
+                    "audit_logs table does not exist - audit logging disabled. Run migration: flask db upgrade"
+                )
             return
 
         user_id = get_current_user_id()
@@ -334,7 +338,7 @@ def receive_before_flush(session, flush_context, instances=None):
                             entity_metadata = capture_timeentry_metadata(instance)
                         except Exception as e:
                             logger.warning(f"Could not capture TimeEntry state for deletion of {entity_id}: {e}")
-                    
+
                     AuditLog = get_audit_log_model()
                     AuditLog.log_change(
                         user_id=user_id,
@@ -350,7 +354,10 @@ def receive_before_flush(session, flush_context, instances=None):
                         request_path=request_path,
                     )
                 except Exception as log_error:
-                    logger.error(f"Failed to log audit entry for deletion of {entity_type}#{entity_id}: {log_error}", exc_info=True)
+                    logger.error(
+                        f"Failed to log audit entry for deletion of {entity_type}#{entity_id}: {log_error}",
+                        exc_info=True,
+                    )
 
         # Stash new (creates) for after_flush when instance.id is available
         info = getattr(session, "info", None)
@@ -383,7 +390,7 @@ def receive_after_flush(session, flush_context):
             if entity_id is None:
                 continue
             entity_name = get_entity_name(instance)
-            
+
             # For TimeEntry, capture full state and metadata
             full_new_state = None
             entity_metadata = None
@@ -393,7 +400,7 @@ def receive_after_flush(session, flush_context):
                     entity_metadata = capture_timeentry_metadata(instance)
                 except Exception as e:
                     logger.warning(f"Could not capture TimeEntry state for creation of {entity_id}: {e}")
-            
+
             AuditLog = get_audit_log_model()
             AuditLog.log_change(
                 user_id=user_id,

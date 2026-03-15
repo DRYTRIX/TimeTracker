@@ -1,9 +1,10 @@
 """Utilities for permission checking and decorators"""
 
 from functools import wraps
-from flask import flash, redirect, url_for, abort
-from flask_login import current_user
+
+from flask import abort, flash, redirect, url_for
 from flask_babel import gettext as _
+from flask_login import current_user
 
 
 def permission_required(*permissions, require_all=False):

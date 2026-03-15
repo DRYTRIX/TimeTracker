@@ -4,7 +4,9 @@ Salesman Email Mapping Model
 Maps salesman initials (from client custom fields) to email addresses
 for automated report distribution.
 """
+
 from datetime import datetime
+
 from app import db
 
 
@@ -66,7 +68,7 @@ class SalesmanEmailMapping(db.Model):
         """Get email address for a salesman initial"""
         if not initial:
             return None
-        
+
         initial = initial.strip().upper()
         mapping = cls.query.filter_by(salesman_initial=initial, is_active=True).first()
         if mapping:
@@ -77,4 +79,3 @@ class SalesmanEmailMapping(db.Model):
     def get_all_active(cls):
         """Get all active mappings"""
         return cls.query.filter_by(is_active=True).order_by(cls.salesman_initial).all()
-

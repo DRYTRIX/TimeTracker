@@ -1,16 +1,18 @@
 """Kiosk Mode Routes - Inventory and Barcode Scanning"""
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, session
-from flask_babel import gettext as _
-from flask_login import login_required, current_user, login_user, logout_user
-from app import db, log_event
-from app.models import User, StockItem, Warehouse, WarehouseStock, StockMovement, Project, TimeEntry, Task, Settings
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
-from app.utils.db import safe_commit
-from app.utils.permissions import admin_or_permission_required
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy import func, or_
+
+from app import db, log_event
+from app.models import Project, Settings, StockItem, StockMovement, Task, TimeEntry, User, Warehouse, WarehouseStock
+from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
+from app.utils.permissions import admin_or_permission_required
 
 kiosk_bp = Blueprint("kiosk", __name__)
 
@@ -573,8 +575,9 @@ def kiosk_warehouses():
 def kiosk_projects():
     """Get list of active projects for timer"""
     try:
-        from app.models import Client
         from sqlalchemy.orm import joinedload
+
+        from app.models import Client
 
         # Query projects with client relationship eager loaded
         # Note: Client model uses backref='client_obj', not 'client'

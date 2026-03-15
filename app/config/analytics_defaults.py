@@ -48,20 +48,20 @@ def get_version_from_setup():
 
     # Try multiple possible paths to setup.py
     possible_paths = []
-    
+
     # Path 1: Relative to this file (app/config/analytics_defaults.py -> setup.py)
     try:
         base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         possible_paths.append(os.path.join(base_path, "setup.py"))
     except Exception:
         pass
-    
+
     # Path 2: Current working directory
     try:
         possible_paths.append(os.path.join(os.getcwd(), "setup.py"))
     except Exception:
         pass
-    
+
     # Path 3: From environment variable (if set)
     try:
         project_root = os.getenv("PROJECT_ROOT") or os.getenv("APP_ROOT")
@@ -69,7 +69,7 @@ def get_version_from_setup():
             possible_paths.append(os.path.join(project_root, "setup.py"))
     except Exception:
         pass
-    
+
     # Path 4: Try to find setup.py by walking up from current file
     try:
         current = os.path.dirname(__file__)

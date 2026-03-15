@@ -1,7 +1,9 @@
 from datetime import datetime
 from decimal import Decimal
-from app import db
+
 from sqlalchemy import Index
+
+from app import db
 
 
 class Expense(db.Model):

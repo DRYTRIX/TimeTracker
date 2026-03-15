@@ -2,15 +2,17 @@
 Routes for project template management.
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db
-from app.models import ProjectTemplate, Client
-from app.services.project_template_service import ProjectTemplateService
-from app.utils.permissions import admin_or_permission_required
-from app.utils.module_helpers import module_enabled
 import json
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
+from app import db
+from app.models import Client, ProjectTemplate
+from app.services.project_template_service import ProjectTemplateService
+from app.utils.module_helpers import module_enabled
+from app.utils.permissions import admin_or_permission_required
 
 project_templates_bp = Blueprint("project_templates", __name__)
 
@@ -126,12 +128,15 @@ def create_template():
                 tasks = parsed_tasks
             else:
                 import logging
+
                 logging.getLogger(__name__).warning(f"Tasks JSON is not a list: {type(parsed_tasks)}")
         except json.JSONDecodeError as e:
             import logging
+
             logging.getLogger(__name__).warning(f"Failed to parse tasks JSON: {e}, raw: {tasks_json}")
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).warning(f"Unexpected error parsing tasks: {e}")
 
         # Fallback: parse from form arrays if JS didn't serialize tasks
@@ -222,7 +227,7 @@ def edit_template(template_id):
         # Get tasks
         tasks = []
         tasks_json = request.form.get("tasks", "[]")
-        
+
         try:
             parsed_tasks = json.loads(tasks_json)
             # Ensure it's a list
@@ -230,12 +235,15 @@ def edit_template(template_id):
                 tasks = parsed_tasks
             else:
                 import logging
+
                 logging.getLogger(__name__).warning(f"Tasks JSON is not a list: {type(parsed_tasks)}")
         except json.JSONDecodeError as e:
             import logging
+
             logging.getLogger(__name__).warning(f"Failed to parse tasks JSON: {e}, raw: {tasks_json}")
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).warning(f"Unexpected error parsing tasks: {e}")
 
         # Fallback: parse from form arrays if JS didn't serialize tasks

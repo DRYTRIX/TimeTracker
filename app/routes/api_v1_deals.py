@@ -3,13 +3,15 @@ API v1 - Deals (CRM) sub-blueprint.
 Routes under /api/v1/deals.
 """
 
-from flask import Blueprint, jsonify, request, g
 from decimal import Decimal
+
+from flask import Blueprint, g, jsonify, request
+
 from app import db
 from app.models import Deal
+from app.routes.api_v1_common import _parse_date, _require_module_enabled_for_api
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import error_response, forbidden_response, validation_error_response
-from app.routes.api_v1_common import _parse_date, _require_module_enabled_for_api
 
 api_v1_deals_bp = Blueprint("api_v1_deals", __name__, url_prefix="/api/v1")
 
@@ -126,7 +128,15 @@ def update_deal(deal_id):
     for field in ("name", "description", "stage", "status", "loss_reason", "notes", "currency_code"):
         if field in data and data[field] is not None:
             setattr(deal, field, str(data[field]).strip() if isinstance(data[field], str) else data[field])
-    for field in ("client_id", "contact_id", "lead_id", "probability", "related_quote_id", "related_project_id", "owner_id"):
+    for field in (
+        "client_id",
+        "contact_id",
+        "lead_id",
+        "probability",
+        "related_quote_id",
+        "related_project_id",
+        "owner_id",
+    ):
         if field in data:
             setattr(deal, field, data[field])
     if "value" in data:

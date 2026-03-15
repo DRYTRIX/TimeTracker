@@ -2,13 +2,14 @@
 Workflow automation routes
 """
 
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
-from flask_login import login_required, current_user
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
 from app import db
-from app.models.workflow import WorkflowRule, WorkflowExecution
+from app.models.workflow import WorkflowExecution, WorkflowRule
 from app.services.workflow_engine import WorkflowEngine
 from app.utils.decorators import admin_required
-from flask_babel import gettext as _
 from app.utils.module_helpers import module_enabled
 
 workflows_bp = Blueprint("workflows", __name__)

@@ -1,13 +1,15 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db, log_event, track_event
-from app.models import Quote, QuoteItem, QuoteAttachment, QuoteImage, Client, Project, Invoice, QuoteTemplate
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
+from app import db, log_event, track_event
+from app.models import Client, Invoice, Project, Quote, QuoteAttachment, QuoteImage, QuoteItem, QuoteTemplate
+from app.utils.config_manager import ConfigManager
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required, permission_required
-from app.utils.config_manager import ConfigManager
 
 quotes_bp = Blueprint("quotes", __name__)
 
@@ -39,12 +41,15 @@ def list_quotes():
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         # Return only the quotes list HTML for AJAX requests
         from flask import make_response
-        response = make_response(render_template(
-            "quotes/_quotes_list.html",
-            quotes=quotes,
-            status=status,
-            search=search,
-        ))
+
+        response = make_response(
+            render_template(
+                "quotes/_quotes_list.html",
+                quotes=quotes,
+                status=status,
+                search=search,
+            )
+        )
         response.headers["Content-Type"] = "text/html; charset=utf-8"
         return response
 
@@ -64,6 +69,7 @@ def list_quotes():
 def create_quote():
     """Create a new quote"""
     from app.utils.client_lock import get_locked_client_id
+
     clients = Client.get_active_clients()
     only_one_client = len(clients) == 1
     single_client = clients[0] if only_one_client else None
@@ -102,13 +108,17 @@ def create_quote():
         # Validate required fields
         if not title or not client_id:
             flash(_("Quote title and client are required"), "error")
-            return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
+            return render_template(
+                "quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client
+            )
 
         # Get client and validate
         client = Client.query.get(client_id)
         if not client:
             flash(_("Selected client not found"), "error")
-            return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
+            return render_template(
+                "quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client
+            )
 
         # Validate amounts
         try:
@@ -117,7 +127,9 @@ def create_quote():
                 raise InvalidOperation
         except (InvalidOperation, ValueError):
             flash(_("Invalid total amount format"), "error")
-            return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
+            return render_template(
+                "quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client
+            )
 
         try:
             hourly_rate = Decimal(hourly_rate) if hourly_rate else None
@@ -125,7 +137,9 @@ def create_quote():
                 raise InvalidOperation
         except (InvalidOperation, ValueError):
             flash(_("Invalid hourly rate format"), "error")
-            return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
+            return render_template(
+                "quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client
+            )
 
         try:
             estimated_hours = float(estimated_hours) if estimated_hours else None
@@ -133,7 +147,9 @@ def create_quote():
                 raise ValueError
         except ValueError:
             flash(_("Invalid estimated hours format"), "error")
-            return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
+            return render_template(
+                "quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client
+            )
 
         try:
             tax_rate = Decimal(tax_rate) if tax_rate else Decimal("0")
@@ -141,7 +157,9 @@ def create_quote():
                 raise InvalidOperation
         except (InvalidOperation, ValueError):
             flash(_("Invalid tax rate format"), "error")
-            return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
+            return render_template(
+                "quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client
+            )
 
         # Validate discount fields
         discount_amount_decimal = None
@@ -158,7 +176,9 @@ def create_quote():
                     discount_type = None  # Invalid type, ignore discount
             except (InvalidOperation, ValueError):
                 flash(_("Invalid discount amount format"), "error")
-                return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
+                return render_template(
+                    "quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client
+                )
 
         # Parse valid_until date
         valid_until_date = None
@@ -167,7 +187,9 @@ def create_quote():
                 valid_until_date = datetime.strptime(valid_until, "%Y-%m-%d").date()
             except ValueError:
                 flash(_("Invalid date format for valid until"), "error")
-                return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
+                return render_template(
+                    "quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client
+                )
 
         # Generate quote number
         quote_number = Quote.generate_quote_number()
@@ -227,7 +249,9 @@ def create_quote():
 
         if not safe_commit("create_quote", {"title": title, "client_id": client_id}):
             flash(_("Could not create quote due to a database error. Please check server logs."), "error")
-            return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
+            return render_template(
+                "quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client
+            )
 
         # Log event
         log_event("quote.created", user_id=current_user.id, quote_id=quote.id, quote_title=title, client_id=client_id)
@@ -238,16 +262,19 @@ def create_quote():
         flash(_("Quote created successfully"), "success")
         return redirect(url_for("quotes.view_quote", quote_id=quote.id))
 
-    return render_template("quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
+    return render_template(
+        "quotes/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client
+    )
 
 
 @quotes_bp.route("/quotes/<int:quote_id>")
 @login_required
 def view_quote(quote_id):
     """View quote details"""
-    from app.services import QuoteService
     from sqlalchemy.orm import joinedload
+
     from app.models import Comment
+    from app.services import QuoteService
 
     # Use service layer with eager loading
     quote_service = QuoteService()
@@ -276,7 +303,9 @@ def edit_quote(quote_id):
     """Edit an quote"""
     from sqlalchemy.orm import joinedload, selectinload
 
-    quote = Quote.query.options(joinedload(Quote.client), selectinload(Quote.items)).filter_by(id=quote_id).first_or_404()
+    quote = (
+        Quote.query.options(joinedload(Quote.client), selectinload(Quote.items)).filter_by(id=quote_id).first_or_404()
+    )
 
     # Only allow editing draft quotes
     if quote.status != "draft":
@@ -344,11 +373,12 @@ def edit_quote(quote_id):
         quote.terms = terms.strip() if terms else None
         quote.payment_terms = payment_terms.strip() if payment_terms else None
         quote.visible_to_client = visible_to_client
-        
+
         # Notify client if quote is made visible
         if visible_to_client and quote.client_id:
             try:
                 from app.services.client_notification_service import ClientNotificationService
+
                 notification_service = ClientNotificationService()
                 notification_service.notify_quote_available(quote.id, quote.client_id)
             except Exception as e:
@@ -422,8 +452,9 @@ def edit_quote(quote_id):
 
         if not safe_commit("edit_quote", {"quote_id": quote_id}):
             flash(_("Could not update quote due to a database error. Please check server logs."), "error")
-            from app.models import StockItem, Warehouse
             import json
+
+            from app.models import StockItem, Warehouse
 
             stock_items = StockItem.query.filter_by(is_active=True).order_by(StockItem.name).all()
             warehouses = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.code).all()
@@ -457,8 +488,9 @@ def edit_quote(quote_id):
         flash(_("Quote updated successfully"), "success")
         return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
-    from app.models import StockItem, Warehouse
     import json
+
+    from app.models import StockItem, Warehouse
 
     stock_items = StockItem.query.filter_by(is_active=True).order_by(StockItem.name).all()
     warehouses = Warehouse.query.filter_by(is_active=True).order_by(Warehouse.code).all()
@@ -508,8 +540,9 @@ def send_quote(quote_id):
         return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
     # Reserve stock for quote items if enabled
-    from app.models import StockReservation
     import os
+
+    from app.models import StockReservation
 
     auto_reserve_on_send = os.getenv("INVENTORY_AUTO_RESERVE_ON_QUOTE_SENT", "false").lower() == "true"
     if auto_reserve_on_send:
@@ -541,8 +574,8 @@ def send_quote(quote_id):
         return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
     # Send notifications
-    from app.utils.email import send_quote_sent_notification
     from app.models import User
+    from app.utils.email import send_quote_sent_notification
 
     # Notify quote creator
     if quote.creator and quote.creator.email:
@@ -605,8 +638,9 @@ def accept_quote(quote_id):
             return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
         # Reserve stock for quote items when accepted (if not already reserved)
-        from app.models import StockReservation
         import os
+
+        from app.models import StockReservation
 
         for item in quote.items:
             if item.is_stock_item and item.stock_item_id and item.warehouse_id:
@@ -646,8 +680,8 @@ def accept_quote(quote_id):
             return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
         # Send notifications
-        from app.utils.email import send_quote_accepted_notification
         from app.models import User
+        from app.utils.email import send_quote_accepted_notification
 
         # Notify quote creator
         if quote.creator and quote.creator.email:
@@ -733,10 +767,11 @@ def delete_quote(quote_id):
 @admin_or_permission_required("edit_quotes")
 def upload_attachment(quote_id):
     """Upload an attachment to a quote"""
-    from werkzeug.utils import secure_filename
-    from flask import current_app
     import os
     from datetime import datetime
+
+    from flask import current_app
+    from werkzeug.utils import secure_filename
 
     quote = Quote.query.get_or_404(quote_id)
 
@@ -791,11 +826,12 @@ def upload_attachment(quote_id):
     mime_type = file.content_type or "application/octet-stream"
     description = request.form.get("description", "").strip() or None
     is_visible_to_client = request.form.get("is_visible_to_client", "false").lower() == "true"
-    
+
     # Notify client if quote is being made visible
     if is_visible_to_client and not quote.visible_to_client and quote.client_id:
         try:
             from app.services.client_notification_service import ClientNotificationService
+
             notification_service = ClientNotificationService()
             notification_service.notify_quote_available(quote.id, quote.client_id)
         except Exception as e:
@@ -846,8 +882,9 @@ def upload_attachment(quote_id):
 @login_required
 def download_attachment(attachment_id):
     """Download a quote attachment"""
-    from flask import send_file, current_app
     import os
+
+    from flask import current_app, send_file
 
     attachment = QuoteAttachment.query.get_or_404(attachment_id)
     quote = attachment.quote
@@ -874,8 +911,9 @@ def download_attachment(attachment_id):
 @admin_or_permission_required("edit_quotes")
 def delete_attachment(attachment_id):
     """Delete a quote attachment"""
-    from flask import current_app
     import os
+
+    from flask import current_app
 
     attachment = QuoteAttachment.query.get_or_404(attachment_id)
     quote = attachment.quote
@@ -940,8 +978,8 @@ def request_approval(quote_id):
         return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
     # Send notification to approvers
-    from app.utils.email import send_quote_approval_request_notification
     from app.models import User
+    from app.utils.email import send_quote_approval_request_notification
 
     # Notify admins (default approvers)
     admins = User.query.filter_by(role="admin", is_active=True).all()
@@ -1194,12 +1232,14 @@ def save_template_from_quote(template_id):
 def export_quote_pdf(quote_id):
     """Export quote as PDF"""
     current_app.logger.info(f"[PDF_EXPORT] Action: export_request, QuoteID: {quote_id}, User: {current_user.username}")
-    
+
     quote = Quote.query.get_or_404(quote_id)
     current_app.logger.info(f"[PDF_EXPORT] Quote found: {quote.quote_number}, Status: {quote.status}")
 
     if not current_user.is_admin and quote.created_by != current_user.id:
-        current_app.logger.warning(f"[PDF_EXPORT] Permission denied - QuoteID: {quote_id}, User: {current_user.username}")
+        current_app.logger.warning(
+            f"[PDF_EXPORT] Permission denied - QuoteID: {quote_id}, User: {current_user.username}"
+        )
         flash(_("You do not have permission to export this quote"), "error")
         return redirect(request.referrer or url_for("quotes.list_quotes"))
 
@@ -1210,46 +1250,67 @@ def export_quote_pdf(quote_id):
     # Validate page size
     valid_sizes = ["A4", "Letter", "Legal", "A3", "A5", "Tabloid"]
     if page_size_raw not in valid_sizes:
-        current_app.logger.warning(f"[PDF_EXPORT] Invalid page size '{page_size_raw}', defaulting to A4, QuoteID: {quote_id}")
+        current_app.logger.warning(
+            f"[PDF_EXPORT] Invalid page size '{page_size_raw}', defaulting to A4, QuoteID: {quote_id}"
+        )
         page_size = "A4"
     else:
         page_size = page_size_raw
 
-    current_app.logger.info(f"[PDF_EXPORT] Final validated PageSize: '{page_size}', QuoteID: {quote_id}, QuoteNumber: {quote.quote_number}")
+    current_app.logger.info(
+        f"[PDF_EXPORT] Final validated PageSize: '{page_size}', QuoteID: {quote_id}, QuoteNumber: {quote.quote_number}"
+    )
 
     try:
-        from app.utils.pdf_generator import QuotePDFGenerator
-        from app.models import Settings
         import io
+
         from flask import send_file
 
+        from app.models import Settings
+        from app.utils.pdf_generator import QuotePDFGenerator
+
         settings = Settings.get_settings()
-        current_app.logger.info(f"[PDF_EXPORT] Creating QuotePDFGenerator - PageSize: '{page_size}', QuoteID: {quote_id}")
+        current_app.logger.info(
+            f"[PDF_EXPORT] Creating QuotePDFGenerator - PageSize: '{page_size}', QuoteID: {quote_id}"
+        )
         pdf_generator = QuotePDFGenerator(quote, settings=settings, page_size=page_size)
         current_app.logger.info(f"[PDF_EXPORT] Starting PDF generation - PageSize: '{page_size}', QuoteID: {quote_id}")
         pdf_bytes = pdf_generator.generate_pdf()
         pdf_size_bytes = len(pdf_bytes)
-        current_app.logger.info(f"[PDF_EXPORT] PDF generation completed successfully - PageSize: '{page_size}', QuoteID: {quote_id}, PDFSize: {pdf_size_bytes} bytes")
+        current_app.logger.info(
+            f"[PDF_EXPORT] PDF generation completed successfully - PageSize: '{page_size}', QuoteID: {quote_id}, PDFSize: {pdf_size_bytes} bytes"
+        )
         filename = f"quote_{quote.quote_number}_{page_size}.pdf"
-        current_app.logger.info(f"[PDF_EXPORT] Returning PDF file - Filename: '{filename}', PageSize: '{page_size}', QuoteID: {quote_id}")
+        current_app.logger.info(
+            f"[PDF_EXPORT] Returning PDF file - Filename: '{filename}', PageSize: '{page_size}', QuoteID: {quote_id}"
+        )
         return send_file(io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=filename)
     except ImportError:
         # Fallback if QuotePDFGenerator doesn't exist yet
-        current_app.logger.warning(f"[PDF_EXPORT] QuotePDFGenerator import failed, using fallback - PageSize: '{page_size}', QuoteID: {quote_id}")
-        from app.utils.pdf_generator_fallback import QuotePDFGeneratorFallback
-        from app.models import Settings
+        current_app.logger.warning(
+            f"[PDF_EXPORT] QuotePDFGenerator import failed, using fallback - PageSize: '{page_size}', QuoteID: {quote_id}"
+        )
         import io
+
         from flask import send_file
+
+        from app.models import Settings
+        from app.utils.pdf_generator_fallback import QuotePDFGeneratorFallback
 
         settings = Settings.get_settings()
         pdf_generator = QuotePDFGeneratorFallback(quote, settings=settings)
         pdf_bytes = pdf_generator.generate_pdf()
         pdf_size_bytes = len(pdf_bytes)
-        current_app.logger.info(f"[PDF_EXPORT] Fallback PDF generated successfully - PageSize: '{page_size}', QuoteID: {quote_id}, PDFSize: {pdf_size_bytes} bytes")
+        current_app.logger.info(
+            f"[PDF_EXPORT] Fallback PDF generated successfully - PageSize: '{page_size}', QuoteID: {quote_id}, PDFSize: {pdf_size_bytes} bytes"
+        )
         filename = f"quote_{quote.quote_number}_{page_size}.pdf"
         return send_file(io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=filename)
     except Exception as e:
-        current_app.logger.error(f"[PDF_EXPORT] Exception in PDF generation - PageSize: '{page_size}', QuoteID: {quote_id}, Error: {str(e)}", exc_info=True)
+        current_app.logger.error(
+            f"[PDF_EXPORT] Exception in PDF generation - PageSize: '{page_size}', QuoteID: {quote_id}, Error: {str(e)}",
+            exc_info=True,
+        )
         flash(_("Error generating PDF: %(error)s", error=str(e)), "error")
         return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
@@ -1327,6 +1388,7 @@ def send_quote_email(quote_id):
 def duplicate_quote(quote_id):
     """Duplicate an existing quote"""
     from datetime import timedelta
+
     from app.utils.timezone import local_now
 
     original_quote = Quote.query.get_or_404(quote_id)
@@ -1439,6 +1501,7 @@ def bulk_action():
 
     if action == "duplicate":
         from datetime import timedelta
+
         from app.utils.timezone import local_now
 
         for quote in quotes:
@@ -1544,10 +1607,11 @@ def bulk_action():
 @admin_or_permission_required("edit_quotes")
 def upload_quote_image(quote_id):
     """Upload a decorative image to a quote"""
-    from werkzeug.utils import secure_filename
     import os
     from datetime import datetime
     from decimal import Decimal
+
+    from werkzeug.utils import secure_filename
 
     quote = Quote.query.get_or_404(quote_id)
 
@@ -1592,7 +1656,10 @@ def upload_quote_image(quote_id):
 
     if file_size > MAX_FILE_SIZE:
         if request.is_json:
-            return jsonify({"error": f"File size exceeds maximum allowed size ({MAX_FILE_SIZE / (1024*1024):.0f} MB)"}), 400
+            return (
+                jsonify({"error": f"File size exceeds maximum allowed size ({MAX_FILE_SIZE / (1024*1024):.0f} MB)"}),
+                400,
+            )
         flash(_("File size exceeds maximum allowed size (5 MB)"), "error")
         return redirect(url_for("quotes.edit_quote", quote_id=quote_id))
 
@@ -1610,7 +1677,7 @@ def upload_quote_image(quote_id):
 
     # Get file info
     mime_type = file.content_type or "image/png"
-    
+
     # Get position from form (default to 0,0)
     position_x = Decimal(str(request.form.get("position_x", 0)))
     position_y = Decimal(str(request.form.get("position_y", 0)))
@@ -1664,7 +1731,7 @@ def upload_quote_image(quote_id):
 
     if request.is_json:
         return jsonify({"success": True, "image": image.to_dict()})
-    
+
     flash(_("Image uploaded successfully"), "success")
     return redirect(url_for("quotes.edit_quote", quote_id=quote_id))
 
@@ -1685,7 +1752,7 @@ def update_quote_image_position(quote_id, image_id):
 
     # Get position data from request
     data = request.get_json() if request.is_json else request.form
-    
+
     if "position_x" in data:
         image.position_x = Decimal(str(data["position_x"]))
     if "position_y" in data:
@@ -1753,7 +1820,7 @@ def delete_quote_image(quote_id, image_id):
 
     if request.is_json:
         return jsonify({"success": True})
-    
+
     flash(_("Image deleted successfully"), "success")
     return redirect(url_for("quotes.edit_quote", quote_id=quote_id))
 
@@ -1762,9 +1829,10 @@ def delete_quote_image(quote_id, image_id):
 @login_required
 def get_quote_image_base64(quote_id, image_id):
     """Get base64-encoded image for PDF embedding or serve image directly"""
-    import os
     import base64
     import mimetypes
+    import os
+
     from flask import send_file
 
     quote = Quote.query.get_or_404(quote_id)
@@ -1789,21 +1857,23 @@ def get_quote_image_base64(quote_id, image_id):
             if not mime_type:
                 mime_type = image.mime_type or "image/png"
 
-            return jsonify({
-                "success": True,
-                "data_uri": f"data:{mime_type};base64,{image_data}",
-                "mime_type": mime_type,
-            })
+            return jsonify(
+                {
+                    "success": True,
+                    "data_uri": f"data:{mime_type};base64,{image_data}",
+                    "mime_type": mime_type,
+                }
+            )
         except Exception as e:
             current_app.logger.error(f"Error reading image file: {e}")
             return jsonify({"error": "Error reading image file"}), 500
-    
+
     # Otherwise, serve the image directly (for img src tags)
     try:
         mime_type, _ = mimetypes.guess_type(file_path)
         if not mime_type:
             mime_type = image.mime_type or "image/png"
-        
+
         return send_file(file_path, mimetype=mime_type)
     except Exception as e:
         current_app.logger.error(f"Error serving image file: {e}")

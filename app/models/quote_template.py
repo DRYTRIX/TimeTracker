@@ -1,7 +1,8 @@
+import json
 from datetime import datetime
+
 from app import db
 from app.utils.timezone import now_in_app_timezone
-import json
 
 
 def local_now():
@@ -119,8 +120,9 @@ class QuoteTemplate(db.Model):
         # Apply default items
         items = self.items_list
         if items:
-            from app.models import QuoteItem
             from decimal import Decimal
+
+            from app.models import QuoteItem
 
             for item_data in items:
                 item = QuoteItem(

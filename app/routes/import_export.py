@@ -2,24 +2,26 @@
 Import/Export routes for data migration and GDPR compliance
 """
 
-from flask import Blueprint, jsonify, request, send_file, current_app, render_template
-from flask_login import login_required, current_user
-from werkzeug.utils import secure_filename
-from app import db
-from app.models import DataImport, DataExport, User
-from app.utils.data_import import (
-    import_csv_time_entries,
-    import_csv_clients,
-    import_from_toggl,
-    import_from_harvest,
-    restore_from_backup,
-    ImportError as DataImportError,
-)
-from app.utils.data_export import export_user_data_gdpr, export_filtered_data, create_backup
-from app.utils.backup import restore_backup as restore_backup_archive
-from datetime import datetime, timedelta
-import os
 import json
+import os
+from datetime import datetime, timedelta
+
+from flask import Blueprint, current_app, jsonify, render_template, request, send_file
+from flask_login import current_user, login_required
+from werkzeug.utils import secure_filename
+
+from app import db
+from app.models import DataExport, DataImport, User
+from app.utils.backup import restore_backup as restore_backup_archive
+from app.utils.data_export import create_backup, export_filtered_data, export_user_data_gdpr
+from app.utils.data_import import ImportError as DataImportError
+from app.utils.data_import import (
+    import_csv_clients,
+    import_csv_time_entries,
+    import_from_harvest,
+    import_from_toggl,
+    restore_from_backup,
+)
 from app.utils.module_helpers import module_enabled
 
 import_export_bp = Blueprint("import_export", __name__)
@@ -654,7 +656,7 @@ def import_csv_clients_route():
             return jsonify({"error": "File must be a CSV"}), 400
 
         skip_duplicates = request.args.get("skip_duplicates", "true").lower() == "true"
-        
+
         # Parse duplicate detection fields
         duplicate_detection_fields = None
         duplicate_fields_param = request.args.get("duplicate_detection_fields", "").strip()
@@ -671,7 +673,10 @@ def import_csv_clients_route():
             try:
                 csv_content = file_bytes.decode("latin-1")
             except Exception:
-                return jsonify({"error": "Could not decode file. Please ensure it's a valid UTF-8 or Latin-1 CSV file."}), 400
+                return (
+                    jsonify({"error": "Could not decode file. Please ensure it's a valid UTF-8 or Latin-1 CSV file."}),
+                    400,
+                )
 
         if not csv_content or not csv_content.strip():
             return jsonify({"error": "File is empty"}), 400
@@ -692,11 +697,11 @@ def import_csv_clients_route():
         # Perform import
         try:
             summary = import_csv_clients(
-                user_id=current_user.id, 
-                csv_content=csv_content, 
-                import_record=import_record, 
+                user_id=current_user.id,
+                csv_content=csv_content,
+                import_record=import_record,
                 skip_duplicates=skip_duplicates,
-                duplicate_detection_fields=duplicate_detection_fields
+                duplicate_detection_fields=duplicate_detection_fields,
             )
             response = jsonify({"success": True, "import_id": import_record.id, "summary": summary})
             response.headers["Content-Type"] = "application/json"
@@ -721,12 +726,18 @@ def import_csv_clients_route():
                     db.session.rollback()
                     current_app.logger.error(f"Failed to update import record status: {db_error}")
             # Return detailed error in debug mode, generic in production
-            error_msg = str(e) if current_app.config.get("FLASK_DEBUG") else "Import failed. Please check the file format and try again."
+            error_msg = (
+                str(e)
+                if current_app.config.get("FLASK_DEBUG")
+                else "Import failed. Please check the file format and try again."
+            )
             return jsonify({"error": error_msg}), 500
 
     except Exception as e:
         current_app.logger.exception(f"Top-level error in client import route: {str(e)}")
-        error_msg = str(e) if current_app.config.get("FLASK_DEBUG") else "An unexpected error occurred. Please try again."
+        error_msg = (
+            str(e) if current_app.config.get("FLASK_DEBUG") else "An unexpected error occurred. Please try again."
+        )
         return jsonify({"error": error_msg}), 500
 
 
@@ -765,4 +776,6 @@ Another Client,Another description,,info@another.com,+0987654321,456 Oak Ave,150
     buffer.write(template_content.encode("utf-8"))
     buffer.seek(0)
 
-    return send_file(buffer, mimetype="text/csv", as_attachment=True, download_name="timetracker_clients_import_template.csv")
+    return send_file(
+        buffer, mimetype="text/csv", as_attachment=True, download_name="timetracker_clients_import_template.csv"
+    )

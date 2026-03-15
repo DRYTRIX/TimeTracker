@@ -5,14 +5,16 @@ This module provides functions for calculating burn rates, forecasting completio
 analyzing resource allocation, and performing cost trend analysis for projects.
 """
 
-from datetime import datetime, timedelta, date
+import statistics
+from collections import defaultdict
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
+
 from sqlalchemy import func
+
 from app import db
-from app.models import Project, TimeEntry, ProjectCost, User
-from collections import defaultdict
-import statistics
+from app.models import Project, ProjectCost, TimeEntry, User
 
 
 def calculate_burn_rate(project_id: int, days: int = 30) -> Dict:

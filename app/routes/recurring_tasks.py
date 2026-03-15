@@ -2,13 +2,15 @@
 Recurring Tasks routes
 """
 
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
-from flask_login import login_required, current_user
-from app import db
-from app.models.recurring_task import RecurringTask
-from app.models import Project
+from datetime import date, datetime
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_babel import gettext as _
-from datetime import datetime, date
+from flask_login import current_user, login_required
+
+from app import db
+from app.models import Project
+from app.models.recurring_task import RecurringTask
 from app.utils.module_helpers import module_enabled
 
 recurring_tasks_bp = Blueprint("recurring_tasks", __name__)

@@ -2,14 +2,16 @@
 Service for backup operations.
 """
 
-from typing import Dict, Any, Optional, List
-from datetime import datetime
 import os
 import shutil
+from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 from flask import current_app
-from app import db
 from sqlalchemy import text
+
+from app import db
 
 
 class BackupService:

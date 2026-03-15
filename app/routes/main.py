@@ -1,15 +1,26 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
-from flask_login import login_required, current_user
-from app.models import User, Project, TimeEntry, Settings, WeeklyTimeGoal, TimeEntryTemplate, Activity, Client
-from app.utils.license_utils import is_license_activated
-from datetime import datetime, timedelta
-from app import db, track_page_view
-from sqlalchemy import text
-from app.models.time_entry import local_now
-
-from flask import make_response, current_app, session
 import json
 import os
+from datetime import datetime, timedelta
+
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    jsonify,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+from flask_login import current_user, login_required
+from sqlalchemy import text
+
+from app import db, track_page_view
+from app.models import Activity, Client, Project, Settings, TimeEntry, TimeEntryTemplate, User, WeeklyTimeGoal
+from app.models.time_entry import local_now
+from app.utils.license_utils import is_license_activated
 from app.utils.posthog_segmentation import update_user_segments_if_needed
 
 main_bp = Blueprint("main", __name__)
@@ -41,7 +52,7 @@ def dashboard():
     recent_entries = time_entry_repo.get_by_user(user_id=current_user.id, limit=10, include_relations=True)
 
     # Get active projects and clients for timer dropdown (scoped for subcontractors)
-    from app.utils.scope_filter import apply_project_scope_to_model, apply_client_scope_to_model
+    from app.utils.scope_filter import apply_client_scope_to_model, apply_project_scope_to_model
 
     projects_query = Project.query.filter_by(status="active").order_by(Project.name)
     scope_p = apply_project_scope_to_model(Project, current_user)
@@ -58,8 +69,8 @@ def dashboard():
 
     # Get user statistics and dashboard aggregations (cached 90s to reduce DB load)
     from app.services import AnalyticsService
-    from app.utils.overtime import calculate_period_overtime, get_week_start_for_date, get_overtime_ytd
     from app.utils.cache import get_cache
+    from app.utils.overtime import calculate_period_overtime, get_overtime_ytd, get_week_start_for_date
 
     dashboard_stats_key = f"dashboard:stats:{current_user.id}"
     dashboard_chart_key = f"dashboard:chart:{current_user.id}"
@@ -181,6 +192,7 @@ def dashboard():
     # Get user stats for smart banner and donation widget
     try:
         from app.models import DonationInteraction
+
         user_stats = DonationInteraction.get_user_engagement_metrics(current_user.id)
     except Exception:
         # Fallback if table doesn't exist yet
@@ -192,17 +204,14 @@ def dashboard():
             "time_entries_count": time_entries_count,
             "total_hours": total_hours,
         }
-    
+
     # Get donation widget stats (separate from user_stats for clarity)
     time_entries_count = user_stats.get("time_entries_count", 0)
     total_hours = user_stats.get("total_hours", 0.0)
 
     # Optional support reminder: show at most once per session for unlicensed instances
     settings_obj = Settings.get_settings()
-    show_support_reminder = (
-        not is_license_activated(settings_obj)
-        and not session.get("support_reminder_shown", False)
-    )
+    show_support_reminder = not is_license_activated(settings_obj) and not session.get("support_reminder_shown", False)
     if show_support_reminder:
         session["support_reminder_shown"] = True
 
@@ -276,15 +285,16 @@ def help():
 def donate():
     """Donation page explaining why donations are important"""
     from app.models import TimeEntry
-    
+
     # Get user engagement metrics
     days_since_signup = (datetime.utcnow() - current_user.created_at).days if current_user.created_at else 0
     time_entries_count = TimeEntry.query.filter_by(user_id=current_user.id).count()
     total_hours = current_user.total_hours if hasattr(current_user, "total_hours") else 0.0
-    
+
     # Record page view (only if table exists)
     try:
         from app.models import DonationInteraction
+
         DonationInteraction.record_interaction(
             user_id=current_user.id,
             interaction_type="page_viewed",
@@ -293,12 +303,12 @@ def donate():
                 "days_since_signup": days_since_signup,
                 "time_entries_count": time_entries_count,
                 "total_hours": total_hours,
-            }
+            },
         )
     except Exception:
         # Don't fail if tracking fails (e.g., table doesn't exist yet)
         pass
-    
+
     return render_template(
         "main/donate.html",
         days_since_signup=days_since_signup,
@@ -313,7 +323,7 @@ def track_donation_click():
     """Track donation link clicks"""
     try:
         from app.models import DonationInteraction
-        
+
         data = request.get_json() or {}
         source = data.get("source", "unknown")
         variant = data.get("variant")
@@ -329,7 +339,7 @@ def track_donation_click():
             user_metrics=metrics,
             variant=variant,
         )
-        
+
         return jsonify({"success": True})
     except Exception as e:
         # Return success even if tracking fails (e.g., table doesn't exist yet)
@@ -397,8 +407,9 @@ def debug_i18n():
     if not current_user.is_admin:
         return jsonify({"error": "Admin only"}), 403
 
-    from flask_babel import get_locale
     import os
+
+    from flask_babel import get_locale
 
     locale = str(get_locale())
     session_lang = session.get("preferred_language")
@@ -521,20 +532,68 @@ def manifest():
         "theme_color": theme_color,
         "orientation": "any",
         "icons": [
-            {"src": url_for("static", filename="images/timetracker-logo.svg"), "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"},
-            {"src": url_for("static", filename="images/android-chrome-192x192.png"), "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
-            {"src": url_for("static", filename="images/android-chrome-512x512.png"), "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
-            {"src": url_for("static", filename="images/apple-touch-icon.png"), "sizes": "180x180", "type": "image/png", "purpose": "any"},
+            {
+                "src": url_for("static", filename="images/timetracker-logo.svg"),
+                "sizes": "any",
+                "type": "image/svg+xml",
+                "purpose": "any maskable",
+            },
+            {
+                "src": url_for("static", filename="images/android-chrome-192x192.png"),
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "any maskable",
+            },
+            {
+                "src": url_for("static", filename="images/android-chrome-512x512.png"),
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "any maskable",
+            },
+            {
+                "src": url_for("static", filename="images/apple-touch-icon.png"),
+                "sizes": "180x180",
+                "type": "image/png",
+                "purpose": "any",
+            },
         ],
         "screenshots": [],
         "categories": ["productivity", "business"],
         "shortcuts": [
-            {"name": "Start Timer", "short_name": "Timer", "description": "Start tracking time", "url": url_for("timer.manual_entry"), "icons": [{"src": url_for("static", filename="images/timetracker-logo.svg"), "sizes": "96x96"}]},
-            {"name": "Dashboard", "short_name": "Dashboard", "description": "View dashboard", "url": url_for("main.dashboard"), "icons": [{"src": url_for("static", filename="images/timetracker-logo.svg"), "sizes": "96x96"}]},
-            {"name": "Projects", "short_name": "Projects", "description": "Manage projects", "url": url_for("projects.list_projects"), "icons": [{"src": url_for("static", filename="images/timetracker-logo.svg"), "sizes": "96x96"}]},
-            {"name": "Reports", "short_name": "Reports", "description": "View reports", "url": url_for("reports.reports"), "icons": [{"src": url_for("static", filename="images/timetracker-logo.svg"), "sizes": "96x96"}]},
+            {
+                "name": "Start Timer",
+                "short_name": "Timer",
+                "description": "Start tracking time",
+                "url": url_for("timer.manual_entry"),
+                "icons": [{"src": url_for("static", filename="images/timetracker-logo.svg"), "sizes": "96x96"}],
+            },
+            {
+                "name": "Dashboard",
+                "short_name": "Dashboard",
+                "description": "View dashboard",
+                "url": url_for("main.dashboard"),
+                "icons": [{"src": url_for("static", filename="images/timetracker-logo.svg"), "sizes": "96x96"}],
+            },
+            {
+                "name": "Projects",
+                "short_name": "Projects",
+                "description": "Manage projects",
+                "url": url_for("projects.list_projects"),
+                "icons": [{"src": url_for("static", filename="images/timetracker-logo.svg"), "sizes": "96x96"}],
+            },
+            {
+                "name": "Reports",
+                "short_name": "Reports",
+                "description": "View reports",
+                "url": url_for("reports.reports"),
+                "icons": [{"src": url_for("static", filename="images/timetracker-logo.svg"), "sizes": "96x96"}],
+            },
         ],
-        "share_target": {"action": url_for("timer.manual_entry"), "method": "GET", "params": {"title": "notes", "text": "notes"}},
+        "share_target": {
+            "action": url_for("timer.manual_entry"),
+            "method": "GET",
+            "params": {"title": "notes", "text": "notes"},
+        },
         "prefer_related_applications": False,
         "display_override": ["window-controls-overlay", "standalone"],
         "edge_side_panel": {"preferred_width": 400},

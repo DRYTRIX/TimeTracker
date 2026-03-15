@@ -3,7 +3,7 @@ Shared helpers for API v1 routes.
 Used by api_v1.py and by domain-specific sub-blueprints (e.g. api_v1_time_entries).
 """
 
-from flask import request, jsonify, g
+from flask import g, jsonify, request
 
 
 def paginate_query(query, page=None, per_page=None):

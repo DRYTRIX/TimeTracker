@@ -1,46 +1,48 @@
-from flask import (
-    Blueprint,
-    render_template,
-    request,
-    redirect,
-    url_for,
-    flash,
-    current_app,
-    jsonify,
-    make_response,
-    Response,
-)
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db, log_event, track_event
-from app.models import (
-    Project,
-    TimeEntry,
-    Task,
-    Client,
-    ProjectCost,
-    KanbanColumn,
-    ExtraGood,
-    Activity,
-    UserFavoriteProject,
-    ProjectAttachment,
-)
+import csv
+import io
+import re
 from datetime import datetime
 from decimal import Decimal
+
+from flask import (
+    Blueprint,
+    Response,
+    current_app,
+    flash,
+    jsonify,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
+from app import db, log_event, track_event
+from app.models import (
+    Activity,
+    Client,
+    ExtraGood,
+    KanbanColumn,
+    Project,
+    ProjectAttachment,
+    ProjectCost,
+    Task,
+    TimeEntry,
+    UserFavoriteProject,
+)
+from app.services import ProjectService
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required, permission_required
-from app.utils.timezone import convert_app_datetime_to_user
-import csv
-import re
-import io
 from app.utils.posthog_funnels import (
     track_onboarding_first_project,
-    track_project_setup_started,
     track_project_setup_basic_info,
     track_project_setup_billing_configured,
     track_project_setup_completed,
+    track_project_setup_started,
 )
-from app.services import ProjectService
+from app.utils.timezone import convert_app_datetime_to_user
 
 _project_service = ProjectService()
 
@@ -66,7 +68,7 @@ def list_projects():
     status_param = None if (status == "all" or not status) else status
     client_name = request.args.get("client", "").strip()
     client_id = request.args.get("client_id", type=int)
-    
+
     # Enforce locked client (if configured)
     try:
         from app.utils.client_lock import get_locked_client
@@ -79,24 +81,28 @@ def list_projects():
         pass
     search = request.args.get("search", "").strip()
     favorites_only = request.args.get("favorites", "").lower() == "true"
-    
+
     # Get custom field filters
     # Format: custom_field_<field_key>=value
     client_custom_field = {}
     from app.models import CustomFieldDefinition
+
     active_definitions = CustomFieldDefinition.get_active_definitions()
     for definition in active_definitions:
         field_value = request.args.get(f"custom_field_{definition.field_key}", "").strip()
         if field_value:
             client_custom_field[definition.field_key] = field_value
-    
+
     # Debug logging
-    current_app.logger.debug(f"Projects list filters - search: '{search}', status: '{status}', client: '{client_name}', client_id: {client_id}, custom_fields: {client_custom_field}, favorites: {favorites_only}")
+    current_app.logger.debug(
+        f"Projects list filters - search: '{search}', status: '{status}', client: '{client_name}', client_id: {client_id}, custom_fields: {client_custom_field}, favorites: {favorites_only}"
+    )
 
     project_service = ProjectService()
 
     # Subcontractor scope: restrict to assigned clients
     from app.utils.scope_filter import apply_client_scope_to_model, get_allowed_client_ids
+
     scope_client_ids = get_allowed_client_ids(current_user)
 
     # Use service layer to get projects (prevents N+1 queries)
@@ -115,8 +121,10 @@ def list_projects():
 
     # Get user's favorite project IDs for quick lookup in template
     from app.models.user_favorite_project import UserFavoriteProject
+
     favorite_project_ids = set(
-        fav_id for (fav_id,) in db.session.query(UserFavoriteProject.project_id).filter_by(user_id=current_user.id).all()
+        fav_id
+        for (fav_id,) in db.session.query(UserFavoriteProject.project_id).filter_by(user_id=current_user.id).all()
     )
 
     # Get clients for filter dropdown (scoped for subcontractors)
@@ -128,23 +136,27 @@ def list_projects():
     only_one_client = len(clients) == 1
     single_client = clients[0] if only_one_client else None
     client_list = [c.name for c in clients]
-    
+
     # Get custom field definitions for filter UI
     from app.models import CustomFieldDefinition
+
     custom_field_definitions = CustomFieldDefinition.get_active_definitions()
 
     # Check if this is an AJAX request
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         # Return only the projects list HTML for AJAX requests
         from flask import make_response
-        response = make_response(render_template(
-            "projects/_projects_list.html",
-            projects=result["projects"],
-            pagination=result["pagination"],
-            favorite_project_ids=favorite_project_ids,
-            search=search,
-            status=status,
-        ))
+
+        response = make_response(
+            render_template(
+                "projects/_projects_list.html",
+                projects=result["projects"],
+                pagination=result["pagination"],
+                favorite_project_ids=favorite_project_ids,
+                search=search,
+                status=status,
+            )
+        )
         response.headers["Content-Type"] = "text/html; charset=utf-8"
         return response
 
@@ -171,7 +183,7 @@ def export_projects():
     client_name = request.args.get("client", "").strip()
     search = request.args.get("search", "").strip()
     favorites_only = request.args.get("favorites", "").lower() == "true"
-    
+
     # Enforce locked client (if configured)
     try:
         from app.utils.client_lock import get_locked_client
@@ -209,6 +221,7 @@ def export_projects():
 
     # Subcontractor scope
     from app.utils.scope_filter import apply_project_scope_to_model
+
     scope = apply_project_scope_to_model(Project, current_user)
     if scope is not None:
         query = query.filter(scope)
@@ -285,6 +298,7 @@ def export_projects():
 def create_project():
     """Create a new project"""
     from app.utils.client_lock import get_locked_client_id
+
     clients = Client.get_active_clients()
     only_one_client = len(clients) == 1
     single_client = clients[0] if only_one_client else None
@@ -327,14 +341,18 @@ def create_project():
                 current_app.logger.warning("Validation failed: missing required fields for project creation")
             except Exception:
                 pass
-            return render_template("projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
+            return render_template(
+                "projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client
+            )
 
         # Validate hourly rate
         try:
             hourly_rate = Decimal(hourly_rate) if hourly_rate else None
         except ValueError:
             flash(_("Invalid hourly rate format"), "error")
-            return render_template("projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
+            return render_template(
+                "projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client
+            )
 
         # Validate budgets
         budget_amount = None
@@ -346,7 +364,12 @@ def create_project():
                     raise ValueError("Budget cannot be negative")
             except Exception:
                 flash(_("Invalid budget amount"), "error")
-                return render_template("projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
+                return render_template(
+                    "projects/create.html",
+                    clients=clients,
+                    only_one_client=only_one_client,
+                    single_client=single_client,
+                )
         if budget_threshold_raw:
             try:
                 budget_threshold_percent = int(budget_threshold_raw)
@@ -354,7 +377,12 @@ def create_project():
                     raise ValueError("Invalid threshold")
             except Exception:
                 flash(_("Invalid budget threshold percent (0-100)"), "error")
-                return render_template("projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
+                return render_template(
+                    "projects/create.html",
+                    clients=clients,
+                    only_one_client=only_one_client,
+                    single_client=single_client,
+                )
 
         # Normalize code
         normalized_code = code.upper() if code else None
@@ -379,7 +407,9 @@ def create_project():
 
         if not result.get("success"):
             flash(_(result.get("message", "Could not create project")), "error")
-            return render_template("projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client)
+            return render_template(
+                "projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client
+            )
 
         project = result["project"]
 
@@ -393,9 +423,10 @@ def create_project():
         # Parse custom fields from global definitions
         # Format: custom_field_<field_key> = value
         from app.models import CustomFieldDefinition
+
         custom_fields = {}
         active_definitions = CustomFieldDefinition.get_active_definitions()
-        
+
         for definition in active_definitions:
             field_value = request.form.get(f"custom_field_{definition.field_key}", "").strip()
             if field_value:
@@ -404,8 +435,14 @@ def create_project():
                 # Validate mandatory fields
                 flash(_("Custom field '%(field)s' is required", field=definition.label), "error")
                 custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-                return render_template("projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client, custom_field_definitions=custom_field_definitions)
-        
+                return render_template(
+                    "projects/create.html",
+                    clients=clients,
+                    only_one_client=only_one_client,
+                    single_client=single_client,
+                    custom_field_definitions=custom_field_definitions,
+                )
+
         # Set custom fields if any
         if custom_fields:
             project.custom_fields = custom_fields
@@ -414,7 +451,13 @@ def create_project():
         if not safe_commit("create_project_custom_fields_and_color", {"project_id": project.id}):
             flash(_("Could not save project due to a database error"), "error")
             custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-            return render_template("projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client, custom_field_definitions=custom_field_definitions)
+            return render_template(
+                "projects/create.html",
+                clients=clients,
+                only_one_client=only_one_client,
+                single_client=single_client,
+                custom_field_definitions=custom_field_definitions,
+            )
 
         # Track project created event
         log_event(
@@ -493,8 +536,15 @@ def create_project():
         return redirect(url_for("projects.view_project", project_id=project.id))
 
     from app.models import CustomFieldDefinition
+
     custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-    return render_template("projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client, custom_field_definitions=custom_field_definitions)
+    return render_template(
+        "projects/create.html",
+        clients=clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
+        custom_field_definitions=custom_field_definitions,
+    )
 
 
 @projects_bp.route("/projects/<int:project_id>")
@@ -505,6 +555,7 @@ def view_project(project_id):
 
     if not user_can_access_project(current_user, project_id):
         from flask import abort
+
         abort(403)
 
     from app.services import ProjectService
@@ -522,31 +573,28 @@ def view_project(project_id):
         return redirect(url_for("projects.list_projects"))
 
     # Get custom field definitions and link templates
-    from app.models import CustomFieldDefinition, LinkTemplate
     from sqlalchemy.exc import ProgrammingError
-    
+
+    from app.models import CustomFieldDefinition, LinkTemplate
+
     custom_field_definitions_by_key = {}
     try:
         for definition in CustomFieldDefinition.get_active_definitions():
             custom_field_definitions_by_key[definition.field_key] = definition
     except ProgrammingError as e:
         if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
-            current_app.logger.warning(
-                "custom_field_definitions table does not exist. Run migration: flask db upgrade"
-            )
+            current_app.logger.warning("custom_field_definitions table does not exist. Run migration: flask db upgrade")
             custom_field_definitions_by_key = {}
         else:
             raise
-    
+
     link_templates_by_field = {}
     try:
         for template in LinkTemplate.get_active_templates():
             link_templates_by_field[template.field_key] = template
     except ProgrammingError as e:
         if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
-            current_app.logger.warning(
-                "link_templates table does not exist. Run migration: flask db upgrade"
-            )
+            current_app.logger.warning("link_templates table does not exist. Run migration: flask db upgrade")
             link_templates_by_field = {}
         else:
             raise
@@ -558,9 +606,7 @@ def view_project(project_id):
     except ProgrammingError as e:
         # Handle case where project_attachments table doesn't exist (migration not run)
         if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():
-            current_app.logger.warning(
-                "project_attachments table does not exist. Run migration: flask db upgrade"
-            )
+            current_app.logger.warning("project_attachments table does not exist. Run migration: flask db upgrade")
             attachments = []
         else:
             raise
@@ -575,7 +621,7 @@ def view_project(project_id):
     if project.budget_amount and float(project.budget_amount) > 0:
         consumed = float(project.budget_consumed_amount or 0)
         budget_amt = float(project.budget_amount)
-        pct = (consumed / budget_amt * 100)
+        pct = consumed / budget_amt * 100
         threshold = int(project.budget_threshold_percent or 80)
         if pct >= 100:
             budget_status = "over"
@@ -799,6 +845,7 @@ def project_dashboard(project_id):
 def project_time_entries_overview(project_id):
     """Per-project chronological time entries overview with date filters."""
     from datetime import datetime
+
     from sqlalchemy.orm import joinedload
 
     project = Project.query.get_or_404(project_id)
@@ -860,9 +907,10 @@ def project_time_entries_overview(project_id):
 @admin_or_permission_required("edit_projects")
 def edit_project(project_id):
     """Edit project details"""
-    from app.utils.client_lock import get_locked_client_id
-    from app.utils.scope_filter import user_can_access_project, apply_client_scope_to_model
     from flask import abort
+
+    from app.utils.client_lock import get_locked_client_id
+    from app.utils.scope_filter import apply_client_scope_to_model, user_can_access_project
 
     project = Project.query.get_or_404(project_id)
     if not user_can_access_project(current_user, project_id):
@@ -893,14 +941,26 @@ def edit_project(project_id):
         # Validate required fields
         if not name or not client_id:
             flash(_("Project name and client are required"), "error")
-            return render_template("projects/edit.html", project=project, clients=clients, only_one_client=only_one_client, single_client=single_client)
+            return render_template(
+                "projects/edit.html",
+                project=project,
+                clients=clients,
+                only_one_client=only_one_client,
+                single_client=single_client,
+            )
 
         # Validate hourly rate
         try:
             hourly_rate = Decimal(hourly_rate) if hourly_rate else None
         except ValueError:
             flash(_("Invalid hourly rate format"), "error")
-            return render_template("projects/edit.html", project=project, clients=clients, only_one_client=only_one_client, single_client=single_client)
+            return render_template(
+                "projects/edit.html",
+                project=project,
+                clients=clients,
+                only_one_client=only_one_client,
+                single_client=single_client,
+            )
 
         # Validate budgets
         budget_amount = None
@@ -911,7 +971,13 @@ def edit_project(project_id):
                     raise ValueError("Budget cannot be negative")
             except Exception:
                 flash(_("Invalid budget amount"), "error")
-                return render_template("projects/edit.html", project=project, clients=clients, only_one_client=only_one_client, single_client=single_client)
+                return render_template(
+                    "projects/edit.html",
+                    project=project,
+                    clients=clients,
+                    only_one_client=only_one_client,
+                    single_client=single_client,
+                )
         budget_threshold_percent = project.budget_threshold_percent or 80
         if budget_threshold_raw:
             try:
@@ -920,7 +986,13 @@ def edit_project(project_id):
                     raise ValueError("Invalid threshold")
             except Exception:
                 flash(_("Invalid budget threshold percent (0-100)"), "error")
-                return render_template("projects/edit.html", project=project, clients=clients, only_one_client=only_one_client, single_client=single_client)
+                return render_template(
+                    "projects/edit.html",
+                    project=project,
+                    clients=clients,
+                    only_one_client=only_one_client,
+                    single_client=single_client,
+                )
 
         # Normalize code
         normalized_code = code.upper().strip() if code else None
@@ -946,7 +1018,13 @@ def edit_project(project_id):
 
         if not result.get("success"):
             flash(_(result.get("message", "Could not update project")), "error")
-            return render_template("projects/edit.html", project=project, clients=clients, only_one_client=only_one_client, single_client=single_client)
+            return render_template(
+                "projects/edit.html",
+                project=project,
+                clients=clients,
+                only_one_client=only_one_client,
+                single_client=single_client,
+            )
 
         project = result["project"]
 
@@ -960,9 +1038,10 @@ def edit_project(project_id):
         # Parse custom fields from global definitions
         # Format: custom_field_<field_key> = value
         from app.models import CustomFieldDefinition
+
         custom_fields = {}
         active_definitions = CustomFieldDefinition.get_active_definitions()
-        
+
         for definition in active_definitions:
             field_value = request.form.get(f"custom_field_{definition.field_key}", "").strip()
             if field_value:
@@ -971,20 +1050,32 @@ def edit_project(project_id):
                 # Validate mandatory fields
                 flash(_("Custom field '%(field)s' is required", field=definition.label), "error")
                 custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-                return render_template("projects/edit.html", project=project, clients=clients, only_one_client=only_one_client, single_client=single_client, custom_field_definitions=custom_field_definitions)
-        
+                return render_template(
+                    "projects/edit.html",
+                    project=project,
+                    clients=clients,
+                    only_one_client=only_one_client,
+                    single_client=single_client,
+                    custom_field_definitions=custom_field_definitions,
+                )
+
         # Update custom fields
         if custom_fields:
             project.custom_fields = custom_fields
         else:
             # Clear custom fields when all are empty
             project.custom_fields = {}
-        
+
         # Commit custom fields and color changes
         if not safe_commit("update_project_custom_fields_and_color", {"project_id": project.id}):
             flash(_("Could not update project due to a database error"), "error")
             custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-            return render_template("projects/edit.html", project=project, clients=clients, custom_field_definitions=custom_field_definitions)
+            return render_template(
+                "projects/edit.html",
+                project=project,
+                clients=clients,
+                custom_field_definitions=custom_field_definitions,
+            )
 
         # Log activity
         Activity.log(
@@ -1002,8 +1093,16 @@ def edit_project(project_id):
         return redirect(url_for("projects.view_project", project_id=project.id))
 
     from app.models import CustomFieldDefinition
+
     custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-    return render_template("projects/edit.html", project=project, clients=clients, only_one_client=only_one_client, single_client=single_client, custom_field_definitions=custom_field_definitions)
+    return render_template(
+        "projects/edit.html",
+        project=project,
+        clients=clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
+        custom_field_definitions=custom_field_definitions,
+    )
 
 
 @projects_bp.route("/projects/<int:project_id>/archive", methods=["GET", "POST"])
@@ -1907,10 +2006,11 @@ def api_project_goods(project_id):
 @admin_or_permission_required("edit_projects")
 def upload_project_attachment(project_id):
     """Upload an attachment to a project"""
-    from werkzeug.utils import secure_filename
-    from flask import current_app, send_file
     import os
     from datetime import datetime
+
+    from flask import current_app, send_file
+    from werkzeug.utils import secure_filename
 
     project = Project.query.get_or_404(project_id)
 
@@ -1988,6 +2088,7 @@ def upload_project_attachment(project_id):
     except Exception as e:
         # Check if it's a table doesn't exist error
         from sqlalchemy.exc import ProgrammingError
+
         error_str = str(e)
         if "does not exist" in error_str or "relation" in error_str.lower() or isinstance(e, ProgrammingError):
             flash(_("The attachments feature requires a database migration. Please run: flask db upgrade"), "error")
@@ -2023,8 +2124,9 @@ def upload_project_attachment(project_id):
 @login_required
 def download_project_attachment(attachment_id):
     """Download a project attachment"""
-    from flask import current_app, send_file
     import os
+
+    from flask import current_app, send_file
 
     attachment = ProjectAttachment.query.get_or_404(attachment_id)
     project = attachment.project
@@ -2046,8 +2148,9 @@ def download_project_attachment(attachment_id):
 @admin_or_permission_required("edit_projects")
 def delete_project_attachment(attachment_id):
     """Delete a project attachment"""
-    from flask import current_app
     import os
+
+    from flask import current_app
 
     attachment = ProjectAttachment.query.get_or_404(attachment_id)
     project = attachment.project
@@ -2070,10 +2173,15 @@ def delete_project_attachment(attachment_id):
         return redirect(url_for("projects.view_project", project_id=project_id))
 
     log_event(
-        "project.attachment.deleted", user_id=current_user.id, project_id=project_id, attachment_id=attachment_id_for_log
+        "project.attachment.deleted",
+        user_id=current_user.id,
+        project_id=project_id,
+        attachment_id=attachment_id_for_log,
     )
     track_event(
-        current_user.id, "project.attachment.deleted", {"project_id": project_id, "attachment_id": attachment_id_for_log}
+        current_user.id,
+        "project.attachment.deleted",
+        {"project_id": project_id, "attachment_id": attachment_id_for_log},
     )
 
     flash(_("Attachment deleted successfully"), "success")

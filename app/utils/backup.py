@@ -1,12 +1,12 @@
-import os
 import io
 import json
+import os
 import shutil
-import tempfile
 import subprocess
+import tempfile
 from datetime import datetime
-from zipfile import ZipFile, ZIP_DEFLATED
 from urllib.parse import urlparse
+from zipfile import ZIP_DEFLATED, ZipFile
 
 
 def get_backup_root_dir(app) -> str:
@@ -219,8 +219,9 @@ def restore_backup(app, archive_path: str, progress_callback=None) -> tuple[bool
 
     Returns: (success, message)
     """
-    from app import db
     from time import sleep
+
+    from app import db
 
     if not archive_path or not os.path.exists(archive_path):
         return False, f"Backup archive not found: {archive_path}"
@@ -235,6 +236,7 @@ def restore_backup(app, archive_path: str, progress_callback=None) -> tuple[bool
         except Exception as e:
             # Log but continue - progress callback failure is not critical
             import logging
+
             logger = logging.getLogger(__name__)
             logger.debug(f"Progress callback failed: {e}")
 
@@ -253,6 +255,7 @@ def restore_backup(app, archive_path: str, progress_callback=None) -> tuple[bool
             except Exception as e:
                 # Log but continue - manifest reading failure is not critical
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.debug(f"Failed to read backup manifest: {e}")
 

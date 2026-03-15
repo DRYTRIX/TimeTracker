@@ -1,18 +1,30 @@
-import re
-
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, make_response, Response, current_app
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-import app as app_module
-from app import db
-from app.models import Task, Project, User, TimeEntry, TaskActivity, KanbanColumn, Activity
-from datetime import datetime, date
-from decimal import Decimal
-from app.utils.db import safe_commit
-from app.utils.timezone import now_in_app_timezone, convert_app_datetime_to_user
-from app.utils.pagination import get_pagination_params
 import csv
 import io
+import re
+from datetime import date, datetime
+from decimal import Decimal
+
+from flask import (
+    Blueprint,
+    Response,
+    current_app,
+    flash,
+    jsonify,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
+import app as app_module
+from app import db
+from app.models import Activity, KanbanColumn, Project, Task, TaskActivity, TimeEntry, User
+from app.utils.db import safe_commit
+from app.utils.pagination import get_pagination_params
+from app.utils.timezone import convert_app_datetime_to_user, now_in_app_timezone
 
 tasks_bp = Blueprint("tasks", __name__)
 
@@ -26,7 +38,9 @@ def _is_safe_next_url(next_url):
     next_url = next_url.strip()
     if not next_url.startswith("/") or next_url.startswith("//"):
         return False
-    return any(next_url == p or next_url.startswith(p + "?") or next_url.startswith(p + "#") for p in ALLOWED_NEXT_PREFIXES)
+    return any(
+        next_url == p or next_url.startswith(p + "?") or next_url.startswith(p + "#") for p in ALLOWED_NEXT_PREFIXES
+    )
 
 
 @tasks_bp.route("/tasks")
@@ -37,15 +51,15 @@ def list_tasks():
 
     # Get pagination parameters from request (respects per_page query param, defaults to DEFAULT_PAGE_SIZE)
     page, per_page = get_pagination_params()
-    
+
     # Parse filter parameters - support both single ID (backward compatibility) and multi-select
     def parse_ids(param_name):
         """Parse comma-separated IDs or single ID into a list of integers"""
         # Try multi-select parameter first (e.g., project_ids)
-        multi_param = request.args.get(param_name + 's', '').strip()
+        multi_param = request.args.get(param_name + "s", "").strip()
         if multi_param:
             try:
-                return [int(x.strip()) for x in multi_param.split(',') if x.strip()]
+                return [int(x.strip()) for x in multi_param.split(",") if x.strip()]
             except (ValueError, AttributeError):
                 return []
         # Fall back to single parameter for backward compatibility (e.g., project_id)
@@ -53,11 +67,11 @@ def list_tasks():
         if single_param:
             return [single_param]
         return []
-    
+
     status = request.args.get("status", "")
     priority = request.args.get("priority", "")
-    project_ids = parse_ids('project_id')
-    assigned_to_ids = parse_ids('assigned_to')
+    project_ids = parse_ids("project_id")
+    assigned_to_ids = parse_ids("assigned_to")
     search = request.args.get("search", "").strip()
     tags = request.args.get("tags", "").strip()
     overdue_param = request.args.get("overdue", "").strip().lower()
@@ -65,16 +79,16 @@ def list_tasks():
 
     # Check if this is an AJAX request first (before loading filter data)
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
-    
+
     # Use service layer to get tasks (prevents N+1 queries)
     task_service = TaskService()
-    
+
     # Optimize permission check - check is_admin first (no DB query needed)
     has_view_all_tasks = current_user.is_admin
     if not has_view_all_tasks:
         # Only check permission if not admin (roles are already loaded via lazy="joined")
         has_view_all_tasks = current_user.has_permission("view_all_tasks")
-    
+
     result = task_service.list_tasks(
         status=status if status else None,
         priority=priority if priority else None,
@@ -93,21 +107,23 @@ def list_tasks():
     # Check if this is an AJAX request
     if is_ajax:
         # Return only the tasks list HTML for AJAX requests
-        response = make_response(render_template(
-            "tasks/_tasks_list.html",
-            tasks=result["tasks"],
-            pagination=result["pagination"],
-            status=status,
-            priority=priority,
-            project_ids=project_ids,
-            assigned_to_ids=assigned_to_ids,
-            # Keep old single params for backward compatibility
-            project_id=project_ids[0] if len(project_ids) == 1 else None,
-            assigned_to=assigned_to_ids[0] if len(assigned_to_ids) == 1 else None,
-            search=search,
-            tags=tags,
-            overdue=overdue,
-        ))
+        response = make_response(
+            render_template(
+                "tasks/_tasks_list.html",
+                tasks=result["tasks"],
+                pagination=result["pagination"],
+                status=status,
+                priority=priority,
+                project_ids=project_ids,
+                assigned_to_ids=assigned_to_ids,
+                # Keep old single params for backward compatibility
+                project_id=project_ids[0] if len(project_ids) == 1 else None,
+                assigned_to=assigned_to_ids[0] if len(assigned_to_ids) == 1 else None,
+                search=search,
+                tags=tags,
+                overdue=overdue,
+            )
+        )
         response.headers["Content-Type"] = "text/html; charset=utf-8"
         return response
 
@@ -116,18 +132,13 @@ def list_tasks():
     # Use reasonable limits to avoid loading too many records
     projects = Project.query.filter_by(status="active").order_by(Project.name).limit(500).all()
     users = User.query.filter_by(is_active=True).order_by(User.username).limit(200).all()
-    
+
     # Kanban columns are already loaded in TaskService, but we need them for the template
     # This is a lightweight query, so it's acceptable
     kanban_columns = KanbanColumn.get_active_columns(project_id=None) if KanbanColumn else []
 
     # Pre-calculate task counts by status for summary cards (avoid template iteration)
-    task_counts = {
-        'todo': 0,
-        'in_progress': 0,
-        'review': 0,
-        'done': 0
-    }
+    task_counts = {"todo": 0, "in_progress": 0, "review": 0, "done": 0}
     for task in result["tasks"]:
         if task.status in task_counts:
             task_counts[task.status] += 1
@@ -173,8 +184,8 @@ def create_task():
         assigned_to = request.form.get("assigned_to", type=int)
 
         # Validate and sanitize input
-        from app.utils.validation import validate_string, sanitize_input
-        
+        from app.utils.validation import sanitize_input, validate_string
+
         # Validate required fields
         if not project_id or not name:
             flash(_("Project and task name are required"), "error")
@@ -304,9 +315,10 @@ def create_task():
 @login_required
 def view_task(task_id):
     """View task details - REFACTORED to use service layer with eager loading"""
-    from app.services import TaskService
     from sqlalchemy.orm import joinedload
+
     from app.models import Comment
+    from app.services import TaskService
 
     task_service = TaskService()
 
@@ -346,7 +358,7 @@ def view_task(task_id):
     # Load all comments (including replies) with their authors to avoid lazy loading issues
     # Use selectinload for replies to load them in a separate query, preventing circular loading
     from sqlalchemy.orm import selectinload
-    
+
     # Load all comments for this task with eager loading
     all_comments = (
         Comment.query.filter_by(task_id=task_id)
@@ -361,7 +373,7 @@ def view_task(task_id):
         .order_by(Comment.created_at.asc())
         .all()
     )
-    
+
     # Filter to only top-level comments (no parent_id) for the template
     # The replies relationship is now eagerly loaded for direct replies
     # Nested replies beyond the first level will be loaded lazily, but the template depth limit prevents issues
@@ -396,7 +408,7 @@ def edit_task(task_id):
         assigned_to = request.form.get("assigned_to", type=int)
 
         # Validate and sanitize input
-        from app.utils.validation import validate_string, sanitize_input
+        from app.utils.validation import sanitize_input, validate_string
 
         # Validate required fields
         if not name:
@@ -825,7 +837,7 @@ def bulk_delete_tasks():
 
     # Use eager loading to prevent N+1 queries when checking time entries
     from sqlalchemy.orm import joinedload
-    
+
     for task_id_str in task_ids:
         try:
             task_id = int(task_id_str)
@@ -845,11 +857,11 @@ def bulk_delete_tasks():
                 continue
 
             # Check for time entries - use exists() for better performance
-            from app.models import TimeEntry
             from sqlalchemy import exists
-            has_time_entries = db.session.query(
-                exists().where(TimeEntry.task_id == task_id)
-            ).scalar()
+
+            from app.models import TimeEntry
+
+            has_time_entries = db.session.query(exists().where(TimeEntry.task_id == task_id)).scalar()
             if has_time_entries:
                 skipped_count += 1
                 errors.append(f"'{task.name}': Has time entries")
@@ -986,6 +998,7 @@ def bulk_update_due_date():
 
     try:
         from datetime import datetime as dt
+
         due_date = dt.strptime(due_date_str, "%Y-%m-%d").date()
     except ValueError:
         if request.is_json:
@@ -1018,12 +1031,16 @@ def bulk_update_due_date():
             return redirect(url_for("tasks.list_tasks"))
 
     if request.is_json:
-        return jsonify({
-            "success": True,
-            "updated": updated_count,
-            "skipped": skipped_count,
-            "message": _("Updated %(count)s task(s)", count=updated_count) if updated_count else _("No tasks updated"),
-        })
+        return jsonify(
+            {
+                "success": True,
+                "updated": updated_count,
+                "skipped": skipped_count,
+                "message": (
+                    _("Updated %(count)s task(s)", count=updated_count) if updated_count else _("No tasks updated")
+                ),
+            }
+        )
     if updated_count > 0:
         flash(
             _("Successfully updated %(count)s task(s) due date to %(date)s", count=updated_count, date=due_date_str),
@@ -1089,12 +1106,16 @@ def bulk_update_priority():
             return redirect(url_for("tasks.list_tasks"))
 
     if request.is_json:
-        return jsonify({
-            "success": True,
-            "updated": updated_count,
-            "skipped": skipped_count,
-            "message": _("Updated %(count)s task(s)", count=updated_count) if updated_count else _("No tasks updated"),
-        })
+        return jsonify(
+            {
+                "success": True,
+                "updated": updated_count,
+                "skipped": skipped_count,
+                "message": (
+                    _("Updated %(count)s task(s)", count=updated_count) if updated_count else _("No tasks updated")
+                ),
+            }
+        )
     if updated_count > 0:
         flash(
             f'Successfully updated {updated_count} task{"s" if updated_count != 1 else ""} to {new_priority} priority',
@@ -1245,6 +1266,7 @@ def bulk_move_project():
 @login_required
 def export_tasks():
     """Export tasks to CSV (supports same filters as list view, including multi-select)"""
+
     # Parse filter parameters - same logic as list_tasks (multi-select + backward compat)
     def parse_ids(param_name):
         multi_param = request.args.get(param_name + "s", "").strip()

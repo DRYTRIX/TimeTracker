@@ -2,12 +2,14 @@
 Service for inventory reports and analytics.
 """
 
-from typing import Dict, List, Any, Optional
-from decimal import Decimal
 from datetime import datetime, timedelta
+from decimal import Decimal
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import and_, func
+
 from app import db
-from app.models import StockItem, WarehouseStock, Warehouse, StockMovement, StockLot
-from sqlalchemy import func, and_
+from app.models import StockItem, StockLot, StockMovement, Warehouse, WarehouseStock
 
 
 class InventoryReportService:

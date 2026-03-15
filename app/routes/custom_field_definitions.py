@@ -1,13 +1,15 @@
 """Custom Field Definition routes for managing global custom field definitions"""
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from datetime import datetime
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_babel import gettext as _
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
+
 from app import db
 from app.models import CustomFieldDefinition
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required
-from datetime import datetime
 
 custom_field_definitions_bp = Blueprint("custom_field_definitions", __name__)
 
@@ -110,8 +112,7 @@ def edit_custom_field_definition(definition_id):
 
         # Check for duplicate field_key (excluding current definition)
         existing = CustomFieldDefinition.query.filter(
-            CustomFieldDefinition.field_key == field_key,
-            CustomFieldDefinition.id != definition_id
+            CustomFieldDefinition.field_key == field_key, CustomFieldDefinition.id != definition_id
         ).first()
         if existing:
             flash(_("A custom field definition with this key already exists"), "error")
@@ -142,10 +143,10 @@ def edit_custom_field_definition(definition_id):
 def delete_custom_field_definition(definition_id):
     """Delete a custom field definition"""
     from app.models import Client
-    
+
     definition = CustomFieldDefinition.query.get_or_404(definition_id)
     field_key = definition.field_key
-    
+
     # Count clients that have a value for this custom field
     clients_with_value = []
     for client in Client.query.all():
@@ -153,19 +154,19 @@ def delete_custom_field_definition(definition_id):
             value = client.custom_fields.get(field_key)
             if value and str(value).strip():
                 clients_with_value.append(client)
-    
+
     client_count = len(clients_with_value)
-    
+
     # Remove the custom field from all clients that have it
     if client_count > 0:
         for client in clients_with_value:
             client.remove_custom_field(field_key)
-        
+
         # Commit the client updates before deleting the definition
         if not safe_commit("remove_custom_field_from_clients", {"field_key": field_key, "client_count": client_count}):
             flash(_("Could not remove custom field from clients due to a database error."), "error")
             return redirect(url_for("custom_field_definitions.list_custom_field_definitions"))
-    
+
     # Now delete the definition (capture id before delete to avoid using detached object)
     definition_id = definition.id
     db.session.delete(definition)
@@ -174,8 +175,11 @@ def delete_custom_field_definition(definition_id):
     else:
         if client_count > 0:
             flash(
-                _("Custom field definition deleted successfully. The field was removed from %(count)d client(s).", count=client_count),
-                "success"
+                _(
+                    "Custom field definition deleted successfully. The field was removed from %(count)d client(s).",
+                    count=client_count,
+                ),
+                "success",
             )
         else:
             flash(_("Custom field definition deleted successfully"), "success")

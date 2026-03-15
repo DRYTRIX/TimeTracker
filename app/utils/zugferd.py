@@ -22,7 +22,6 @@ from typing import Any, Optional, Tuple
 
 from app.utils.cii_invoice import CIIParty, build_cii_invoice_xml
 
-
 # Standard embedded filename per Factur-X specification
 FACTURX_EMBEDDED_FILENAME = "factur-x.xml"
 # Legacy alias kept for backwards compatibility in tests
@@ -39,8 +38,7 @@ def _get_seller_party(settings: Any) -> CIIParty:
         tax_id=(getattr(settings, "company_tax_id", None) or "").strip() or None,
         address_line=(getattr(settings, "company_address", None) or "").strip() or None,
         country_code=(
-            (getattr(settings, "peppol_sender_country", "") or os.getenv("PEPPOL_SENDER_COUNTRY") or "").strip()
-            or None
+            (getattr(settings, "peppol_sender_country", "") or os.getenv("PEPPOL_SENDER_COUNTRY") or "").strip() or None
         ),
         email=(getattr(settings, "company_email", None) or "").strip() or None,
         phone=(getattr(settings, "company_phone", None) or "").strip() or None,
@@ -73,7 +71,9 @@ def _get_buyer_party(invoice: Any) -> CIIParty:
         country = (client.get_custom_field("peppol_country", "") or "").strip() or None
         name = (getattr(client, "name", None) or getattr(invoice, "client_name", "") or "Customer").strip()
         tax_id = (client.get_custom_field("vat_id", "") or client.get_custom_field("tax_id", "") or "").strip() or None
-        address_line = (getattr(client, "address", None) or getattr(invoice, "client_address", None) or "").strip() or None
+        address_line = (
+            getattr(client, "address", None) or getattr(invoice, "client_address", None) or ""
+        ).strip() or None
         email = (getattr(client, "email", None) or getattr(invoice, "client_email", None) or "").strip() or None
         phone = (getattr(client, "phone", None) or "").strip() or None
 
@@ -183,6 +183,7 @@ def embed_zugferd_xml_in_pdf(pdf_bytes: bytes, invoice: Any, settings: Any) -> T
         cii_bytes = cii_xml.encode("utf-8")
         try:
             from pikepdf import Name
+
             relationship = Name("/Alternative")
         except ImportError:
             relationship = "/Alternative"
@@ -195,9 +196,7 @@ def embed_zugferd_xml_in_pdf(pdf_bytes: bytes, invoice: Any, settings: Any) -> T
                 relationship=relationship,
             )
         except TypeError:
-            with tempfile.NamedTemporaryFile(
-                mode="wb", suffix=".xml", delete=False, prefix="facturx_"
-            ) as tmp:
+            with tempfile.NamedTemporaryFile(mode="wb", suffix=".xml", delete=False, prefix="facturx_") as tmp:
                 tmp.write(cii_bytes)
                 tmp_path = tmp.name
             try:

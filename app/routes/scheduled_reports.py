@@ -2,12 +2,14 @@
 Routes for scheduled reports management.
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app.models import SavedReportView, ReportEmailSchedule
-from app.services.scheduled_report_service import ScheduledReportService
 import logging
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
+from app.models import ReportEmailSchedule, SavedReportView
+from app.services.scheduled_report_service import ScheduledReportService
 from app.utils.module_helpers import module_enabled
 
 logger = logging.getLogger(__name__)
@@ -21,8 +23,9 @@ scheduled_reports_bp = Blueprint("scheduled_reports", __name__)
 def api_list_scheduled():
     """Get scheduled reports as JSON"""
     from sqlalchemy.orm import joinedload
-    from app.models import ReportEmailSchedule
+
     from app import db
+    from app.models import ReportEmailSchedule
 
     # Query with eager loading
     query = db.session.query(ReportEmailSchedule).options(joinedload(ReportEmailSchedule.saved_view))
@@ -60,7 +63,7 @@ def list_scheduled():
     try:
         service = ScheduledReportService()
         schedules = service.list_schedules(user_id=current_user.id)
-        
+
         # Validate schedules and filter out invalid ones
         valid_schedules = []
         for schedule in schedules:
@@ -69,8 +72,13 @@ def list_scheduled():
                 if schedule.saved_view:
                     # Try to parse config to validate
                     import json
+
                     try:
-                        config = json.loads(schedule.saved_view.config_json) if isinstance(schedule.saved_view.config_json, str) else schedule.saved_view.config_json
+                        config = (
+                            json.loads(schedule.saved_view.config_json)
+                            if isinstance(schedule.saved_view.config_json, str)
+                            else schedule.saved_view.config_json
+                        )
                         if not isinstance(config, dict):
                             logger.warning(f"Invalid config for schedule {schedule.id}, skipping")
                             continue
@@ -80,16 +88,18 @@ def list_scheduled():
                 else:
                     logger.warning(f"Schedule {schedule.id} has no saved_view, skipping")
                     continue
-                
+
                 valid_schedules.append(schedule)
             except Exception as e:
                 from flask import current_app
+
                 current_app.logger.error(f"Error validating schedule {schedule.id}: {e}", exc_info=True)
                 continue
-        
+
         return render_template("reports/scheduled.html", schedules=valid_schedules)
     except Exception as e:
         from flask import current_app
+
         current_app.logger.error(f"Error loading scheduled reports: {e}", exc_info=True)
         flash(_("Error loading scheduled reports. Please check the logs."), "error")
         return render_template("reports/scheduled.html", schedules=[])
@@ -185,7 +195,12 @@ def api_create_scheduled():
         return jsonify({"success": False, "error": _("Please fill in all required fields.")}), 400
 
     if split_by_custom_field and not custom_field_name:
-        return jsonify({"success": False, "error": _("Please specify a custom field name when enabling report iteration.")}), 400
+        return (
+            jsonify(
+                {"success": False, "error": _("Please specify a custom field name when enabling report iteration.")}
+            ),
+            400,
+        )
 
     result = service.create_schedule(
         saved_view_id=saved_view_id,
@@ -279,16 +294,17 @@ def api_saved_views():
 @module_enabled("scheduled_reports")
 def fix_scheduled(schedule_id):
     """Fix or remove an invalid scheduled report"""
-    from app import db
     import json
-    
+
+    from app import db
+
     schedule = ReportEmailSchedule.query.get_or_404(schedule_id)
-    
+
     # Check permission
     if schedule.created_by != current_user.id and not current_user.is_admin:
         flash(_("You do not have permission to fix this schedule."), "error")
         return redirect(url_for("scheduled_reports.list_scheduled"))
-    
+
     # Try to validate the saved view
     if not schedule.saved_view:
         # Saved view doesn't exist - delete the schedule
@@ -296,10 +312,14 @@ def fix_scheduled(schedule_id):
         db.session.commit()
         flash(_("Scheduled report deleted: saved view no longer exists."), "success")
         return redirect(url_for("scheduled_reports.list_scheduled"))
-    
+
     # Try to parse config
     try:
-        config = json.loads(schedule.saved_view.config_json) if isinstance(schedule.saved_view.config_json, str) else schedule.saved_view.config_json
+        config = (
+            json.loads(schedule.saved_view.config_json)
+            if isinstance(schedule.saved_view.config_json, str)
+            else schedule.saved_view.config_json
+        )
         if not isinstance(config, dict):
             # Invalid config - deactivate the schedule
             schedule.active = False
@@ -313,7 +333,7 @@ def fix_scheduled(schedule_id):
         db.session.commit()
         flash(_("Scheduled report deactivated: could not parse configuration."), "warning")
         return redirect(url_for("scheduled_reports.list_scheduled"))
-    
+
     # If we get here, the schedule is valid - reactivate it
     schedule.active = True
     db.session.commit()
@@ -327,25 +347,21 @@ def fix_scheduled(schedule_id):
 def api_trigger_scheduled(schedule_id):
     """Manually trigger a scheduled report for testing"""
     service = ScheduledReportService()
-    
+
     schedule = ReportEmailSchedule.query.get_or_404(schedule_id)
-    
+
     # Check permission
     if schedule.created_by != current_user.id and not current_user.is_admin:
         return jsonify({"success": False, "error": _("Permission denied")}), 403
-    
+
     # Check if schedule is valid
     if not schedule.saved_view:
         return jsonify({"success": False, "error": _("Saved report view not found")}), 400
-    
+
     # Trigger the report generation
     result = service.generate_and_send_report(schedule_id)
-    
+
     if result["success"]:
-        return jsonify({
-            "success": True,
-            "message": result["message"],
-            "sent_count": result.get("sent_count", 0)
-        })
+        return jsonify({"success": True, "message": result["message"], "sent_count": result.get("sent_count", 0)})
     else:
         return jsonify({"success": False, "error": result["message"]}), 400

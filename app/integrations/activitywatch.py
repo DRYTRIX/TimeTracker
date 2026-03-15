@@ -176,9 +176,7 @@ class ActivityWatchConnector(BaseConnector):
                 }
         else:
             selected = [
-                b
-                for b in all_bucket_ids
-                if b.startswith("aw-watcher-window_") or b.startswith("aw-watcher-web_")
+                b for b in all_bucket_ids if b.startswith("aw-watcher-window_") or b.startswith("aw-watcher-web_")
             ]
 
         if not selected:

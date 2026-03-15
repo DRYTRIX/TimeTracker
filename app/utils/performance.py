@@ -7,6 +7,7 @@ Enable via config:
 """
 
 import logging
+
 from flask import g, request
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
@@ -48,12 +49,17 @@ def init_performance_logging(app):
             if query_count is not None:
                 logger.warning(
                     "slow_request path=%s duration_ms=%.0f status=%s query_count=%s",
-                    request.path, duration_ms, response.status_code, query_count,
+                    request.path,
+                    duration_ms,
+                    response.status_code,
+                    query_count,
                 )
             else:
                 logger.warning(
                     "slow_request path=%s duration_ms=%.0f status=%s",
-                    request.path, duration_ms, response.status_code,
+                    request.path,
+                    duration_ms,
+                    response.status_code,
                 )
         except Exception:
             pass

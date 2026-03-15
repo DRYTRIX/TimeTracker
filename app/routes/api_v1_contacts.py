@@ -3,12 +3,13 @@ API v1 - Contacts (CRM) sub-blueprint.
 Routes under /api/v1/clients/<id>/contacts and /api/v1/contacts.
 """
 
-from flask import Blueprint, jsonify, request, g
+from flask import Blueprint, g, jsonify, request
+
 from app import db
 from app.models import Client, Contact
+from app.routes.api_v1_common import _require_module_enabled_for_api
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import error_response, forbidden_response
-from app.routes.api_v1_common import _require_module_enabled_for_api
 
 api_v1_contacts_bp = Blueprint("api_v1_contacts", __name__, url_prefix="/api/v1")
 
@@ -92,12 +93,22 @@ def update_contact(contact_id):
     contact = Contact.query.filter_by(id=contact_id).first_or_404()
     data = request.get_json() or {}
     for field in (
-        "first_name", "last_name", "email", "phone", "mobile", "title",
-        "department", "role", "address", "notes", "tags",
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "mobile",
+        "title",
+        "department",
+        "role",
+        "address",
+        "notes",
+        "tags",
     ):
         if field in data and data[field] is not None:
             setattr(
-                contact, field,
+                contact,
+                field,
                 str(data[field]).strip() if isinstance(data[field], str) else data[field],
             )
     if "is_primary" in data:

@@ -2,13 +2,14 @@
 Time Entry Approval routes
 """
 
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
-from flask_login import login_required, current_user
-from app import db
-from app.models.time_entry_approval import TimeEntryApproval, ApprovalPolicy, ApprovalStatus
-from app.models import TimeEntry
-from app.services.time_approval_service import TimeApprovalService
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
+from app import db
+from app.models import TimeEntry
+from app.models.time_entry_approval import ApprovalPolicy, ApprovalStatus, TimeEntryApproval
+from app.services.time_approval_service import TimeApprovalService
 from app.utils.module_helpers import module_enabled
 
 time_approvals_bp = Blueprint("time_approvals", __name__)
@@ -48,9 +49,8 @@ def view_approval(approval_id):
             return redirect(url_for("time_approvals.list_approvals"))
 
     # Can current user approve this (pending) request?
-    can_approve = (
-        approval.status == ApprovalStatus.PENDING
-        and (current_user.id in approver_ids or current_user.is_admin)
+    can_approve = approval.status == ApprovalStatus.PENDING and (
+        current_user.id in approver_ids or current_user.is_admin
     )
 
     return render_template("approvals/view.html", approval=approval, can_approve=can_approve)

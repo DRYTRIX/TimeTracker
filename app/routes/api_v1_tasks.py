@@ -3,7 +3,8 @@ API v1 - Tasks sub-blueprint.
 Routes under /api/v1/tasks.
 """
 
-from flask import Blueprint, jsonify, request, g
+from flask import Blueprint, g, jsonify, request
+
 from app import db
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import error_response, not_found_response, validation_error_response
@@ -50,12 +51,11 @@ def list_tasks():
 def get_task(task_id):
     """Get a specific task."""
     from sqlalchemy.orm import joinedload
+
     from app.models import Task
 
     task = (
-        Task.query.options(
-            joinedload(Task.project), joinedload(Task.assignee), joinedload(Task.created_by_user)
-        )
+        Task.query.options(joinedload(Task.project), joinedload(Task.assignee), joinedload(Task.created_by_user))
         .filter_by(id=task_id)
         .first_or_404()
     )

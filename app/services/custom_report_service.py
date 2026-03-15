@@ -2,13 +2,15 @@
 Custom Report Builder Service
 """
 
-from typing import Dict, List, Any, Optional
-from datetime import datetime
-from app import db
-from app.models.custom_report import CustomReportConfig
-from app.models import TimeEntry, Project, Invoice, Expense, User
-from sqlalchemy import func, and_, or_
 import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import and_, func, or_
+
+from app import db
+from app.models import Expense, Invoice, Project, TimeEntry, User
+from app.models.custom_report import CustomReportConfig
 
 logger = logging.getLogger(__name__)
 

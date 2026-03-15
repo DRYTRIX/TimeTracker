@@ -1,15 +1,17 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db
-from app.models import CalendarEvent, Task, Project, Client, TimeEntry, CalendarIntegration
-from app.services.calendar_integration_service import CalendarIntegrationService
-from datetime import datetime, timedelta
-from app.utils.db import safe_commit
-from app.utils.timezone import now_in_app_timezone
-from app.utils.permissions import check_permission
-from app.utils.module_helpers import module_enabled
 import os
+from datetime import datetime, timedelta
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
+from app import db
+from app.models import CalendarEvent, CalendarIntegration, Client, Project, Task, TimeEntry
+from app.services.calendar_integration_service import CalendarIntegrationService
+from app.utils.db import safe_commit
+from app.utils.module_helpers import module_enabled
+from app.utils.permissions import check_permission
+from app.utils.timezone import now_in_app_timezone
 
 calendar_bp = Blueprint("calendar", __name__)
 
@@ -117,11 +119,11 @@ def get_events():
     def get_type_color(typ):
         defaults = {"event": "#3b82f6", "task": "#f59e0b", "time_entry": "#10b981", "time_entry_running": "#06b6d4"}
         if typ == "event":
-            return (current_user.calendar_color_events or defaults["event"])
+            return current_user.calendar_color_events or defaults["event"]
         if typ == "task":
-            return (current_user.calendar_color_tasks or defaults["task"])
+            return current_user.calendar_color_tasks or defaults["task"]
         if typ == "time_entry":
-            return (current_user.calendar_color_time_entries or defaults["time_entry"])
+            return current_user.calendar_color_time_entries or defaults["time_entry"]
         if typ == "time_entry_running":
             return defaults["time_entry_running"]
         return defaults.get(typ, "#6b7280")

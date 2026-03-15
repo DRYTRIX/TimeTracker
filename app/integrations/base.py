@@ -3,8 +3,8 @@ Base connector interface for integrations.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 
 class BaseConnector(ABC):
@@ -120,7 +120,9 @@ class BaseConnector(ABC):
         # Default implementation - override in subclasses
         return {"success": False, "message": "Sync not implemented for this connector"}
 
-    def handle_webhook(self, payload: Dict[str, Any], headers: Dict[str, str], raw_body: Optional[bytes] = None) -> Dict[str, Any]:
+    def handle_webhook(
+        self, payload: Dict[str, Any], headers: Dict[str, str], raw_body: Optional[bytes] = None
+    ) -> Dict[str, Any]:
         """
         Handle incoming webhook from the service.
 
@@ -183,7 +185,7 @@ class BaseConnector(ABC):
                 "sync_interval": "manual",
                 "sync_direction": "provider_to_timetracker",
                 "sync_items": [],
-            }
+            },
         }
 
     def validate_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
@@ -198,7 +200,7 @@ class BaseConnector(ABC):
         """
         schema = self.get_config_schema()
         errors = []
-        
+
         # Check required fields
         required_fields = schema.get("required", [])
         for field_name in required_fields:
@@ -210,16 +212,16 @@ class BaseConnector(ABC):
                         field_label = field.get("label", field_name)
                         break
                 errors.append(f"{field_label} is required")
-        
+
         # Validate field types and constraints
         for field in schema.get("fields", []):
             field_name = field.get("name")
             if field_name not in config:
                 continue
-                
+
             value = config[field_name]
             field_type = field.get("type", "string")
-            
+
             # Type validation
             if field_type == "number" and value is not None:
                 try:
@@ -238,6 +240,7 @@ class BaseConnector(ABC):
             elif field_type == "url" and value:
                 try:
                     from urllib.parse import urlparse
+
                     parsed = urlparse(value)
                     if not parsed.scheme or not parsed.netloc:
                         errors.append(f"{field.get('label', field_name)} must be a valid URL")
@@ -246,51 +249,54 @@ class BaseConnector(ABC):
             elif field_type == "json" and value:
                 try:
                     import json
+
                     if isinstance(value, str):
                         json.loads(value)
                 except json.JSONDecodeError:
                     errors.append(f"{field.get('label', field_name)} must be valid JSON")
-        
+
         return {"valid": len(errors) == 0, "errors": errors}
-    
+
     def get_sync_settings(self) -> Dict[str, Any]:
         """
         Get current sync settings from integration config.
-        
+
         Returns:
             Dict with sync settings
         """
         if not self.integration or not self.integration.config:
             schema = self.get_config_schema()
             return schema.get("sync_settings", {})
-        
+
         config = self.integration.config
         schema = self.get_config_schema()
         default_sync_settings = schema.get("sync_settings", {})
-        
+
         return {
             "enabled": config.get("sync_enabled", default_sync_settings.get("enabled", True)),
             "auto_sync": config.get("auto_sync", default_sync_settings.get("auto_sync", False)),
             "sync_interval": config.get("sync_interval", default_sync_settings.get("sync_interval", "manual")),
-            "sync_direction": config.get("sync_direction", default_sync_settings.get("sync_direction", "provider_to_timetracker")),
+            "sync_direction": config.get(
+                "sync_direction", default_sync_settings.get("sync_direction", "provider_to_timetracker")
+            ),
             "sync_items": config.get("sync_items", default_sync_settings.get("sync_items", [])),
         }
-    
+
     def get_field_mappings(self) -> Dict[str, str]:
         """
         Get field mappings for data translation.
-        
+
         Returns:
             Dict mapping provider fields to TimeTracker fields
         """
         if not self.integration or not self.integration.config:
             return {}
         return self.integration.config.get("field_mappings", {})
-    
+
     def get_status_mappings(self) -> Dict[str, str]:
         """
         Get status mappings for data translation.
-        
+
         Returns:
             Dict mapping provider statuses to TimeTracker statuses
         """

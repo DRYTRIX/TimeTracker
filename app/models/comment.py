@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from app import db
 from app.utils.timezone import now_in_app_timezone
 
@@ -18,7 +19,9 @@ class Comment(db.Model):
 
     # Author of the comment (nullable for client comments)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
-    client_contact_id = db.Column(db.Integer, db.ForeignKey("contacts.id"), nullable=True, index=True)  # For client comments
+    client_contact_id = db.Column(
+        db.Integer, db.ForeignKey("contacts.id"), nullable=True, index=True
+    )  # For client comments
 
     # Visibility: True = internal team comment, False = client-visible comment
     is_internal = db.Column(db.Boolean, default=True, nullable=False)
@@ -42,7 +45,15 @@ class Comment(db.Model):
     parent = db.relationship("Comment", remote_side=[id], backref="replies")
 
     def __init__(
-        self, content, user_id=None, client_contact_id=None, project_id=None, task_id=None, quote_id=None, parent_id=None, is_internal=True
+        self,
+        content,
+        user_id=None,
+        client_contact_id=None,
+        project_id=None,
+        task_id=None,
+        quote_id=None,
+        parent_id=None,
+        is_internal=True,
     ):
         """Create a comment.
 
@@ -85,14 +96,14 @@ class Comment(db.Model):
             target = f"Quote {self.quote_id}"
         else:
             target = "Unknown"
-        
+
         author_name = "Unknown"
         if self.author:
             author_name = self.author.username
         elif self.client_contact:
             author_name = self.client_contact.full_name
-        
-        return f'<Comment by {author_name} on {target}>'
+
+        return f"<Comment by {author_name} on {target}>"
 
     @property
     def is_reply(self):
@@ -168,7 +179,7 @@ class Comment(db.Model):
         elif self.client_contact:
             author_name = self.client_contact.full_name
             author_full_name = self.client_contact.full_name
-        
+
         result = {
             "id": self.id,
             "content": self.content,
@@ -189,13 +200,13 @@ class Comment(db.Model):
             "is_internal": self.is_internal,
             "is_client_comment": self.is_client_comment,
         }
-        
+
         # Add attachments if relationship exists
-        if hasattr(self, 'attachments'):
+        if hasattr(self, "attachments"):
             result["attachments"] = [att.to_dict() for att in self.attachments.all()]
         else:
             result["attachments"] = []
-        
+
         return result
 
     @classmethod

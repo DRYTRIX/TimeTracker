@@ -2,7 +2,8 @@
 Service for permission and role management.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from app import db
 from app.models import Permission, Role, User
 from app.repositories import UserRepository

@@ -1,54 +1,59 @@
 """REST API v1 - Comprehensive API endpoints with token authentication"""
 
-from flask import Blueprint, jsonify, request, current_app, g, Response
+from datetime import date, datetime, timedelta
+
+from flask import Blueprint, Response, current_app, g, jsonify, request
+from sqlalchemy import func, or_
+
 from app import db, limiter
 from app.models import (
-    User,
-    Project,
-    TimeEntry,
-    Task,
-    Client,
-    Invoice,
-    Expense,
-    SavedFilter,
-    FocusSession,
-    RecurringBlock,
-    Comment,
-    Payment,
-    Mileage,
-    PerDiem,
-    PerDiemRate,
+    Activity,
+    ApiToken,
+    AuditLog,
     BudgetAlert,
     CalendarEvent,
-    KanbanColumn,
-    TimeEntryTemplate,
-    CreditNote,
-    RecurringInvoice,
+    Client,
     ClientNote,
-    ProjectCost,
-    TaxRule,
+    Comment,
+    Contact,
+    CreditNote,
     Currency,
+    Deal,
     ExchangeRate,
-    UserFavoriteProject,
-    Activity,
-    AuditLog,
+    Expense,
+    FocusSession,
+    Invoice,
     InvoicePDFTemplate,
     InvoiceTemplate,
-    Webhook,
-    WebhookDelivery,
-    Warehouse,
+    KanbanColumn,
+    Lead,
+    Mileage,
+    Payment,
+    PerDiem,
+    PerDiemRate,
+    Project,
+    ProjectCost,
+    PurchaseOrder,
+    RecurringBlock,
+    RecurringInvoice,
+    SavedFilter,
     StockItem,
-    WarehouseStock,
     StockMovement,
     StockReservation,
     Supplier,
-    PurchaseOrder,
-    ApiToken,
-    Deal,
-    Lead,
-    Contact,
+    Task,
+    TaxRule,
+    TimeEntry,
+    TimeEntryTemplate,
+    User,
+    UserFavoriteProject,
+    Warehouse,
+    WarehouseStock,
+    Webhook,
+    WebhookDelivery,
 )
-from app.models.time_entry_approval import TimeEntryApproval, ApprovalStatus
+from app.models.time_entry import local_now
+from app.models.time_entry_approval import ApprovalStatus, TimeEntryApproval
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import (
     error_response,
@@ -58,22 +63,18 @@ from app.utils.api_responses import (
     success_response,
     validation_error_response,
 )
-from datetime import datetime, timedelta, date
-from sqlalchemy import func, or_
 from app.utils.timezone import get_app_timezone, parse_local_datetime, utc_to_local
-from app.models.time_entry import local_now
 
 api_v1_bp = Blueprint("api_v1", __name__, url_prefix="/api/v1")
 
 # Shared helpers for API v1 (used here and in api_v1_time_entries)
 from app.routes.api_v1_common import (
-    paginate_query,
-    parse_datetime,
     _parse_date,
     _parse_date_range,
     _require_module_enabled_for_api,
+    paginate_query,
+    parse_datetime,
 )
-
 
 # ==================== API Info & Health ====================
 
@@ -101,11 +102,12 @@ def api_info():
     """
     # Get app version from setup.py (single source of truth)
     from app.config.analytics_defaults import get_version_from_setup
+
     app_version = get_version_from_setup()
     if app_version == "unknown":
         # Fallback to config or default
         app_version = current_app.config.get("APP_VERSION", "1.0.0")
-    
+
     return jsonify(
         {
             "api_version": "v1",
@@ -253,6 +255,7 @@ def list_time_entry_approvals():
     if blocked:
         return blocked
     from app.services.time_approval_service import TimeApprovalService
+
     service = TimeApprovalService()
     approvals = service.get_pending_approvals(g.api_user.id)
     return jsonify({"approvals": [a.to_dict() for a in approvals]})
@@ -267,6 +270,7 @@ def get_time_entry_approval(approval_id):
         return blocked
     approval = TimeEntryApproval.query.filter_by(id=approval_id).first_or_404()
     from app.services.time_approval_service import TimeApprovalService
+
     service = TimeApprovalService()
     approver_ids = service._get_approvers_for_entry(approval.time_entry)
     if approval.requested_by != g.api_user.id and (approval.approved_by or 0) != g.api_user.id:
@@ -283,6 +287,7 @@ def approve_time_entry(approval_id):
     if blocked:
         return blocked
     from app.services.time_approval_service import TimeApprovalService
+
     service = TimeApprovalService()
     data = request.get_json(silent=True) or {}
     result = service.approve(approval_id=approval_id, approver_id=g.api_user.id, comment=data.get("comment"))
@@ -299,6 +304,7 @@ def reject_time_entry(approval_id):
     if blocked:
         return blocked
     from app.services.time_approval_service import TimeApprovalService
+
     service = TimeApprovalService()
     data = request.get_json(silent=True) or {}
     reason = data.get("reason") or data.get("rejection_reason")
@@ -318,6 +324,7 @@ def cancel_time_entry_approval(approval_id):
     if blocked:
         return blocked
     from app.services.time_approval_service import TimeApprovalService
+
     service = TimeApprovalService()
     result = service.cancel_approval(approval_id=approval_id, user_id=g.api_user.id)
     if not result.get("success"):
@@ -333,6 +340,7 @@ def request_time_entry_approval(entry_id):
     if blocked:
         return blocked
     from app.services.time_approval_service import TimeApprovalService
+
     service = TimeApprovalService()
     data = request.get_json(silent=True) or {}
     result = service.request_approval(
@@ -354,6 +362,7 @@ def bulk_approve_time_entries():
     if blocked:
         return blocked
     from app.services.time_approval_service import TimeApprovalService
+
     service = TimeApprovalService()
     data = request.get_json(silent=True) or {}
     approval_ids = data.get("approval_ids", [])
@@ -1264,10 +1273,10 @@ def list_quotes():
     tags:
       - Quotes
     """
-    from app.models import Quote
-
-    from app.services import QuoteService
     from sqlalchemy.orm import joinedload
+
+    from app.models import Quote
+    from app.services import QuoteService
 
     status = request.args.get("status")
     client_id = request.args.get("client_id", type=int)
@@ -1318,7 +1327,6 @@ def get_quote(quote_id):
       - Quotes
     """
     from app.models import Quote
-
     from app.services import QuoteService
 
     quote_service = QuoteService()
@@ -1340,10 +1348,11 @@ def create_quote():
     tags:
       - Quotes
     """
-    from app.services import QuoteService
-    from app.models import QuoteItem
-    from decimal import Decimal
     from datetime import date
+    from decimal import Decimal
+
+    from app.models import QuoteItem
+    from app.services import QuoteService
 
     data = request.get_json() or {}
     client_id = data.get("client_id")
@@ -1403,12 +1412,10 @@ def update_quote(quote_id):
     tags:
       - Quotes
     """
-    from app.models import Quote, QuoteItem
     from decimal import Decimal
 
+    from app.models import Quote, QuoteItem
     from app.services import QuoteService
-    from app.models import QuoteItem
-    from decimal import Decimal
 
     data = request.get_json() or {}
 
@@ -1474,10 +1481,10 @@ def delete_quote(quote_id):
     tags:
       - Quotes
     """
-    from app.models import Quote
-
-    from app.services import QuoteService
     from sqlalchemy.orm import joinedload
+
+    from app.models import Quote
+    from app.services import QuoteService
 
     # Use service layer with eager loading
     quote_service = QuoteService()
@@ -2767,10 +2774,12 @@ def list_users():
         .all()
     )
     total_hours_by_user = {uid: round((total_seconds or 0) / 3600, 2) for uid, total_seconds in rows}
-    return jsonify({
-        "users": [u.to_dict(total_hours_override=total_hours_by_user.get(u.id)) for u in items],
-        "pagination": result["pagination"],
-    })
+    return jsonify(
+        {
+            "users": [u.to_dict(total_hours_override=total_hours_by_user.get(u.id)) for u in items],
+            "pagination": result["pagination"],
+        }
+    )
 
 
 # ==================== Webhooks ====================
@@ -3150,13 +3159,14 @@ def get_stock_item_api(item_id):
 def create_stock_item_api():
     """Create a stock item"""
     from decimal import Decimal
+
     data = request.get_json() or {}
-    
+
     required_fields = ["sku", "name"]
     missing = [f for f in required_fields if not data.get(f)]
     if missing:
         return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
-    
+
     try:
         item = StockItem(
             sku=data["sku"],
@@ -3185,9 +3195,10 @@ def create_stock_item_api():
 def update_stock_item_api(item_id):
     """Update a stock item"""
     from decimal import Decimal
+
     item = StockItem.query.get_or_404(item_id)
     data = request.get_json() or {}
-    
+
     try:
         # Update fields
         if "name" in data:
@@ -3210,7 +3221,7 @@ def update_stock_item_api(item_id):
             item.currency_code = data["currency_code"]
         if "is_active" in data:
             item.is_active = bool(data["is_active"])
-        
+
         db.session.commit()
         return jsonify({"message": "Stock item updated successfully", "item": item.to_dict()})
     except Exception as e:
@@ -3224,7 +3235,7 @@ def update_stock_item_api(item_id):
 def delete_stock_item_api(item_id):
     """Delete (deactivate) a stock item"""
     item = StockItem.query.get_or_404(item_id)
-    
+
     try:
         # Soft delete by deactivating
         item.is_active = False
@@ -3323,9 +3334,10 @@ def get_stock_levels_api():
 @require_api_token("write:projects")
 def create_stock_movement_api():
     """Create a stock movement with optional devaluation support for return/waste movements"""
-    from app.models import StockItem, WarehouseStock
     from decimal import Decimal, InvalidOperation
-    
+
+    from app.models import StockItem, WarehouseStock
+
     data = request.get_json() or {}
 
     movement_type = data.get("movement_type", "adjustment")
@@ -3349,7 +3361,7 @@ def create_stock_movement_api():
 
     try:
         quantity = Decimal(str(quantity))
-        
+
         # Initialize variables
         lot_type = None
         unit_cost_override = None
@@ -3401,9 +3413,14 @@ def create_stock_movement_api():
             ).first()
             available_qty = warehouse_stock.quantity_on_hand if warehouse_stock else Decimal("0")
             if available_qty < quantity:
-                return jsonify({
-                    "error": f"Insufficient stock to devalue. Available: {float(available_qty)}, Requested: {float(quantity)}"
-                }), 400
+                return (
+                    jsonify(
+                        {
+                            "error": f"Insufficient stock to devalue. Available: {float(available_qty)}, Requested: {float(quantity)}"
+                        }
+                    ),
+                    400,
+                )
 
             StockMovement.record_devaluation(
                 stock_item_id=stock_item_id,
@@ -3430,7 +3447,7 @@ def create_stock_movement_api():
             if devalue_enabled:
                 if not item.is_trackable:
                     return jsonify({"error": "Stock item is not trackable. Devaluation requires trackable items."}), 400
-                
+
                 base_cost = item.default_cost or Decimal("0")
                 if base_cost <= 0:
                     return jsonify({"error": "Stock item must have a default cost to perform devaluation"}), 400
@@ -3460,9 +3477,14 @@ def create_stock_movement_api():
 
                 # Validate devaluation cost is not greater than original
                 if unit_cost_override > base_cost:
-                    return jsonify({
-                        "error": f"Devaluation cost ({float(unit_cost_override)}) cannot be greater than original cost ({float(base_cost)})"
-                    }), 400
+                    return (
+                        jsonify(
+                            {
+                                "error": f"Devaluation cost ({float(unit_cost_override)}) cannot be greater than original cost ({float(base_cost)})"
+                            }
+                        ),
+                        400,
+                    )
 
                 # Returns: book inbound directly into a devalued lot
                 if movement_type == "return":
@@ -3472,16 +3494,21 @@ def create_stock_movement_api():
                 # Waste: devalue existing stock first, then waste from the devalued lot
                 elif movement_type == "waste":
                     qty_to_waste = abs(quantity)
-                    
+
                     # Check stock availability
                     warehouse_stock = WarehouseStock.query.filter_by(
                         warehouse_id=warehouse_id, stock_item_id=stock_item_id
                     ).first()
                     available_qty = warehouse_stock.quantity_on_hand if warehouse_stock else Decimal("0")
                     if available_qty < qty_to_waste:
-                        return jsonify({
-                            "error": f"Insufficient stock to waste. Available: {float(available_qty)}, Requested: {float(qty_to_waste)}"
-                        }), 400
+                        return (
+                            jsonify(
+                                {
+                                    "error": f"Insufficient stock to waste. Available: {float(available_qty)}, Requested: {float(qty_to_waste)}"
+                                }
+                            ),
+                            400,
+                        )
 
                     # Devalue the quantity first (creates a devalued lot)
                     try:
@@ -3509,7 +3536,11 @@ def create_stock_movement_api():
                 moved_by=g.api_user.id,
                 reference_type=reference_type,
                 reference_id=reference_id,
-                unit_cost=unit_cost_override if unit_cost_override is not None else (Decimal(str(unit_cost)) if unit_cost else None),
+                unit_cost=(
+                    unit_cost_override
+                    if unit_cost_override is not None
+                    else (Decimal(str(unit_cost)) if unit_cost else None)
+                ),
                 reason=reason,
                 notes=notes,
                 lot_type=lot_type,
@@ -3554,8 +3585,9 @@ def create_stock_movement_api():
 @require_api_token("read:projects")
 def list_suppliers_api():
     """List suppliers"""
-    from app.models import Supplier
     from sqlalchemy import or_
+
+    from app.models import Supplier
 
     search = request.args.get("search", "").strip()
     active_only = request.args.get("active_only", "true").lower() == "true"
@@ -3590,19 +3622,20 @@ def get_supplier_api(supplier_id):
 def create_supplier_api():
     """Create a supplier"""
     from app.models import Supplier
+
     data = request.get_json() or {}
-    
+
     required_fields = ["code", "name"]
     missing = [f for f in required_fields if not data.get(f)]
     if missing:
         return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
-    
+
     try:
         # Check for duplicate code
         existing = Supplier.query.filter_by(code=data["code"]).first()
         if existing:
             return jsonify({"error": f"Supplier with code '{data['code']}' already exists"}), 400
-        
+
         supplier = Supplier(
             code=data["code"],
             name=data["name"],
@@ -3628,9 +3661,10 @@ def create_supplier_api():
 def update_supplier_api(supplier_id):
     """Update a supplier"""
     from app.models import Supplier
+
     supplier = Supplier.query.get_or_404(supplier_id)
     data = request.get_json() or {}
-    
+
     try:
         # Check for duplicate code if changing
         if "code" in data and data["code"] != supplier.code:
@@ -3638,7 +3672,7 @@ def update_supplier_api(supplier_id):
             if existing:
                 return jsonify({"error": f"Supplier with code '{data['code']}' already exists"}), 400
             supplier.code = data["code"]
-        
+
         if "name" in data:
             supplier.name = data["name"]
         if "contact_person" in data:
@@ -3655,7 +3689,7 @@ def update_supplier_api(supplier_id):
             supplier.notes = data.get("notes")
         if "is_active" in data:
             supplier.is_active = bool(data["is_active"])
-        
+
         db.session.commit()
         return jsonify({"message": "Supplier updated successfully", "supplier": supplier.to_dict()})
     except Exception as e:
@@ -3669,8 +3703,9 @@ def update_supplier_api(supplier_id):
 def delete_supplier_api(supplier_id):
     """Delete (deactivate) a supplier"""
     from app.models import Supplier
+
     supplier = Supplier.query.get_or_404(supplier_id)
-    
+
     try:
         # Soft delete by deactivating
         supplier.is_active = False
@@ -3711,8 +3746,9 @@ def get_supplier_stock_items_api(supplier_id):
 @require_api_token("read:projects")
 def list_purchase_orders_api():
     """List purchase orders"""
-    from app.models import PurchaseOrder
     from sqlalchemy import or_
+
+    from app.models import PurchaseOrder
 
     status = request.args.get("status", "")
     supplier_id = request.args.get("supplier_id", type=int)
@@ -3745,9 +3781,10 @@ def get_purchase_order_api(po_id):
 @require_api_token("write:projects")
 def create_purchase_order_api():
     """Create a purchase order"""
-    from app.models import PurchaseOrder, PurchaseOrderItem, Supplier
     from datetime import datetime
     from decimal import Decimal
+
+    from app.models import PurchaseOrder, PurchaseOrderItem, Supplier
 
     data = request.get_json() or {}
 
@@ -3817,36 +3854,48 @@ def create_purchase_order_api():
 @require_api_token("write:projects")
 def update_purchase_order_api(po_id):
     """Update a purchase order (only if status is 'draft')"""
-    from app.models import PurchaseOrder, PurchaseOrderItem
     from datetime import datetime
     from decimal import Decimal
-    
+
+    from app.models import PurchaseOrder, PurchaseOrderItem
+
     purchase_order = PurchaseOrder.query.get_or_404(po_id)
     data = request.get_json() or {}
-    
+
     # Only allow updates to draft purchase orders
     if purchase_order.status != "draft":
-        return jsonify({"error": f"Cannot update purchase order with status '{purchase_order.status}'. Only draft orders can be updated."}), 400
-    
+        return (
+            jsonify(
+                {
+                    "error": f"Cannot update purchase order with status '{purchase_order.status}'. Only draft orders can be updated."
+                }
+            ),
+            400,
+        )
+
     try:
         # Update basic fields
         if "order_date" in data:
             purchase_order.order_date = datetime.strptime(data["order_date"], "%Y-%m-%d").date()
         if "expected_delivery_date" in data:
-            purchase_order.expected_delivery_date = datetime.strptime(data["expected_delivery_date"], "%Y-%m-%d").date() if data["expected_delivery_date"] else None
+            purchase_order.expected_delivery_date = (
+                datetime.strptime(data["expected_delivery_date"], "%Y-%m-%d").date()
+                if data["expected_delivery_date"]
+                else None
+            )
         if "notes" in data:
             purchase_order.notes = data.get("notes")
         if "internal_notes" in data:
             purchase_order.internal_notes = data.get("internal_notes")
         if "currency_code" in data:
             purchase_order.currency_code = data["currency_code"]
-        
+
         # Update items if provided
         if "items" in data:
             # Remove existing items
             for item in purchase_order.items:
                 db.session.delete(item)
-            
+
             # Add new items
             for item_data in data["items"]:
                 item = PurchaseOrderItem(
@@ -3861,9 +3910,9 @@ def update_purchase_order_api(po_id):
                     currency_code=purchase_order.currency_code,
                 )
                 db.session.add(item)
-            
+
             purchase_order.calculate_totals()
-        
+
         db.session.commit()
         return jsonify({"message": "Purchase order updated successfully", "purchase_order": purchase_order.to_dict()})
     except Exception as e:
@@ -3877,18 +3926,25 @@ def update_purchase_order_api(po_id):
 def delete_purchase_order_api(po_id):
     """Delete (cancel) a purchase order (only if status is 'draft')"""
     from app.models import PurchaseOrder
-    
+
     purchase_order = PurchaseOrder.query.get_or_404(po_id)
-    
+
     # Only allow deletion of draft purchase orders
     if purchase_order.status != "draft":
-        return jsonify({"error": f"Cannot delete purchase order with status '{purchase_order.status}'. Only draft orders can be deleted."}), 400
-    
+        return (
+            jsonify(
+                {
+                    "error": f"Cannot delete purchase order with status '{purchase_order.status}'. Only draft orders can be deleted."
+                }
+            ),
+            400,
+        )
+
     try:
         # Delete associated items first
         for item in purchase_order.items:
             db.session.delete(item)
-        
+
         # Delete the purchase order
         db.session.delete(purchase_order)
         db.session.commit()
@@ -3903,8 +3959,9 @@ def delete_purchase_order_api(po_id):
 @require_api_token("write:projects")
 def receive_purchase_order_api(po_id):
     """Receive a purchase order"""
-    from app.models import PurchaseOrder
     from datetime import datetime
+
+    from app.models import PurchaseOrder
 
     purchase_order = PurchaseOrder.query.get_or_404(po_id)
     data = request.get_json() or {}
@@ -4004,7 +4061,7 @@ def search():
     query = request.args.get("q", "").strip()
     limit = min(request.args.get("limit", 10, type=int), 50)  # Cap at 50
     types_filter = request.args.get("types", "").strip().lower()
-    
+
     if not query or len(query) < 2:
         return jsonify({"error": "Query must be at least 2 characters", "results": []}), 400
 
@@ -4018,7 +4075,7 @@ def search():
 
     results = []
     search_pattern = f"%{query}%"
-    
+
     # Get authenticated user from API token
     user = g.api_user
 
@@ -4026,6 +4083,7 @@ def search():
     if "project" in search_types:
         try:
             from app.utils.scope_filter import apply_project_scope_to_model
+
             projects_query = Project.query.filter(
                 Project.status == "active",
                 or_(Project.name.ilike(search_pattern), Project.description.ilike(search_pattern)),
@@ -4057,7 +4115,7 @@ def search():
                 Task.query.join(Project)
                 .filter(
                     Project.status == "active",
-                    or_(Task.name.ilike(search_pattern), Task.description.ilike(search_pattern))
+                    or_(Task.name.ilike(search_pattern), Task.description.ilike(search_pattern)),
                 )
                 .limit(limit)
                 .all()
@@ -4082,6 +4140,7 @@ def search():
     if "client" in search_types:
         try:
             from app.utils.scope_filter import apply_client_scope_to_model
+
             clients_query = Client.query.filter(
                 or_(
                     Client.name.ilike(search_pattern),
@@ -4117,17 +4176,12 @@ def search():
                 TimeEntry.end_time.isnot(None),
                 or_(TimeEntry.notes.ilike(search_pattern), TimeEntry.tags.ilike(search_pattern)),
             )
-            
+
             # Restrict to user's entries if not admin
             if not user.is_admin:
                 entries_query = entries_query.filter(TimeEntry.user_id == user.id)
-            
-            entries = (
-                entries_query
-                .order_by(TimeEntry.start_time.desc())
-                .limit(limit)
-                .all()
-            )
+
+            entries = entries_query.order_by(TimeEntry.start_time.desc()).limit(limit).all()
 
             for entry in entries:
                 title_parts = []
@@ -4203,7 +4257,9 @@ def create_or_get_timesheet_period():
     user_id = data.get("user_id") if g.api_user.is_admin else g.api_user.id
     user_id = int(user_id)
 
-    period = WorkforceGovernanceService().get_or_create_period_for_date(user_id=user_id, reference=ref, period_type=period_type)
+    period = WorkforceGovernanceService().get_or_create_period_for_date(
+        user_id=user_id, reference=ref, period_type=period_type
+    )
     return jsonify({"timesheet_period": period.to_dict()}), 201
 
 
@@ -4227,7 +4283,9 @@ def approve_timesheet_period(period_id):
         return forbidden_response("Access denied")
 
     data = request.get_json() or {}
-    result = WorkforceGovernanceService().approve_period(period_id=period_id, approver_id=g.api_user.id, comment=data.get("comment"))
+    result = WorkforceGovernanceService().approve_period(
+        period_id=period_id, approver_id=g.api_user.id, comment=data.get("comment")
+    )
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not approve period")}), 400
     return jsonify({"message": "Timesheet period approved", "timesheet_period": result["period"].to_dict()})
@@ -4261,7 +4319,9 @@ def close_timesheet_period(period_id):
         return jsonify({"error": "Only admins can close periods"}), 403
 
     data = request.get_json() or {}
-    result = WorkforceGovernanceService().close_period(period_id=period_id, closer_id=g.api_user.id, reason=data.get("reason"))
+    result = WorkforceGovernanceService().close_period(
+        period_id=period_id, closer_id=g.api_user.id, reason=data.get("reason")
+    )
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not close period")}), 400
     return jsonify({"message": "Timesheet period closed", "timesheet_period": result["period"].to_dict()})
@@ -4528,7 +4588,9 @@ def create_holiday_api():
     if not name or not start or not end:
         return jsonify({"error": "name, start_date and end_date are required"}), 400
 
-    holiday = CompanyHoliday(name=name, start_date=start, end_date=end, region=data.get("region"), enabled=bool(data.get("enabled", True)))
+    holiday = CompanyHoliday(
+        name=name, start_date=start, end_date=end, region=data.get("region"), enabled=bool(data.get("enabled", True))
+    )
     db.session.add(holiday)
     db.session.commit()
     return jsonify({"message": "Holiday created", "holiday": holiday.to_dict()}), 201
@@ -4553,9 +4615,10 @@ def delete_holiday_api(holiday_id):
 @api_v1_bp.route("/exports/payroll", methods=["GET"])
 @require_api_token("read:reports")
 def export_payroll_csv():
-    from app.services.workforce_governance_service import WorkforceGovernanceService
     import csv
     import io
+
+    from app.services.workforce_governance_service import WorkforceGovernanceService
 
     start = _parse_date(request.args.get("start_date"))
     end = _parse_date(request.args.get("end_date"))

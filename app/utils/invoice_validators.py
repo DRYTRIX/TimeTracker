@@ -12,9 +12,8 @@ from __future__ import annotations
 import os
 import subprocess
 import tempfile
-from typing import List, Optional, Tuple
 import xml.etree.ElementTree as ET
-
+from typing import List, Optional, Tuple
 
 # ---- UBL Validation ----
 
@@ -22,9 +21,7 @@ _UBL_NS_INVOICE = "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
 _UBL_NS_CBC = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
 _UBL_NS_CAC = "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
 
-_PEPPOL_BIS3_CUSTOMIZATION_ID = (
-    "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0"
-)
+_PEPPOL_BIS3_CUSTOMIZATION_ID = "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0"
 
 
 def validate_ubl_wellformed(ubl_xml: str) -> Tuple[bool, List[str]]:
@@ -195,9 +192,7 @@ def validate_cii_en16931(cii_xml: str) -> Tuple[bool, List[str]]:
     if ctx is None:
         issues.append("Missing ExchangedDocumentContext")
     else:
-        guideline = _find_text(
-            "rsm:ExchangedDocumentContext/ram:GuidelineSpecifiedDocumentContextParameter/ram:ID"
-        )
+        guideline = _find_text("rsm:ExchangedDocumentContext/ram:GuidelineSpecifiedDocumentContextParameter/ram:ID")
         if not guideline:
             issues.append("Missing GuidelineSpecifiedDocumentContextParameter/ID")
 
@@ -247,9 +242,7 @@ def validate_cii_en16931(cii_xml: str) -> Tuple[bool, List[str]]:
     else:
         if not settlement.find("ram:InvoiceCurrencyCode", ns) is not None:
             issues.append("Missing InvoiceCurrencyCode (BT-5)")
-        summation = settlement.find(
-            "ram:SpecifiedTradeSettlementHeaderMonetarySummation", ns
-        )
+        summation = settlement.find("ram:SpecifiedTradeSettlementHeaderMonetarySummation", ns)
         if summation is None:
             issues.append("Missing SpecifiedTradeSettlementHeaderMonetarySummation")
         else:
@@ -276,6 +269,7 @@ def validate_cii_en16931(cii_xml: str) -> Tuple[bool, List[str]]:
 
 
 # ---- PDF / veraPDF Validation ----
+
 
 def validate_pdfa_verapdf(
     pdf_bytes: bytes,

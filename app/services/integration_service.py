@@ -2,14 +2,15 @@
 Service for managing integrations.
 """
 
-from typing import Dict, Any, Optional, List
+import logging
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from app import db
+from app.constants import WebhookEvent
 from app.models import Integration, IntegrationCredential, IntegrationEvent, User
 from app.utils.db import safe_commit
 from app.utils.event_bus import emit_event
-from app.constants import WebhookEvent
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -118,15 +119,17 @@ class IntegrationService:
 
         return {"success": True, "message": "Integration created successfully.", "integration": integration}
 
-    def get_integration(self, integration_id: int, user_id: Optional[int] = None, allow_admin_override: bool = False) -> Optional[Integration]:
+    def get_integration(
+        self, integration_id: int, user_id: Optional[int] = None, allow_admin_override: bool = False
+    ) -> Optional[Integration]:
         """
         Get integration by ID (with user check for per-user integrations).
-        
+
         Args:
             integration_id: ID of the integration
             user_id: User ID to check ownership (None for admins viewing any integration)
             allow_admin_override: If True and user_id is None, allow access to any integration (for admins)
-        
+
         Returns:
             Integration if found and accessible, None otherwise
         """
@@ -142,7 +145,7 @@ class IntegrationService:
         # If allow_admin_override is True and user_id is None, allow access (admin viewing any integration)
         if allow_admin_override and user_id is None:
             return integration
-        
+
         if user_id and integration.user_id == user_id:
             return integration
 
@@ -165,9 +168,7 @@ class IntegrationService:
         integration_ids = [i.id for i in integrations]
         cred_integration_ids = set()
         if integration_ids:
-            creds = IntegrationCredential.query.filter(
-                IntegrationCredential.integration_id.in_(integration_ids)
-            ).all()
+            creds = IntegrationCredential.query.filter(IntegrationCredential.integration_id.in_(integration_ids)).all()
             cred_integration_ids = {c.integration_id for c in creds}
         for integration in integrations:
             has_credentials = integration.id in cred_integration_ids
@@ -201,7 +202,7 @@ class IntegrationService:
         credentials = IntegrationCredential.query.filter_by(integration_id=integration_id).all()
         for credential in credentials:
             db.session.delete(credential)
-        
+
         # Delete associated events (for cleanup, though cascade should handle it)
         events = IntegrationEvent.query.filter_by(integration_id=integration_id).all()
         for event in events:
@@ -210,13 +211,11 @@ class IntegrationService:
         # Delete the integration
         provider = integration.provider  # Save before deletion
         db.session.delete(integration)
-        
+
         if not safe_commit("delete_integration", {"integration_id": integration_id}):
             return {"success": False, "message": "Could not delete integration due to a database error."}
 
-        emit_event(
-            WebhookEvent.INTEGRATION_DELETED, {"integration_id": integration_id, "provider": provider}
-        )
+        emit_event(WebhookEvent.INTEGRATION_DELETED, {"integration_id": integration_id, "provider": provider})
 
         return {"success": True, "message": "Integration deleted successfully."}
 
@@ -250,7 +249,8 @@ class IntegrationService:
             return {"success": False, "message": "Could not reset integration due to a database error."}
 
         emit_event(
-            WebhookEvent.INTEGRATION_UPDATED, {"integration_id": integration_id, "provider": integration.provider, "action": "reset"}
+            WebhookEvent.INTEGRATION_UPDATED,
+            {"integration_id": integration_id, "provider": integration.provider, "action": "reset"},
         )
 
         return {"success": True, "message": "Integration reset successfully. You can now reconfigure it."}
@@ -292,7 +292,9 @@ class IntegrationService:
 
         return {"success": True, "message": "Credentials saved successfully.", "credentials": credentials}
 
-    def test_connection(self, integration_id: int, user_id: Optional[int] = None, allow_admin_override: bool = False) -> Dict[str, Any]:
+    def test_connection(
+        self, integration_id: int, user_id: Optional[int] = None, allow_admin_override: bool = False
+    ) -> Dict[str, Any]:
         """Test connection to integrated service."""
         integration = self.get_integration(integration_id, user_id, allow_admin_override=allow_admin_override)
         if not integration:
@@ -331,13 +333,13 @@ class IntegrationService:
         )
         db.session.add(event)
         safe_commit("log_integration_event", {"integration_id": integration_id})
-    
+
     def update_integration_active_status(self, integration_id: int):
         """Update integration is_active status based on credentials."""
         integration = Integration.query.get(integration_id)
         if not integration:
             return
-        
+
         has_credentials = IntegrationCredential.query.filter_by(integration_id=integration_id).first() is not None
         if integration.is_active != has_credentials:
             integration.is_active = has_credentials

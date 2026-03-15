@@ -3,10 +3,11 @@ Repository for user data access operations.
 """
 
 from typing import List, Optional
+
 from app import db
+from app.constants import UserRole
 from app.models import User
 from app.repositories.base_repository import BaseRepository
-from app.constants import UserRole
 
 
 class UserRepository(BaseRepository[User]):

@@ -1,9 +1,9 @@
 """Utility module for seeding default permissions and roles"""
 
-from app import db
-from app.models import Permission, Role, User
 from sqlalchemy.exc import IntegrityError
 
+from app import db
+from app.models import Permission, Role, User
 
 # Define all available permissions organized by category
 DEFAULT_PERMISSIONS = [
@@ -393,7 +393,9 @@ def seed_roles(silent=False):
     try:
         db.session.commit()
         if not silent and updated_count > 0:
-            print(f"Roles seeded: {created_count} created, {existing_count} already existed, {updated_count} permissions added")
+            print(
+                f"Roles seeded: {created_count} created, {existing_count} already existed, {updated_count} permissions added"
+            )
         elif not silent:
             print(f"Roles seeded: {created_count} created, {existing_count} already existed")
         return True

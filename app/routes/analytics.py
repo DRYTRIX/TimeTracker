@@ -1,10 +1,12 @@
-from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_required, current_user
-from app import db
-from app.models import User, Project, TimeEntry, Settings, Task, Payment, Invoice
-from datetime import datetime, timedelta
-from sqlalchemy import func, extract, case
 import calendar
+from datetime import datetime, timedelta
+
+from flask import Blueprint, jsonify, render_template, request
+from flask_login import current_user, login_required
+from sqlalchemy import case, extract, func
+
+from app import db
+from app.models import Invoice, Payment, Project, Settings, Task, TimeEntry, User
 from app.utils.module_helpers import module_enabled
 
 analytics_bp = Blueprint("analytics", __name__)

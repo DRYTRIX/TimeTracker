@@ -4,18 +4,13 @@ Uses ReportLab (same as time_entries_pdf).
 """
 
 from io import BytesIO
+
 from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import cm
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.enums import TA_LEFT, TA_CENTER
-from reportlab.platypus import (
-    SimpleDocTemplate,
-    Table,
-    TableStyle,
-    Spacer,
-    Paragraph,
-)
+from reportlab.lib.units import cm
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 # Colors (aligned with time_entries_pdf)
 BRAND_COLOR = colors.HexColor("#1e3a5f")

@@ -2,9 +2,11 @@
 Configuration management utilities.
 """
 
-from typing import Any, Dict, Optional
-from flask import current_app
 import os
+from typing import Any, Dict, Optional
+
+from flask import current_app
+
 from app.models import Settings
 
 
@@ -54,6 +56,7 @@ class ConfigManager:
         except Exception as e:
             # Log error but continue to fallback values
             import logging
+
             logger = logging.getLogger(__name__)
             logger.debug(f"Error retrieving setting '{key}' from Settings model: {e}")
             pass

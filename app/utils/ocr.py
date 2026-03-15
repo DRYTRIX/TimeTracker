@@ -5,11 +5,11 @@ This module provides functionality to extract text and data from receipt images
 using Tesseract OCR and parse common receipt information.
 """
 
+import logging
 import os
 import re
-from decimal import Decimal
 from datetime import datetime
-import logging
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 

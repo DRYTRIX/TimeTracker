@@ -2,8 +2,10 @@
 Schemas for project serialization and validation.
 """
 
-from marshmallow import Schema, fields, validate
 from decimal import Decimal
+
+from marshmallow import Schema, fields, validate
+
 from app.constants import ProjectStatus
 
 

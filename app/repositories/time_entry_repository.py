@@ -2,14 +2,16 @@
 Repository for time entry data access operations.
 """
 
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
+
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import joinedload
+
 from app import db
-from app.models import TimeEntry, User, Project, Task
-from app.repositories.base_repository import BaseRepository
 from app.constants import TimeEntrySource, TimeEntryStatus
+from app.models import Project, Task, TimeEntry, User
+from app.repositories.base_repository import BaseRepository
 
 
 class TimeEntryRepository(BaseRepository[TimeEntry]):

@@ -2,24 +2,30 @@
 
 import logging
 from datetime import datetime, timedelta
+
 from flask import current_app
+
 from app import db
 from app.models import (
-    Invoice,
-    User,
-    TimeEntry,
-    Project,
     BudgetAlert,
-    RecurringInvoice,
-    Quote,
-    ReportEmailSchedule,
     Integration,
+    Invoice,
+    Project,
+    Quote,
+    RecurringInvoice,
+    ReportEmailSchedule,
+    TimeEntry,
+    User,
 )
-from app.utils.email import send_overdue_invoice_notification, send_weekly_summary, send_quote_expired_notification, send_remind_to_log_email
-from app.utils.budget_forecasting import check_budget_alerts
-from app.services.scheduled_report_service import ScheduledReportService
 from app.services.integration_service import IntegrationService
-
+from app.services.scheduled_report_service import ScheduledReportService
+from app.utils.budget_forecasting import check_budget_alerts
+from app.utils.email import (
+    send_overdue_invoice_notification,
+    send_quote_expired_notification,
+    send_remind_to_log_email,
+    send_weekly_summary,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -204,7 +210,7 @@ def generate_recurring_invoices():
     """Generate invoices from active recurring invoice templates
 
     This task should be run daily to check for recurring invoices that need to be generated.
-    
+
     Note: This function should be called within an app context.
     Use generate_recurring_invoices_with_app() wrapper for scheduled tasks.
     """
@@ -236,9 +242,7 @@ def generate_recurring_invoices():
                 if invoice:
                     db.session.commit()
                     invoices_generated += 1
-                    logger.info(
-                        f"Generated invoice {invoice.invoice_number} from recurring template {recurring.name}"
-                    )
+                    logger.info(f"Generated invoice {invoice.invoice_number} from recurring template {recurring.name}")
 
                     # Auto-send if enabled
                     if recurring.auto_send and invoice.client_email:
@@ -267,19 +271,20 @@ def generate_recurring_invoices():
 
 def send_monthly_unpaid_hours_reports():
     """Send monthly unpaid hours reports split by salesman
-    
+
     This task runs on the first day of each month and generates
     unpaid hours reports for each salesman based on their client assignments.
     """
     with current_app.app_context():
         try:
             logger.info("Sending monthly unpaid hours reports by salesman...")
-            
-            from app.services.unpaid_hours_service import UnpaidHoursService
-            from app.models import SalesmanEmailMapping
-            from app.utils.email import send_email
+
             from datetime import datetime, timedelta
-            
+
+            from app.models import SalesmanEmailMapping
+            from app.services.unpaid_hours_service import UnpaidHoursService
+            from app.utils.email import send_email
+
             # Get last month's date range
             now = datetime.now()
             if now.month == 1:
@@ -288,7 +293,7 @@ def send_monthly_unpaid_hours_reports():
             else:
                 last_month_start = datetime(now.year, now.month - 1, 1)
                 last_month_end = datetime(now.year, now.month, 1) - timedelta(seconds=1)
-            
+
             # Get unpaid hours grouped by salesman
             unpaid_service = UnpaidHoursService()
             salesman_reports = unpaid_service.get_unpaid_hours_by_salesman(
@@ -296,18 +301,18 @@ def send_monthly_unpaid_hours_reports():
                 end_date=last_month_end,
                 salesman_field_name="salesman",
             )
-            
+
             sent_count = 0
             for salesman_initial, report_data in salesman_reports.items():
                 if salesman_initial == "_UNASSIGNED_":
                     continue
-                
+
                 # Get email for this salesman
                 email = SalesmanEmailMapping.get_email_for_initial(salesman_initial)
                 if not email:
                     logger.warning(f"No email mapping for salesman {salesman_initial}, skipping")
                     continue
-                
+
                 # Format report data
                 formatted_data = {
                     "salesman_initial": salesman_initial,
@@ -322,7 +327,11 @@ def send_monthly_unpaid_hours_reports():
                             "project": e.project.name if e.project else "",
                             # Project.client is a string property; relationship is Project.client_obj
                             "client": (
-                                (e.project.client_obj.name if (e.project and getattr(e.project, "client_obj", None)) else (e.project.client if e.project else ""))
+                                (
+                                    e.project.client_obj.name
+                                    if (e.project and getattr(e.project, "client_obj", None))
+                                    else (e.project.client if e.project else "")
+                                )
                                 or (e.client.name if e.client else "Unknown")
                             ),
                             "user": e.user.username if e.user else "",
@@ -332,7 +341,7 @@ def send_monthly_unpaid_hours_reports():
                         for e in report_data["entries"]
                     ],
                 }
-                
+
                 try:
                     send_email(
                         to=email,
@@ -347,10 +356,10 @@ def send_monthly_unpaid_hours_reports():
                     logger.info(f"Sent monthly unpaid hours report to {email} for {salesman_initial}")
                 except Exception as e:
                     logger.error(f"Error sending report to {email} ({salesman_initial}): {e}")
-            
+
             logger.info(f"Sent {sent_count} monthly unpaid hours reports")
             return sent_count
-            
+
         except Exception as e:
             logger.error(f"Error sending monthly unpaid hours reports: {e}")
             return 0
@@ -593,8 +602,9 @@ def process_remind_to_log():
     if current time in user's timezone matches the reminder hour and they have < 0.5h logged today (user's local day), send email.
     """
     from datetime import time as dt_time
-    from app.utils.timezone import now_in_user_timezone, get_timezone_for_user
     from datetime import timezone as tz_utc
+
+    from app.utils.timezone import get_timezone_for_user, now_in_user_timezone
 
     try:
         users = User.query.filter(
@@ -630,12 +640,18 @@ def process_remind_to_log():
                 start_utc = start_local.astimezone(tz_utc)
                 end_utc = end_local.astimezone(tz_utc)
                 from sqlalchemy import func
-                total_seconds = db.session.query(func.coalesce(func.sum(TimeEntry.duration_seconds), 0)).filter(
-                    TimeEntry.user_id == user.id,
-                    TimeEntry.start_time >= start_utc,
-                    TimeEntry.start_time < end_utc,
-                    TimeEntry.end_time.isnot(None),
-                ).scalar() or 0
+
+                total_seconds = (
+                    db.session.query(func.coalesce(func.sum(TimeEntry.duration_seconds), 0))
+                    .filter(
+                        TimeEntry.user_id == user.id,
+                        TimeEntry.start_time >= start_utc,
+                        TimeEntry.start_time < end_utc,
+                        TimeEntry.end_time.isnot(None),
+                    )
+                    .scalar()
+                    or 0
+                )
                 today_hours = total_seconds / 3600.0
                 if today_hours >= 0.5:
                     continue
@@ -720,9 +736,10 @@ def check_expiring_quotes():
     Use check_expiring_quotes_with_app() wrapper for scheduled tasks.
     """
     try:
-        from app.utils.timezone import local_now
         from datetime import timedelta
+
         from app.utils.email import send_quote_expiring_reminder
+        from app.utils.timezone import local_now
 
         logger.info("Checking for expiring quotes...")
 

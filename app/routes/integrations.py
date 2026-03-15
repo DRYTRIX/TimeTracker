@@ -2,16 +2,18 @@
 Routes for integration management.
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+import logging
+import os
+import secrets
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_babel import gettext as _
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
+
 from app import db
 from app.models import Integration, IntegrationCredential
 from app.services.integration_service import IntegrationService
 from app.utils.db import safe_commit
-import secrets
-import logging
-import os
 from app.utils.module_helpers import module_enabled
 
 # Import registry to ensure connectors are registered
@@ -28,6 +30,7 @@ integrations_bp = Blueprint("integrations", __name__)
 def has_setup_wizard(provider):
     """Check if a setup wizard template exists for the given provider."""
     from flask import current_app
+
     template_path = f"integrations/wizard_{provider}.html"
     template_dir = os.path.join(current_app.root_path, "templates")
     template_file = os.path.join(template_dir, template_path)
@@ -44,7 +47,7 @@ def list_integrations():
     available_providers = service.get_available_providers()
 
     from flask import current_app
-    
+
     return render_template(
         "integrations/list.html",
         integrations=integrations,
@@ -118,20 +121,21 @@ def connect_integration(provider):
 
     # Generate state for CSRF protection
     state = secrets.token_urlsafe(32)
-    
+
     # Store state in both session (for immediate access) and database (for persistence across redirects)
     session[f"integration_oauth_state_{integration.id}"] = state
-    
+
     # Also store in database config field for per-user integrations to handle session expiration
     if not is_global:
         from datetime import datetime
+
         if integration.config is None:
             integration.config = {}
         integration.config["oauth_state"] = state
         integration.config["oauth_state_timestamp"] = datetime.utcnow().isoformat()
         db.session.commit()
         logger.debug(f"Stored OAuth state for integration {integration.id} (user {current_user.id})")
-    
+
     # Get authorization URL - automatically redirects to OAuth provider (Google, etc.)
     try:
         redirect_uri = url_for("integrations.oauth_callback", provider=provider, _external=True)
@@ -189,15 +193,16 @@ def oauth_callback(provider):
     # Verify state - check both session and database (for per-user integrations)
     session_key = f"integration_oauth_state_{integration.id}"
     expected_state = session.get(session_key)
-    
+
     # If not in session, check database config (for per-user integrations)
     if not expected_state and not is_global and integration.config:
         stored_state = integration.config.get("oauth_state")
         state_timestamp_str = integration.config.get("oauth_state_timestamp")
-        
+
         if stored_state and state_timestamp_str:
             try:
                 from datetime import datetime
+
                 state_timestamp = datetime.fromisoformat(state_timestamp_str)
                 # State is valid for 10 minutes
                 time_diff = (datetime.utcnow() - state_timestamp).total_seconds()
@@ -212,7 +217,7 @@ def oauth_callback(provider):
                     db.session.commit()
             except (ValueError, TypeError) as e:
                 logger.warning(f"Error parsing OAuth state timestamp: {e}")
-    
+
     if not expected_state or state != expected_state:
         logger.error(
             f"Invalid state parameter for integration {integration.id}. "
@@ -279,13 +284,13 @@ def oauth_callback(provider):
 def manage_integration(provider):
     """Manage an integration: configure OAuth credentials (admin) and connection management (all users)."""
     from app.models import Settings
-    
+
     # Ensure registry is loaded
     try:
         from app.integrations import registry  # noqa: F401
     except ImportError:
         pass
-    
+
     service = IntegrationService()
 
     # Get connector class if available, otherwise use defaults
@@ -296,11 +301,12 @@ def manage_integration(provider):
             display_name = provider.replace("_", " ").title()
             description = ""
             icon = "plug"
+
         connector_class = MinimalConnector
-        
+
         # Log warning but continue
         logger.warning(f"Provider {provider} not found in registry, using defaults")
-    
+
     settings = Settings.get_settings()
 
     # Get or create integration
@@ -324,7 +330,7 @@ def manage_integration(provider):
         if is_global and not current_user.is_admin:
             flash(_("Only administrators can configure global integrations."), "error")
             return redirect(url_for("integrations.manage_integration", provider=provider))
-        
+
         # Check if this is an OAuth credential update (admin section)
         if request.form.get("action") == "update_credentials":
             # Update OAuth credentials in Settings
@@ -332,18 +338,18 @@ def manage_integration(provider):
                 # Trello uses API key + secret, not OAuth
                 api_key = request.form.get("trello_api_key", "").strip()
                 api_secret = request.form.get("trello_api_secret", "").strip()
-                
+
                 # Validate required fields
                 if not api_key:
                     flash(_("Trello API Key is required."), "error")
                     return redirect(url_for("integrations.manage_integration", provider=provider))
-                
+
                 # Check if we have existing credentials - if not, secret is required
                 existing_creds = settings.get_integration_credentials("trello")
                 if not existing_creds.get("api_secret") and not api_secret:
                     flash(_("Trello API Secret is required for new setup."), "error")
                     return redirect(url_for("integrations.manage_integration", provider=provider))
-                
+
                 if api_key:
                     settings.trello_api_key = api_key
                 if api_secret:
@@ -364,12 +370,12 @@ def manage_integration(provider):
                 # OAuth-based integrations
                 client_id = request.form.get(f"{provider}_client_id", "").strip()
                 client_secret = request.form.get(f"{provider}_client_secret", "").strip()
-                
+
                 # Validate required fields
                 if not client_id:
                     flash(_("OAuth Client ID is required."), "error")
                     return redirect(url_for("integrations.manage_integration", provider=provider))
-                
+
                 # Check if we have existing credentials - if not, secret is required
                 existing_creds = settings.get_integration_credentials(provider)
                 if not existing_creds.get("client_secret") and not client_secret:
@@ -426,6 +432,7 @@ def manage_integration(provider):
                         # Validate URL format
                         try:
                             from urllib.parse import urlparse
+
                             parsed = urlparse(instance_url)
                             if not parsed.scheme or not parsed.netloc:
                                 flash(_("GitLab Instance URL must be a valid URL (e.g., https://gitlab.com)."), "error")
@@ -433,7 +440,7 @@ def manage_integration(provider):
                         except Exception:
                             flash(_("GitLab Instance URL format is invalid."), "error")
                             return redirect(url_for("integrations.manage_integration", provider=provider))
-                        
+
                         try:
                             settings.gitlab_instance_url = instance_url
                         except AttributeError:
@@ -450,47 +457,49 @@ def manage_integration(provider):
                 flash(_("Integration credentials updated successfully."), "success")
                 if provider == "google_calendar":
                     flash(
-                        _("Users can now connect their Google Calendar. They will be automatically redirected to Google for authorization."),
+                        _(
+                            "Users can now connect their Google Calendar. They will be automatically redirected to Google for authorization."
+                        ),
                         "info",
                     )
                 return redirect(url_for("integrations.manage_integration", provider=provider))
             else:
                 flash(_("Failed to update credentials."), "error")
-        
+
         # Check if this is a CalDAV credential update (non-OAuth)
         elif request.form.get("action") == "update_caldav_credentials":
             # CalDAV uses username/password, not OAuth
             if provider != "caldav_calendar":
                 flash(_("This action is only available for CalDAV integrations."), "error")
                 return redirect(url_for("integrations.manage_integration", provider=provider))
-            
+
             # Get the integration to update (should be per-user)
             integration_to_update = integration
             if not integration_to_update:
                 flash(_("Integration not found. Please connect the integration first."), "error")
                 return redirect(url_for("integrations.manage_integration", provider=provider))
-            
+
             username = request.form.get("username", "").strip()
             password = request.form.get("password", "").strip()
-            
+
             # Validate required fields
             if not username:
                 flash(_("Username is required."), "error")
                 return redirect(url_for("integrations.manage_integration", provider=provider))
-            
+
             # Check if we have existing credentials - if not, password is required
             existing_creds = IntegrationCredential.query.filter_by(integration_id=integration_to_update.id).first()
             if not existing_creds and not password:
                 flash(_("Password is required for new setup."), "error")
                 return redirect(url_for("integrations.manage_integration", provider=provider))
-            
+
             # Use existing password if new password not provided
             password_to_save = password if password else (existing_creds.access_token if existing_creds else "")
-            
+
             if not password_to_save:
                 flash(_("Password is required."), "error")
                 return redirect(url_for("integrations.manage_integration", provider=provider))
-            
+
             # Save credentials (password in access_token, username in extra_data)
             result = service.save_credentials(
                 integration_id=integration_to_update.id,
@@ -501,13 +510,19 @@ def manage_integration(provider):
                 scope="caldav",
                 extra_data={"username": username},
             )
-            
+
             if result.get("success"):
                 flash(_("CalDAV credentials updated successfully."), "success")
                 return redirect(url_for("integrations.manage_integration", provider=provider))
             else:
-                flash(_("Failed to update CalDAV credentials: %(message)s", message=result.get("message", "Unknown error")), "error")
-        
+                flash(
+                    _(
+                        "Failed to update CalDAV credentials: %(message)s",
+                        message=result.get("message", "Unknown error"),
+                    ),
+                    "error",
+                )
+
         # Check if this is an integration config update
         elif request.form.get("action") == "update_config":
             # Get the integration to update
@@ -515,7 +530,7 @@ def manage_integration(provider):
             if not integration_to_update:
                 flash(_("Integration not found. Please connect the integration first."), "error")
                 return redirect(url_for("integrations.manage_integration", provider=provider))
-            
+
             # Get config schema from connector
             config_schema = {}
             if connector_class and hasattr(connector_class, "get_config_schema"):
@@ -525,20 +540,20 @@ def manage_integration(provider):
                     config_schema = temp_connector.get_config_schema()
                 except Exception as e:
                     logger.warning(f"Could not get config schema for {provider}: {e}")
-            
+
             # Update config from form
             if not integration_to_update.config:
                 integration_to_update.config = {}
-            
+
             # Process config fields from schema
             if config_schema and "fields" in config_schema:
                 for field in config_schema["fields"]:
                     field_name = field.get("name")
                     if not field_name:
                         continue
-                    
+
                     field_type = field.get("type", "string")
-                    
+
                     if field_type == "boolean":
                         # Checkboxes: present = True, absent = False
                         value = field_name in request.form
@@ -562,7 +577,10 @@ def manage_integration(provider):
                                 else:
                                     value = int(value_str)
                             except ValueError:
-                                flash(_("Invalid number for field %(field)s", field=field.get("label", field_name)), "error")
+                                flash(
+                                    _("Invalid number for field %(field)s", field=field.get("label", field_name)),
+                                    "error",
+                                )
                                 continue
                         else:
                             # Empty value - use None if not required, otherwise use default
@@ -576,9 +594,12 @@ def manage_integration(provider):
                         if value_str:
                             try:
                                 import json
+
                                 value = json.loads(value_str)
                             except json.JSONDecodeError:
-                                flash(_("Invalid JSON for field %(field)s", field=field.get("label", field_name)), "error")
+                                flash(
+                                    _("Invalid JSON for field %(field)s", field=field.get("label", field_name)), "error"
+                                )
                                 continue
                         else:
                             value = None
@@ -590,7 +611,7 @@ def manage_integration(provider):
                             continue
                         if not value:
                             value = field.get("default")
-                    
+
                     # Update config field
                     # For optional number fields, explicitly set to None if empty
                     if field_type == "number" and value is None and not field.get("required", False):
@@ -603,11 +624,12 @@ def manage_integration(provider):
                     elif field_type == "number" and value is None:
                         # Required number field that's empty - already flashed error above
                         continue
-            
+
             # Ensure config is marked as modified
             from sqlalchemy.orm.attributes import flag_modified
+
             flag_modified(integration_to_update, "config")
-            
+
             if safe_commit("update_integration_config", {"integration_id": integration_to_update.id}):
                 flash(_("Integration configuration updated successfully."), "success")
                 return redirect(url_for("integrations.manage_integration", provider=provider))
@@ -623,12 +645,14 @@ def manage_integration(provider):
         if provider == "trello" and "api_secret" not in current_creds:
             if hasattr(settings, "trello_api_secret"):
                 current_creds["api_secret"] = settings.trello_api_secret or ""
-    
+
     # Get user's existing integration for this provider (if per-user)
     user_integration = None
     if not is_global:
-        user_integration = Integration.query.filter_by(provider=provider, user_id=current_user.id, is_global=False).first()
-    
+        user_integration = Integration.query.filter_by(
+            provider=provider, user_id=current_user.id, is_global=False
+        ).first()
+
     # Get connector if integration exists
     connector = None
     connector_error = None
@@ -639,7 +663,7 @@ def manage_integration(provider):
         except Exception as e:
             logger.error(f"Error initializing connector for integration: {e}", exc_info=True)
             connector_error = str(e)
-    
+
     credentials = None
     if integration:
         credentials = IntegrationCredential.query.filter_by(integration_id=integration.id).first()
@@ -649,12 +673,12 @@ def manage_integration(provider):
     # Get display info from connector class or use defaults
     display_name = getattr(connector_class, "display_name", None) or provider.replace("_", " ").title()
     description = getattr(connector_class, "description", None) or ""
-    
+
     # Get config schema from connector
     config_schema = {}
     current_config = {}
     active_integration = integration if integration else user_integration
-    
+
     if active_integration:
         current_config = active_integration.config or {}
         if connector:
@@ -668,7 +692,7 @@ def manage_integration(provider):
                 config_schema = temp_connector.get_config_schema()
             except Exception as e:
                 logger.warning(f"Could not get config schema for {provider}: {e}")
-    
+
     return render_template(
         "integrations/manage.html",
         provider=provider,
@@ -696,7 +720,11 @@ def view_integration(integration_id):
     """View integration details."""
     service = IntegrationService()
     # Allow viewing global integrations for all users, per-user only for owner (or admin)
-    integration = service.get_integration(integration_id, current_user.id if not current_user.is_admin else None, allow_admin_override=current_user.is_admin)
+    integration = service.get_integration(
+        integration_id,
+        current_user.id if not current_user.is_admin else None,
+        allow_admin_override=current_user.is_admin,
+    )
 
     if not integration:
         flash(_("Integration not found."), "error")
@@ -710,7 +738,7 @@ def view_integration(integration_id):
     except Exception as e:
         logger.error(f"Error initializing connector for integration {integration_id}: {e}", exc_info=True)
         connector_error = str(e)
-    
+
     credentials = IntegrationCredential.query.filter_by(integration_id=integration_id).first()
 
     # Get recent sync events
@@ -742,9 +770,9 @@ def test_integration(integration_id):
     # For per-user integrations, pass user_id; for admins, allow override to test any integration
     # For global integrations, user_id should be None
     integration = service.get_integration(
-        integration_id, 
+        integration_id,
         current_user.id if not current_user.is_admin else None,
-        allow_admin_override=current_user.is_admin
+        allow_admin_override=current_user.is_admin,
     )
     if not integration:
         flash(_("Integration not found."), "error")
@@ -765,7 +793,7 @@ def test_integration(integration_id):
         # Non-admin testing their own per-user integration
         test_user_id = current_user.id
         allow_admin_override = False
-    
+
     result = service.test_connection(integration_id, test_user_id, allow_admin_override=allow_admin_override)
 
     if result.get("success"):
@@ -782,7 +810,11 @@ def test_integration(integration_id):
 def delete_integration(integration_id):
     """Delete an integration."""
     service = IntegrationService()
-    integration = service.get_integration(integration_id, current_user.id if not current_user.is_admin else None, allow_admin_override=current_user.is_admin)
+    integration = service.get_integration(
+        integration_id,
+        current_user.id if not current_user.is_admin else None,
+        allow_admin_override=current_user.is_admin,
+    )
     if not integration:
         flash(_("Integration not found."), "error")
         return redirect(url_for("integrations.list_integrations"))
@@ -803,7 +835,11 @@ def delete_integration(integration_id):
 def reset_integration(integration_id):
     """Reset an integration by removing credentials and clearing config."""
     service = IntegrationService()
-    integration = service.get_integration(integration_id, current_user.id if not current_user.is_admin else None, allow_admin_override=current_user.is_admin)
+    integration = service.get_integration(
+        integration_id,
+        current_user.id if not current_user.is_admin else None,
+        allow_admin_override=current_user.is_admin,
+    )
     if not integration:
         flash(_("Integration not found."), "error")
         return redirect(url_for("integrations.list_integrations"))
@@ -827,7 +863,11 @@ def reset_integration(integration_id):
 def sync_integration(integration_id):
     """Trigger a sync for an integration."""
     service = IntegrationService()
-    integration = service.get_integration(integration_id, current_user.id if not current_user.is_admin else None, allow_admin_override=current_user.is_admin)
+    integration = service.get_integration(
+        integration_id,
+        current_user.id if not current_user.is_admin else None,
+        allow_admin_override=current_user.is_admin,
+    )
 
     if not integration:
         flash(_("Integration not found."), "error")
@@ -840,9 +880,10 @@ def sync_integration(integration_id):
 
     try:
         sync_result = connector.sync_data()
-        
+
         # Update integration status
         from datetime import datetime
+
         integration.last_sync_at = datetime.utcnow()
         if sync_result.get("success"):
             integration.last_sync_status = "success"
@@ -855,16 +896,20 @@ def sync_integration(integration_id):
             integration.last_sync_status = "error"
             integration.last_error = sync_result.get("message", "Unknown error")
             flash(_("Sync failed: %(message)s", message=sync_result.get("message", "Unknown error")), "error")
-        
+
         # Log sync event
         service._log_event(
             integration_id,
             "sync",
             sync_result.get("success", False),
             sync_result.get("message"),
-            {"synced_count": sync_result.get("synced_count")} if sync_result.get("success") and sync_result.get("synced_count") else None
+            (
+                {"synced_count": sync_result.get("synced_count")}
+                if sync_result.get("success") and sync_result.get("synced_count")
+                else None
+            ),
         )
-        
+
         if not safe_commit("update_integration_sync_status", {"integration_id": integration_id}):
             logger.warning(f"Could not update sync status for integration {integration_id}")
     except Exception as e:
@@ -872,6 +917,7 @@ def sync_integration(integration_id):
         integration.last_sync_status = "error"
         integration.last_error = str(e)
         from datetime import datetime
+
         integration.last_sync_at = datetime.utcnow()
         safe_commit("update_integration_sync_status_error", {"integration_id": integration_id})
         flash(_("Error during sync: %(error)s", error=str(e)), "error")
@@ -922,33 +968,35 @@ def caldav_setup():
 
         # Validation
         errors = []
-        
+
         if not server_url and not calendar_url:
             errors.append(_("Either server URL or calendar URL is required."))
-        
+
         # Validate URL format if provided
         if server_url:
             try:
                 from urllib.parse import urlparse
+
                 parsed = urlparse(server_url)
                 if not parsed.scheme or not parsed.netloc:
                     errors.append(_("Server URL must be a valid URL (e.g., https://mail.example.com/dav)."))
             except Exception:
                 errors.append(_("Server URL format is invalid."))
-        
+
         if calendar_url:
             try:
                 from urllib.parse import urlparse
+
                 parsed = urlparse(calendar_url)
                 if not parsed.scheme or not parsed.netloc:
                     errors.append(_("Calendar URL must be a valid URL."))
             except Exception:
                 errors.append(_("Calendar URL format is invalid."))
-        
+
         # Check if we need to update credentials (username provided or password provided)
         existing_creds = IntegrationCredential.query.filter_by(integration_id=integration.id).first()
         needs_creds_update = username or password or not existing_creds
-        
+
         if needs_creds_update:
             if not username:
                 # Try to get existing username if password is being updated
@@ -958,7 +1006,7 @@ def caldav_setup():
                     errors.append(_("Username is required."))
             if not password and not existing_creds:
                 errors.append(_("Password is required for new setup."))
-        
+
         # Validate project if provided (optional)
         if default_project_id:
             try:
@@ -968,7 +1016,7 @@ def caldav_setup():
                     errors.append(_("Selected project not found or is not active."))
             except ValueError:
                 errors.append(_("Invalid project selected."))
-        
+
         try:
             lookback_days = int(lookback_days_str)
             if lookback_days < 1 or lookback_days > 365:
@@ -1018,7 +1066,10 @@ def caldav_setup():
                     extra_data={"username": username},
                 )
                 if not result.get("success"):
-                    flash(_("Failed to save credentials: %(message)s", message=result.get("message", "Unknown error")), "error")
+                    flash(
+                        _("Failed to save credentials: %(message)s", message=result.get("message", "Unknown error")),
+                        "error",
+                    )
                     return render_template(
                         "integrations/caldav_setup.html",
                         integration=integration,
@@ -1148,7 +1199,10 @@ def activitywatch_setup():
                 return redirect(url_for("integrations.view_integration", integration_id=integration.id))
             else:
                 flash(
-                    _("Configuration saved but connection test failed: %(message)s", message=test_result.get("message", "")),
+                    _(
+                        "Configuration saved but connection test failed: %(message)s",
+                        message=test_result.get("message", ""),
+                    ),
                     "warning",
                 )
                 return redirect(url_for("integrations.view_integration", integration_id=integration.id))
@@ -1232,24 +1286,24 @@ def setup_wizard(provider):
     if not has_setup_wizard(provider):
         flash(_("Setup wizard not available for this integration."), "error")
         return redirect(url_for("integrations.list_integrations"))
-    
+
     service = IntegrationService()
-    
+
     # Check if provider is available
     if provider not in service._connector_registry:
         flash(_("Integration provider not available."), "error")
         return redirect(url_for("integrations.list_integrations"))
-    
+
     # Get connector class
     connector_class = service._connector_registry.get(provider)
     if not connector_class:
         flash(_("Connector class not found."), "error")
         return redirect(url_for("integrations.list_integrations"))
-    
+
     # Get display info
     display_name = getattr(connector_class, "display_name", None) or provider.replace("_", " ").title()
     description = getattr(connector_class, "description", None) or ""
-    
+
     # Get or create integration
     is_global = provider not in ("google_calendar", "caldav_calendar", "activitywatch")
     integration = None
@@ -1261,16 +1315,16 @@ def setup_wizard(provider):
                 integration = result["integration"]
     else:
         integration = Integration.query.filter_by(provider=provider, user_id=current_user.id, is_global=False).first()
-    
+
     # Check permissions
     if is_global and not current_user.is_admin:
         flash(_("Only administrators can configure global integrations."), "error")
         return redirect(url_for("integrations.list_integrations"))
-    
+
     # Handle POST - save wizard data
     if request.method == "POST":
         wizard_step = int(request.form.get("wizard_step", 1))
-        
+
         # Get current config or create new
         if integration:
             if not integration.config:
@@ -1278,7 +1332,7 @@ def setup_wizard(provider):
             current_config = integration.config
         else:
             current_config = {}
-        
+
         # Update config based on wizard step and form data
         # This is a generic handler - specific wizards will override with their own logic
         config_schema = {}
@@ -1289,16 +1343,16 @@ def setup_wizard(provider):
                 config_schema = temp_connector.get_config_schema()
             except Exception as e:
                 logger.warning(f"Could not get config schema for {provider}: {e}")
-        
+
         # Process form fields based on config schema
         if config_schema and "fields" in config_schema:
             for field in config_schema["fields"]:
                 field_name = field.get("name")
                 if not field_name:
                     continue
-                
+
                 field_type = field.get("type", "string")
-                
+
                 if field_type == "boolean":
                     value = field_name in request.form
                 elif field_type == "array":
@@ -1313,6 +1367,7 @@ def setup_wizard(provider):
                     if value_str:
                         try:
                             import json
+
                             value = json.loads(value_str)
                         except json.JSONDecodeError:
                             flash(_("Invalid JSON for field %(field)s", field=field.get("label", field_name)), "error")
@@ -1321,18 +1376,19 @@ def setup_wizard(provider):
                         value = None
                 else:
                     value = request.form.get(field_name, "").strip()
-                
+
                 if value is not None:
                     current_config[field_name] = value
-        
+
         # Save OAuth credentials if provided (admin only for global)
         if is_global and current_user.is_admin:
             from app.models import Settings
+
             settings = Settings.get_settings()
-            
+
             client_id = request.form.get(f"{provider}_client_id", "").strip()
             client_secret = request.form.get(f"{provider}_client_secret", "").strip()
-            
+
             if client_id:
                 attr_map = {
                     "jira": ("jira_client_id", "jira_client_id"),
@@ -1345,51 +1401,49 @@ def setup_wizard(provider):
                     "outlook_calendar": ("outlook_calendar_client_id", "outlook_calendar_client_secret"),
                     "microsoft_teams": ("microsoft_teams_client_id", "microsoft_teams_client_secret"),
                 }
-                
+
                 if provider in attr_map:
                     id_attr, secret_attr = attr_map[provider]
                     if hasattr(settings, id_attr):
                         setattr(settings, id_attr, client_id)
                     if client_secret and hasattr(settings, secret_attr):
                         setattr(settings, secret_attr, client_secret)
-        
+
         # Create integration if it doesn't exist
         if not integration:
             result = service.create_integration(
-                provider,
-                user_id=None if is_global else current_user.id,
-                is_global=is_global
+                provider, user_id=None if is_global else current_user.id, is_global=is_global
             )
             if result["success"]:
                 integration = result["integration"]
             else:
                 flash(result["message"], "error")
                 return redirect(url_for("integrations.setup_wizard", provider=provider))
-        
+
         # Update integration config
         integration.config = current_config
         from sqlalchemy.orm.attributes import flag_modified
+
         flag_modified(integration, "config")
-        
+
         # If this is the last step, save and redirect
         # Individual wizard templates will handle determining the last step
         if safe_commit("save_wizard_config", {"provider": provider}):
             # Check if this was the final step (wizard template should set this)
             if request.form.get("wizard_final_step") == "true":
                 flash(_("Integration configured successfully!"), "success")
-                return jsonify({
-                    "success": True,
-                    "redirect_url": url_for("integrations.manage_integration", provider=provider)
-                })
+                return jsonify(
+                    {"success": True, "redirect_url": url_for("integrations.manage_integration", provider=provider)}
+                )
             else:
                 return jsonify({"success": True})
         else:
             return jsonify({"success": False, "message": _("Failed to save configuration.")})
-    
+
     # GET - render wizard
     current_config = integration.config if integration and integration.config else {}
     config_schema = {}
-    
+
     if connector_class and hasattr(connector_class, "get_config_schema"):
         try:
             temp_integration = integration if integration else Integration(provider=provider, config={})
@@ -1397,7 +1451,7 @@ def setup_wizard(provider):
             config_schema = temp_connector.get_config_schema()
         except Exception as e:
             logger.warning(f"Could not get config schema for {provider}: {e}")
-    
+
     # Determine step labels based on provider
     step_labels_map = {
         "jira": [_("OAuth Setup"), _("Connection Test"), _("Sync Config"), _("Advanced"), _("Review")],
@@ -1410,18 +1464,18 @@ def setup_wizard(provider):
         "outlook_calendar": [_("Tenant ID"), _("OAuth"), _("Review")],
         "microsoft_teams": [_("Tenant ID"), _("OAuth"), _("Review")],
     }
-    
+
     step_labels = step_labels_map.get(provider, [])
     total_steps = len(step_labels) if step_labels else 5  # Default to 5 if not specified
-    
+
     # Get test connection URL if available
     test_connection_url = None
     if provider in ["jira", "gitlab", "trello"]:
         test_connection_url = url_for("integrations.test_connection_wizard", provider=provider)
-    
+
     wizard_title = _("%(name)s Setup Wizard", name=display_name)
     wizard_subtitle = _("Guided step-by-step configuration for %(name)s", name=display_name)
-    
+
     return render_template(
         f"integrations/wizard_{provider}.html",
         provider=provider,
@@ -1447,24 +1501,24 @@ def setup_wizard(provider):
 def test_connection_wizard(provider):
     """Test connection from wizard."""
     from flask import request as flask_request
-    
+
     service = IntegrationService()
-    
+
     # Get integration
     is_global = provider not in ("google_calendar", "caldav_calendar", "activitywatch")
     if is_global:
         integration = service.get_global_integration(provider)
     else:
         integration = Integration.query.filter_by(provider=provider, user_id=current_user.id, is_global=False).first()
-    
+
     if not integration:
         return jsonify({"success": False, "error": _("Integration not found")}), 404
-    
+
     # Get connector
     connector = service.get_connector(integration)
     if not connector:
         return jsonify({"success": False, "error": _("Connector not available")}), 400
-    
+
     # Test connection
     try:
         result = connector.test_connection()

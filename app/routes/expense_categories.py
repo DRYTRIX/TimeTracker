@@ -1,10 +1,12 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from datetime import date, datetime
+from decimal import Decimal
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_babel import gettext as _
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
+
 from app import db, log_event, track_event
 from app.models import ExpenseCategory
-from datetime import datetime, date
-from decimal import Decimal
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required
 

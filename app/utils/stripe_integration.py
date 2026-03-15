@@ -3,8 +3,9 @@ Stripe payment gateway integration utilities.
 """
 
 import logging
-from typing import Optional, Dict, Any
 from decimal import Decimal
+from typing import Any, Dict, Optional
+
 import stripe
 from flask import current_app
 

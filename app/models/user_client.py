@@ -1,6 +1,7 @@
 """User-Client association for subcontractor scope (restrict user to assigned clients)."""
 
 from datetime import datetime
+
 from app import db
 
 

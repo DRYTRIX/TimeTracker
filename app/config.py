@@ -73,7 +73,7 @@ class Config:
     OIDC_ADMIN_GROUP = os.getenv("OIDC_ADMIN_GROUP")  # optional
     OIDC_ADMIN_EMAILS = [e.strip().lower() for e in os.getenv("OIDC_ADMIN_EMAILS", "").split(",") if e.strip()]
     OIDC_POST_LOGOUT_REDIRECT_URI = os.getenv("OIDC_POST_LOGOUT_REDIRECT_URI")
-    
+
     # OIDC metadata fetch configuration (for DNS resolution issues)
     OIDC_METADATA_FETCH_TIMEOUT = int(os.getenv("OIDC_METADATA_FETCH_TIMEOUT", 10))  # seconds
     OIDC_METADATA_RETRY_ATTEMPTS = int(os.getenv("OIDC_METADATA_RETRY_ATTEMPTS", 3))  # number of retries
@@ -129,9 +129,7 @@ class Config:
     DONATE_HIDE_UNLOCK_SECRET = _donate_secret
 
     # Support & Purchase Key page URL (for links to purchase a key to hide donate UI)
-    SUPPORT_PURCHASE_URL = os.getenv(
-        "SUPPORT_PURCHASE_URL", "https://timetracker.drytrix.com/support.html"
-    ).strip()
+    SUPPORT_PURCHASE_URL = os.getenv("SUPPORT_PURCHASE_URL", "https://timetracker.drytrix.com/support.html").strip()
 
     # Backup settings
     BACKUP_RETENTION_DAYS = int(os.getenv("BACKUP_RETENTION_DAYS", 30))
@@ -271,6 +269,7 @@ class ProductionConfig(Config):
         # Enforce that SECRET_KEY is set via environment in production
         if self._SECRET_KEY_IS_DEFAULT:
             import warnings
+
             warnings.warn(
                 "SECURITY WARNING: SECRET_KEY is using the default development value. "
                 "Set the SECRET_KEY environment variable to a secure random value in production.",
@@ -279,9 +278,9 @@ class ProductionConfig(Config):
             )
         if len(self.SECRET_KEY) < 32:
             import warnings
+
             warnings.warn(
-                "SECURITY WARNING: SECRET_KEY is too short. "
-                "Use a key of at least 32 characters for production.",
+                "SECURITY WARNING: SECRET_KEY is too short. " "Use a key of at least 32 characters for production.",
                 RuntimeWarning,
                 stacklevel=2,
             )

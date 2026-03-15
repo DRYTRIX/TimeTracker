@@ -80,10 +80,7 @@ class StockLotAllocation(db.Model):
 
     movement = db.relationship("StockMovement", foreign_keys=[stock_movement_id], backref="lot_allocations")
 
-    __table_args__ = (
-        db.Index("ix_stock_lot_allocations_move_lot", "stock_movement_id", "stock_lot_id"),
-    )
+    __table_args__ = (db.Index("ix_stock_lot_allocations_move_lot", "stock_movement_id", "stock_lot_id"),)
 
     def __repr__(self):
         return f"<StockLotAllocation move={self.stock_movement_id} lot={self.stock_lot_id} qty={self.quantity} cost={self.unit_cost}>"
-

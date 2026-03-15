@@ -2,8 +2,9 @@
 Schemas for expense serialization and validation.
 """
 
-from marshmallow import Schema, fields, validate
 from decimal import Decimal
+
+from marshmallow import Schema, fields, validate
 
 
 class ExpenseSchema(Schema):

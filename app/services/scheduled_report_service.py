@@ -2,17 +2,19 @@
 Service for scheduled report generation and email delivery.
 """
 
-from typing import Optional, List, Dict, Any
+import json
+import logging
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
 from flask import current_app
+
 from app import db
-from app.models import ReportEmailSchedule, SavedReportView, User, SalesmanEmailMapping
+from app.models import ReportEmailSchedule, SalesmanEmailMapping, SavedReportView, User
 from app.services.reporting_service import ReportingService
 from app.services.unpaid_hours_service import UnpaidHoursService
 from app.utils.email import send_email
 from app.utils.timezone import now_in_app_timezone
-import logging
-import json
 
 logger = logging.getLogger(__name__)
 
@@ -122,21 +124,22 @@ class ScheduledReportService:
             if saved_view.iterative_report_generation and saved_view.iterative_custom_field_name:
                 # Use iterative report generation from saved view
                 return self._generate_and_send_custom_field_reports(
-                    schedule, saved_view, config, 
-                    custom_field_name=saved_view.iterative_custom_field_name
+                    schedule, saved_view, config, custom_field_name=saved_view.iterative_custom_field_name
                 )
             elif schedule.split_by_salesman and schedule.salesman_field_name:
                 # Use legacy split_by_salesman from schedule
                 return self._generate_and_send_custom_field_reports(
-                    schedule, saved_view, config,
-                    custom_field_name=schedule.salesman_field_name
+                    schedule, saved_view, config, custom_field_name=schedule.salesman_field_name
                 )
-            
+
             # Validate config before proceeding
             if not isinstance(config, dict):
                 logger.error(f"Invalid config for schedule {schedule_id}: config is not a dict")
-                return {"success": False, "message": "Invalid report configuration. Please check the saved report view."}
-            
+                return {
+                    "success": False,
+                    "message": "Invalid report configuration. Please check the saved report view.",
+                }
+
             # Generate report data based on config
             report_data = self._generate_report_data(saved_view, config)
 
@@ -147,6 +150,7 @@ class ScheduledReportService:
             # Render email template
             try:
                 from flask import render_template
+
                 html_body = render_template(
                     "email/scheduled_report.html",
                     report_name=saved_view.name,
@@ -263,6 +267,7 @@ class ScheduledReportService:
     def list_schedules(self, user_id: Optional[int] = None, active_only: bool = True) -> List[ReportEmailSchedule]:
         """List scheduled reports"""
         from sqlalchemy.orm import joinedload
+
         query = ReportEmailSchedule.query.options(joinedload(ReportEmailSchedule.saved_view))
         if user_id:
             query = query.filter_by(created_by=user_id)
@@ -322,35 +327,40 @@ class ScheduledReportService:
             return {"success": False, "message": f"Error deleting schedule: {str(e)}"}
 
     def _generate_and_send_custom_field_reports(
-        self, schedule: ReportEmailSchedule, saved_view: SavedReportView, config: Dict[str, Any],
-        custom_field_name: Optional[str] = None
+        self,
+        schedule: ReportEmailSchedule,
+        saved_view: SavedReportView,
+        config: Dict[str, Any],
+        custom_field_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Generate and send reports split by custom field value.
-        
+
         This generates individual reports for each unique value of the specified
         custom field and sends them to the configured recipients.
-        
+
         Args:
             schedule: ReportEmailSchedule object
             saved_view: SavedReportView object
             config: Report configuration dict
             custom_field_name: Custom field name to iterate over (if None, uses schedule.salesman_field_name or "salesman")
-        
+
         Returns:
             dict with 'success', 'message', and 'sent_count' keys
         """
         try:
             from datetime import timedelta
-            from app.models import Client, TimeEntry
+
             # Import the generate_report_data function from custom_reports module
             import app.routes.custom_reports as custom_reports_module
+            from app.models import Client, TimeEntry
+
             generate_report_data = custom_reports_module.generate_report_data
-            
+
             # Get custom field name - use provided parameter, or fall back to schedule or default
             if not custom_field_name:
                 custom_field_name = schedule.salesman_field_name or saved_view.iterative_custom_field_name or "salesman"
-            
+
             # Override with previous calendar month when schedule has use_last_month_dates and cadence is monthly
             if schedule.cadence == "monthly" and getattr(schedule, "use_last_month_dates", False):
                 now = now_in_app_timezone()
@@ -361,14 +371,14 @@ class ScheduledReportService:
                     config["filters"] = {}
                 config["filters"]["start_date"] = first_of_prev.strftime("%Y-%m-%d")
                 config["filters"]["end_date"] = last_of_prev.strftime("%Y-%m-%d")
-            
+
             # Get date range from config or use defaults
             # Config can have filters at top level or nested
             filters = config.get("filters", {}) if isinstance(config.get("filters"), dict) else {}
             if not filters and "start_date" in config:
                 # Filters might be at top level
                 filters = config
-            
+
             end_date = now_in_app_timezone()
             if filters.get("end_date"):
                 end_date_str = filters["end_date"]
@@ -377,13 +387,13 @@ class ScheduledReportService:
                         end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
                     except ValueError:
                         try:
-                            end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
+                            end_date = datetime.fromisoformat(end_date_str.replace("Z", "+00:00"))
                         except (ValueError, AttributeError) as e:
                             logger.warning(f"Could not parse end_date: {end_date_str}, using current time: {e}")
                             end_date = now_in_app_timezone()
                 else:
                     end_date = end_date_str
-            
+
             # Default to last month if no start date
             start_date = end_date - timedelta(days=30)
             if filters.get("start_date"):
@@ -393,32 +403,30 @@ class ScheduledReportService:
                         start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
                     except ValueError:
                         try:
-                            start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
+                            start_date = datetime.fromisoformat(start_date_str.replace("Z", "+00:00"))
                         except (ValueError, AttributeError) as e:
                             logger.warning(f"Could not parse start_date: {start_date_str}, using default: {e}")
                             start_date = end_date - timedelta(days=30)
                 else:
                     start_date = start_date_str
-            
+
             # Get all unique values for the custom field from clients that have time entries in the date range
             # First, get all clients with the custom field
             clients = Client.query.filter_by(status="active").all()
             unique_values = set()
-            
+
             # Also check time entries in the date range to get values that actually have data
             time_entries = TimeEntry.query.filter(
-                TimeEntry.end_time.isnot(None),
-                TimeEntry.start_time >= start_date,
-                TimeEntry.start_time <= end_date
+                TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_date, TimeEntry.start_time <= end_date
             ).all()
-            
+
             # Collect unique values from both clients and time entries
             for client in clients:
                 if client.custom_fields and custom_field_name in client.custom_fields:
                     value = client.custom_fields[custom_field_name]
                     if value:
                         unique_values.add(str(value).strip())
-            
+
             # Also check from time entries (in case client was deleted or field changed)
             for entry in time_entries:
                 client = None
@@ -426,12 +434,12 @@ class ScheduledReportService:
                     client = entry.project.client
                 elif entry.client:
                     client = entry.client
-                
+
                 if client and client.custom_fields and custom_field_name in client.custom_fields:
                     value = client.custom_fields[custom_field_name]
                     if value:
                         unique_values.add(str(value).strip())
-            
+
             if not unique_values:
                 logger.warning(f"No unique values found for custom field '{custom_field_name}'")
                 return {
@@ -439,12 +447,12 @@ class ScheduledReportService:
                     "message": f"No unique values found for custom field '{custom_field_name}'",
                     "sent_count": 0,
                 }
-            
+
             # Generate a report for each unique value
             recipients = [email.strip() for email in schedule.recipients.split(",")]
             sent_count = 0
             errors = []
-            
+
             for field_value in sorted(unique_values):
                 # Create a modified config with the custom field filter
                 modified_config = config.copy()
@@ -454,13 +462,14 @@ class ScheduledReportService:
                 elif not isinstance(modified_config["filters"], dict):
                     modified_config["filters"] = {}
                 modified_config["filters"]["custom_field_filter"] = {custom_field_name: field_value}
-                
+
                 # Generate report data with the filter
                 report_data = generate_report_data(modified_config, schedule.created_by)
-                
+
                 # Render email template
                 try:
                     from flask import render_template
+
                     html_body = render_template(
                         "email/scheduled_report.html",
                         report_name=f"{saved_view.name} ({custom_field_name}={field_value})",
@@ -474,12 +483,10 @@ class ScheduledReportService:
                     logger.warning(f"Could not render email template, using plain text: {e}")
                     html_body = None
                     text_body = f"Scheduled Report: {saved_view.name} - {custom_field_name}={field_value}\n\nGenerated at: {now_in_app_timezone()}\n\nReport data available in HTML version."
-                
+
                 # Determine recipient(s) based on distribution mode
-                report_recipients = self._get_recipients_for_field_value(
-                    schedule, field_value, recipients
-                )
-                
+                report_recipients = self._get_recipients_for_field_value(schedule, field_value, recipients)
+
                 # Send email to determined recipients
                 for recipient in report_recipients:
                     try:
@@ -495,16 +502,16 @@ class ScheduledReportService:
                         error_msg = f"Error sending to {recipient} ({custom_field_name}={field_value}): {str(e)}"
                         logger.error(error_msg)
                         errors.append(error_msg)
-            
+
             # Update schedule
             schedule.last_run_at = now_in_app_timezone()
             schedule.next_run_at = self._calculate_next_run(schedule.cadence, schedule.cron, schedule.timezone)
             db.session.commit()
-            
+
             message = f"Reports sent for {len(unique_values)} unique {custom_field_name} values to {len(recipients)} recipient(s)."
             if errors:
                 message += f" Errors: {len(errors)}"
-            
+
             return {
                 "success": True,
                 "message": message,
@@ -515,38 +522,39 @@ class ScheduledReportService:
             db.session.rollback()
             logger.error(f"Error generating and sending custom field reports: {e}", exc_info=True)
             return {"success": False, "message": f"Error generating reports: {str(e)}"}
-    
+
     def _get_recipients_for_field_value(
         self, schedule: ReportEmailSchedule, field_value: str, default_recipients: List[str]
     ) -> List[str]:
         """
         Get recipient email addresses for a specific custom field value.
-        
+
         Supports three modes:
         - 'mapping': Use SalesmanEmailMapping table
         - 'template': Use recipient_email_template with {value} placeholder
         - 'single': Use default recipients (fallback)
-        
+
         Args:
             schedule: ReportEmailSchedule object
             field_value: The custom field value (e.g., 'MM', 'PB')
             default_recipients: Fallback recipients if mapping/template fails
-            
+
         Returns:
             List of email addresses
         """
         distribution_mode = schedule.email_distribution_mode or "single"
-        
+
         if distribution_mode == "mapping":
             # Use SalesmanEmailMapping
             from app.models import SalesmanEmailMapping
+
             email = SalesmanEmailMapping.get_email_for_initial(field_value)
             if email:
                 return [email]
             else:
                 logger.warning(f"No email mapping found for {field_value}, using default recipients")
                 return default_recipients
-        
+
         elif distribution_mode == "template":
             # Use email template; supports {value} and {value_lower} (e.g. {value_lower}@test.de -> kf@test.de)
             template = schedule.recipient_email_template
@@ -556,7 +564,7 @@ class ScheduledReportService:
             else:
                 logger.warning(f"Invalid email template '{template}', using default recipients")
                 return default_recipients
-        
+
         else:
             # Single mode: use default recipients
             return default_recipients

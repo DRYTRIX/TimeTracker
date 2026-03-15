@@ -12,18 +12,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
-from app.integrations.peppol import (
-    PEPPOL_BIS3_PROFILE_ID,
-    PeppolAccessPointError,
-    send_ubl_via_access_point,
-)
-from app.integrations.peppol_as4 import build_as4_message, send_as4_message, PeppolAS4Error
-from app.integrations.peppol_identifiers import validate_participant_identifiers, PeppolIdentifierError
-from app.integrations.peppol_smp import (
-    PeppolSMPError,
-    get_recipient_endpoint_url,
-    get_smp_url,
-)
+from app.integrations.peppol import PEPPOL_BIS3_PROFILE_ID, PeppolAccessPointError, send_ubl_via_access_point
+from app.integrations.peppol_as4 import PeppolAS4Error, build_as4_message, send_as4_message
+from app.integrations.peppol_identifiers import PeppolIdentifierError, validate_participant_identifiers
+from app.integrations.peppol_smp import PeppolSMPError, get_recipient_endpoint_url, get_smp_url
 
 
 class PeppolTransportError(RuntimeError):

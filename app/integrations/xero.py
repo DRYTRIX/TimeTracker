@@ -3,13 +3,15 @@ Xero integration connector.
 Sync invoices, expenses, and payments with Xero.
 """
 
-from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta
-from app.integrations.base import BaseConnector
-import requests
-import os
 import base64
 import logging
+import os
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+import requests
+
+from app.integrations.base import BaseConnector
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +40,13 @@ class XeroConnector(BaseConnector):
         if not client_id:
             raise ValueError("XERO_CLIENT_ID not configured")
 
-        scopes = ["accounting.invoices", "accounting.payments", "accounting.contacts", "accounting.settings", "offline_access"]
+        scopes = [
+            "accounting.invoices",
+            "accounting.payments",
+            "accounting.contacts",
+            "accounting.settings",
+            "offline_access",
+        ]
 
         auth_url = "https://login.xero.com/identity/connect/authorize"
         params = {
@@ -214,8 +222,8 @@ class XeroConnector(BaseConnector):
 
     def sync_data(self, sync_type: str = "full") -> Dict[str, Any]:
         """Sync invoices and expenses with Xero"""
-        from app.models import Invoice, Expense
         from app import db
+        from app.models import Expense, Invoice
 
         try:
             tenant_id = self.integration.config.get("tenant_id")
@@ -250,7 +258,9 @@ class XeroConnector(BaseConnector):
 
             # Sync expenses (create as expenses in Xero)
             if sync_type == "full" or sync_type == "expenses":
-                expenses = Expense.query.filter(Expense.expense_date >= datetime.utcnow().date() - timedelta(days=90)).all()
+                expenses = Expense.query.filter(
+                    Expense.expense_date >= datetime.utcnow().date() - timedelta(days=90)
+                ).all()
 
                 for expense in expenses:
                     try:
@@ -258,7 +268,9 @@ class XeroConnector(BaseConnector):
                         if xero_expense:
                             if not hasattr(expense, "metadata") or not expense.metadata:
                                 expense.metadata = {}
-                            expense.metadata["xero_expense_id"] = xero_expense.get("ExpenseClaims", [{}])[0].get("ExpenseClaimID")
+                            expense.metadata["xero_expense_id"] = xero_expense.get("ExpenseClaims", [{}])[0].get(
+                                "ExpenseClaimID"
+                            )
                             synced_count += 1
                     except Exception as e:
                         errors.append(f"Error syncing expense {expense.id}: {str(e)}")
@@ -275,18 +287,18 @@ class XeroConnector(BaseConnector):
         # Get customer mapping from integration config or invoice metadata
         contact_mapping = self.integration.config.get("contact_mappings", {}) if self.integration else {}
         item_mapping = self.integration.config.get("item_mappings", {}) if self.integration else {}
-        
+
         # Try to get Xero contact ID from mapping or metadata
         contact_id = None
         contact_name = invoice.client.name if invoice.client else "Unknown"
-        
+
         if invoice.client_id:
             # Check mapping first
             contact_id = contact_mapping.get(str(invoice.client_id))
             # Fallback to invoice metadata
             if not contact_id and hasattr(invoice, "metadata") and invoice.metadata:
                 contact_id = invoice.metadata.get("xero_contact_id")
-        
+
         # Build Xero invoice structure
         xero_invoice = {
             "Type": "ACCREC",
@@ -296,7 +308,7 @@ class XeroConnector(BaseConnector):
             ),
             "LineItems": [],
         }
-        
+
         # Add contact - use ID if available, otherwise use name
         if contact_id:
             xero_invoice["Contact"] = {"ContactID": contact_id}
@@ -308,18 +320,18 @@ class XeroConnector(BaseConnector):
         for item in invoice.items:
             # Try to get Xero item code from mapping
             item_code = item_mapping.get(str(item.id)) or item_mapping.get(item.description, {}).get("code")
-            
+
             line_item = {
                 "Description": item.description,
                 "Quantity": float(item.quantity),
                 "UnitAmount": float(item.unit_price),
                 "LineAmount": float(item.quantity * item.unit_price),
             }
-            
+
             # Add item code if available
             if item_code:
                 line_item["ItemCode"] = item_code
-            
+
             xero_invoice["LineItems"].append(line_item)
 
         endpoint = "/api.xro/2.0/Invoices"
@@ -329,15 +341,17 @@ class XeroConnector(BaseConnector):
         """Create expense in Xero"""
         # Get account mapping from integration config
         account_mapping = self.integration.config.get("account_mappings", {}) if self.integration else {}
-        default_expense_account = self.integration.config.get("default_expense_account_code", "200") if self.integration else "200"
-        
+        default_expense_account = (
+            self.integration.config.get("default_expense_account_code", "200") if self.integration else "200"
+        )
+
         # Try to get account code from expense category mapping or use default
         account_code = default_expense_account
         if expense.category_id:
             account_code = account_mapping.get(str(expense.category_id), default_expense_account)
         elif hasattr(expense, "metadata") and expense.metadata:
             account_code = expense.metadata.get("xero_account_code", default_expense_account)
-        
+
         # Build Xero expense structure
         xero_expense = {
             "Date": expense.date.strftime("%Y-%m-%d") if expense.date else datetime.utcnow().strftime("%Y-%m-%d"),
@@ -394,8 +408,20 @@ class XeroConnector(BaseConnector):
                     "default": ["invoices", "expenses"],
                     "description": "Select which items to synchronize",
                 },
-                {"name": "sync_invoices", "type": "boolean", "label": "Sync Invoices", "default": True, "description": "Enable invoice synchronization"},
-                {"name": "sync_expenses", "type": "boolean", "label": "Sync Expenses", "default": True, "description": "Enable expense synchronization"},
+                {
+                    "name": "sync_invoices",
+                    "type": "boolean",
+                    "label": "Sync Invoices",
+                    "default": True,
+                    "description": "Enable invoice synchronization",
+                },
+                {
+                    "name": "sync_expenses",
+                    "type": "boolean",
+                    "label": "Sync Expenses",
+                    "default": True,
+                    "description": "Enable expense synchronization",
+                },
                 {
                     "name": "auto_sync",
                     "type": "boolean",
@@ -431,7 +457,7 @@ class XeroConnector(BaseConnector):
                     "required": False,
                     "placeholder": '{"1": "contact-uuid-123", "2": "contact-uuid-456"}',
                     "description": "JSON mapping of TimeTracker client IDs to Xero Contact IDs",
-                    "help": "Map your TimeTracker clients to Xero contacts. Format: {\"timetracker_client_id\": \"xero_contact_id\"}",
+                    "help": 'Map your TimeTracker clients to Xero contacts. Format: {"timetracker_client_id": "xero_contact_id"}',
                 },
                 {
                     "name": "item_mappings",
@@ -462,7 +488,14 @@ class XeroConnector(BaseConnector):
                 {
                     "title": "Sync Settings",
                     "description": "Configure what and how to sync",
-                    "fields": ["sync_direction", "sync_items", "sync_invoices", "sync_expenses", "auto_sync", "sync_interval"],
+                    "fields": [
+                        "sync_direction",
+                        "sync_items",
+                        "sync_invoices",
+                        "sync_expenses",
+                        "auto_sync",
+                        "sync_interval",
+                    ],
                 },
                 {
                     "title": "Data Mapping",

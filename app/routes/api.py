@@ -1,28 +1,30 @@
-from flask import Blueprint, jsonify, request, current_app, send_from_directory, make_response
-from flask_login import login_required, current_user
-from flask_babel import gettext as _
-from app import db, socketio
-from app.models import (
-    User,
-    Project,
-    TimeEntry,
-    Settings,
-    Task,
-    FocusSession,
-    RecurringBlock,
-    RateOverride,
-    SavedFilter,
-    Client,
-)
-from datetime import datetime, timedelta, time
-from app.utils.db import safe_commit
-from app.utils.timezone import parse_local_datetime, utc_to_local, convert_app_datetime_to_user
-from app.models.time_entry import local_now
-from sqlalchemy import or_
 import json
 import os
 import uuid
+from datetime import datetime, time, timedelta
+
+from flask import Blueprint, current_app, jsonify, make_response, request, send_from_directory
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+from sqlalchemy import or_
 from werkzeug.utils import secure_filename
+
+from app import db, socketio
+from app.models import (
+    Client,
+    FocusSession,
+    Project,
+    RateOverride,
+    RecurringBlock,
+    SavedFilter,
+    Settings,
+    Task,
+    TimeEntry,
+    User,
+)
+from app.models.time_entry import local_now
+from app.utils.db import safe_commit
+from app.utils.timezone import convert_app_datetime_to_user, parse_local_datetime, utc_to_local
 
 api_bp = Blueprint("api", __name__)
 
@@ -91,19 +93,19 @@ def get_recent_tags():
 @login_required
 def search():
     """Global search endpoint for projects, tasks, clients, and time entries
-    
+
     Query Parameters:
         q (str): Search query (minimum 2 characters)
         limit (int): Maximum number of results per category (default: 10, max: 50)
         types (str): Comma-separated list of types to search (project, task, client, entry)
-    
+
     Returns:
         JSON object with search results array
     """
     query = request.args.get("q", "").strip()
     limit = min(request.args.get("limit", 10, type=int), 50)  # Cap at 50
     types_filter = request.args.get("types", "").strip().lower()
-    
+
     if not query or len(query) < 2:
         return jsonify({"results": [], "query": query})
 
@@ -152,7 +154,7 @@ def search():
                 Task.query.join(Project)
                 .filter(
                     Project.status == "active",
-                    or_(Task.name.ilike(search_pattern), Task.description.ilike(search_pattern))
+                    or_(Task.name.ilike(search_pattern), Task.description.ilike(search_pattern)),
                 )
                 .limit(limit)
                 .all()
@@ -897,40 +899,44 @@ def create_entry():
         return jsonify({"error": result.get("message", "Could not create time entry")}), 400
 
     entry = result.get("entry")
-    
+
     # Log activity
     if entry:
         from app.models import Activity
+
         entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
         task_name = entry.task.name if entry.task else None
-        duration_formatted = entry.duration_formatted if hasattr(entry, 'duration_formatted') else "0:00"
-        
+        duration_formatted = entry.duration_formatted if hasattr(entry, "duration_formatted") else "0:00"
+
         Activity.log(
             user_id=entry.user_id,
             action="created",
             entity_type="time_entry",
             entity_id=entry.id,
             entity_name=f"{entity_name}" + (f" - {task_name}" if task_name else ""),
-            description=f'Created time entry for {entity_name}' + (f" - {task_name}" if task_name else "") + f' - {duration_formatted}',
+            description=f"Created time entry for {entity_name}"
+            + (f" - {task_name}" if task_name else "")
+            + f" - {duration_formatted}",
             extra_data={
                 "project_name": entry.project.name if entry.project else None,
                 "client_name": entry.client.name if entry.client else None,
                 "task_name": task_name,
                 "duration_formatted": duration_formatted,
-                "duration_hours": entry.duration_hours if hasattr(entry, 'duration_hours') else None,
+                "duration_hours": entry.duration_hours if hasattr(entry, "duration_hours") else None,
             },
             ip_address=request.remote_addr,
             user_agent=request.headers.get("User-Agent"),
         )
-    
+
     # Invalidate dashboard cache for the entry owner so new entry appears immediately
     try:
         from app.utils.cache import invalidate_dashboard_for_user
+
         invalidate_dashboard_for_user(entry.user_id)
         current_app.logger.debug("Invalidated dashboard cache for user %s after entry creation", entry.user_id)
     except Exception as e:
         current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
-    
+
     payload = entry.to_dict()
     payload["project_name"] = entry.project.name if entry.project else None
     payload["client_name"] = entry.client.name if entry.client else None
@@ -1145,7 +1151,7 @@ def calendar_events():
         if not ev.get("allDay", False):
             event_start = convert_time_for_calendar(ev["start"])
             event_end = convert_time_for_calendar(ev["end"])
-        
+
         events.append(
             {
                 "id": ev["id"],
@@ -1373,6 +1379,7 @@ def create_task_inline():
             if wants_json:
                 return jsonify({"error": "name and project_id are required"}), 400
             from flask import flash, redirect, url_for
+
             flash(_("Task name and project are required"), "error")
             return redirect(url_for("tasks.list_tasks"))
 
@@ -1382,6 +1389,7 @@ def create_task_inline():
             if wants_json:
                 return jsonify({"error": "Project not found or inactive"}), 404
             from flask import flash, redirect, url_for
+
             flash(_("Selected project does not exist or is inactive"), "error")
             return redirect(url_for("tasks.list_tasks"))
 
@@ -1404,14 +1412,15 @@ def create_task_inline():
             if wants_json:
                 return jsonify({"error": result.get("message", "Failed to create task")}), 400
             from flask import flash, redirect, url_for
+
             flash(_(result["message"]), "error")
             return redirect(url_for("tasks.list_tasks"))
 
         task = result["task"]
 
         # Log task creation
-        from app.models import Activity
         from app import log_event, track_event
+        from app.models import Activity
 
         log_event(
             "task.created",
@@ -1439,6 +1448,7 @@ def create_task_inline():
         if wants_json:
             return jsonify({"success": True, "id": task.id, "name": task.name, "task": task.to_dict()}), 201
         from flask import flash, redirect, url_for
+
         flash(_('Task "%(name)s" created successfully', name=name), "success")
         return redirect(url_for("tasks.view_task", task_id=task.id))
 
@@ -1480,9 +1490,7 @@ def get_users():
         .all()
     )
     total_hours_by_user = {uid: round((total_seconds or 0) / 3600, 2) for uid, total_seconds in rows}
-    return jsonify({
-        "users": [user.to_dict(total_hours_override=total_hours_by_user.get(user.id)) for user in users]
-    })
+    return jsonify({"users": [user.to_dict(total_hours_override=total_hours_by_user.get(user.id)) for user in users]})
 
 
 @api_bp.route("/api/stats")
@@ -1499,17 +1507,11 @@ def get_stats():
     user_id = current_user.id if not current_user.is_admin else None
 
     # Calculate statistics
-    today_hours = TimeEntry.get_total_hours_for_period(
-        start_date=today, user_id=user_id
-    )
+    today_hours = TimeEntry.get_total_hours_for_period(start_date=today, user_id=user_id)
 
-    week_hours = TimeEntry.get_total_hours_for_period(
-        start_date=week_start, user_id=user_id
-    )
+    week_hours = TimeEntry.get_total_hours_for_period(start_date=week_start, user_id=user_id)
 
-    month_hours = TimeEntry.get_total_hours_for_period(
-        start_date=start_date.date(), user_id=user_id
-    )
+    month_hours = TimeEntry.get_total_hours_for_period(start_date=start_date.date(), user_id=user_id)
 
     # Overtime for today, week, and YTD
     from app.utils.overtime import get_overtime_ytd
@@ -1567,8 +1569,9 @@ def update_entry(entry_id):
 
     # Use service layer for update to get enhanced audit logging
     from app.services import TimeTrackingService
+
     service = TimeTrackingService()
-    
+
     # Convert data to service parameters
     result = service.update_entry(
         entry_id=entry_id,
@@ -1586,25 +1589,26 @@ def update_entry(entry_id):
         invoice_number=data.get("invoice_number"),
         reason=reason,
     )
-    
+
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not update entry")}), 400
 
     entry = result.get("entry")
-    
+
     # Log activity
     if entry:
         from app.models import Activity
+
         entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
         task_name = entry.task.name if entry.task else None
-        
+
         Activity.log(
             user_id=current_user.id,
             action="updated",
             entity_type="time_entry",
             entity_id=entry.id,
             entity_name=f"{entity_name}" + (f" - {task_name}" if task_name else ""),
-            description=f'Updated time entry for {entity_name}' + (f" - {task_name}" if task_name else ""),
+            description=f"Updated time entry for {entity_name}" + (f" - {task_name}" if task_name else ""),
             extra_data={
                 "project_name": entry.project.name if entry.project else None,
                 "client_name": entry.client.name if entry.client else None,
@@ -1617,6 +1621,7 @@ def update_entry(entry_id):
     # Invalidate dashboard cache for the entry owner so changes appear immediately
     try:
         from app.utils.cache import invalidate_dashboard_for_user
+
         invalidate_dashboard_for_user(entry.user_id)
         current_app.logger.debug("Invalidated dashboard cache for user %s after entry update", entry.user_id)
     except Exception as e:
@@ -1633,24 +1638,26 @@ def delete_entry(entry_id):
     """Delete a time entry"""
     data = request.get_json() or {}
     reason = data.get("reason")  # Optional reason for deletion
-    
+
     # Use service layer for deletion to get enhanced audit logging
     from app.services import TimeTrackingService
+
     service = TimeTrackingService()
-    
+
     result = service.delete_entry(
         user_id=current_user.id,
         entry_id=entry_id,
         is_admin=current_user.is_admin,
         reason=reason,
     )
-    
+
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not delete entry")}), 400
 
     # Invalidate dashboard cache for the entry owner so changes appear immediately
     try:
         from app.utils.cache import invalidate_dashboard_for_user
+
         invalidate_dashboard_for_user(current_user.id)
         current_app.logger.debug("Invalidated dashboard cache for user %s after entry deletion", current_user.id)
     except Exception as e:
@@ -1705,22 +1712,22 @@ def upload_editor_images_bulk():
     """Handle multiple image uploads from the markdown editor."""
     if "images" not in request.files:
         return jsonify({"error": "No images provided"}), 400
-    
+
     files = request.files.getlist("images")
     if not files or all(f.filename == "" for f in files):
         return jsonify({"error": "No images provided"}), 400
-    
+
     uploaded_urls = []
     errors = []
-    
+
     for idx, file in enumerate(files):
         if file.filename == "":
             continue
-        
+
         if not allowed_image_file(file.filename):
             errors.append(f"File {idx + 1} ({file.filename}): Invalid file type")
             continue
-        
+
         try:
             filename = secure_filename(file.filename)
             ext = filename.rsplit(".", 1)[1].lower()
@@ -1728,19 +1735,19 @@ def upload_editor_images_bulk():
             folder = get_editor_upload_folder()
             path = os.path.join(folder, unique_name)
             file.save(path)
-            
+
             url = f"/uploads/editor/{unique_name}"
             uploaded_urls.append(url)
         except Exception as e:
             errors.append(f"File {idx + 1} ({file.filename}): {str(e)}")
-    
+
     if not uploaded_urls and errors:
         return jsonify({"error": "All uploads failed", "details": errors}), 400
-    
+
     response = {"success": True, "urls": uploaded_urls}
     if errors:
         response["warnings"] = errors
-    
+
     return jsonify(response)
 
 
@@ -1760,8 +1767,9 @@ def serve_editor_image(filename):
 @login_required
 def get_activities():
     """Get recent activities with filtering"""
-    from app.models import Activity
     from sqlalchemy import and_
+
+    from app.models import Activity
 
     # Get query parameters
     limit = request.args.get("limit", 50, type=int)
@@ -1826,9 +1834,10 @@ def get_activities():
 @login_required
 def dashboard_stats():
     """Get dashboard statistics for real-time updates"""
-    from app.models import TimeEntry
     from datetime import datetime, timedelta
-    from app.utils.overtime import calculate_period_overtime, get_week_start_for_date, get_overtime_ytd
+
+    from app.models import TimeEntry
+    from app.utils.overtime import calculate_period_overtime, get_overtime_ytd, get_week_start_for_date
 
     today = datetime.utcnow().date()
     week_start = get_week_start_for_date(today, current_user)
@@ -1866,9 +1875,11 @@ def dashboard_stats():
 @login_required
 def dashboard_sparklines():
     """Get sparkline data for dashboard widgets"""
-    from app.models import TimeEntry
     from datetime import datetime, timedelta
+
     from sqlalchemy import func
+
+    from app.models import TimeEntry
 
     # Get last 7 days of data
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
@@ -1912,9 +1923,11 @@ def dashboard_sparklines():
 @login_required
 def summary_today():
     """Get today's time tracking summary for daily summary notification"""
-    from app.models import TimeEntry, Project
     from datetime import datetime, timedelta
-    from sqlalchemy import func, distinct
+
+    from sqlalchemy import distinct, func
+
+    from app.models import Project, TimeEntry
 
     today = datetime.utcnow().date()
 
@@ -1937,8 +1950,9 @@ def summary_today():
 @login_required
 def activity_timeline():
     """Get activity timeline for dashboard"""
-    from app.models import Activity
     from datetime import datetime, timedelta
+
+    from app.models import Activity
 
     # Get activities from last 7 days
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
@@ -1969,8 +1983,9 @@ def activity_timeline():
 @login_required
 def get_activity_stats():
     """Get activity statistics"""
-    from app.models import Activity
     from sqlalchemy import func
+
+    from app.models import Activity
 
     # Get date range (default to last 7 days)
     days = request.args.get("days", 7, type=int)

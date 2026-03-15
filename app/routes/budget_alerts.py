@@ -4,22 +4,24 @@ Budget Alerts Routes
 This module provides API endpoints for managing budget alerts and forecasting.
 """
 
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
-from flask_login import login_required, current_user
+from datetime import datetime, timedelta
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_babel import _
+from flask_login import current_user, login_required
+from sqlalchemy import func
+
 from app import db, log_event, track_event
-from app.models import Project, BudgetAlert, User
+from app.models import BudgetAlert, Project, User
 from app.repositories import TimeEntryRepository
 from app.utils.budget_forecasting import (
-    calculate_burn_rate,
-    estimate_completion_date,
-    analyze_resource_allocation,
     analyze_cost_trends,
-    get_budget_status,
+    analyze_resource_allocation,
+    calculate_burn_rate,
     check_budget_alerts,
+    estimate_completion_date,
+    get_budget_status,
 )
-from datetime import datetime, timedelta
-from sqlalchemy import func
 from app.utils.module_helpers import module_enabled
 
 budget_alerts_bp = Blueprint("budget_alerts", __name__)

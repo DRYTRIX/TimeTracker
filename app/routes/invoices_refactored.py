@@ -7,20 +7,22 @@ app/routes/invoices.py. Do not register this blueprint; use it as reference when
 refactoring or when adding new invoice routes.
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from decimal import Decimal
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
 from app import db, log_event, track_event
-from app.services import InvoiceService, ProjectService
-from app.repositories import InvoiceRepository, ProjectRepository
+from app.constants import InvoiceStatus, WebhookEvent
 from app.models import Invoice, Project, Settings
+from app.repositories import InvoiceRepository, ProjectRepository
+from app.services import InvoiceService, ProjectService
+from app.utils.api_responses import error_response, paginated_response, success_response
 from app.utils.db import safe_commit
-from app.utils.api_responses import success_response, error_response, paginated_response
 from app.utils.event_bus import emit_event
-from app.constants import WebhookEvent, InvoiceStatus
-from app.utils.posthog_funnels import track_invoice_page_viewed, track_invoice_project_selected, track_invoice_generated
+from app.utils.posthog_funnels import track_invoice_generated, track_invoice_page_viewed, track_invoice_project_selected
 
 invoices_bp = Blueprint("invoices", __name__)
 

@@ -2,16 +2,17 @@
 
 import hmac
 import re
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
-from flask_login import login_required, current_user
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
 from app import db
-from app.models import User, Activity, Settings
+from app.models import Activity, Settings, User
 from app.utils.db import safe_commit
 from app.utils.donate_hide_code import compute_donate_hide_code, verify_ed25519_signature
 from app.utils.license_utils import is_license_activated
-from flask_babel import gettext as _
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from app.utils.timezone import get_available_timezones
 
 HEX_COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
@@ -57,6 +58,7 @@ def settings():
             reminder_time = request.form.get("reminder_to_log_time", "").strip()
             if reminder_time and len(reminder_time) <= 5:
                 import re
+
                 if re.match(r"^([01]?\d|2[0-3]):[0-5]\d$", reminder_time):
                     current_user.reminder_to_log_time = reminder_time
                 else:
@@ -118,6 +120,7 @@ def settings():
                 current_user.preferred_language = preferred_language if preferred_language else None
                 # Also update session for immediate effect
                 from flask import session
+
                 if preferred_language:
                     session["preferred_language"] = preferred_language
                     session.permanent = True

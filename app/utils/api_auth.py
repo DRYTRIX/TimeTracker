@@ -1,10 +1,12 @@
 """API Token Authentication utilities for REST API"""
 
-from functools import wraps
-from flask import request, jsonify, g, current_app
-from app.models import ApiToken, User
-from app import db
 from datetime import datetime
+from functools import wraps
+
+from flask import current_app, g, jsonify, request
+
+from app import db
+from app.models import ApiToken, User
 
 
 def extract_token_from_request():
@@ -145,11 +147,13 @@ def require_api_token(required_scope=None):
             if not user or not api_token:
                 message = error_msg or "The provided API token is invalid or expired"
                 return (
-                    jsonify({
-                        "error": "Invalid token",
-                        "message": message,
-                        "error_code": "unauthorized",
-                    }),
+                    jsonify(
+                        {
+                            "error": "Invalid token",
+                            "message": message,
+                            "error_code": "unauthorized",
+                        }
+                    ),
                     401,
                 )
 

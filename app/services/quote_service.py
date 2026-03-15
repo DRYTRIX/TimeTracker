@@ -2,13 +2,15 @@
 Service for quote business logic.
 """
 
-from typing import Optional, Dict, Any, List
 from datetime import date, timedelta
 from decimal import Decimal
+from typing import Any, Dict, List, Optional
+
 from sqlalchemy import func
+
 from app import db
+from app.models import Client, Quote
 from app.repositories import ClientRepository
-from app.models import Quote, Client
 from app.utils.db import safe_commit
 from app.utils.timezone import local_now
 

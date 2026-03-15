@@ -2,11 +2,13 @@
 Slack integration connector.
 """
 
-from typing import Dict, Any, Optional
-from datetime import datetime, timedelta
-from app.integrations.base import BaseConnector
-import requests
 import os
+from datetime import datetime, timedelta
+from typing import Any, Dict, Optional
+
+import requests
+
+from app.integrations.base import BaseConnector
 
 
 class SlackConnector(BaseConnector):
@@ -217,12 +219,14 @@ class SlackConnector(BaseConnector):
         except Exception as e:
             return {"success": False, "message": f"Sync failed: {str(e)}"}
 
-    def handle_webhook(self, payload: Dict[str, Any], headers: Dict[str, str], raw_body: Optional[bytes] = None) -> Dict[str, Any]:
+    def handle_webhook(
+        self, payload: Dict[str, Any], headers: Dict[str, str], raw_body: Optional[bytes] = None
+    ) -> Dict[str, Any]:
         """Handle incoming webhook from Slack."""
         import logging
-        
+
         logger = logging.getLogger(__name__)
-        
+
         try:
             # Slack webhooks typically use challenge-response for URL verification
             if payload.get("type") == "url_verification":

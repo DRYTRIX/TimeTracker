@@ -1,15 +1,17 @@
 """Routes for lead management"""
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db
-from app.models import Lead, LeadActivity, Client, Deal
-from app.utils.db import safe_commit
-from app.utils.timezone import parse_local_datetime_from_string
-from app.utils.module_helpers import module_enabled
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
+from app import db
+from app.models import Client, Deal, Lead, LeadActivity
+from app.utils.db import safe_commit
+from app.utils.module_helpers import module_enabled
+from app.utils.timezone import parse_local_datetime_from_string
 
 leads_bp = Blueprint("leads", __name__)
 
@@ -311,7 +313,9 @@ def create_activity(lead_id):
     if request.method == "POST":
         try:
             activity_date_str = request.form.get("activity_date", "")
-            activity_date = parse_local_datetime_from_string(activity_date_str) if activity_date_str else datetime.utcnow()
+            activity_date = (
+                parse_local_datetime_from_string(activity_date_str) if activity_date_str else datetime.utcnow()
+            )
             if activity_date is None:
                 activity_date = datetime.utcnow()
 

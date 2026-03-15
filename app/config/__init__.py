@@ -6,10 +6,11 @@ This module contains:
 - Analytics configuration for telemetry
 """
 
+import os
+
 # Import Flask configuration classes from parent config.py
 # We need to import from the parent app module to avoid circular imports
 import sys
-import os
 
 # Import analytics configuration
 from app.config.analytics_defaults import get_analytics_config, has_analytics_configured
@@ -19,7 +20,7 @@ from app.config.analytics_defaults import get_analytics_config, has_analytics_co
 # So we need to import it properly
 try:
     # Try to import from a renamed file if it exists
-    from app.flask_config import Config, ProductionConfig, DevelopmentConfig, TestingConfig
+    from app.flask_config import Config, DevelopmentConfig, ProductionConfig, TestingConfig
 except ImportError:
     # If the file wasn't renamed, we need to import it differently
     # Add parent to path temporarily to import the shadowed config.py

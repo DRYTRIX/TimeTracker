@@ -68,7 +68,8 @@ class GanttService:
 
         all_tasks = (
             Task.query.filter(Task.project_id.in_(project_ids)).order_by(Task.project_id, Task.id).all()
-            if project_ids else []
+            if project_ids
+            else []
         )
         tasks_by_project = defaultdict(list)
         for t in all_tasks:
@@ -101,17 +102,19 @@ class GanttService:
             proj_color = (project.color or "#3b82f6").lstrip("#")
             if len(proj_color) != 6 or not all(c in "0123456789aAbBcCdDeEfF" for c in proj_color):
                 proj_color = "3b82f6"
-            gantt_data.append({
-                "id": f"project-{project.id}",
-                "name": project.name,
-                "start": project_start.strftime("%Y-%m-%d"),
-                "end": project_end.strftime("%Y-%m-%d"),
-                "progress": calculate_project_progress(project, tasks),
-                "type": "project",
-                "project_id": project.id,
-                "dependencies": [],
-                "color": proj_color,
-            })
+            gantt_data.append(
+                {
+                    "id": f"project-{project.id}",
+                    "name": project.name,
+                    "start": project_start.strftime("%Y-%m-%d"),
+                    "end": project_end.strftime("%Y-%m-%d"),
+                    "progress": calculate_project_progress(project, tasks),
+                    "type": "project",
+                    "project_id": project.id,
+                    "dependencies": [],
+                    "color": proj_color,
+                }
+            )
 
             for task in tasks:
                 if task.due_date:
@@ -129,20 +132,22 @@ class GanttService:
                     task_color = raw.lower()
                 else:
                     task_color = proj_color
-                gantt_data.append({
-                    "id": f"task-{task.id}",
-                    "name": task.name,
-                    "start": task_start.strftime("%Y-%m-%d"),
-                    "end": task_end.strftime("%Y-%m-%d"),
-                    "progress": calculate_task_progress(task),
-                    "type": "task",
-                    "task_id": task.id,
-                    "project_id": project.id,
-                    "parent": f"project-{project.id}",
-                    "dependencies": [],
-                    "status": task.status,
-                    "color": task_color,
-                })
+                gantt_data.append(
+                    {
+                        "id": f"task-{task.id}",
+                        "name": task.name,
+                        "start": task_start.strftime("%Y-%m-%d"),
+                        "end": task_end.strftime("%Y-%m-%d"),
+                        "progress": calculate_task_progress(task),
+                        "type": "task",
+                        "task_id": task.id,
+                        "project_id": project.id,
+                        "parent": f"project-{project.id}",
+                        "dependencies": [],
+                        "status": task.status,
+                        "color": task_color,
+                    }
+                )
 
         return {
             "data": gantt_data,

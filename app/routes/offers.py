@@ -1,10 +1,12 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
-from flask_babel import gettext as _
-from flask_login import login_required, current_user
-from app import db, log_event, track_event
-from app.models import Quote, QuoteItem, Client, Project, Invoice
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask_babel import gettext as _
+from flask_login import current_user, login_required
+
+from app import db, log_event, track_event
+from app.models import Client, Invoice, Project, Quote, QuoteItem
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required, permission_required
 

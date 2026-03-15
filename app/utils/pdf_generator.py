@@ -7,13 +7,13 @@ and fewer system dependencies. Legacy WeasyPrint imports remain for backward com
 but are not actively used in the new implementation.
 """
 
-import os
 import html as html_lib
+import os
 from datetime import datetime
 
 try:
     # Try importing WeasyPrint. This may fail on systems without native deps.
-    from weasyprint import HTML, CSS  # type: ignore
+    from weasyprint import CSS, HTML  # type: ignore
     from weasyprint.text.fonts import FontConfiguration  # type: ignore
 
     _WEASYPRINT_AVAILABLE = True
@@ -23,59 +23,59 @@ except Exception:
     CSS = None  # type: ignore
     FontConfiguration = None  # type: ignore
     _WEASYPRINT_AVAILABLE = False
-from app.models import Settings, InvoicePDFTemplate, QuotePDFTemplate
-from app import db
 from flask import current_app
 from flask_babel import gettext as _
+
+from app import db
+from app.models import InvoicePDFTemplate, QuotePDFTemplate, Settings
 
 try:
     from babel.dates import format_date as babel_format_date
 except Exception:
     babel_format_date = None
 from pathlib import Path
+
 from flask import render_template
 
 
 def update_page_size_in_css(css_text, page_size):
     """
     Update @page size property to match the specified page size.
-    
+
     This function handles:
     - Replacing existing @page size property
     - Adding @page size property if missing
     - Handling nested @page rules (e.g., @bottom-center)
     - Multiple @page rules (updates all of them)
-    
+
     Args:
         css_text: CSS string that may contain @page rules
         page_size: Target page size (e.g., "A4", "Letter")
-    
+
     Returns:
         Updated CSS string with correct @page size
     """
     import re
-    
+
     if not css_text or not page_size:
         return css_text
-    
+
     # Find all @page rules (may have multiple)
     page_pattern = r"@page\s*\{"
     matches = list(re.finditer(page_pattern, css_text, re.IGNORECASE | re.MULTILINE))
-    
+
     if not matches:
         # No @page rule exists - add one at the beginning
-        new_page_rule = (
-            f"@page {{\n            size: {page_size};\n            margin: 2cm;\n        }}\n\n"
-        )
+        new_page_rule = f"@page {{\n            size: {page_size};\n            margin: 2cm;\n        }}\n\n"
         return new_page_rule + css_text
-    
+
     # Process matches in reverse order to maintain positions
     for match in reversed(matches):
         start_pos = match.start()
         # Find matching closing brace, accounting for nested braces
         brace_count = 0
         end_pos = len(css_text)
-        
+
         for i in range(match.end() - 1, len(css_text)):
             if css_text[i] == "{":
                 brace_count += 1
@@ -84,9 +84,9 @@ def update_page_size_in_css(css_text, page_size):
                 if brace_count == 0:
                     end_pos = i + 1
                     break
-        
+
         page_block = css_text[start_pos:end_pos]
-        
+
         # Replace or add size property
         if re.search(r"size\s*:", page_block, re.IGNORECASE):
             # Replace existing size property - handle any whitespace, quotes, and values
@@ -108,27 +108,27 @@ def update_page_size_in_css(css_text, page_size):
                 flags=re.IGNORECASE,
             )
             css_text = css_text[:start_pos] + updated_block + css_text[end_pos:]
-    
+
     return css_text
 
 
 def update_wrapper_dimensions_in_css(css_text, page_size):
     """
     Update wrapper dimensions (width, height, max-width, max-height) in CSS to match page size.
-    
+
     This function updates the .invoice-wrapper and .quote-wrapper dimensions to match
     the selected page size. Dimensions are calculated at 72 DPI for PDF.
-    
+
     Args:
         css_text: CSS string that may contain wrapper dimension definitions
         page_size: Target page size (e.g., "A4", "A5", "Letter")
-    
+
     Returns:
         Updated CSS string with correct wrapper dimensions
     """
     if not css_text or not page_size:
         return css_text
-    
+
     # Standard page sizes (shared by both InvoicePDFTemplate and QuotePDFTemplate)
     PAGE_SIZES = {
         "A4": {"width": 210, "height": 297},
@@ -138,108 +138,96 @@ def update_wrapper_dimensions_in_css(css_text, page_size):
         "A5": {"width": 148, "height": 210},
         "Tabloid": {"width": 279, "height": 432},
     }
-    
+
     # Get page dimensions
     page_dimensions = PAGE_SIZES.get(page_size)
     if not page_dimensions:
         return css_text
-    
+
     # Calculate dimensions in pixels at 72 DPI (PDF standard)
-    width_mm = page_dimensions['width']
-    height_mm = page_dimensions['height']
+    width_mm = page_dimensions["width"]
+    height_mm = page_dimensions["height"]
     width_px = int((width_mm / 25.4) * 72)
     height_px = int((height_mm / 25.4) * 72)
-    
+
     import re
-    
+
     # Pattern to match wrapper dimension properties
     # Match: width: 420px, width:420px, width: 420px !important, etc.
     dimension_patterns = [
-        (r'\.invoice-wrapper\s*\{[^}]*?)(width\s*:\s*)\d+px(\s*!important)?', 
-         f'\\1\\2{width_px}px\\3'),
-        (r'\.invoice-wrapper\s*\{[^}]*?)(height\s*:\s*)\d+px(\s*!important)?', 
-         f'\\1\\2{height_px}px\\3'),
-        (r'\.invoice-wrapper\s*\{[^}]*?)(max-width\s*:\s*)\d+px(\s*!important)?', 
-         f'\\1\\2{width_px}px\\3'),
-        (r'\.invoice-wrapper\s*\{[^}]*?)(max-height\s*:\s*)\d+px(\s*!important)?', 
-         f'\\1\\2{height_px}px\\3'),
-        (r'\.invoice-wrapper\s*\{[^}]*?)(min-width\s*:\s*)\d+px(\s*!important)?', 
-         f'\\1\\2{width_px}px\\3'),
-        (r'\.invoice-wrapper\s*\{[^}]*?)(min-height\s*:\s*)\d+px(\s*!important)?', 
-         f'\\1\\2{height_px}px\\3'),
-        (r'\.quote-wrapper\s*\{[^}]*?)(width\s*:\s*)\d+px(\s*!important)?', 
-         f'\\1\\2{width_px}px\\3'),
-        (r'\.quote-wrapper\s*\{[^}]*?)(height\s*:\s*)\d+px(\s*!important)?', 
-         f'\\1\\2{height_px}px\\3'),
-        (r'\.quote-wrapper\s*\{[^}]*?)(max-width\s*:\s*)\d+px(\s*!important)?', 
-         f'\\1\\2{width_px}px\\3'),
-        (r'\.quote-wrapper\s*\{[^}]*?)(max-height\s*:\s*)\d+px(\s*!important)?', 
-         f'\\1\\2{height_px}px\\3'),
-        (r'\.quote-wrapper\s*\{[^}]*?)(min-width\s*:\s*)\d+px(\s*!important)?', 
-         f'\\1\\2{width_px}px\\3'),
-        (r'\.quote-wrapper\s*\{[^}]*?)(min-height\s*:\s*)\d+px(\s*!important)?', 
-         f'\\1\\2{height_px}px\\3'),
+        (r"\.invoice-wrapper\s*\{[^}]*?)(width\s*:\s*)\d+px(\s*!important)?", f"\\1\\2{width_px}px\\3"),
+        (r"\.invoice-wrapper\s*\{[^}]*?)(height\s*:\s*)\d+px(\s*!important)?", f"\\1\\2{height_px}px\\3"),
+        (r"\.invoice-wrapper\s*\{[^}]*?)(max-width\s*:\s*)\d+px(\s*!important)?", f"\\1\\2{width_px}px\\3"),
+        (r"\.invoice-wrapper\s*\{[^}]*?)(max-height\s*:\s*)\d+px(\s*!important)?", f"\\1\\2{height_px}px\\3"),
+        (r"\.invoice-wrapper\s*\{[^}]*?)(min-width\s*:\s*)\d+px(\s*!important)?", f"\\1\\2{width_px}px\\3"),
+        (r"\.invoice-wrapper\s*\{[^}]*?)(min-height\s*:\s*)\d+px(\s*!important)?", f"\\1\\2{height_px}px\\3"),
+        (r"\.quote-wrapper\s*\{[^}]*?)(width\s*:\s*)\d+px(\s*!important)?", f"\\1\\2{width_px}px\\3"),
+        (r"\.quote-wrapper\s*\{[^}]*?)(height\s*:\s*)\d+px(\s*!important)?", f"\\1\\2{height_px}px\\3"),
+        (r"\.quote-wrapper\s*\{[^}]*?)(max-width\s*:\s*)\d+px(\s*!important)?", f"\\1\\2{width_px}px\\3"),
+        (r"\.quote-wrapper\s*\{[^}]*?)(max-height\s*:\s*)\d+px(\s*!important)?", f"\\1\\2{height_px}px\\3"),
+        (r"\.quote-wrapper\s*\{[^}]*?)(min-width\s*:\s*)\d+px(\s*!important)?", f"\\1\\2{width_px}px\\3"),
+        (r"\.quote-wrapper\s*\{[^}]*?)(min-height\s*:\s*)\d+px(\s*!important)?", f"\\1\\2{height_px}px\\3"),
     ]
-    
+
     updated_css = css_text
     for pattern, replacement in dimension_patterns:
         updated_css = re.sub(pattern, replacement, updated_css, flags=re.IGNORECASE | re.DOTALL)
-    
+
     # Also update html, body dimensions if they exist
     updated_css = re.sub(
-        r'(html,\s*body\s*\{[^}]*?)(width\s*:\s*)\d+px(\s*!important)?',
-        f'\\1\\2{width_px}px\\3',
+        r"(html,\s*body\s*\{[^}]*?)(width\s*:\s*)\d+px(\s*!important)?",
+        f"\\1\\2{width_px}px\\3",
         updated_css,
-        flags=re.IGNORECASE | re.DOTALL
+        flags=re.IGNORECASE | re.DOTALL,
     )
     updated_css = re.sub(
-        r'(html,\s*body\s*\{[^}]*?)(height\s*:\s*)\d+px(\s*!important)?',
-        f'\\1\\2{height_px}px\\3',
+        r"(html,\s*body\s*\{[^}]*?)(height\s*:\s*)\d+px(\s*!important)?",
+        f"\\1\\2{height_px}px\\3",
         updated_css,
-        flags=re.IGNORECASE | re.DOTALL
+        flags=re.IGNORECASE | re.DOTALL,
     )
-    
+
     return updated_css
 
 
 def validate_page_size_in_css(css_text, expected_page_size):
     """
     Validate that CSS contains the correct @page size.
-    
+
     Args:
         css_text: CSS string to validate
         expected_page_size: Expected page size (e.g., "A4", "Letter")
-    
+
     Returns:
         tuple: (is_valid: bool, found_sizes: list) - True if all @page rules have correct size
     """
     import re
-    
+
     if not css_text or not expected_page_size:
         return False, []
-    
+
     # Find all @page rules and check their size
     page_rules = re.findall(r"@page\s*\{[^}]*\}", css_text, re.IGNORECASE | re.DOTALL)
     found_sizes = []
-    
+
     for rule in page_rules:
         size_match = re.search(r"size\s*:\s*['\"]?([^;}\n'\"]+)['\"]?", rule, re.IGNORECASE)
         if size_match:
             found_size = size_match.group(1).strip()
             found_sizes.append(found_size)
             # Remove quotes if present (double-check)
-            found_size = found_size.strip('"\'')
+            found_size = found_size.strip("\"'")
             if found_size != expected_page_size:
                 return False, found_sizes
-    
+
     # If we found @page rules, all should have the correct size
     if page_rules and not found_sizes:
         return False, []  # @page rules exist but no size specified
-    
+
     # If no @page rules, that's also a problem
     if not page_rules:
         return False, []
-    
+
     return True, found_sizes
 
 
@@ -253,8 +241,9 @@ class InvoicePDFGenerator:
 
     def generate_pdf(self):
         """Generate PDF content and return as bytes using ReportLab"""
-        import sys
         import json
+        import sys
+
         from flask import current_app
 
         def debug_print(msg):
@@ -267,35 +256,46 @@ class InvoicePDFGenerator:
             except Exception:
                 pass
 
-        invoice_id = getattr(self.invoice, 'id', 'N/A')
-        invoice_number = getattr(self.invoice, 'invoice_number', 'N/A')
-        
-        debug_print(f"\n[PDF_EXPORT] PDF GENERATOR - InvoiceID: {invoice_id}, InvoiceNumber: {invoice_number}, PageSize: {self.page_size}")
+        invoice_id = getattr(self.invoice, "id", "N/A")
+        invoice_number = getattr(self.invoice, "invoice_number", "N/A")
+
+        debug_print(
+            f"\n[PDF_EXPORT] PDF GENERATOR - InvoiceID: {invoice_id}, InvoiceNumber: {invoice_number}, PageSize: {self.page_size}"
+        )
         debug_print(f"{'='*80}\n")
-        current_app.logger.info(f"[PDF_EXPORT] Starting PDF generation - InvoiceID: {invoice_id}, InvoiceNumber: {invoice_number}, PageSize: '{self.page_size}'")
+        current_app.logger.info(
+            f"[PDF_EXPORT] Starting PDF generation - InvoiceID: {invoice_id}, InvoiceNumber: {invoice_number}, PageSize: '{self.page_size}'"
+        )
 
         # Get template for the specified page size
         from app.models import InvoicePDFTemplate
 
         # CRITICAL: Expire all cached objects to ensure we get the latest saved template
         db.session.expire_all()
-        
-        current_app.logger.info(f"[PDF_EXPORT] Querying database for template - PageSize: '{self.page_size}', InvoiceID: {invoice_id}")
-        
+
+        current_app.logger.info(
+            f"[PDF_EXPORT] Querying database for template - PageSize: '{self.page_size}', InvoiceID: {invoice_id}"
+        )
+
         # CRITICAL: Do a completely fresh query using raw SQL to bypass any ORM caching
         # This ensures we get the absolute latest data from the database
         from sqlalchemy import text
+
         result = db.session.execute(
-            text("SELECT id, page_size, template_json, updated_at FROM invoice_pdf_templates WHERE page_size = :page_size"),
-            {"page_size": self.page_size}
+            text(
+                "SELECT id, page_size, template_json, updated_at FROM invoice_pdf_templates WHERE page_size = :page_size"
+            ),
+            {"page_size": self.page_size},
         ).first()
-        
+
         template_json_raw_from_db = None
         template = None
-        
+
         if result:
             template_id, page_size_db, template_json_raw_from_db, updated_at = result
-            current_app.logger.info(f"[PDF_EXPORT] Template found via raw query - PageSize: '{page_size_db}', TemplateID: {template_id}, UpdatedAt: {updated_at}, TemplateJSONLength: {len(template_json_raw_from_db) if template_json_raw_from_db else 0}, InvoiceID: {invoice_id}")
+            current_app.logger.info(
+                f"[PDF_EXPORT] Template found via raw query - PageSize: '{page_size_db}', TemplateID: {template_id}, UpdatedAt: {updated_at}, TemplateJSONLength: {len(template_json_raw_from_db) if template_json_raw_from_db else 0}, InvoiceID: {invoice_id}"
+            )
             # Now get the full template object for use (for other attributes if needed)
             template = InvoicePDFTemplate.query.get(template_id)
             # CRITICAL: Use template_json directly from raw query, not from ORM object (which might be cached)
@@ -304,21 +304,32 @@ class InvoicePDFGenerator:
             # Force refresh all other attributes
             db.session.refresh(template)
         else:
-            current_app.logger.warning(f"[PDF_EXPORT] Template not found for PageSize: '{self.page_size}', creating default - InvoiceID: {invoice_id}")
+            current_app.logger.warning(
+                f"[PDF_EXPORT] Template not found for PageSize: '{self.page_size}', creating default - InvoiceID: {invoice_id}"
+            )
             template = InvoicePDFTemplate.get_template(self.page_size)
             template_json_raw_from_db = template.template_json
-        
+
         # Store template as instance variable for use in format_date
         self.template = template
-        
+
         debug_print(f"[DEBUG] Retrieved template: page_size={template.page_size}, id={template.id}")
         template_json_to_use = template_json_raw_from_db if template_json_raw_from_db else template.template_json
         template_json_length = len(template_json_to_use) if template_json_to_use else 0
-        template_json_preview = (template_json_to_use[:100] + "...") if template_json_to_use and len(template_json_to_use) > 100 else (template_json_to_use or "(empty)")
+        template_json_preview = (
+            (template_json_to_use[:100] + "...")
+            if template_json_to_use and len(template_json_to_use) > 100
+            else (template_json_to_use or "(empty)")
+        )
         # Also get a hash/fingerprint of the JSON to verify it's actually the saved one
         import hashlib
-        template_json_hash = hashlib.md5(template_json_to_use.encode('utf-8')).hexdigest()[:16] if template_json_to_use else "none"
-        current_app.logger.info(f"[PDF_EXPORT] Template retrieved - PageSize: '{template.page_size}', TemplateID: {template.id}, HasJSON: {bool(template_json_to_use)}, JSONLength: {template_json_length}, JSONHash: {template_json_hash}, JSONPreview: {template_json_preview}, UpdatedAt: {template.updated_at}, InvoiceID: {invoice_id}")
+
+        template_json_hash = (
+            hashlib.md5(template_json_to_use.encode("utf-8")).hexdigest()[:16] if template_json_to_use else "none"
+        )
+        current_app.logger.info(
+            f"[PDF_EXPORT] Template retrieved - PageSize: '{template.page_size}', TemplateID: {template.id}, HasJSON: {bool(template_json_to_use)}, JSONLength: {template_json_length}, JSONHash: {template_json_hash}, JSONPreview: {template_json_preview}, UpdatedAt: {template.updated_at}, InvoiceID: {invoice_id}"
+        )
 
         # Get or generate ReportLab template JSON
         template_json_dict = None
@@ -327,42 +338,57 @@ class InvoicePDFGenerator:
         # Check if template_json exists and is not empty/whitespace
         if template_json_to_use and template_json_to_use.strip():
             try:
-                current_app.logger.info(f"[PDF_EXPORT] Parsing template JSON - PageSize: '{self.page_size}', JSON length: {len(template_json_to_use)}, InvoiceID: {invoice_id}")
+                current_app.logger.info(
+                    f"[PDF_EXPORT] Parsing template JSON - PageSize: '{self.page_size}', JSON length: {len(template_json_to_use)}, InvoiceID: {invoice_id}"
+                )
                 template_json_dict = json.loads(template_json_to_use)
                 element_count = len(template_json_dict.get("elements", []))
                 json_page_size = template_json_dict.get("page", {}).get("size", "unknown")
                 # Get first few element types for debugging
                 element_types = [elem.get("type", "unknown") for elem in template_json_dict.get("elements", [])[:5]]
                 debug_print(f"[DEBUG] Found ReportLab template JSON (length: {len(template_json_to_use)})")
-                current_app.logger.info(f"[PDF_EXPORT] Template JSON parsed successfully - PageSize: '{self.page_size}', JSON PageSize: '{json_page_size}', Elements: {element_count}, FirstElementTypes: {element_types}, InvoiceID: {invoice_id}")
+                current_app.logger.info(
+                    f"[PDF_EXPORT] Template JSON parsed successfully - PageSize: '{self.page_size}', JSON PageSize: '{json_page_size}', Elements: {element_count}, FirstElementTypes: {element_types}, InvoiceID: {invoice_id}"
+                )
             except Exception as e:
                 debug_print(f"[WARNING] Failed to parse template_json: {e}")
-                template_json_preview_use = (template_json_to_use[:100] + "...") if template_json_to_use and len(template_json_to_use) > 100 else (template_json_to_use or "(empty)")
-                current_app.logger.error(f"[PDF_EXPORT] Failed to parse template JSON - PageSize: '{self.page_size}', Error: {str(e)}, JSONPreview: {template_json_preview_use}, InvoiceID: {invoice_id}", exc_info=True)
+                template_json_preview_use = (
+                    (template_json_to_use[:100] + "...")
+                    if template_json_to_use and len(template_json_to_use) > 100
+                    else (template_json_to_use or "(empty)")
+                )
+                current_app.logger.error(
+                    f"[PDF_EXPORT] Failed to parse template JSON - PageSize: '{self.page_size}', Error: {str(e)}, JSONPreview: {template_json_preview_use}, InvoiceID: {invoice_id}",
+                    exc_info=True,
+                )
                 template_json_dict = None
         else:
-            current_app.logger.warning(f"[PDF_EXPORT] Template JSON is empty or whitespace - PageSize: '{self.page_size}', TemplateID: {template.id}, TemplateJSONIsNone: {template_json_to_use is None}, TemplateJSONIsEmpty: {not template_json_to_use or not template_json_to_use.strip()}, RawQueryResult: {template_json_raw_from_db is not None if 'template_json_raw_from_db' in locals() else 'N/A'}, InvoiceID: {invoice_id}")
+            current_app.logger.warning(
+                f"[PDF_EXPORT] Template JSON is empty or whitespace - PageSize: '{self.page_size}', TemplateID: {template.id}, TemplateJSONIsNone: {template_json_to_use is None}, TemplateJSONIsEmpty: {not template_json_to_use or not template_json_to_use.strip()}, RawQueryResult: {template_json_raw_from_db is not None if 'template_json_raw_from_db' in locals() else 'N/A'}, InvoiceID: {invoice_id}"
+            )
 
         # If no JSON template exists, ensure it's populated with default (will save to database if empty)
         if not template_json_dict:
-            debug_print(f"[DEBUG] No template JSON found, ensuring default template JSON for page size {self.page_size}")
+            debug_print(
+                f"[DEBUG] No template JSON found, ensuring default template JSON for page size {self.page_size}"
+            )
             current_app.logger.info(
                 f"[PDF_EXPORT] Template JSON is empty, ensuring default template - PageSize: '{self.page_size}', "
                 f"TemplateID: {template.id}, InvoiceID: {invoice_id}"
             )
-            
+
             # Call ensure_template_json() which will populate with default if empty/invalid
             # This saves the default to the database, so it's available for future exports
             # It only saves if template_json is truly empty/invalid, not if it's a valid custom template
             template.ensure_template_json()
-            
+
             # Re-query template_json from database to get the updated value (avoid ORM caching)
             db.session.expire(template)
             result_updated = db.session.execute(
                 text("SELECT template_json FROM invoice_pdf_templates WHERE id = :template_id"),
-                {"template_id": template.id}
+                {"template_id": template.id},
             ).first()
-            
+
             if result_updated and result_updated[0]:
                 template_json_to_use = result_updated[0]
                 try:
@@ -374,21 +400,28 @@ class InvoicePDFGenerator:
                         f"Elements: {element_count}, InvoiceID: {invoice_id}"
                     )
                 except Exception as e:
-                    current_app.logger.error(f"[PDF_EXPORT] Failed to parse template JSON after ensure_template_json() - PageSize: '{self.page_size}', Error: {str(e)}, InvoiceID: {invoice_id}", exc_info=True)
+                    current_app.logger.error(
+                        f"[PDF_EXPORT] Failed to parse template JSON after ensure_template_json() - PageSize: '{self.page_size}', Error: {str(e)}, InvoiceID: {invoice_id}",
+                        exc_info=True,
+                    )
                     # Fall back to generating default in memory if parsing fails
                     from app.utils.pdf_template_schema import get_default_template
+
                     template_json_dict = get_default_template(self.page_size)
             else:
                 # Fallback: generate default in memory if ensure_template_json() didn't work
-                current_app.logger.warning(f"[PDF_EXPORT] ensure_template_json() didn't populate template_json, using in-memory default - PageSize: '{self.page_size}', TemplateID: {template.id}, InvoiceID: {invoice_id}")
+                current_app.logger.warning(
+                    f"[PDF_EXPORT] ensure_template_json() didn't populate template_json, using in-memory default - PageSize: '{self.page_size}', TemplateID: {template.id}, InvoiceID: {invoice_id}"
+                )
                 from app.utils.pdf_template_schema import get_default_template
+
                 template_json_dict = get_default_template(self.page_size)
         else:
             # CRITICAL: Ensure template page size and dimensions match the requested page size
             # This fixes layout issues when templates were customized but dimensions don't match
             template_page_config = template_json_dict.get("page", {})
             template_page_size = template_page_config.get("size", self.page_size)
-            
+
             if template_page_size != self.page_size:
                 current_app.logger.warning(
                     f"[PDF_EXPORT] Template page size mismatch - TemplatePageSize: '{template_page_size}', "
@@ -398,14 +431,15 @@ class InvoicePDFGenerator:
                 # Update template page size to match requested size
                 template_page_config["size"] = self.page_size
                 template_json_dict["page"] = template_page_config
-            
+
             # Ensure page dimensions are correct for the requested page size
             from app.utils.pdf_template_schema import PAGE_SIZE_DIMENSIONS_MM
+
             if self.page_size in PAGE_SIZE_DIMENSIONS_MM:
                 expected_dims = PAGE_SIZE_DIMENSIONS_MM[self.page_size]
                 current_width = template_page_config.get("width")
                 current_height = template_page_config.get("height")
-                
+
                 if current_width != expected_dims["width"] or current_height != expected_dims["height"]:
                     current_app.logger.info(
                         f"[PDF_EXPORT] Correcting template page dimensions - PageSize: '{self.page_size}', "
@@ -414,14 +448,14 @@ class InvoicePDFGenerator:
                     template_page_config["width"] = expected_dims["width"]
                     template_page_config["height"] = expected_dims["height"]
                     template_json_dict["page"] = template_page_config
-            
+
             # Update element positions if they exceed page bounds (due to page size change)
             # This helps fix layout issues when switching between page sizes
             if template_page_size != self.page_size:
                 page_dims = PAGE_SIZE_DIMENSIONS_MM.get(self.page_size, {"width": 210, "height": 297})
                 page_width_pt = (page_dims["width"] / 25.4) * 72  # Convert mm to points
                 page_height_pt = (page_dims["height"] / 25.4) * 72
-                
+
                 elements = template_json_dict.get("elements", [])
                 adjusted_count = 0
                 for element in elements:
@@ -429,7 +463,7 @@ class InvoicePDFGenerator:
                     y = element.get("y", 0)
                     width = element.get("width", 0)
                     height = element.get("height", 0)
-                    
+
                     # Check if element is outside page bounds
                     if x + width > page_width_pt or y + height > page_height_pt:
                         # Scale element to fit within page (proportional scaling)
@@ -443,7 +477,7 @@ class InvoicePDFGenerator:
                             element["y"] = y * scale_y
                             element["height"] = height * scale_y
                             adjusted_count += 1
-                
+
                 if adjusted_count > 0:
                     current_app.logger.info(
                         f"[PDF_EXPORT] Adjusted {adjusted_count} elements to fit page size '{self.page_size}' - InvoiceID: {invoice_id}"
@@ -453,56 +487,87 @@ class InvoicePDFGenerator:
         debug_print(f"[DEBUG] Using ReportLab template renderer for page size {self.page_size}")
         from app.utils.pdf_generator_reportlab import ReportLabTemplateRenderer
         from app.utils.pdf_template_schema import validate_template_json
-        
+
         # Validate template JSON
-        current_app.logger.info(f"[PDF_EXPORT] Validating template JSON - PageSize: '{self.page_size}', InvoiceID: {invoice_id}")
+        current_app.logger.info(
+            f"[PDF_EXPORT] Validating template JSON - PageSize: '{self.page_size}', InvoiceID: {invoice_id}"
+        )
         is_valid, error = validate_template_json(template_json_dict)
         if not is_valid:
             debug_print(f"[ERROR] Template JSON validation failed: {error}")
-            current_app.logger.error(f"[PDF_EXPORT] Template JSON validation failed - PageSize: '{self.page_size}', Error: {error}, InvoiceID: {invoice_id}")
+            current_app.logger.error(
+                f"[PDF_EXPORT] Template JSON validation failed - PageSize: '{self.page_size}', Error: {error}, InvoiceID: {invoice_id}"
+            )
             # Even if validation fails, try to render with default fallback
             return self._generate_pdf_with_default()
         else:
-            current_app.logger.info(f"[PDF_EXPORT] Template JSON validation passed - PageSize: '{self.page_size}', InvoiceID: {invoice_id}")
-        
+            current_app.logger.info(
+                f"[PDF_EXPORT] Template JSON validation passed - PageSize: '{self.page_size}', InvoiceID: {invoice_id}"
+            )
+
         # Prepare data context for template rendering
-        current_app.logger.info(f"[PDF_EXPORT] Preparing template context - PageSize: '{self.page_size}', InvoiceID: {invoice_id}")
+        current_app.logger.info(
+            f"[PDF_EXPORT] Preparing template context - PageSize: '{self.page_size}', InvoiceID: {invoice_id}"
+        )
         data_context = self._prepare_template_context()
-        
+
         # Render PDF using ReportLab
-        current_app.logger.info(f"[PDF_EXPORT] Creating ReportLab renderer - PageSize: '{self.page_size}', InvoiceID: {invoice_id}")
+        current_app.logger.info(
+            f"[PDF_EXPORT] Creating ReportLab renderer - PageSize: '{self.page_size}', InvoiceID: {invoice_id}"
+        )
         renderer = ReportLabTemplateRenderer(template_json_dict, data_context, self.page_size)
         try:
-            current_app.logger.info(f"[PDF_EXPORT] Starting ReportLab render - PageSize: '{self.page_size}', InvoiceID: {invoice_id}")
+            current_app.logger.info(
+                f"[PDF_EXPORT] Starting ReportLab render - PageSize: '{self.page_size}', InvoiceID: {invoice_id}"
+            )
             pdf_bytes = renderer.render_to_bytes()
             pdf_size_bytes = len(pdf_bytes)
             debug_print(f"[DEBUG] ReportLab PDF generated successfully - size: {pdf_size_bytes} bytes")
-            current_app.logger.info(f"[PDF_EXPORT] ReportLab PDF generated successfully - PageSize: '{self.page_size}', PDFSize: {pdf_size_bytes} bytes, InvoiceID: {invoice_id}")
+            current_app.logger.info(
+                f"[PDF_EXPORT] ReportLab PDF generated successfully - PageSize: '{self.page_size}', PDFSize: {pdf_size_bytes} bytes, InvoiceID: {invoice_id}"
+            )
             return pdf_bytes
         except Exception as e:
             debug_print(f"[ERROR] ReportLab rendering failed: {e}")
             import traceback
+
             debug_print(traceback.format_exc())
-            current_app.logger.error(f"[PDF_EXPORT] ReportLab rendering failed - PageSize: '{self.page_size}', Error: {str(e)}, InvoiceID: {invoice_id}", exc_info=True)
+            current_app.logger.error(
+                f"[PDF_EXPORT] ReportLab rendering failed - PageSize: '{self.page_size}', Error: {str(e)}, InvoiceID: {invoice_id}",
+                exc_info=True,
+            )
             # Fall back to default generation
             return self._generate_pdf_with_default()
-    
+
     def _prepare_template_context(self):
         """Prepare data context for template rendering"""
         # Convert SQLAlchemy objects to simple structures for template
         from types import SimpleNamespace
-        
+
         # Create invoice wrapper
         invoice_wrapper = SimpleNamespace()
-        for attr in ['id', 'invoice_number', 'issue_date', 'due_date', 'status', 
-                     'client_name', 'client_email', 'client_address', 'client_id',
-                     'subtotal', 'tax_rate', 'tax_amount', 'total_amount', 
-                     'notes', 'terms']:
+        for attr in [
+            "id",
+            "invoice_number",
+            "issue_date",
+            "due_date",
+            "status",
+            "client_name",
+            "client_email",
+            "client_address",
+            "client_id",
+            "subtotal",
+            "tax_rate",
+            "tax_amount",
+            "total_amount",
+            "notes",
+            "terms",
+        ]:
             try:
                 setattr(invoice_wrapper, attr, getattr(self.invoice, attr))
             except AttributeError:
                 pass
-        
+
         # Convert relationships to lists
         try:
             if hasattr(self.invoice.items, "all"):
@@ -511,7 +576,7 @@ class InvoicePDFGenerator:
                 invoice_wrapper.items = list(self.invoice.items) if self.invoice.items else []
         except Exception:
             invoice_wrapper.items = []
-        
+
         try:
             if hasattr(self.invoice.extra_goods, "all"):
                 invoice_wrapper.extra_goods = self.invoice.extra_goods.all()
@@ -519,12 +584,14 @@ class InvoicePDFGenerator:
                 invoice_wrapper.extra_goods = list(self.invoice.extra_goods) if self.invoice.extra_goods else []
         except Exception:
             invoice_wrapper.extra_goods = []
-        
+
         try:
             if hasattr(self.invoice, "expenses") and hasattr(self.invoice.expenses, "all"):
                 invoice_wrapper.expenses = self.invoice.expenses.all()
             else:
-                invoice_wrapper.expenses = list(self.invoice.expenses) if hasattr(self.invoice, "expenses") and self.invoice.expenses else []
+                invoice_wrapper.expenses = (
+                    list(self.invoice.expenses) if hasattr(self.invoice, "expenses") and self.invoice.expenses else []
+                )
         except Exception:
             invoice_wrapper.expenses = []
 
@@ -579,33 +646,44 @@ class InvoicePDFGenerator:
 
         # Settings
         settings_wrapper = SimpleNamespace()
-        for attr in ['company_name', 'company_address', 'company_email', 'company_phone', 
-                     'company_website', 'company_tax_id', 'currency', 'invoice_terms',
-                     'company_bank_info']:
+        for attr in [
+            "company_name",
+            "company_address",
+            "company_email",
+            "company_phone",
+            "company_website",
+            "company_tax_id",
+            "currency",
+            "invoice_terms",
+            "company_bank_info",
+        ]:
             try:
                 setattr(settings_wrapper, attr, getattr(self.settings, attr))
             except AttributeError:
                 pass
-        
+
         # Add helper methods
         def has_logo():
             return self.settings.has_logo()
+
         def get_logo_path():
             return self.settings.get_logo_path()
+
         settings_wrapper.has_logo = has_logo
         settings_wrapper.get_logo_path = get_logo_path
-        
+
         # Helper functions for templates
-        from app.utils.template_filters import get_logo_base64, get_image_base64
         from babel.dates import format_date as babel_format_date
-        
+
+        from app.utils.template_filters import get_image_base64, get_logo_base64
+
         def format_date(value, format="medium"):
             try:
                 # Use DD.MM.YYYY format for invoices and quotes
                 return value.strftime("%d.%m.%Y") if value else ""
             except Exception:
                 return str(value) if value else ""
-        
+
         def format_money(value):
             try:
                 return f"{float(value):,.2f} {self.settings.currency}"
@@ -614,31 +692,37 @@ class InvoicePDFGenerator:
 
         # PEPPOL compliance: include when invoices_peppol_compliant is on
         result = {
-            'invoice': invoice_wrapper,
-            'settings': settings_wrapper,
-            'get_logo_base64': get_logo_base64,
-            'format_date': format_date,
-            'format_money': format_money,
+            "invoice": invoice_wrapper,
+            "settings": settings_wrapper,
+            "get_logo_base64": get_logo_base64,
+            "format_date": format_date,
+            "format_money": format_money,
         }
         if getattr(self.settings, "invoices_peppol_compliant", False):
             client = getattr(self.invoice, "client", None)
-            result['peppol_compliance'] = {
-                'enabled': True,
-                'seller_endpoint_id': (getattr(self.settings, "peppol_sender_endpoint_id", None) or "").strip(),
-                'seller_scheme_id': (getattr(self.settings, "peppol_sender_scheme_id", None) or "").strip(),
-                'seller_vat': (getattr(self.settings, "company_tax_id", None) or "").strip(),
-                'buyer_endpoint_id': (client.get_custom_field("peppol_endpoint_id", "") or "").strip() if client else "",
-                'buyer_scheme_id': (client.get_custom_field("peppol_scheme_id", "") or "").strip() if client else "",
-                'buyer_vat': (client.get_custom_field("vat_id", "") or client.get_custom_field("tax_id", "") or "").strip() if client else "",
+            result["peppol_compliance"] = {
+                "enabled": True,
+                "seller_endpoint_id": (getattr(self.settings, "peppol_sender_endpoint_id", None) or "").strip(),
+                "seller_scheme_id": (getattr(self.settings, "peppol_sender_scheme_id", None) or "").strip(),
+                "seller_vat": (getattr(self.settings, "company_tax_id", None) or "").strip(),
+                "buyer_endpoint_id": (
+                    (client.get_custom_field("peppol_endpoint_id", "") or "").strip() if client else ""
+                ),
+                "buyer_scheme_id": (client.get_custom_field("peppol_scheme_id", "") or "").strip() if client else "",
+                "buyer_vat": (
+                    (client.get_custom_field("vat_id", "") or client.get_custom_field("tax_id", "") or "").strip()
+                    if client
+                    else ""
+                ),
             }
         return result
-    
+
     def _generate_pdf_with_default(self):
         """Generate PDF using default fallback ReportLab generator"""
         from app.utils.pdf_generator_fallback import InvoicePDFGeneratorFallback
+
         fallback = InvoicePDFGeneratorFallback(self.invoice, settings=self.settings)
         return fallback.generate_pdf()
-
 
     def _render_from_custom_template(self, template=None):
         """Render HTML and CSS from custom templates stored in database, with fallback to default template."""
@@ -760,7 +844,7 @@ class InvoicePDFGenerator:
                 debug_print(f"[DEBUG] CSS template @page size BEFORE update: '{before_size}'")
 
             css_to_use = update_page_size_in_css(css_template, self.page_size)
-            
+
             # Update wrapper dimensions to match page size (fixes hardcoded dimension issues)
             css_to_use = update_wrapper_dimensions_in_css(css_to_use, self.page_size)
             debug_print(f"[DEBUG] Updated wrapper dimensions in template CSS for page size: {self.page_size}")
@@ -791,18 +875,23 @@ class InvoicePDFGenerator:
 
         # Ensure @page rule has correct size - this is critical for PDF generation
         css = css_to_use
-        
+
         # Add comprehensive overflow prevention CSS
         overflow_css = get_overflow_prevention_css()
         css = css + "\n" + overflow_css
-        
+
         # Import helper functions for template
-        from app.utils.template_filters import get_logo_base64, get_image_base64
         from babel.dates import format_date as babel_format_date
 
+        from app.utils.template_filters import get_image_base64, get_logo_base64
+
         # Get date format from template, default to %d.%m.%Y
-        date_format_str = getattr(self.template, 'date_format', '%d.%m.%Y') if hasattr(self, 'template') and self.template else '%d.%m.%Y'
-        
+        date_format_str = (
+            getattr(self.template, "date_format", "%d.%m.%Y")
+            if hasattr(self, "template") and self.template
+            else "%d.%m.%Y"
+        )
+
         def format_date(value, format="medium"):
             """Format date for template"""
             # Use date format from template settings
@@ -865,6 +954,7 @@ class InvoicePDFGenerator:
         # Load decorative images
         try:
             from app.models import InvoiceImage
+
             decorative_images = InvoiceImage.get_invoice_images(self.invoice.id)
         except Exception:
             decorative_images = []
@@ -1525,7 +1615,7 @@ def get_overflow_prevention_css():
     """
     Get comprehensive CSS rules to prevent content overflow beyond page boundaries.
     This should be applied to all PDF exports and previews.
-    
+
     Returns:
         CSS string with overflow prevention rules
     """
@@ -1640,8 +1730,9 @@ class QuotePDFGenerator:
 
     def generate_pdf(self):
         """Generate PDF content and return as bytes using ReportLab"""
-        import sys
         import json
+        import sys
+
         from flask import current_app
 
         def debug_print(msg):
@@ -1654,33 +1745,44 @@ class QuotePDFGenerator:
             except Exception:
                 pass
 
-        quote_id = getattr(self.quote, 'id', 'N/A')
-        quote_number = getattr(self.quote, 'quote_number', 'N/A')
-        
-        debug_print(f"\n[PDF_EXPORT] QUOTE PDF GENERATOR - QuoteID: {quote_id}, QuoteNumber: {quote_number}, PageSize: {self.page_size}")
+        quote_id = getattr(self.quote, "id", "N/A")
+        quote_number = getattr(self.quote, "quote_number", "N/A")
+
+        debug_print(
+            f"\n[PDF_EXPORT] QUOTE PDF GENERATOR - QuoteID: {quote_id}, QuoteNumber: {quote_number}, PageSize: {self.page_size}"
+        )
         debug_print(f"{'='*80}\n")
-        current_app.logger.info(f"[PDF_EXPORT] Starting quote PDF generation - QuoteID: {quote_id}, QuoteNumber: {quote_number}, PageSize: '{self.page_size}'")
+        current_app.logger.info(
+            f"[PDF_EXPORT] Starting quote PDF generation - QuoteID: {quote_id}, QuoteNumber: {quote_number}, PageSize: '{self.page_size}'"
+        )
 
         # Get template for the specified page size
         # CRITICAL: Expire all cached objects to ensure we get the latest saved template
         db.session.expire_all()
-        
-        current_app.logger.info(f"[PDF_EXPORT] Querying database for quote template - PageSize: '{self.page_size}', QuoteID: {quote_id}")
-        
+
+        current_app.logger.info(
+            f"[PDF_EXPORT] Querying database for quote template - PageSize: '{self.page_size}', QuoteID: {quote_id}"
+        )
+
         # CRITICAL: Do a completely fresh query using raw SQL to bypass any ORM caching
         # This ensures we get the absolute latest data from the database
         from sqlalchemy import text
+
         result = db.session.execute(
-            text("SELECT id, page_size, template_json, updated_at FROM quote_pdf_templates WHERE page_size = :page_size"),
-            {"page_size": self.page_size}
+            text(
+                "SELECT id, page_size, template_json, updated_at FROM quote_pdf_templates WHERE page_size = :page_size"
+            ),
+            {"page_size": self.page_size},
         ).first()
-        
+
         template_json_raw_from_db = None
         template = None
-        
+
         if result:
             template_id, page_size_db, template_json_raw_from_db, updated_at = result
-            current_app.logger.info(f"[PDF_EXPORT] Quote template found via raw query - PageSize: '{page_size_db}', TemplateID: {template_id}, UpdatedAt: {updated_at}, TemplateJSONLength: {len(template_json_raw_from_db) if template_json_raw_from_db else 0}, QuoteID: {quote_id}")
+            current_app.logger.info(
+                f"[PDF_EXPORT] Quote template found via raw query - PageSize: '{page_size_db}', TemplateID: {template_id}, UpdatedAt: {updated_at}, TemplateJSONLength: {len(template_json_raw_from_db) if template_json_raw_from_db else 0}, QuoteID: {quote_id}"
+            )
             # Now get the full template object for use (for other attributes if needed)
             template = QuotePDFTemplate.query.get(template_id)
             # CRITICAL: Use template_json directly from raw query, not from ORM object (which might be cached)
@@ -1689,21 +1791,32 @@ class QuotePDFGenerator:
             # Force refresh all other attributes
             db.session.refresh(template)
         else:
-            current_app.logger.warning(f"[PDF_EXPORT] Quote template not found for PageSize: '{self.page_size}', creating default - QuoteID: {quote_id}")
+            current_app.logger.warning(
+                f"[PDF_EXPORT] Quote template not found for PageSize: '{self.page_size}', creating default - QuoteID: {quote_id}"
+            )
             template = QuotePDFTemplate.get_template(self.page_size)
             template_json_raw_from_db = template.template_json
-        
+
         # Store template as instance variable for use in format_date
         self.template = template
 
         debug_print(f"[DEBUG] Retrieved quote template: page_size={template.page_size}, id={template.id}")
         template_json_to_use = template_json_raw_from_db if template_json_raw_from_db else template.template_json
         template_json_length = len(template_json_to_use) if template_json_to_use else 0
-        template_json_preview = (template_json_to_use[:100] + "...") if template_json_to_use and len(template_json_to_use) > 100 else (template_json_to_use or "(empty)")
+        template_json_preview = (
+            (template_json_to_use[:100] + "...")
+            if template_json_to_use and len(template_json_to_use) > 100
+            else (template_json_to_use or "(empty)")
+        )
         # Also get a hash/fingerprint of the JSON to verify it's actually the saved one
         import hashlib
-        template_json_hash = hashlib.md5(template_json_to_use.encode('utf-8')).hexdigest()[:16] if template_json_to_use else "none"
-        current_app.logger.info(f"[PDF_EXPORT] Quote template retrieved - PageSize: '{template.page_size}', TemplateID: {template.id}, HasJSON: {bool(template_json_to_use)}, JSONLength: {template_json_length}, JSONHash: {template_json_hash}, JSONPreview: {template_json_preview}, UpdatedAt: {template.updated_at}, QuoteID: {quote_id}")
+
+        template_json_hash = (
+            hashlib.md5(template_json_to_use.encode("utf-8")).hexdigest()[:16] if template_json_to_use else "none"
+        )
+        current_app.logger.info(
+            f"[PDF_EXPORT] Quote template retrieved - PageSize: '{template.page_size}', TemplateID: {template.id}, HasJSON: {bool(template_json_to_use)}, JSONLength: {template_json_length}, JSONHash: {template_json_hash}, JSONPreview: {template_json_preview}, UpdatedAt: {template.updated_at}, QuoteID: {quote_id}"
+        )
 
         # Get or generate ReportLab template JSON
         template_json_dict = None
@@ -1712,120 +1825,178 @@ class QuotePDFGenerator:
         # Check if template_json exists and is not empty/whitespace
         if template_json_to_use and template_json_to_use.strip():
             try:
-                current_app.logger.info(f"[PDF_EXPORT] Parsing quote template JSON - PageSize: '{self.page_size}', JSON length: {len(template_json_to_use)}, QuoteID: {quote_id}")
+                current_app.logger.info(
+                    f"[PDF_EXPORT] Parsing quote template JSON - PageSize: '{self.page_size}', JSON length: {len(template_json_to_use)}, QuoteID: {quote_id}"
+                )
                 template_json_dict = json.loads(template_json_to_use)
                 element_count = len(template_json_dict.get("elements", []))
                 json_page_size = template_json_dict.get("page", {}).get("size", "unknown")
                 # Get first few element types for debugging
                 element_types = [elem.get("type", "unknown") for elem in template_json_dict.get("elements", [])[:5]]
                 debug_print(f"[DEBUG] Found ReportLab template JSON (length: {len(template_json_to_use)})")
-                current_app.logger.info(f"[PDF_EXPORT] Quote template JSON parsed successfully - PageSize: '{self.page_size}', JSON PageSize: '{json_page_size}', Elements: {element_count}, FirstElementTypes: {element_types}, QuoteID: {quote_id}")
+                current_app.logger.info(
+                    f"[PDF_EXPORT] Quote template JSON parsed successfully - PageSize: '{self.page_size}', JSON PageSize: '{json_page_size}', Elements: {element_count}, FirstElementTypes: {element_types}, QuoteID: {quote_id}"
+                )
             except Exception as e:
                 debug_print(f"[WARNING] Failed to parse template_json: {e}")
-                template_json_preview_use = (template_json_to_use[:100] + "...") if template_json_to_use and len(template_json_to_use) > 100 else (template_json_to_use or "(empty)")
-                current_app.logger.error(f"[PDF_EXPORT] Failed to parse quote template JSON - PageSize: '{self.page_size}', Error: {str(e)}, JSONPreview: {template_json_preview_use}, QuoteID: {quote_id}", exc_info=True)
+                template_json_preview_use = (
+                    (template_json_to_use[:100] + "...")
+                    if template_json_to_use and len(template_json_to_use) > 100
+                    else (template_json_to_use or "(empty)")
+                )
+                current_app.logger.error(
+                    f"[PDF_EXPORT] Failed to parse quote template JSON - PageSize: '{self.page_size}', Error: {str(e)}, JSONPreview: {template_json_preview_use}, QuoteID: {quote_id}",
+                    exc_info=True,
+                )
                 template_json_dict = None
         else:
             # Log why template_json is not being used
             reason = "template_json is None" if template_json_to_use is None else "template_json is empty or whitespace"
-            current_app.logger.warning(f"[PDF_EXPORT] Quote template JSON is empty/whitespace - PageSize: '{self.page_size}', TemplateID: {template.id}, Reason: {reason}, TemplateJSONLength: {len(template_json_to_use) if template_json_to_use else 0}, QuoteID: {quote_id}")
+            current_app.logger.warning(
+                f"[PDF_EXPORT] Quote template JSON is empty/whitespace - PageSize: '{self.page_size}', TemplateID: {template.id}, Reason: {reason}, TemplateJSONLength: {len(template_json_to_use) if template_json_to_use else 0}, QuoteID: {quote_id}"
+            )
 
         # If no JSON template exists, ensure it's populated with default (will save to database if empty)
         if not template_json_dict:
-            debug_print(f"[DEBUG] No quote template JSON found, ensuring default template JSON for page size {self.page_size}")
+            debug_print(
+                f"[DEBUG] No quote template JSON found, ensuring default template JSON for page size {self.page_size}"
+            )
             current_app.logger.info(
                 f"[PDF_EXPORT] Quote template JSON is empty, ensuring default template - PageSize: '{self.page_size}', "
                 f"TemplateID: {template.id}, QuoteID: {quote_id}"
             )
-            
+
             # Call ensure_template_json() which will populate with default if empty/invalid
             # This saves the default to the database, so it's available for future exports
             # It only saves if template_json is truly empty/invalid, not if it's a valid custom template
             template.ensure_template_json()
-            
+
             # Re-query template_json from database to get the updated value (avoid ORM caching)
             db.session.expire(template)
             result_updated = db.session.execute(
                 text("SELECT template_json FROM quote_pdf_templates WHERE id = :template_id"),
-                {"template_id": template.id}
+                {"template_id": template.id},
             ).first()
-            
+
             if result_updated and result_updated[0]:
                 template_json_to_use = result_updated[0]
                 try:
                     template_json_dict = json.loads(template_json_to_use)
                     element_count = len(template_json_dict.get("elements", []))
-                    debug_print(f"[DEBUG] Retrieved default quote template JSON with {element_count} elements (saved to DB)")
+                    debug_print(
+                        f"[DEBUG] Retrieved default quote template JSON with {element_count} elements (saved to DB)"
+                    )
                     current_app.logger.info(
                         f"[PDF_EXPORT] Default quote template JSON retrieved from database - PageSize: '{self.page_size}', "
                         f"Elements: {element_count}, QuoteID: {quote_id}"
                     )
                 except Exception as e:
-                    current_app.logger.error(f"[PDF_EXPORT] Failed to parse quote template JSON after ensure_template_json() - PageSize: '{self.page_size}', Error: {str(e)}, QuoteID: {quote_id}", exc_info=True)
+                    current_app.logger.error(
+                        f"[PDF_EXPORT] Failed to parse quote template JSON after ensure_template_json() - PageSize: '{self.page_size}', Error: {str(e)}, QuoteID: {quote_id}",
+                        exc_info=True,
+                    )
                     # Fall back to generating default in memory if parsing fails
                     from app.utils.pdf_template_schema import get_default_template
+
                     template_json_dict = get_default_template(self.page_size)
             else:
                 # Fallback: generate default in memory if ensure_template_json() didn't work
-                current_app.logger.warning(f"[PDF_EXPORT] ensure_template_json() didn't populate quote template_json, using in-memory default - PageSize: '{self.page_size}', TemplateID: {template.id}, QuoteID: {quote_id}")
+                current_app.logger.warning(
+                    f"[PDF_EXPORT] ensure_template_json() didn't populate quote template_json, using in-memory default - PageSize: '{self.page_size}', TemplateID: {template.id}, QuoteID: {quote_id}"
+                )
                 from app.utils.pdf_template_schema import get_default_template
+
                 template_json_dict = get_default_template(self.page_size)
 
         # Always use ReportLab template renderer with JSON
         debug_print(f"[DEBUG] Using ReportLab template renderer for page size {self.page_size}")
         from app.utils.pdf_generator_reportlab import ReportLabTemplateRenderer
         from app.utils.pdf_template_schema import validate_template_json
-        
+
         # Validate template JSON
-        current_app.logger.info(f"[PDF_EXPORT] Validating quote template JSON - PageSize: '{self.page_size}', QuoteID: {quote_id}")
+        current_app.logger.info(
+            f"[PDF_EXPORT] Validating quote template JSON - PageSize: '{self.page_size}', QuoteID: {quote_id}"
+        )
         is_valid, error = validate_template_json(template_json_dict)
         if not is_valid:
             debug_print(f"[ERROR] Template JSON validation failed: {error}")
-            current_app.logger.error(f"[PDF_EXPORT] Quote template JSON validation failed - PageSize: '{self.page_size}', Error: {error}, QuoteID: {quote_id}")
+            current_app.logger.error(
+                f"[PDF_EXPORT] Quote template JSON validation failed - PageSize: '{self.page_size}', Error: {error}, QuoteID: {quote_id}"
+            )
             # Even if validation fails, try to render with default fallback
             return self._generate_pdf_with_default()
         else:
-            current_app.logger.info(f"[PDF_EXPORT] Quote template JSON validation passed - PageSize: '{self.page_size}', QuoteID: {quote_id}")
-        
+            current_app.logger.info(
+                f"[PDF_EXPORT] Quote template JSON validation passed - PageSize: '{self.page_size}', QuoteID: {quote_id}"
+            )
+
         # Prepare data context for template rendering
-        current_app.logger.info(f"[PDF_EXPORT] Preparing quote template context - PageSize: '{self.page_size}', QuoteID: {quote_id}")
+        current_app.logger.info(
+            f"[PDF_EXPORT] Preparing quote template context - PageSize: '{self.page_size}', QuoteID: {quote_id}"
+        )
         data_context = self._prepare_quote_template_context()
-        
+
         # Render PDF using ReportLab
-        current_app.logger.info(f"[PDF_EXPORT] Creating ReportLab renderer for quote - PageSize: '{self.page_size}', QuoteID: {quote_id}")
+        current_app.logger.info(
+            f"[PDF_EXPORT] Creating ReportLab renderer for quote - PageSize: '{self.page_size}', QuoteID: {quote_id}"
+        )
         renderer = ReportLabTemplateRenderer(template_json_dict, data_context, self.page_size)
         try:
-            current_app.logger.info(f"[PDF_EXPORT] Starting ReportLab render for quote - PageSize: '{self.page_size}', QuoteID: {quote_id}")
+            current_app.logger.info(
+                f"[PDF_EXPORT] Starting ReportLab render for quote - PageSize: '{self.page_size}', QuoteID: {quote_id}"
+            )
             pdf_bytes = renderer.render_to_bytes()
             pdf_size_bytes = len(pdf_bytes)
             debug_print(f"[DEBUG] ReportLab PDF generated successfully - size: {pdf_size_bytes} bytes")
-            current_app.logger.info(f"[PDF_EXPORT] ReportLab quote PDF generated successfully - PageSize: '{self.page_size}', PDFSize: {pdf_size_bytes} bytes, QuoteID: {quote_id}")
+            current_app.logger.info(
+                f"[PDF_EXPORT] ReportLab quote PDF generated successfully - PageSize: '{self.page_size}', PDFSize: {pdf_size_bytes} bytes, QuoteID: {quote_id}"
+            )
             return pdf_bytes
         except Exception as e:
             debug_print(f"[ERROR] ReportLab rendering failed: {e}")
             import traceback
+
             debug_print(traceback.format_exc())
-            current_app.logger.error(f"[PDF_EXPORT] ReportLab quote rendering failed - PageSize: '{self.page_size}', Error: {str(e)}, QuoteID: {quote_id}", exc_info=True)
+            current_app.logger.error(
+                f"[PDF_EXPORT] ReportLab quote rendering failed - PageSize: '{self.page_size}', Error: {str(e)}, QuoteID: {quote_id}",
+                exc_info=True,
+            )
             # Fall back to default generation
             return self._generate_pdf_with_default()
-    
+
     def _prepare_quote_template_context(self):
         """Prepare data context for quote template rendering"""
         # Convert SQLAlchemy objects to simple structures for template
         from types import SimpleNamespace
-        
+
         # Create quote wrapper
         quote_wrapper = SimpleNamespace()
-        for attr in ['id', 'quote_number', 'title', 'description', 'status', 
-                     'subtotal', 'tax_rate', 'tax_amount', 'total_amount', 
-                     'discount_type', 'discount_amount', 'discount_reason',
-                     'coupon_code', 'currency_code', 'notes', 'terms', 
-                     'valid_until', 'created_at', 'updated_at']:
+        for attr in [
+            "id",
+            "quote_number",
+            "title",
+            "description",
+            "status",
+            "subtotal",
+            "tax_rate",
+            "tax_amount",
+            "total_amount",
+            "discount_type",
+            "discount_amount",
+            "discount_reason",
+            "coupon_code",
+            "currency_code",
+            "notes",
+            "terms",
+            "valid_until",
+            "created_at",
+            "updated_at",
+        ]:
             try:
                 setattr(quote_wrapper, attr, getattr(self.quote, attr))
             except AttributeError:
                 pass
-        
+
         # Convert relationships to lists
         try:
             if hasattr(self.quote.items, "all"):
@@ -1834,66 +2005,81 @@ class QuotePDFGenerator:
                 quote_wrapper.items = list(self.quote.items) if self.quote.items else []
         except Exception:
             quote_wrapper.items = []
-        
+
         # Client
-        if hasattr(self.quote, 'client') and self.quote.client:
+        if hasattr(self.quote, "client") and self.quote.client:
             quote_wrapper.client = self.quote.client
         else:
             quote_wrapper.client = None
-        
+
         # Project
-        quote_wrapper.project = self.quote.project if hasattr(self.quote, 'project') else None
-        
+        quote_wrapper.project = self.quote.project if hasattr(self.quote, "project") else None
+
         # Settings
         settings_wrapper = SimpleNamespace()
-        for attr in ['company_name', 'company_address', 'company_email', 'company_phone', 
-                     'company_website', 'company_tax_id', 'currency']:
+        for attr in [
+            "company_name",
+            "company_address",
+            "company_email",
+            "company_phone",
+            "company_website",
+            "company_tax_id",
+            "currency",
+        ]:
             try:
                 setattr(settings_wrapper, attr, getattr(self.settings, attr))
             except AttributeError:
                 pass
-        
+
         def has_logo():
             return self.settings.has_logo()
+
         def get_logo_path():
             return self.settings.get_logo_path()
+
         settings_wrapper.has_logo = has_logo
         settings_wrapper.get_logo_path = get_logo_path
-        
+
         # Helper functions for templates
-        from app.utils.template_filters import get_logo_base64, get_image_base64
         from babel.dates import format_date as babel_format_date
-        
+
+        from app.utils.template_filters import get_image_base64, get_logo_base64
+
         # Get date format from template, default to %d.%m.%Y
-        date_format_str = getattr(self.template, 'date_format', '%d.%m.%Y') if hasattr(self, 'template') and self.template else '%d.%m.%Y'
-        
+        date_format_str = (
+            getattr(self.template, "date_format", "%d.%m.%Y")
+            if hasattr(self, "template") and self.template
+            else "%d.%m.%Y"
+        )
+
         def format_date(value, format="medium"):
             try:
                 # Use date format from template settings
                 return value.strftime(date_format_str) if value else ""
             except Exception:
                 return str(value) if value else ""
-        
+
         def format_money(value):
             try:
-                currency = getattr(quote_wrapper, 'currency_code', None) or self.settings.currency
+                currency = getattr(quote_wrapper, "currency_code", None) or self.settings.currency
                 return f"{float(value):,.2f} {currency}"
             except Exception:
-                currency = getattr(quote_wrapper, 'currency_code', None) or self.settings.currency
+                currency = getattr(quote_wrapper, "currency_code", None) or self.settings.currency
                 return f"{value} {currency}"
-        
+
         return {
-            'quote': quote_wrapper,
-            'invoice': quote_wrapper,  # Some templates use 'invoice' instead of 'quote'
-            'settings': settings_wrapper,
-            'get_logo_base64': get_logo_base64,
-            'format_date': format_date,
-            'format_money': format_money,
+            "quote": quote_wrapper,
+            "invoice": quote_wrapper,  # Some templates use 'invoice' instead of 'quote'
+            "settings": settings_wrapper,
+            "get_logo_base64": get_logo_base64,
+            "format_date": format_date,
+            "format_money": format_money,
         }
-    
+
     def _generate_pdf_with_default(self):
         """Generate PDF using default fallback ReportLab generator"""
         from app.utils.pdf_generator_fallback import QuotePDFGeneratorFallback
+
         fallback = QuotePDFGeneratorFallback(self.quote, settings=self.settings)
         return fallback.generate_pdf()
 
@@ -1919,7 +2105,7 @@ class QuotePDFGenerator:
             css_template = template.template_css or ""
         else:
             raise ValueError(f"No template provided for page size {self.page_size}. This is a bug.")
-        
+
         html = ""
 
         def remove_page_rule_from_html(html_text):
@@ -1976,7 +2162,7 @@ class QuotePDFGenerator:
                 debug_print(f"[DEBUG] CSS template @page size BEFORE update: '{before_size}'")
 
             css_to_use = update_page_size_in_css(css_template, self.page_size)
-            
+
             # Update wrapper dimensions to match page size (fixes hardcoded dimension issues)
             css_to_use = update_wrapper_dimensions_in_css(css_to_use, self.page_size)
             debug_print(f"[DEBUG] Updated wrapper dimensions in template CSS for page size: {self.page_size}")
@@ -1996,6 +2182,7 @@ class QuotePDFGenerator:
         else:
             try:
                 from flask import render_template as _render_tpl
+
                 css_to_use = _render_tpl("quotes/pdf_styles_default.css")
                 css_to_use = update_page_size_in_css(css_to_use, self.page_size)
                 css_to_use = update_wrapper_dimensions_in_css(css_to_use, self.page_size)
@@ -2004,18 +2191,23 @@ class QuotePDFGenerator:
 
         # Ensure @page rule has correct size
         css = css_to_use
-        
+
         # Add comprehensive overflow prevention CSS
         overflow_css = get_overflow_prevention_css()
         css = css + "\n" + overflow_css
-        
+
         # Import helper functions for template
-        from app.utils.template_filters import get_logo_base64, get_image_base64
         from babel.dates import format_date as babel_format_date
 
+        from app.utils.template_filters import get_image_base64, get_logo_base64
+
         # Get date format from template, default to %d.%m.%Y
-        date_format_str = getattr(self.template, 'date_format', '%d.%m.%Y') if hasattr(self, 'template') and self.template else '%d.%m.%Y'
-        
+        date_format_str = (
+            getattr(self.template, "date_format", "%d.%m.%Y")
+            if hasattr(self, "template") and self.template
+            else "%d.%m.%Y"
+        )
+
         def format_date(value, format="medium"):
             """Format date for template"""
             # Use date format from template settings
@@ -2054,6 +2246,7 @@ class QuotePDFGenerator:
         # Load decorative images
         try:
             from app.models import QuoteImage
+
             decorative_images = QuoteImage.get_quote_images(self.quote.id)
         except Exception:
             decorative_images = []
@@ -2075,7 +2268,7 @@ class QuotePDFGenerator:
                     debug_print("[DEBUG] Removed @page rules from HTML inline styles")
                 else:
                     html_template_updated = html_template
-                
+
                 html = render_template_string(
                     html_template_updated,
                     quote=quote_data,
@@ -2089,6 +2282,7 @@ class QuotePDFGenerator:
                 )
         except Exception as e:
             import traceback
+
             print(f"Error rendering custom quote PDF template: {e}")
             print(traceback.format_exc())
             html = ""
@@ -2108,10 +2302,11 @@ class QuotePDFGenerator:
                 )
             except Exception as e:
                 import traceback
+
                 print(f"Error rendering default quote PDF template: {e}")
                 print(traceback.format_exc())
                 html = f"<html><body><h1>{_('Quote')} {self.quote.quote_number}</h1></body></html>"
-        
+
         return html, css
 
     def _generate_html(self):
@@ -2140,4 +2335,6 @@ class QuotePDFGenerator:
             margin: 0;
             padding: 0;
         }}
-        """.format(page_size=page_size)
+        """.format(
+            page_size=page_size
+        )

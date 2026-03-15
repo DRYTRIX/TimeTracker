@@ -2,12 +2,14 @@
 File upload utilities with validation and security.
 """
 
-from typing import Optional, Tuple
-from werkzeug.utils import secure_filename
-from flask import current_app
 import os
 from pathlib import Path
-from app.constants import MAX_FILE_SIZE, ALLOWED_IMAGE_EXTENSIONS, ALLOWED_DOCUMENT_EXTENSIONS
+from typing import Optional, Tuple
+
+from flask import current_app
+from werkzeug.utils import secure_filename
+
+from app.constants import ALLOWED_DOCUMENT_EXTENSIONS, ALLOWED_IMAGE_EXTENSIONS, MAX_FILE_SIZE
 
 
 def validate_file_upload(
@@ -49,16 +51,16 @@ def validate_file_upload(
             secure_name = secure_filename(file.filename)
             if not secure_name:
                 return False, "Invalid filename"
-            
+
             # Then check extension on the secured filename
             ext = Path(secure_name).suffix.lower()
             # Handle extensions without leading dot
-            if not ext.startswith('.'):
-                ext = '.' + ext
-            
+            if not ext.startswith("."):
+                ext = "." + ext
+
             # Normalize allowed_extensions to have leading dots
-            normalized_allowed = {ext if ext.startswith('.') else '.' + ext for ext in allowed_extensions}
-            
+            normalized_allowed = {ext if ext.startswith(".") else "." + ext for ext in allowed_extensions}
+
             if ext not in normalized_allowed:
                 return False, f"File type not allowed. Allowed types: {', '.join(sorted(allowed_extensions))}"
 

@@ -3,7 +3,9 @@ Repository for client data access operations.
 """
 
 from typing import List, Optional
+
 from sqlalchemy.orm import joinedload
+
 from app import db
 from app.models import Client
 from app.repositories.base_repository import BaseRepository

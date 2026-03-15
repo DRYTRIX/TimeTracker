@@ -3,9 +3,11 @@
 import io
 import logging
 from datetime import datetime
+
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+
 from app.utils.timezone import convert_app_datetime_to_user
 
 logger = logging.getLogger(__name__)
@@ -174,7 +176,9 @@ def create_time_entries_excel(entries, filename_prefix="timetracker_export", col
         ws.cell(row=last_row + 1, column=1).font = Font(bold=True)
 
         total_hours = sum(e.duration_hours for e in entries if getattr(e, "end_time", None))
-        billable_hours = sum(e.duration_hours for e in entries if getattr(e, "end_time", None) and getattr(e, "billable", False))
+        billable_hours = sum(
+            e.duration_hours for e in entries if getattr(e, "end_time", None) and getattr(e, "billable", False)
+        )
 
         ws.cell(row=last_row + 2, column=1, value="Total Hours:")
         ws.cell(row=last_row + 2, column=2, value=total_hours).number_format = "0.00"
@@ -382,6 +386,7 @@ def create_invoice_excel(invoice, items):
 
     # Get invoice prefix from settings, default to "INV"
     from app.models import Settings
+
     settings = Settings.get_settings()
     prefix = getattr(settings, "invoice_prefix", "INV") if settings else "INV"
     if not prefix:

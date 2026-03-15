@@ -2,11 +2,12 @@
 Service for client business logic.
 """
 
-from typing import Optional, Dict, Any, List
 from decimal import Decimal
+from typing import Any, Dict, List, Optional
+
 from app import db
-from app.repositories import ClientRepository
 from app.models import Client
+from app.repositories import ClientRepository
 from app.utils.db import safe_commit
 
 

@@ -16,14 +16,16 @@ Example:
     summary = service.get_reports_summary(user_id=1, is_admin=False)
 """
 
-from typing import Dict, Any, List, Optional
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
-from app import db
-from app.repositories import TimeEntryRepository, ProjectRepository, InvoiceRepository, ExpenseRepository
-from app.models import TimeEntry, Project, Invoice, Expense, Payment, User, ProjectCost, InvoiceItem
-from sqlalchemy.orm import joinedload
+from typing import Any, Dict, List, Optional
+
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
+
+from app import db
+from app.models import Expense, Invoice, InvoiceItem, Payment, Project, ProjectCost, TimeEntry, User
+from app.repositories import ExpenseRepository, InvoiceRepository, ProjectRepository, TimeEntryRepository
 
 
 class ReportingService:
@@ -298,15 +300,13 @@ class ReportingService:
             },
         }
 
-    def get_week_in_review(
-        self, user_id: Optional[int] = None, is_admin: bool = False
-    ) -> Dict[str, Any]:
+    def get_week_in_review(self, user_id: Optional[int] = None, is_admin: bool = False) -> Dict[str, Any]:
         """
         Get a summary of the current week: total hours, billable vs non-billable, top projects.
         Uses the user's week_start_day for "this week" boundaries.
         """
-        from app.utils.overtime import get_week_start_for_date
         from app.models import User
+        from app.utils.overtime import get_week_start_for_date
 
         user = User.query.get(user_id) if user_id else None
         if not user and user_id:
@@ -317,9 +317,7 @@ class ReportingService:
         start_dt = datetime.combine(week_start, datetime.min.time())
         end_dt = datetime.combine(week_end, datetime.max.time().replace(microsecond=0))
 
-        time_summary = self.get_time_summary(
-            user_id=user_id, start_date=start_dt, end_date=end_dt, billable_only=False
-        )
+        time_summary = self.get_time_summary(user_id=user_id, start_date=start_dt, end_date=end_dt, billable_only=False)
         entries = self.time_entry_repo.get_by_date_range(
             start_date=start_dt, end_date=end_dt, user_id=user_id, include_relations=True
         )
@@ -344,7 +342,9 @@ class ReportingService:
         return {
             "total_hours": time_summary["total_hours"],
             "billable_hours": time_summary["billable_hours"],
-            "non_billable_hours": time_summary.get("non_billable_hours", time_summary["total_hours"] - time_summary["billable_hours"]),
+            "non_billable_hours": time_summary.get(
+                "non_billable_hours", time_summary["total_hours"] - time_summary["billable_hours"]
+            ),
             "entry_count": time_summary.get("total_entries", len(entries)),
             "top_projects": top_projects,
             "week_start": week_start.isoformat(),
@@ -503,9 +503,7 @@ class ReportingService:
             agg["total_costs"] = round(agg["total_costs"], 2)
             agg["billable_costs"] = round(agg["billable_costs"], 2)
             agg["total_value"] = round(agg["total_value"], 2)
-            agg["user_totals"] = [
-                {"username": u, "hours": round(h, 1)} for u, h in agg["user_totals"].items()
-            ]
+            agg["user_totals"] = [{"username": u, "hours": round(h, 1)} for u, h in agg["user_totals"].items()]
             projects_data.append(agg)
 
         summary = {
@@ -552,9 +550,11 @@ class ReportingService:
             query = query.filter(TimeEntry.client_id == client_id)
         all_entries = query.all()
 
-        all_invoice_items = InvoiceItem.query.join(Invoice).filter(
-            InvoiceItem.time_entry_ids.isnot(None), InvoiceItem.time_entry_ids != ""
-        ).all()
+        all_invoice_items = (
+            InvoiceItem.query.join(Invoice)
+            .filter(InvoiceItem.time_entry_ids.isnot(None), InvoiceItem.time_entry_ids != "")
+            .all()
+        )
         billed_entry_ids = set()
         for item in all_invoice_items:
             if not item.time_entry_ids:

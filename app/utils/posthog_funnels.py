@@ -5,9 +5,9 @@ This module provides utilities for tracking multi-step conversion funnels
 in your application. Use this to understand where users drop off in complex workflows.
 """
 
-from typing import Optional, Dict, Any
-from datetime import datetime
 import os
+from datetime import datetime
+from typing import Any, Dict, Optional
 
 
 def is_funnel_tracking_enabled() -> bool:
