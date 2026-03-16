@@ -4,7 +4,7 @@ Provides a simplified interface for clients to view their projects,
 invoices, and time entries. Uses separate authentication from regular users.
 """
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from functools import wraps
 
 from flask import (
@@ -1361,6 +1361,14 @@ def download_attachment(attachment_id):
 # ==================== Reports ====================
 
 
+def _report_days_from_request():
+    """Parse and clamp days query param (1-365). Default 30."""
+    days = request.args.get("days", 30, type=int)
+    if days is None:
+        days = 30
+    return max(1, min(365, days))
+
+
 @client_portal_bp.route("/client-portal/reports")
 def reports():
     """View client-specific reports (first version: project progress, invoice/payment, task/status, time by date)."""
@@ -1376,7 +1384,12 @@ def reports():
 
     from app.services.client_report_service import build_report_data
 
-    report_data = build_report_data(client, portal_data, date_range_days=30)
+    date_range_days = _report_days_from_request()
+    report_data = build_report_data(client, portal_data, date_range_days=date_range_days)
+
+    # CSV export via same route
+    if request.args.get("format") == "csv":
+        return _reports_csv_response(client, report_data, date_range_days)
 
     return render_template(
         "client_portal/reports.html",
@@ -1387,6 +1400,44 @@ def reports():
         task_summary=report_data["task_summary"],
         time_by_date=report_data["time_by_date"],
         recent_entries=report_data["recent_entries"],
+        date_range_days=date_range_days,
+    )
+
+
+def _reports_csv_response(client, report_data, date_range_days):
+    """Build CSV download from report_data (same access as reports())."""
+    import csv
+    import io
+    from flask import Response
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([_("Client Report"), client.name, _("Last %(days)s days") % {"days": date_range_days}])
+    writer.writerow([])
+    writer.writerow([_("Summary")])
+    writer.writerow([_("Total Hours"), report_data["total_hours"]])
+    inv = report_data["invoice_summary"]
+    writer.writerow([_("Total Invoiced"), inv["total"]])
+    writer.writerow([_("Paid"), inv["paid"]])
+    writer.writerow([_("Outstanding"), inv["unpaid"]])
+    writer.writerow([])
+    writer.writerow([_("Hours by Project")])
+    writer.writerow([_("Project"), _("Hours"), _("Billable Hours")])
+    for ph in report_data["project_hours"]:
+        p = ph.get("project")
+        name = p.name if p else ""
+        writer.writerow([name, ph.get("hours", 0), ph.get("billable_hours", 0)])
+    writer.writerow([])
+    writer.writerow([_("Time by Date")])
+    writer.writerow([_("Date"), _("Hours")])
+    for row in report_data["time_by_date"]:
+        writer.writerow([row.get("date", ""), row.get("hours", 0)])
+    output.seek(0)
+    filename = f"client-report-{date.today().isoformat()}.csv"
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
 

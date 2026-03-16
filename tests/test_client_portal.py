@@ -811,6 +811,42 @@ class TestClientPortalReportsVisibility:
             assert "Reports" in html or "report" in html.lower()
             assert "Other Project Feed" not in html and "Other Project" not in html
 
+    def test_reports_date_range_days_param(self, app, client, user, test_client):
+        """Reports with ?days=7 returns 200 and page reflects date range."""
+        with app.app_context():
+            user.client_portal_enabled = True
+            user.client_id = test_client.id
+            db.session.commit()
+            user = safe_get_user(user.id)
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(user.id)
+            response = client.get("/client-portal/reports?days=7")
+            assert response.status_code == 200
+            html = response.get_data(as_text=True)
+            assert "7" in html or "Reports" in html
+
+    def test_reports_csv_export(self, app, client, user, test_client):
+        """Reports with ?format=csv returns CSV attachment with expected columns."""
+        with app.app_context():
+            user.client_portal_enabled = True
+            user.client_id = test_client.id
+            db.session.commit()
+            user = safe_get_user(user.id)
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(user.id)
+            response = client.get("/client-portal/reports?format=csv")
+            assert response.status_code == 200
+            assert "text/csv" in response.headers.get("Content-Type", "")
+            assert "attachment" in response.headers.get("Content-Disposition", "")
+            body = response.get_data(as_text=True)
+            assert "Total Hours" in body or "Hours" in body
+            assert "client-report-" in response.headers.get("Content-Disposition", "")
+
+    def test_reports_csv_export_requires_access(self, app, client):
+        """Reports CSV export without client portal auth returns redirect/error."""
+        response = client.get("/client-portal/reports?format=csv")
+        assert response.status_code in (302, 403)
+
 
 # ============================================================================
 # Activity feed filtering

@@ -12,7 +12,7 @@
 {{ page_header(
     icon_class='fas fa-chart-bar',
     title_text=_('Reports'),
-    subtitle_text=_('Project and invoice summaries'),
+    subtitle_text=_('Project and invoice summaries') + (' — ' + (_('Last %(days)s days') % {'days': date_range_days}) if (date_range_days is defined and date_range_days) else ''),
     breadcrumbs=breadcrumbs
 ) }}
 
