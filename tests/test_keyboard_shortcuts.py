@@ -258,17 +258,33 @@ def test_keyboard_shortcuts_route_registered(app):
 class TestKeyboardShortcutsData:
     """Test keyboard shortcuts data handling"""
 
+    @pytest.fixture(autouse=True)
+    def setup(self, authenticated_client, auth_user):
+        """Setup for each test"""
+        self.client = authenticated_client
+        self.user = auth_user
+
     def test_shortcuts_data_structure(self):
-        """Test that shortcuts have proper data structure"""
-        # This tests the JavaScript data structure indirectly
-        # by checking the HTML template has the expected elements
-        pass  # Placeholder for future JavaScript testing
+        """GET API returns shortcut list with required keys (id, default_key, current_key, name)."""
+        response = self.client.get("/api/settings/keyboard-shortcuts")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert "shortcuts" in data
+        assert isinstance(data["shortcuts"], list)
+        assert len(data["shortcuts"]) > 0
+        required_keys = {"id", "default_key", "current_key", "name"}
+        for s in data["shortcuts"]:
+            for key in required_keys:
+                assert key in s, f"Missing key {key} in shortcut {s}"
 
     def test_statistics_tracking(self):
-        """Test that statistics can be tracked"""
-        # This would test localStorage interactions
-        # Requires JavaScript testing framework
-        pass  # Placeholder for future testing
+        """Settings page contains stats containers (total-shortcuts, most-used-list, recent-usage-list)."""
+        response = self.client.get("/settings/keyboard-shortcuts")
+        assert response.status_code == 200
+        html = response.data
+        assert b"total-shortcuts" in html
+        assert b"most-used-list" in html
+        assert b"recent-usage-list" in html
 
 
 # Performance Tests

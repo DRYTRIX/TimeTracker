@@ -774,21 +774,17 @@ class FilterManager {
         })
         .catch(error => {
             console.error('Error fetching filtered results:', error);
-            // Fallback to regular form submission on error
             if (container) {
                 container.style.opacity = '';
                 container.style.pointerEvents = '';
             }
-            // Optionally show an error message
-            if (window.toastManager) {
-                if (typeof window.toastManager.error === 'function') {
-                    window.toastManager.error('Failed to filter results. Please try again.');
-                } else if (typeof window.showToast === 'function') {
-                    window.showToast('Failed to filter results. Please try again.', 'error');
-                } else if (typeof window.toastManager.show === 'function') {
-                    // Last resort: try the modern options-object shape
-                    window.toastManager.show({ message: 'Failed to filter results. Please try again.', type: 'error' });
-                }
+            const msg = 'Failed to filter results. Please try again.';
+            if (window.toastManager && typeof window.toastManager.error === 'function') {
+                window.toastManager.error(msg);
+            } else if (window.toastManager && typeof window.toastManager.show === 'function') {
+                window.toastManager.show({ message: msg, type: 'error' });
+            } else if (typeof window.showToast === 'function') {
+                window.showToast(msg, 'error');
             }
         })
         .finally(() => {
@@ -1469,6 +1465,30 @@ function animateCount(element, start, end, duration, decimals = 0) {
 
 function easeOutQuad(t) {
     return t * (2 - t);
+}
+
+/**
+ * Set submit button loading state (disabled, text, aria-busy).
+ * Use before/after async submit; pass loadingText to override "Saving...".
+ */
+function setSubmitButtonLoading(button, loading, loadingText) {
+    if (!button) return;
+    if (loading) {
+        button.dataset.originalSubmitText = button.textContent.trim();
+        button.textContent = loadingText || 'Saving...';
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+    } else {
+        button.disabled = false;
+        button.removeAttribute('aria-busy');
+        if (button.dataset.originalSubmitText) {
+            button.textContent = button.dataset.originalSubmitText;
+            delete button.dataset.originalSubmitText;
+        }
+    }
+}
+if (typeof window !== 'undefined') {
+    window.setSubmitButtonLoading = setSubmitButtonLoading;
 }
 
 // Global functions for inline event handlers

@@ -16,55 +16,58 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-{% if activities %}
+{% if feed_items %}
 <div class="space-y-4">
-    {% for activity in activities %}
+    {% for item in feed_items %}
     <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
         <div class="p-6">
             <div class="flex items-start gap-4">
                 <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center flex-shrink-0 shadow-md">
-                    <i class="fas 
-                        {% if 'time' in activity.action_type|lower %}fa-clock
-                        {% elif 'invoice' in activity.action_type|lower %}fa-file-invoice
-                        {% elif 'project' in activity.action_type|lower %}fa-folder-open
-                        {% elif 'comment' in activity.action_type|lower %}fa-comment
-                        {% elif 'update' in activity.action_type|lower %}fa-edit
-                        {% elif 'create' in activity.action_type|lower %}fa-plus-circle
-                        {% elif 'delete' in activity.action_type|lower %}fa-trash
-                        {% else %}fa-circle{% endif %} 
+                    <i class="fas
+                        {% if 'time' in (item.action or '')|lower or item.entity_type == 'time_entry' %}fa-clock
+                        {% elif 'comment' in (item.action or '')|lower or item.feed_type == 'comment' %}fa-comment
+                        {% elif 'project' in (item.entity_type or '')|lower %}fa-folder-open
+                        {% elif 'update' in (item.action or '')|lower or 'edit' in (item.action or '')|lower %}fa-edit
+                        {% elif 'create' in (item.action or '')|lower or 'start' in (item.action or '')|lower %}fa-plus-circle
+                        {% elif 'delete' in (item.action or '')|lower %}fa-trash
+                        {% elif 'stop' in (item.action or '')|lower %}fa-stop-circle
+                        {% else %}fa-circle{% endif %}
                         text-white"></i>
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-start justify-between mb-2">
                         <div class="flex-1">
                             <h3 class="font-bold text-text-light dark:text-text-dark mb-1">
-                                {{ activity.description or activity.action_type|replace('_', ' ')|title }}
+                                {{ item.description or (item.action|replace('_', ' ')|title) }}
                             </h3>
                             <div class="flex flex-wrap items-center gap-3 text-sm">
-                                {% if activity.project %}
+                                {% if item.project_name %}
                                 <div class="flex items-center space-x-1 text-text-muted-light dark:text-text-muted-dark">
                                     <i class="fas fa-folder text-primary"></i>
-                                    <span>{{ activity.project.name }}</span>
+                                    <span>{{ item.project_name }}</span>
                                 </div>
                                 {% endif %}
-                                {% if activity.user %}
+                                {% if item.user_display_name %}
                                 <div class="flex items-center space-x-1 text-text-muted-light dark:text-text-muted-dark">
                                     <div class="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center">
                                         <i class="fas fa-user text-primary text-xs"></i>
                                     </div>
-                                    <span>{{ activity.user.display_name if activity.user.display_name else activity.user.username }}</span>
+                                    <span>{{ item.user_display_name }}</span>
                                 </div>
                                 {% endif %}
                                 <div class="flex items-center space-x-1 text-text-muted-light dark:text-text-muted-dark">
                                     <i class="fas fa-clock"></i>
-                                    <span>{{ activity.created_at|user_datetime if activity.created_at else _('N/A') }}</span>
+                                    <span>{{ item.created_at|user_datetime if item.created_at else _('N/A') }}</span>
                                 </div>
                             </div>
                         </div>
                         <span class="ml-4 px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
-                            {{ activity.action_type|replace('_', ' ')|title }}
+                            {{ (item.action or 'activity')|replace('_', ' ')|title }}
                         </span>
                     </div>
+                    {% if item.link_url %}
+                    <a href="{{ item.link_url }}" class="text-sm text-primary hover:underline mt-2 inline-block">{{ _('View details') }}</a>
+                    {% endif %}
                 </div>
             </div>
         </div>

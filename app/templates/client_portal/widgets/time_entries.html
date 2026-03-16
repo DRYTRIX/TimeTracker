@@ -1,0 +1,72 @@
+{# Dashboard widget: Recent time entries #}
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-6 rounded-xl shadow-lg mb-8">
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center space-x-3">
+            <div class="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg">
+                <i class="fas fa-clock text-green-600 dark:text-green-400"></i>
+            </div>
+            <h2 class="text-xl font-bold text-text-light dark:text-text-dark">{{ _('Recent Time Entries') }}</h2>
+        </div>
+        <a href="{{ url_for('client_portal.time_entries') }}" class="text-primary hover:text-primary/80 font-medium text-sm flex items-center space-x-1 transition-colors">
+            <span>{{ _('View All') }}</span>
+            <i class="fas fa-arrow-right text-xs"></i>
+        </a>
+    </div>
+    {% if recent_time_entries %}
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b-2 border-border-light dark:border-border-dark">
+                    <th class="text-left py-3 px-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Date') }}</th>
+                    <th class="text-left py-3 px-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Project') }}</th>
+                    <th class="text-left py-3 px-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('User') }}</th>
+                    <th class="text-left py-3 px-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Duration') }}</th>
+                    <th class="text-left py-3 px-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Description') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in recent_time_entries[:10] %}
+                <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+                    <td class="py-3 px-4 text-sm">
+                        <div class="font-medium text-text-light dark:text-text-dark">{{ entry.start_time|user_date }}</div>
+                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ entry.start_time|user_date }}</div>
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-folder text-primary text-xs"></i>
+                            <span class="text-sm text-text-light dark:text-text-dark">{{ entry.project.name if entry.project else _('N/A') }}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user text-primary text-xs"></i>
+                            </div>
+                            <span class="text-sm text-text-light dark:text-text-dark">{{ entry.user.display_name if entry.user else _('N/A') }}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            <i class="fas fa-clock mr-1"></i>{{ "%.2f"|format(entry.duration_hours) }}h
+                        </span>
+                    </td>
+                    <td class="py-3 px-4">
+                        <p class="text-sm text-text-light dark:text-text-dark max-w-xs truncate" title="{{ entry.description or '-' }}">
+                            {{ entry.description[:50] if entry.description else '-' }}{% if entry.description and entry.description|length > 50 %}...{% endif %}
+                        </p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+            <i class="fas fa-clock text-3xl text-gray-400"></i>
+        </div>
+        <p class="text-text-muted-light dark:text-text-muted-dark font-medium">{{ _('No time entries found') }}</p>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Time entries will appear here once they are logged') }}</p>
+    </div>
+    {% endif %}
+</div>

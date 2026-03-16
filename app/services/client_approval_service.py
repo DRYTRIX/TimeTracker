@@ -51,6 +51,17 @@ class ClientApprovalService:
         db.session.add(approval)
         db.session.commit()
 
+        # Real-time: emit to client portal room
+        try:
+            from app import socketio
+            socketio.emit(
+                "client_approval_update",
+                {"approval_id": approval.id, "status": approval.status.value, "event": "requested"},
+                room=f"client_portal_{client.id}",
+            )
+        except Exception as e:
+            logger.debug("SocketIO emit for client approval skipped: %s", e)
+
         # Notify client contacts
         self._notify_client_contacts(client, approval)
 
@@ -75,6 +86,7 @@ class ClientApprovalService:
             return {"success": False, "message": "Approval is not pending", "error": "invalid_status"}
 
         approval.approve(contact_id, comment)
+        self._emit_approval_update(approval, "approved")
         self._notify_requester(approval, "approved", comment)
 
         return {"success": True, "message": "Time entry approved", "approval": approval.to_dict()}
@@ -89,6 +101,7 @@ class ClientApprovalService:
             return {"success": False, "message": "Approval is not pending", "error": "invalid_status"}
 
         approval.reject(contact_id, reason)
+        self._emit_approval_update(approval, "rejected")
         self._notify_requester(approval, "rejected", reason)
 
         return {"success": True, "message": "Time entry rejected", "approval": approval.to_dict()}
@@ -110,6 +123,20 @@ class ClientApprovalService:
                 logger.error(f"Error during rollback: {rollback_error}", exc_info=True)
             # Return empty list on error to prevent cascading failures
             return []
+
+    def _emit_approval_update(self, approval: ClientTimeApproval, event: str):
+        """Emit SocketIO event to client portal room when approval status changes."""
+        if not approval.client_id:
+            return
+        try:
+            from app import socketio
+            socketio.emit(
+                "client_approval_update",
+                {"approval_id": approval.id, "status": approval.status.value, "event": event},
+                room=f"client_portal_{approval.client_id}",
+            )
+        except Exception as e:
+            logger.debug("SocketIO emit for client approval update skipped: %s", e)
 
     def _notify_client_contacts(self, client: Client, approval: ClientTimeApproval):
         """Send notifications to client contacts"""

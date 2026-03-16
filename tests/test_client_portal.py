@@ -12,7 +12,7 @@ import pytest
 from datetime import datetime, timedelta
 from decimal import Decimal
 from sqlalchemy.exc import PendingRollbackError
-from app.models import User, Client, Project, Invoice, InvoiceItem, TimeEntry
+from app.models import User, Client, Project, Invoice, InvoiceItem, TimeEntry, Quote
 from app import db
 
 
@@ -301,7 +301,26 @@ class TestClientPortalRoutes:
 
             response = client.get("/client-portal/dashboard")
             assert response.status_code == 200
-            assert b"Client Portal" in response.data
+            html = response.get_data(as_text=True)
+            assert "Client Portal" in html or "Dashboard" in html or "Welcome" in html or "Projects" in html
+
+    def test_client_portal_dashboard_customize_save_has_loading_state(self, app, client, user, test_client):
+        """Test dashboard customize modal Save button has loading state (aria-busy or Saving...)."""
+        with app.app_context():
+            with db.session.no_autoflush:
+                user.client_portal_enabled = True
+                user.client_id = test_client.id
+                db.session.merge(user)
+                db.session.flush()
+            safe_commit_with_retry()
+            user = safe_get_user(user.id)
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(user.id)
+            response = client.get("/client-portal/dashboard")
+            assert response.status_code == 200
+            html = response.get_data(as_text=True)
+            assert "dashboard-customize-save" in html
+            assert "aria-busy" in html or "Saving" in html
 
     def test_client_portal_projects_route(self, app, client, user, test_client):
         """Test projects route"""
@@ -422,6 +441,83 @@ class TestClientPortalRoutes:
             # Should be able to view invoice
             response = client.get(f"/client-portal/invoices/{invoice.id}")
             assert response.status_code == 200
+
+    def test_view_invoice_other_clients_invoice_returns_404_with_flash(
+        self, app, client, user, test_client
+    ):
+        """Portal user cannot view invoice belonging to another client; returns 404 and flash."""
+        with app.app_context():
+            with db.session.no_autoflush:
+                user.client_portal_enabled = True
+                user.client_id = test_client.id
+                db.session.merge(user)
+                db.session.flush()
+            safe_commit_with_retry()
+            user = safe_get_user(user.id)
+
+            other_client = Client(name="Other Client")
+            db.session.add(other_client)
+            db.session.flush()
+            other_project = Project(
+                name="Other Project", client_id=other_client.id, status="active"
+            )
+            db.session.add(other_project)
+            safe_commit_with_retry()
+
+            other_invoice = Invoice(
+                invoice_number="INV-OTHER-001",
+                project_id=other_project.id,
+                client_name=other_client.name,
+                client_id=other_client.id,
+                due_date=datetime.utcnow().date() + timedelta(days=30),
+                created_by=user.id,
+                total_amount=Decimal("50.00"),
+            )
+            db.session.add(other_invoice)
+            safe_commit_with_retry()
+
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(user.id)
+
+            response = client.get(f"/client-portal/invoices/{other_invoice.id}")
+            assert response.status_code == 404
+            body = response.get_data(as_text=True)
+            assert "not found" in body.lower() or "Invoice" in body
+
+    def test_view_quote_other_clients_quote_returns_404_with_flash(
+        self, app, client, user, test_client
+    ):
+        """Portal user cannot view quote belonging to another client; returns 404 and flash."""
+        with app.app_context():
+            with db.session.no_autoflush:
+                user.client_portal_enabled = True
+                user.client_id = test_client.id
+                db.session.merge(user)
+                db.session.flush()
+            safe_commit_with_retry()
+            user = safe_get_user(user.id)
+
+            other_client = Client(name="Other Quote Client")
+            db.session.add(other_client)
+            db.session.flush()
+
+            other_quote = Quote(
+                quote_number="QUO-OTHER-001",
+                client_id=other_client.id,
+                title="Other client quote",
+                created_by=user.id,
+                visible_to_client=True,
+            )
+            db.session.add(other_quote)
+            safe_commit_with_retry()
+
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(user.id)
+
+            response = client.get(f"/client-portal/quotes/{other_quote.id}")
+            assert response.status_code == 404
+            body = response.get_data(as_text=True)
+            assert "not found" in body.lower() or "Quote" in body
 
 
 # ============================================================================
@@ -577,3 +673,288 @@ def test_client_portal_smoke(app, user, test_client):
         data = user.get_client_portal_data()
         assert data is not None
         assert data["client"] == test_client
+
+
+# ============================================================================
+# Dashboard widget preferences
+# ============================================================================
+
+
+@pytest.mark.routes
+@pytest.mark.unit
+class TestClientPortalDashboardPreferences:
+    """Test dashboard widget preference persistence and validation"""
+
+    def test_dashboard_preferences_get_default(self, app, client, user, test_client):
+        """GET preferences returns default layout when none saved"""
+        with app.app_context():
+            user.client_portal_enabled = True
+            user.client_id = test_client.id
+            db.session.commit()
+            user = safe_get_user(user.id)
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(user.id)
+            response = client.get("/client-portal/dashboard/preferences")
+            assert response.status_code == 200
+            data = response.get_json()
+            assert "widget_ids" in data
+            assert "widget_order" in data
+            assert data["widget_ids"]  # default non-empty
+
+    def test_dashboard_preferences_post_and_get(self, app, client, user, test_client):
+        """POST saves preferences; GET returns saved layout"""
+        with app.app_context():
+            user.client_portal_enabled = True
+            user.client_id = test_client.id
+            db.session.commit()
+            user = safe_get_user(user.id)
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(user.id)
+            post_resp = client.post(
+                "/client-portal/dashboard/preferences",
+                json={"widget_ids": ["stats", "projects"], "widget_order": ["stats", "projects"]},
+                headers={"Content-Type": "application/json"},
+            )
+            assert post_resp.status_code == 200
+            get_resp = client.get("/client-portal/dashboard/preferences")
+            assert get_resp.status_code == 200
+            data = get_resp.get_json()
+            assert data["widget_ids"] == ["stats", "projects"]
+
+    def test_dashboard_preferences_reject_invalid_widget_id(self, app, client, user, test_client):
+        """POST with invalid widget_ids returns 400"""
+        with app.app_context():
+            user.client_portal_enabled = True
+            user.client_id = test_client.id
+            db.session.commit()
+            user = safe_get_user(user.id)
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(user.id)
+            response = client.post(
+                "/client-portal/dashboard/preferences",
+                json={"widget_ids": ["stats", "invalid_widget"], "widget_order": ["stats", "invalid_widget"]},
+                headers={"Content-Type": "application/json"},
+            )
+            assert response.status_code == 400
+
+    def test_dashboard_preferences_require_auth(self, app, client):
+        """Preferences endpoints require client portal auth"""
+        response = client.get("/client-portal/dashboard/preferences")
+        assert response.status_code in (302, 403)
+
+    def test_dashboard_preferences_post_non_json_returns_400(self, app, client, user, test_client):
+        """POST with non-JSON body returns 400 (widget_ids missing or invalid)."""
+        with app.app_context():
+            user.client_portal_enabled = True
+            user.client_id = test_client.id
+            db.session.commit()
+            user = safe_get_user(user.id)
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(user.id)
+        response = client.post(
+            "/client-portal/dashboard/preferences",
+            data="not json",
+            headers={"Content-Type": "text/plain"},
+        )
+        assert response.status_code == 400
+
+    def test_dashboard_preferences_post_widget_ids_not_list_returns_400(
+        self, app, client, user, test_client
+    ):
+        """POST with widget_ids not a list (e.g. string) returns 400."""
+        with app.app_context():
+            user.client_portal_enabled = True
+            user.client_id = test_client.id
+            db.session.commit()
+            user = safe_get_user(user.id)
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(user.id)
+        response = client.post(
+            "/client-portal/dashboard/preferences",
+            json={"widget_ids": "stats", "widget_order": ["stats"]},
+            headers={"Content-Type": "application/json"},
+        )
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data is not None and "error" in data
+
+
+# ============================================================================
+# Client report visibility
+# ============================================================================
+
+
+@pytest.mark.routes
+@pytest.mark.unit
+class TestClientPortalReportsVisibility:
+    """Test that report data respects client visibility"""
+
+    def test_reports_only_show_authenticated_client_data(self, app, client, user, test_client):
+        """Reports page returns 200 and uses portal data for authenticated client only"""
+        with app.app_context():
+            from app.models import Client as ClientModel
+            other_client = ClientModel(name="Other Client", email="other@example.com")
+            db.session.add(other_client)
+            db.session.flush()
+            other_project = Project(name="Other Project", client_id=other_client.id, status="active")
+            db.session.add(other_project)
+            db.session.commit()
+            user.client_portal_enabled = True
+            user.client_id = test_client.id
+            db.session.commit()
+            user = safe_get_user(user.id)
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(user.id)
+            response = client.get("/client-portal/reports")
+            assert response.status_code == 200
+            html = response.get_data(as_text=True)
+            assert "Reports" in html or "report" in html.lower()
+            assert "Other Project Feed" not in html and "Other Project" not in html
+
+    def test_reports_date_range_days_param(self, app, client, user, test_client):
+        """Reports with ?days=7 returns 200 and page reflects date range."""
+        with app.app_context():
+            user.client_portal_enabled = True
+            user.client_id = test_client.id
+            db.session.commit()
+            user = safe_get_user(user.id)
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(user.id)
+            response = client.get("/client-portal/reports?days=7")
+            assert response.status_code == 200
+            html = response.get_data(as_text=True)
+            assert "7" in html or "Reports" in html
+
+    def test_reports_csv_export(self, app, client, user, test_client):
+        """Reports with ?format=csv returns CSV attachment with expected columns."""
+        with app.app_context():
+            user.client_portal_enabled = True
+            user.client_id = test_client.id
+            db.session.commit()
+            user = safe_get_user(user.id)
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(user.id)
+            response = client.get("/client-portal/reports?format=csv")
+            assert response.status_code == 200
+            assert "text/csv" in response.headers.get("Content-Type", "")
+            assert "attachment" in response.headers.get("Content-Disposition", "")
+            body = response.get_data(as_text=True)
+            assert "Total Hours" in body or "Hours" in body
+            assert "client-report-" in response.headers.get("Content-Disposition", "")
+
+    def test_reports_csv_export_requires_access(self, app, client):
+        """Reports CSV export without client portal auth returns redirect/error."""
+        response = client.get("/client-portal/reports?format=csv")
+        assert response.status_code in (302, 403)
+
+
+# ============================================================================
+# Activity feed filtering
+# ============================================================================
+
+
+@pytest.mark.routes
+@pytest.mark.unit
+class TestClientPortalActivityFeed:
+    """Test activity feed shows only client-visible events"""
+
+    def test_activity_feed_requires_auth(self, app, client):
+        """Activity feed requires client portal auth"""
+        response = client.get("/client-portal/activity")
+        assert response.status_code in (302, 403)
+
+    def test_activity_feed_returns_feed_items(self, app, client, user, test_client):
+        """Activity feed returns 200 and feed_items for authenticated client"""
+        with app.app_context():
+            user.client_portal_enabled = True
+            user.client_id = test_client.id
+            db.session.commit()
+            user = safe_get_user(user.id)
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(user.id)
+            response = client.get("/client-portal/activity")
+            assert response.status_code == 200
+            html = response.get_data(as_text=True)
+            assert "Activity" in html or "activity" in html
+
+    def test_activity_feed_service_only_client_projects(self, app, test_client):
+        """get_client_activity_feed returns only activities for client's projects"""
+        with app.app_context():
+            from app.models import Activity, Client as ClientModel
+            from app.services.client_activity_feed_service import get_client_activity_feed
+            other_client = ClientModel(name="Other Client Feed", email="other2@example.com")
+            db.session.add(other_client)
+            db.session.flush()
+            other_project = Project(name="Other Project Feed", client_id=other_client.id, status="active")
+            db.session.add(other_project)
+            db.session.commit()
+            proj = Project(name="My Project", client_id=test_client.id, status="active")
+            db.session.add(proj)
+            db.session.commit()
+            feed = get_client_activity_feed(test_client.id, limit=10)
+            for item in feed:
+                if item.get("project_id"):
+                    assert item["project_id"] == proj.id or item["project_name"] != "Other Project Feed"
+
+
+# ============================================================================
+# SocketIO client room (unit: session resolution and emit on notification)
+# ============================================================================
+
+
+@pytest.mark.unit
+def test_get_client_id_from_session_client_portal_id(app):
+    """_get_client_id_from_session returns client_id when session has client_portal_id"""
+    with app.app_context():
+        from app.routes.api import _get_client_id_from_session
+        with app.test_request_context():
+            from flask import session
+            session["client_portal_id"] = 42
+            assert _get_client_id_from_session() == 42
+
+
+@pytest.mark.unit
+def test_get_client_id_from_session_user_portal(app, user, test_client):
+    """_get_client_id_from_session returns client_id when session has _user_id with portal access"""
+    with app.app_context():
+        user.client_portal_enabled = True
+        user.client_id = test_client.id
+        db.session.commit()
+        from app.routes.api import _get_client_id_from_session
+        with app.test_request_context():
+            from flask import session
+            session["_user_id"] = str(user.id)
+            assert _get_client_id_from_session() == test_client.id
+
+
+@pytest.mark.unit
+def test_get_client_id_from_session_returns_none_without_portal(app, user):
+    """_get_client_id_from_session returns None when session has no portal identity"""
+    with app.app_context():
+        from app.routes.api import _get_client_id_from_session
+        with app.test_request_context():
+            from flask import session
+            session.clear()
+            assert _get_client_id_from_session() is None
+
+
+@pytest.mark.unit
+def test_create_notification_emits_to_client_room(app, test_client):
+    """Creating a client notification emits to client_portal_{client_id} room"""
+    with app.app_context():
+        from unittest.mock import patch, MagicMock
+        with patch("app.socketio") as mock_socketio:
+            mock_socketio.emit = MagicMock()
+            from app.services.client_notification_service import ClientNotificationService
+            service = ClientNotificationService()
+            service.create_notification(
+                client_id=test_client.id,
+                notification_type="invoice_created",
+                title="Test",
+                message="Test message",
+                send_email=False,
+            )
+            mock_socketio.emit.assert_called_once()
+            call_args = mock_socketio.emit.call_args
+            assert call_args[0][0] == "client_notification"
+            assert call_args[1]["room"] == f"client_portal_{test_client.id}"

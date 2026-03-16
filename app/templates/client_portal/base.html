@@ -400,5 +400,28 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
     <script src="{{ url_for('static', filename='toast-notifications.js') }}?v={{ app_version }}-toastfix1"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous"></script>
+    <script>
+    (function() {
+        if (typeof io === 'undefined') return;
+        var socket = io({ path: '/socket.io', transports: ['websocket', 'polling'] });
+        socket.on('connect', function() {
+            socket.emit('join_client_room', {});
+        });
+        socket.on('client_notification', function(data) {
+            if (typeof showToast === 'function' && data && data.title) {
+                showToast(data.title, data.message || '', 'info');
+            }
+        });
+        socket.on('client_approval_update', function(data) {
+            if (typeof showToast === 'function' && data) {
+                showToast('{{ _("Approval update") }}', data.event === 'requested' ? '{{ _("A time entry approval was requested.") }}' : '{{ _("An approval was updated.") }}', 'info');
+            }
+        });
+        window.addEventListener('beforeunload', function() {
+            socket.emit('leave_client_room', {});
+        });
+    })();
+    </script>
 </body>
 </html>

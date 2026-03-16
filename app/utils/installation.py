@@ -2,13 +2,14 @@
 Installation and configuration utilities for TimeTracker
 
 This module handles first-time setup, installation-specific configuration,
-and telemetry salt generation.
+telemetry salt generation, and install identity (UUID) for base telemetry.
 """
 
 import hashlib
 import json
 import os
 import secrets
+import uuid as uuid_module
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -66,29 +67,25 @@ class InstallationConfig:
             self._save_config()
         return self._config["telemetry_salt"]
 
+    def get_install_id(self) -> str:
+        """
+        Get or generate a random installation UUID for telemetry.
+
+        Used for base_telemetry and (when opt-in) as install-level identity in
+        detailed analytics. Not derived from hostname or other identifying data.
+        """
+        if "install_id" not in self._config:
+            self._config["install_id"] = str(uuid_module.uuid4())
+            self._save_config()
+        return self._config["install_id"]
+
     def get_installation_id(self) -> str:
         """
-        Get or generate a unique installation ID.
+        Get installation ID for display and backward compatibility.
 
-        This is a one-way hash that uniquely identifies this installation
-        without revealing any server information.
+        Returns the same canonical install identity as get_install_id() (UUID).
         """
-        if "installation_id" not in self._config:
-            # Generate a unique installation ID
-            import platform
-            import time
-
-            # Combine multiple factors for uniqueness
-            factors = [platform.node() or "unknown", str(time.time()), secrets.token_hex(16)]
-
-            # Hash to create installation ID
-            combined = "".join(factors).encode()
-            installation_id = hashlib.sha256(combined).hexdigest()[:16]
-
-            self._config["installation_id"] = installation_id
-            self._save_config()
-
-        return self._config["installation_id"]
+        return self.get_install_id()
 
     def is_setup_complete(self) -> bool:
         """Check if initial setup is complete"""
@@ -127,6 +124,16 @@ class InstallationConfig:
     def get_all_config(self) -> Dict:
         """Get all configuration (for admin dashboard)"""
         return self._config.copy()
+
+    def get_base_first_seen_sent_at(self) -> Optional[str]:
+        """Return ISO timestamp when base telemetry first_seen was sent, or None."""
+        return self._config.get("base_first_seen_sent_at")
+
+    def set_base_first_seen_sent_at(self, iso_timestamp: str) -> None:
+        """Record that base_telemetry.first_seen was sent. Persists to disk."""
+        self._config["base_first_seen_sent_at"] = iso_timestamp
+        self._config["base_first_seen_at"] = iso_timestamp
+        self._save_config()
 
 
 # Global instance

@@ -12,8 +12,10 @@ from typing import Any, Dict, Optional
 
 
 def is_monitoring_enabled() -> bool:
-    """Check if PostHog monitoring is enabled."""
-    return bool(os.getenv("POSTHOG_API_KEY", ""))
+    """Check if PostHog monitoring is enabled (PostHog configured and user opted in)."""
+    from app.utils.telemetry import is_telemetry_enabled
+
+    return bool(os.getenv("POSTHOG_API_KEY", "")) and is_telemetry_enabled()
 
 
 # ============================================================================

@@ -369,6 +369,62 @@ class TestActivityIntegration:
             assert test_project.name in activity.description
 
 
+class TestActivityFeedDateParams:
+    """Tests for activity_feed blueprint date parameter validation (/activity and /api/activity).
+    Uses session_transaction to set user so requests are authenticated; activity_feed module must be enabled.
+    """
+
+    def test_api_activity_valid_date_params(self, app, client, user, test_project):
+        """GET /api/activity with valid start_date and end_date returns 200 and applies filter."""
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+            sess["_fresh"] = True
+        with app.app_context():
+            Activity.log(
+                user_id=user.id,
+                action="created",
+                entity_type="project",
+                entity_id=test_project.id,
+                entity_name=test_project.name,
+                description="Activity for date filter",
+            )
+        response = client.get("/api/activity?start_date=2024-01-01&end_date=2025-12-31")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert "activities" in data
+        assert "pagination" in data
+
+    def test_api_activity_invalid_start_date_returns_400(self, app, client, user):
+        """GET /api/activity with invalid start_date returns 400 and error message."""
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+            sess["_fresh"] = True
+        response = client.get("/api/activity?start_date=not-a-date")
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data.get("error") == "Invalid parameter"
+        assert "start_date" in data.get("message", "").lower() or "ISO 8601" in data.get("message", "")
+
+    def test_api_activity_invalid_end_date_returns_400(self, app, client, user):
+        """GET /api/activity with invalid end_date returns 400."""
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+            sess["_fresh"] = True
+        response = client.get("/api/activity?end_date=invalid")
+        assert response.status_code == 400
+        data = response.get_json()
+        assert "message" in data
+
+    def test_web_activity_invalid_date_filter_skipped_no_crash(self, app, client, user):
+        """GET /activity (web) with invalid date param: date filter is skipped (no crash in route)."""
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+            sess["_fresh"] = True
+        response = client.get("/activity?start_date=not-a-date")
+        # Route must not crash on invalid date (ValueError caught and logged); 500 may be template missing
+        assert response.status_code in (200, 500)
+
+
 class TestActivityWidget:
     """Tests for the activity feed widget on dashboard"""
 

@@ -60,6 +60,17 @@ A comprehensive, enhanced keyboard shortcuts system has been fully implemented f
   - Performance tests
   - Security tests
   - Edge case coverage
+- ✅ `tests/test_keyboard_shortcuts_api.py`
+  - API tests: GET/POST/reset, auth, validation, conflicts, forbidden keys
+
+### 5. **Persistence (per-user customization)**
+- ✅ **Backend**: `User.keyboard_shortcuts_overrides` (JSON) stores overrides as `{ "shortcut_id": "normalized_key" }`. Defaults live in `app/utils/keyboard_shortcuts_defaults.py`.
+- ✅ **API** (all require login):
+  - `GET /api/settings/keyboard-shortcuts` — returns `{ shortcuts, overrides }` (shortcuts list includes `id`, `default_key`, `current_key`, `name`, `description`, `category`, `context`).
+  - `POST /api/settings/keyboard-shortcuts` — body `{ "overrides": { "id": "key", ... } }`; validates (conflicts per context, forbidden keys), then saves.
+  - `POST /api/settings/keyboard-shortcuts/reset` — clears user overrides and returns full config.
+- ✅ **Frontend**: Settings page at `/settings/keyboard-shortcuts` loads and saves via the API; `keyboard-shortcuts-advanced.js` applies overrides from `window.__KEYBOARD_SHORTCUTS_CONFIG__` (injected for logged-in users) or uses defaults.
+- ✅ **Conflict rules**: Same key cannot be assigned to two actions in the same context. Forbidden keys (e.g. Ctrl+W, Ctrl+N) are rejected. See **Registering new shortcuts** in `docs/KEYBOARD_SHORTCUTS_DEVELOPER.md`.
 
 ## 🚀 Key Features
 
@@ -138,7 +149,7 @@ Comprehensive configuration interface:
   - Total uses
 - 🏆 **Top 5 Most Used** - See what you use most
 - 🕐 **Recent Usage** - View recent shortcuts
-- 🔧 **Customization** (coming soon)
+- 🔧 **Customization** — overrides via Settings → Keyboard Shortcuts and API
 
 ### Usage Analytics
 Track and improve your workflow:

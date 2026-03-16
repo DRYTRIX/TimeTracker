@@ -58,6 +58,12 @@ curl -X POST https://your-domain.com/api/v1/projects \
   -d '{"name": "New Project", "status": "active"}'
 ```
 
+**Inventory**: Dedicated scopes `read:inventory` and `write:inventory` grant access only to inventory endpoints. For backward compatibility, `read:projects` and `write:projects` also grant the same inventory access.
+- **read:inventory** (or **read:projects**): `GET /api/v1/inventory/items`, `GET /api/v1/inventory/warehouses`, `GET /api/v1/inventory/stock-levels`, `GET /api/v1/inventory/transfers`, `GET /api/v1/inventory/transfers/{reference_id}`, `GET /api/v1/inventory/reports/*`, suppliers, purchase orders (read).
+- **write:inventory** (or **write:projects**): `POST /api/v1/inventory/transfers`, `POST /api/v1/inventory/movements`, create/update/delete items, suppliers, purchase orders.
+
+Use `read:inventory` / `write:inventory` when you need inventory-only tokens (least privilege).
+
 ---
 
 ### Time Entries
@@ -512,8 +518,10 @@ curl -X POST https://your-domain.com/api/v1/projects \
 
 | Scope | Read | Write | Admin Required | Notes |
 |-------|------|-------|----------------|-------|
-| `read:projects` | ✅ | ❌ | ❌ | View projects |
-| `write:projects` | ✅ | ✅ | ❌ | Manage projects |
+| `read:projects` | ✅ | ❌ | ❌ | View projects (and inventory read) |
+| `write:projects` | ✅ | ✅ | ❌ | Manage projects (and inventory write) |
+| `read:inventory` | ❌ | ❌ | ❌ | View inventory only |
+| `write:inventory` | ❌ | ❌ | ❌ | Manage inventory only |
 | `read:time_entries` | ✅ | ❌ | ❌ | View own entries |
 | `write:time_entries` | ✅ | ✅ | ❌ | Manage own entries |
 | `read:tasks` | ✅ | ❌ | ❌ | View tasks |

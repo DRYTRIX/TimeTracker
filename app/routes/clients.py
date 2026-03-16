@@ -28,6 +28,7 @@ from app.models import Client, ClientAttachment, Contact, CustomFieldDefinition,
 from app.services.client_service import ClientService
 from app.utils.db import safe_commit
 from app.utils.email import send_client_portal_password_setup_email
+from app.utils.error_handling import safe_log
 from app.utils.module_registry import ModuleRegistry
 from app.utils.permissions import admin_or_permission_required
 from app.utils.timezone import convert_app_datetime_to_user
@@ -44,7 +45,8 @@ def _wants_json_response() -> bool:
         if request.is_json:
             return True
         return request.accept_mimetypes["application/json"] > request.accept_mimetypes["text/html"]
-    except Exception:
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Could not determine JSON response preference: %s", e)
         return False
 
 
@@ -100,8 +102,8 @@ def list_clients():
 
         engine = db.engine
         is_postgres = "postgresql" in str(engine.url).lower()
-    except Exception:
-        pass
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Could not detect database type: %s", e)
 
     if search:
         # Escape special LIKE characters to prevent SQL injection
@@ -174,9 +176,8 @@ def list_clients():
                     filtered_clients.append(client)
 
             clients = filtered_clients
-        except Exception:
-            # If filtering fails, just use the original results
-            pass
+        except Exception as e:
+            current_app.logger.warning("Client list filtering failed, using original results: %s", e)
 
     # Get custom field definitions for the template
     custom_field_definitions = CustomFieldDefinition.get_active_definitions()
@@ -230,9 +231,9 @@ def create_client():
     """Create a new client"""
     # Detect AJAX/JSON request while preserving classic form behavior
     try:
-        # Consider classic HTML forms regardless of Accept header
         is_classic_form = request.mimetype in ("application/x-www-form-urlencoded", "multipart/form-data")
-    except Exception:
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Could not get request mimetype: %s", e)
         is_classic_form = False
 
     try:
@@ -244,7 +245,8 @@ def create_client():
                 and (request.accept_mimetypes["application/json"] > request.accept_mimetypes["text/html"])
             )
         )
-    except Exception:
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Could not determine wants_json: %s", e)
         wants_json = False
 
     # Check permissions
@@ -267,25 +269,21 @@ def create_client():
         default_hourly_rate = request.form.get("default_hourly_rate", "").strip()
         prepaid_hours_input = request.form.get("prepaid_hours_monthly", "").strip()
         prepaid_reset_day_input = request.form.get("prepaid_reset_day", "").strip()
-        try:
-            current_app.logger.info(
-                "POST /clients/create user=%s name=%s email=%s",
-                current_user.username,
-                name or "<empty>",
-                email or "<empty>",
-            )
-        except Exception:
-            pass
+        safe_log(
+            current_app.logger,
+            "info",
+            "POST /clients/create user=%s name=%s email=%s",
+            current_user.username,
+            name or "<empty>",
+            email or "<empty>",
+        )
 
         # Validate required fields
         if not name:
             if wants_json:
                 return jsonify({"error": "validation_error", "messages": ["Client name is required"]}), 400
             flash(_("Client name is required"), "error")
-            try:
-                current_app.logger.warning("Validation failed: missing client name")
-            except Exception:
-                pass
+            safe_log(current_app.logger, "warning", "Validation failed: missing client name")
             return render_template("clients/create.html")
 
         # Check if client name already exists
@@ -296,10 +294,7 @@ def create_client():
                     400,
                 )
             flash(_("A client with this name already exists"), "error")
-            try:
-                current_app.logger.warning("Validation failed: duplicate client name '%s'", name)
-            except Exception:
-                pass
+            safe_log(current_app.logger, "warning", "Validation failed: duplicate client name '%s'", name)
             return render_template("clients/create.html")
 
         # Validate email format if provided
@@ -319,10 +314,7 @@ def create_client():
             if wants_json:
                 return jsonify({"error": "validation_error", "messages": ["Invalid hourly rate format"]}), 400
             flash(_("Invalid hourly rate format"), "error")
-            try:
-                current_app.logger.warning("Validation failed: invalid hourly rate '%s'", default_hourly_rate)
-            except Exception:
-                pass
+            safe_log(current_app.logger, "warning", "Validation failed: invalid hourly rate '%s'", default_hourly_rate)
             return render_template("clients/create.html")
 
         try:
@@ -406,8 +398,8 @@ def create_client():
             from app.utils.cache import invalidate_dashboard_for_user
 
             invalidate_dashboard_for_user(current_user.id)
-        except Exception:
-            pass
+        except Exception as e:
+            safe_log(current_app.logger, "debug", "Dashboard cache invalidation failed: %s", e)
 
         if wants_json:
             return (
@@ -814,11 +806,11 @@ def archive_client(client_id):
         app_module.track_event(current_user.id, "client.archived", {"client_id": client.id})
         flash(f'Client "{client.name}" archived successfully', "success")
         try:
-            from app.utils.cache import get_cache, invalidate_dashboard_for_user
+            from app.utils.cache import invalidate_dashboard_for_user
 
             invalidate_dashboard_for_user(current_user.id)
-        except Exception:
-            pass
+        except Exception as e:
+            safe_log(current_app.logger, "debug", "Dashboard cache invalidation failed: %s", e)
 
     return redirect(url_for("clients.list_clients"))
 
@@ -841,11 +833,11 @@ def activate_client(client_id):
         db.session.commit()
         flash(f'Client "{client.name}" activated successfully', "success")
         try:
-            from app.utils.cache import get_cache, invalidate_dashboard_for_user
+            from app.utils.cache import invalidate_dashboard_for_user
 
             invalidate_dashboard_for_user(current_user.id)
-        except Exception:
-            pass
+        except Exception as e:
+            safe_log(current_app.logger, "debug", "Dashboard cache invalidation failed: %s", e)
 
     return redirect(url_for("clients.list_clients"))
 
@@ -902,8 +894,8 @@ def delete_client(client_id):
         from app.utils.cache import invalidate_dashboard_for_user
 
         invalidate_dashboard_for_user(current_user.id)
-    except Exception:
-        pass
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Dashboard cache invalidation failed: %s", e)
 
     flash(f'Client "{client_name}" deleted successfully', "success")
     return redirect(url_for("clients.list_clients"))
@@ -981,11 +973,11 @@ def bulk_delete_clients():
     if deleted_count > 0:
         flash(f'Successfully deleted {deleted_count} client{"s" if deleted_count != 1 else ""}', "success")
         try:
-            from app.utils.cache import get_cache, invalidate_dashboard_for_user
+            from app.utils.cache import invalidate_dashboard_for_user
 
             invalidate_dashboard_for_user(current_user.id)
-        except Exception:
-            pass
+        except Exception as e:
+            safe_log(current_app.logger, "debug", "Dashboard cache invalidation failed: %s", e)
 
     if skipped_count > 0:
         flash(

@@ -42,6 +42,24 @@ class ClientNotificationService:
         db.session.add(notification)
         db.session.commit()
 
+        # Real-time: emit to client portal room
+        try:
+            from app import socketio
+            socketio.emit(
+                "client_notification",
+                {
+                    "id": notification.id,
+                    "type": notification.type,
+                    "title": notification.title,
+                    "message": notification.message,
+                    "link_url": notification.link_url,
+                    "link_text": notification.link_text,
+                },
+                room=f"client_portal_{client_id}",
+            )
+        except Exception as e:
+            logger.debug("SocketIO emit for client notification skipped: %s", e)
+
         # Send email if enabled
         if send_email:
             try:

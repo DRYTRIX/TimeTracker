@@ -564,7 +564,7 @@ console.log(window.widgetManager.layout);
 ### Dashboard Widgets
 - Choose which widgets to show
 - Drag to reorder
-- Resize (coming soon)
+- Dashboard widget resize (planned)
 - Custom widgets (via API)
 
 ---

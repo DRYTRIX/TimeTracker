@@ -21310,20 +21310,12 @@ msgstr ""
 msgid "for all overdue tasks?"
 msgstr ""
 
-#: app/templates/tasks/overdue.html:151
-msgid "Bulk due date update feature coming soon!"
-msgstr ""
-
 #: app/templates/tasks/overdue.html:152
 msgid "Enter new priority (low/medium/high/urgent):"
 msgstr ""
 
 #: app/templates/tasks/overdue.html:153
 msgid "Are you sure you want to set priority to"
-msgstr ""
-
-#: app/templates/tasks/overdue.html:155
-msgid "Bulk priority update feature coming soon!"
 msgstr ""
 
 #: app/templates/tasks/overdue.html:156

@@ -78,6 +78,9 @@ class User(UserMixin, db.Model):
     # Calendar default view: 'day' | 'week' | 'month'; None = use last view (session)
     calendar_default_view = db.Column(db.String(10), nullable=True)
 
+    # Keyboard shortcut overrides: JSON dict { "shortcut_id": "normalized_key" }. None/empty = use defaults.
+    keyboard_shortcuts_overrides = db.Column(db.JSON, nullable=True)
+
     # UI feature flags - allow users to customize which features are visible
     # All default to True (enabled) for backward compatibility
     # Calendar section

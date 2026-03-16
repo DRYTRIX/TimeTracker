@@ -9,25 +9,27 @@ class KeyboardShortcutManager {
         this.contexts = new Map();
         this.currentContext = 'global';
         this.recording = false;
-        this.customShortcuts = this.loadCustomShortcuts();
+        /** Registry: id -> { defaultKey, callback, context, description, category, preventDefault, stopPropagation, originalKey } for applying overrides */
+        this.registry = [];
+        this.customShortcuts = new Map();
         this.initDefaultShortcuts();
+        this.applyUserOverrides();
         this.init();
     }
 
     init() {
         document.addEventListener('keydown', (e) => this.handleKeyPress(e));
         this.detectContext();
-        
-        // Listen for context changes
         document.addEventListener('focusin', () => this.detectContext());
         window.addEventListener('popstate', () => this.detectContext());
     }
 
     /**
-     * Register a keyboard shortcut
+     * Register a keyboard shortcut. options.id is used for backend override mapping.
      */
     register(key, callback, options = {}) {
         const {
+            id = null,
             context = 'global',
             description = '',
             category = 'General',
@@ -36,164 +38,84 @@ class KeyboardShortcutManager {
         } = options;
 
         const shortcutKey = this.normalizeKey(key);
-        
         if (!this.shortcuts.has(context)) {
             this.shortcuts.set(context, new Map());
         }
-
         this.shortcuts.get(context).set(shortcutKey, {
             callback,
             description,
             category,
             preventDefault,
             stopPropagation,
-            originalKey: key
+            originalKey: key,
+            id: id || null
         });
+        if (id) {
+            this.registry.push({
+                id,
+                defaultKey: shortcutKey,
+                callback,
+                context,
+                description,
+                category,
+                preventDefault,
+                stopPropagation,
+                originalKey: key
+            });
+        }
     }
 
     /**
-     * Initialize default shortcuts
+     * Initialize default shortcuts. IDs must match backend DEFAULT_SHORTCUTS in keyboard_shortcuts_defaults.py.
      */
     initDefaultShortcuts() {
-        // Global shortcuts
-        this.register('Ctrl+K', () => this.openCommandPalette(), {
-            description: 'Open command palette',
-            category: 'Navigation'
-        });
+        this.register('Ctrl+K', () => this.openCommandPalette(), { id: 'global_command_palette', description: 'Open command palette', category: 'Navigation' });
+        this.register('Ctrl+/', () => this.toggleSearch(), { id: 'global_search', description: 'Toggle search', category: 'Navigation' });
+        this.register('Ctrl+B', () => this.toggleSidebar(), { id: 'global_sidebar', description: 'Toggle sidebar', category: 'Navigation' });
+        this.register('Ctrl+D', () => this.toggleDarkMode(), { id: 'appearance_dark_mode', description: 'Toggle dark mode', category: 'Appearance' });
+        this.register('Shift+/', () => this.showShortcutsPanel(), { id: 'help_shortcuts_panel', description: 'Show keyboard shortcuts', category: 'Help', preventDefault: true });
+        this.register('Shift+?', () => this.showQuickActions(), { id: 'actions_quick_actions', description: 'Show quick actions', category: 'Actions' });
+        this.register('g d', () => this.navigateTo('/main/dashboard'), { id: 'nav_dashboard', description: 'Go to Dashboard', category: 'Navigation' });
+        this.register('g p', () => this.navigateTo('/projects/'), { id: 'nav_projects', description: 'Go to Projects', category: 'Navigation' });
+        this.register('g t', () => this.navigateTo('/tasks/'), { id: 'nav_tasks', description: 'Go to Tasks', category: 'Navigation' });
+        this.register('g r', () => this.navigateTo('/reports/'), { id: 'nav_reports', description: 'Go to Reports', category: 'Navigation' });
+        this.register('g i', () => this.navigateTo('/invoices/'), { id: 'nav_invoices', description: 'Go to Invoices', category: 'Navigation' });
+        this.register('c p', () => this.createProject(), { id: 'create_project', description: 'Create new project', category: 'Actions' });
+        this.register('c t', () => this.createTask(), { id: 'create_task', description: 'Create new task', category: 'Actions' });
+        this.register('c c', () => this.createClient(), { id: 'create_client', description: 'Create new client', category: 'Actions' });
+        this.register('t s', () => this.startTimer(), { id: 'timer_start', description: 'Start timer', category: 'Timer' });
+        this.register('t p', () => this.pauseTimer(), { id: 'timer_pause', description: 'Pause timer', category: 'Timer' });
+        this.register('t l', () => this.logTime(), { id: 'timer_log', description: 'Log time manually', category: 'Timer' });
+        this.register('Ctrl+A', () => this.selectAllRows(), { id: 'table_select_all', context: 'table', description: 'Select all rows', category: 'Table' });
+        this.register('Delete', () => this.deleteSelected(), { id: 'table_delete', context: 'table', description: 'Delete selected rows', category: 'Table' });
+        this.register('Escape', () => this.clearSelection(), { id: 'table_clear_selection', context: 'table', description: 'Clear selection', category: 'Table' });
+        this.register('Escape', () => this.closeModal(), { id: 'modal_close', context: 'modal', description: 'Close modal', category: 'Modal' });
+        this.register('Enter', () => this.submitForm(), { id: 'modal_submit', context: 'modal', description: 'Submit form', category: 'Modal', preventDefault: false });
+        this.register('Ctrl+S', () => this.saveForm(), { id: 'editing_save', context: 'editing', description: 'Save changes', category: 'Editing' });
+        this.register('Ctrl+Z', () => this.undo(), { id: 'editing_undo', description: 'Undo', category: 'Editing' });
+        this.register('Ctrl+Shift+Z', () => this.redo(), { id: 'editing_redo', description: 'Redo', category: 'Editing' });
+    }
 
-        this.register('Ctrl+/', () => this.toggleSearch(), {
-            description: 'Toggle search',
-            category: 'Navigation'
-        });
-
-        this.register('Ctrl+B', () => this.toggleSidebar(), {
-            description: 'Toggle sidebar',
-            category: 'Navigation'
-        });
-
-        this.register('Ctrl+D', () => this.toggleDarkMode(), {
-            description: 'Toggle dark mode',
-            category: 'Appearance'
-        });
-
-        this.register('Shift+/', () => this.showShortcutsPanel(), {
-            description: 'Show keyboard shortcuts',
-            category: 'Help',
-            preventDefault: true
-        });
-
-        // Navigation shortcuts
-        this.register('g d', () => this.navigateTo('/main/dashboard'), {
-            description: 'Go to Dashboard',
-            category: 'Navigation'
-        });
-
-        this.register('g p', () => this.navigateTo('/projects/'), {
-            description: 'Go to Projects',
-            category: 'Navigation'
-        });
-
-        this.register('g t', () => this.navigateTo('/tasks/'), {
-            description: 'Go to Tasks',
-            category: 'Navigation'
-        });
-
-        this.register('g r', () => this.navigateTo('/reports/'), {
-            description: 'Go to Reports',
-            category: 'Navigation'
-        });
-
-        this.register('g i', () => this.navigateTo('/invoices/'), {
-            description: 'Go to Invoices',
-            category: 'Navigation'
-        });
-
-        // Creation shortcuts
-        this.register('c p', () => this.createProject(), {
-            description: 'Create new project',
-            category: 'Actions'
-        });
-
-        this.register('c t', () => this.createTask(), {
-            description: 'Create new task',
-            category: 'Actions'
-        });
-
-        this.register('c c', () => this.createClient(), {
-            description: 'Create new client',
-            category: 'Actions'
-        });
-
-        // Timer shortcuts
-        this.register('t s', () => this.startTimer(), {
-            description: 'Start timer',
-            category: 'Timer'
-        });
-
-        this.register('t p', () => this.pauseTimer(), {
-            description: 'Pause timer',
-            category: 'Timer'
-        });
-
-        this.register('t l', () => this.logTime(), {
-            description: 'Log time manually',
-            category: 'Timer'
-        });
-
-        // Table shortcuts (context-specific)
-        this.register('Ctrl+A', () => this.selectAllRows(), {
-            context: 'table',
-            description: 'Select all rows',
-            category: 'Table'
-        });
-
-        this.register('Delete', () => this.deleteSelected(), {
-            context: 'table',
-            description: 'Delete selected rows',
-            category: 'Table'
-        });
-
-        this.register('Escape', () => this.clearSelection(), {
-            context: 'table',
-            description: 'Clear selection',
-            category: 'Table'
-        });
-
-        // Modal shortcuts
-        this.register('Escape', () => this.closeModal(), {
-            context: 'modal',
-            description: 'Close modal',
-            category: 'Modal'
-        });
-
-        this.register('Enter', () => this.submitForm(), {
-            context: 'modal',
-            description: 'Submit form',
-            category: 'Modal',
-            preventDefault: false
-        });
-
-        // Editing shortcuts
-        this.register('Ctrl+S', () => this.saveForm(), {
-            context: 'editing',
-            description: 'Save changes',
-            category: 'Editing'
-        });
-
-        this.register('Ctrl+Z', () => this.undo(), {
-            description: 'Undo',
-            category: 'Editing'
-        });
-
-        this.register('Ctrl+Shift+Z', () => this.redo(), {
-            description: 'Redo',
-            category: 'Editing'
-        });
-
-        // Quick actions
-        this.register('Shift+?', () => this.showQuickActions(), {
-            description: 'Show quick actions',
-            category: 'Actions'
+    /**
+     * Apply user overrides from window.__KEYBOARD_SHORTCUTS_CONFIG__ or fetch from API.
+     * Rebuilds this.shortcuts so effective key per id = overrides[id] || defaultKey.
+     */
+    applyUserOverrides() {
+        const config = window.__KEYBOARD_SHORTCUTS_CONFIG__;
+        const overrides = (config && config.overrides) || {};
+        this.shortcuts.clear();
+        this.registry.forEach((reg) => {
+            const effectiveKey = (overrides[reg.id] && this.normalizeKey(overrides[reg.id])) || reg.defaultKey;
+            if (!this.shortcuts.has(reg.context)) this.shortcuts.set(reg.context, new Map());
+            this.shortcuts.get(reg.context).set(effectiveKey, {
+                callback: reg.callback,
+                description: reg.description,
+                category: reg.category,
+                preventDefault: reg.preventDefault,
+                stopPropagation: reg.stopPropagation,
+                originalKey: effectiveKey,
+                id: reg.id
+            });
         });
     }
 
@@ -259,15 +181,7 @@ class KeyboardShortcutManager {
             }
         }
 
-        // Check custom shortcuts first
-        if (this.customShortcuts.has(normalizedKey)) {
-            const customAction = this.customShortcuts.get(normalizedKey);
-            this.executeAction(customAction);
-            e.preventDefault();
-            return;
-        }
-
-        // Check context-specific shortcuts
+        // Check context-specific shortcuts (already include user overrides via applyUserOverrides)
         const contextShortcuts = this.shortcuts.get(this.currentContext);
         if (contextShortcuts && contextShortcuts.has(normalizedKey)) {
             const shortcut = contextShortcuts.get(normalizedKey);
@@ -311,10 +225,10 @@ class KeyboardShortcutManager {
     }
 
     /**
-     * Normalize key for consistent matching
+     * Normalize key for consistent matching (matches backend keyboard_shortcuts_defaults.normalize_key)
      */
     normalizeKey(key) {
-        return key.replace(/\s+/g, ' ').toLowerCase();
+        return String(key || '').trim().toLowerCase().replace(/\s+/g, ' ').replace(/command|cmd/gi, 'ctrl');
     }
 
     /**
@@ -588,7 +502,7 @@ class KeyboardShortcutManager {
     }
 
     customizeShortcuts() {
-        window.toastManager?.info('Shortcut customization coming soon!');
+        window.location.href = '/settings/keyboard-shortcuts';
     }
 }
 

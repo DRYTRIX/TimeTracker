@@ -397,15 +397,22 @@ class PWAEnhancements {
     }
 
     showUpdateNotification() {
-        if (window.toastManager && typeof window.toastManager.info === 'function') {
-            const toastId = window.toastManager.info('New version available!', 0);
+        if (window.toastManager && typeof window.toastManager.show === 'function') {
+            const toastId = window.toastManager.show({
+                message: 'New version available!',
+                title: 'Update available',
+                type: 'info',
+                duration: 0
+            });
             const toastEl = toastId && document.querySelector('[data-toast-id="' + toastId + '"]');
             if (toastEl) {
                 const btn = document.createElement('button');
+                btn.type = 'button';
                 btn.textContent = 'Reload';
                 btn.className = 'ml-2 px-3 py-1 bg-primary text-white rounded hover:bg-primary/90';
+                btn.setAttribute('aria-label', 'Reload page to apply update');
                 btn.onclick = () => window.location.reload();
-                const content = toastEl.querySelector('.toast-content');
+                const content = toastEl.querySelector('.tt-toast-content') || toastEl.querySelector('.toast-content');
                 if (content) content.appendChild(btn);
                 else toastEl.appendChild(btn);
             }

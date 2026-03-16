@@ -7,7 +7,10 @@ or early startup, tables/columns may not exist yet.
 
 from __future__ import annotations
 
+import logging
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 def get_locked_client_id() -> Optional[int]:
@@ -18,8 +21,8 @@ def get_locked_client_id() -> Optional[int]:
         cached = getattr(g, "_locked_client_id", None)
         if cached is not None:
             return cached or None
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Could not get cached locked_client_id: %s", e)
 
     try:
         from app.models.settings import Settings
@@ -30,10 +33,11 @@ def get_locked_client_id() -> Optional[int]:
             from flask import g
 
             g._locked_client_id = locked_client_id or 0
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Could not set g._locked_client_id: %s", e)
         return locked_client_id
-    except Exception:
+    except Exception as e:
+        logger.debug("Could not get locked_client_id from settings: %s", e)
         return None
 
 
@@ -44,8 +48,8 @@ def get_locked_client():
 
         if hasattr(g, "_locked_client"):
             return getattr(g, "_locked_client", None)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Could not get cached locked client: %s", e)
 
     locked_client_id = get_locked_client_id()
     if not locked_client_id:
@@ -60,17 +64,18 @@ def get_locked_client():
                 from flask import g
 
                 g._locked_client = client
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Could not set g._locked_client: %s", e)
             return client
         try:
             from flask import g
 
             g._locked_client = None
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Could not clear g._locked_client: %s", e)
         return None
-    except Exception:
+    except Exception as e:
+        logger.debug("Could not load locked client: %s", e)
         return None
 
 

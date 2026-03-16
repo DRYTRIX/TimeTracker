@@ -264,9 +264,9 @@ class EnhancedErrorHandler {
         
         // Queue for offline processing if offline
         if (!this.isOnline) {
-            this.queueForOffline(url, options, errorId);
+            await this.queueForOffline(url, options, errorId);
         }
-        
+
         // Return original response so caller can handle it
         return response;
     }
@@ -274,7 +274,7 @@ class EnhancedErrorHandler {
     async handleFetchException(error, url, options) {
         // Network error
         if (!this.isOnline) {
-            this.queueForOffline(url, options);
+            await this.queueForOffline(url, options);
             return new Response(JSON.stringify({ error: 'Offline' }), {
                 status: 0,
                 statusText: 'Offline'
@@ -376,6 +376,8 @@ class EnhancedErrorHandler {
                 
                 const retryBtn = document.createElement('button');
                 retryBtn.className = 'error-retry-btn';
+                retryBtn.type = 'button';
+                retryBtn.setAttribute('aria-label', 'Retry');
                 retryBtn.textContent = 'Retry';
                 retryBtn.onclick = async () => {
                     retryBtn.disabled = true;
@@ -423,15 +425,17 @@ class EnhancedErrorHandler {
     }
 
     showError(message, title = 'Error') {
-        // Check for duplicates before showing
         if (this.isDuplicateError(message)) {
             console.warn('Duplicate error suppressed:', message);
             return;
         }
-        
-        if (window.toastManager) {
-            window.toastManager.error(message, title);
-        } else {
+        try {
+            if (window.toastManager && typeof window.toastManager.error === 'function') {
+                window.toastManager.error(message, title);
+            } else {
+                console.error(title + ':', message);
+            }
+        } catch (e) {
             console.error(title + ':', message);
         }
     }
@@ -524,20 +528,57 @@ class EnhancedErrorHandler {
 
     /**
      * Offline Queue Management
+     * Stores method, headers, and body in a replay-safe form so POST/PUT replay correctly after JSON round-trip.
      */
-    queueForOffline(url, options, errorId = null) {
+    async queueForOffline(url, options, errorId = null) {
+        const opts = options || {};
+        let method = (opts.method || 'GET').toUpperCase();
+        let headers = {};
+        let body = null;
+
+        if (opts.headers) {
+            if (opts.headers instanceof Headers) {
+                opts.headers.forEach((v, k) => { headers[k] = v; });
+            } else if (typeof opts.headers === 'object') {
+                headers = { ...opts.headers };
+            }
+        }
+        if (opts.body !== undefined && opts.body !== null) {
+            if (typeof opts.body === 'string') {
+                body = opts.body;
+            } else if (opts.body instanceof Blob) {
+                try {
+                    body = await opts.body.text();
+                } catch (e) {
+                    console.warn('Offline queue: could not read body as text, skipping queue', e);
+                    return;
+                }
+            } else if (opts.body instanceof ArrayBuffer) {
+                body = new TextDecoder().decode(opts.body);
+            } else if (typeof opts.body.toString === 'function') {
+                body = opts.body.toString();
+            } else {
+                try {
+                    body = JSON.stringify(opts.body);
+                } catch (e) {
+                    console.warn('Offline queue: could not serialize body, skipping queue', e);
+                    return;
+                }
+            }
+        }
+
         const queueItem = {
             url,
-            options,
+            method,
+            headers,
+            body,
             errorId,
             timestamp: Date.now(),
             retries: 0
         };
-        
+
         this.offlineQueue.push(queueItem);
         this.updateOfflineQueueIndicator();
-        
-        // Store in localStorage for persistence
         this.saveOfflineQueue();
     }
 
@@ -563,22 +604,33 @@ class EnhancedErrorHandler {
 
     async processOfflineQueue() {
         if (this.offlineQueue.length === 0) return;
-        
+
         const queue = [...this.offlineQueue];
         this.offlineQueue = [];
-        
+
         for (const item of queue) {
             try {
-                const response = await fetch(item.url, item.options);
+                let fetchOptions;
+                if (item.method !== undefined || item.body !== undefined) {
+                    fetchOptions = {
+                        method: item.method || 'GET',
+                        headers: item.headers || {}
+                    };
+                    if (item.body != null) {
+                        fetchOptions.body = item.body;
+                    }
+                } else {
+                    fetchOptions = item.options || { method: 'GET' };
+                }
+                const response = await fetch(item.url, fetchOptions);
                 if (response.ok && item.errorId) {
                     window.toastManager?.dismiss(item.errorId);
                 }
             } catch (error) {
-                // Re-queue if still failing
                 this.offlineQueue.push(item);
             }
         }
-        
+
         this.updateOfflineQueueIndicator();
         this.saveOfflineQueue();
     }

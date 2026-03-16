@@ -11,8 +11,10 @@ from typing import Any, Dict, Optional
 
 
 def is_funnel_tracking_enabled() -> bool:
-    """Check if funnel tracking is enabled."""
-    return bool(os.getenv("POSTHOG_API_KEY", ""))
+    """Check if funnel tracking is enabled (PostHog configured and user opted in)."""
+    from app.utils.telemetry import is_telemetry_enabled
+
+    return bool(os.getenv("POSTHOG_API_KEY", "")) and is_telemetry_enabled()
 
 
 def track_funnel_step(user_id: Any, funnel_name: str, step: str, properties: Optional[Dict[str, Any]] = None) -> None:

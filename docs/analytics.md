@@ -64,16 +64,13 @@ Tracks user behavior and feature usage with advanced features:
 
 See [POSTHOG_ADVANCED_FEATURES.md](../POSTHOG_ADVANCED_FEATURES.md) for complete guide.
 
-### Telemetry
+### Two-Layer Telemetry
 
-Optional, opt-in telemetry helps us understand:
-- Number of active installations (anonymized)
-- Version distribution
-- Update patterns
+**Base telemetry (always on when PostHog is configured):** Minimal install footprint—version, platform, first/last seen, heartbeat. No PII. See [Telemetry Architecture](telemetry-architecture.md).
 
-**Privacy**: Telemetry is disabled by default and contains no personally identifiable information (PII).
+**Detailed analytics (opt-in):** Feature usage, screens, errors, retention. Enabled in Admin → Privacy & Analytics or Admin → Telemetry. Only when opted in are product events sent to PostHog.
 
-**Implementation**: Telemetry data is sent via PostHog using anonymous fingerprints, keeping all installation data in one place.
+**Privacy:** Base layer has fixed minimal schema; detailed layer is off by default and can be turned off anytime. No PII in either layer.
 
 ## Configuration
 

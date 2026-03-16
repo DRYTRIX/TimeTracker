@@ -1,6 +1,7 @@
 """REST API v1 - Comprehensive API endpoints with token authentication"""
 
 from datetime import date, datetime, timedelta
+from decimal import InvalidOperation
 
 from flask import Blueprint, Response, current_app, g, jsonify, request
 from sqlalchemy import func, or_
@@ -63,6 +64,7 @@ from app.utils.api_responses import (
     success_response,
     validation_error_response,
 )
+from app.utils.error_handling import safe_log
 from app.utils.timezone import get_app_timezone, parse_local_datetime, utc_to_local
 
 api_v1_bp = Blueprint("api_v1", __name__, url_prefix="/api/v1")
@@ -171,8 +173,15 @@ def api_info():
                     "warehouses": "/api/v1/inventory/warehouses",
                     "stock_levels": "/api/v1/inventory/stock-levels",
                     "movements": "/api/v1/inventory/movements",
+                    "transfers": "/api/v1/inventory/transfers",
                     "suppliers": "/api/v1/inventory/suppliers",
                     "purchase_orders": "/api/v1/inventory/purchase-orders",
+                    "reports": {
+                        "valuation": "/api/v1/inventory/reports/valuation",
+                        "movement_history": "/api/v1/inventory/reports/movement-history",
+                        "turnover": "/api/v1/inventory/reports/turnover",
+                        "low_stock": "/api/v1/inventory/reports/low-stock",
+                    },
                 },
             },
             "timezone": get_app_timezone(),
@@ -499,16 +508,16 @@ def update_per_diem(pd_id):
         if numfield in data:
             try:
                 setattr(pd, numfield, int(data[numfield]))
-            except Exception:
-                pass
+            except (ValueError, TypeError):
+                return validation_error_response({numfield: ["Invalid value."]}, message="Invalid value for " + numfield)
     for ratefield in ("full_day_rate", "half_day_rate", "breakfast_deduction", "lunch_deduction", "dinner_deduction"):
         if ratefield in data:
             try:
                 from decimal import Decimal
 
                 setattr(pd, ratefield, Decimal(str(data[ratefield])))
-            except Exception:
-                pass
+            except (ValueError, TypeError, InvalidOperation):
+                return validation_error_response({ratefield: ["Invalid value."]}, message="Invalid value for " + ratefield)
     if "start_date" in data:
         parsed = _parse_date(data["start_date"])
         if parsed:
@@ -1788,8 +1797,8 @@ def update_project_cost(cost_id):
             from decimal import Decimal
 
             cost.amount = Decimal(str(data["amount"]))
-        except Exception:
-            pass
+        except (ValueError, TypeError, InvalidOperation):
+            return validation_error_response({"amount": ["Invalid value."]}, message="Invalid amount")
     if "cost_date" in data:
         parsed = _parse_date(data["cost_date"])
         if parsed:
@@ -2059,8 +2068,8 @@ def update_exchange_rate(rate_id):
             from decimal import Decimal
 
             er.rate = Decimal(str(data["rate"]))
-        except Exception:
-            pass
+        except (ValueError, TypeError, InvalidOperation):
+            return validation_error_response({"rate": ["Invalid value."]}, message="Invalid rate")
     if "date" in data:
         d = _parse_date(data["date"])
         if d:
@@ -2394,8 +2403,8 @@ def update_recurring_invoice(ri_id):
     if "interval" in data:
         try:
             ri.interval = int(data["interval"])
-        except Exception:
-            pass
+        except (ValueError, TypeError):
+            return validation_error_response({"interval": ["Invalid value."]}, message="Invalid interval")
     if "next_run_date" in data:
         parsed = _parse_date(data["next_run_date"])
         if parsed:
@@ -2408,15 +2417,15 @@ def update_recurring_invoice(ri_id):
     if "due_date_days" in data:
         try:
             ri.due_date_days = int(data["due_date_days"])
-        except Exception:
-            pass
+        except (ValueError, TypeError):
+            return validation_error_response({"due_date_days": ["Invalid value."]}, message="Invalid due_date_days")
     if "tax_rate" in data:
         try:
             from decimal import Decimal
 
             ri.tax_rate = Decimal(str(data["tax_rate"]))
-        except Exception:
-            pass
+        except (ValueError, TypeError, InvalidOperation):
+            return validation_error_response({"tax_rate": ["Invalid value."]}, message="Invalid tax_rate")
     db.session.commit()
     return jsonify({"message": "Recurring invoice updated successfully", "recurring_invoice": ri.to_dict()})
 
@@ -2585,8 +2594,8 @@ def update_credit_note(cn_id):
             from decimal import Decimal
 
             cn.amount = Decimal(str(data["amount"]))
-        except Exception:
-            pass
+        except (ValueError, TypeError, InvalidOperation):
+            return validation_error_response({"amount": ["Invalid value."]}, message="Invalid amount")
     db.session.commit()
     return jsonify({"message": "Credit note updated successfully"})
 
@@ -2858,11 +2867,11 @@ def create_webhook():
 
         parsed = urlparse(data["url"])
         if not parsed.scheme or not parsed.netloc:
-            return jsonify({"error": "Invalid URL format"}), 400
+            return validation_error_response({"url": ["Invalid URL format."]}, message="Invalid URL format")
         if parsed.scheme not in ["http", "https"]:
-            return jsonify({"error": "URL must use http or https"}), 400
-    except Exception:
-        return jsonify({"error": "Invalid URL format"}), 400
+            return validation_error_response({"url": ["URL must use http or https."]}, message="Invalid URL format")
+    except (KeyError, ValueError, AttributeError, TypeError):
+        return validation_error_response({"url": ["Invalid URL format."]}, message="Invalid URL format")
 
     # Validate events
     from app.utils.webhook_service import WebhookService
@@ -2971,11 +2980,11 @@ def update_webhook(webhook_id):
 
             parsed = urlparse(data["url"])
             if not parsed.scheme or not parsed.netloc:
-                return jsonify({"error": "Invalid URL format"}), 400
+                return validation_error_response({"url": ["Invalid URL format."]}, message="Invalid URL format")
             if parsed.scheme not in ["http", "https"]:
-                return jsonify({"error": "URL must use http or https"}), 400
-        except Exception:
-            return jsonify({"error": "Invalid URL format"}), 400
+                return validation_error_response({"url": ["URL must use http or https."]}, message="Invalid URL format")
+        except (ValueError, AttributeError, TypeError):
+            return validation_error_response({"url": ["Invalid URL format."]}, message="Invalid URL format")
         webhook.url = data["url"]
     if "events" in data:
         if not isinstance(data["events"], list):
@@ -3121,7 +3130,7 @@ def list_webhook_events():
 
 
 @api_v1_bp.route("/inventory/items", methods=["GET"])
-@require_api_token("read:projects")  # Use existing scope for now
+@require_api_token(("read:inventory", "read:projects"))
 def list_stock_items_api():
     """List stock items"""
     search = request.args.get("search", "").strip()
@@ -3147,7 +3156,7 @@ def list_stock_items_api():
 
 
 @api_v1_bp.route("/inventory/items/<int:item_id>", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def get_stock_item_api(item_id):
     """Get stock item details"""
     item = StockItem.query.get_or_404(item_id)
@@ -3155,7 +3164,7 @@ def get_stock_item_api(item_id):
 
 
 @api_v1_bp.route("/inventory/items", methods=["POST"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def create_stock_item_api():
     """Create a stock item"""
     from decimal import Decimal
@@ -3191,7 +3200,7 @@ def create_stock_item_api():
 
 
 @api_v1_bp.route("/inventory/items/<int:item_id>", methods=["PUT", "PATCH"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def update_stock_item_api(item_id):
     """Update a stock item"""
     from decimal import Decimal
@@ -3231,7 +3240,7 @@ def update_stock_item_api(item_id):
 
 
 @api_v1_bp.route("/inventory/items/<int:item_id>", methods=["DELETE"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def delete_stock_item_api(item_id):
     """Delete (deactivate) a stock item"""
     item = StockItem.query.get_or_404(item_id)
@@ -3248,7 +3257,7 @@ def delete_stock_item_api(item_id):
 
 
 @api_v1_bp.route("/inventory/items/<int:item_id>/availability", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def get_stock_availability_api(item_id):
     """Get stock availability for an item across warehouses"""
     item = StockItem.query.get_or_404(item_id)
@@ -3278,7 +3287,7 @@ def get_stock_availability_api(item_id):
 
 
 @api_v1_bp.route("/inventory/warehouses", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def list_warehouses_api():
     """List warehouses"""
     active_only = request.args.get("active_only", "true").lower() == "true"
@@ -3294,7 +3303,7 @@ def list_warehouses_api():
 
 
 @api_v1_bp.route("/inventory/stock-levels", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def get_stock_levels_api():
     """Get stock levels"""
     warehouse_id = request.args.get("warehouse_id", type=int)
@@ -3331,7 +3340,7 @@ def get_stock_levels_api():
 
 
 @api_v1_bp.route("/inventory/movements", methods=["POST"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def create_stock_movement_api():
     """Create a stock movement with optional devaluation support for return/waste movements"""
     from decimal import Decimal, InvalidOperation
@@ -3578,11 +3587,341 @@ def create_stock_movement_api():
         return jsonify({"error": str(e)}), 400
 
 
+# ==================== Inventory Transfers API ====================
+
+
+@api_v1_bp.route("/inventory/transfers", methods=["GET"])
+@require_api_token(("read:inventory", "read:projects"))
+def list_transfers_api():
+    """List stock transfers (grouped by reference_id) with optional date filter and pagination."""
+    blocked = _require_module_enabled_for_api("inventory")
+    if blocked:
+        return blocked
+
+    date_from_str = request.args.get("date_from")
+    date_to_str = request.args.get("date_to")
+    date_from, date_to = _parse_date_range(date_from_str, date_to_str)
+
+    page = request.args.get("page", 1, type=int)
+    per_page = min(request.args.get("per_page", 50, type=int), 100)
+
+    query = StockMovement.query.filter(
+        StockMovement.movement_type == "transfer",
+        StockMovement.reference_type == "transfer",
+        StockMovement.reference_id.isnot(None),
+    )
+    if date_from:
+        query = query.filter(StockMovement.moved_at >= date_from)
+    if date_to:
+        query = query.filter(StockMovement.moved_at <= date_to)
+
+    # Subquery: distinct reference_ids ordered by latest moved_at
+    ref_subq = (
+        query.with_entities(StockMovement.reference_id, func.max(StockMovement.moved_at).label("max_at"))
+        .group_by(StockMovement.reference_id)
+        .order_by(func.max(StockMovement.moved_at).desc())
+    )
+    paginated = ref_subq.paginate(page=page, per_page=per_page, error_out=False)
+    ref_ids = [row[0] for row in paginated.items]
+
+    transfers = []
+    for ref_id in ref_ids:
+        movements = (
+            StockMovement.query.filter(
+                StockMovement.movement_type == "transfer",
+                StockMovement.reference_type == "transfer",
+                StockMovement.reference_id == ref_id,
+            )
+            .order_by(StockMovement.quantity.asc())
+            .all()
+        )
+        if len(movements) != 2:
+            continue
+        out_m, in_m = (movements[0], movements[1]) if movements[0].quantity < 0 else (movements[1], movements[0])
+        quantity = abs(float(out_m.quantity))
+        transfers.append(
+            {
+                "reference_id": ref_id,
+                "moved_at": (in_m.moved_at or out_m.moved_at).isoformat() if (in_m.moved_at or out_m.moved_at) else None,
+                "stock_item_id": out_m.stock_item_id,
+                "from_warehouse_id": out_m.warehouse_id,
+                "to_warehouse_id": in_m.warehouse_id,
+                "quantity": quantity,
+                "notes": out_m.notes or in_m.notes,
+                "movement_ids": [out_m.id, in_m.id],
+            }
+        )
+
+    return jsonify(
+        {
+            "transfers": transfers,
+            "pagination": {
+                "page": paginated.page,
+                "per_page": paginated.per_page,
+                "total": paginated.total,
+                "pages": paginated.pages,
+                "has_next": paginated.has_next,
+                "has_prev": paginated.has_prev,
+                "next_page": paginated.page + 1 if paginated.has_next else None,
+                "prev_page": paginated.page - 1 if paginated.has_prev else None,
+            },
+        }
+    )
+
+
+@api_v1_bp.route("/inventory/transfers", methods=["POST"])
+@require_api_token(("write:inventory", "write:projects"))
+def create_transfer_api():
+    """Create a stock transfer between warehouses."""
+    blocked = _require_module_enabled_for_api("inventory")
+    if blocked:
+        return blocked
+
+    from decimal import Decimal, InvalidOperation
+
+    data = request.get_json() or {}
+    stock_item_id = data.get("stock_item_id")
+    from_warehouse_id = data.get("from_warehouse_id")
+    to_warehouse_id = data.get("to_warehouse_id")
+    quantity = data.get("quantity")
+    notes = (data.get("notes") or "").strip() or None
+
+    missing = []
+    if stock_item_id is None:
+        missing.append("stock_item_id")
+    if from_warehouse_id is None:
+        missing.append("from_warehouse_id")
+    if to_warehouse_id is None:
+        missing.append("to_warehouse_id")
+    if quantity is None:
+        missing.append("quantity")
+    if missing:
+        return validation_error_response(
+            {f: ["Required"] for f in missing}, "Missing required fields: " + ", ".join(missing)
+        )
+
+    try:
+        quantity = Decimal(str(quantity))
+    except (InvalidOperation, ValueError):
+        return error_response("quantity must be a valid number", status_code=400)
+
+    if quantity <= 0:
+        return error_response("quantity must be positive", status_code=400)
+
+    if int(from_warehouse_id) == int(to_warehouse_id):
+        return error_response("Source and destination warehouses must be different", status_code=400)
+
+    stock_item = StockItem.query.get(stock_item_id)
+    if not stock_item:
+        return not_found_response("Stock item", stock_item_id)
+
+    from_wh = Warehouse.query.get(from_warehouse_id)
+    to_wh = Warehouse.query.get(to_warehouse_id)
+    if not from_wh:
+        return not_found_response("Warehouse", from_warehouse_id)
+    if not to_wh:
+        return not_found_response("Warehouse", to_warehouse_id)
+
+    source_stock = WarehouseStock.query.filter_by(
+        warehouse_id=int(from_warehouse_id), stock_item_id=int(stock_item_id)
+    ).first()
+    if not source_stock or source_stock.quantity_available < quantity:
+        return error_response("Insufficient stock available in source warehouse", status_code=400)
+
+    transfer_ref_id = int(datetime.utcnow().timestamp() * 1000)
+    reason = f"Transfer from {from_wh.code} to {to_wh.code}"
+
+    try:
+        out_movement, _ = StockMovement.record_movement(
+            movement_type="transfer",
+            stock_item_id=int(stock_item_id),
+            warehouse_id=int(from_warehouse_id),
+            quantity=-quantity,
+            moved_by=g.api_user.id,
+            reference_type="transfer",
+            reference_id=transfer_ref_id,
+            reason=reason,
+            notes=notes,
+            update_stock=True,
+        )
+        in_movement, _ = StockMovement.record_movement(
+            movement_type="transfer",
+            stock_item_id=int(stock_item_id),
+            warehouse_id=int(to_warehouse_id),
+            quantity=quantity,
+            moved_by=g.api_user.id,
+            reference_type="transfer",
+            reference_id=transfer_ref_id,
+            reason=reason,
+            notes=notes,
+            update_stock=True,
+        )
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating transfer via API: {e}", exc_info=True)
+        return error_response(str(e), status_code=400)
+
+    return (
+        jsonify(
+            {
+                "message": "Stock transfer completed successfully",
+                "reference_id": transfer_ref_id,
+                "transfers": [
+                    {"movement_id": out_movement.id, "movement": out_movement.to_dict()},
+                    {"movement_id": in_movement.id, "movement": in_movement.to_dict()},
+                ],
+            }
+        ),
+        201,
+    )
+
+
+@api_v1_bp.route("/inventory/transfers/<int:reference_id>", methods=["GET"])
+@require_api_token(("read:inventory", "read:projects"))
+def get_transfer_api(reference_id):
+    """Get a single transfer by reference_id (returns the pair of movements)."""
+    blocked = _require_module_enabled_for_api("inventory")
+    if blocked:
+        return blocked
+
+    movements = (
+        StockMovement.query.filter(
+            StockMovement.movement_type == "transfer",
+            StockMovement.reference_type == "transfer",
+            StockMovement.reference_id == reference_id,
+        )
+        .order_by(StockMovement.quantity.asc())
+        .all()
+    )
+    if len(movements) != 2:
+        return not_found_response("Transfer", reference_id)
+
+    out_m, in_m = (movements[0], movements[1]) if movements[0].quantity < 0 else (movements[1], movements[0])
+    quantity = abs(float(out_m.quantity))
+
+    transfer = {
+        "reference_id": reference_id,
+        "moved_at": (in_m.moved_at or out_m.moved_at).isoformat() if (in_m.moved_at or out_m.moved_at) else None,
+        "stock_item_id": out_m.stock_item_id,
+        "from_warehouse_id": out_m.warehouse_id,
+        "to_warehouse_id": in_m.warehouse_id,
+        "quantity": quantity,
+        "notes": out_m.notes or in_m.notes,
+        "movements": [out_m.to_dict(), in_m.to_dict()],
+    }
+    return jsonify({"transfer": transfer})
+
+
+# ==================== Inventory Reports API ====================
+
+
+@api_v1_bp.route("/inventory/reports/valuation", methods=["GET"])
+@require_api_token(("read:inventory", "read:projects"))
+def get_inventory_valuation_report_api():
+    """Get stock valuation report. Optional filters: warehouse_id, category, currency_code."""
+    blocked = _require_module_enabled_for_api("inventory")
+    if blocked:
+        return blocked
+
+    from app.services.inventory_report_service import InventoryReportService
+
+    warehouse_id = request.args.get("warehouse_id", type=int)
+    category = (request.args.get("category") or "").strip() or None
+    currency_code = (request.args.get("currency_code") or "").strip() or None
+
+    data = InventoryReportService().get_stock_valuation(
+        warehouse_id=warehouse_id,
+        category=category,
+        currency_code=currency_code,
+    )
+    return jsonify(data)
+
+
+@api_v1_bp.route("/inventory/reports/movement-history", methods=["GET"])
+@require_api_token(("read:inventory", "read:projects"))
+def get_inventory_movement_history_report_api():
+    """Get movement history report with optional filters and pagination."""
+    blocked = _require_module_enabled_for_api("inventory")
+    if blocked:
+        return blocked
+
+    from app.services.inventory_report_service import InventoryReportService
+
+    date_from_str = request.args.get("date_from")
+    date_to_str = request.args.get("date_to")
+    date_from, date_to = _parse_date_range(date_from_str, date_to_str)
+    stock_item_id = request.args.get("stock_item_id", type=int)
+    warehouse_id = request.args.get("warehouse_id", type=int)
+    movement_type = (request.args.get("movement_type") or "").strip() or None
+    page = request.args.get("page", type=int)
+    per_page = request.args.get("per_page", type=int)
+
+    service = InventoryReportService()
+    result = service.get_movement_history(
+        start_date=date_from,
+        end_date=date_to,
+        item_id=stock_item_id,
+        warehouse_id=warehouse_id,
+        movement_type=movement_type,
+        page=page,
+        per_page=per_page,
+    )
+    return jsonify(result)
+
+
+@api_v1_bp.route("/inventory/reports/turnover", methods=["GET"])
+@require_api_token(("read:inventory", "read:projects"))
+def get_inventory_turnover_report_api():
+    """Get inventory turnover report. Optional filters: start_date, end_date, item_id."""
+    blocked = _require_module_enabled_for_api("inventory")
+    if blocked:
+        return blocked
+
+    from app.services.inventory_report_service import InventoryReportService
+
+    start_date_str = request.args.get("start_date")
+    end_date_str = request.args.get("end_date")
+    if not start_date_str:
+        start_date_str = (datetime.utcnow() - timedelta(days=365)).strftime("%Y-%m-%d")
+    if not end_date_str:
+        end_date_str = datetime.utcnow().strftime("%Y-%m-%d")
+    start_dt, end_dt = _parse_date_range(start_date_str, end_date_str)
+    if not start_dt:
+        start_dt = datetime.utcnow() - timedelta(days=365)
+    if not end_dt:
+        end_dt = datetime.utcnow()
+    item_id = request.args.get("item_id", type=int)
+
+    data = InventoryReportService().get_inventory_turnover(
+        start_date=start_dt,
+        end_date=end_dt,
+        item_id=item_id,
+    )
+    return jsonify(data)
+
+
+@api_v1_bp.route("/inventory/reports/low-stock", methods=["GET"])
+@require_api_token(("read:inventory", "read:projects"))
+def get_inventory_low_stock_report_api():
+    """Get low-stock report (items below reorder point). Optional filter: warehouse_id."""
+    blocked = _require_module_enabled_for_api("inventory")
+    if blocked:
+        return blocked
+
+    from app.services.inventory_report_service import InventoryReportService
+
+    warehouse_id = request.args.get("warehouse_id", type=int)
+
+    data = InventoryReportService().get_low_stock(warehouse_id=warehouse_id)
+    return jsonify(data)
+
+
 # ==================== Suppliers API ====================
 
 
 @api_v1_bp.route("/inventory/suppliers", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def list_suppliers_api():
     """List suppliers"""
     from sqlalchemy import or_
@@ -3608,7 +3947,7 @@ def list_suppliers_api():
 
 
 @api_v1_bp.route("/inventory/suppliers/<int:supplier_id>", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def get_supplier_api(supplier_id):
     """Get supplier details"""
     from app.models import Supplier
@@ -3618,7 +3957,7 @@ def get_supplier_api(supplier_id):
 
 
 @api_v1_bp.route("/inventory/suppliers", methods=["POST"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def create_supplier_api():
     """Create a supplier"""
     from app.models import Supplier
@@ -3657,7 +3996,7 @@ def create_supplier_api():
 
 
 @api_v1_bp.route("/inventory/suppliers/<int:supplier_id>", methods=["PUT", "PATCH"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def update_supplier_api(supplier_id):
     """Update a supplier"""
     from app.models import Supplier
@@ -3699,7 +4038,7 @@ def update_supplier_api(supplier_id):
 
 
 @api_v1_bp.route("/inventory/suppliers/<int:supplier_id>", methods=["DELETE"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def delete_supplier_api(supplier_id):
     """Delete (deactivate) a supplier"""
     from app.models import Supplier
@@ -3718,7 +4057,7 @@ def delete_supplier_api(supplier_id):
 
 
 @api_v1_bp.route("/inventory/suppliers/<int:supplier_id>/stock-items", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def get_supplier_stock_items_api(supplier_id):
     """Get stock items from a supplier"""
     from app.models import Supplier, SupplierStockItem
@@ -3743,7 +4082,7 @@ def get_supplier_stock_items_api(supplier_id):
 
 
 @api_v1_bp.route("/inventory/purchase-orders", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def list_purchase_orders_api():
     """List purchase orders"""
     from sqlalchemy import or_
@@ -3768,7 +4107,7 @@ def list_purchase_orders_api():
 
 
 @api_v1_bp.route("/inventory/purchase-orders/<int:po_id>", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def get_purchase_order_api(po_id):
     """Get purchase order details"""
     from app.models import PurchaseOrder
@@ -3778,7 +4117,7 @@ def get_purchase_order_api(po_id):
 
 
 @api_v1_bp.route("/inventory/purchase-orders", methods=["POST"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def create_purchase_order_api():
     """Create a purchase order"""
     from datetime import datetime
@@ -3851,7 +4190,7 @@ def create_purchase_order_api():
 
 
 @api_v1_bp.route("/inventory/purchase-orders/<int:po_id>", methods=["PUT", "PATCH"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def update_purchase_order_api(po_id):
     """Update a purchase order (only if status is 'draft')"""
     from datetime import datetime
@@ -3922,7 +4261,7 @@ def update_purchase_order_api(po_id):
 
 
 @api_v1_bp.route("/inventory/purchase-orders/<int:po_id>", methods=["DELETE"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def delete_purchase_order_api(po_id):
     """Delete (cancel) a purchase order (only if status is 'draft')"""
     from app.models import PurchaseOrder
@@ -3956,7 +4295,7 @@ def delete_purchase_order_api(po_id):
 
 
 @api_v1_bp.route("/inventory/purchase-orders/<int:po_id>/receive", methods=["POST"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def receive_purchase_order_api(po_id):
     """Receive a purchase order"""
     from datetime import datetime
@@ -4223,7 +4562,8 @@ def _is_api_approver(user) -> bool:
 
         policy = WorkforceGovernanceService().get_or_create_default_policy()
         return user.id in policy.get_approver_ids()
-    except Exception:
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Policy approver check failed: %s", e)
         return False
 
 

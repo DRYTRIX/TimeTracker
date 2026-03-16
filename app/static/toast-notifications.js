@@ -76,6 +76,10 @@ class ToastNotificationManager {
      * @param {string} options.actionLabel - Label for action link (e.g. "View time entries")
      */
     show(options) {
+        // Legacy signature: show(message, type) for backward compatibility with templates
+        if (typeof options === 'string' && typeof arguments[1] === 'string') {
+            options = { message: options, type: arguments[1] };
+        }
         if (!options || !options.message) {
             console.warn('Toast notification requires a message');
             return null;

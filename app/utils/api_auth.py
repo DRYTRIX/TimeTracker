@@ -113,15 +113,20 @@ def require_api_token(required_scope=None):
     """Decorator to require API token authentication
 
     Args:
-        required_scope: Optional scope required for this endpoint (e.g., 'read:projects')
+        required_scope: Optional scope(s) required for this endpoint. Either a single
+            string (e.g. 'read:projects') or a tuple/list of strings (any one of,
+            e.g. ('read:inventory', 'read:projects') for backward compatibility).
 
     Usage:
         @require_api_token('read:projects')
         def get_projects():
-            # Access authenticated user via g.api_user
-            # Access token via g.api_token
-            pass
+            ...
+
+        @require_api_token(('read:inventory', 'read:projects'))
+        def list_stock_items_api():
+            ...
     """
+    allowed_scopes = (required_scope,) if isinstance(required_scope, str) else (required_scope or ())
 
     def decorator(f):
         @wraps(f)
@@ -157,20 +162,23 @@ def require_api_token(required_scope=None):
                     401,
                 )
 
-            # Check scope if required
-            if required_scope and not api_token.has_scope(required_scope):
-                return (
-                    jsonify(
-                        {
-                            "error": "Insufficient permissions",
-                            "message": f'This endpoint requires the "{required_scope}" scope',
-                            "error_code": "forbidden",
-                            "required_scope": required_scope,
-                            "available_scopes": api_token.scopes.split(",") if api_token.scopes else [],
-                        }
-                    ),
-                    403,
-                )
+            # Check scope if required (single scope or any of multiple)
+            if allowed_scopes:
+                has_any = any(api_token.has_scope(s) for s in allowed_scopes)
+                if not has_any:
+                    required_display = allowed_scopes[0] if len(allowed_scopes) == 1 else ", ".join(allowed_scopes)
+                    return (
+                        jsonify(
+                            {
+                                "error": "Insufficient permissions",
+                                "message": f'This endpoint requires one of: "{required_display}"',
+                                "error_code": "forbidden",
+                                "required_scope": required_display,
+                                "available_scopes": api_token.scopes.split(",") if api_token.scopes else [],
+                            }
+                        ),
+                        403,
+                    )
 
             # Store in request context
             g.api_user = user

@@ -196,9 +196,9 @@ Activity logging is already integrated for:
 - ✅ Projects (create, update, delete, archive, unarchive)
 - ✅ Tasks (create, update, delete, status changes, assignments)
 - ✅ Time Entries (start timer, stop timer, manual create, edit, delete)
-- ⏳ Invoices (create, update, status change, payment, send) - *coming soon*
-- ⏳ Clients (create, update, delete) - *coming soon*
-- ⏳ Comments (create) - *coming soon*
+- ❌ Invoices (create, update, status change, payment, send) — not yet in main activity feed
+- ❌ Clients (create, update, delete) — not yet in main activity feed
+- ⏳ Comments — integrated in **client portal** activity feed only; main activity feed comment logging still planned
 
 ## Use Cases
 

@@ -4,7 +4,7 @@ This document gives a high-level overview of the TimeTracker system for contribu
 
 ## System Overview
 
-TimeTracker is a self-hosted web application for time tracking, project management, invoicing, and reporting. The core is a **Flask** app serving both HTML (server-rendered) and a **REST API**. Optional components include background jobs (APScheduler), real-time updates (WebSocket via Flask-SocketIO), and monitoring (Prometheus, Sentry, PostHog). Deployment is typically **Docker** with Nginx as reverse proxy and PostgreSQL as the primary database.
+TimeTracker is a self-hosted web application for time tracking, project management, invoicing, and reporting. The core is a **Flask** app serving both HTML (server-rendered) and a **REST API**. Optional components include background jobs (APScheduler), real-time updates (WebSocket via Flask-SocketIO), and monitoring (Prometheus, Sentry, PostHog). Telemetry is two-layer: **base telemetry** (always-on, minimal: install footprint, version, platform, heartbeat) and **detailed analytics** (opt-in only: feature usage, screens, errors). See [Telemetry Architecture](telemetry-architecture.md). Deployment is typically **Docker** with Nginx as reverse proxy and PostgreSQL as the primary database.
 
 ```mermaid
 flowchart LR

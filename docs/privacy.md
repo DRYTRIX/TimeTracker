@@ -74,51 +74,36 @@ When enabled, sends error reports to Sentry.
 **Retention:** Based on your Sentry plan (typically 90 days)  
 **Access:** Team members with Sentry access
 
-#### 4. Product Analytics (PostHog) - Optional
-**Default:** Disabled  
-**Enable by setting:** `POSTHOG_API_KEY`
+#### 4. Base Telemetry (Minimal) - Always On When PostHog Configured
+**Purpose:** Install footprint and distribution (version, platform, active installs).
 
-When enabled, tracks product usage and feature adoption.
+**Data collected (no PII):**
+- Install ID (random UUID), app version, platform, OS version, architecture
+- Locale, timezone, deployment type, first/last seen, heartbeat timestamp
+
+**Not collected:** Raw IP (stored), email, usernames, feature usage, paths, business data
+
+**Storage:** PostHog (or custom sink if configured)  
+**Retention:** Recommend 12 months; configure in PostHog  
+**Access:** Product/ops for install analytics
+
+#### 5. Detailed Analytics (PostHog) - Optional & Opt-In
+**Default:** Disabled (user must opt in via Admin → Privacy & Analytics)  
+**Requires:** `POSTHOG_API_KEY` set and user enabling "detailed analytics"
+
+When opted in, tracks product usage and feature adoption.
 
 **Data collected:**
-- Event names (e.g., "timer.started", "project.created")
-- User ID (internal reference)
-- Feature usage metadata (e.g., "has_due_date": true)
-- Session information
-- Page views and interactions
+- Event names (e.g. "timer.started", "project.created"), internal user ID, install_id
+- Feature usage metadata, session context, page views (pathnames)
 
-**Not collected:**
-- Personal notes or descriptions
-- Email addresses
-- Passwords or tokens
-- Client data or project names
+**Not collected:** Email, usernames, time entry content, client/project names, stored IP
 
-**Storage:** PostHog servers (or your self-hosted PostHog instance)  
-**Retention:** Based on your PostHog plan  
+**Storage:** PostHog servers (or self-hosted PostHog)  
+**Retention:** Per PostHog plan (e.g. 24 months)  
 **Access:** Team members with PostHog access
 
-#### 5. Installation Telemetry - Optional & Opt-In
-**Default:** Disabled  
-**Enable by setting:** `ENABLE_TELEMETRY=true`
-
-When enabled, sends a single anonymized ping on first run and periodic update checks.
-
-**Data collected:**
-- Anonymized installation fingerprint (SHA-256 hash)
-- Application version
-- Installation timestamp
-- Update timestamp
-
-**Not collected:**
-- User information
-- Usage data
-- Server information
-- IP addresses (not stored)
-- Any business data
-
-**Storage:** Telemetry server (if provided)  
-**Retention:** 12 months  
-**Access:** Product team for version distribution analysis
+**Consent:** You can turn detailed analytics off anytime in Admin → Settings or Admin → Telemetry. Base telemetry (minimal) continues; no product events are sent when opted out.
 
 ## Anonymization & Hashing
 

@@ -2,7 +2,17 @@
 
 **Date:** 2025-01-27  
 **Version:** 4.7.1  
-**Status:** Comprehensive Analysis
+**Status:** **Historical (as of 2025-01-27).** Line numbers and file paths may have shifted. For current gaps, verify against the codebase and see [INVENTORY_IMPLEMENTATION_STATUS](features/INVENTORY_IMPLEMENTATION_STATUS.md) and [activity_feed](features/activity_feed.md) where applicable.
+
+### Still relevant (high level)
+
+Items that may still need attention (verify in current code):
+
+- **Security:** **Verified 2026-03-16:** GitHub and Jira webhook signature verification implemented; issues module permission filtering for non-admins implemented (see CODEBASE_AUDIT.md).
+- **Integrations:** QuickBooks customer/account mapping; CalDAV bidirectional sync
+- **API:** **Verified 2026-03-16:** Search endpoint `/api/search` exists and is used; see CODEBASE_AUDIT.
+- **Offline/PWA:** **Verified 2026-03-16:** Offline queue now stores and replays request body/method; push subscription storage may still need verification.
+- **Error handling:** High-impact PEPPOL (invoices) and activity_feed date params addressed 2026-03-16; other `pass` handlers remain.
 
 ---
 

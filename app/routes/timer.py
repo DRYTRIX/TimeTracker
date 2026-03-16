@@ -13,6 +13,7 @@ from app.models import Activity, Client, Project, Settings, Task, TimeEntry, Use
 from app.services.client_service import ClientService
 from app.services.project_service import ProjectService
 from app.utils.db import safe_commit
+from app.utils.error_handling import safe_log
 from app.utils.posthog_funnels import track_onboarding_first_time_entry, track_onboarding_first_timer
 from app.utils.scope_filter import user_can_access_client, user_can_access_project
 from app.utils.timezone import parse_local_datetime, parse_user_local_datetime, utc_to_local
@@ -593,8 +594,8 @@ def pause_timer():
         from app.utils.cache import invalidate_dashboard_for_user
 
         invalidate_dashboard_for_user(current_user.id)
-    except Exception:
-        pass
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Dashboard cache invalidation failed: %s", e)
     return redirect(url_for("main.dashboard"))
 
 
@@ -618,8 +619,8 @@ def resume_timer():
         from app.utils.cache import invalidate_dashboard_for_user
 
         invalidate_dashboard_for_user(current_user.id)
-    except Exception:
-        pass
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Dashboard cache invalidation failed: %s", e)
     return redirect(url_for("main.dashboard"))
 
 
@@ -658,8 +659,8 @@ def adjust_timer():
         from app.utils.cache import invalidate_dashboard_for_user
 
         invalidate_dashboard_for_user(current_user.id)
-    except Exception:
-        pass
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Dashboard cache invalidation failed: %s", e)
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"success": True, "start_time": active_timer.start_time.isoformat()})
@@ -2365,9 +2366,8 @@ def time_entries_overview():
                 from flask_sqlalchemy import Pagination
 
                 pagination = Pagination(query=None, page=page, per_page=per_page, total=total, items=time_entries)
-        except Exception:
-            # If filtering fails, use original results
-            pass
+        except Exception as e:
+            current_app.logger.warning("Time entries list filtering failed, using original results: %s", e)
 
     # Get filter options
     projects = []

@@ -563,8 +563,7 @@ def _parse_datetime(datetime_str):
         dt = datetime.fromisoformat(datetime_str.replace("Z", "+00:00"))
         return dt.replace(tzinfo=None)  # Convert to naive datetime
     except (ValueError, AttributeError) as e:
-        logger.debug(f"Could not parse datetime string '{datetime_str}' as ISO format: {e}")
-        pass
+        logger.debug("Could not parse datetime string '%s' as ISO format: %s", datetime_str, e)
 
     return None
 
@@ -703,8 +702,8 @@ def import_csv_clients(user_id, csv_content, import_record, skip_duplicates=True
             if row.get("default_hourly_rate"):
                 try:
                     client.default_hourly_rate = Decimal(str(row.get("default_hourly_rate")))
-                except (InvalidOperation, ValueError):
-                    pass
+                except (InvalidOperation, ValueError) as e:
+                    logger.debug("Row %s: invalid default_hourly_rate: %s", idx + 1, e)
 
             # Set status
             status = row.get("status", "active").strip().lower()
@@ -715,16 +714,16 @@ def import_csv_clients(user_id, csv_content, import_record, skip_duplicates=True
             if row.get("prepaid_hours_monthly"):
                 try:
                     client.prepaid_hours_monthly = Decimal(str(row.get("prepaid_hours_monthly")))
-                except (InvalidOperation, ValueError):
-                    pass
+                except (InvalidOperation, ValueError) as e:
+                    logger.debug("Row %s: invalid prepaid_hours_monthly: %s", idx + 1, e)
 
             # Set prepaid reset day
             if row.get("prepaid_reset_day"):
                 try:
                     reset_day = int(row.get("prepaid_reset_day"))
                     client.prepaid_reset_day = max(1, min(28, reset_day))
-                except (ValueError, TypeError):
-                    pass
+                except (ValueError, TypeError) as e:
+                    logger.debug("Row %s: invalid prepaid_reset_day: %s", idx + 1, e)
 
             # Handle custom fields
             custom_fields = {}

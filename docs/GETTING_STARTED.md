@@ -306,7 +306,7 @@ Time entries feed into Projects and Invoices; use **Reports** to see time and bi
 6. **Save and send**:
    - Status: Draft → Sent → Paid
    - Export as CSV
-   - (PDF export coming soon!)
+   - Export as PDF (and optional ZUGFeRD)
 
 ### Workflow 4: View Reports
 
@@ -366,7 +366,7 @@ If you're setting up for a team:
 
 2. **Assign projects**:
    - Projects are visible to all users
-   - Use permissions to control access (coming soon)
+   - Use project permissions (e.g. view_projects, create_projects, edit_projects) to control access
 
 3. **Assign tasks**:
    - Create tasks and assign to team members
@@ -482,7 +482,7 @@ docker-compose up -d
 Yes! Multiple export options:
 - **CSV export** from reports
 - **Database backup** via scripts
-- **API access** for custom integrations (coming soon)
+- **REST API v1** for custom integrations (see [REST API](api/REST_API.md))
 
 ### How do I upgrade TimeTracker?
 
