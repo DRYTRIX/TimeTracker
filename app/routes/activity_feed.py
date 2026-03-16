@@ -4,7 +4,7 @@ Activity Feed routes
 
 from datetime import datetime, timedelta
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, current_app, jsonify, render_template, request
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
 from sqlalchemy import and_
@@ -49,15 +49,15 @@ def activity_feed():
         try:
             start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
             query = query.filter(Activity.created_at >= start_dt)
-        except Exception:
-            pass
+        except ValueError:
+            current_app.logger.debug("Invalid activity feed start_date param: %r", start_date)
 
     if end_date:
         try:
             end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
             query = query.filter(Activity.created_at <= end_dt)
-        except Exception:
-            pass
+        except ValueError:
+            current_app.logger.debug("Invalid activity feed end_date param: %r", end_date)
 
     # Paginate
     per_page = min(limit, 100)  # Max 100 per page
@@ -114,15 +114,27 @@ def api_activity_feed():
         try:
             start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
             query = query.filter(Activity.created_at >= start_dt)
-        except Exception:
-            pass
+        except ValueError:
+            return (
+                jsonify({
+                    "error": "Invalid parameter",
+                    "message": "Invalid start_date or end_date format; use ISO 8601 (e.g. 2024-01-15 or 2024-01-15T00:00:00Z).",
+                }),
+                400,
+            )
 
     if end_date:
         try:
             end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
             query = query.filter(Activity.created_at <= end_dt)
-        except Exception:
-            pass
+        except ValueError:
+            return (
+                jsonify({
+                    "error": "Invalid parameter",
+                    "message": "Invalid start_date or end_date format; use ISO 8601 (e.g. 2024-01-15 or 2024-01-15T00:00:00Z).",
+                }),
+                400,
+            )
 
     # Paginate
     per_page = min(limit, 100)
