@@ -120,6 +120,9 @@ def test_offline_queue_functionality():
             content = f.read()
             assert "queueForOffline" in content, "Offline queue should be implemented"
             assert "processOfflineQueue" in content, "Offline queue processing should exist"
+            # Replay-safe: store method/body so POST/PUT replay correctly after JSON round-trip
+            assert "item.method" in content or "item.body" in content, "Offline queue should store method and body for replay"
+            assert "fetchOptions" in content and ("fetchOptions.body" in content or "body: item.body" in content), "Replay should use stored body"
 
 
 @pytest.mark.unit
