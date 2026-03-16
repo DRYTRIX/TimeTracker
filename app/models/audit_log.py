@@ -158,8 +158,9 @@ class AuditLog(db.Model):
             # Just remove the audit log from the session and continue
             try:
                 db.session.expunge(audit_log)
-            except Exception:
-                pass
+            except Exception as expunge_err:
+                import logging
+                logging.getLogger(__name__).debug("Audit log expunge failed: %s", expunge_err)
             # Don't let audit logging break the main flow
             # Log at warning level so it's visible if there's a real issue
             import logging

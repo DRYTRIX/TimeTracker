@@ -9,6 +9,11 @@ from .client_attachment import ClientAttachment
 from .client_note import ClientNote
 from .client_notification import ClientNotification, ClientNotificationPreferences, NotificationType
 from .client_portal_customization import ClientPortalCustomization
+from .client_portal_dashboard_preference import (
+    ClientPortalDashboardPreference,
+    DEFAULT_WIDGET_ORDER,
+    VALID_WIDGET_IDS,
+)
 from .client_prepaid_consumption import ClientPrepaidConsumption
 from .client_time_approval import ClientApprovalPolicy, ClientApprovalStatus, ClientTimeApproval
 from .comment import Comment
@@ -193,6 +198,9 @@ __all__ = [
     "CompanyHoliday",
     "RecurringTask",
     "ClientPortalCustomization",
+    "ClientPortalDashboardPreference",
+    "DEFAULT_WIDGET_ORDER",
+    "VALID_WIDGET_IDS",
     "ChatChannel",
     "ChatMessage",
     "ChatChannelMember",
