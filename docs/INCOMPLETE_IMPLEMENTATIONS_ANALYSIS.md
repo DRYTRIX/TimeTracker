@@ -2,7 +2,17 @@
 
 **Date:** 2025-01-27  
 **Version:** 4.7.1  
-**Status:** Comprehensive Analysis
+**Status:** **Historical (as of 2025-01-27).** Line numbers and file paths may have shifted. For current gaps, verify against the codebase and see [INVENTORY_IMPLEMENTATION_STATUS](features/INVENTORY_IMPLEMENTATION_STATUS.md) and [activity_feed](features/activity_feed.md) where applicable.
+
+### Still relevant (high level)
+
+Items that may still need attention (verify in current code):
+
+- **Security:** GitHub webhook signature verification; issues module permission filtering for non-admins
+- **Integrations:** QuickBooks customer/account mapping; CalDAV bidirectional sync
+- **API:** Search endpoint `/api/search` if referenced by frontend and not implemented
+- **Offline/PWA:** Task and project sync in offline-sync.js; push subscription storage
+- **Error handling:** Many `pass` in exception handlers; address high-impact routes first
 
 ---
 

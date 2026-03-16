@@ -42,29 +42,25 @@
 - **Fix**: Added duplicate code check in `new_supplier` and `edit_supplier` routes
 - **Error Handling**: User-friendly error messages
 
-### 7. Inventory Reports (Partially) ✅
-- **Routes Added** (in code but need to verify):
-  - `GET /inventory/reports` - Reports dashboard
-  - `GET /inventory/reports/valuation` - Stock valuation
-  - `GET /inventory/reports/movement-history` - Movement history report
-  - `GET /inventory/reports/turnover` - Turnover analysis
-  - `GET /inventory/reports/low-stock` - Low stock report
+### 7. Inventory Reports ✅
+- **Routes**: `GET /inventory/reports` (dashboard), `GET /inventory/reports/valuation`, `GET /inventory/reports/movement-history`, `GET /inventory/reports/turnover`, `GET /inventory/reports/low-stock`
+- **Templates**: Report templates (dashboard, valuation, movement_history, turnover, low_stock) are implemented.
 
-## 🔄 Still Need Templates
+## ✅ API Endpoints (REST API v1)
 
-### Reports Templates Needed:
-- `inventory/reports/dashboard.html`
-- `inventory/reports/valuation.html`
-- `inventory/reports/movement_history.html`
-- `inventory/reports/turnover.html`
-- `inventory/reports/low_stock.html`
+The following inventory API endpoints are implemented under `/api/v1` (require inventory module and `read:projects` / `write:projects` scopes):
+
+- **Transfers**: `GET /api/v1/inventory/transfers` (list with date filter and pagination), `POST /api/v1/inventory/transfers` (create), `GET /api/v1/inventory/transfers/<reference_id>` (get one)
+- **Reports**: `GET /api/v1/inventory/reports/valuation`, `GET /api/v1/inventory/reports/movement-history` (with pagination), `GET /api/v1/inventory/reports/turnover`, `GET /api/v1/inventory/reports/low-stock`
+- **Existing**: Suppliers and Purchase Order CRUD, stock items, warehouses, stock-levels, `POST /api/v1/inventory/movements`
+
+See [REST_API.md](../api/REST_API.md) and [API_TOKEN_SCOPES.md](../api/API_TOKEN_SCOPES.md) for details.
 
 ## ⏳ Still Pending
 
-### 1. API Endpoints
-- Supplier API endpoints
-- Purchase Order API endpoints
-- Enhanced inventory API endpoints
+### 1. API Endpoints (remaining)
+- Optional: `read:inventory` / `write:inventory` scopes for closer alignment with web permissions
+- Optional: `GET /api/v1/inventory/movements` (list movements with filters)
 
 ### 2. Menu Updates
 - Add "Transfers" link to inventory menu
@@ -75,8 +71,7 @@
 ### 3. Tests
 - Supplier model and route tests
 - Purchase Order model and route tests
-- Transfer tests
-- Report tests
+- **Done**: API tests for inventory transfers (`tests/test_routes/test_api_v1_inventory_transfers.py`) and inventory reports (`tests/test_routes/test_api_v1_inventory_reports.py`)
 
 ### 4. Documentation
 - User guide (`docs/features/INVENTORY_MANAGEMENT.md`)
@@ -86,15 +81,13 @@
 ## 📝 Notes
 
 1. Most core functionality has been implemented
-2. Reports routes are in the code but templates need to be created
+2. Report templates (dashboard, valuation, movement_history, turnover, low_stock) are implemented
 3. Menu navigation needs to be updated to include new routes
 4. API endpoints can be added incrementally
 5. Tests should be created as per project standards
 
 ## Next Steps
 
-1. Create report templates
-2. Update menu in `base.html`
-3. Add API endpoints
-4. Create comprehensive tests
-5. Write documentation
+1. Update menu in `base.html` (Transfers, Adjustments, Reports links)
+2. Create comprehensive tests for suppliers and purchase orders (web and API)
+3. Write documentation (user guide, INVENTORY_API.md)

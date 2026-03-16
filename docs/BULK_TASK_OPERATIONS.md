@@ -192,12 +192,10 @@ pytest tests/test_bulk_task_operations.py -v
 
 Potential improvements for future versions:
 
-1. **Bulk Priority Change**: Change priority for multiple tasks
-2. **Bulk Due Date Update**: Set due dates for multiple tasks
-3. **Export Selected**: Export only selected tasks
-4. **Undo Operation**: Ability to undo recent bulk operations
-5. **Keyboard Shortcuts**: Quick access via keyboard shortcuts
-6. **Advanced Selection**: Select by filters (e.g., all overdue tasks)
+1. **Export Selected**: Export only selected tasks
+2. **Undo Operation**: Ability to undo recent bulk operations
+3. **Keyboard Shortcuts**: Quick access via keyboard shortcuts
+4. **Advanced Selection**: Select by filters (e.g., all overdue tasks)
 
 ## Troubleshooting
 

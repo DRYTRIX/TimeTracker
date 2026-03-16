@@ -494,6 +494,70 @@ POST /api/v1/clients
 }
 ```
 
+### Inventory
+
+Inventory endpoints require the **inventory module** to be enabled (Admin settings). They use `read:projects` and `write:projects` scopes.
+
+#### List Transfers
+```
+GET /api/v1/inventory/transfers
+```
+
+**Required Scope:** `read:projects`
+
+**Query Parameters:**
+- `date_from` - Filter transfers on or after this date (YYYY-MM-DD)
+- `date_to` - Filter transfers on or before this date (YYYY-MM-DD)
+- `page` - Page number
+- `per_page` - Items per page (max 100)
+
+**Response:** `transfers` (array of transfer objects with `reference_id`, `moved_at`, `stock_item_id`, `from_warehouse_id`, `to_warehouse_id`, `quantity`, `notes`, `movement_ids`) and `pagination`.
+
+#### Create Transfer
+```
+POST /api/v1/inventory/transfers
+```
+
+**Required Scope:** `write:projects`
+
+**Request Body:**
+```json
+{
+  "stock_item_id": 1,
+  "from_warehouse_id": 2,
+  "to_warehouse_id": 3,
+  "quantity": 10,
+  "notes": "Optional notes"
+}
+```
+
+**Response:** `201 Created` with `reference_id`, `transfers` (pair of movements), and success message.
+
+#### Get Transfer by Reference ID
+```
+GET /api/v1/inventory/transfers/<reference_id>
+```
+
+**Required Scope:** `read:projects`
+
+Returns a single transfer (the pair of out/in movements) or `404` if not found.
+
+#### Inventory Reports
+
+**Required Scope:** `read:projects` for all report endpoints.
+
+- **Valuation:** `GET /api/v1/inventory/reports/valuation`  
+  Query: `warehouse_id`, `category`, `currency_code`. Returns `total_value`, `by_warehouse`, `by_category`, `item_details`.
+
+- **Movement History:** `GET /api/v1/inventory/reports/movement-history`  
+  Query: `date_from`, `date_to`, `stock_item_id`, `warehouse_id`, `movement_type`, `page`, `per_page`. Returns `movements` and optional `pagination`.
+
+- **Turnover:** `GET /api/v1/inventory/reports/turnover`  
+  Query: `start_date`, `end_date`, `item_id`. Returns `start_date`, `end_date`, `items` (turnover metrics per item).
+
+- **Low Stock:** `GET /api/v1/inventory/reports/low-stock`  
+  Query: `warehouse_id` (optional). Returns `items` (entries below reorder point with `quantity_on_hand`, `reorder_point`, `shortfall`, etc.).
+
 ### Reports
 
 #### Get Summary Report
@@ -663,13 +727,9 @@ The API implements rate limiting to ensure fair usage:
 
 When rate limited, you'll receive a `429 Too Many Requests` response.
 
-## Webhook Support (Coming Soon)
+## Webhook Support
 
-Webhook support for real-time notifications is planned for a future release. This will allow you to receive notifications when:
-- Time entries are created/updated
-- Projects change status
-- Tasks are completed
-- Timer events occur
+Webhooks are supported for real-time notifications. You can receive notifications when time entries are created/updated, projects change status, tasks are completed, and timer events occur. See [Webhooks](../features/webhooks.md) for setup and event types.
 
 ## Support
 

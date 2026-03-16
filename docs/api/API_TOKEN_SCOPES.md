@@ -58,6 +58,10 @@ curl -X POST https://your-domain.com/api/v1/projects \
   -d '{"name": "New Project", "status": "active"}'
 ```
 
+**Inventory (same scopes)**: When the inventory module is enabled, `read:projects` and `write:projects` also grant access to inventory endpoints:
+- **read:projects**: `GET /api/v1/inventory/items`, `GET /api/v1/inventory/warehouses`, `GET /api/v1/inventory/stock-levels`, `GET /api/v1/inventory/transfers`, `GET /api/v1/inventory/transfers/{reference_id}`, `GET /api/v1/inventory/reports/valuation`, `GET /api/v1/inventory/reports/movement-history`, `GET /api/v1/inventory/reports/turnover`, `GET /api/v1/inventory/reports/low-stock`, suppliers, purchase orders
+- **write:projects**: `POST /api/v1/inventory/transfers`, `POST /api/v1/inventory/movements`, create/update/delete items, suppliers, purchase orders
+
 ---
 
 ### Time Entries

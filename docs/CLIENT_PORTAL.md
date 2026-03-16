@@ -48,7 +48,8 @@ For a user to access the client portal:
 
 ### Dashboard
 - **URL**: `/client-portal` or `/client-portal/dashboard`
-- **Description**: Overview page showing statistics and recent activity
+- **Description**: Overview page showing statistics and recent activity. Clients can **customize the dashboard**: choose which widgets to show (stats, pending actions, projects, recent invoices, recent time entries) and their order. Preferences are stored per client (or per user when logged in as a portal user). Use the "Customize dashboard" button to change layout.
+- **Preferences API**: `GET /client-portal/dashboard/preferences` returns current widget layout; `POST /client-portal/dashboard/preferences` with body `{ "widget_ids": [...], "widget_order": [...] }` saves the layout.
 
 ### Projects
 - **URL**: `/client-portal/projects`
@@ -71,6 +72,21 @@ For a user to access the client portal:
   - `date_from`: Filter entries from this date (YYYY-MM-DD)
   - `date_to`: Filter entries to this date (YYYY-MM-DD)
 - **Description**: List of time entries with filtering capabilities
+
+### Reports
+- **URL**: `/client-portal/reports`
+- **Description**: First-version client reports: project progress (hours, status, optional estimate/budget), invoice/payment summary, task/status summary (if tasks exist for client projects), time by date (last 30 days), and recent time entries. All data is scoped to the authenticated client.
+
+### Activity Feed
+- **URL**: `/client-portal/activity`
+- **Description**: Unified feed of client-visible events: project and time-entry activities for the client's projects, and non-internal comments. Internal-only comments are excluded.
+
+### Real-time updates
+- The client portal uses **Flask-SocketIO** for real-time notifications. When a client has the portal open, they join a room `client_portal_{client_id}` after connecting. The server emits:
+  - **client_notification**: when a new in-app notification is created (e.g. new invoice, quote, approval request). The client can show a toast.
+  - **client_approval_update**: when a time entry approval is requested or when an approval is approved/rejected. The client can show a toast.
+- **Auth**: Only connections with a valid client portal session (either `client_portal_id` or `_user_id` with portal access) can join their client room. No cross-client access.
+- **Fallback**: If WebSockets are unavailable, the portal works without real-time updates; notification and approval counts still update on the next page load.
 
 ## Database Schema
 
@@ -184,13 +200,25 @@ pytest tests/test_client_portal.py -v
 2. Verify the client exists and is active
 3. Check for database errors in server logs
 
+## Database Schema (additional)
+
+### Client Portal Dashboard Preferences
+
+Table `client_portal_dashboard_preferences` stores per-client (and optionally per-user) widget layout:
+
+- `client_id`, `user_id` (nullable; null = client login)
+- `widget_ids` (JSON array of widget keys)
+- `widget_order` (JSON array for display order)
+
+Migration: `140_add_client_portal_dashboard_preferences.py`.
+
 ## Future Enhancements
 
 Potential future improvements:
-- Email notifications for new invoices
-- PDF invoice downloads
-- Export time entries to CSV
-- Project status updates
-- Comments/notes on projects
-- Custom branding per client
+- Per-contact preferences when contact-based login is added
+- Report export (PDF/CSV), date range picker
+- Activity feed: quote/invoice events; optional `visible_to_client` on Activity
+- Real-time activity feed live updates
+- New widget types (e.g. upcoming deadlines, documents)
+- Custom branding per client (see Client Portal Customization admin)
 
