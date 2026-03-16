@@ -307,8 +307,20 @@ def view_invoice(invoice_id):
                 peppol_compliance_warnings.append(
                     _("Invoice has no linked client; buyer PEPPOL identifiers cannot be checked.")
                 )
-    except Exception:
-        pass
+    except (AttributeError, KeyError, TypeError) as e:
+        current_app.logger.warning(
+            "PEPPOL compliance check failed (configuration or data): %s", e, exc_info=True
+        )
+        peppol_compliance_warnings.append(
+            _("Could not verify PEPPOL compliance; check configuration.")
+        )
+    except Exception as e:
+        current_app.logger.warning(
+            "PEPPOL compliance check failed: %s", e, exc_info=True
+        )
+        peppol_compliance_warnings.append(
+            _("Could not verify PEPPOL compliance; check configuration.")
+        )
 
     # Get approval information
     from app.services.invoice_approval_service import InvoiceApprovalService

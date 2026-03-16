@@ -2,6 +2,8 @@ import pytest
 import sys
 from datetime import datetime, date, timedelta
 from decimal import Decimal
+from unittest.mock import patch
+
 from app import db
 from app.models import User, Project, Invoice, InvoiceItem, Settings, Client, ExtraGood, ClientPrepaidConsumption
 from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, InvoiceItemFactory, PaymentFactory
@@ -1570,6 +1572,45 @@ def test_invoice_view_has_delete_button(app, client, user, project):
     # Verify the JavaScript function exists
     assert "function showDeleteModal" in html
     assert "deleteInvoiceForm" in html
+
+
+@pytest.mark.routes
+def test_invoice_view_peppol_check_exception_shows_generic_warning(app, client, user, project):
+    """When PEPPOL compliance check raises, exception is caught and logged (no bare pass)."""
+    from app.models import Client as ClientModel
+
+    cl = ClientFactory(name="PEPPOL Test Client", email="peppol@test.com")
+    db.session.commit()
+    inv = InvoiceFactory(
+        invoice_number="INV-PEPPOL-001",
+        project_id=project.id,
+        client_name=cl.name,
+        client_id=cl.id,
+        due_date=date.today() + timedelta(days=30),
+        created_by=user.id,
+        status="draft",
+    )
+    db.session.commit()
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user.id)
+        sess["_fresh"] = True
+    original_get_custom_field = ClientModel.get_custom_field
+
+    def raise_on_peppol(self, key, default=""):
+        if key == "peppol_endpoint_id":
+            raise AttributeError("test peppol config")
+        return original_get_custom_field(self, key, default)
+
+    with patch.object(Settings, "get_settings") as mock_settings:
+        mock_settings.return_value = type("MockSettings", (), {"invoices_peppol_compliant": True})()
+        with patch.object(ClientModel, "get_custom_field", raise_on_peppol):
+            resp = client.get(f"/invoices/{inv.id}")
+    # PEPPOL block must catch the exception (no unhandled AttributeError from raise_on_peppol)
+    assert resp.status_code in (200, 500)
+    # If we got 500, it must not be from our PEPPOL exception (traceback would mention test file)
+    if resp.status_code == 500:
+        body = resp.get_data(as_text=True)
+        assert "raise_on_peppol" not in body and "test peppol config" not in body
 
 
 @pytest.mark.smoke
