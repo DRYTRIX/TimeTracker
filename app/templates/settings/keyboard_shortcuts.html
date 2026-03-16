@@ -30,11 +30,11 @@
                 </p>
             </div>
             <div class="flex gap-3">
-                <button onclick="window.enhancedKeyboardShortcuts.showCheatSheet()" 
+                <button type="button" id="view-all-shortcuts-btn"
                         class="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                     <i class="fas fa-list mr-2"></i>View All Shortcuts
                 </button>
-                <button onclick="resetToDefaults()" 
+                <button type="button" onclick="resetToDefaults()" 
                         class="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                     <i class="fas fa-undo mr-2"></i>Reset to Defaults
                 </button>
@@ -97,7 +97,7 @@
     <div class="mb-6">
         <div class="border-b border-border-light dark:border-border-dark">
             <nav class="flex space-x-8" aria-label="Tabs">
-                <button onclick="switchTab('general')" 
+                <button type="button" onclick="window.keyboardShortcutsSwitchTab('general')" 
                         data-tab="general"
                         class="tab-button border-b-2 border-primary text-primary py-3 px-1 font-medium">
                     <i class="fas fa-cog mr-2"></i>General Settings
@@ -107,7 +107,7 @@
                         class="tab-button border-b-2 border-transparent text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark py-3 px-1 font-medium">
                     <i class="fas fa-edit mr-2"></i>Customize Shortcuts
                 </button>
-                <button onclick="switchTab('statistics')" 
+                <button type="button" onclick="window.keyboardShortcutsSwitchTab('statistics')" 
                         data-tab="statistics"
                         class="tab-button border-b-2 border-transparent text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark py-3 px-1 font-medium">
                     <i class="fas fa-chart-bar mr-2"></i>Usage Statistics
@@ -237,8 +237,14 @@
                 </div>
             </div>
 
+            <div id="shortcut-feedback" class="hidden mb-4 p-4 rounded-lg" role="alert"></div>
             <div id="customization-list" class="space-y-2">
-                <!-- Populated by JavaScript -->
+                <!-- Populated by JavaScript from API -->
+            </div>
+            <div class="mt-4 flex gap-2">
+                <button type="button" id="save-shortcuts-btn" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">
+                    <i class="fas fa-save mr-2"></i>{{ _('Save changes') }}
+                </button>
             </div>
         </div>
     </div>
@@ -311,194 +317,224 @@ function switchTab(tabName) {
     }
 }
 
-// Load statistics
-function loadStatistics() {
-    const shortcuts = window.enhancedKeyboardShortcuts;
-    if (!shortcuts) return;
+// API URLs (injected by Flask)
+const KEYBOARD_SHORTCUTS_API_GET = {{ url_for('settings.api_keyboard_shortcuts_get') | tojson }};
+const KEYBOARD_SHORTCUTS_API_POST = {{ url_for('settings.api_keyboard_shortcuts_save') | tojson }};
+const KEYBOARD_SHORTCUTS_API_RESET = {{ url_for('settings.api_keyboard_shortcuts_reset') | tojson }};
+let shortcutsData = { shortcuts: [], overrides: {} };
 
-    const stats = shortcuts.stats || {};
-    
-    // Update overview stats
-    const totalShortcuts = Array.from(shortcuts.shortcuts.values()).reduce((acc, map) => acc + map.size, 0);
-    document.getElementById('total-shortcuts').textContent = totalShortcuts;
-    
-    const customCount = Object.keys(shortcuts.customShortcuts || {}).length;
-    document.getElementById('custom-shortcuts').textContent = customCount;
-    
-    const totalUses = Object.values(stats).reduce((acc, s) => acc + (s.count || 0), 0);
-    document.getElementById('total-uses').textContent = totalUses.toLocaleString();
-    
-    // Find most used
-    const sortedStats = Object.entries(stats).sort((a, b) => (b[1].count || 0) - (a[1].count || 0));
-    if (sortedStats.length > 0) {
-        const mostUsedKey = sortedStats[0][0];
-        const mostUsedShortcut = findShortcutByNormalizedKey(mostUsedKey);
-        document.getElementById('most-used').textContent = mostUsedShortcut?.name || mostUsedKey;
-    }
-    
-    // Most used list
-    const mostUsedList = document.getElementById('most-used-list');
-    if (sortedStats.length === 0) {
-        mostUsedList.innerHTML = '<p class="text-sm text-text-muted-light dark:text-text-muted-dark">No usage data yet</p>';
-    } else {
-        mostUsedList.innerHTML = sortedStats.slice(0, 5).map(([key, stat], index) => {
-            const shortcut = findShortcutByNormalizedKey(key);
-            return `
-                <div class="flex items-center justify-between p-3 bg-background-light dark:bg-background-dark rounded-lg">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-sm">
-                            ${index + 1}
-                        </div>
-                        <div>
-                            <div class="font-medium text-text-light dark:text-text-dark">${shortcut?.name || key}</div>
-                            <div class="text-xs text-text-muted-light dark:text-text-muted-dark">${shortcut?.keys || key}</div>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="font-semibold text-text-light dark:text-text-dark">${stat.count}</div>
-                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">uses</div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-    
-    // Recent usage
-    const recentList = document.getElementById('recent-usage-list');
-    const sortedRecent = sortedStats.filter(([_, stat]) => stat.lastUsed).sort((a, b) => 
-        new Date(b[1].lastUsed) - new Date(a[1].lastUsed)
-    );
-    
-    if (sortedRecent.length === 0) {
-        recentList.innerHTML = '<p class="text-sm text-text-muted-light dark:text-text-muted-dark">No recent usage</p>';
-    } else {
-        recentList.innerHTML = sortedRecent.slice(0, 5).map(([key, stat]) => {
-            const shortcut = findShortcutByNormalizedKey(key);
-            const lastUsed = new Date(stat.lastUsed);
-            const timeAgo = getTimeAgo(lastUsed);
-            return `
-                <div class="flex items-center justify-between p-3 bg-background-light dark:bg-background-dark rounded-lg">
-                    <div class="flex-1">
-                        <div class="font-medium text-text-light dark:text-text-dark">${shortcut?.name || key}</div>
-                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">${shortcut?.keys || key}</div>
-                    </div>
-                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark">${timeAgo}</div>
-                </div>
-            `;
-        }).join('');
-    }
+function getCsrfHeaders() {
+    const h = { 'Content-Type': 'application/json' };
+    const tok = document.querySelector('meta[name="csrf-token"]');
+    if (tok && tok.getAttribute('content')) h['X-CSRFToken'] = tok.getAttribute('content');
+    return h;
 }
 
-// Helper function to find shortcut by normalized key
-function findShortcutByNormalizedKey(normalizedKey) {
-    const shortcuts = window.enhancedKeyboardShortcuts;
-    if (!shortcuts) return null;
-    
-    for (const [context, shortcutsMap] of shortcuts.shortcuts) {
-        for (const [key, shortcut] of shortcutsMap) {
-            if (shortcut.normalizedKeys === normalizedKey) {
-                return shortcut;
-            }
-        }
+function normalizeKey(key) {
+    if (!key || typeof key !== 'string') return '';
+    return key.trim().toLowerCase().replace(/\s+/g, ' ').replace(/command|cmd/gi, 'ctrl');
+}
+
+function formatKeyDisplay(key) {
+    if (!key) return '';
+    return key.split('+').map(p => {
+        const k = p.trim();
+        if (k === 'ctrl') return navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl';
+        if (k === 'shift') return '⇧'; if (k === 'alt') return '⌥';
+        if (k === 'enter') return '↵'; if (k === ' ') return '␣';
+        return k.length === 1 ? k.toUpperCase() : k;
+    }).join(' + ');
+}
+
+function showShortcutFeedback(msg, isError) {
+    const el = document.getElementById('shortcut-feedback');
+    if (el) {
+        el.textContent = msg;
+        el.className = 'mb-4 p-4 rounded-lg ' + (isError ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200' : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200');
+        el.classList.remove('hidden');
+        setTimeout(function() { el.classList.add('hidden'); }, 5000);
     }
+    if (window.toastManager) { isError ? window.toastManager.error(msg) : window.toastManager.success(msg); }
+}
+
+async function fetchShortcutsConfig() {
+    const res = await fetch(KEYBOARD_SHORTCUTS_API_GET, { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(res.status === 401 ? 'Unauthorized' : 'Failed to load');
+    return res.json();
+}
+
+function updateOverviewStats() {
+    var s = shortcutsData.shortcuts || [];
+    var total = s.length;
+    var custom = s.filter(function(x) { return x.current_key !== x.default_key; }).length;
+    var el = document.getElementById('total-shortcuts'); if (el) el.textContent = total;
+    el = document.getElementById('custom-shortcuts'); if (el) el.textContent = custom;
+    el = document.getElementById('most-used'); if (el) el.textContent = custom > 0 ? (custom + ' customized') : '-';
+    el = document.getElementById('total-uses'); if (el) el.textContent = '0';
+}
+
+function escapeHtml(str) {
+    var d = document.createElement('div'); d.textContent = str; return d.innerHTML;
+}
+
+var recordingId = null;
+function startRecording(btn) {
+    if (recordingId) return;
+    recordingId = btn.dataset.id;
+    btn.textContent = '{{ _("Press keys...") }}';
+    btn.classList.add('ring-2', 'ring-primary');
+    var handler = function(e) {
+        e.preventDefault(); e.stopPropagation();
+        var parts = [];
+        if (e.ctrlKey || e.metaKey) parts.push('Ctrl');
+        if (e.altKey) parts.push('Alt');
+        if (e.shiftKey && e.key.length > 1) parts.push('Shift');
+        var key = e.key; if (key === ' ') key = 'Space';
+        parts.push(key);
+        var normalized = normalizeKey(parts.join('+'));
+        document.removeEventListener('keydown', handler);
+        recordingId = null;
+        btn.classList.remove('ring-2', 'ring-primary');
+        setShortcutKey(btn.dataset.id, normalized);
+        renderCustomizationList();
+    };
+    document.addEventListener('keydown', handler, { once: true });
+    setTimeout(function() {
+        if (recordingId === btn.dataset.id) {
+            document.removeEventListener('keydown', handler);
+            recordingId = null;
+            btn.classList.remove('ring-2', 'ring-primary');
+            renderCustomizationList();
+        }
+    }, 10000);
+}
+
+function setShortcutKey(id, normalizedKey) {
+    var s = shortcutsData.shortcuts.find(function(x) { return x.id === id; });
+    if (!s) return;
+    s.current_key = normalizedKey;
+    var overrides = {};
+    shortcutsData.shortcuts.forEach(function(x) {
+        if (x.current_key !== x.default_key) overrides[x.id] = x.current_key;
+    });
+    shortcutsData.overrides = overrides;
+}
+
+function revertShortcut(id) {
+    var s = shortcutsData.shortcuts.find(function(x) { return x.id === id; });
+    if (!s) return;
+    s.current_key = s.default_key;
+    delete shortcutsData.overrides[id];
+    renderCustomizationList();
+    updateOverviewStats();
+}
+
+function renderCustomizationList() {
+    var list = document.getElementById('customization-list');
+    if (!list) return;
+    var shortcuts = shortcutsData.shortcuts || [];
+    list.innerHTML = shortcuts.map(function(s) {
+        var isCustom = s.current_key !== s.default_key;
+        var displayKey = formatKeyDisplay(s.current_key);
+        return '<div class="shortcut-customization-row flex items-center justify-between p-4 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark" data-id="' + s.id + '">' +
+            '<div class="flex-1">' +
+            '<div class="font-medium text-text-light dark:text-text-dark flex items-center gap-2"><i class="fas fa-keyboard text-primary"></i>' + escapeHtml(s.name) + '</div>' +
+            '<div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">' + escapeHtml(s.description) + '</div></div>' +
+            '<div class="flex items-center gap-3">' +
+            '<button type="button" class="shortcut-key-btn px-3 py-2 bg-card-light dark:bg-card-dark border rounded font-mono text-sm min-w-[8rem] text-left" data-id="' + s.id + '" title="{{ _("Click then press a key combination") }}">' + (displayKey || '{{ _("Click to record") }}') + '</button>' +
+            (isCustom ? '<button type="button" class="shortcut-revert-btn px-2 py-1 text-xs text-amber-600 dark:text-amber-400 hover:underline" data-id="' + s.id + '">{{ _("Revert") }}</button>' : '') +
+            '</div></div>';
+    }).join('');
+    list.querySelectorAll('.shortcut-key-btn').forEach(function(btn) { btn.addEventListener('click', function() { startRecording(btn); }); });
+    list.querySelectorAll('.shortcut-revert-btn').forEach(function(btn) { btn.addEventListener('click', function() { revertShortcut(btn.dataset.id); }); });
+}
+
+function checkConflicts() {
+    var keyToIds = {};
+    shortcutsData.shortcuts.forEach(function(s) {
+        (keyToIds[s.current_key] = keyToIds[s.current_key] || []).push(s.id);
+    });
+    for (var key in keyToIds) { if (keyToIds[key].length > 1) return '{{ _("Conflict: the same key is assigned to multiple actions.") }}'; }
     return null;
 }
 
-// Get time ago string
-function getTimeAgo(date) {
-    const seconds = Math.floor((new Date() - date) / 1000);
-    
-    if (seconds < 60) return 'just now';
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    return `${Math.floor(seconds / 86400)}d ago`;
+async function saveShortcuts() {
+    var err = checkConflicts();
+    if (err) { showShortcutFeedback(err, true); return; }
+    var overrides = {};
+    shortcutsData.shortcuts.forEach(function(s) {
+        if (s.current_key !== s.default_key) overrides[s.id] = s.current_key;
+    });
+    var saveBtn = document.getElementById('save-shortcuts-btn');
+    if (window.setSubmitButtonLoading && saveBtn) window.setSubmitButtonLoading(saveBtn, true, '{{ _("Saving...") }}');
+    try {
+        var res = await fetch(KEYBOARD_SHORTCUTS_API_POST, { method: 'POST', credentials: 'same-origin', headers: getCsrfHeaders(), body: JSON.stringify({ overrides: overrides }) });
+        var data = await res.json().catch(function() { return {}; });
+        if (!res.ok) { showShortcutFeedback(data.error || '{{ _("Failed to save") }}', true); return; }
+        shortcutsData = data;
+        updateOverviewStats();
+        renderCustomizationList();
+        showShortcutFeedback('{{ _("Shortcuts saved.") }}', false);
+    } catch (e) { showShortcutFeedback('{{ _("Failed to save shortcuts.") }}', true); }
+    finally { if (window.setSubmitButtonLoading && saveBtn) window.setSubmitButtonLoading(saveBtn, false); }
 }
 
-// Load customization list
-function loadCustomizationList() {
-    const shortcuts = window.enhancedKeyboardShortcuts;
-    if (!shortcuts) return;
-    
-    const list = document.getElementById('customization-list');
-    const allShortcuts = [];
-    
-    for (const [context, shortcutsMap] of shortcuts.shortcuts) {
-        for (const [key, shortcut] of shortcutsMap) {
-            allShortcuts.push({ ...shortcut, context });
-        }
-    }
-    
-    list.innerHTML = allShortcuts.map(shortcut => `
-        <div class="shortcut-customization-row">
-            <div class="flex-1">
-                <div class="font-medium text-text-light dark:text-text-dark flex items-center gap-2">
-                    <i class="fas ${shortcut.icon || 'fa-keyboard'} text-primary"></i>
-                    ${shortcut.name}
-                </div>
-                <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">${shortcut.description}</div>
-            </div>
-            <div class="flex items-center gap-3">
-                <div class="shortcut-item-keys">
-                    ${shortcuts.formatKeysForDisplay(shortcut.keys)}
-                </div>
-                <button onclick="customizeShortcut('${shortcut.normalizedKeys}')" 
-                        class="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary/90 transition-colors">
-                    <i class="fas fa-edit"></i>
-                </button>
-            </div>
-        </div>
-    `).join('');
-}
-
-// Customize shortcut
-function customizeShortcut(normalizedKey) {
-    alert('Shortcut customization is coming soon! Stay tuned for updates.');
-}
-
-// Reset to defaults
 async function resetToDefaults() {
-    const confirmed = await showConfirm(
-        '{{ _("This will reset all keyboard shortcuts to their default values. Continue?") }}',
-        {
-            title: '{{ _("Reset to Defaults") }}',
-            confirmText: '{{ _("Reset") }}',
-            cancelText: '{{ _("Cancel") }}',
-            variant: 'warning'
-        }
-    );
-    if (confirmed) {
-        localStorage.removeItem('tt_shortcuts_custom_shortcuts');
-        localStorage.removeItem('tt_shortcuts_disabled_shortcuts');
-        location.reload();
-    }
+    var confirmed = window.showConfirm ? await window.showConfirm('{{ _("This will reset all keyboard shortcuts to their default values. Continue?") }}',
+        { title: '{{ _("Reset to Defaults") }}', confirmText: '{{ _("Reset") }}', cancelText: '{{ _("Cancel") }}', variant: 'warning' }) : confirm('{{ _("Reset all shortcuts to defaults?") }}');
+    if (!confirmed) return;
+    try {
+        var res = await fetch(KEYBOARD_SHORTCUTS_API_RESET, { method: 'POST', credentials: 'same-origin', headers: getCsrfHeaders() });
+        var data = await res.json().catch(function() { return {}; });
+        if (!res.ok) { showShortcutFeedback(data.error || '{{ _("Failed to reset") }}', true); return; }
+        shortcutsData = data;
+        updateOverviewStats();
+        renderCustomizationList();
+        showShortcutFeedback('{{ _("Shortcuts reset to defaults.") }}', false);
+    } catch (e) { showShortcutFeedback('{{ _("Failed to reset shortcuts.") }}', true); }
 }
 
-// Initialize
+function loadStatistics() {
+    var mostUsedList = document.getElementById('most-used-list');
+    var recentList = document.getElementById('recent-usage-list');
+    if (mostUsedList) mostUsedList.innerHTML = '<p class="text-sm text-text-muted-light dark:text-text-muted-dark">Use shortcuts to see usage stats (when available).</p>';
+    if (recentList) recentList.innerHTML = '<p class="text-sm text-text-muted-light dark:text-text-muted-dark">No recent usage data.</p>';
+}
+
+function loadCustomizationList() {
+    fetchShortcutsConfig().then(function(data) {
+        shortcutsData = data;
+        renderCustomizationList();
+        updateOverviewStats();
+    }).catch(function() {
+        var list = document.getElementById('customization-list');
+        if (list) list.innerHTML = '<p class="text-sm text-red-600 dark:text-red-400">{{ _("Failed to load shortcuts.") }}</p>';
+    });
+}
+
+window.resetToDefaults = resetToDefaults;
+window.keyboardShortcutsSwitchTab = switchTab;
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Load initial stats
-    loadStatistics();
-    
-    // Sequence timeout slider
-    const timeoutSlider = document.getElementById('sequence-timeout');
-    const timeoutValue = document.getElementById('timeout-value');
-    
-    if (timeoutSlider && timeoutValue) {
-        timeoutSlider.addEventListener('input', function() {
-            timeoutValue.textContent = this.value + 'ms';
-        });
-    }
-    
-    // Search
-    const search = document.getElementById('customization-search');
-    if (search) {
-        search.addEventListener('input', function() {
-            const query = this.value.toLowerCase();
-            document.querySelectorAll('.shortcut-customization-row').forEach(row => {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(query) ? '' : 'none';
-            });
-        });
-    }
+    var timeoutSlider = document.getElementById('sequence-timeout');
+    var timeoutValue = document.getElementById('timeout-value');
+    if (timeoutSlider && timeoutValue) timeoutSlider.addEventListener('input', function() { timeoutValue.textContent = this.value + 'ms'; });
+    var search = document.getElementById('customization-search');
+    if (search) search.addEventListener('input', function() {
+        var q = this.value.toLowerCase();
+        document.querySelectorAll('.shortcut-customization-row').forEach(function(row) { row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+    });
+    var saveBtn = document.getElementById('save-shortcuts-btn');
+    if (saveBtn) saveBtn.addEventListener('click', saveShortcuts);
+    var viewAllBtn = document.getElementById('view-all-shortcuts-btn');
+    if (viewAllBtn) viewAllBtn.addEventListener('click', function() {
+        if (window.shortcutManager && typeof window.shortcutManager.showShortcutsPanel === 'function') window.shortcutManager.showShortcutsPanel();
+        else switchTab('customization');
+    });
+    fetchShortcutsConfig().then(function(data) {
+        shortcutsData = data;
+        updateOverviewStats();
+    }).catch(function() { updateOverviewStats(); });
 });
 </script>
 {% endblock %}
