@@ -14054,12 +14054,6 @@ msgstr "Etes-vous sûr de vouloir prolonger la date d'échéance jusqu'à"
 msgid "for all overdue tasks?"
 msgstr "pour toutes les tâches en retard ?"
 
-#: app/templates/tasks/overdue.html:151
-msgid "Bulk due date update feature coming soon!"
-msgstr ""
-"La fonctionnalité de mise à jour groupée de la date d'échéance sera bientôt "
-"disponible !"
-
 #: app/templates/tasks/overdue.html:152
 msgid "Enter new priority (low/medium/high/urgent):"
 msgstr "Entrez une nouvelle priorité (faible/moyenne/élevée/urgente) :"
@@ -14067,10 +14061,6 @@ msgstr "Entrez une nouvelle priorité (faible/moyenne/élevée/urgente) :"
 #: app/templates/tasks/overdue.html:153
 msgid "Are you sure you want to set priority to"
 msgstr "Êtes-vous sûr de vouloir définir la priorité sur"
-
-#: app/templates/tasks/overdue.html:155
-msgid "Bulk priority update feature coming soon!"
-msgstr "Fonctionnalité de mise à jour prioritaire en masse à venir !"
 
 #: app/templates/tasks/overdue.html:156
 msgid "Invalid priority. Please use: low, medium, high, or urgent"
