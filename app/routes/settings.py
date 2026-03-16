@@ -17,9 +17,9 @@ settings_bp = Blueprint("settings", __name__)
 @settings_bp.route("/settings")
 @login_required
 def index():
-    """Main settings page"""
+    """Settings hub — canonical user settings are at user.settings (same path, registered first)."""
     track_page_view("settings_index")
-    return render_template("settings/index.html")
+    return redirect(url_for("user.settings"))
 
 
 @settings_bp.route("/settings/keyboard-shortcuts")
@@ -41,9 +41,10 @@ def profile():
 @settings_bp.route("/settings/preferences")
 @login_required
 def preferences():
-    """User preferences"""
+    """User preferences — canonical page is user.settings (profile, notifications, theme, etc.)."""
     track_page_view("settings_preferences")
-    return render_template("settings/preferences.html")
+    flash(_("Your preferences are managed on the main Settings page."), "info")
+    return redirect(url_for("user.settings"))
 
 
 # ----- Keyboard shortcuts API (JSON) -----
