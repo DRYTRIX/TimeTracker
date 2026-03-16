@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Offline queue replay** — Queued requests now store method, headers, and body in a replay-safe form (serializable for localStorage). POST/PUT requests replayed when back online send the same body and method. Legacy queue items (with `options` only) are still replayed via fallback.
+- **Inventory API scopes** — New scopes `read:inventory` and `write:inventory` for inventory-only API access. Existing `read:projects` and `write:projects` still grant the same inventory access for backward compatibility.
+- **Client portal reports: date range and CSV export** — Reports support optional `days` query param (1–365, default 30). Add `?format=csv` to download a CSV of the same report (summary, hours by project, time by date). Export uses the same access control as the reports page.
+- **Jira webhook verification** — When a webhook secret is configured in the Jira integration (Connection Settings → Webhook Secret), incoming webhooks are verified using HMAC-SHA256 of the request body. Supported headers: `X-Hub-Signature-256`, `X-Atlassian-Webhook-Signature`, `X-Hub-Signature`. Requests with missing or invalid signature are rejected. If no secret is set, behavior is unchanged (all webhooks accepted).
+
 ### Changed
+- **Documentation sync** — CODEBASE_AUDIT.md: marked gaps 2.3–2.7 and 2.9 as fixed; added “Implemented 2026-03-16” summary. CLIENT_FEATURES_IMPLEMENTATION_STATUS: report date range and CSV export noted as implemented. INCOMPLETE_IMPLEMENTATIONS_ANALYSIS: added “Verified 2026-03-16” for webhook verification, issues permissions, search API, offline queue.
+- **Activity feed API date params** — `/api/activity` now returns 400 with a clear message when `start_date` or `end_date` are invalid (e.g. not ISO 8601). Invalid dates on the web route `/activity` are logged and the filter is skipped (no 500).
+- **Invoice PEPPOL compliance check** — Exceptions in the PEPPOL compliance block are no longer silently ignored: specific and generic exceptions are caught, logged, and a generic warning (“Could not verify PEPPOL compliance; check configuration.”) is shown to the user so the view still renders.
 - **Documentation and i18n audit** — Updated docs and translations to match current implementation: removed stale "coming soon" claims; marked INCOMPLETE_IMPLEMENTATIONS_ANALYSIS as historical and added still-relevant summary; rewrote INVENTORY_MISSING_FEATURES as "Remaining Gaps" (transfers, adjustments, reports, PO management, API are implemented); updated GETTING_STARTED (PDF export, project permissions, REST API); REST_API (webhooks supported); KEYBOARD_SHORTCUTS_SUMMARY (customization implemented); BULK_TASK_OPERATIONS (bulk due date/priority implemented); INVENTORY_IMPLEMENTATION_STATUS (report templates done); activity_feed (invoices/clients/comments status clarified). Removed orphaned translation strings "Bulk due date update feature coming soon!" and "Bulk priority update feature coming soon!" from 10 locale `.po` files.
 
 ### Added

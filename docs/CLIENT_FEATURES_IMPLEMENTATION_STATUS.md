@@ -61,7 +61,7 @@
 ## Optional / future (Phase 2)
 
 - Per-contact preferences (when contact-based login exists)
-- Report export (PDF/CSV), saved report params
+- **Report date range and CSV export:** implemented (query param `?days=1–365`, `?format=csv`). PDF export and saved report params remain future.
 - Activity: log quote/invoice events; optional `visible_to_client` on Activity
 - Real-time activity feed live updates
 - New widget types (e.g. documents, deadlines); admin-defined default layouts

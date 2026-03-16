@@ -8,11 +8,11 @@
 
 Items that may still need attention (verify in current code):
 
-- **Security:** GitHub webhook signature verification; issues module permission filtering for non-admins
+- **Security:** **Verified 2026-03-16:** GitHub and Jira webhook signature verification implemented; issues module permission filtering for non-admins implemented (see CODEBASE_AUDIT.md).
 - **Integrations:** QuickBooks customer/account mapping; CalDAV bidirectional sync
-- **API:** Search endpoint `/api/search` if referenced by frontend and not implemented
-- **Offline/PWA:** Task and project sync in offline-sync.js; push subscription storage
-- **Error handling:** Many `pass` in exception handlers; address high-impact routes first
+- **API:** **Verified 2026-03-16:** Search endpoint `/api/search` exists and is used; see CODEBASE_AUDIT.
+- **Offline/PWA:** **Verified 2026-03-16:** Offline queue now stores and replays request body/method; push subscription storage may still need verification.
+- **Error handling:** High-impact PEPPOL (invoices) and activity_feed date params addressed 2026-03-16; other `pass` handlers remain.
 
 ---
 
