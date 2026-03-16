@@ -1086,7 +1086,14 @@ def toggle_telemetry():
 
     installation_config.set_telemetry_preference(new_state)
 
-    # Log the change
+    if new_state:
+        try:
+            from app.utils.telemetry import check_and_send_telemetry
+
+            check_and_send_telemetry()
+        except Exception:
+            pass
+
     app_module.log_event("admin.telemetry_toggled", user_id=current_user.id, new_state=new_state)
     app_module.track_event(current_user.id, "admin.telemetry_toggled", {"enabled": new_state})
 

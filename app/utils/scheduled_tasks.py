@@ -591,6 +591,33 @@ def register_scheduled_tasks(scheduler, app=None):
         )
         logger.info("Registered remind-to-log task")
 
+        # Base telemetry heartbeat (daily) – always-on minimal install footprint
+        def send_base_telemetry_heartbeat_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    return
+            with app_instance.app_context():
+                try:
+                    from app.telemetry.service import send_base_heartbeat
+
+                    send_base_heartbeat()
+                except Exception:
+                    pass
+
+        scheduler.add_job(
+            func=send_base_telemetry_heartbeat_with_app,
+            trigger="cron",
+            hour=3,
+            minute=0,
+            id="send_base_telemetry_heartbeat",
+            name="Base telemetry heartbeat",
+            replace_existing=True,
+        )
+        logger.info("Registered base telemetry heartbeat task")
+
     except Exception as e:
         logger.error(f"Error registering scheduled tasks: {e}")
 

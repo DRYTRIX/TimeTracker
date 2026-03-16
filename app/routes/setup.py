@@ -116,6 +116,12 @@ def initial_setup():
         )
 
         if telemetry_enabled:
+            try:
+                from app.utils.telemetry import check_and_send_telemetry
+
+                check_and_send_telemetry()
+            except Exception:
+                pass
             flash(_("Setup complete! Thank you for helping us improve TimeTracker."), "success")
         else:
             flash(_("Setup complete! Telemetry is disabled."), "success")
