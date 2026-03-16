@@ -457,19 +457,22 @@
             <div id="section-analytics">
                 <h2 class="text-lg font-semibold mb-4">{{ _('Privacy & Analytics') }}</h2>
                 <div class="space-y-4">
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                        <strong>Minimal install telemetry (always on):</strong> Version, platform, and last-seen heartbeat so we can understand install footprint and distribution. No personal data.
+                    </p>
                     <div class="flex items-center">
                         <input type="checkbox" name="allow_analytics" id="allow_analytics" {% if settings.allow_analytics %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        <label for="allow_analytics" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">Enable anonymous usage analytics</label>
+                        <label for="allow_analytics" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">Enable optional detailed analytics</label>
                     </div>
                     <div class="ml-6 text-xs text-text-muted-light dark:text-text-muted-dark space-y-1">
-                        <p>Help improve TimeTracker by sharing anonymous usage data:</p>
+                        <p>When enabled, we also collect:</p>
                         <ul class="list-disc ml-4 space-y-0.5">
-                            <li>Platform and version information</li>
-                            <li>Feature usage patterns (no personal data)</li>
-                            <li>Performance and error metrics</li>
+                            <li>Feature usage (e.g. timer started, project created)</li>
+                            <li>Screens and pages visited</li>
+                            <li>Errors linked to usage context (no PII)</li>
                         </ul>
-                        <p class="mt-2"><strong>Privacy:</strong> All data is anonymized. No personal information, time entries, or client data is ever collected.</p>
-                        <p>This is the same setting as the telemetry preference shown during initial setup.</p>
+                        <p class="mt-2"><strong>Privacy:</strong> No email, usernames, time entry content, or client data. You can turn this off anytime.</p>
+                        <p>Same setting as the telemetry preference during initial setup.</p>
                     </div>
                 </div>
             </div>

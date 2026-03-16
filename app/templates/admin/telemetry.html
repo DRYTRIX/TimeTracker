@@ -39,25 +39,27 @@
             </div>
         </div>
 
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <strong>Minimal install telemetry</strong> is always on (version, platform, last seen). The toggle below controls <strong>optional detailed analytics</strong> (feature usage, screens, errors).
+        </p>
         <form method="POST" action="{{ url_for('admin.toggle_telemetry') }}" class="mt-4">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <button type="submit" class="px-4 py-2 rounded-lg transition {% if telemetry.enabled %}bg-red-600 hover:bg-red-700 text-white{% else %}bg-green-600 hover:bg-green-700 text-white{% endif %}">
-                {% if telemetry.enabled %}Disable Telemetry{% else %}Enable Telemetry{% endif %}
+                {% if telemetry.enabled %}Disable detailed analytics{% else %}Enable detailed analytics{% endif %}
             </button>
-            <p class="text-xs text-gray-600 dark:text-gray-400 mt-2">Tip: You can also manage this setting in <a href="{{ url_for('admin.settings') }}" class="text-primary hover:underline">{{ _('Admin → Settings') }}</a> ({{ _('Privacy & Analytics') }} section)</p>
+            <p class="text-xs text-gray-600 dark:text-gray-400 mt-2">Also in <a href="{{ url_for('admin.settings') }}#section-analytics" class="text-primary hover:underline">{{ _('Admin → Settings') }}</a> (Privacy &amp; Analytics)</p>
         </form>
 
         {% if telemetry.enabled %}
         <div class="mt-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
             <p class="text-sm text-green-800 dark:text-green-200">
-                <strong>Thank you!</strong> Your anonymous telemetry data helps us improve TimeTracker.
-                No personally identifiable information is ever collected.
+                <strong>Detailed analytics is on.</strong> We receive feature usage, screens, and error context (no PII). Thank you for helping improve TimeTracker.
             </p>
         </div>
         {% else %}
         <div class="mt-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
             <p class="text-sm text-gray-700 dark:text-gray-300">
-                Telemetry is currently disabled. No data is being sent.
+                Detailed analytics is off. Only minimal install telemetry (version, platform, heartbeat) is sent.
             </p>
         </div>
         {% endif %}
@@ -145,26 +147,26 @@
 
         <div class="space-y-4">
             <div>
-                <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-2">✅ What We Collect (When Enabled)</h3>
+                <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-2">Always on (minimal install telemetry)</h3>
                 <ul class="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300 ml-4">
-                    <li>Anonymous installation fingerprint (hashed, cannot identify you)</li>
-                    <li>Application version and platform information</li>
-                    <li>Feature usage events (e.g., "timer started", "project created")</li>
-                    <li>Internal user IDs (numeric, not linked to real identities)</li>
-                    <li>Error messages and stack traces (for debugging)</li>
-                    <li>Performance metrics (request latency, response times)</li>
+                    <li>Install ID (random UUID), app version, platform, OS version, architecture</li>
+                    <li>Locale, timezone, deployment type (docker/native), release channel</li>
+                    <li>First seen and last seen timestamps, coarse heartbeat</li>
                 </ul>
             </div>
-
             <div>
-                <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-2">❌ What We DON'T Collect</h3>
+                <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-2">Only when you enable detailed analytics</h3>
                 <ul class="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300 ml-4">
-                    <li>Email addresses or usernames</li>
-                    <li>IP addresses</li>
-                    <li>Project names or descriptions</li>
-                    <li>Time entry notes or descriptions</li>
-                    <li>Client information or business data</li>
-                    <li>Any personally identifiable information (PII)</li>
+                    <li>Feature usage (e.g. timer started, project created)</li>
+                    <li>Screens/pages visited, internal user IDs (not linked to identity)</li>
+                    <li>Errors with usage context, performance metrics</li>
+                </ul>
+            </div>
+            <div>
+                <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-2">Never collected</h3>
+                <ul class="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300 ml-4">
+                    <li>Email, usernames, IP addresses (stored), project/time entry content</li>
+                    <li>Client or business data; any PII</li>
                 </ul>
             </div>
         </div>
