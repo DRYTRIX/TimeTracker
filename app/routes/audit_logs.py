@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from flask import Blueprint, abort, jsonify, render_template, request
+from flask import Blueprint, abort, current_app, jsonify, render_template, request
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
 from sqlalchemy import inspect as sqlalchemy_inspect
@@ -80,15 +80,15 @@ def list_audit_logs():
         entity_types = db.session.query(AuditLog.entity_type).distinct().all()
         entity_types = [et[0] for et in entity_types]
         entity_types.sort()
-    except Exception:
-        # Table might not exist yet
+    except Exception as e:
+        current_app.logger.debug("Audit log entity types query failed (table may not exist): %s", e)
         entity_types = []
 
     # Get users for filter dropdown
     try:
         users_with_logs = db.session.query(User).join(AuditLog).distinct().all()
-    except Exception:
-        # Table might not exist yet or no logs yet
+    except Exception as e:
+        current_app.logger.debug("Audit log users query failed: %s", e)
         users_with_logs = []
 
     return render_template(
@@ -184,8 +184,8 @@ def entity_history(entity_type, entity_id):
                     or getattr(entity, "username", None)
                     or str(entity)
                 )
-    except Exception:
-        pass
+    except Exception as e:
+        current_app.logger.debug("Could not resolve entity name for audit log: %s", e)
 
     return render_template(
         "audit_logs/entity_history.html",

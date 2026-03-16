@@ -64,9 +64,8 @@ def log_event(name: str, **kwargs):
     try:
         extra = {"request_id": getattr(g, "request_id", None), "event": name, **kwargs}
         json_logger.info(name, extra=extra)
-    except Exception:
-        # Don't let logging errors break the application
-        pass
+    except Exception as e:
+        logging.getLogger(__name__).debug("Structured log_event failed: %s", e)
 
 
 def identify_user(user_id, properties=None):
@@ -78,8 +77,8 @@ def identify_user(user_id, properties=None):
         from app.telemetry.service import identify_user as _identify
 
         _identify(user_id, properties)
-    except Exception:
-        pass
+    except Exception as e:
+        logging.getLogger(__name__).debug("Telemetry identify_user failed: %s", e)
 
 
 def track_event(user_id, event_name, properties=None):
@@ -115,8 +114,8 @@ def track_page_view(page_name, user_id=None, properties=None):
         if properties:
             page_properties.update(properties)
         track_event(user_id, "$pageview", page_properties)
-    except Exception:
-        pass
+    except Exception as e:
+        logging.getLogger(__name__).debug("Telemetry track_page_view failed: %s", e)
 
 
 def create_app(config=None):

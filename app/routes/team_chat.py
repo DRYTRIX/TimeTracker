@@ -129,8 +129,8 @@ def send_message(channel_id):
         except (json.JSONDecodeError, TypeError, ValueError, AttributeError) as e:
             from flask import current_app
 
-            current_app.logger.debug(f"Could not parse attachment data: {e}")
-            pass
+            current_app.logger.warning("Could not parse attachment data: %s", e)
+            flash(_("Attachment data was invalid; message sent without attachment."), "warning")
 
     # Create message
     message = ChatMessage(
@@ -236,6 +236,29 @@ def api_messages(channel_id):
     if request.method == "POST":
         # Create new message
         data = request.get_json()
+        if data is None:
+            return jsonify({"error": "Invalid JSON", "error_code": "validation_error"}), 400
+
+        # Validate attachment fields if present (API may send attachment_url, attachment_filename, attachment_size)
+        attachment_url = data.get("attachment_url")
+        attachment_filename = data.get("attachment_filename")
+        attachment_size = data.get("attachment_size")
+        if attachment_url is not None or attachment_filename is not None or attachment_size is not None:
+            errors = {}
+            if attachment_url is not None and not isinstance(attachment_url, str):
+                errors.setdefault("attachment_url", []).append("Must be a string.")
+            if attachment_filename is not None and not isinstance(attachment_filename, str):
+                errors.setdefault("attachment_filename", []).append("Must be a string.")
+            if attachment_size is not None:
+                try:
+                    attachment_size = int(attachment_size)
+                    if attachment_size < 0:
+                        errors.setdefault("attachment_size", []).append("Must be non-negative.")
+                except (TypeError, ValueError):
+                    errors.setdefault("attachment_size", []).append("Invalid value.")
+            if errors:
+                from app.utils.api_responses import validation_error_response
+                return validation_error_response(errors, message="Invalid attachment data.")
 
         message = ChatMessage(
             channel_id=channel_id,
@@ -243,9 +266,9 @@ def api_messages(channel_id):
             message=data.get("message", ""),
             message_type=data.get("message_type", "text"),
             reply_to_id=data.get("reply_to_id"),
-            attachment_url=data.get("attachment_url"),
-            attachment_filename=data.get("attachment_filename"),
-            attachment_size=data.get("attachment_size"),
+            attachment_url=attachment_url,
+            attachment_filename=attachment_filename,
+            attachment_size=attachment_size,
         )
 
         # Parse mentions

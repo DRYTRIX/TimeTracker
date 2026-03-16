@@ -1,5 +1,6 @@
 import io
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -7,6 +8,8 @@ import tempfile
 from datetime import datetime
 from urllib.parse import urlparse
 from zipfile import ZIP_DEFLATED, ZipFile
+
+logger = logging.getLogger(__name__)
 
 
 def get_backup_root_dir(app) -> str:
@@ -86,7 +89,8 @@ def _get_alembic_revision(db_session):
         result = db_session.execute(text("SELECT version_num FROM alembic_version"))
         row = result.first()
         return row[0] if row else None
-    except Exception:
+    except Exception as e:
+        logger.warning("Could not read alembic revision: %s", e)
         return None
 
 
@@ -204,8 +208,8 @@ def create_backup(app) -> str:
     finally:
         try:
             shutil.rmtree(tmp_dir, ignore_errors=True)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Backup temp dir cleanup failed: %s", e)
 
 
 def restore_backup(app, archive_path: str, progress_callback=None) -> tuple[bool, str]:
@@ -375,13 +379,13 @@ def restore_backup(app, archive_path: str, progress_callback=None) -> tuple[bool
             with app.app_context():
                 db.session.remove()
                 db.engine.dispose()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Session remove/dispose after restore failed: %s", e)
 
         _progress("Restore completed successfully", 100)
         return True, "Restore completed successfully"
     finally:
         try:
             shutil.rmtree(tmp_dir, ignore_errors=True)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Restore temp dir cleanup failed: %s", e)

@@ -24,6 +24,7 @@ from werkzeug.utils import secure_filename
 from app import db, log_event, track_event
 from app.models import Client, Expense, Project, User
 from app.utils.db import safe_commit
+from app.utils.error_handling import safe_file_remove
 from app.utils.module_helpers import module_enabled
 from app.utils.ocr import get_suggested_expense_data, is_ocr_available, scan_receipt
 
@@ -670,19 +671,12 @@ def delete_expense(expense_id):
         # Delete receipt file if exists
         if expense.receipt_path:
             try:
-                # Extract filename from receipt_path (which is like "uploads/receipts/filename.jpg")
                 upload_dir = get_receipt_upload_folder()
                 filename = os.path.basename(expense.receipt_path)
                 file_path = os.path.join(upload_dir, filename)
-                if os.path.exists(file_path):
-                    try:
-                        os.remove(file_path)
-                    except Exception:
-                        pass
+                safe_file_remove(file_path, current_app.logger)
             except Exception as e:
-                # If we can't access the upload directory (e.g., doesn't exist), just log and continue
-                current_app.logger.warning(f"Could not access upload directory to delete receipt file: {e}")
-                pass
+                current_app.logger.warning("Could not access upload directory to delete receipt file: %s", e)
 
         db.session.delete(expense)
 
@@ -737,19 +731,12 @@ def bulk_delete_expenses():
             # Delete receipt file if exists
             if expense.receipt_path:
                 try:
-                    # Extract filename from receipt_path (which is like "uploads/receipts/filename.jpg")
                     upload_dir = get_receipt_upload_folder()
                     filename = os.path.basename(expense.receipt_path)
                     file_path = os.path.join(upload_dir, filename)
-                    if os.path.exists(file_path):
-                        try:
-                            os.remove(file_path)
-                        except Exception:
-                            pass
+                    safe_file_remove(file_path, current_app.logger)
                 except Exception as e:
-                    # If we can't access the upload directory (e.g., doesn't exist), just log and continue
-                    current_app.logger.warning(f"Could not access upload directory to delete receipt file: {e}")
-                    pass
+                    current_app.logger.warning("Could not access upload directory to delete receipt file: %s", e)
 
             expense_title = expense.title or str(expense_id)
             db.session.delete(expense)
@@ -796,6 +783,7 @@ def bulk_update_status():
 
     updated_count = 0
     skipped_count = 0
+    update_errors = []
 
     for expense_id_str in expense_ids:
         try:
@@ -813,8 +801,10 @@ def bulk_update_status():
             expense.status = new_status
             updated_count += 1
 
-        except Exception:
+        except Exception as e:
             skipped_count += 1
+            current_app.logger.warning("Bulk update failed for expense id %s: %s", expense_id_str, e)
+            update_errors.append(f"ID {expense_id_str}: {str(e)}")
 
     if updated_count > 0:
         if not safe_commit(db):
@@ -827,7 +817,13 @@ def bulk_update_status():
         )
 
     if skipped_count > 0:
-        flash(_("Skipped %(count)d expense(s) (no permission)", count=skipped_count), "warning")
+        if update_errors:
+            summary = "; ".join(update_errors[:3])
+            if len(update_errors) > 3:
+                summary += " (" + str(len(update_errors) - 3) + " more)"
+            flash(_("Skipped %(count)d expense(s): %(summary)s", count=skipped_count, summary=summary), "warning")
+        else:
+            flash(_("Skipped %(count)d expense(s) (no permission)", count=skipped_count), "warning")
 
     return redirect(url_for("expenses.list_expenses"))
 
@@ -1231,10 +1227,7 @@ def api_scan_receipt():
         suggestions = get_suggested_expense_data(receipt_data)
 
         # Clean up temp file
-        try:
-            os.remove(temp_path)
-        except Exception:
-            pass
+        safe_file_remove(temp_path, current_app.logger)
 
         # Log event
         log_event("receipt_scanned", user_id=current_user.id)

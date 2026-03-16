@@ -40,6 +40,7 @@ from app.models import (
 )
 from app.utils.backup import create_backup, get_backup_root_dir, restore_backup
 from app.utils.db import safe_commit
+from app.utils.error_handling import safe_file_remove, safe_log
 from app.utils.installation import get_installation_config
 from app.utils.permissions import admin_or_permission_required
 from app.utils.telemetry import get_telemetry_fingerprint, is_telemetry_enabled
@@ -493,8 +494,8 @@ body {{
                                 items = list(resolved)
                             else:
                                 items = [resolved]
-                except Exception:
-                    pass
+                except Exception as e:
+                    safe_log(current_app.logger, "warning", "Dashboard data resolution failed: %s", e)
             # Fallback: use data_obj.items (e.g. when data source not set or resolution failed)
             if not items and data_obj and hasattr(data_obj, "items"):
                 try:
@@ -504,7 +505,8 @@ body {{
                         items = data_obj.items
                     else:
                         items = list(data_obj.items) if data_obj.items else []
-                except Exception:
+                except Exception as e:
+                    safe_log(current_app.logger, "debug", "Dashboard data fallback items failed: %s", e)
                     items = []
 
             # If no items available, create sample row from template
@@ -527,7 +529,8 @@ body {{
                                 value = str(item.get(field, ""))
                             else:
                                 value = ""
-                        except Exception:
+                        except Exception as e:
+                            safe_log(current_app.logger, "debug", "Template value for field %s failed: %s", field, e)
                             value = ""
 
                         value_escaped = html_escape.escape(str(value))
@@ -710,8 +713,8 @@ def admin_dashboard():
         }
         try:
             _cache.set("admin:dashboard:chart", chart_data, ttl=600)
-        except Exception:
-            pass
+        except Exception as e:
+            safe_log(current_app.logger, "debug", "Admin dashboard chart cache set failed: %s", e)
 
     # Build stats object expected by the template
     stats = {
@@ -811,8 +814,8 @@ def create_user():
         try:
             settings = Settings.get_settings()
             user.standard_hours_per_day = float(getattr(settings, "default_daily_working_hours", 8.0) or 8.0)
-        except Exception:
-            pass
+        except Exception as e:
+            safe_log(current_app.logger, "debug", "Default daily working hours for new user failed: %s", e)
 
         # Assign the role from the new Role system
         user.roles.append(role_obj)
@@ -1091,8 +1094,8 @@ def toggle_telemetry():
             from app.utils.telemetry import check_and_send_telemetry
 
             check_and_send_telemetry()
-        except Exception:
-            pass
+        except Exception as e:
+            safe_log(current_app.logger, "debug", "Telemetry check_and_send failed: %s", e)
 
     app_module.log_event("admin.telemetry_toggled", user_id=current_user.id, new_state=new_state)
     app_module.track_event(current_user.id, "admin.telemetry_toggled", {"enabled": new_state})
@@ -2121,14 +2124,14 @@ def quote_pdf_layout():
 
                 m = _re.search(r"<body[^>]*>([\s\S]*?)</body>", html_src, _re.IGNORECASE)
                 initial_html = m.group(1).strip() if m else html_src
-            except Exception:
-                pass
+            except Exception as e:
+                safe_log(current_app.logger, "debug", "Quote PDF template body regex failed: %s", e)
         if not initial_css:
             env = current_app.jinja_env
             css_src, _unused3, _unused4 = env.loader.get_source(env, "quotes/pdf_styles_default.css")
             initial_css = css_src
-    except Exception:
-        pass
+    except Exception as e:
+        safe_log(current_app.logger, "warning", "Quote PDF layout initialization failed: %s", e)
 
     # Normalize @page size in initial CSS to match the selected page size
     # This ensures the editor always shows the correct page size
@@ -2478,13 +2481,15 @@ def pdf_layout_default():
             match = _re.search(r"<body[^>]*>([\s\S]*?)</body>", html_src, _re.IGNORECASE)
             if match:
                 html_src = match.group(1).strip()
-        except Exception:
-            pass
-    except Exception:
+        except Exception as e:
+            safe_log(current_app.logger, "debug", "Invoice PDF template body regex failed: %s", e)
+    except Exception as e:
+        safe_log(current_app.logger, "warning", "Invoice PDF layout initialization failed: %s", e)
         html_src = "<div class=\"wrapper\"><h1>{{ _('INVOICE') }} {{ invoice.invoice_number }}</h1></div>"
     try:
         css_src, _, _ = env.loader.get_source(env, "invoices/pdf_styles_default.css")
-    except Exception:
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Invoice PDF default CSS load failed: %s", e)
         css_src = ""
     return jsonify(
         {
@@ -4086,10 +4091,7 @@ def restore(filename=None):
                     "message": str(e),
                 }
             finally:
-                try:
-                    os.remove(temp_path)
-                except Exception:
-                    pass
+                safe_file_remove(temp_path, current_app.logger)
 
         # Run restore in background to keep request responsive
         t = threading.Thread(target=_do_restore, daemon=True)
@@ -4201,8 +4203,8 @@ def oidc_debug():
             .order_by(User.last_login.desc())
             .all()
         )
-    except Exception:
-        pass
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "OIDC users query failed (columns may not exist): %s", e)
 
     return render_template(
         "admin/oidc_debug.html",

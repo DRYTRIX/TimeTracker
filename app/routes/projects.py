@@ -34,6 +34,7 @@ from app.models import (
 )
 from app.services import ProjectService
 from app.utils.db import safe_commit
+from app.utils.error_handling import safe_log
 from app.utils.permissions import admin_or_permission_required, permission_required
 from app.utils.posthog_funnels import (
     track_onboarding_first_project,
@@ -77,8 +78,8 @@ def list_projects():
         if locked_client:
             client_name = locked_client.name
             client_id = locked_client.id
-    except Exception:
-        pass
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Could not get locked client: %s", e)
     search = request.args.get("search", "").strip()
     favorites_only = request.args.get("favorites", "").lower() == "true"
 
@@ -191,8 +192,8 @@ def export_projects():
         locked_client = get_locked_client()
         if locked_client:
             client_name = locked_client.name
-    except Exception:
-        pass
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Could not get locked client: %s", e)
 
     query = Project.query
 
@@ -323,24 +324,20 @@ def create_project():
         budget_amount_raw = request.form.get("budget_amount", "").strip()
         budget_threshold_raw = request.form.get("budget_threshold_percent", "").strip()
         code = sanitize_input(request.form.get("code", "").strip(), max_length=50)
-        try:
-            current_app.logger.info(
-                "POST /projects/create user=%s name=%s client_id=%s billable=%s",
-                current_user.username,
-                name or "<empty>",
-                client_id or "<empty>",
-                billable,
-            )
-        except Exception:
-            pass
+        safe_log(
+            current_app.logger,
+            "info",
+            "POST /projects/create user=%s name=%s client_id=%s billable=%s",
+            current_user.username,
+            name or "<empty>",
+            client_id or "<empty>",
+            billable,
+        )
 
         # Validate required fields
         if not name or not client_id:
             flash(_("Project name and client are required"), "error")
-            try:
-                current_app.logger.warning("Validation failed: missing required fields for project creation")
-            except Exception:
-                pass
+            safe_log(current_app.logger, "warning", "Validation failed: missing required fields for project creation")
             return render_template(
                 "projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client
             )

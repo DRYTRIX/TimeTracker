@@ -192,6 +192,20 @@ def register_context_processors(app):
             "support_ab_variant": support_ab_variant,
         }
 
+    @app.context_processor
+    def inject_keyboard_shortcuts_config():
+        """Inject keyboard shortcut config for logged-in users (for keyboard-shortcuts-advanced.js)."""
+        try:
+            if getattr(current_user, "is_authenticated", False):
+                from app.utils.keyboard_shortcuts_defaults import merge_overrides
+
+                overrides = getattr(current_user, "keyboard_shortcuts_overrides", None) or {}
+                shortcuts = merge_overrides(overrides)
+                return {"keyboard_shortcuts_config": {"shortcuts": shortcuts, "overrides": overrides}}
+        except Exception:
+            pass
+        return {"keyboard_shortcuts_config": None}
+
     @app.before_request
     def before_request():
         """Set up request-specific data"""

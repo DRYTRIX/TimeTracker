@@ -3,7 +3,7 @@ import os
 import uuid
 from datetime import datetime, time, timedelta
 
-from flask import Blueprint, current_app, jsonify, make_response, request, send_from_directory
+from flask import Blueprint, current_app, jsonify, make_response, request, send_from_directory, session
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
 from sqlalchemy import or_
@@ -2071,3 +2071,39 @@ def handle_leave_user_room(data):
     if user_id:
         socketio.leave_room(f"user_{user_id}")
         print(f"User {user_id} left room")
+
+
+# Client portal real-time: join/leave client-specific room (auth via session)
+def _get_client_id_from_session():
+    """Resolve client_id for client portal from session. Returns None if not a portal session."""
+    client_id = session.get("client_portal_id")
+    if client_id is not None:
+        return int(client_id) if client_id else None
+    user_id = session.get("_user_id")
+    if user_id is not None:
+        try:
+            uid = int(user_id) if isinstance(user_id, str) else user_id
+            user = User.query.get(uid)
+            if user and getattr(user, "client_portal_enabled", False) and getattr(user, "client_id", None):
+                return user.client_id
+        except (TypeError, ValueError):
+            pass
+    return None
+
+
+@socketio.on("join_client_room")
+def handle_join_client_room(data):
+    """Join client portal room for real-time notifications. Client identity from session."""
+    client_id = _get_client_id_from_session()
+    if client_id is None:
+        return
+    room = f"client_portal_{client_id}"
+    socketio.join_room(room)
+
+
+@socketio.on("leave_client_room")
+def handle_leave_client_room(data):
+    """Leave client portal room."""
+    client_id = _get_client_id_from_session()
+    if client_id is not None:
+        socketio.leave_room(f"client_portal_{client_id}")
