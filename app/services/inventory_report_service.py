@@ -2,11 +2,14 @@
 Service for inventory reports and analytics.
 """
 
+from collections import defaultdict
+
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import and_, func
+from sqlalchemy.orm import joinedload
 
 from app import db
 from app.models import StockItem, StockLot, StockMovement, Warehouse, WarehouseStock
@@ -310,12 +313,23 @@ class InventoryReportService:
         item_id: Optional[int] = None,
         warehouse_id: Optional[int] = None,
         movement_type: Optional[str] = None,
+        page: Optional[int] = None,
+        per_page: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
         Get detailed movement history.
 
+        Args:
+            start_date: Filter movements on or after this date.
+            end_date: Filter movements on or before this date.
+            item_id: Filter by stock item.
+            warehouse_id: Filter by warehouse.
+            movement_type: Filter by movement type.
+            page: If set with per_page, return paginated results.
+            per_page: Page size when paginating.
+
         Returns:
-            dict with movement history data
+            dict with movements list, total_movements, and optionally pagination.
         """
         query = StockMovement.query
 
@@ -330,14 +344,34 @@ class InventoryReportService:
         if movement_type:
             query = query.filter(StockMovement.movement_type == movement_type)
 
-        movements = query.order_by(StockMovement.moved_at.desc()).all()
+        query = query.order_by(StockMovement.moved_at.desc())
+
+        if page is not None and per_page is not None:
+            per_page = min(per_page, 100)
+            paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+            movements = paginated.items
+            total = paginated.total
+            pagination = {
+                "page": paginated.page,
+                "per_page": paginated.per_page,
+                "total": paginated.total,
+                "pages": paginated.pages,
+                "has_next": paginated.has_next,
+                "has_prev": paginated.has_prev,
+                "next_page": paginated.page + 1 if paginated.has_next else None,
+                "prev_page": paginated.page - 1 if paginated.has_prev else None,
+            }
+        else:
+            movements = query.all()
+            total = len(movements)
+            pagination = None
 
         def _ref(m):
             parts = [m.reference_type or "", str(m.reference_id) if m.reference_id is not None else ""]
             s = "#".join(p for p in parts if p).strip("#") or None
             return s
 
-        return {
+        result = {
             "movements": [
                 {
                     "id": m.id,
@@ -354,5 +388,60 @@ class InventoryReportService:
                 }
                 for m in movements
             ],
-            "total_movements": len(movements),
+            "total_movements": total,
         }
+        if pagination is not None:
+            result["pagination"] = pagination
+        return result
+
+    def get_low_stock(self, warehouse_id: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Get items below reorder point per warehouse.
+
+        Args:
+            warehouse_id: If set, only return low-stock rows for this warehouse.
+
+        Returns:
+            dict with "items" list; each element has item/warehouse info and numeric fields as float.
+        """
+        items = StockItem.query.filter_by(is_active=True, is_trackable=True).all()
+        items_with_reorder = [i for i in items if i.reorder_point]
+        item_ids = [i.id for i in items_with_reorder]
+
+        low_stock_items: List[Dict[str, Any]] = []
+        if not item_ids:
+            return {"items": low_stock_items}
+
+        query = WarehouseStock.query.options(joinedload(WarehouseStock.warehouse)).filter(
+            WarehouseStock.stock_item_id.in_(item_ids)
+        )
+        if warehouse_id is not None:
+            query = query.filter(WarehouseStock.warehouse_id == warehouse_id)
+
+        all_stock = query.all()
+        stock_by_item = defaultdict(list)
+        for s in all_stock:
+            stock_by_item[s.stock_item_id].append(s)
+
+        for item in items_with_reorder:
+            for stock in stock_by_item.get(item.id, []):
+                if stock.quantity_on_hand < item.reorder_point:
+                    reorder_pt = item.reorder_point
+                    reorder_qty = item.reorder_quantity or Decimal("0")
+                    shortfall = reorder_pt - stock.quantity_on_hand
+                    low_stock_items.append(
+                        {
+                            "item_id": item.id,
+                            "item_sku": item.sku,
+                            "item_name": item.name,
+                            "warehouse_id": stock.warehouse_id,
+                            "warehouse_code": stock.warehouse.code if stock.warehouse else None,
+                            "warehouse_name": stock.warehouse.name if stock.warehouse else None,
+                            "quantity_on_hand": float(stock.quantity_on_hand),
+                            "reorder_point": float(reorder_pt),
+                            "reorder_quantity": float(reorder_qty),
+                            "shortfall": float(shortfall),
+                        }
+                    )
+
+        return {"items": low_stock_items}

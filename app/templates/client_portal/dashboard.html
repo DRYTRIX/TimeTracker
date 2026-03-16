@@ -15,271 +15,144 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<!-- Statistics Cards with Enhanced Design -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    <!-- Active Projects Card -->
-    <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">{{ _('Active Projects') }}</p>
-                <p class="text-3xl font-bold text-blue-900 dark:text-blue-100">{{ total_projects }}</p>
-                <p class="text-xs text-blue-600/70 dark:text-blue-400/70 mt-1">{{ _('Total active') }}</p>
-            </div>
-            <div class="bg-blue-500/10 dark:bg-blue-400/10 p-4 rounded-full">
-                <i class="fas fa-folder-open text-blue-600 dark:text-blue-400 text-3xl"></i>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Total Hours Card -->
-    <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border border-green-200 dark:border-green-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-sm font-medium text-green-600 dark:text-green-400 mb-1">{{ _('Total Hours') }}</p>
-                <p class="text-3xl font-bold text-green-900 dark:text-green-100">{{ "%.1f"|format(total_hours) }}</p>
-                <p class="text-xs text-green-600/70 dark:text-green-400/70 mt-1">{{ _('Hours tracked') }}</p>
-            </div>
-            <div class="bg-green-500/10 dark:bg-green-400/10 p-4 rounded-full">
-                <i class="fas fa-clock text-green-600 dark:text-green-400 text-3xl"></i>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Total Invoices Card -->
-    <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border border-purple-200 dark:border-purple-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">{{ _('Total Invoices') }}</p>
-                <p class="text-3xl font-bold text-purple-900 dark:text-purple-100">{{ total_invoices }}</p>
-                <p class="text-xs text-purple-600/70 dark:text-purple-400/70 mt-1">{{ _('All invoices') }}</p>
-            </div>
-            <div class="bg-purple-500/10 dark:bg-purple-400/10 p-4 rounded-full">
-                <i class="fas fa-file-invoice text-purple-600 dark:text-purple-400 text-3xl"></i>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Outstanding Amount Card -->
-    <div class="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border border-amber-200 dark:border-amber-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-sm font-medium text-amber-600 dark:text-amber-400 mb-1">{{ _('Outstanding') }}</p>
-                <p class="text-2xl font-bold text-amber-900 dark:text-amber-100">{{ "%.2f"|format(unpaid_invoice_amount) }}</p>
-                <p class="text-xs text-amber-600/70 dark:text-amber-400/70 mt-1">{{ invoices[0].currency_code if invoices else 'EUR' }}</p>
-            </div>
-            <div class="bg-amber-500/10 dark:bg-amber-400/10 p-4 rounded-full">
-                <i class="fas fa-exclamation-triangle text-amber-600 dark:text-amber-400 text-3xl"></i>
-            </div>
-        </div>
-    </div>
+{# Customize dashboard button #}
+<div class="mb-4 flex justify-end">
+    <button type="button" id="dashboard-customize-btn" class="inline-flex items-center px-4 py-2 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors text-sm font-medium">
+        <i class="fas fa-cog mr-2"></i>{{ _('Customize dashboard') }}
+    </button>
 </div>
 
-<!-- Action Cards for Pending Items -->
-{% if pending_approvals_count > 0 or unread_notifications_count > 0 %}
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-    {% if pending_approvals_count > 0 %}
-    <div class="bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 p-6 rounded-xl shadow-lg text-white transform hover:scale-105 transition-all duration-300">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-sm font-medium text-blue-100 mb-2">{{ _('Action Required') }}</p>
-                <p class="text-2xl font-bold mb-1">{{ pending_approvals_count }} {{ _('Pending Approvals') }}</p>
-                <p class="text-sm text-blue-100/80">{{ _('Time entries awaiting your review') }}</p>
-            </div>
-            <a href="{{ url_for('client_portal.time_entry_approvals') }}" 
-               class="inline-flex items-center px-5 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors shadow-md">
-                <i class="fas fa-check-circle mr-2"></i>{{ _('Review Now') }}
-            </a>
-        </div>
-    </div>
-    {% endif %}
-    
-    {% if unread_notifications_count > 0 %}
-    <div class="bg-gradient-to-r from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 p-6 rounded-xl shadow-lg text-white transform hover:scale-105 transition-all duration-300">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-sm font-medium text-green-100 mb-2">{{ _('New Updates') }}</p>
-                <p class="text-2xl font-bold mb-1">{{ unread_notifications_count }} {{ _('Unread') }}</p>
-                <p class="text-sm text-green-100/80">{{ _('Notifications waiting for you') }}</p>
-            </div>
-            <a href="{{ url_for('client_portal.notifications') }}" 
-               class="inline-flex items-center px-5 py-3 bg-white text-green-600 font-semibold rounded-lg hover:bg-green-50 transition-colors shadow-md">
-                <i class="fas fa-bell mr-2"></i>{{ _('View All') }}
-            </a>
-        </div>
-    </div>
-    {% endif %}
-</div>
+{# Widget area: render only widgets in widget_ids, in widget_order; else default layout #}
+{% set widget_ids_set = widget_ids | default([]) | list %}
+{% set order = widget_order | default(widget_ids) | default([]) | list %}
+{% if not order %}
+    {% set order = ['stats', 'pending_actions', 'projects', 'invoices', 'time_entries'] %}
 {% endif %}
 
-<!-- Projects and Invoices Overview -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-    <!-- Projects Overview -->
-    <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-6 rounded-xl shadow-lg">
-        <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center space-x-3">
-                <div class="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
-                    <i class="fas fa-folder-open text-blue-600 dark:text-blue-400"></i>
-                </div>
-                <h2 class="text-xl font-bold text-text-light dark:text-text-dark">{{ _('Projects') }}</h2>
-            </div>
-            <a href="{{ url_for('client_portal.projects') }}" class="text-primary hover:text-primary/80 font-medium text-sm flex items-center space-x-1 transition-colors">
-                <span>{{ _('View All') }}</span>
-                <i class="fas fa-arrow-right text-xs"></i>
-            </a>
-        </div>
-        {% if projects %}
-        <div class="space-y-3">
-            {% for project in projects[:5] %}
-            <a href="{{ url_for('client_portal.projects') }}" class="block p-4 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark hover:border-primary hover:shadow-md transition-all duration-200 group">
-                <div class="flex items-start justify-between">
-                    <div class="flex-1">
-                        <div class="flex items-center space-x-2 mb-1">
-                            <p class="font-semibold text-text-light dark:text-text-dark group-hover:text-primary transition-colors">{{ project.name }}</p>
-                            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">{{ project.status|capitalize }}</span>
-                        </div>
-                        {% if project.description %}
-                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark line-clamp-2">{{ project.description }}</p>
-                        {% else %}
-                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark italic">{{ _('No description') }}</p>
-                        {% endif %}
-                    </div>
-                    <i class="fas fa-chevron-right text-text-muted-light dark:text-text-muted-dark group-hover:text-primary group-hover:translate-x-1 transition-all"></i>
-                </div>
-            </a>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="text-center py-12">
-            <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-                <i class="fas fa-folder-open text-3xl text-gray-400"></i>
-            </div>
-            <p class="text-text-muted-light dark:text-text-muted-dark font-medium">{{ _('No projects found') }}</p>
-            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Projects will appear here once they are created') }}</p>
-        </div>
+<div id="dashboard-widgets">
+{% if widget_ids_set %}
+    {% for w in order %}
+        {% if w in widget_ids_set %}
+            {% if w == 'stats' %}
+                {% include 'client_portal/widgets/stats.html' %}
+            {% elif w == 'pending_actions' %}
+                {% include 'client_portal/widgets/pending_actions.html' %}
+            {% elif w == 'projects' %}
+                {% include 'client_portal/widgets/projects.html' %}
+            {% elif w == 'invoices' %}
+                {% include 'client_portal/widgets/invoices.html' %}
+            {% elif w == 'time_entries' %}
+                {% include 'client_portal/widgets/time_entries.html' %}
+            {% endif %}
         {% endif %}
+    {% endfor %}
+{% else %}
+    {# Default: show all widgets in default order when no preferences saved #}
+    {% include 'client_portal/widgets/stats.html' %}
+    {% include 'client_portal/widgets/pending_actions.html' %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {% include 'client_portal/widgets/projects.html' %}
+        {% include 'client_portal/widgets/invoices.html' %}
     </div>
-    
-    <!-- Recent Invoices -->
-    <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-6 rounded-xl shadow-lg">
-        <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center space-x-3">
-                <div class="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg">
-                    <i class="fas fa-file-invoice text-purple-600 dark:text-purple-400"></i>
+    {% include 'client_portal/widgets/time_entries.html' %}
+{% endif %}
+</div>
+
+{# Customize dashboard modal #}
+<div id="dashboard-customize-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+        <div class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/75 transition-opacity" aria-hidden="true" id="dashboard-customize-backdrop"></div>
+        <div class="relative inline-block align-bottom bg-card-light dark:bg-card-dark rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-border-light dark:border-border-dark">
+            <div class="px-6 py-4">
+                <h3 class="text-lg font-bold text-text-light dark:text-text-dark" id="modal-title">{{ _('Customize dashboard') }}</h3>
+                <p class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Choose which widgets to show and their order.') }}</p>
+                <div class="mt-4 space-y-3" id="dashboard-widget-checkboxes">
+                    {% for w in ['stats', 'pending_actions', 'projects', 'invoices', 'time_entries'] %}
+                    <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark">
+                        <input type="checkbox" class="dashboard-widget-cb rounded border-border-light dark:border-border-dark text-primary focus:ring-primary" value="{{ w }}" {% if w in widget_ids_set %}checked{% endif %}>
+                        <span class="text-text-light dark:text-text-dark">
+                            {% if w == 'stats' %}{{ _('Statistics cards') }}
+                            {% elif w == 'pending_actions' %}{{ _('Pending actions') }}
+                            {% elif w == 'projects' %}{{ _('Projects') }}
+                            {% elif w == 'invoices' %}{{ _('Recent invoices') }}
+                            {% elif w == 'time_entries' %}{{ _('Recent time entries') }}
+                            {% else %}{{ w }}{% endif %}
+                        </span>
+                    </label>
+                    {% endfor %}
                 </div>
-                <h2 class="text-xl font-bold text-text-light dark:text-text-dark">{{ _('Recent Invoices') }}</h2>
+                <div id="dashboard-customize-error" class="mt-2 text-sm text-red-600 dark:text-red-400 hidden"></div>
             </div>
-            <a href="{{ url_for('client_portal.invoices') }}" class="text-primary hover:text-primary/80 font-medium text-sm flex items-center space-x-1 transition-colors">
-                <span>{{ _('View All') }}</span>
-                <i class="fas fa-arrow-right text-xs"></i>
-            </a>
-        </div>
-        {% if invoices %}
-        <div class="space-y-3">
-            {% for invoice in invoices[:5] %}
-            <a href="{{ url_for('client_portal.view_invoice', invoice_id=invoice.id) }}" class="block p-4 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark hover:border-primary hover:shadow-md transition-all duration-200 group">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <div class="flex items-center space-x-2 mb-1">
-                            <p class="font-semibold text-primary group-hover:underline">{{ invoice.invoice_number }}</p>
-                            <span class="px-2 py-0.5 text-xs font-medium rounded-full
-                                {% if invoice.payment_status == 'fully_paid' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
-                                {% elif invoice.is_overdue %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
-                                {% else %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400{% endif %}">
-                                {{ invoice.payment_status|replace('_', ' ')|title }}
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-4 text-sm text-text-muted-light dark:text-text-muted-dark">
-                            <span><i class="fas fa-calendar mr-1"></i>{{ invoice.issue_date|user_date }}</span>
-                            <span class="font-semibold text-text-light dark:text-text-dark">{{ "%.2f"|format(invoice.total_amount) }} {{ invoice.currency_code }}</span>
-                        </div>
-                    </div>
-                    <i class="fas fa-chevron-right text-text-muted-light dark:text-text-muted-dark group-hover:text-primary group-hover:translate-x-1 transition-all"></i>
-                </div>
-            </a>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="text-center py-12">
-            <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-                <i class="fas fa-file-invoice text-3xl text-gray-400"></i>
+            <div class="px-6 py-4 bg-background-light dark:bg-background-dark flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                <button type="button" id="dashboard-customize-cancel" class="inline-flex justify-center px-4 py-2 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark hover:bg-opacity-80 text-sm font-medium">
+                    {{ _('Cancel') }}
+                </button>
+                <button type="button" id="dashboard-customize-save" class="inline-flex justify-center px-4 py-2 rounded-lg bg-primary text-white hover:opacity-90 text-sm font-medium">
+                    {{ _('Save') }}
+                </button>
             </div>
-            <p class="text-text-muted-light dark:text-text-muted-dark font-medium">{{ _('No invoices found') }}</p>
-            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Invoices will appear here once they are created') }}</p>
         </div>
-        {% endif %}
     </div>
 </div>
 
-<!-- Recent Time Entries -->
-<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-6 rounded-xl shadow-lg">
-    <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center space-x-3">
-            <div class="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg">
-                <i class="fas fa-clock text-green-600 dark:text-green-400"></i>
-            </div>
-            <h2 class="text-xl font-bold text-text-light dark:text-text-dark">{{ _('Recent Time Entries') }}</h2>
-        </div>
-        <a href="{{ url_for('client_portal.time_entries') }}" class="text-primary hover:text-primary/80 font-medium text-sm flex items-center space-x-1 transition-colors">
-            <span>{{ _('View All') }}</span>
-            <i class="fas fa-arrow-right text-xs"></i>
-        </a>
-    </div>
-    {% if recent_time_entries %}
-    <div class="overflow-x-auto">
-        <table class="w-full">
-            <thead>
-                <tr class="border-b-2 border-border-light dark:border-border-dark">
-                    <th class="text-left py-3 px-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Date') }}</th>
-                    <th class="text-left py-3 px-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Project') }}</th>
-                    <th class="text-left py-3 px-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('User') }}</th>
-                    <th class="text-left py-3 px-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Duration') }}</th>
-                    <th class="text-left py-3 px-4 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Description') }}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for entry in recent_time_entries[:10] %}
-                <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
-                    <td class="py-3 px-4 text-sm">
-                        <div class="font-medium text-text-light dark:text-text-dark">{{ entry.start_time|user_date }}</div>
-                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ entry.start_time|user_date }}</div>
-                    </td>
-                    <td class="py-3 px-4">
-                        <div class="flex items-center space-x-2">
-                            <i class="fas fa-folder text-primary text-xs"></i>
-                            <span class="text-sm text-text-light dark:text-text-dark">{{ entry.project.name if entry.project else _('N/A') }}</span>
-                        </div>
-                    </td>
-                    <td class="py-3 px-4">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
-                                <i class="fas fa-user text-primary text-xs"></i>
-                            </div>
-                            <span class="text-sm text-text-light dark:text-text-dark">{{ entry.user.display_name if entry.user else _('N/A') }}</span>
-                        </div>
-                    </td>
-                    <td class="py-3 px-4">
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                            <i class="fas fa-clock mr-1"></i>{{ "%.2f"|format(entry.duration_hours) }}h
-                        </span>
-                    </td>
-                    <td class="py-3 px-4">
-                        <p class="text-sm text-text-light dark:text-text-dark max-w-xs truncate" title="{{ entry.description or '-' }}">
-                            {{ entry.description[:50] if entry.description else '-' }}{% if entry.description and entry.description|length > 50 %}...{% endif %}
-                        </p>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="text-center py-12">
-        <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-            <i class="fas fa-clock text-3xl text-gray-400"></i>
-        </div>
-        <p class="text-text-muted-light dark:text-text-muted-dark font-medium">{{ _('No time entries found') }}</p>
-        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Time entries will appear here once they are logged') }}</p>
-    </div>
-    {% endif %}
-</div>
+<script>
+(function() {
+    var modal = document.getElementById('dashboard-customize-modal');
+    var backdrop = document.getElementById('dashboard-customize-backdrop');
+    var btn = document.getElementById('dashboard-customize-btn');
+    var cancelBtn = document.getElementById('dashboard-customize-cancel');
+    var saveBtn = document.getElementById('dashboard-customize-save');
+    var errorEl = document.getElementById('dashboard-customize-error');
+    var prefsUrl = '{{ url_for("client_portal.dashboard_preferences_post") }}';
+
+    function openModal() {
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeModal() {
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+        errorEl.classList.add('hidden');
+    }
+
+    if (btn) btn.addEventListener('click', openModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    if (backdrop) backdrop.addEventListener('click', closeModal);
+
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function() {
+            var checkboxes = document.querySelectorAll('.dashboard-widget-cb:checked');
+            var widgetIds = Array.from(checkboxes).map(function(cb) { return cb.value; });
+            if (widgetIds.length === 0) {
+                errorEl.textContent = '{{ _("Select at least one widget.") }}';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            errorEl.classList.add('hidden');
+            saveBtn.disabled = true;
+            saveBtn.setAttribute('aria-busy', 'true');
+            var saveBtnOrigText = saveBtn.textContent;
+            saveBtn.textContent = '{{ _("Saving...") }}';
+            fetch(prefsUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify({ widget_ids: widgetIds, widget_order: widgetIds })
+            }).then(function(r) {
+                return r.json().then(function(data) {
+                    if (!r.ok) throw new Error(data.error || 'Save failed');
+                    closeModal();
+                    window.location.reload();
+                });
+            }).catch(function(err) {
+                errorEl.textContent = err.message || '{{ _("Failed to save.") }}';
+                errorEl.classList.remove('hidden');
+            }).finally(function() {
+                saveBtn.disabled = false;
+                saveBtn.removeAttribute('aria-busy');
+                saveBtn.textContent = saveBtnOrigText;
+            });
+        });
+    }
+})();
+</script>
 {% endblock %}

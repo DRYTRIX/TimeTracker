@@ -71,14 +71,14 @@
     </div>
 </div>
 
-<!-- Project Hours Breakdown -->
+<!-- Project Progress / Hours by Project -->
 <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg mb-6 overflow-hidden">
     <div class="p-6 border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
         <div class="flex items-center space-x-3">
             <div class="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
                 <i class="fas fa-chart-pie text-blue-600 dark:text-blue-400"></i>
             </div>
-            <h2 class="text-xl font-bold text-text-light dark:text-text-dark">{{ _('Hours by Project') }}</h2>
+            <h2 class="text-xl font-bold text-text-light dark:text-text-dark">{{ _('Project progress') }}</h2>
         </div>
     </div>
     {% if project_hours %}
@@ -87,8 +87,10 @@
             <thead class="bg-background-light dark:bg-background-dark border-b-2 border-border-light dark:border-border-dark">
                 <tr>
                     <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Project') }}</th>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Status') }}</th>
                     <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Total Hours') }}</th>
                     <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Billable Hours') }}</th>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Est. / Budget') }}</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-border-light dark:divide-border-dark">
@@ -101,6 +103,9 @@
                         </div>
                     </td>
                     <td class="py-4 px-6">
+                        <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">{{ (ph.project.status if ph.project else 'active')|capitalize }}</span>
+                    </td>
+                    <td class="py-4 px-6">
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                             <i class="fas fa-clock mr-1.5 text-xs"></i>
                             {{ "%.2f"|format(ph.hours) }}h
@@ -111,6 +116,12 @@
                             <i class="fas fa-euro-sign mr-1.5 text-xs"></i>
                             {{ "%.2f"|format(ph.billable_hours) }}h
                         </span>
+                    </td>
+                    <td class="py-4 px-6 text-sm text-text-muted-light dark:text-text-muted-dark">
+                        {% if ph.get('estimated_hours') %}{{ "%.1f"|format(ph.estimated_hours) }}h{% endif %}
+                        {% if ph.get('estimated_hours') and ph.get('budget_amount') %} / {% endif %}
+                        {% if ph.get('budget_amount') %}{{ "%.2f"|format(ph.budget_amount) }} EUR{% endif %}
+                        {% if not ph.get('estimated_hours') and not ph.get('budget_amount') %}&mdash;{% endif %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -126,6 +137,69 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Task / status summary -->
+{% if task_summary and (task_summary.total > 0 or task_summary.by_status) %}
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg mb-6 overflow-hidden">
+    <div class="p-6 border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
+        <div class="flex items-center space-x-3">
+            <div class="bg-indigo-100 dark:bg-indigo-900/30 p-2 rounded-lg">
+                <i class="fas fa-tasks text-indigo-600 dark:text-indigo-400"></i>
+            </div>
+            <h2 class="text-xl font-bold text-text-light dark:text-text-dark">{{ _('Task summary') }}</h2>
+        </div>
+    </div>
+    <div class="p-6">
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Total tasks: %(count)s', count=task_summary.total) }}</p>
+        {% if task_summary.by_status %}
+        <div class="flex flex-wrap gap-3">
+            {% for status, count in task_summary.by_status.items() %}
+            <span class="inline-flex items-center px-4 py-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark">
+                <span class="font-medium text-text-light dark:text-text-dark">{{ status|replace('_', ' ')|title }}</span>
+                <span class="ml-2 text-sm text-text-muted-light dark:text-text-muted-dark">({{ count }})</span>
+            </span>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No tasks yet.') }}</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Time by date (last 30 days) -->
+{% if time_by_date is defined and time_by_date %}
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg mb-6 overflow-hidden">
+    <div class="p-6 border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
+        <div class="flex items-center space-x-3">
+            <div class="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg">
+                <i class="fas fa-calendar-alt text-green-600 dark:text-green-400"></i>
+            </div>
+            <h2 class="text-xl font-bold text-text-light dark:text-text-dark">{{ _('Time by date (last 30 days)') }}</h2>
+        </div>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-background-light dark:bg-background-dark border-b-2 border-border-light dark:border-border-dark">
+                <tr>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Date') }}</th>
+                    <th class="text-left py-4 px-6 text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Hours') }}</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-border-light dark:divide-border-dark">
+                {% for row in time_by_date[:31] %}
+                <tr class="hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+                    <td class="py-4 px-6 font-medium text-text-light dark:text-text-dark">{{ row.date }}</td>
+                    <td class="py-4 px-6">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">{{ "%.2f"|format(row.hours) }}h</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
 
 <!-- Recent Activity -->
 <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg overflow-hidden">

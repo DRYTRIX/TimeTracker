@@ -1,0 +1,49 @@
+{# Dashboard widget: Recent invoices #}
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-6 rounded-xl shadow-lg mb-8">
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center space-x-3">
+            <div class="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg">
+                <i class="fas fa-file-invoice text-purple-600 dark:text-purple-400"></i>
+            </div>
+            <h2 class="text-xl font-bold text-text-light dark:text-text-dark">{{ _('Recent Invoices') }}</h2>
+        </div>
+        <a href="{{ url_for('client_portal.invoices') }}" class="text-primary hover:text-primary/80 font-medium text-sm flex items-center space-x-1 transition-colors">
+            <span>{{ _('View All') }}</span>
+            <i class="fas fa-arrow-right text-xs"></i>
+        </a>
+    </div>
+    {% if invoices %}
+    <div class="space-y-3">
+        {% for invoice in invoices[:5] %}
+        <a href="{{ url_for('client_portal.view_invoice', invoice_id=invoice.id) }}" class="block p-4 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark hover:border-primary hover:shadow-md transition-all duration-200 group">
+            <div class="flex items-center justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center space-x-2 mb-1">
+                        <p class="font-semibold text-primary group-hover:underline">{{ invoice.invoice_number }}</p>
+                        <span class="px-2 py-0.5 text-xs font-medium rounded-full
+                            {% if invoice.payment_status == 'fully_paid' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
+                            {% elif invoice.is_overdue %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
+                            {% else %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400{% endif %}">
+                            {{ invoice.payment_status|replace('_', ' ')|title }}
+                        </span>
+                    </div>
+                    <div class="flex items-center space-x-4 text-sm text-text-muted-light dark:text-text-muted-dark">
+                        <span><i class="fas fa-calendar mr-1"></i>{{ invoice.issue_date|user_date }}</span>
+                        <span class="font-semibold text-text-light dark:text-text-dark">{{ "%.2f"|format(invoice.total_amount) }} {{ invoice.currency_code }}</span>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right text-text-muted-light dark:text-text-muted-dark group-hover:text-primary group-hover:translate-x-1 transition-all"></i>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+            <i class="fas fa-file-invoice text-3xl text-gray-400"></i>
+        </div>
+        <p class="text-text-muted-light dark:text-text-muted-dark font-medium">{{ _('No invoices found') }}</p>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Invoices will appear here once they are created') }}</p>
+    </div>
+    {% endif %}
+</div>

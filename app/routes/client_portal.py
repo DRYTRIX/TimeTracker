@@ -28,8 +28,10 @@ from app.models import (
     Activity,
     Client,
     ClientAttachment,
+    ClientPortalDashboardPreference,
     Comment,
     Contact,
+    DEFAULT_WIDGET_ORDER,
     Invoice,
     Issue,
     Project,
@@ -37,6 +39,7 @@ from app.models import (
     Quote,
     TimeEntry,
     User,
+    VALID_WIDGET_IDS,
 )
 from app.models.client_time_approval import ClientTimeApproval
 from app.services.client_approval_service import ClientApprovalService
@@ -286,6 +289,29 @@ def get_portal_data(client):
     return client.get_portal_data()
 
 
+def get_dashboard_preferences(client_id, user_id=None):
+    """Get dashboard widget preferences for a client (and optional user). Returns None for default layout."""
+    q = ClientPortalDashboardPreference.query.filter_by(client_id=client_id)
+    if user_id is not None:
+        try:
+            uid = int(user_id) if isinstance(user_id, str) else user_id
+            q = q.filter_by(user_id=uid)
+        except (TypeError, ValueError):
+            q = q.filter_by(user_id=None)
+    else:
+        q = q.filter_by(user_id=None)
+    return q.first()
+
+
+def get_effective_widget_layout(client_id, user_id=None):
+    """Return (widget_ids, widget_order) for the dashboard. Uses saved preferences or default."""
+    prefs = get_dashboard_preferences(client_id, user_id)
+    if prefs and prefs.widget_ids:
+        order = prefs.widget_order if prefs.widget_order is not None else prefs.widget_ids
+        return list(prefs.widget_ids), list(order)
+    return list(DEFAULT_WIDGET_ORDER), list(DEFAULT_WIDGET_ORDER)
+
+
 @client_portal_bp.route("/client-portal/login", methods=["GET", "POST"])
 def login():
     """Client portal login page"""
@@ -440,6 +466,10 @@ def dashboard():
     notification_service = ClientNotificationService()
     unread_notifications_count = notification_service.get_unread_count(client.id)
 
+    # Dashboard widget layout (customizable)
+    user_id = session.get("_user_id")
+    widget_ids, widget_order = get_effective_widget_layout(client.id, user_id)
+
     return render_template(
         "client_portal/dashboard.html",
         client=client,
@@ -457,7 +487,68 @@ def dashboard():
         project_hours=list(project_hours.values()),
         pending_approvals_count=pending_approvals_count,
         unread_notifications_count=unread_notifications_count,
+        widget_ids=widget_ids,
+        widget_order=widget_order,
     )
+
+
+@client_portal_bp.route("/client-portal/dashboard/preferences", methods=["GET"])
+def dashboard_preferences_get():
+    """Return current dashboard widget preferences (JSON)."""
+    result = check_client_portal_access()
+    if not isinstance(result, Client):
+        return result
+    client = result
+    user_id = session.get("_user_id")
+    widget_ids, widget_order = get_effective_widget_layout(client.id, user_id)
+    return jsonify({"widget_ids": widget_ids, "widget_order": widget_order})
+
+
+@client_portal_bp.route("/client-portal/dashboard/preferences", methods=["POST"])
+def dashboard_preferences_post():
+    """Save dashboard widget preferences. Body: { widget_ids: [], widget_order?: [] }."""
+    result = check_client_portal_access()
+    if not isinstance(result, Client):
+        return result
+    client = result
+    user_id = session.get("_user_id")
+    try:
+        uid = int(user_id) if (user_id is not None and isinstance(user_id, str)) else user_id
+    except (TypeError, ValueError):
+        uid = None
+
+    data = request.get_json() or {}
+    widget_ids = data.get("widget_ids")
+    widget_order = data.get("widget_order")
+
+    if not isinstance(widget_ids, list):
+        return jsonify({"error": _("widget_ids must be a list")}), 400
+    invalid = [w for w in widget_ids if w not in VALID_WIDGET_IDS]
+    if invalid:
+        return jsonify({"error": _("Invalid widget id(s): %(ids)s", ids=", ".join(invalid))}), 400
+    if widget_order is not None and not isinstance(widget_order, list):
+        return jsonify({"error": _("widget_order must be a list")}), 400
+    if widget_order is not None:
+        invalid_order = [w for w in widget_order if w not in VALID_WIDGET_IDS]
+        if invalid_order:
+            return jsonify({"error": _("Invalid widget id(s) in order: %(ids)s", ids=", ".join(invalid_order))}), 400
+
+    prefs = get_dashboard_preferences(client.id, uid)
+    if prefs is None:
+        prefs = ClientPortalDashboardPreference(
+            client_id=client.id,
+            user_id=uid,
+            widget_ids=widget_ids,
+            widget_order=widget_order or widget_ids,
+        )
+        db.session.add(prefs)
+    else:
+        prefs.widget_ids = widget_ids
+        prefs.widget_order = widget_order if widget_order is not None else widget_ids
+        prefs.updated_at = datetime.utcnow()
+    db.session.commit()
+    order = prefs.widget_order if prefs.widget_order is not None else prefs.widget_ids
+    return jsonify({"widget_ids": prefs.widget_ids, "widget_order": list(order)})
 
 
 @client_portal_bp.route("/client-portal/projects")
@@ -1272,54 +1363,30 @@ def download_attachment(attachment_id):
 
 @client_portal_bp.route("/client-portal/reports")
 def reports():
-    """View client-specific reports"""
+    """View client-specific reports (first version: project progress, invoice/payment, task/status, time by date)."""
     result = check_client_portal_access()
     if not isinstance(result, Client):
         return result
     client = result
 
     portal_data = get_portal_data(client)
+    if not portal_data:
+        flash(_("Unable to load report data."), "error")
+        return redirect(url_for("client_portal.dashboard"))
 
-    # Calculate report data
-    from datetime import datetime, timedelta
-    from decimal import Decimal
+    from app.services.client_report_service import build_report_data
 
-    # Time tracking summary
-    total_hours = sum(entry.duration_hours for entry in portal_data["time_entries"])
-
-    # Project hours breakdown
-    project_hours = {}
-    for entry in portal_data["time_entries"]:
-        if entry.project_id:
-            if entry.project_id not in project_hours:
-                project_hours[entry.project_id] = {
-                    "project": entry.project,
-                    "hours": 0.0,
-                    "billable_hours": 0.0,
-                }
-            project_hours[entry.project_id]["hours"] += entry.duration_hours
-            if entry.billable:
-                project_hours[entry.project_id]["billable_hours"] += entry.duration_hours
-
-    # Invoice summary
-    invoice_summary = {
-        "total": sum(inv.total_amount for inv in portal_data["invoices"]),
-        "paid": sum(inv.total_amount for inv in portal_data["invoices"] if inv.payment_status == "fully_paid"),
-        "unpaid": sum(inv.outstanding_amount for inv in portal_data["invoices"] if inv.payment_status != "fully_paid"),
-        "overdue": sum(inv.outstanding_amount for inv in portal_data["invoices"] if inv.is_overdue),
-    }
-
-    # Recent activity (last 30 days)
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-    recent_entries = [e for e in portal_data["time_entries"] if e.start_time >= thirty_days_ago]
+    report_data = build_report_data(client, portal_data, date_range_days=30)
 
     return render_template(
         "client_portal/reports.html",
         client=client,
-        total_hours=round(total_hours, 2),
-        project_hours=list(project_hours.values()),
-        invoice_summary=invoice_summary,
-        recent_entries=recent_entries,
+        total_hours=report_data["total_hours"],
+        project_hours=report_data["project_hours"],
+        invoice_summary=report_data["invoice_summary"],
+        task_summary=report_data["task_summary"],
+        time_by_date=report_data["time_by_date"],
+        recent_entries=report_data["recent_entries"],
     )
 
 
@@ -1328,25 +1395,17 @@ def reports():
 
 @client_portal_bp.route("/client-portal/activity")
 def activity_feed():
-    """View project activity feed"""
+    """View project activity feed (client-visible events only)."""
     result = check_client_portal_access()
     if not isinstance(result, Client):
         return result
     client = result
 
-    from app.models import Activity, Project
+    from app.services.client_activity_feed_service import get_client_activity_feed
 
-    # Get client's projects
-    project_ids = [p.id for p in Project.query.filter_by(client_id=client.id).all()]
-
-    # Get activities for these projects
-    activities = []
-    if project_ids:
-        activities = (
-            Activity.query.filter(Activity.entity_type == "project", Activity.entity_id.in_(project_ids))
-            .order_by(Activity.created_at.desc())
-            .limit(50)
-            .all()
-        )
-
-    return render_template("client_portal/activity_feed.html", client=client, activities=activities)
+    feed_items = get_client_activity_feed(client.id, limit=50)
+    return render_template(
+        "client_portal/activity_feed.html",
+        client=client,
+        feed_items=feed_items,
+    )
