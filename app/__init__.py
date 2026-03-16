@@ -71,117 +71,51 @@ def log_event(name: str, **kwargs):
 
 def identify_user(user_id, properties=None):
     """
-    Identify a user in PostHog with person properties.
-
-    Sets properties on the user for better segmentation, cohort analysis,
-    and personalization in PostHog.
-
-    Args:
-        user_id: The user ID (internal ID, not PII)
-        properties: Dict of properties to set (use $set and $set_once)
+    Identify a user in the analytics backend (consent-aware).
+    Delegates to telemetry service; only sent when detailed analytics is opted in.
     """
     try:
-        posthog_api_key = os.getenv("POSTHOG_API_KEY", "")
-        if not posthog_api_key:
-            return
+        from app.telemetry.service import identify_user as _identify
 
-        posthog.identify(distinct_id=str(user_id), properties=properties or {})
+        _identify(user_id, properties)
     except Exception:
-        # Don't let analytics errors break the application
         pass
 
 
 def track_event(user_id, event_name, properties=None):
     """
-    Track a product analytics event via PostHog.
-
-    Enhanced to include contextual properties like user agent, referrer,
-    and deployment info for better analysis.
-
-    Args:
-        user_id: The user ID (internal ID, not PII)
-        event_name: Name of the event (use resource.action format)
-        properties: Dict of event properties (no PII)
+    Track a product analytics event (consent-aware).
+    Delegates to telemetry service; only sent when detailed analytics is opted in.
     """
     try:
-        # Get PostHog API key - must be explicitly set to enable tracking
-        posthog_api_key = os.getenv("POSTHOG_API_KEY", "")
-        if not posthog_api_key:
-            return
+        from app.telemetry.service import send_analytics_event
 
-        # Enhance properties with context
-        enhanced_properties = properties or {}
-
-        # Add request context if available
-        try:
-            if request:
-                enhanced_properties.update(
-                    {
-                        "$current_url": request.url,
-                        "$host": request.host,
-                        "$pathname": request.path,
-                        "$browser": request.user_agent.browser,
-                        "$device_type": "mobile" if request.user_agent.platform in ["android", "iphone"] else "desktop",
-                        "$os": request.user_agent.platform,
-                    }
-                )
-        except Exception:
-            pass
-
-        # Add deployment context
-        # Get app version from analytics config
-        from app.config.analytics_defaults import get_analytics_config
-
-        analytics_config = get_analytics_config()
-
-        enhanced_properties.update(
-            {
-                "environment": os.getenv("FLASK_ENV", "production"),
-                "app_version": analytics_config.get("app_version"),
-                "deployment_method": "docker" if os.path.exists("/.dockerenv") else "native",
-            }
-        )
-
-        posthog.capture(distinct_id=str(user_id), event=event_name, properties=enhanced_properties)
+        send_analytics_event(user_id, event_name, properties)
     except Exception:
-        # Don't let analytics errors break the application
         pass
 
 
 def track_page_view(page_name, user_id=None, properties=None):
     """
-    Track a page view event.
-
-    Args:
-        page_name: Name of the page (e.g., 'dashboard', 'projects_list')
-        user_id: User ID (optional, will use current_user if not provided)
-        properties: Additional properties for the page view
+    Track a page view event (consent-aware). Only sent when detailed analytics is opted in.
     """
     try:
-        # Get user ID if not provided
         if user_id is None:
             from flask_login import current_user
 
             if current_user.is_authenticated:
                 user_id = current_user.id
             else:
-                return  # Don't track anonymous page views
-
-        # Build page view properties
+                return
         page_properties = {
             "page_name": page_name,
             "$pathname": request.path if request else None,
             "$current_url": request.url if request else None,
         }
-
-        # Add custom properties if provided
         if properties:
             page_properties.update(properties)
-
-        # Track the page view
         track_event(user_id, "$pageview", page_properties)
     except Exception:
-        # Don't let analytics errors break the application
         pass
 
 
@@ -395,6 +329,13 @@ def create_app(config=None):
             # Register tasks after app context is available, passing app instance
             with app.app_context():
                 register_scheduled_tasks(scheduler, app=app)
+                # Base telemetry: send first_seen once per install (idempotent)
+                try:
+                    from app.telemetry.service import send_base_first_seen
+
+                    send_base_first_seen()
+                except Exception:
+                    pass
 
     # Only initialize CSRF protection if enabled
     if app.config.get("WTF_CSRF_ENABLED"):
