@@ -1,8 +1,19 @@
 # All Tracked Events in TimeTracker
 
-This document lists all events that are tracked via PostHog and logged via JSON logging when telemetry is enabled.
+This document lists events tracked via PostHog and JSON logging.
 
-## Authentication Events
+**Two layers:**
+- **Base telemetry** (always on when PostHog configured): `base_telemetry.first_seen`, `base_telemetry.heartbeat` — minimal install footprint, no PII.
+- **Detailed analytics** (opt-in only): All events below are sent only when the user has enabled detailed analytics in Admin → Privacy & Analytics (or Telemetry dashboard). See [Telemetry Architecture](telemetry-architecture.md).
+
+## Base Telemetry Events (Always-On Layer)
+
+| Event Name | Description | Properties |
+|------------|-------------|------------|
+| `base_telemetry.first_seen` | First time this install is seen | install_id, app_version, platform, os_version, architecture, locale, timezone, first_seen_at, last_seen_at, heartbeat_at, release_channel, deployment_type |
+| `base_telemetry.heartbeat` | Periodic heartbeat (e.g. daily) | Same as above; last_seen_at / heartbeat_at updated |
+
+## Authentication Events (Opt-In Layer)
 
 | Event Name | Description | Properties |
 |-----------|-------------|-----------|
