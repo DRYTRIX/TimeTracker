@@ -82,8 +82,8 @@ class GitHubConnector(BaseConnector):
                 )
                 if user_response.status_code == 200:
                     user_info = user_response.json()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("GitHub user fetch failed: %s", e)
 
         return {
             "access_token": access_token,
@@ -330,8 +330,8 @@ class GitHubConnector(BaseConnector):
             logger.error(f"GitHub sync failed: {e}", exc_info=True)
             try:
                 db.session.rollback()
-            except Exception:
-                pass
+            except Exception as rollback_err:
+                logger.debug("Rollback after GitHub sync failure: %s", rollback_err)
             return {"success": False, "message": f"Sync failed: {str(e)}", "errors": errors}
 
     def handle_webhook(

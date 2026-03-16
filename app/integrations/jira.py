@@ -2,13 +2,20 @@
 Jira integration connector.
 """
 
+import logging
 import os
+import re
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
 import requests
 
 from app.integrations.base import BaseConnector
+
+logger = logging.getLogger(__name__)
+
+# Jira issue key format: PROJECT_KEY-NUMBER (e.g. PROJ-123, MYPROJ-1)
+JIRA_ISSUE_KEY_PATTERN = re.compile(r"^[A-Za-z0-9_-]+-[0-9]+$")
 
 
 class JiraConnector(BaseConnector):
@@ -147,12 +154,87 @@ class JiraConnector(BaseConnector):
         except Exception as e:
             return {"success": False, "message": f"Connection error: {str(e)}"}
 
-    def sync_data(self, sync_type: str = "full") -> Dict[str, Any]:
-        """Sync issues from Jira and create tasks."""
-        from datetime import datetime, timedelta
+    def _extract_description_text(self, issue_fields: Dict[str, Any]) -> Optional[str]:
+        """Extract plain text from Jira description (ADF content structure)."""
+        desc = issue_fields.get("description")
+        if not desc or not isinstance(desc, dict):
+            return None
+        try:
+            content = desc.get("content") or []
+            if content and isinstance(content[0], dict):
+                inner = content[0].get("content") or []
+                if inner and isinstance(inner[0], dict):
+                    return inner[0].get("text") or None
+        except (IndexError, KeyError, TypeError):
+            pass
+        return None
 
+    def _upsert_task_from_issue(self, issue: Dict[str, Any]) -> int:
+        """
+        Find or create Project and Task from a single Jira issue dict.
+        Reuses same mapping logic as sync_data. Returns 1 if upserted, 0 on skip/error.
+        """
         from app import db
         from app.models import Project, Task
+
+        issue_key = issue.get("key")
+        if not issue_key:
+            return 0
+        issue_fields = issue.get("fields") or {}
+        project_key = (issue_fields.get("project") or {}).get("key") or ""
+        project_key = project_key or "Jira"
+
+        project = Project.query.filter_by(
+            user_id=self.integration.user_id, name=project_key
+        ).first()
+
+        if not project:
+            project = Project(
+                name=project_key,
+                description=f"Synced from Jira project {project_key}",
+                user_id=self.integration.user_id,
+                status="active",
+            )
+            db.session.add(project)
+            db.session.flush()
+
+        task = Task.query.filter_by(project_id=project.id, name=issue_key).first()
+        summary = issue_fields.get("summary") or ""
+        status_name = (issue_fields.get("status") or {}).get("name") or "To Do"
+        mapped_status = self._map_jira_status(status_name)
+        description_text = self._extract_description_text(issue_fields)
+
+        if not task:
+            task_kw = {
+                "project_id": project.id,
+                "name": issue_key,
+                "description": summary,
+                "status": mapped_status,
+            }
+            if getattr(Task, "notes", None) is not None:
+                task_kw["notes"] = description_text
+            if self.integration.user_id is not None:
+                task_kw["created_by"] = self.integration.user_id
+            task = Task(**task_kw)
+            db.session.add(task)
+            db.session.flush()
+        else:
+            task.description = summary
+            task.status = mapped_status
+            if hasattr(task, "notes"):
+                task.notes = description_text
+
+        if hasattr(task, "metadata"):
+            if not task.metadata:
+                task.metadata = {}
+            task.metadata["jira_issue_key"] = issue_key
+            task.metadata["jira_issue_id"] = issue.get("id")
+
+        return 1
+
+    def sync_data(self, sync_type: str = "full") -> Dict[str, Any]:
+        """Sync issues from Jira and create tasks."""
+        from app import db
 
         token = self.get_access_token()
         if not token:
@@ -165,17 +247,12 @@ class JiraConnector(BaseConnector):
         errors = []
 
         try:
-            # Get JQL query from config or use default
             jql = self.integration.config.get(
                 "jql", "assignee = currentUser() AND status != Done ORDER BY updated DESC"
             )
-
-            # Determine date range
             if sync_type == "incremental":
-                # Get issues updated in last 7 days
                 jql = f"{jql} AND updated >= -7d"
 
-            # Fetch issues from Jira
             response = requests.get(
                 api_url,
                 headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
@@ -193,53 +270,7 @@ class JiraConnector(BaseConnector):
 
             for issue in issues:
                 try:
-                    issue_key = issue.get("key")
-                    issue_fields = issue.get("fields", {})
-                    project_key = issue.get("fields", {}).get("project", {}).get("key", "")
-
-                    # Find or create project
-                    project = Project.query.filter_by(
-                        user_id=self.integration.user_id, name=project_key or "Jira"
-                    ).first()
-
-                    if not project:
-                        project = Project(
-                            name=project_key or "Jira",
-                            description=f"Synced from Jira project {project_key}",
-                            user_id=self.integration.user_id,
-                            status="active",
-                        )
-                        db.session.add(project)
-                        db.session.flush()
-
-                    # Find or create task
-                    task = Task.query.filter_by(project_id=project.id, name=issue_key).first()
-
-                    if not task:
-                        task = Task(
-                            project_id=project.id,
-                            name=issue_key,
-                            description=issue_fields.get("summary", ""),
-                            status=self._map_jira_status(issue_fields.get("status", {}).get("name", "To Do")),
-                            notes=(
-                                issue_fields.get("description", {})
-                                .get("content", [{}])[0]
-                                .get("content", [{}])[0]
-                                .get("text", "")
-                                if issue_fields.get("description")
-                                else None
-                            ),
-                        )
-                        db.session.add(task)
-                        db.session.flush()
-
-                    # Store Jira issue key in task metadata
-                    if not hasattr(task, "metadata") or not task.metadata:
-                        task.metadata = {}
-                    task.metadata["jira_issue_key"] = issue_key
-                    task.metadata["jira_issue_id"] = issue.get("id")
-
-                    synced_count += 1
+                    synced_count += self._upsert_task_from_issue(issue)
                 except Exception as e:
                     errors.append(f"Error syncing issue {issue.get('key', 'unknown')}: {str(e)}")
 
@@ -253,6 +284,74 @@ class JiraConnector(BaseConnector):
             }
         except Exception as e:
             return {"success": False, "message": f"Sync failed: {str(e)}"}
+
+    def sync_issue(self, issue_key: str) -> Dict[str, Any]:
+        """
+        Fetch a single Jira issue by key and upsert it as a task.
+        Idempotent: repeated calls for the same issue_key just update the task.
+        """
+        from app import db
+
+        if not issue_key or not isinstance(issue_key, str):
+            return {"success": False, "message": "Invalid issue key", "issue_key": issue_key}
+        issue_key = issue_key.strip()
+        if not JIRA_ISSUE_KEY_PATTERN.match(issue_key):
+            return {
+                "success": False,
+                "message": "Invalid issue key format (expected PROJECT-NUM)",
+                "issue_key": issue_key,
+            }
+
+        token = self.get_access_token()
+        if not token:
+            return {"success": False, "message": "No access token available", "issue_key": issue_key}
+
+        base_url = self.integration.config.get("jira_url", "https://your-domain.atlassian.net")
+        api_url = f"{base_url}/rest/api/3/issue/{issue_key}"
+        fields = "summary,description,status,assignee,project,created,updated"
+
+        try:
+            response = requests.get(
+                api_url,
+                headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+                params={"fields": fields},
+            )
+
+            if response.status_code == 404:
+                return {
+                    "success": False,
+                    "message": "Issue not found",
+                    "issue_key": issue_key,
+                }
+            if response.status_code != 200:
+                body = response.text[:500] if response.text else ""
+                return {
+                    "success": False,
+                    "message": f"Jira API returned status {response.status_code}",
+                    "issue_key": issue_key,
+                    "status_code": response.status_code,
+                    "detail": body,
+                }
+
+            issue = response.json()
+            self._upsert_task_from_issue(issue)
+            db.session.commit()
+            return {
+                "success": True,
+                "synced_items": 1,
+                "issue_key": issue_key,
+            }
+        except Exception as e:
+            logger.exception("sync_issue failed for %s: %s", issue_key, e)
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            return {
+                "success": False,
+                "message": str(e),
+                "issue_key": issue_key,
+            }
 
     def _map_jira_status(self, jira_status: str) -> str:
         """Map Jira status to TimeTracker task status."""
@@ -273,32 +372,103 @@ class JiraConnector(BaseConnector):
     def handle_webhook(
         self, payload: Dict[str, Any], headers: Dict[str, str], raw_body: Optional[bytes] = None
     ) -> Dict[str, Any]:
-        """Handle incoming webhook from Jira."""
-        import logging
+        """Handle incoming webhook from Jira. Validates payload and triggers issue-specific sync when appropriate."""
+        if not isinstance(payload, dict):
+            logger.warning("Jira webhook invalid payload: expected JSON object")
+            return {"success": False, "message": "Invalid webhook payload"}
 
-        logger = logging.getLogger(__name__)
+        event_type = payload.get("webhookEvent")
+        if event_type is not None and not isinstance(event_type, str):
+            event_type = str(event_type)
+
+        issue = payload.get("issue")
+        if not isinstance(issue, dict):
+            logger.warning("Jira webhook missing or invalid issue object")
+            return {"success": False, "message": "Missing or invalid issue in webhook payload"}
+
+        raw_key = issue.get("key")
+        issue_key = (raw_key if isinstance(raw_key, str) else "").strip()
+        if not issue_key:
+            logger.warning("Jira webhook missing or empty issue key")
+            return {"success": False, "message": "No issue key in webhook payload"}
+
+        if not JIRA_ISSUE_KEY_PATTERN.match(issue_key):
+            logger.warning("Jira webhook invalid issue key format: %s", issue_key)
+            return {
+                "success": False,
+                "message": "Invalid issue key format in webhook payload",
+                "issue_key": issue_key,
+            }
+
+        supported_events = ("jira:issue_updated", "jira:issue_created")
+        if event_type not in supported_events:
+            logger.info(
+                "Jira webhook event ignored: event_type=%s issue_key=%s",
+                event_type,
+                issue_key,
+            )
+            return {
+                "success": True,
+                "message": f"Event ignored: {event_type or 'unknown'}",
+                "event_type": event_type or "unknown",
+                "issue_key": issue_key,
+            }
+
+        auto_sync = self.get_sync_settings().get("auto_sync", False)
+        if not auto_sync:
+            logger.info(
+                "Jira webhook acknowledged (auto_sync disabled): event_type=%s issue_key=%s",
+                event_type,
+                issue_key,
+            )
+            return {
+                "success": True,
+                "message": f"Webhook received for issue {issue_key}",
+                "event_type": event_type,
+                "issue_key": issue_key,
+            }
 
         try:
-            event_type = payload.get("webhookEvent")
-            issue = payload.get("issue", {})
-            issue_key = issue.get("key")
-
-            if not issue_key:
-                return {"success": False, "message": "No issue key in webhook payload"}
-
-            # Handle issue updated events
-            if event_type in ["jira:issue_updated", "jira:issue_created"]:
-                # Trigger a sync for this specific issue
-                # This would be handled by the sync_data method
-                return {"success": True, "message": f"Webhook received for issue {issue_key}", "event_type": event_type}
-
-            return {"success": True, "message": f"Webhook processed: {event_type}"}
-        except KeyError as e:
-            logger.error(f"Jira webhook missing required field: {e}")
-            return {"success": False, "message": f"Invalid webhook payload: missing field {str(e)}"}
+            sync_result = self.sync_issue(issue_key)
+            if sync_result.get("success"):
+                logger.info(
+                    "Jira webhook sync ok: event_type=%s issue_key=%s",
+                    event_type,
+                    issue_key,
+                )
+                return {
+                    "success": True,
+                    "message": f"Synced issue {issue_key}",
+                    "event_type": event_type,
+                    "issue_key": issue_key,
+                    "synced_items": sync_result.get("synced_items", 1),
+                }
+            msg = sync_result.get("message", "Sync failed")
+            logger.warning(
+                "Jira webhook sync failed: event_type=%s issue_key=%s reason=%s",
+                event_type,
+                issue_key,
+                msg,
+            )
+            return {
+                "success": False,
+                "message": msg,
+                "event_type": event_type,
+                "issue_key": issue_key,
+            }
         except Exception as e:
-            logger.error(f"Jira webhook processing error: {e}", exc_info=True)
-            return {"success": False, "message": f"Error processing webhook: {str(e)}"}
+            logger.exception(
+                "Jira webhook sync error: event_type=%s issue_key=%s error=%s",
+                event_type,
+                issue_key,
+                e,
+            )
+            return {
+                "success": False,
+                "message": str(e),
+                "event_type": event_type,
+                "issue_key": issue_key,
+            }
 
     def get_config_schema(self) -> Dict[str, Any]:
         """Get configuration schema."""
