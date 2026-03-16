@@ -2,6 +2,9 @@
 Tests for Jira integration: webhook handling and issue-specific sync.
 """
 
+import hashlib
+import hmac
+import json
 from unittest.mock import Mock, patch
 
 import pytest
@@ -58,6 +61,32 @@ def jira_integration_no_auto_sync(db_session, test_user):
     db_session.add(integration)
     db_session.commit()
     return integration
+
+
+@pytest.fixture
+def jira_integration_with_webhook_secret(db_session, test_user):
+    """Jira integration with webhook_secret set (signature verification enabled)."""
+    integration = Integration(
+        name="Jira",
+        provider="jira",
+        user_id=test_user.id,
+        is_global=False,
+        is_active=True,
+        config={
+            "jira_url": "https://example.atlassian.net",
+            "auto_sync": True,
+            "webhook_secret": "test-webhook-secret",
+        },
+    )
+    db_session.add(integration)
+    db_session.commit()
+    return integration
+
+
+def _jira_webhook_signature(secret: str, body: bytes) -> str:
+    """Compute HMAC-SHA256 signature for Jira webhook body (sha256=hex format)."""
+    digest = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+    return f"sha256={digest}"
 
 
 class TestJiraIssueKeyPattern:
@@ -237,6 +266,78 @@ class TestJiraHandleWebhook:
         assert r2["success"] is True
         assert mock_sync.call_count == 2
         mock_sync.assert_any_call("PROJ-1")
+
+
+class TestJiraWebhookVerification:
+    """Test Jira webhook signature verification when webhook_secret is configured."""
+
+    def test_handle_webhook_with_secret_and_valid_signature_accepted(
+        self, jira_integration_with_webhook_secret
+    ):
+        """When webhook_secret is set and signature is valid, webhook is accepted."""
+        connector = JiraConnector(jira_integration_with_webhook_secret, None)
+        payload = {
+            "webhookEvent": "jira:issue_updated",
+            "issue": {"key": "PROJ-1", "id": "10001"},
+        }
+        raw_body = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        sig = _jira_webhook_signature("test-webhook-secret", raw_body)
+        headers = {"X-Hub-Signature-256": sig}
+
+        with patch.object(connector, "sync_issue", return_value={"success": True, "synced_items": 1}) as mock_sync:
+            result = connector.handle_webhook(payload, headers, raw_body=raw_body)
+
+        assert result["success"] is True
+        assert result.get("issue_key") == "PROJ-1"
+        mock_sync.assert_called_once_with("PROJ-1")
+
+    def test_handle_webhook_with_secret_and_missing_signature_rejected(
+        self, jira_integration_with_webhook_secret
+    ):
+        """When webhook_secret is set but no signature provided, webhook is rejected."""
+        connector = JiraConnector(jira_integration_with_webhook_secret, None)
+        payload = {
+            "webhookEvent": "jira:issue_updated",
+            "issue": {"key": "PROJ-1"},
+        }
+        with patch.object(connector, "sync_issue") as mock_sync:
+            result = connector.handle_webhook(payload, {}, raw_body=b"{}")
+
+        assert result["success"] is False
+        assert "signature" in result["message"].lower()
+        mock_sync.assert_not_called()
+
+    def test_handle_webhook_with_secret_and_wrong_signature_rejected(
+        self, jira_integration_with_webhook_secret
+    ):
+        """When webhook_secret is set but signature is invalid, webhook is rejected."""
+        connector = JiraConnector(jira_integration_with_webhook_secret, None)
+        payload = {
+            "webhookEvent": "jira:issue_updated",
+            "issue": {"key": "PROJ-1"},
+        }
+        headers = {"X-Hub-Signature-256": "sha256=invalidwrongsignature"}
+        with patch.object(connector, "sync_issue") as mock_sync:
+            result = connector.handle_webhook(
+                payload, headers, raw_body=json.dumps(payload).encode("utf-8")
+            )
+
+        assert result["success"] is False
+        assert "verification" in result["message"].lower() or "signature" in result["message"].lower()
+        mock_sync.assert_not_called()
+
+    def test_handle_webhook_without_secret_no_verification(self, jira_integration):
+        """When webhook_secret is not set, webhooks are accepted without signature (backward compat)."""
+        connector = JiraConnector(jira_integration, None)
+        payload = {
+            "webhookEvent": "jira:issue_updated",
+            "issue": {"key": "PROJ-1"},
+        }
+        with patch.object(connector, "sync_issue", return_value={"success": True, "synced_items": 1}) as mock_sync:
+            result = connector.handle_webhook(payload, {})
+
+        assert result["success"] is True
+        mock_sync.assert_called_once_with("PROJ-1")
 
 
 class TestJiraSyncIssue:

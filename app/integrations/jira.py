@@ -2,6 +2,9 @@
 Jira integration connector.
 """
 
+import hashlib
+import hmac
+import json
 import logging
 import os
 import re
@@ -377,6 +380,33 @@ class JiraConnector(BaseConnector):
             logger.warning("Jira webhook invalid payload: expected JSON object")
             return {"success": False, "message": "Invalid webhook payload"}
 
+        # Optional webhook signature verification (Jira Cloud uses HMAC-SHA256; WebSub-style X-Hub-Signature)
+        webhook_secret = self.integration.config.get("webhook_secret") if self.integration else None
+        if webhook_secret:
+            signature = (
+                headers.get("X-Hub-Signature-256")
+                or headers.get("X-Atlassian-Webhook-Signature")
+                or headers.get("X-Hub-Signature")
+                or ""
+            ).strip()
+            if not signature:
+                logger.warning("Jira webhook secret configured but no signature provided - rejecting")
+                return {"success": False, "message": "Webhook signature required"}
+            # Normalize: accept "sha256=<hex>" or "method=value" (WebSub)
+            if signature.startswith("sha256="):
+                signature_hash = signature[7:]
+            elif "=" in signature:
+                signature_hash = signature.split("=", 1)[1].strip()
+            else:
+                signature_hash = signature
+            if raw_body is None:
+                raw_body = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+                logger.debug("Jira webhook: using reconstructed body for signature verification")
+            expected = hmac.new(webhook_secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+            if not hmac.compare_digest(signature_hash, expected):
+                logger.warning("Jira webhook signature verification failed")
+                return {"success": False, "message": "Webhook signature verification failed"}
+
         event_type = payload.get("webhookEvent")
         if event_type is not None and not isinstance(event_type, str):
             event_type = str(event_type)
@@ -559,13 +589,21 @@ class JiraConnector(BaseConnector):
                     "description": "Map Jira fields to TimeTracker fields (JSON format)",
                     "help": "Customize how Jira issue fields map to TimeTracker task fields",
                 },
+                {
+                    "name": "webhook_secret",
+                    "type": "password",
+                    "label": "Webhook Secret",
+                    "required": False,
+                    "description": "Optional secret for verifying webhook requests (Jira Cloud: set in webhook config)",
+                    "help": "When set, incoming webhooks must include a valid signature (HMAC-SHA256 of body). Leave empty to accept all webhooks.",
+                },
             ],
             "required": ["jira_url"],
             "sections": [
                 {
                     "title": "Connection Settings",
                     "description": "Configure your Jira connection",
-                    "fields": ["jira_url", "jql"],
+                    "fields": ["jira_url", "jql", "webhook_secret"],
                 },
                 {
                     "title": "Sync Settings",
