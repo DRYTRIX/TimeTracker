@@ -42,15 +42,23 @@ class TestInstallationConfig:
         assert salt1 == salt2
 
     def test_installation_id_generation(self, installation_config):
-        """Test that installation ID is generated and persisted"""
-        # First call should generate ID
+        """Test that installation ID (UUID) is generated and persisted"""
         id1 = installation_config.get_installation_id()
         assert id1 is not None
-        assert len(id1) == 16
+        assert len(id1) == 36  # UUID with dashes
+        assert id1.count("-") == 4
 
-        # Second call should return same ID
         id2 = installation_config.get_installation_id()
         assert id1 == id2
+
+    def test_install_id_uuid_format(self, installation_config):
+        """Test that get_install_id returns a valid UUID string"""
+        install_id = installation_config.get_install_id()
+        assert install_id is not None
+        assert len(install_id) == 36
+        parts = install_id.split("-")
+        assert len(parts) == 5
+        assert all(len(p) in (8, 4, 4, 4, 12) for p in parts)
 
     def test_installation_id_uniqueness(self, temp_config_dir, monkeypatch):
         """Test that each installation gets a unique ID"""
@@ -109,7 +117,7 @@ class TestInstallationConfig:
             data = json.load(f)
 
         assert data["telemetry_salt"] == salt
-        assert data["installation_id"] == installation_id
+        assert data.get("install_id") == installation_id or data.get("installation_id") == installation_id
         assert data["setup_complete"] is True
         assert data["telemetry_enabled"] is True
 
@@ -123,7 +131,7 @@ class TestInstallationConfig:
 
         config = installation_config.get_all_config()
         assert "telemetry_salt" in config
-        assert "installation_id" in config
+        assert "install_id" in config
         assert "setup_complete" in config
         assert config["setup_complete"] is True
 
