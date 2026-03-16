@@ -3130,7 +3130,7 @@ def list_webhook_events():
 
 
 @api_v1_bp.route("/inventory/items", methods=["GET"])
-@require_api_token("read:projects")  # Use existing scope for now
+@require_api_token(("read:inventory", "read:projects"))
 def list_stock_items_api():
     """List stock items"""
     search = request.args.get("search", "").strip()
@@ -3156,7 +3156,7 @@ def list_stock_items_api():
 
 
 @api_v1_bp.route("/inventory/items/<int:item_id>", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def get_stock_item_api(item_id):
     """Get stock item details"""
     item = StockItem.query.get_or_404(item_id)
@@ -3164,7 +3164,7 @@ def get_stock_item_api(item_id):
 
 
 @api_v1_bp.route("/inventory/items", methods=["POST"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def create_stock_item_api():
     """Create a stock item"""
     from decimal import Decimal
@@ -3200,7 +3200,7 @@ def create_stock_item_api():
 
 
 @api_v1_bp.route("/inventory/items/<int:item_id>", methods=["PUT", "PATCH"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def update_stock_item_api(item_id):
     """Update a stock item"""
     from decimal import Decimal
@@ -3240,7 +3240,7 @@ def update_stock_item_api(item_id):
 
 
 @api_v1_bp.route("/inventory/items/<int:item_id>", methods=["DELETE"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def delete_stock_item_api(item_id):
     """Delete (deactivate) a stock item"""
     item = StockItem.query.get_or_404(item_id)
@@ -3257,7 +3257,7 @@ def delete_stock_item_api(item_id):
 
 
 @api_v1_bp.route("/inventory/items/<int:item_id>/availability", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def get_stock_availability_api(item_id):
     """Get stock availability for an item across warehouses"""
     item = StockItem.query.get_or_404(item_id)
@@ -3287,7 +3287,7 @@ def get_stock_availability_api(item_id):
 
 
 @api_v1_bp.route("/inventory/warehouses", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def list_warehouses_api():
     """List warehouses"""
     active_only = request.args.get("active_only", "true").lower() == "true"
@@ -3303,7 +3303,7 @@ def list_warehouses_api():
 
 
 @api_v1_bp.route("/inventory/stock-levels", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def get_stock_levels_api():
     """Get stock levels"""
     warehouse_id = request.args.get("warehouse_id", type=int)
@@ -3340,7 +3340,7 @@ def get_stock_levels_api():
 
 
 @api_v1_bp.route("/inventory/movements", methods=["POST"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def create_stock_movement_api():
     """Create a stock movement with optional devaluation support for return/waste movements"""
     from decimal import Decimal, InvalidOperation
@@ -3591,7 +3591,7 @@ def create_stock_movement_api():
 
 
 @api_v1_bp.route("/inventory/transfers", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def list_transfers_api():
     """List stock transfers (grouped by reference_id) with optional date filter and pagination."""
     blocked = _require_module_enabled_for_api("inventory")
@@ -3670,7 +3670,7 @@ def list_transfers_api():
 
 
 @api_v1_bp.route("/inventory/transfers", methods=["POST"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def create_transfer_api():
     """Create a stock transfer between warehouses."""
     blocked = _require_module_enabled_for_api("inventory")
@@ -3778,7 +3778,7 @@ def create_transfer_api():
 
 
 @api_v1_bp.route("/inventory/transfers/<int:reference_id>", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def get_transfer_api(reference_id):
     """Get a single transfer by reference_id (returns the pair of movements)."""
     blocked = _require_module_enabled_for_api("inventory")
@@ -3817,7 +3817,7 @@ def get_transfer_api(reference_id):
 
 
 @api_v1_bp.route("/inventory/reports/valuation", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def get_inventory_valuation_report_api():
     """Get stock valuation report. Optional filters: warehouse_id, category, currency_code."""
     blocked = _require_module_enabled_for_api("inventory")
@@ -3839,7 +3839,7 @@ def get_inventory_valuation_report_api():
 
 
 @api_v1_bp.route("/inventory/reports/movement-history", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def get_inventory_movement_history_report_api():
     """Get movement history report with optional filters and pagination."""
     blocked = _require_module_enabled_for_api("inventory")
@@ -3871,7 +3871,7 @@ def get_inventory_movement_history_report_api():
 
 
 @api_v1_bp.route("/inventory/reports/turnover", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def get_inventory_turnover_report_api():
     """Get inventory turnover report. Optional filters: start_date, end_date, item_id."""
     blocked = _require_module_enabled_for_api("inventory")
@@ -3902,7 +3902,7 @@ def get_inventory_turnover_report_api():
 
 
 @api_v1_bp.route("/inventory/reports/low-stock", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def get_inventory_low_stock_report_api():
     """Get low-stock report (items below reorder point). Optional filter: warehouse_id."""
     blocked = _require_module_enabled_for_api("inventory")
@@ -3921,7 +3921,7 @@ def get_inventory_low_stock_report_api():
 
 
 @api_v1_bp.route("/inventory/suppliers", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def list_suppliers_api():
     """List suppliers"""
     from sqlalchemy import or_
@@ -3947,7 +3947,7 @@ def list_suppliers_api():
 
 
 @api_v1_bp.route("/inventory/suppliers/<int:supplier_id>", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def get_supplier_api(supplier_id):
     """Get supplier details"""
     from app.models import Supplier
@@ -3957,7 +3957,7 @@ def get_supplier_api(supplier_id):
 
 
 @api_v1_bp.route("/inventory/suppliers", methods=["POST"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def create_supplier_api():
     """Create a supplier"""
     from app.models import Supplier
@@ -3996,7 +3996,7 @@ def create_supplier_api():
 
 
 @api_v1_bp.route("/inventory/suppliers/<int:supplier_id>", methods=["PUT", "PATCH"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def update_supplier_api(supplier_id):
     """Update a supplier"""
     from app.models import Supplier
@@ -4038,7 +4038,7 @@ def update_supplier_api(supplier_id):
 
 
 @api_v1_bp.route("/inventory/suppliers/<int:supplier_id>", methods=["DELETE"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def delete_supplier_api(supplier_id):
     """Delete (deactivate) a supplier"""
     from app.models import Supplier
@@ -4057,7 +4057,7 @@ def delete_supplier_api(supplier_id):
 
 
 @api_v1_bp.route("/inventory/suppliers/<int:supplier_id>/stock-items", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def get_supplier_stock_items_api(supplier_id):
     """Get stock items from a supplier"""
     from app.models import Supplier, SupplierStockItem
@@ -4082,7 +4082,7 @@ def get_supplier_stock_items_api(supplier_id):
 
 
 @api_v1_bp.route("/inventory/purchase-orders", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def list_purchase_orders_api():
     """List purchase orders"""
     from sqlalchemy import or_
@@ -4107,7 +4107,7 @@ def list_purchase_orders_api():
 
 
 @api_v1_bp.route("/inventory/purchase-orders/<int:po_id>", methods=["GET"])
-@require_api_token("read:projects")
+@require_api_token(("read:inventory", "read:projects"))
 def get_purchase_order_api(po_id):
     """Get purchase order details"""
     from app.models import PurchaseOrder
@@ -4117,7 +4117,7 @@ def get_purchase_order_api(po_id):
 
 
 @api_v1_bp.route("/inventory/purchase-orders", methods=["POST"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def create_purchase_order_api():
     """Create a purchase order"""
     from datetime import datetime
@@ -4190,7 +4190,7 @@ def create_purchase_order_api():
 
 
 @api_v1_bp.route("/inventory/purchase-orders/<int:po_id>", methods=["PUT", "PATCH"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def update_purchase_order_api(po_id):
     """Update a purchase order (only if status is 'draft')"""
     from datetime import datetime
@@ -4261,7 +4261,7 @@ def update_purchase_order_api(po_id):
 
 
 @api_v1_bp.route("/inventory/purchase-orders/<int:po_id>", methods=["DELETE"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def delete_purchase_order_api(po_id):
     """Delete (cancel) a purchase order (only if status is 'draft')"""
     from app.models import PurchaseOrder
@@ -4295,7 +4295,7 @@ def delete_purchase_order_api(po_id):
 
 
 @api_v1_bp.route("/inventory/purchase-orders/<int:po_id>/receive", methods=["POST"])
-@require_api_token("write:projects")
+@require_api_token(("write:inventory", "write:projects"))
 def receive_purchase_order_api(po_id):
     """Receive a purchase order"""
     from datetime import datetime

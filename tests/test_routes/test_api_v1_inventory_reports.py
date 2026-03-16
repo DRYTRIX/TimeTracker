@@ -61,6 +61,35 @@ def _auth_headers(token):
     return {"Authorization": f"Bearer {token}"}
 
 
+class TestInventoryScopes:
+    """Test read:inventory / write:inventory and backward compatibility with read:projects / write:projects."""
+
+    def test_read_inventory_only_can_access_inventory(self, client, db_session, test_user):
+        """Token with only read:inventory can GET inventory endpoints."""
+        token, plain = ApiToken.create_token(
+            user_id=test_user.id, name="Inv Only", scopes="read:inventory"
+        )
+        db.session.add(token)
+        db.session.commit()
+        response = client.get("/api/v1/inventory/reports/valuation", headers=_auth_headers(plain))
+        assert response.status_code == 200
+
+    def test_read_inventory_only_cannot_access_projects(self, client, db_session, test_user):
+        """Token with only read:inventory cannot GET non-inventory project endpoints."""
+        token, plain = ApiToken.create_token(
+            user_id=test_user.id, name="Inv Only", scopes="read:inventory"
+        )
+        db.session.add(token)
+        db.session.commit()
+        response = client.get("/api/v1/projects", headers=_auth_headers(plain))
+        assert response.status_code == 403
+
+    def test_read_projects_still_grants_inventory(self, client, api_token):
+        """Token with only read:projects can still GET inventory (backward compatibility)."""
+        response = client.get("/api/v1/inventory/reports/valuation", headers=_auth_headers(api_token))
+        assert response.status_code == 200
+
+
 class TestValuationReportAPI:
     """GET /api/v1/inventory/reports/valuation"""
 

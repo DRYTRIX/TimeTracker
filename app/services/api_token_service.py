@@ -258,6 +258,7 @@ class ApiTokenService:
             "read:leads",
             "read:contacts",
             "read:time_approvals",
+            "read:inventory",
             "write:projects",
             "write:time_entries",
             "write:invoices",
@@ -267,6 +268,7 @@ class ApiTokenService:
             "write:leads",
             "write:contacts",
             "write:time_approvals",
+            "write:inventory",
             "admin:all",
             "*",
         ]
