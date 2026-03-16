@@ -2009,6 +2009,9 @@
     
     <!-- Shared utilities (must load before keyboard shortcuts) -->
     <script src="{{ url_for('static', filename='typing-utils.js') }}"></script>
+    {% if keyboard_shortcuts_config %}
+    <script>window.__KEYBOARD_SHORTCUTS_CONFIG__ = {{ keyboard_shortcuts_config | tojson }};</script>
+    {% endif %}
     <!-- Advanced Features -->
     <script src="{{ url_for('static', filename='keyboard-shortcuts-advanced.js') }}?v=2.2"></script>
     <script src="{{ url_for('static', filename='quick-actions.js') }}"></script>

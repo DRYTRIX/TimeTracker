@@ -376,6 +376,8 @@ class EnhancedErrorHandler {
                 
                 const retryBtn = document.createElement('button');
                 retryBtn.className = 'error-retry-btn';
+                retryBtn.type = 'button';
+                retryBtn.setAttribute('aria-label', 'Retry');
                 retryBtn.textContent = 'Retry';
                 retryBtn.onclick = async () => {
                     retryBtn.disabled = true;
@@ -423,15 +425,17 @@ class EnhancedErrorHandler {
     }
 
     showError(message, title = 'Error') {
-        // Check for duplicates before showing
         if (this.isDuplicateError(message)) {
             console.warn('Duplicate error suppressed:', message);
             return;
         }
-        
-        if (window.toastManager) {
-            window.toastManager.error(message, title);
-        } else {
+        try {
+            if (window.toastManager && typeof window.toastManager.error === 'function') {
+                window.toastManager.error(message, title);
+            } else {
+                console.error(title + ':', message);
+            }
+        } catch (e) {
             console.error(title + ':', message);
         }
     }

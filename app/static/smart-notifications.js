@@ -353,30 +353,35 @@ class SmartNotificationManager {
 
     // Daily summary
     checkDailySummary() {
+        const storageKey = 'smart_notifications_last_daily_summary';
+        const getTodayKey = () => {
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        };
         try {
-            let lastSummarySent = null;
             const targetHour = 18; // 6 PM
-            
+
             const sendSummary = () => {
                 try {
                     const now = new Date();
                     const hour = now.getHours();
-                    const date = now.toDateString();
-                    
-                    // Send at 6 PM, but only once per day
-                    if (hour === targetHour && lastSummarySent !== date) {
+                    const todayKey = getTodayKey();
+                    let lastSent = null;
+                    try {
+                        lastSent = localStorage.getItem(storageKey);
+                    } catch (e) { /* ignore */ }
+                    if (hour === targetHour && lastSent !== todayKey) {
                         this.sendDailySummary();
-                        lastSummarySent = date;
+                        try {
+                            localStorage.setItem(storageKey, todayKey);
+                        } catch (e) { /* ignore */ }
                     }
                 } catch (error) {
                     console.error('[SmartNotifications] Error in daily summary check:', error);
                 }
             };
 
-            // Check every hour
             setInterval(sendSummary, 60 * 60 * 1000);
-            
-            // Also check immediately if it's already 6 PM
             const now = new Date();
             if (now.getHours() === targetHour) {
                 sendSummary();
