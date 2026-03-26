@@ -26,6 +26,7 @@ from werkzeug.utils import secure_filename
 
 import app as app_module
 from app import db, limiter
+from app.config.analytics_defaults import get_analytics_config
 from app.models import (
     DonationInteraction,
     Invoice,
@@ -1047,6 +1048,7 @@ def delete_user(user_id):
 def telemetry_dashboard():
     """Telemetry and analytics dashboard"""
     installation_config = get_installation_config()
+    analytics_config = get_analytics_config()
 
     # Get telemetry status
     telemetry_data = {
@@ -1059,16 +1061,19 @@ def telemetry_dashboard():
     }
 
     # Get OTEL OTLP status
+    grafana_endpoint = analytics_config.get("otel_exporter_otlp_endpoint") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+    grafana_token = analytics_config.get("otel_exporter_otlp_token") or os.getenv("OTEL_EXPORTER_OTLP_TOKEN", "")
     grafana_data = {
-        "enabled": bool(os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")) and bool(os.getenv("OTEL_EXPORTER_OTLP_TOKEN")),
-        "endpoint": os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
-        "token_set": bool(os.getenv("OTEL_EXPORTER_OTLP_TOKEN")),
+        "enabled": bool(grafana_endpoint) and bool(grafana_token),
+        "endpoint": grafana_endpoint,
+        "token_set": bool(grafana_token),
     }
 
     # Get Sentry status
+    sentry_dsn = analytics_config.get("sentry_dsn") or os.getenv("SENTRY_DSN", "")
     sentry_data = {
-        "enabled": bool(os.getenv("SENTRY_DSN")),
-        "dsn_set": bool(os.getenv("SENTRY_DSN")),
+        "enabled": bool(sentry_dsn),
+        "dsn_set": bool(sentry_dsn),
         "traces_rate": os.getenv("SENTRY_TRACES_RATE", "0.0"),
     }
 

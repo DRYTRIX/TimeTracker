@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 BASE_SCHEMA_KEYS = frozenset(
     {
         "install_id",
+        "telemetry_fingerprint",
         "app_version",
         "platform",
         "os_version",
@@ -45,6 +46,7 @@ def is_detailed_analytics_enabled() -> bool:
 def _build_base_telemetry_payload(event_kind: str) -> Dict[str, Any]:
     from app.config.analytics_defaults import get_analytics_config
     from app.utils.installation import get_installation_config
+    from app.utils.telemetry import get_telemetry_fingerprint
 
     config = get_analytics_config()
     inst = get_installation_config()
@@ -53,6 +55,7 @@ def _build_base_telemetry_payload(event_kind: str) -> Dict[str, Any]:
     first_seen = inst.get_base_first_seen_sent_at() or now
     payload = {
         "install_id": inst.get_install_id(),
+        "telemetry_fingerprint": get_telemetry_fingerprint(),
         "app_version": config.get("app_version", "unknown"),
         "platform": platform.system(),
         "os_version": platform.release(),
@@ -271,10 +274,12 @@ def send_analytics_event(user_id: Any, event_name: str, properties: Optional[Dic
         return
     from app.config.analytics_defaults import get_analytics_config
     from app.utils.installation import get_installation_config
+    from app.utils.telemetry import get_telemetry_fingerprint
 
     config = get_analytics_config()
     enhanced = dict(properties or {})
     enhanced["install_id"] = get_installation_config().get_install_id()
+    enhanced["telemetry_fingerprint"] = get_telemetry_fingerprint()
     enhanced["environment"] = os.getenv("FLASK_ENV", "production")
     enhanced["app_version"] = config.get("app_version")
     enhanced["deployment_method"] = "docker" if os.path.exists("/.dockerenv") else "native"
