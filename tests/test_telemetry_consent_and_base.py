@@ -34,12 +34,14 @@ class TestConsentGate:
                 }
                 with patch("app.utils.installation.get_installation_config") as mock_inst:
                     mock_inst.return_value.get_install_id.return_value = "install-uuid-123"
-                    send_analytics_event(1, "test.event", {"k": "v"})
+                    with patch("app.utils.telemetry.get_telemetry_fingerprint", return_value="fp-abc-123"):
+                        send_analytics_event(1, "test.event", {"k": "v"})
         mock_send.assert_called_once()
         call_kw = mock_send.call_args[1]
         assert call_kw["identity"] == "1"
         assert call_kw["event_name"] == "test.event"
         assert call_kw["properties"].get("install_id") == "install-uuid-123"
+        assert call_kw["properties"].get("telemetry_fingerprint") == "fp-abc-123"
 
 
 class TestBaseTelemetry:
@@ -56,9 +58,10 @@ class TestBaseTelemetry:
 
         with patch("app.utils.installation.get_installation_config", return_value=mock_inst):
             with patch("app.telemetry.service.send_base_telemetry") as mock_send:
-                mock_send.return_value = True
-                r1 = send_base_first_seen()
-                r2 = send_base_first_seen()
+                with patch("app.utils.telemetry.get_telemetry_fingerprint", return_value="fp-abc-123"):
+                    mock_send.return_value = True
+                    r1 = send_base_first_seen()
+                    r2 = send_base_first_seen()
         assert mock_send.call_count == 1, "first_seen should be sent only once"
         assert r1 is True
         assert r2 is False
@@ -97,6 +100,22 @@ class TestBaseTelemetry:
         assert call_payload["install_id"] == "uuid-hb"
         assert "app_version" in call_payload
         assert "platform" in call_payload
+
+    def test_base_payload_includes_telemetry_fingerprint(self):
+        """Base telemetry payload includes both install_id and telemetry fingerprint."""
+        from app.telemetry.service import _build_base_telemetry_payload
+
+        mock_inst = MagicMock()
+        mock_inst.get_base_first_seen_sent_at.return_value = None
+        mock_inst.get_install_id.return_value = "install-uuid-123"
+
+        with patch("app.utils.installation.get_installation_config", return_value=mock_inst):
+            with patch("app.config.analytics_defaults.get_analytics_config", return_value={"app_version": "1.0.0"}):
+                with patch("app.utils.telemetry.get_telemetry_fingerprint", return_value="fp-abc-123"):
+                    payload = _build_base_telemetry_payload("heartbeat")
+
+        assert payload["install_id"] == "install-uuid-123"
+        assert payload["telemetry_fingerprint"] == "fp-abc-123"
 
 
 class TestInstallIdInPayloads:
