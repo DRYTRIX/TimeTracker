@@ -30,9 +30,9 @@
     <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='images/android-chrome-192x192.png') }}">
     <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='images/android-chrome-512x512.png') }}">
     <!--
-    PostHog Session Replay Privacy Protection:
+    Telemetry Privacy Protection:
     Add the CSS class 'ph-no-capture' to any element containing sensitive data
-    to prevent it from being recorded in session replays.
+    to prevent capture in opt-in telemetry instrumentation.
     
     Examples:
     - Project names: <span class="ph-no-capture">Project ABC</span>
@@ -40,8 +40,7 @@
     - Time entry notes: <textarea class="ph-no-capture" name="notes"></textarea>
     - User emails: <span class="ph-no-capture">user@example.com</span>
     
-    PostHog will mask these elements automatically in recordings.
-    For more details, see: POSTHOG_SESSION_REPLAY_PRIVACY.md
+    Telemetry instrumentation should avoid these elements by design.
     -->
     <link rel="manifest" href="{{ url_for('main.manifest') }}">
     <meta name="vapid-public-key" content="{{ config.get('VAPID_PUBLIC_KEY', '') }}">

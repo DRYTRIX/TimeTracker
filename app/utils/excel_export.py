@@ -384,14 +384,7 @@ def create_invoice_excel(invoice, items):
     wb.save(output)
     output.seek(0)
 
-    # Get invoice prefix from settings, default to "INV"
-    from app.models import Settings
-
-    settings = Settings.get_settings()
-    prefix = getattr(settings, "invoice_prefix", "INV") if settings else "INV"
-    if not prefix:
-        prefix = "INV"
-    filename = f"{prefix}_{invoice.invoice_number}.xlsx"
+    filename = f"{invoice.invoice_number}.xlsx"
     return output, filename
 
 

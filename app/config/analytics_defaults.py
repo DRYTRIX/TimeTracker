@@ -14,10 +14,11 @@ Key Privacy Protections:
 DO NOT commit actual keys to this file - they are injected at build time only.
 """
 
-# PostHog Configuration
-# Replaced by GitHub Actions: POSTHOG_API_KEY_PLACEHOLDER
-POSTHOG_API_KEY_DEFAULT = "%%POSTHOG_API_KEY_PLACEHOLDER%%"
-POSTHOG_HOST_DEFAULT = "https://us.i.posthog.com"
+# OTEL OTLP Configuration
+# Replaced by GitHub Actions: OTEL_EXPORTER_OTLP_ENDPOINT_PLACEHOLDER
+# Replaced by GitHub Actions: OTEL_EXPORTER_OTLP_TOKEN_PLACEHOLDER
+OTEL_EXPORTER_OTLP_ENDPOINT_DEFAULT = "%%OTEL_EXPORTER_OTLP_ENDPOINT_PLACEHOLDER%%"
+OTEL_EXPORTER_OTLP_TOKEN_DEFAULT = "%%OTEL_EXPORTER_OTLP_TOKEN_PLACEHOLDER%%"
 
 # Sentry Configuration
 # Replaced by GitHub Actions: SENTRY_DSN_PLACEHOLDER
@@ -128,8 +129,13 @@ def get_analytics_config():
     def is_placeholder(value):
         return value.startswith("%%") and value.endswith("%%")
 
-    # PostHog configuration - use embedded keys (no override)
-    posthog_api_key = POSTHOG_API_KEY_DEFAULT if not is_placeholder(POSTHOG_API_KEY_DEFAULT) else ""
+    # OTEL OTLP configuration - use embedded values (no override)
+    otel_exporter_otlp_endpoint = (
+        OTEL_EXPORTER_OTLP_ENDPOINT_DEFAULT if not is_placeholder(OTEL_EXPORTER_OTLP_ENDPOINT_DEFAULT) else ""
+    )
+    otel_exporter_otlp_token = (
+        OTEL_EXPORTER_OTLP_TOKEN_DEFAULT if not is_placeholder(OTEL_EXPORTER_OTLP_TOKEN_DEFAULT) else ""
+    )
 
     # Sentry configuration - use embedded keys (no override)
     sentry_dsn = SENTRY_DSN_DEFAULT if not is_placeholder(SENTRY_DSN_DEFAULT) else ""
@@ -141,8 +147,8 @@ def get_analytics_config():
     # Users control telemetry via the opt-in/opt-out toggle in admin dashboard
 
     return {
-        "posthog_api_key": posthog_api_key,
-        "posthog_host": POSTHOG_HOST_DEFAULT,  # Fixed host, no override
+        "otel_exporter_otlp_endpoint": otel_exporter_otlp_endpoint,
+        "otel_exporter_otlp_token": otel_exporter_otlp_token,
         "sentry_dsn": sentry_dsn,
         "sentry_traces_rate": float(SENTRY_TRACES_RATE_DEFAULT),  # Fixed rate, no override
         "app_version": app_version,
@@ -162,4 +168,6 @@ def has_analytics_configured():
         return value.startswith("%%") and value.endswith("%%")
 
     # Check if keys have been replaced during build
-    return not is_placeholder(POSTHOG_API_KEY_DEFAULT)
+    return (not is_placeholder(OTEL_EXPORTER_OTLP_ENDPOINT_DEFAULT)) and (
+        not is_placeholder(OTEL_EXPORTER_OTLP_TOKEN_DEFAULT)
+    )

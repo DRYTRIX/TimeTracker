@@ -53,7 +53,8 @@ def fix_database_schema(engine):
                 'company_website': 'VARCHAR(200) DEFAULT \'www.yourcompany.com\' NOT NULL',
                 'company_tax_id': 'VARCHAR(100) DEFAULT \'\' NOT NULL',
                 'company_bank_info': 'TEXT DEFAULT \'\' NOT NULL',
-                'invoice_prefix': 'VARCHAR(10) DEFAULT \'INV\' NOT NULL',
+                'invoice_prefix': 'VARCHAR(50) DEFAULT \'INV\' NOT NULL',
+                'invoice_number_pattern': 'VARCHAR(120) DEFAULT \'{PREFIX}-{YYYY}{MM}{DD}-{SEQ}\' NOT NULL',
                 'invoice_start_number': 'INTEGER DEFAULT 1000 NOT NULL',
                 'invoice_terms': 'TEXT DEFAULT \'Payment is due within 30 days of invoice date.\' NOT NULL',
                 'invoice_notes': 'TEXT DEFAULT \'Thank you for your business!\' NOT NULL'
@@ -81,6 +82,7 @@ def fix_database_schema(engine):
                 company_tax_id = COALESCE(company_tax_id, ''),
                 company_bank_info = COALESCE(company_bank_info, ''),
                 invoice_prefix = COALESCE(invoice_prefix, 'INV'),
+                invoice_number_pattern = COALESCE(invoice_number_pattern, '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}'),
                 invoice_start_number = COALESCE(invoice_start_number, 1000),
                 invoice_terms = COALESCE(invoice_terms, 'Payment is due within 30 days of invoice date.'),
                 invoice_notes = COALESCE(invoice_notes, 'Thank you for your business!')

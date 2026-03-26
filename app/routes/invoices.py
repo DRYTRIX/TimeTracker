@@ -599,6 +599,7 @@ def update_invoice_status(invoice_id):
     if not current_user.is_admin and invoice.created_by != current_user.id:
         return jsonify({"error": "Permission denied"}), 403
 
+    previous_status = invoice.status
     new_status = request.form.get("new_status")
     if new_status not in ["draft", "sent", "paid", "cancelled"]:
         return jsonify({"error": "Invalid status"}), 400
@@ -631,7 +632,11 @@ def update_invoice_status(invoice_id):
     reduce_on_sent = os.getenv("INVENTORY_REDUCE_ON_INVOICE_SENT", "true").lower() == "true"
     reduce_on_paid = os.getenv("INVENTORY_REDUCE_ON_INVOICE_PAID", "false").lower() == "true"
 
-    if (new_status == "sent" and reduce_on_sent) or (new_status == "paid" and reduce_on_paid):
+    should_reduce_stock = (
+        (new_status == "sent" and reduce_on_sent and previous_status != "sent")
+        or (new_status == "paid" and reduce_on_paid and previous_status != "paid")
+    )
+    if should_reduce_stock:
         for item in invoice.items:
             if item.is_stock_item and item.stock_item_id and item.warehouse_id:
                 try:
@@ -1032,12 +1037,7 @@ def export_invoice_csv(invoice_id):
 
     output.seek(0)
 
-    # Get invoice prefix from settings, default to "INV"
-    settings = Settings.get_settings()
-    prefix = getattr(settings, "invoice_prefix", "INV") if settings else "INV"
-    if not prefix:
-        prefix = "INV"
-    filename = f"{prefix}_{invoice.invoice_number}.csv"
+    filename = f"{invoice.invoice_number}.csv"
 
     return send_file(
         io.BytesIO(output.getvalue().encode("utf-8")), mimetype="text/csv", as_attachment=True, download_name=filename
@@ -1060,7 +1060,7 @@ def export_invoice_ubl(invoice_id):
         sender = svc._get_sender_party()
         recipient_party, _ign, _ign = svc._get_recipient_party(invoice)
         ubl_xml, _ign = build_peppol_ubl_invoice_xml(invoice=invoice, supplier=sender, customer=recipient_party)
-        fn = f"invoice_{invoice.invoice_number}.xml"
+        fn = f"{invoice.invoice_number}.xml"
         return Response(
             ubl_xml, mimetype="application/xml", headers={"Content-Disposition": f"attachment; filename={fn}"}
         )

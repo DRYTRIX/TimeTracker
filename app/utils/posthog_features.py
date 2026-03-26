@@ -12,13 +12,12 @@ import os
 from functools import wraps
 from typing import Any, Dict, Optional
 
-import posthog
 from flask import request
 
 
 def is_posthog_enabled() -> bool:
-    """Check if PostHog is enabled and configured"""
-    return bool(os.getenv("POSTHOG_API_KEY", ""))
+    """Legacy feature-flag hook; disabled after Grafana cutover."""
+    return False
 
 
 def get_feature_flag(user_id: Any, flag_key: str, default: bool = False) -> bool:
@@ -36,10 +35,7 @@ def get_feature_flag(user_id: Any, flag_key: str, default: bool = False) -> bool
     if not is_posthog_enabled():
         return default
 
-    try:
-        return posthog.feature_enabled(flag_key, str(user_id)) or default
-    except Exception:
-        return default
+    return default
 
 
 def get_feature_flag_payload(user_id: Any, flag_key: str) -> Optional[Dict[str, Any]]:
@@ -62,10 +58,7 @@ def get_feature_flag_payload(user_id: Any, flag_key: str) -> Optional[Dict[str, 
     if not is_posthog_enabled():
         return None
 
-    try:
-        return posthog.get_feature_flag_payload(flag_key, str(user_id))
-    except Exception:
-        return None
+    return None
 
 
 def get_all_feature_flags(user_id: Any) -> Dict[str, Any]:
@@ -83,10 +76,7 @@ def get_all_feature_flags(user_id: Any) -> Dict[str, Any]:
     if not is_posthog_enabled():
         return {}
 
-    try:
-        return posthog.get_all_flags(str(user_id)) or {}
-    except Exception:
-        return {}
+    return {}
 
 
 def feature_flag_required(flag_key: str, redirect_to: Optional[str] = None):

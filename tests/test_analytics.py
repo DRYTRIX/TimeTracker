@@ -1,5 +1,5 @@
 """
-Tests for analytics functionality (logging, Prometheus, PostHog)
+Tests for analytics functionality (logging, Prometheus, OTLP telemetry)
 """
 
 import pytest
@@ -60,47 +60,46 @@ class TestLogEvent:
 
 
 class TestTrackEvent:
-    """Tests for PostHog event tracking"""
+    """Tests for event tracking"""
 
-    @patch("app.posthog.capture")
-    def test_track_event_when_enabled(self, mock_capture, app):
-        """Test that PostHog events are tracked when API key is set"""
-        with patch.dict(os.environ, {"POSTHOG_API_KEY": "test-key"}):
+    @patch("app.telemetry.service.is_detailed_analytics_enabled", return_value=True)
+    @patch("app.telemetry.service._send_otlp_event")
+    def test_track_event_when_enabled(self, mock_send, _mock_enabled, app):
+        """Test that events are sent when OTLP is configured"""
+        with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": "https://otlp.example.com", "OTEL_EXPORTER_OTLP_TOKEN": "x"}):
             track_event(123, "test.event", {"property": "value"})
-            # Verify the event was tracked
-            assert mock_capture.called
-            call_args = mock_capture.call_args
-            assert call_args[1]["distinct_id"] == "123"
-            assert call_args[1]["event"] == "test.event"
-            # Verify our property is included (along with context properties)
+            assert mock_send.called
+            call_args = mock_send.call_args
+            assert call_args[1]["identity"] == "123"
+            assert call_args[1]["event_name"] == "test.event"
             assert call_args[1]["properties"]["property"] == "value"
 
-    @patch("app.posthog.capture")
-    def test_track_event_when_disabled(self, mock_capture, app):
-        """Test that PostHog events are not tracked when API key is not set"""
-        with patch.dict(os.environ, {"POSTHOG_API_KEY": ""}):
+    @patch("app.telemetry.service.is_detailed_analytics_enabled", return_value=False)
+    @patch("app.telemetry.service._send_otlp_event")
+    def test_track_event_when_disabled(self, mock_send, _mock_enabled, app):
+        """Test that events are not sent when sink is not configured"""
+        with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": "", "OTEL_EXPORTER_OTLP_TOKEN": ""}):
             track_event(123, "test.event", {"property": "value"})
-            mock_capture.assert_not_called()
+            mock_send.assert_not_called()
 
-    @patch("app.posthog.capture")
-    def test_track_event_handles_errors_gracefully(self, mock_capture, app):
+    @patch("app.telemetry.service.is_detailed_analytics_enabled", return_value=True)
+    @patch("app.telemetry.service._send_otlp_event")
+    def test_track_event_handles_errors_gracefully(self, mock_send, _mock_enabled, app):
         """Test that tracking errors don't crash the application"""
-        mock_capture.side_effect = Exception("PostHog error")
-        with patch.dict(os.environ, {"POSTHOG_API_KEY": "test-key"}):
+        mock_send.side_effect = Exception("Telemetry error")
+        with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": "https://otlp.example.com", "OTEL_EXPORTER_OTLP_TOKEN": "x"}):
             # Should not raise an exception
             track_event(123, "test.event", {})
 
     def test_track_event_with_none_properties(self, app):
         """Test that track_event handles None properties"""
-        with patch.dict(os.environ, {"POSTHOG_API_KEY": "test-key"}):
-            with patch("app.posthog.capture") as mock_capture:
-                track_event(123, "test.event", None)
-                # Should have context properties even when None is passed
-                call_args = mock_capture.call_args
-                # Properties should be a dict (not None) with at least context properties
-                assert isinstance(call_args[1]["properties"], dict)
-                # Context properties should be present
-                assert "environment" in call_args[1]["properties"]
+        with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": "https://otlp.example.com", "OTEL_EXPORTER_OTLP_TOKEN": "x"}):
+            with patch("app.telemetry.service.is_detailed_analytics_enabled", return_value=True):
+                with patch("app.telemetry.service._send_otlp_event") as mock_send:
+                    track_event(123, "test.event", None)
+                    call_args = mock_send.call_args
+                    assert isinstance(call_args[1]["properties"], dict)
+                    assert "environment" in call_args[1]["properties"]
 
 
 class TestPrometheusMetrics:
@@ -241,16 +240,16 @@ class TestAnalyticsPrivacy:
                 # - IP addresses (unless explicitly needed)
                 # - passwords or tokens
 
-    @patch("app.posthog.capture")
-    def test_posthog_uses_internal_ids(self, mock_capture, app):
-        """Test that PostHog events use internal IDs, not PII"""
-        with patch.dict(os.environ, {"POSTHOG_API_KEY": "test-key"}):
+    @patch("app.telemetry.service.is_detailed_analytics_enabled", return_value=True)
+    @patch("app.telemetry.service._send_otlp_event")
+    def test_telemetry_uses_internal_ids(self, mock_send, _mock_enabled, app):
+        """Test that telemetry events use internal IDs, not PII"""
+        with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": "https://otlp.example.com", "OTEL_EXPORTER_OTLP_TOKEN": "x"}):
             # Should use numeric ID, not email
             track_event(123, "test.event", {"project_id": 456})
 
-            call_args = mock_capture.call_args
-            # distinct_id should be the internal user ID (converted to string)
-            assert call_args[1]["distinct_id"] == "123"
+            call_args = mock_send.call_args
+            assert call_args[1]["identity"] == "123"
 
 
 class TestAnalyticsPerformance:
@@ -268,10 +267,10 @@ class TestAnalyticsPerformance:
         assert duration < 1.0  # Should complete in less than 1 second
         assert response.status_code == 200
 
-    @patch("app.posthog.capture")
-    def test_analytics_errors_dont_break_app(self, mock_capture, app, client):
+    @patch("app.telemetry.service._send_otlp_event")
+    def test_analytics_errors_dont_break_app(self, mock_send, app, client):
         """Test that analytics failures don't break the application"""
-        mock_capture.side_effect = Exception("Analytics service down")
+        mock_send.side_effect = Exception("Analytics service down")
 
         # Application should still work
         response = client.get("/metrics")

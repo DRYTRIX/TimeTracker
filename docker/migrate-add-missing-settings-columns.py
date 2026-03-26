@@ -47,7 +47,8 @@ def add_missing_columns(engine):
     ALTER TABLE settings ADD COLUMN IF NOT EXISTS company_bank_info TEXT DEFAULT '' NOT NULL;
     
     -- Add invoice default columns
-    ALTER TABLE settings ADD COLUMN IF NOT EXISTS invoice_prefix VARCHAR(10) DEFAULT 'INV' NOT NULL;
+    ALTER TABLE settings ADD COLUMN IF NOT EXISTS invoice_prefix VARCHAR(50) DEFAULT 'INV' NOT NULL;
+    ALTER TABLE settings ADD COLUMN IF NOT EXISTS invoice_number_pattern VARCHAR(120) DEFAULT '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}' NOT NULL;
     ALTER TABLE settings ADD COLUMN IF NOT EXISTS invoice_start_number INTEGER DEFAULT 1000 NOT NULL;
     ALTER TABLE settings ADD COLUMN IF NOT EXISTS invoice_terms TEXT DEFAULT 'Payment is due within 30 days of invoice date.' NOT NULL;
     ALTER TABLE settings ADD COLUMN IF NOT EXISTS invoice_notes TEXT DEFAULT 'Thank you for your business!' NOT NULL;
@@ -79,7 +80,7 @@ def verify_columns(engine):
             'allow_self_register', 'idle_timeout_minutes', 'backup_retention_days',
             'backup_time', 'export_delimiter', 'company_name', 'company_address',
             'company_email', 'company_phone', 'company_website', 'company_logo_filename',
-            'company_tax_id', 'company_bank_info', 'invoice_prefix', 'invoice_start_number',
+            'company_tax_id', 'company_bank_info', 'invoice_prefix', 'invoice_number_pattern', 'invoice_start_number',
             'invoice_terms', 'invoice_notes', 'created_at', 'updated_at'
         ]
         
@@ -111,6 +112,7 @@ def update_existing_settings(engine):
         company_tax_id = COALESCE(company_tax_id, ''),
         company_bank_info = COALESCE(company_bank_info, ''),
         invoice_prefix = COALESCE(invoice_prefix, 'INV'),
+        invoice_number_pattern = COALESCE(invoice_number_pattern, '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}'),
         invoice_start_number = COALESCE(invoice_start_number, 1000),
         invoice_terms = COALESCE(invoice_terms, 'Payment is due within 30 days of invoice date.'),
         invoice_notes = COALESCE(invoice_notes, 'Thank you for your business!')

@@ -4,6 +4,7 @@ import pytest
 
 pytestmark = [pytest.mark.integration]
 
+from datetime import datetime, timedelta
 from decimal import Decimal
 from flask import url_for
 from app import db
@@ -263,6 +264,63 @@ class TestInvoiceInventoryIntegration:
         # Stock should be reduced if INVENTORY_REDUCE_ON_INVOICE_SENT is true
         # This test verifies the integration point exists
         assert invoice.status == "sent" or response.status_code in [200, 302]
+
+    def test_invoice_sent_twice_does_not_double_reduce_stock(
+        self, client, test_user, test_client, test_stock_item, test_warehouse, test_stock_with_quantity
+    ):
+        """Sending an already-sent invoice should not create extra sale movement."""
+        import os
+
+        os.environ["INVENTORY_REDUCE_ON_INVOICE_SENT"] = "true"
+
+        project = Project(name="Idempotency Project", client_id=test_client.id, billable=True)
+        db.session.add(project)
+        db.session.commit()
+
+        invoice = Invoice(
+            invoice_number="INV-TEST-IDEMPOTENT",
+            project_id=project.id,
+            client_name=test_client.name,
+            client_id=test_client.id,
+            due_date=datetime.utcnow().date() + timedelta(days=30),
+            created_by=test_user.id,
+            status="draft",
+        )
+        db.session.add(invoice)
+        db.session.flush()
+        db.session.add(
+            InvoiceItem(
+                invoice_id=invoice.id,
+                description="Test Product",
+                quantity=Decimal("2.00"),
+                unit_price=Decimal("25.00"),
+                stock_item_id=test_stock_item.id,
+                warehouse_id=test_warehouse.id,
+            )
+        )
+        db.session.commit()
+
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(test_user.id)
+
+        response_first = client.post(
+            url_for("invoices.update_invoice_status", invoice_id=invoice.id),
+            data={"new_status": "sent"},
+            follow_redirects=False,
+        )
+        assert response_first.status_code == 200
+
+        first_count = StockMovement.query.filter_by(reference_type="invoice", reference_id=invoice.id).count()
+
+        response_second = client.post(
+            url_for("invoices.update_invoice_status", invoice_id=invoice.id),
+            data={"new_status": "sent"},
+            follow_redirects=False,
+        )
+        assert response_second.status_code == 200
+
+        second_count = StockMovement.query.filter_by(reference_type="invoice", reference_id=invoice.id).count()
+        assert second_count == first_count
 
 
 class TestStockReservationLifecycle:

@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
+from uuid import uuid4
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_babel import gettext as _
@@ -29,6 +30,17 @@ from app.utils.module_helpers import module_enabled
 from app.utils.permissions import admin_or_permission_required
 
 inventory_bp = Blueprint("inventory", __name__)
+
+
+def _provisional_po_number():
+    """Generate a temporary unique PO number before we have a DB id."""
+    return f"PO-TMP-{uuid4().hex[:12].upper()}"
+
+
+def _finalize_po_number(purchase_order):
+    """Assign deterministic PO number based on persisted id."""
+    order_date = purchase_order.order_date or datetime.utcnow().date()
+    purchase_order.po_number = f"PO-{order_date.strftime('%Y%m%d')}-{purchase_order.id:04d}"
 
 
 # ==================== Stock Items API (for selection in forms) ====================
@@ -1800,15 +1812,26 @@ def new_purchase_order():
     """Create a new purchase order"""
     if request.method == "POST":
         try:
-            # Generate PO number
-            last_po = PurchaseOrder.query.order_by(PurchaseOrder.id.desc()).first()
-            next_id = (last_po.id + 1) if last_po else 1
-            po_number = f"PO-{datetime.now().strftime('%Y%m%d')}-{next_id:04d}"
+            supplier_id_raw = request.form.get("supplier_id")
+            if not supplier_id_raw:
+                flash(_("Supplier is required."), "error")
+                return redirect(url_for("inventory.new_purchase_order"))
+            supplier_id = int(supplier_id_raw)
+            supplier = Supplier.query.get(supplier_id)
+            if not supplier:
+                flash(_("Supplier not found."), "error")
+                return redirect(url_for("inventory.new_purchase_order"))
+
+            order_date_raw = request.form.get("order_date")
+            if not order_date_raw:
+                flash(_("Order date is required."), "error")
+                return redirect(url_for("inventory.new_purchase_order"))
+            order_date = datetime.strptime(order_date_raw, "%Y-%m-%d").date()
 
             purchase_order = PurchaseOrder(
-                po_number=po_number,
-                supplier_id=int(request.form.get("supplier_id")),
-                order_date=datetime.strptime(request.form.get("order_date"), "%Y-%m-%d").date(),
+                po_number=_provisional_po_number(),
+                supplier_id=supplier.id,
+                order_date=order_date,
                 created_by=current_user.id,
                 expected_delivery_date=(
                     datetime.strptime(request.form.get("expected_delivery_date"), "%Y-%m-%d").date()
@@ -1822,6 +1845,7 @@ def new_purchase_order():
 
             db.session.add(purchase_order)
             db.session.flush()
+            _finalize_po_number(purchase_order)
 
             # Handle items
             item_descriptions = request.form.getlist("item_description[]")
@@ -1835,6 +1859,17 @@ def new_purchase_order():
             for i, desc in enumerate(item_descriptions):
                 if desc.strip():
                     try:
+                        quantity = (
+                            Decimal(item_quantities[i]) if i < len(item_quantities) and item_quantities[i] else Decimal("1")
+                        )
+                        unit_cost = (
+                            Decimal(item_unit_costs[i]) if i < len(item_unit_costs) and item_unit_costs[i] else Decimal("0")
+                        )
+                        if quantity <= 0:
+                            raise ValueError("quantity must be greater than zero")
+                        if unit_cost < 0:
+                            raise ValueError("unit_cost must be zero or greater")
+
                         stock_item_id = (
                             int(item_stock_ids[i]) if i < len(item_stock_ids) and item_stock_ids[i] else None
                         )
@@ -1852,16 +1887,8 @@ def new_purchase_order():
                         item = PurchaseOrderItem(
                             purchase_order_id=purchase_order.id,
                             description=desc.strip(),
-                            quantity_ordered=(
-                                Decimal(item_quantities[i])
-                                if i < len(item_quantities) and item_quantities[i]
-                                else Decimal("1")
-                            ),
-                            unit_cost=(
-                                Decimal(item_unit_costs[i])
-                                if i < len(item_unit_costs) and item_unit_costs[i]
-                                else Decimal("0")
-                            ),
+                            quantity_ordered=quantity,
+                            unit_cost=unit_cost,
                             stock_item_id=stock_item_id,
                             supplier_stock_item_id=supplier_stock_item_id,
                             supplier_sku=(
@@ -1877,7 +1904,9 @@ def new_purchase_order():
                         current_app.logger.warning(f"Invalid quantity or cost for purchase order item: {e}")
 
             purchase_order.calculate_totals()
-            safe_commit()
+            if not safe_commit("create_purchase_order", {"supplier_id": supplier.id, "po_number": purchase_order.po_number}):
+                flash(_("Could not create purchase order due to a database error."), "error")
+                return redirect(url_for("inventory.new_purchase_order"))
 
             log_event(
                 "purchase_order_created",
@@ -2001,7 +2030,9 @@ def edit_purchase_order(po_id):
                         current_app.logger.warning(f"Invalid quantity or cost for purchase order item: {e}")
 
             purchase_order.calculate_totals()
-            safe_commit()
+            if not safe_commit("edit_purchase_order", {"purchase_order_id": po_id}):
+                flash(_("Could not update purchase order due to a database error."), "error")
+                return redirect(url_for("inventory.edit_purchase_order", po_id=po_id))
 
             log_event("purchase_order_updated", purchase_order_id=po_id)
             flash(_("Purchase order updated successfully."), "success")
@@ -2040,7 +2071,9 @@ def send_purchase_order(po_id):
     if request.method == "POST":
         try:
             purchase_order.mark_as_sent()
-            safe_commit()
+            if not safe_commit("send_purchase_order", {"purchase_order_id": po_id}):
+                flash(_("Could not update purchase order status due to a database error."), "error")
+                return redirect(url_for("inventory.view_purchase_order", po_id=po_id))
 
             log_event("purchase_order_sent", purchase_order_id=po_id)
             flash(_("Purchase order marked as sent."), "success")
@@ -2062,7 +2095,9 @@ def cancel_purchase_order(po_id):
     if request.method == "POST":
         try:
             purchase_order.cancel()
-            safe_commit()
+            if not safe_commit("cancel_purchase_order", {"purchase_order_id": po_id}):
+                flash(_("Could not cancel purchase order due to a database error."), "error")
+                return redirect(url_for("inventory.view_purchase_order", po_id=po_id))
 
             log_event("purchase_order_cancelled", purchase_order_id=po_id)
             flash(_("Purchase order cancelled successfully."), "success")
@@ -2088,7 +2123,9 @@ def delete_purchase_order(po_id):
 
             po_number = purchase_order.po_number
             db.session.delete(purchase_order)
-            safe_commit()
+            if not safe_commit("delete_purchase_order", {"purchase_order_id": po_id, "po_number": po_number}):
+                flash(_("Could not delete purchase order due to a database error."), "error")
+                return redirect(url_for("inventory.view_purchase_order", po_id=po_id))
 
             log_event("purchase_order_deleted", po_number=po_number)
             flash(_("Purchase order deleted successfully."), "success")
@@ -2130,7 +2167,9 @@ def receive_purchase_order(po_id):
             )
             purchase_order.mark_as_received(received_date)
 
-            safe_commit()
+            if not safe_commit("receive_purchase_order", {"purchase_order_id": po_id}):
+                flash(_("Could not receive purchase order due to a database error."), "error")
+                return redirect(url_for("inventory.view_purchase_order", po_id=po_id))
 
             log_event("purchase_order_received", purchase_order_id=po_id)
             flash(_("Purchase order marked as received and stock updated."), "success")

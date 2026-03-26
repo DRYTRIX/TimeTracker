@@ -7,7 +7,7 @@ This document describes how TimeTracker collects, uses, and protects data throug
 TimeTracker is designed with privacy as a core principle. All analytics features are either:
 1. **Local-only** (structured logging)
 2. **Self-hosted** (Prometheus metrics)
-3. **Optional and opt-in** (PostHog, Sentry, Telemetry)
+3. **Optional and opt-in** (Grafana OTLP detailed analytics, Sentry)
 
 ## Data Collection
 
@@ -74,7 +74,7 @@ When enabled, sends error reports to Sentry.
 **Retention:** Based on your Sentry plan (typically 90 days)  
 **Access:** Team members with Sentry access
 
-#### 4. Base Telemetry (Minimal) - Always On When PostHog Configured
+#### 4. Base Telemetry (Minimal) - Anonymous Installation Telemetry
 **Purpose:** Install footprint and distribution (version, platform, active installs).
 
 **Data collected (no PII):**
@@ -83,13 +83,13 @@ When enabled, sends error reports to Sentry.
 
 **Not collected:** Raw IP (stored), email, usernames, feature usage, paths, business data
 
-**Storage:** PostHog (or custom sink if configured)  
-**Retention:** Recommend 12 months; configure in PostHog  
+**Storage:** Grafana OTLP sink (if configured)  
+**Retention:** Recommend 12 months  
 **Access:** Product/ops for install analytics
 
-#### 5. Detailed Analytics (PostHog) - Optional & Opt-In
+#### 5. Detailed Analytics (Grafana OTLP) - Optional & Opt-In
 **Default:** Disabled (user must opt in via Admin → Privacy & Analytics)  
-**Requires:** `POSTHOG_API_KEY` set and user enabling "detailed analytics"
+**Requires:** OTLP endpoint/token configured and user enabling "detailed analytics"
 
 When opted in, tracks product usage and feature adoption.
 
@@ -99,9 +99,9 @@ When opted in, tracks product usage and feature adoption.
 
 **Not collected:** Email, usernames, time entry content, client/project names, stored IP
 
-**Storage:** PostHog servers (or self-hosted PostHog)  
-**Retention:** Per PostHog plan (e.g. 24 months)  
-**Access:** Team members with PostHog access
+**Storage:** Grafana Cloud OTLP backend (or self-hosted OTLP receiver)  
+**Retention:** Per your Grafana retention policy  
+**Access:** Team members with Grafana access
 
 **Consent:** You can turn detailed analytics off anytime in Admin → Settings or Admin → Telemetry. Base telemetry (minimal) continues; no product events are sent when opted out.
 
@@ -136,14 +136,13 @@ When you enable optional services, data is sent to:
 | Service | Data Sent | Purpose | Control |
 |---------|-----------|---------|---------|
 | Sentry | Errors, request context | Error monitoring | Set `SENTRY_DSN` |
-| PostHog | Product events, user IDs | Product analytics | Set `POSTHOG_API_KEY` |
-| Telemetry Server | Anonymized fingerprint, version | Version tracking | Set `ENABLE_TELEMETRY=true` |
+| Grafana OTLP | Base telemetry + product events | Product analytics | Set `GRAFANA_OTLP_ENDPOINT` and `GRAFANA_OTLP_TOKEN` |
 
 ### Self-Hosting
 
 You can self-host all optional services:
 - **Sentry**: https://develop.sentry.dev/self-hosted/
-- **PostHog**: https://posthog.com/docs/self-host
+- **Grafana/OTLP receiver**: Use Grafana Cloud or self-host an OTLP-compatible receiver
 - **Prometheus**: Already self-hosted by default
 
 ## Your Rights (GDPR Compliance)
@@ -154,7 +153,7 @@ TimeTracker is designed to be GDPR-compliant. You have the right to:
 - **Logs**: Access files in `logs/` directory
 - **Metrics**: Query your Prometheus instance
 - **Sentry**: Export data from Sentry UI
-- **PostHog**: Export data from PostHog UI
+- **Grafana telemetry**: Export/query from Grafana stack
 
 ### 2. Rectify Your Data
 Contact your TimeTracker administrator to correct inaccurate data.
@@ -174,15 +173,8 @@ Data automatically expires based on retention settings.
 #### Sentry
 Use Sentry's data deletion features or contact support.
 
-#### PostHog
-Use PostHog's GDPR deletion features:
-```python
-posthog.capture(
-    distinct_id='user_id',
-    event='$delete',
-    properties={}
-)
-```
+#### Grafana telemetry
+Use your Grafana data retention/deletion policy and tooling.
 
 #### Telemetry
 Set `ENABLE_TELEMETRY=false` to stop sending data. To delete existing telemetry data, contact the telemetry service operator with your fingerprint hash.
@@ -192,7 +184,7 @@ All data can be exported:
 - **Logs**: Copy files from `logs/` directory
 - **Metrics**: Query and export from Prometheus
 - **Sentry**: Use Sentry export features
-- **PostHog**: Use PostHog export features
+- **Grafana telemetry**: Use Grafana export/query features
 
 ### 5. Opt-Out
 To opt out of all optional analytics:
@@ -200,7 +192,8 @@ To opt out of all optional analytics:
 ```bash
 # .env file
 SENTRY_DSN=
-POSTHOG_API_KEY=
+GRAFANA_OTLP_ENDPOINT=
+GRAFANA_OTLP_TOKEN=
 ENABLE_TELEMETRY=false
 ```
 
@@ -210,20 +203,20 @@ ENABLE_TELEMETRY=false
 - Logs: Local filesystem only (no transit)
 - Metrics: Scraped via HTTP/HTTPS (configure TLS in Prometheus)
 - Sentry: HTTPS only
-- PostHog: HTTPS only
+- Grafana OTLP: HTTPS only
 - Telemetry: HTTPS only
 
 ### At Rest
 - **Logs**: Protected by filesystem permissions (use encryption at rest if required)
 - **Metrics**: Protected by Prometheus access controls
 - **Sentry**: Protected by Sentry (encrypted at rest)
-- **PostHog**: Protected by PostHog (encrypted at rest)
+- **Grafana telemetry**: Protected by your Grafana backend
 
 ### Access Controls
 - Logs: Require server filesystem access
 - Metrics: Require Prometheus/Grafana access
 - Sentry: Require Sentry account with appropriate permissions
-- PostHog: Require PostHog account with appropriate permissions
+- Grafana telemetry: Require Grafana account with appropriate permissions
 
 ## Data Minimization
 
@@ -239,7 +232,7 @@ TimeTracker follows data minimization principles:
 
 ### Explicit Consent Required
 - Installation telemetry (`ENABLE_TELEMETRY`)
-- Product analytics (`POSTHOG_API_KEY`)
+- Product analytics sink (`GRAFANA_OTLP_ENDPOINT` + `GRAFANA_OTLP_TOKEN`)
 - Error monitoring (`SENTRY_DSN`)
 
 ### Implicit Consent
@@ -259,8 +252,7 @@ TimeTracker is not intended for use by children under 16. We do not knowingly co
 
 If you enable optional services hosted outside your region:
 - **Sentry**: Data may be transferred to US/EU Sentry servers
-- **PostHog**: Data may be transferred to US/EU PostHog servers
-- **Telemetry**: Data location depends on your `TELE_URL` configuration
+- **Grafana telemetry**: Data location depends on your Grafana region/stack
 
 Use self-hosted instances to keep data in your region.
 
@@ -292,7 +284,7 @@ For privacy-related questions:
 ## Frequently Asked Questions
 
 ### Can I disable all analytics?
-You can disable optional analytics (Sentry, PostHog, Telemetry). Local logs and Prometheus metrics are essential for operation but stay on your infrastructure.
+You can disable optional analytics (Sentry and detailed telemetry). Local logs and Prometheus metrics are essential for operation but stay on your infrastructure.
 
 ### Where is my data stored?
 - **Logs**: Your server's filesystem
@@ -301,7 +293,7 @@ You can disable optional analytics (Sentry, PostHog, Telemetry). Local logs and 
 
 ### Can someone else see my data?
 Only if you:
-1. Enable optional cloud services (Sentry, PostHog)
+1. Enable optional cloud services (Sentry, Grafana OTLP)
 2. Grant them access to your infrastructure
 
 Self-hosted deployments are completely private.
@@ -317,7 +309,8 @@ rm -rf logs/*.jsonl*
 # Remove optional service configurations
 # Edit .env and remove:
 # - SENTRY_DSN
-# - POSTHOG_API_KEY
+# - GRAFANA_OTLP_ENDPOINT
+# - GRAFANA_OTLP_TOKEN
 # - ENABLE_TELEMETRY
 
 # Restart application

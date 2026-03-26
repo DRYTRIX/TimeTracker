@@ -74,7 +74,8 @@ def migrate_logo_system():
                             company_logo_filename VARCHAR(255) DEFAULT '',
                             company_tax_id VARCHAR(100) DEFAULT '',
                             company_bank_info TEXT DEFAULT '',
-                            invoice_prefix VARCHAR(10) NOT NULL DEFAULT 'INV',
+                            invoice_prefix VARCHAR(50) NOT NULL DEFAULT 'INV',
+                            invoice_number_pattern VARCHAR(120) NOT NULL DEFAULT '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}',
                             invoice_start_number INTEGER NOT NULL DEFAULT 1000,
                             invoice_terms TEXT NOT NULL DEFAULT 'Payment is due within 30 days of invoice date.',
                             invoice_notes TEXT NOT NULL DEFAULT 'Thank you for your business!',
@@ -105,14 +106,14 @@ def migrate_logo_system():
                                 allow_self_register, idle_timeout_minutes, backup_retention_days,
                                 backup_time, export_delimiter, company_name, company_address,
                                 company_email, company_phone, company_website, company_logo_filename,
-                                company_tax_id, company_bank_info, invoice_prefix, invoice_start_number,
+                                company_tax_id, company_bank_info, invoice_prefix, invoice_number_pattern, invoice_start_number,
                                 invoice_terms, invoice_notes, created_at, updated_at
                             ) VALUES (
                                 :id, :timezone, :currency, :rounding_minutes, :single_active_timer,
                                 :allow_self_register, :idle_timeout_minutes, :backup_retention_days,
                                 :backup_time, :export_delimiter, :company_name, :company_address,
                                 :company_email, :company_phone, :company_website, :company_logo_filename,
-                                :company_tax_id, :company_bank_info, :invoice_prefix, :invoice_start_number,
+                                :company_tax_id, :company_bank_info, :invoice_prefix, :invoice_number_pattern, :invoice_start_number,
                                 :invoice_terms, :invoice_notes, :created_at, :updated_at
                             )
                         """), {
@@ -135,6 +136,9 @@ def migrate_logo_system():
                             'company_tax_id': row_dict.get('company_tax_id', ''),
                             'company_bank_info': row_dict.get('company_bank_info', ''),
                             'invoice_prefix': row_dict.get('invoice_prefix', 'INV'),
+                            'invoice_number_pattern': row_dict.get(
+                                'invoice_number_pattern', '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}'
+                            ),
                             'invoice_start_number': row_dict.get('invoice_start_number', 1000),
                             'invoice_terms': row_dict.get('invoice_terms', 'Payment is due within 30 days of invoice date.'),
                             'invoice_notes': row_dict.get('invoice_notes', 'Thank you for your business!'),

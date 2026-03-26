@@ -370,7 +370,8 @@ jobs:
 
       - name: Inject analytics configuration from GitHub Secrets
         env:
-          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_EXPORTER_OTLP_TOKEN: ${{ secrets.OTEL_EXPORTER_OTLP_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -384,18 +385,17 @@ jobs:
           # Show file before injection
           echo "📄 File content BEFORE injection (showing placeholders):"
           echo "──────────────────────────────────────────────────────────────────"
-          grep -E "(POSTHOG_API_KEY_DEFAULT|SENTRY_DSN_DEFAULT)" app/config/analytics_defaults.py || true
+          grep -E "(OTEL_EXPORTER_OTLP_ENDPOINT_DEFAULT|OTEL_EXPORTER_OTLP_TOKEN_DEFAULT|SENTRY_DSN_DEFAULT)" app/config/analytics_defaults.py || true
           echo "──────────────────────────────────────────────────────────────────"
           echo ""
           
           # Verify secrets are available
           echo "🔍 Verifying GitHub Secrets availability..."
-          if [ -z "$POSTHOG_API_KEY" ]; then
-            echo "⚠️  POSTHOG_API_KEY secret not set (optional - analytics disabled in this build)"
-            echo "   → To enable: Add POSTHOG_API_KEY secret (format: phc_xxxxx) in Settings → Secrets"
+          if [ -z "$OTEL_EXPORTER_OTLP_ENDPOINT" ] || [ -z "$OTEL_EXPORTER_OTLP_TOKEN" ]; then
+            echo "⚠️  Grafana OTLP secrets not fully set (telemetry sink disabled in this build)"
+            echo "   → To enable: Add OTEL_EXPORTER_OTLP_ENDPOINT and OTEL_EXPORTER_OTLP_TOKEN in Settings → Secrets"
           else
-            echo "✅ POSTHOG_API_KEY secret found in GitHub Secret Store"
-            echo "   → Format: ${POSTHOG_API_KEY:0:8}***${POSTHOG_API_KEY: -4} (${#POSTHOG_API_KEY} characters)"
+            echo "✅ Grafana OTLP secrets found in GitHub Secret Store"
           fi
           
           if [ -z "$SENTRY_DSN" ]; then
@@ -409,7 +409,8 @@ jobs:
           
           # Perform replacement (use empty string if secrets not set)
           echo "🔧 Injecting secrets into application configuration..."
-          sed -i "s|%%POSTHOG_API_KEY_PLACEHOLDER%%|${POSTHOG_API_KEY:-}|g" app/config/analytics_defaults.py
+          sed -i "s|%%OTEL_EXPORTER_OTLP_ENDPOINT_PLACEHOLDER%%|${OTEL_EXPORTER_OTLP_ENDPOINT:-}|g" app/config/analytics_defaults.py
+          sed -i "s|%%OTEL_EXPORTER_OTLP_TOKEN_PLACEHOLDER%%|${OTEL_EXPORTER_OTLP_TOKEN:-}|g" app/config/analytics_defaults.py
           sed -i "s|%%SENTRY_DSN_PLACEHOLDER%%|${SENTRY_DSN:-}|g" app/config/analytics_defaults.py
           echo "   → Placeholders replaced with secret values (or empty if not set)"
           echo ""
@@ -417,7 +418,7 @@ jobs:
           # Show file after injection (redacted)
           echo "📄 File content AFTER injection (secrets redacted):"
           echo "──────────────────────────────────────────────────────────────────"
-          grep -E "(POSTHOG_API_KEY_DEFAULT|SENTRY_DSN_DEFAULT)" app/config/analytics_defaults.py | \
+          grep -E "(OTEL_EXPORTER_OTLP_ENDPOINT_DEFAULT|OTEL_EXPORTER_OTLP_TOKEN_DEFAULT|SENTRY_DSN_DEFAULT)" app/config/analytics_defaults.py | \
             sed 's/\(phc_[a-zA-Z0-9]\{8\}\)[a-zA-Z0-9]*\([a-zA-Z0-9]\{4\}\)/\1***\2/g' | \
             sed 's|\(https://[^@]*@[^/]*\)|***REDACTED***|g' || true
           echo "──────────────────────────────────────────────────────────────────"
@@ -425,12 +426,17 @@ jobs:
           
           # Verify placeholders were replaced
           echo "🔍 Verifying injection was successful..."
-          if grep -q "%%POSTHOG_API_KEY_PLACEHOLDER%%" app/config/analytics_defaults.py; then
-            echo "❌ ERROR: PostHog API key placeholder was NOT replaced!"
-            echo "   The placeholder '%%POSTHOG_API_KEY_PLACEHOLDER%%' is still present in the file."
+          if grep -q "%%OTEL_EXPORTER_OTLP_ENDPOINT_PLACEHOLDER%%" app/config/analytics_defaults.py; then
+            echo "❌ ERROR: Grafana endpoint placeholder was NOT replaced!"
             exit 1
           else
-            echo "✅ PostHog API key placeholder successfully replaced"
+            echo "✅ Grafana endpoint placeholder successfully replaced"
+          fi
+          if grep -q "%%OTEL_EXPORTER_OTLP_TOKEN_PLACEHOLDER%%" app/config/analytics_defaults.py; then
+            echo "❌ ERROR: Grafana token placeholder was NOT replaced!"
+            exit 1
+          else
+            echo "✅ Grafana token placeholder successfully replaced"
           fi
           
           if grep -q "%%SENTRY_DSN_PLACEHOLDER%%" app/config/analytics_defaults.py; then
@@ -441,19 +447,7 @@ jobs:
             echo "✅ Sentry DSN placeholder successfully replaced"
           fi
           
-          # Verify PostHog key format only when it was provided (non-empty)
-          if [ -n "$POSTHOG_API_KEY" ]; then
-            if ! grep -q 'POSTHOG_API_KEY_DEFAULT = "phc_' app/config/analytics_defaults.py; then
-              echo "❌ ERROR: PostHog API key format validation FAILED!"
-              echo "   Expected format: phc_* (PostHog Cloud key)"
-              echo "   Please verify the secret value in GitHub Settings."
-              exit 1
-            else
-              echo "✅ PostHog API key format validated (phc_* pattern confirmed)"
-            fi
-          else
-            echo "✅ PostHog API key skipped (not configured - analytics disabled)"
-          fi
+          echo "✅ Grafana OTLP values injected"
           echo ""
           
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -461,10 +455,10 @@ jobs:
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo ""
           echo "📊 Injected Credentials Summary:"
-          if [ -n "$POSTHOG_API_KEY" ]; then
-            echo "   • PostHog API Key: phc_***${POSTHOG_API_KEY: -4} ✓"
+          if [ -n "$OTEL_EXPORTER_OTLP_ENDPOINT" ] && [ -n "$OTEL_EXPORTER_OTLP_TOKEN" ]; then
+            echo "   • Grafana OTLP: configured ✓"
           else
-            echo "   • PostHog API Key: [Not configured - analytics disabled] ⚠️"
+            echo "   • Grafana OTLP: [Not configured - telemetry sink disabled] ⚠️"
           fi
           if [ -n "$SENTRY_DSN" ]; then
             echo "   • Sentry DSN: ${SENTRY_DSN:0:20}*** ✓"
@@ -597,10 +591,9 @@ jobs:
                 # See docs/analytics.md for configuration details
                 - SENTRY_DSN=\${SENTRY_DSN:-}
                 - SENTRY_TRACES_RATE=\${SENTRY_TRACES_RATE:-0.0}
-                - POSTHOG_API_KEY=\${POSTHOG_API_KEY:-}
-                - POSTHOG_HOST=\${POSTHOG_HOST:-https://app.posthog.com}
+                - OTEL_EXPORTER_OTLP_ENDPOINT=\${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+                - OTEL_EXPORTER_OTLP_TOKEN=\${OTEL_EXPORTER_OTLP_TOKEN:-}
                 - ENABLE_TELEMETRY=\${ENABLE_TELEMETRY:-false}
-                - TELE_URL=\${TELE_URL:-}
                 - TELE_SALT=\${TELE_SALT:-8f4a7b2e9c1d6f3a5e8b4c7d2a9f6e3b1c8d5a7f2e9b4c6d3a8f5e1b7c4d9a2f}
           
               # Expose only internally; nginx publishes ports
@@ -1337,7 +1330,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔐 Analytics Configuration" >> $GITHUB_STEP_SUMMARY
           echo "Analytics credentials were **successfully injected** from GitHub Secret Store:" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ **PostHog API Key**: Injected from \`POSTHOG_API_KEY\` secret" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **OTLP**: Injected from \`OTEL_EXPORTER_OTLP_ENDPOINT\` + \`OTEL_EXPORTER_OTLP_TOKEN\` secrets" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ **Sentry DSN**: Injected from \`SENTRY_DSN\` secret" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "> 📍 **Secret Location**: Repository Settings → Secrets and variables → Actions" >> $GITHUB_STEP_SUMMARY

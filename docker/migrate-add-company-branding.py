@@ -95,7 +95,8 @@ def add_company_branding_fields(engine, existing_columns):
 def add_invoice_default_fields(engine, existing_columns):
     """Add invoice default fields to settings table"""
     fields_to_add = [
-        ('invoice_prefix', 'VARCHAR(10) DEFAULT \'INV\' NOT NULL'),
+        ('invoice_prefix', 'VARCHAR(50) DEFAULT \'INV\' NOT NULL'),
+        ('invoice_number_pattern', 'VARCHAR(120) DEFAULT \'{PREFIX}-{YYYY}{MM}{DD}-{SEQ}\' NOT NULL'),
         ('invoice_start_number', 'INTEGER DEFAULT 1000 NOT NULL'),
         ('invoice_terms', 'TEXT DEFAULT \'Payment is due within 30 days of invoice date.\' NOT NULL'),
         ('invoice_notes', 'TEXT DEFAULT \'Thank you for your business!\' NOT NULL')

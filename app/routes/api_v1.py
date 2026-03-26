@@ -1,10 +1,12 @@
 """REST API v1 - Comprehensive API endpoints with token authentication"""
 
 from datetime import date, datetime, timedelta
-from decimal import InvalidOperation
+from decimal import Decimal, InvalidOperation
+from uuid import uuid4
 
 from flask import Blueprint, Response, current_app, g, jsonify, request
 from sqlalchemy import func, or_
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app import db, limiter
 from app.models import (
@@ -4120,9 +4122,6 @@ def get_purchase_order_api(po_id):
 @require_api_token(("write:inventory", "write:projects"))
 def create_purchase_order_api():
     """Create a purchase order"""
-    from datetime import datetime
-    from decimal import Decimal
-
     from app.models import PurchaseOrder, PurchaseOrderItem, Supplier
 
     data = request.get_json() or {}
@@ -4131,12 +4130,38 @@ def create_purchase_order_api():
     if not supplier_id:
         return jsonify({"error": "supplier_id is required"}), 400
 
-    try:
-        # Generate PO number
-        last_po = PurchaseOrder.query.order_by(PurchaseOrder.id.desc()).first()
-        next_id = (last_po.id + 1) if last_po else 1
-        po_number = f"PO-{datetime.now().strftime('%Y%m%d')}-{next_id:04d}"
+    supplier = Supplier.query.get(supplier_id)
+    if not supplier:
+        return jsonify({"error": "supplier_id does not reference an existing supplier"}), 400
 
+    items = data.get("items", [])
+    normalized_items = []
+    try:
+        for item_data in items:
+            description = item_data.get("description")
+            if description is None or not str(description).strip():
+                return jsonify({"error": "Each item requires a non-empty description"}), 400
+            quantity_ordered = Decimal(str(item_data.get("quantity_ordered", 1)))
+            unit_cost = Decimal(str(item_data.get("unit_cost", 0)))
+            if quantity_ordered <= 0:
+                return jsonify({"error": "quantity_ordered must be greater than zero"}), 400
+            if unit_cost < 0:
+                return jsonify({"error": "unit_cost must be zero or greater"}), 400
+            normalized_items.append(
+                {
+                    "description": str(description).strip(),
+                    "quantity_ordered": quantity_ordered,
+                    "unit_cost": unit_cost,
+                    "stock_item_id": item_data.get("stock_item_id"),
+                    "supplier_stock_item_id": item_data.get("supplier_stock_item_id"),
+                    "supplier_sku": item_data.get("supplier_sku"),
+                    "warehouse_id": item_data.get("warehouse_id"),
+                }
+            )
+    except (InvalidOperation, ValueError, TypeError):
+        return jsonify({"error": "Invalid item quantity or unit cost"}), 400
+
+    try:
         order_date = (
             datetime.strptime(data.get("order_date"), "%Y-%m-%d").date()
             if data.get("order_date")
@@ -4149,7 +4174,7 @@ def create_purchase_order_api():
         )
 
         purchase_order = PurchaseOrder(
-            po_number=po_number,
+            po_number=f"PO-TMP-{uuid4().hex[:12].upper()}",
             supplier_id=supplier_id,
             order_date=order_date,
             created_by=g.api_user.id,
@@ -4160,15 +4185,15 @@ def create_purchase_order_api():
         )
         db.session.add(purchase_order)
         db.session.flush()
+        purchase_order.po_number = f"PO-{order_date.strftime('%Y%m%d')}-{purchase_order.id:04d}"
 
         # Handle items
-        items = data.get("items", [])
-        for item_data in items:
+        for item_data in normalized_items:
             item = PurchaseOrderItem(
                 purchase_order_id=purchase_order.id,
-                description=item_data.get("description", ""),
-                quantity_ordered=Decimal(str(item_data.get("quantity_ordered", 1))),
-                unit_cost=Decimal(str(item_data.get("unit_cost", 0))),
+                description=item_data["description"],
+                quantity_ordered=item_data["quantity_ordered"],
+                unit_cost=item_data["unit_cost"],
                 stock_item_id=item_data.get("stock_item_id"),
                 supplier_stock_item_id=item_data.get("supplier_stock_item_id"),
                 supplier_sku=item_data.get("supplier_sku"),
@@ -4184,9 +4209,21 @@ def create_purchase_order_api():
             jsonify({"message": "Purchase order created successfully", "purchase_order": purchase_order.to_dict()}),
             201,
         )
-    except Exception as e:
+    except IntegrityError:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+        current_app.logger.exception("Purchase order create conflict or integrity error")
+        return jsonify({"error": "Could not create purchase order due to data conflict"}), 409
+    except (InvalidOperation, ValueError, TypeError):
+        db.session.rollback()
+        return jsonify({"error": "Invalid purchase order payload"}), 400
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception("Database error while creating purchase order")
+        return jsonify({"error": "Database error while creating purchase order"}), 500
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Unexpected error while creating purchase order")
+        return jsonify({"error": "Unexpected server error while creating purchase order"}), 500
 
 
 @api_v1_bp.route("/inventory/purchase-orders/<int:po_id>", methods=["PUT", "PATCH"])
@@ -4254,10 +4291,21 @@ def update_purchase_order_api(po_id):
 
         db.session.commit()
         return jsonify({"message": "Purchase order updated successfully", "purchase_order": purchase_order.to_dict()})
+    except IntegrityError:
+        db.session.rollback()
+        current_app.logger.exception("Purchase order update conflict or integrity error")
+        return jsonify({"error": "Could not update purchase order due to data conflict"}), 409
+    except (InvalidOperation, ValueError, TypeError):
+        db.session.rollback()
+        return jsonify({"error": "Invalid purchase order payload"}), 400
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception("Database error while updating purchase order")
+        return jsonify({"error": "Database error while updating purchase order"}), 500
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error updating purchase order: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": "Unexpected server error while updating purchase order"}), 500
 
 
 @api_v1_bp.route("/inventory/purchase-orders/<int:po_id>", methods=["DELETE"])

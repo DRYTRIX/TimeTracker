@@ -1,11 +1,8 @@
 """
-Telemetry utilities for anonymous usage tracking
+Telemetry utility wrappers.
 
-This module provides opt-in telemetry functionality that sends anonymized
-installation information via PostHog. All telemetry is:
-- Opt-in (disabled by default)
-- Anonymous (no PII)
-- Transparent (see docs/privacy.md)
+Legacy helper names are preserved for compatibility and delegated to the
+consent-aware telemetry service backed by Grafana OTLP.
 """
 
 import hashlib
@@ -14,8 +11,6 @@ import os
 import platform
 import time
 from typing import Optional
-
-import posthog
 
 
 def get_telemetry_fingerprint() -> str:
@@ -80,103 +75,6 @@ except Exception:
         raise RuntimeError("installation config unavailable")
 
 
-def _ensure_posthog_initialized() -> bool:
-    """
-    Ensure PostHog is initialized with API key and host.
-
-    Returns:
-        True if PostHog is ready to use, False otherwise
-    """
-    posthog_api_key = os.getenv("POSTHOG_API_KEY", "")
-    if not posthog_api_key:
-        return False
-
-    try:
-        # Initialize PostHog if not already done
-        if not hasattr(posthog, "project_api_key") or not posthog.project_api_key:
-            posthog.project_api_key = posthog_api_key
-            posthog.host = os.getenv("POSTHOG_HOST", "https://app.posthog.com")
-        return True
-    except Exception:
-        return False
-
-
-def _get_installation_properties() -> dict:
-    """
-    Get installation properties for PostHog person/group properties.
-
-    Returns:
-        Dictionary of installation characteristics (no PII)
-    """
-    import sys
-
-    # Get app version from analytics config (which reads from setup.py)
-    from app.config.analytics_defaults import get_analytics_config
-
-    analytics_config = get_analytics_config()
-    app_version = analytics_config.get("app_version")
-    flask_env = os.getenv("FLASK_ENV", "production")
-
-    properties = {
-        # Version info
-        "app_version": app_version,
-        "python_version": platform.python_version(),
-        "python_major_version": f"{sys.version_info.major}.{sys.version_info.minor}",
-        # Platform info
-        "platform": platform.system(),
-        "platform_release": platform.release(),
-        "platform_version": platform.version(),
-        "machine": platform.machine(),
-        # Environment
-        "environment": flask_env,
-        "timezone": os.getenv("TZ", "Unknown"),
-        # Deployment info
-        "deployment_method": "docker" if os.path.exists("/.dockerenv") else "native",
-        "auth_method": os.getenv("AUTH_METHOD", "local"),
-    }
-
-    return properties
-
-
-def _identify_installation(fingerprint: str) -> None:
-    """
-    Identify the installation in PostHog with person properties.
-
-    This sets/updates properties on the installation fingerprint for better
-    segmentation and cohort analysis in PostHog.
-
-    Args:
-        fingerprint: The installation fingerprint (distinct_id)
-    """
-    try:
-        properties = _get_installation_properties()
-
-        # Use $set_once for properties that shouldn't change (first install data)
-        set_once_properties = {
-            "first_seen_platform": properties["platform"],
-            "first_seen_python_version": properties["python_version"],
-            "first_seen_version": properties["app_version"],
-        }
-
-        # Regular $set properties that can update
-        set_properties = {
-            "current_version": properties["app_version"],
-            "current_platform": properties["platform"],
-            "current_python_version": properties["python_version"],
-            "environment": properties["environment"],
-            "deployment_method": properties["deployment_method"],
-            "auth_method": properties["auth_method"],
-            "timezone": properties["timezone"],
-            "last_seen": time.strftime("%Y-%m-%d %H:%M:%S"),
-        }
-
-        # Identify the installation
-        posthog.identify(distinct_id=fingerprint, properties={"$set": set_properties, "$set_once": set_once_properties})
-    except Exception:
-        # Don't let identification errors break telemetry
-        pass
-
-
 def send_telemetry_ping(event_type: str = "install", extra_data: Optional[dict] = None) -> bool:
     """
     Send a telemetry ping via PostHog with person properties and groups.
@@ -192,86 +90,28 @@ def send_telemetry_ping(event_type: str = "install", extra_data: Optional[dict] 
     if not is_telemetry_enabled():
         return False
 
-    # Ensure PostHog is initialized and ready
-    if not _ensure_posthog_initialized():
+    try:
+        from app.config.analytics_defaults import get_analytics_config
+
+        cfg = get_analytics_config()
+        endpoint = cfg.get("otel_exporter_otlp_endpoint") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+        token = cfg.get("otel_exporter_otlp_token") or os.getenv("OTEL_EXPORTER_OTLP_TOKEN", "")
+        if not endpoint or not token:
+            return False
+    except Exception:
         return False
 
-    # Get fingerprint for distinct_id
-    fingerprint = get_telemetry_fingerprint()
-
-    # Identify the installation with person properties (for better segmentation)
-    _identify_installation(fingerprint)
-
-    # Get installation properties
-    install_props = _get_installation_properties()
-
-    # Build event properties
-    properties = {
-        "app_version": install_props["app_version"],
-        "platform": install_props["platform"],
-        "python_version": install_props["python_version"],
-        "environment": install_props["environment"],
-        "deployment_method": install_props["deployment_method"],
-    }
-
-    # Add extra data if provided
-    if extra_data:
-        properties.update(extra_data)
-
-    # Send telemetry via PostHog
     try:
-        posthog.capture(
-            distinct_id=fingerprint,
-            event=f"telemetry.{event_type}",
-            properties=properties,
-            groups={
-                "version": install_props["app_version"],
-                "platform": install_props["platform"],
-            },
+        from app.telemetry.service import send_analytics_event
+
+        send_analytics_event(
+            user_id=get_telemetry_fingerprint(),
+            event_name=f"telemetry.{event_type}",
+            properties=extra_data or {},
         )
-
-        # Also update group properties for cohort analysis
-        _update_group_properties(install_props)
-
         return True
     except Exception:
-        # Silently fail - telemetry should never break the application
         return False
-
-
-def _update_group_properties(install_props: dict) -> None:
-    """
-    Update PostHog group properties for version and platform cohorts.
-
-    This enables analysis like "all installations on version X" or
-    "all Linux installations".
-
-    Args:
-        install_props: Installation properties dictionary
-    """
-    try:
-        # Group by version
-        posthog.group_identify(
-            group_type="version",
-            group_key=install_props["app_version"],
-            properties={
-                "version_number": install_props["app_version"],
-                "python_versions": [install_props["python_version"]],  # Will aggregate
-            },
-        )
-
-        # Group by platform
-        posthog.group_identify(
-            group_type="platform",
-            group_key=install_props["platform"],
-            properties={
-                "platform_name": install_props["platform"],
-                "platform_release": install_props.get("platform_release", "Unknown"),
-            },
-        )
-    except Exception:
-        # Don't let group errors break telemetry
-        pass
 
 
 def send_install_ping() -> bool:

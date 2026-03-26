@@ -244,6 +244,13 @@
                         <label for="invoice_prefix" class="form-label">Invoice Prefix</label>
                         <input type="text" name="invoice_prefix" id="invoice_prefix" value="{{ settings.invoice_prefix }}" class="form-input">
                     </div>
+                    <div class="md:col-span-2">
+                        <label for="invoice_number_pattern" class="form-label">Invoice Number Pattern</label>
+                        <input type="text" name="invoice_number_pattern" id="invoice_number_pattern" value="{{ settings.invoice_number_pattern or '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}' }}" class="form-input" placeholder="e.g. RE-{YYYY}-{SEQ}">
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            Available tokens: <code>{SEQ}</code>, <code>{YYYY}</code>, <code>{YY}</code>, <code>{MM}</code>, <code>{DD}</code>, <code>{PREFIX}</code>. Leave blank to generate sequence-only numbers.
+                        </p>
+                    </div>
                     <div>
                         <label for="invoice_start_number" class="form-label">Invoice Start Number</label>
                         <input type="number" name="invoice_start_number" id="invoice_start_number" value="{{ settings.invoice_start_number }}" class="form-input">

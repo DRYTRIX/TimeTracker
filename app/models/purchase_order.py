@@ -6,6 +6,22 @@ from decimal import Decimal
 from app import db
 
 
+def _normalize_optional_text(value):
+    """Normalize optional text input to a trimmed string or None."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _normalize_required_text(value, field_name):
+    """Normalize required text and fail fast for empty values."""
+    text = _normalize_optional_text(value)
+    if not text:
+        raise ValueError(f"{field_name} is required")
+    return text
+
+
 class PurchaseOrder(db.Model):
     """PurchaseOrder model - represents a purchase order to a supplier"""
 
@@ -37,6 +53,8 @@ class PurchaseOrder(db.Model):
 
     # Relationships
     items = db.relationship("PurchaseOrderItem", backref="purchase_order", lazy="dynamic", cascade="all, delete-orphan")
+    supplier = db.relationship("Supplier", backref="purchase_orders", lazy="select")
+    created_by_user = db.relationship("User", foreign_keys=[created_by], lazy="select")
 
     def __init__(
         self,
@@ -49,14 +67,14 @@ class PurchaseOrder(db.Model):
         internal_notes=None,
         currency_code="EUR",
     ):
-        self.po_number = po_number.strip().upper()
+        self.po_number = _normalize_required_text(po_number, "po_number").upper()
         self.supplier_id = supplier_id
         self.order_date = order_date
         self.expected_delivery_date = expected_delivery_date
         self.created_by = created_by
-        self.notes = notes.strip() if notes else None
-        self.internal_notes = internal_notes.strip() if internal_notes else None
-        self.currency_code = currency_code.upper()
+        self.notes = _normalize_optional_text(notes)
+        self.internal_notes = _normalize_optional_text(internal_notes)
+        self.currency_code = _normalize_required_text(currency_code, "currency_code").upper()
         self.status = "draft"
         self.subtotal = Decimal("0")
         self.tax_amount = Decimal("0")
@@ -126,6 +144,7 @@ class PurchaseOrder(db.Model):
             "id": self.id,
             "po_number": self.po_number,
             "supplier_id": self.supplier_id,
+            "supplier_name": self.supplier.name if self.supplier else None,
             "status": self.status,
             "order_date": self.order_date.isoformat() if self.order_date else None,
             "expected_delivery_date": self.expected_delivery_date.isoformat() if self.expected_delivery_date else None,
@@ -139,6 +158,7 @@ class PurchaseOrder(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "created_by": self.created_by,
+            "items": [item.to_dict() for item in self.items],
         }
 
 
@@ -185,15 +205,15 @@ class PurchaseOrderItem(db.Model):
         self.purchase_order_id = purchase_order_id
         self.stock_item_id = stock_item_id
         self.supplier_stock_item_id = supplier_stock_item_id
-        self.description = description.strip()
-        self.supplier_sku = supplier_sku.strip() if supplier_sku else None
+        self.description = _normalize_required_text(description, "description")
+        self.supplier_sku = _normalize_optional_text(supplier_sku)
         self.quantity_ordered = Decimal(str(quantity_ordered))
         self.quantity_received = Decimal("0")
         self.unit_cost = Decimal(str(unit_cost))
         self.line_total = self.quantity_ordered * self.unit_cost
         self.warehouse_id = warehouse_id
-        self.notes = notes.strip() if notes else None
-        self.currency_code = currency_code.upper()
+        self.notes = _normalize_optional_text(notes)
+        self.currency_code = _normalize_required_text(currency_code, "currency_code").upper()
 
     def __repr__(self):
         return f"<PurchaseOrderItem {self.description} ({self.quantity_ordered})>"

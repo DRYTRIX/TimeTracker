@@ -38,7 +38,11 @@ BEGIN
     
     -- Invoice default columns
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'invoice_prefix') THEN
-        ALTER TABLE settings ADD COLUMN invoice_prefix VARCHAR(10) DEFAULT 'INV' NOT NULL;
+        ALTER TABLE settings ADD COLUMN invoice_prefix VARCHAR(50) DEFAULT 'INV' NOT NULL;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'invoice_number_pattern') THEN
+        ALTER TABLE settings ADD COLUMN invoice_number_pattern VARCHAR(120) DEFAULT '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}' NOT NULL;
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'invoice_start_number') THEN
@@ -65,6 +69,7 @@ UPDATE settings SET
     company_tax_id = COALESCE(company_tax_id, ''),
     company_bank_info = COALESCE(company_bank_info, ''),
     invoice_prefix = COALESCE(invoice_prefix, 'INV'),
+    invoice_number_pattern = COALESCE(invoice_number_pattern, '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}'),
     invoice_start_number = COALESCE(invoice_start_number, 1000),
     invoice_terms = COALESCE(invoice_terms, 'Payment is due within 30 days of invoice date.'),
     invoice_notes = COALESCE(invoice_notes, 'Thank you for your business!')

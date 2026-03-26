@@ -124,7 +124,7 @@ def initial_setup():
                 pass
             flash(_("Setup complete! Thank you for helping us improve TimeTracker."), "success")
         else:
-            flash(_("Setup complete! Telemetry is disabled."), "success")
+            flash(_("Setup complete! Detailed analytics is disabled; anonymous base telemetry remains active."), "success")
         if google_client_id:
             flash(_("Google Calendar OAuth credentials have been configured."), "success")
 

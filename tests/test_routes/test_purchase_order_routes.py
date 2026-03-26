@@ -1,6 +1,7 @@
 """Tests for purchase order routes"""
 
 import pytest
+from unittest.mock import patch
 
 pytestmark = [pytest.mark.unit, pytest.mark.routes]
 
@@ -189,3 +190,22 @@ class TestPurchaseOrderRoutes:
         # Check if PO was deleted
         po = PurchaseOrder.query.get(test_purchase_order.id)
         assert po is None
+
+    def test_create_purchase_order_safe_commit_failure(self, client, test_user, test_supplier):
+        """Create route should handle safe_commit failure without success redirect."""
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(test_user.id)
+
+        with patch("app.routes.inventory.safe_commit", return_value=False):
+            response = client.post(
+                url_for("inventory.new_purchase_order"),
+                data={
+                    "supplier_id": test_supplier.id,
+                    "order_date": date.today().isoformat(),
+                    "currency_code": "EUR",
+                },
+                follow_redirects=True,
+            )
+
+        assert response.status_code == 200
+        assert b"database error" in response.data.lower()

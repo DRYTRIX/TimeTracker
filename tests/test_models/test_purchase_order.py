@@ -95,7 +95,7 @@ class TestPurchaseOrder:
         test_purchase_order.calculate_totals()
         db_session.commit()
 
-        assert len(test_purchase_order.items) == 1
+        assert test_purchase_order.items.count() == 1
         assert test_purchase_order.total_amount == Decimal("50.00")
 
     def test_purchase_order_receive(self, db_session, test_purchase_order, test_stock_item, test_warehouse):
@@ -134,3 +134,23 @@ class TestPurchaseOrder:
         assert data["status"] == "draft"
         assert "created_at" in data
         assert "items" in data
+
+    def test_purchase_order_none_safe_normalization(self, db_session, test_supplier, test_user):
+        """Model constructor should reject missing required string fields cleanly."""
+        with pytest.raises(ValueError):
+            PurchaseOrder(
+                po_number=None,
+                supplier_id=test_supplier.id,
+                order_date=date.today(),
+                created_by=test_user.id,
+                currency_code=None,
+            )
+
+    def test_purchase_order_item_description_required(self, db_session, test_purchase_order):
+        with pytest.raises(ValueError):
+            PurchaseOrderItem(
+                purchase_order_id=test_purchase_order.id,
+                description=" ",
+                quantity_ordered=Decimal("1.00"),
+                unit_cost=Decimal("1.00"),
+            )

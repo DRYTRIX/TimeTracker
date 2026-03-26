@@ -3,6 +3,8 @@
 from datetime import datetime
 from decimal import Decimal
 
+from sqlalchemy.exc import IntegrityError
+
 from app import db
 
 
@@ -131,8 +133,18 @@ class StockMovement(db.Model):
             stock = WarehouseStock.query.filter_by(warehouse_id=warehouse_id, stock_item_id=stock_item_id).first()
 
             if not stock:
-                stock = WarehouseStock(warehouse_id=warehouse_id, stock_item_id=stock_item_id, quantity_on_hand=0)
-                db.session.add(stock)
+                try:
+                    with db.session.begin_nested():
+                        stock = WarehouseStock(warehouse_id=warehouse_id, stock_item_id=stock_item_id, quantity_on_hand=0)
+                        db.session.add(stock)
+                        db.session.flush()
+                except IntegrityError:
+                    # Another concurrent transaction inserted it first.
+                    stock = WarehouseStock.query.filter_by(
+                        warehouse_id=warehouse_id, stock_item_id=stock_item_id
+                    ).first()
+                    if not stock:
+                        raise
 
             # Update stock level
             stock.adjust_on_hand(quantity)

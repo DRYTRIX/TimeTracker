@@ -10,8 +10,8 @@ from typing import Any, Dict, Optional
 
 
 def is_segmentation_enabled() -> bool:
-    """Check if PostHog segmentation is enabled."""
-    return bool(os.getenv("POSTHOG_API_KEY", ""))
+    """Check if segmentation telemetry is enabled."""
+    return bool(os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")) and bool(os.getenv("OTEL_EXPORTER_OTLP_TOKEN", ""))
 
 
 def identify_user_with_segments(user_id: Any, user) -> None:
