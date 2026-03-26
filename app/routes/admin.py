@@ -42,6 +42,7 @@ from app.utils.backup import create_backup, get_backup_root_dir, restore_backup
 from app.utils.db import safe_commit
 from app.utils.error_handling import safe_file_remove, safe_log
 from app.utils.installation import get_installation_config
+from app.utils.invoice_numbering import sanitize_invoice_pattern, sanitize_invoice_prefix, validate_invoice_pattern
 from app.utils.permissions import admin_or_permission_required
 from app.utils.telemetry import get_telemetry_fingerprint, is_telemetry_enabled
 from app.utils.timezone import get_available_timezones
@@ -1313,8 +1314,21 @@ def settings():
         settings_obj.company_bank_info = request.form.get("company_bank_info", "")
 
         # Update invoice defaults
-        invoice_prefix_form = request.form.get("invoice_prefix", "INV")
+        invoice_prefix_form = sanitize_invoice_prefix(request.form.get("invoice_prefix", ""))
+        invoice_number_pattern_form = sanitize_invoice_pattern(request.form.get("invoice_number_pattern", ""))
         invoice_start_number_form = request.form.get("invoice_start_number", 1000)
+        is_valid_pattern, pattern_error = validate_invoice_pattern(invoice_number_pattern_form)
+        if not is_valid_pattern:
+            flash(_("Invalid invoice number pattern: %(reason)s", reason=pattern_error), "error")
+            system_instance_id = Settings.get_system_instance_id()
+            return render_template(
+                "admin/settings.html",
+                settings=settings_obj,
+                timezones=timezones,
+                kiosk_settings=kiosk_settings,
+                peppol_env_enabled=peppol_env_enabled,
+                system_instance_id=system_instance_id,
+            )
         # #region agent log
         try:
             import json
@@ -1324,6 +1338,7 @@ def settings():
                 "message": "Saving invoice prefix and start number",
                 "data": {
                     "invoice_prefix_form": str(invoice_prefix_form),
+                    "invoice_number_pattern_form": str(invoice_number_pattern_form),
                     "invoice_start_number_form": str(invoice_start_number_form),
                     "settings_obj_id": settings_obj.id if hasattr(settings_obj, "id") else "NO_ID",
                 },
@@ -1339,6 +1354,7 @@ def settings():
             pass
         # #endregion
         settings_obj.invoice_prefix = invoice_prefix_form
+        settings_obj.invoice_number_pattern = invoice_number_pattern_form
         settings_obj.invoice_start_number = int(invoice_start_number_form)
         settings_obj.invoice_terms = request.form.get("invoice_terms", "Payment is due within 30 days of invoice date.")
         settings_obj.invoice_notes = request.form.get("invoice_notes", "Thank you for your business!")
@@ -1452,6 +1468,7 @@ def settings():
                 "message": "After commit - settings values",
                 "data": {
                     "invoice_prefix": str(settings_obj.invoice_prefix),
+                    "invoice_number_pattern": str(getattr(settings_obj, "invoice_number_pattern", "")),
                     "invoice_start_number": int(settings_obj.invoice_start_number),
                     "settings_obj_id": settings_obj.id if hasattr(settings_obj, "id") else "NO_ID",
                 },
@@ -4961,7 +4978,15 @@ def create_email_template():
         # Validate
         if not name:
             flash(_("Template name is required"), "error")
-            return render_template("admin/email_templates/create.html")
+            return render_template(
+                "admin/email_templates/create.html", name=name, description=description, html=html, css=css
+            )
+
+        if not html:
+            flash(_("HTML template content is required"), "error")
+            return render_template(
+                "admin/email_templates/create.html", name=name, description=description, html=html, css=css
+            )
 
         # Check for duplicate name
         existing = InvoiceTemplate.query.filter_by(name=name).first()
@@ -4987,7 +5012,9 @@ def create_email_template():
         db.session.add(template)
         if not safe_commit("create_email_template", {"name": name}):
             flash(_("Could not create email template due to a database error."), "error")
-            return render_template("admin/email_templates/create.html")
+            return render_template(
+                "admin/email_templates/create.html", name=name, description=description, html=html, css=css
+            )
 
         flash(_("Email template created successfully"), "success")
         return redirect(url_for("admin.list_email_templates"))

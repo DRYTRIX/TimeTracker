@@ -30,7 +30,8 @@ def main():
                 "ALTER TABLE settings ADD COLUMN IF NOT EXISTS company_logo_filename VARCHAR(255) DEFAULT '' NOT NULL;",
                 "ALTER TABLE settings ADD COLUMN IF NOT EXISTS company_tax_id VARCHAR(100) DEFAULT '' NOT NULL;",
                 "ALTER TABLE settings ADD COLUMN IF NOT EXISTS company_bank_info TEXT DEFAULT '' NOT NULL;",
-                "ALTER TABLE settings ADD COLUMN IF NOT EXISTS invoice_prefix VARCHAR(10) DEFAULT 'INV' NOT NULL;",
+                "ALTER TABLE settings ADD COLUMN IF NOT EXISTS invoice_prefix VARCHAR(50) DEFAULT 'INV' NOT NULL;",
+                "ALTER TABLE settings ADD COLUMN IF NOT EXISTS invoice_number_pattern VARCHAR(120) DEFAULT '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}' NOT NULL;",
                 "ALTER TABLE settings ADD COLUMN IF NOT EXISTS invoice_start_number INTEGER DEFAULT 1000 NOT NULL;",
                 "ALTER TABLE settings ADD COLUMN IF NOT EXISTS invoice_terms TEXT DEFAULT 'Payment is due within 30 days of invoice date.' NOT NULL;",
                 "ALTER TABLE settings ADD COLUMN IF NOT EXISTS invoice_notes TEXT DEFAULT 'Thank you for your business!' NOT NULL;"

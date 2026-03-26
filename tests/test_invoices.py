@@ -180,6 +180,31 @@ def test_invoice_number_generation(app):
     assert len(invoice_number.split("-")) == 3
 
 
+def test_invoice_number_generation_with_custom_pattern(app):
+    """Invoice number follows custom settings pattern."""
+    settings = Settings.get_settings()
+    settings.invoice_prefix = "RE"
+    settings.invoice_number_pattern = "{PREFIX}-{YYYY}-{SEQ}"
+    settings.invoice_start_number = 12
+    db.session.commit()
+
+    invoice_number = Invoice.generate_invoice_number()
+    assert invoice_number.startswith("RE-")
+    assert invoice_number.endswith("-012")
+
+
+def test_invoice_number_generation_with_empty_pattern_uses_sequence(app):
+    """Empty pattern generates sequence-only invoice numbers."""
+    settings = Settings.get_settings()
+    settings.invoice_prefix = ""
+    settings.invoice_number_pattern = ""
+    settings.invoice_start_number = 7
+    db.session.commit()
+
+    invoice_number = Invoice.generate_invoice_number()
+    assert invoice_number == "007"
+
+
 def test_invoice_overdue_status(app, sample_user, sample_project):
     """Test that invoices are marked as overdue correctly."""
     # Create a client first

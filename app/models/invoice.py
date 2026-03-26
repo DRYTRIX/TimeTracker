@@ -2,6 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from app import db
+from app.utils.invoice_numbering import generate_next_invoice_number
 
 
 class Invoice(db.Model):
@@ -288,127 +289,7 @@ class Invoice(db.Model):
     @classmethod
     def generate_invoice_number(cls):
         """Generate a unique invoice number"""
-        import json
-        import os
-        from datetime import datetime
-
-        from app.models import Settings
-
-        # Get settings for invoice prefix and start number
-        settings = Settings.get_settings()
-        # #region agent log
-        try:
-            log_data = {
-                "location": "invoice.py:291",
-                "message": "Settings.get_settings() returned",
-                "data": {
-                    "settings_is_none": settings is None,
-                    "settings_has_id": hasattr(settings, "id") and settings.id is not None,
-                    "settings_type": type(settings).__name__,
-                },
-                "timestamp": int(datetime.utcnow().timestamp() * 1000),
-                "sessionId": "debug-session",
-                "runId": "run1",
-                "hypothesisId": "A",
-            }
-            log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".cursor", "debug.log")
-            with open(log_path, "a", encoding="utf-8") as f:
-                f.write(json.dumps(log_data) + "\n")
-        except (OSError, IOError, TypeError, ValueError):
-            pass
-        # #endregion
-        prefix = "INV"  # Default prefix
-        start_number = 1  # Default start number
-
-        if settings:
-            prefix_raw = getattr(settings, "invoice_prefix", "INV")
-            start_number_raw = getattr(settings, "invoice_start_number", 1)
-            # #region agent log
-            try:
-                log_data = {
-                    "location": "invoice.py:296",
-                    "message": "Retrieved settings values from object",
-                    "data": {
-                        "prefix_raw": str(prefix_raw),
-                        "start_number_raw": str(start_number_raw),
-                        "prefix_raw_type": type(prefix_raw).__name__,
-                        "start_number_raw_type": type(start_number_raw).__name__,
-                    },
-                    "timestamp": int(datetime.utcnow().timestamp() * 1000),
-                    "sessionId": "debug-session",
-                    "runId": "run1",
-                    "hypothesisId": "B",
-                }
-                log_path = os.path.join(
-                    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".cursor", "debug.log"
-                )
-                with open(log_path, "a", encoding="utf-8") as f:
-                    f.write(json.dumps(log_data) + "\n")
-            except (OSError, IOError, TypeError, ValueError):
-                pass
-            # #endregion
-            prefix = prefix_raw or "INV"
-            start_number = start_number_raw or 1
-            # Ensure start_number is a valid integer
-            try:
-                start_number = int(start_number)
-                if start_number < 1:
-                    start_number = 1
-            except (ValueError, TypeError):
-                start_number = 1
-        # #region agent log
-        try:
-            log_data = {
-                "location": "invoice.py:304",
-                "message": "Final prefix and start_number values",
-                "data": {
-                    "prefix": str(prefix),
-                    "start_number": int(start_number),
-                    "settings_was_none": settings is None,
-                },
-                "timestamp": int(datetime.utcnow().timestamp() * 1000),
-                "sessionId": "debug-session",
-                "runId": "run1",
-                "hypothesisId": "C",
-            }
-            log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".cursor", "debug.log")
-            with open(log_path, "a", encoding="utf-8") as f:
-                f.write(json.dumps(log_data) + "\n")
-        except (OSError, IOError, TypeError, ValueError):
-            pass
-        # #endregion
-
-        # Format: {prefix}-YYYYMMDD-XXX (where XXX is the sequential number)
-        today = datetime.utcnow()
-        date_prefix = today.strftime("%Y%m%d")
-        search_pattern = f"{prefix}-{date_prefix}-%"
-
-        # Find the next available number for today with the custom prefix
-        existing = cls.query.filter(cls.invoice_number.like(search_pattern)).order_by(cls.invoice_number.desc()).first()
-
-        if existing:
-            # Extract the number part and increment
-            try:
-                # Split by last hyphen to get the number part
-                parts = existing.invoice_number.rsplit("-", 1)
-                if len(parts) == 2:
-                    last_num = int(parts[1])
-                    next_num = last_num + 1
-                else:
-                    # Fallback if format is unexpected
-                    next_num = start_number
-                # Ensure next_num is at least start_number
-                next_num = max(next_num, start_number)
-            except (ValueError, IndexError, AttributeError):
-                next_num = start_number
-        else:
-            # No existing invoices for today, use start_number
-            next_num = start_number
-
-        # Format with appropriate padding based on start_number length
-        # Use at least 3 digits, but more if start_number requires it
-        min_digits = max(3, len(str(start_number)))
-        return f"{prefix}-{date_prefix}-{next_num:0{min_digits}d}"
+        return generate_next_invoice_number(cls)
 
 
 class InvoiceItem(db.Model):

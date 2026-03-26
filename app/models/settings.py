@@ -4,6 +4,7 @@ from datetime import datetime
 
 from app import db
 from app.config import Config
+from app.utils.invoice_numbering import DEFAULT_INVOICE_PATTERN
 
 # Re-entrancy guard: avoid add+commit when get_settings is called from inside a flush/commit
 _creating_settings = threading.local()
@@ -63,6 +64,7 @@ class Settings(db.Model):
 
     # Invoice defaults
     invoice_prefix = db.Column(db.String(50), default="INV", nullable=False)
+    invoice_number_pattern = db.Column(db.String(120), default=DEFAULT_INVOICE_PATTERN, nullable=False)
     invoice_start_number = db.Column(db.Integer, default=1000, nullable=False)
     invoice_terms = db.Column(db.Text, default="Payment is due within 30 days of invoice date.", nullable=False)
     invoice_notes = db.Column(db.Text, default="Thank you for your business!", nullable=False)
@@ -215,6 +217,7 @@ class Settings(db.Model):
 
         # Set invoice defaults
         self.invoice_prefix = kwargs.get("invoice_prefix", "INV")
+        self.invoice_number_pattern = kwargs.get("invoice_number_pattern", DEFAULT_INVOICE_PATTERN)
         self.invoice_start_number = kwargs.get("invoice_start_number", 1000)
         self.invoice_terms = kwargs.get("invoice_terms", "Payment is due within 30 days of invoice date.")
         self.invoice_notes = kwargs.get("invoice_notes", "Thank you for your business!")
@@ -437,6 +440,7 @@ class Settings(db.Model):
             "company_tax_id": self.company_tax_id,
             "company_bank_info": self.company_bank_info,
             "invoice_prefix": self.invoice_prefix,
+            "invoice_number_pattern": self.invoice_number_pattern,
             "invoice_start_number": self.invoice_start_number,
             "invoice_terms": self.invoice_terms,
             "invoice_notes": self.invoice_notes,
