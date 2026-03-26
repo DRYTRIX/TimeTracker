@@ -74,7 +74,7 @@
                         </div>
                     </div>
                     <div id="html_editor" style="min-height: 500px;"></div>
-                    <textarea id="html" name="html" required style="display: none;">{{ template.html or '' }}</textarea>
+                    <textarea id="html" name="html" style="display: none;">{{ template.html or '' }}</textarea>
                 </div>
                 
                 <!-- Preview Column -->
@@ -98,7 +98,10 @@
                 Use Jinja2 syntax for variables: <code>{{ '{{ invoice.invoice_number }}' }}</code>, <code>{{ '{{ company_name }}' }}</code>, <code>{{ '{{ custom_message }}' }}</code>
             </p>
         </div>
-        
+        <p id="htmlValidationError" class="hidden text-sm text-red-600 dark:text-red-400 mt-2">
+            {{ _('HTML template content is required') }}
+        </p>
+
         <!-- CSS Editor Section -->
         <div class="mt-6">
             <div class="flex items-center justify-between mb-2">
@@ -242,20 +245,6 @@ function initEditor() {
             initialValue: originalHtml || ''
         });
         
-        // Update hidden textarea on form submit
-        const emailTemplateForm = document.getElementById('emailTemplateForm');
-        if (emailTemplateForm) {
-            emailTemplateForm.addEventListener('submit', function() {
-                if (htmlEditor) {
-                    try {
-                        htmlTextarea.value = htmlEditor.getHTML();
-                    } catch (e) {
-                        htmlTextarea.value = htmlEditor.getMarkdown();
-                    }
-                }
-            });
-        }
-        
         // Auto-update preview on content change
         htmlEditor.on('change', function() {
             clearTimeout(window.previewTimeout);
@@ -288,7 +277,50 @@ function initializeFallback() {
     }
 }
 
+function setHtmlValidationError(isVisible) {
+    const errorElement = document.getElementById('htmlValidationError');
+    if (!errorElement) {
+        return;
+    }
+    errorElement.classList.toggle('hidden', !isVisible);
+}
+
+function syncEditorHtmlToTextarea() {
+    const htmlTextarea = document.getElementById('html');
+    if (!htmlTextarea) {
+        return '';
+    }
+
+    let htmlContent = '';
+    if (htmlEditor) {
+        try {
+            htmlContent = htmlEditor.getHTML();
+        } catch (e) {
+            htmlContent = htmlEditor.getMarkdown();
+        }
+    } else {
+        const fallbackTextarea = document.getElementById('html_fallback');
+        htmlContent = fallbackTextarea ? fallbackTextarea.value : htmlTextarea.value;
+    }
+
+    htmlTextarea.value = htmlContent || '';
+    return htmlTextarea.value.trim();
+}
+
 function setupEventListeners() {
+    const emailTemplateForm = document.getElementById('emailTemplateForm');
+    if (emailTemplateForm) {
+        emailTemplateForm.addEventListener('submit', function(event) {
+            const htmlContent = syncEditorHtmlToTextarea();
+            if (!htmlContent) {
+                event.preventDefault();
+                setHtmlValidationError(true);
+                return;
+            }
+            setHtmlValidationError(false);
+        });
+    }
+
     // CSS editor change handler
     const cssTextarea = document.getElementById('css');
     if (cssTextarea) {
@@ -430,6 +462,8 @@ function updatePreview() {
             return;
         }
     }
+
+    setHtmlValidationError(false);
     
     updatePreviewContent(htmlContent);
 }
