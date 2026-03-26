@@ -11,9 +11,9 @@ When you first access TimeTracker, you'll see a **guided setup wizard** (6 steps
 3. **Company** – Company name, address, email; optional phone and website (for invoices and branding).
 4. **System** – Allow self-registration, time rounding, single active timer per user, idle timeout (minutes).
 5. **Integrations (optional)** – Google Calendar OAuth (Client ID / Secret). You can skip this and configure later in Admin → Settings.
-6. **Privacy & finish** – Choose whether to enable anonymous telemetry:
-   - ✅ **Enable Telemetry** – Help improve TimeTracker with anonymous usage data
-   - ⬜ **Disable Telemetry** – No data will be sent (default)
+6. **Privacy & finish** – Choose whether to enable detailed analytics:
+   - ✅ **Enable detailed analytics** – Send richer product usage diagnostics
+   - ⬜ **Disable detailed analytics** – Only anonymous base telemetry will be sent (default)
    - Click **Complete Setup & Continue** to finish.
 
 You can change telemetry and all other options anytime in **Admin → Settings**.
@@ -25,7 +25,7 @@ You can change telemetry and all other options anytime in **Admin → Settings**
 3. View:
    - Current telemetry status (enabled/disabled)
    - Installation ID and fingerprint
-   - PostHog configuration status
+   - Grafana OTLP configuration status
    - Sentry configuration status
    - What data is being collected
 
@@ -39,19 +39,17 @@ You can change telemetry and all other options anytime in **Admin → Settings**
 
 ### Setting Up Analytics Services
 
-#### PostHog (Product Analytics)
+#### Grafana Cloud OTLP (Telemetry Sink)
 
-To enable PostHog tracking:
+To enable telemetry export:
 
-1. Sign up for PostHog at https://posthog.com (or self-host)
-2. Get your API key from PostHog dashboard
-3. Set environment variable:
+1. Set your OTLP endpoint and token:
    ```bash
-   export POSTHOG_API_KEY="your-api-key-here"
-   export POSTHOG_HOST="https://app.posthog.com"  # Default, change if self-hosting
+   export GRAFANA_OTLP_ENDPOINT="https://otlp-gateway-.../otlp/v1/logs"
+   export GRAFANA_OTLP_TOKEN="your-token-here"
    ```
-4. Restart the application
-5. Enable telemetry in admin dashboard (if not already enabled)
+2. Restart the application
+3. In Admin, choose whether detailed analytics should be enabled
 
 #### Sentry (Error Monitoring)
 
@@ -141,7 +139,7 @@ TimeTracker's telemetry system is designed with GDPR principles in mind:
 ### Data Retention
 
 - **JSON Logs:** Rotate daily, keep 30 days (configurable)
-- **PostHog:** Follow PostHog's retention policy
+- **Grafana OTLP sink:** Follow your Grafana Cloud retention policy
 - **Sentry:** Follow Sentry's retention policy
 - **Prometheus:** 15 days default (configurable in `prometheus/prometheus.yml`)
 
@@ -152,7 +150,8 @@ To completely disable all telemetry and analytics:
 1. **In Application:** Disable in `/admin/telemetry`
 2. **Remove API Keys:**
    ```bash
-   unset POSTHOG_API_KEY
+   unset GRAFANA_OTLP_ENDPOINT
+   unset GRAFANA_OTLP_TOKEN
    unset SENTRY_DSN
    unset ENABLE_TELEMETRY
    ```
@@ -168,12 +167,12 @@ If the setup page keeps appearing after completion:
 2. Check file permissions (application must be able to write to `data/` directory)
 3. Check logs for errors: `tail -f logs/app.jsonl`
 
-### Events Not Appearing in PostHog
+### Events Not Appearing in Grafana
 
-1. **Check API Key:** Verify `POSTHOG_API_KEY` is set
+1. **Check OTLP config:** Verify `GRAFANA_OTLP_ENDPOINT` and `GRAFANA_OTLP_TOKEN` are set
 2. **Check Telemetry Status:** Go to `/admin/telemetry` and verify it's enabled
-3. **Check Logs:** `tail -f logs/app.jsonl | grep PostHog`
-4. **Check Network:** Ensure server can reach PostHog host
+3. **Check Logs:** `tail -f logs/app.jsonl | grep telemetry`
+4. **Check Network:** Ensure server can reach OTLP endpoint
 
 ### Admin Dashboard Not Accessible
 
@@ -199,8 +198,8 @@ A: No. We only collect anonymous event types and numeric IDs. No usernames, emai
 **Q: How do I know what's being sent?**
 A: Check the `/admin/telemetry` dashboard and review `docs/all_tracked_events.md` for a complete list.
 
-**Q: Can I use my own PostHog/Sentry instance?**
-A: Yes! Set `POSTHOG_HOST` and `SENTRY_DSN` to your self-hosted instances.
+**Q: Can I use my own Grafana/Sentry instance?**
+A: Yes. Configure your own OTLP endpoint/token and Sentry DSN.
 
 **Q: What happens to my data if I disable telemetry?**
 A: Nothing is sent to external services. Events are still logged locally in `logs/app.jsonl` for debugging.

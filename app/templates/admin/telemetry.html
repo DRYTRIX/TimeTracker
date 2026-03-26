@@ -65,11 +65,11 @@
         {% endif %}
     </div>
 
-    <!-- PostHog Status Card -->
+    <!-- Grafana Cloud OTLP Status Card -->
     <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6 mb-6">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">📈 PostHog (Product Analytics)</h2>
-            {% if posthog.enabled %}
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">📈 Grafana Cloud OTLP</h2>
+            {% if grafana.enabled %}
             <span class="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-sm font-medium">Configured</span>
             {% else %}
             <span class="px-3 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-full text-sm font-medium">Not Configured</span>
@@ -78,26 +78,26 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">API Key</p>
-                <p class="font-medium text-text-light dark:text-text-dark">{{ 'Set' if posthog.api_key_set else 'Not Set' }}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Token</p>
+                <p class="font-medium text-text-light dark:text-text-dark">{{ 'Set' if grafana.token_set else 'Not Set' }}</p>
             </div>
             <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Host</p>
-                <p class="font-mono text-sm text-text-light dark:text-text-dark">{{ posthog.host }}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">OTLP Endpoint</p>
+                <p class="font-mono text-sm text-text-light dark:text-text-dark">{{ grafana.endpoint or 'Not Set' }}</p>
             </div>
         </div>
 
-        {% if posthog.enabled %}
+        {% if grafana.enabled %}
         <div class="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <p class="text-sm text-blue-800 dark:text-blue-200">
-                <strong>PostHog is tracking:</strong> User behavior events like timer starts, project creation, etc.
-                Uses internal user IDs only (no PII).
+                <strong>Grafana OTLP is receiving telemetry:</strong> anonymous base install events and consented detailed analytics.
+                Direct personal identifiers are excluded.
             </p>
         </div>
         {% else %}
         <div class="mt-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
             <p class="text-sm text-gray-700 dark:text-gray-300">
-                To enable PostHog, set <code class="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-text-light dark:text-text-dark">POSTHOG_API_KEY</code> in your environment variables.
+                To enable OTLP telemetry, set <code class="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-text-light dark:text-text-dark">OTEL_EXPORTER_OTLP_ENDPOINT</code> and <code class="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-text-light dark:text-text-dark">OTEL_EXPORTER_OTLP_TOKEN</code> in your environment variables.
             </p>
         </div>
         {% endif %}

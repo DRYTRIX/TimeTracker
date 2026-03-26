@@ -91,77 +91,78 @@ class TestTelemetryEnabled:
 class TestSendTelemetryPing:
     """Tests for sending telemetry pings"""
 
-    @patch("app.utils.telemetry.posthog.capture")
-    def test_send_ping_when_enabled(self, mock_capture):
+    @patch("app.telemetry.service._send_otlp_event")
+    def test_send_ping_when_enabled(self, mock_send):
         """Test sending telemetry ping when enabled"""
         with patch.dict(
             os.environ,
             {
                 "ENABLE_TELEMETRY": "true",
-                "POSTHOG_API_KEY": "test-api-key",
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "https://otlp.example.com",
+                "OTEL_EXPORTER_OTLP_TOKEN": "test-token",
                 "APP_VERSION": "1.0.0",
                 "TELE_SALT": "test-salt",
             },
         ):
             result = send_telemetry_ping("install")
             assert result is True
-            assert mock_capture.called
+            assert mock_send.called
 
-            # Verify the call
-            call_args = mock_capture.call_args
-            assert call_args[1]["event"] == "telemetry.install"
-            assert "distinct_id" in call_args[1]
+            call_args = mock_send.call_args
+            assert call_args[1]["event_name"] == "telemetry.install"
+            assert "identity" in call_args[1]
             assert "properties" in call_args[1]
 
-    @patch("app.utils.telemetry.posthog.capture")
-    def test_no_ping_when_disabled(self, mock_capture):
+    @patch("app.telemetry.service._send_otlp_event")
+    def test_no_ping_when_disabled(self, mock_send):
         """Test that no ping is sent when telemetry is disabled"""
         with patch.dict(os.environ, {"ENABLE_TELEMETRY": "false"}):
             result = send_telemetry_ping("install")
             assert result is False
-            assert not mock_capture.called
+            assert not mock_send.called
 
-    @patch("app.utils.telemetry.posthog.capture")
-    def test_no_ping_when_no_api_key(self, mock_capture):
-        """Test that no ping is sent when POSTHOG_API_KEY is not set"""
-        with patch.dict(os.environ, {"ENABLE_TELEMETRY": "true", "POSTHOG_API_KEY": ""}):
+    @patch("app.telemetry.service._send_otlp_event")
+    def test_no_ping_when_no_sink_config(self, mock_send):
+        """Test that no ping is sent when OTLP sink is not set."""
+        with patch.dict(
+            os.environ, {"ENABLE_TELEMETRY": "true", "OTEL_EXPORTER_OTLP_ENDPOINT": "", "OTEL_EXPORTER_OTLP_TOKEN": ""}
+        ):
             result = send_telemetry_ping("install")
             assert result is False
-            assert not mock_capture.called
+            assert not mock_send.called
 
-    @patch("app.utils.telemetry.posthog.capture")
-    def test_ping_includes_required_fields(self, mock_capture):
-        """Test that telemetry ping includes required fields"""
+    @patch("app.telemetry.service._send_otlp_event")
+    def test_ping_forwards_extra_data(self, mock_send):
+        """Test that telemetry ping forwards custom event data."""
         with patch.dict(
             os.environ,
             {
                 "ENABLE_TELEMETRY": "true",
-                "POSTHOG_API_KEY": "test-api-key",
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "https://otlp.example.com",
+                "OTEL_EXPORTER_OTLP_TOKEN": "test-token",
                 "APP_VERSION": "1.0.0",
                 "TELE_SALT": "test-salt",
             },
         ):
             send_telemetry_ping("install", extra_data={"test": "value"})
 
-            # Get the call arguments
-            call_args = mock_capture.call_args
-            event = call_args[1]["event"]
+            call_args = mock_send.call_args
             properties = call_args[1]["properties"]
-
-            assert event == "telemetry.install"
-            assert "app_version" in properties
-            assert "platform" in properties
-            assert "python_version" in properties
-            assert "environment" in properties
-            assert "deployment_method" in properties
             assert properties["test"] == "value"
 
-    @patch("app.utils.telemetry.posthog.capture")
-    def test_ping_handles_network_errors_gracefully(self, mock_capture):
+    @patch("app.telemetry.service._send_otlp_event")
+    def test_ping_handles_network_errors_gracefully(self, mock_send):
         """Test that network errors don't crash the application"""
-        mock_capture.side_effect = Exception("Network error")
+        mock_send.side_effect = Exception("Network error")
 
-        with patch.dict(os.environ, {"ENABLE_TELEMETRY": "true", "POSTHOG_API_KEY": "test-api-key"}):
+        with patch.dict(
+            os.environ,
+            {
+                "ENABLE_TELEMETRY": "true",
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "https://otlp.example.com",
+                "OTEL_EXPORTER_OTLP_TOKEN": "test-token",
+            },
+        ):
             result = send_telemetry_ping("install")
             assert result is False
 

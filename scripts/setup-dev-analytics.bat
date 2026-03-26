@@ -27,9 +27,8 @@ echo 📝 Enter your development analytics keys:
 echo (Leave empty to skip)
 echo.
 
-set /p POSTHOG_KEY="PostHog API Key (starts with phc_): "
-set /p POSTHOG_HOST="PostHog Host [https://app.posthog.com]: "
-if "%POSTHOG_HOST%"=="" set POSTHOG_HOST=https://app.posthog.com
+set /p GRAFANA_OTLP_ENDPOINT="Grafana OTLP Endpoint: "
+set /p GRAFANA_OTLP_TOKEN="Grafana OTLP Token: "
 
 set /p SENTRY_DSN="Sentry DSN (optional): "
 set /p SENTRY_RATE="Sentry Traces Rate [1.0]: "
@@ -45,9 +44,9 @@ echo.
 echo This file is gitignored and contains your development API keys.
 echo """
 echo.
-echo # PostHog Configuration ^(Development^)
-echo POSTHOG_API_KEY_DEFAULT = "%POSTHOG_KEY%"
-echo POSTHOG_HOST_DEFAULT = "%POSTHOG_HOST%"
+echo # Grafana OTLP Configuration ^(Development^)
+echo GRAFANA_OTLP_ENDPOINT_DEFAULT = "%GRAFANA_OTLP_ENDPOINT%"
+echo GRAFANA_OTLP_TOKEN_DEFAULT = "%GRAFANA_OTLP_TOKEN%"
 echo.
 echo # Sentry Configuration ^(Development^)
 echo SENTRY_DSN_DEFAULT = "%SENTRY_DSN%"
@@ -73,8 +72,8 @@ echo def get_analytics_config^(^):
 echo     """Get analytics configuration for local development."""
 echo     app_version = _get_version_from_setup^(^)
 echo     return {
-echo         "posthog_api_key": POSTHOG_API_KEY_DEFAULT,
-echo         "posthog_host": POSTHOG_HOST_DEFAULT,
+echo         "grafana_otlp_endpoint": GRAFANA_OTLP_ENDPOINT_DEFAULT,
+echo         "grafana_otlp_token": GRAFANA_OTLP_TOKEN_DEFAULT,
 echo         "sentry_dsn": SENTRY_DSN_DEFAULT,
 echo         "sentry_traces_rate": float^(SENTRY_TRACES_RATE_DEFAULT^),
 echo         "app_version": app_version,
@@ -84,7 +83,7 @@ echo.
 echo.
 echo def has_analytics_configured^(^):
 echo     """Check if analytics keys are configured."""
-echo     return bool^(POSTHOG_API_KEY_DEFAULT^)
+echo     return bool^(GRAFANA_OTLP_ENDPOINT_DEFAULT^) and bool^(GRAFANA_OTLP_TOKEN_DEFAULT^)
 ) > app\config\analytics_defaults_local.py
 
 echo.
@@ -97,11 +96,11 @@ echo Next steps:
 echo 1. Start the application: docker-compose up -d
 echo 2. Access: http://localhost:5000
 echo 3. Complete setup and enable telemetry
-echo 4. Check PostHog dashboard for events
+echo 4. Check Grafana Cloud OTLP ingestion for events
 echo.
 echo ⚠️  Remember:
 echo - This config is gitignored and won't be committed
-echo - Use a separate PostHog project for development
+echo - Use a separate Grafana Cloud stack for development
 echo - Before committing, ensure no keys in analytics_defaults.py
 echo.
 echo To remove:

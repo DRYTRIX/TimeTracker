@@ -7,7 +7,6 @@ import uuid
 from datetime import timedelta
 from urllib.parse import urlparse
 
-import posthog
 import sentry_sdk
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
@@ -657,18 +656,6 @@ def create_app(config=None):
             app.logger.info("Sentry error monitoring initialized")
         except Exception as e:
             app.logger.warning(f"Failed to initialize Sentry: {e}")
-
-    # Initialize PostHog for product analytics
-    # Priority: Env var > Built-in default > Disabled
-    posthog_api_key = analytics_config.get("posthog_api_key", "")
-    posthog_host = analytics_config.get("posthog_host", "https://app.posthog.com")
-    if posthog_api_key:
-        try:
-            posthog.project_api_key = posthog_api_key
-            posthog.host = posthog_host
-            app.logger.info(f"PostHog product analytics initialized (host: {posthog_host})")
-        except Exception as e:
-            app.logger.warning(f"Failed to initialize PostHog: {e}")
 
     # Fail-fast on weak/missing secret in production
     # Skip validation in testing or debug mode

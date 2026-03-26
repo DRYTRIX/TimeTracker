@@ -1058,11 +1058,11 @@ def telemetry_dashboard():
         "config": installation_config.get_all_config(),
     }
 
-    # Get PostHog status
-    posthog_data = {
-        "enabled": bool(os.getenv("POSTHOG_API_KEY")),
-        "host": os.getenv("POSTHOG_HOST", "https://app.posthog.com"),
-        "api_key_set": bool(os.getenv("POSTHOG_API_KEY")),
+    # Get OTEL OTLP status
+    grafana_data = {
+        "enabled": bool(os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")) and bool(os.getenv("OTEL_EXPORTER_OTLP_TOKEN")),
+        "endpoint": os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
+        "token_set": bool(os.getenv("OTEL_EXPORTER_OTLP_TOKEN")),
     }
 
     # Get Sentry status
@@ -1076,7 +1076,7 @@ def telemetry_dashboard():
     app_module.log_event("admin.telemetry_dashboard_viewed", user_id=current_user.id)
     app_module.track_event(current_user.id, "admin.telemetry_dashboard_viewed", {})
 
-    return render_template("admin/telemetry.html", telemetry=telemetry_data, posthog=posthog_data, sentry=sentry_data)
+    return render_template("admin/telemetry.html", telemetry=telemetry_data, grafana=grafana_data, sentry=sentry_data)
 
 
 @admin_bp.route("/admin/telemetry/toggle", methods=["POST"])
@@ -1104,7 +1104,7 @@ def toggle_telemetry():
     if new_state:
         flash(_("Telemetry has been enabled. Thank you for helping us improve!"), "success")
     else:
-        flash(_("Telemetry has been disabled."), "info")
+        flash(_("Detailed analytics has been disabled. Anonymous base telemetry remains active."), "info")
 
     return redirect(url_for("admin.telemetry_dashboard"))
 

@@ -62,7 +62,7 @@ TimeTracker is built with modern, reliable technologies:
 - **APScheduler** — Background task scheduling
 - **Prometheus Client** — Metrics collection
 - **Sentry SDK** — Error monitoring (optional)
-- **PostHog** — Product analytics (optional)
+- **Grafana OTLP** — Telemetry sink (optional)
 
 ### Development & Testing
 - **pytest** — Testing framework
@@ -798,22 +798,21 @@ TimeTracker includes **optional** analytics and monitoring features to help impr
 - Helps identify and fix bugs quickly
 - **Opt-in:** Set `SENTRY_DSN` environment variable
 
-#### 4. **Product Analytics** (Optional - PostHog)
+#### 4. **Product Analytics** (Optional - Grafana OTLP)
 - Tracks feature usage and user behavior patterns with advanced features:
   - **Person Properties**: Role, auth method, login history
   - **Feature Flags**: Gradual rollouts, A/B testing, kill switches
   - **Group Analytics**: Segment by version, platform, deployment
   - **Rich Context**: Browser, device, environment on every event
-- **Opt-in:** Set `POSTHOG_API_KEY` environment variable
-- See [POSTHOG_ADVANCED_FEATURES.md](docs/admin/monitoring/POSTHOG_ADVANCED_FEATURES.md) for complete guide
+- **Sink config:** Set `GRAFANA_OTLP_ENDPOINT` and `GRAFANA_OTLP_TOKEN`
 
 #### 5. **Installation Telemetry** (Optional, Anonymous)
-- Sends anonymous installation data via PostHog with:
+- Sends anonymous installation data via Grafana OTLP with:
   - Anonymized fingerprint (SHA-256 hash, cannot be reversed)
   - Application version
   - Platform information
 - **No PII:** No IP addresses, usernames, or business data
-- **Opt-in:** Set `ENABLE_TELEMETRY=true` and `POSTHOG_API_KEY` environment variables
+- **Opt-in:** Set `ENABLE_TELEMETRY=true` for detailed analytics; base telemetry remains anonymous
 
 ### How to Enable Analytics
 
@@ -822,11 +821,11 @@ TimeTracker includes **optional** analytics and monitoring features to help impr
 SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
 SENTRY_TRACES_RATE=0.1  # 10% sampling for performance traces
 
-# Enable PostHog product analytics (optional)
-POSTHOG_API_KEY=your-posthog-api-key
-POSTHOG_HOST=https://app.posthog.com
+# Configure Grafana Cloud OTLP sink (optional)
+GRAFANA_OTLP_ENDPOINT=https://otlp-gateway-prod-eu-west-2.grafana.net/otlp/v1/logs
+GRAFANA_OTLP_TOKEN=your-grafana-otlp-token
 
-# Enable anonymous telemetry (optional, uses PostHog)
+# Enable detailed analytics (optional)
 ENABLE_TELEMETRY=true
 TELE_SALT=your-unique-salt
 APP_VERSION=1.0.0

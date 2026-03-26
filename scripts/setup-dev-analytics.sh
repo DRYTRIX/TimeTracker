@@ -29,9 +29,8 @@ echo "📝 Enter your development analytics keys:"
 echo "(Leave empty to skip)"
 echo ""
 
-read -p "PostHog API Key (starts with phc_): " POSTHOG_KEY
-read -p "PostHog Host [https://app.posthog.com]: " POSTHOG_HOST
-POSTHOG_HOST=${POSTHOG_HOST:-https://app.posthog.com}
+read -p "Grafana OTLP Endpoint: " GRAFANA_OTLP_ENDPOINT
+read -p "Grafana OTLP Token: " GRAFANA_OTLP_TOKEN
 
 read -p "Sentry DSN (optional): " SENTRY_DSN
 read -p "Sentry Traces Rate [1.0]: " SENTRY_RATE
@@ -47,9 +46,9 @@ Local development analytics configuration.
 This file is gitignored and contains your development API keys.
 """
 
-# PostHog Configuration (Development)
-POSTHOG_API_KEY_DEFAULT = "${POSTHOG_KEY}"
-POSTHOG_HOST_DEFAULT = "${POSTHOG_HOST}"
+# Grafana OTLP Configuration (Development)
+GRAFANA_OTLP_ENDPOINT_DEFAULT = "${GRAFANA_OTLP_ENDPOINT}"
+GRAFANA_OTLP_TOKEN_DEFAULT = "${GRAFANA_OTLP_TOKEN}"
 
 # Sentry Configuration (Development)
 SENTRY_DSN_DEFAULT = "${SENTRY_DSN}"
@@ -96,8 +95,8 @@ def get_analytics_config():
     app_version = _get_version_from_setup()
     
     return {
-        "posthog_api_key": POSTHOG_API_KEY_DEFAULT,
-        "posthog_host": POSTHOG_HOST_DEFAULT,
+        "grafana_otlp_endpoint": GRAFANA_OTLP_ENDPOINT_DEFAULT,
+        "grafana_otlp_token": GRAFANA_OTLP_TOKEN_DEFAULT,
         "sentry_dsn": SENTRY_DSN_DEFAULT,
         "sentry_traces_rate": float(SENTRY_TRACES_RATE_DEFAULT),
         "app_version": app_version,
@@ -107,7 +106,7 @@ def get_analytics_config():
 
 def has_analytics_configured():
     """Check if analytics keys are configured."""
-    return bool(POSTHOG_API_KEY_DEFAULT)
+    return bool(GRAFANA_OTLP_ENDPOINT_DEFAULT) and bool(GRAFANA_OTLP_TOKEN_DEFAULT)
 EOF
 
 echo ""
@@ -153,11 +152,11 @@ echo "Next steps:"
 echo "1. Start the application: docker-compose up -d"
 echo "2. Access: http://localhost:5000"
 echo "3. Complete setup and enable telemetry"
-echo "4. Check PostHog dashboard for events"
+echo "4. Check Grafana Cloud OTLP ingestion for events"
 echo ""
 echo "⚠️  Remember:"
 echo "- This config is gitignored and won't be committed"
-echo "- Use a separate PostHog project for development"
+echo "- Use a separate Grafana Cloud stack for development"
 echo "- Before committing, ensure no keys in analytics_defaults.py"
 echo ""
 echo "To revert changes:"

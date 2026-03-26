@@ -79,10 +79,10 @@ services:
       # See docs/analytics.md for configuration details
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_TRACES_RATE=${SENTRY_TRACES_RATE:-0.0}
-      - POSTHOG_API_KEY=${POSTHOG_API_KEY:-}
-      - POSTHOG_HOST=${POSTHOG_HOST:-https://app.posthog.com}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      - OTEL_EXPORTER_OTLP_TOKEN=${OTEL_EXPORTER_OTLP_TOKEN:-}
+      - OTEL_DEBUG_LOGGING=${OTEL_DEBUG_LOGGING:-false}
       - ENABLE_TELEMETRY=${ENABLE_TELEMETRY:-false}
-      - TELE_URL=${TELE_URL:-}
       - TELE_SALT=${TELE_SALT:-8f4a7b2e9c1d6f3a5e8b4c7d2a9f6e3b1c8d5a7f2e9b4c6d3a8f5e1b7c4d9a2f}
 
     # Expose only internally; nginx publishes ports

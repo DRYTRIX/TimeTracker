@@ -11,34 +11,34 @@ import pytest
 class TestConsentGate:
     """Product analytics only sent when opt-in is enabled."""
 
-    @patch("posthog.capture")
-    def test_send_analytics_event_no_capture_when_opt_out(self, mock_capture):
-        """When detailed analytics is disabled, send_analytics_event must not call posthog.capture."""
+    @patch("app.telemetry.service._send_otlp_event")
+    def test_send_analytics_event_no_capture_when_opt_out(self, mock_send):
+        """When detailed analytics is disabled, send_analytics_event must not call OTLP sender."""
         from app.telemetry.service import send_analytics_event
 
         with patch("app.telemetry.service.is_detailed_analytics_enabled", return_value=False):
             send_analytics_event(1, "test.event", {"k": "v"})
-        mock_capture.assert_not_called()
+        mock_send.assert_not_called()
 
-    @patch("posthog.capture")
-    def test_send_analytics_event_capture_when_opt_in(self, mock_capture):
-        """When detailed analytics is enabled and PostHog configured, capture is called."""
+    @patch("app.telemetry.service._send_otlp_event")
+    def test_send_analytics_event_capture_when_opt_in(self, mock_send):
+        """When detailed analytics is enabled and OTLP configured, sender is called."""
         from app.telemetry.service import send_analytics_event
 
         with patch("app.telemetry.service.is_detailed_analytics_enabled", return_value=True):
             with patch("app.config.analytics_defaults.get_analytics_config") as mock_config:
                 mock_config.return_value = {
-                    "posthog_api_key": "phc_test",
-                    "posthog_host": "https://test.posthog.com",
+                    "otel_exporter_otlp_endpoint": "https://otlp.example.com",
+                    "otel_exporter_otlp_token": "test-token",
                     "app_version": "1.0.0",
                 }
                 with patch("app.utils.installation.get_installation_config") as mock_inst:
                     mock_inst.return_value.get_install_id.return_value = "install-uuid-123"
                     send_analytics_event(1, "test.event", {"k": "v"})
-        mock_capture.assert_called_once()
-        call_kw = mock_capture.call_args[1]
-        assert call_kw["distinct_id"] == "1"
-        assert call_kw["event"] == "test.event"
+        mock_send.assert_called_once()
+        call_kw = mock_send.call_args[1]
+        assert call_kw["identity"] == "1"
+        assert call_kw["event_name"] == "test.event"
         assert call_kw["properties"].get("install_id") == "install-uuid-123"
 
 
