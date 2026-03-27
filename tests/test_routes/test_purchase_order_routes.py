@@ -112,6 +112,28 @@ class TestPurchaseOrderRoutes:
         assert response.status_code == 200
         assert b"PO-TEST-001" in response.data
 
+    def test_view_purchase_order_with_line_items(self, client, test_user, test_purchase_order, test_stock_item, test_warehouse):
+        """View page must render when PO has line items (regression for #576)."""
+        item = PurchaseOrderItem(
+            purchase_order_id=test_purchase_order.id,
+            description="Test Item",
+            quantity_ordered=Decimal("10.00"),
+            unit_cost=Decimal("5.00"),
+            stock_item_id=test_stock_item.id,
+            warehouse_id=test_warehouse.id,
+        )
+        db.session.add(item)
+        test_purchase_order.calculate_totals()
+        db.session.commit()
+
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(test_user.id)
+
+        response = client.get(url_for("inventory.view_purchase_order", po_id=test_purchase_order.id))
+        assert response.status_code == 200
+        assert b"PO-TEST-001" in response.data
+        assert test_stock_item.sku.encode() in response.data
+
     def test_edit_purchase_order(self, client, test_user, test_purchase_order):
         """Test editing a draft purchase order"""
         with client.session_transaction() as sess:

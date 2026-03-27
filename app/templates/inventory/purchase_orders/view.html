@@ -151,7 +151,7 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="mb-4">
                     <label for="received_date" class="form-label">{{ _('Received Date') }}</label>
-                    <input type="date" name="received_date" id="received_date" value="{{ datetime.now().strftime('%Y-%m-%d') }}" class="form-input">
+                    <input type="date" name="received_date" id="received_date" value="{{ default_received_date }}" class="form-input">
                 </div>
                 <div class="space-y-2 mb-4">
                     {% for item in purchase_order.items %}
