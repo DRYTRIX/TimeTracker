@@ -17,12 +17,12 @@
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <form method="POST" id="editInvoiceForm" novalidate data-validate-form>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
+                    <div class="min-w-0">
                         <label for="client_name" class="form-label">{{ _('Client Name') }} *</label>
                         <input type="text" name="client_name" id="client_name" value="{{ invoice.client_name }}" required class="form-input">
                     </div>
-                    <div>
+                    <div class="min-w-0">
                         <label for="client_email" class="form-label">{{ _('Client Email') }}</label>
                         <input type="email" name="client_email" id="client_email" value="{{ invoice.client_email }}" class="form-input">
                     </div>
@@ -30,7 +30,7 @@
                         <label for="due_date" class="form-label">{{ _('Due Date') }} *</label>
                         <input type="date" name="due_date" id="due_date" value="{{ invoice.due_date.strftime('%Y-%m-%d') }}" required class="form-input user-date-input">
                     </div>
-                    <div>
+                    <div class="min-w-0">
                         <label for="tax_rate" class="form-label">{{ _('Tax Rate (%)') }}</label>
                         <input type="number" name="tax_rate" id="tax_rate" value="{{ invoice.tax_rate }}" step="0.01" class="form-input">
                     </div>
@@ -38,15 +38,15 @@
                         <label for="client_address" class="form-label">{{ _('Client Address') }}</label>
                         <textarea name="client_address" id="client_address" rows="3" class="form-input">{{ invoice.client_address }}</textarea>
                     </div>
-                    <div class="md:col-span-2">
+                    <div class="md:col-span-2 min-w-0">
                         <label for="buyer_reference" class="form-label">{{ _('Buyer reference (PEPPOL BT-10)') }}</label>
                         <input type="text" name="buyer_reference" id="buyer_reference" value="{{ invoice.buyer_reference or '' }}" class="form-input" placeholder="{{ _('Optional; used in PEPPOL UBL') }}">
                     </div>
-                    <div class="md:col-span-2">
+                    <div class="md:col-span-2 min-w-0">
                         <label for="notes" class="form-label">{{ _('Notes') }}</label>
                         <textarea name="notes" id="notes" rows="3" class="form-input">{{ invoice.notes or '' }}</textarea>
                     </div>
-                    <div class="md:col-span-2">
+                    <div class="md:col-span-2 min-w-0">
                         <label for="terms" class="form-label">{{ _('Terms') }}</label>
                         <textarea name="terms" id="terms" rows="3" class="form-input">{{ invoice.terms or '' }}</textarea>
                     </div>
@@ -79,21 +79,21 @@
                     
                     <div id="invoice-items" class="space-y-2">
                         {% for item in invoice.items %}
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row hover:shadow-sm transition" data-is-time-based="{{ 'true' if item.time_entry_ids else 'false' }}">
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row min-w-0 hover:shadow-sm transition" data-is-time-based="{{ 'true' if item.time_entry_ids else 'false' }}">
                             <input type="hidden" name="item_stock_item_id[]" value="{{ item.stock_item_id if item.stock_item_id else '' }}">
                             <input type="hidden" name="item_warehouse_id[]" value="{{ item.warehouse_id if item.warehouse_id else '' }}">
                             <input type="hidden" name="item_time_entry_ids[]" value="{{ item.time_entry_ids or '' }}">
                             {% if item.time_entry_ids %}
                             {# Time-based item: show Project and Task #}
-                            <div class="md:col-span-2 flex flex-col justify-center">
+                            <div class="md:col-span-2 min-w-0 flex flex-col justify-center">
                                 <span class="text-sm text-text-light dark:text-text-dark py-2">{{ invoice.project.name if invoice.project else '-' }}</span>
                             </div>
-                            <div class="md:col-span-2 flex flex-col justify-center">
+                            <div class="md:col-span-2 min-w-0 flex flex-col justify-center">
                                 <span class="text-sm text-text-light dark:text-text-dark py-2">{{ item.task_name_from_time_entries or _('Project hours') }}</span>
                             </div>
                             {% else %}
                             {# Stock/manual item: show Stock and Warehouse dropdowns #}
-                            <div class="md:col-span-2 flex flex-col">
+                            <div class="md:col-span-2 min-w-0 flex flex-col">
                                 <select class="form-input item-stock-select text-sm" data-row-index="{{ loop.index0 }}" title="{{ _('Select Stock Item') }}">
                                     <option value="">{{ _('None') }}</option>
                                     {% for stock_item in stock_items %}
@@ -101,7 +101,7 @@
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="md:col-span-2 flex flex-col">
+                            <div class="md:col-span-2 min-w-0 flex flex-col">
                                 <select class="form-input item-warehouse-select text-sm" data-row-index="{{ loop.index0 }}" title="{{ _('Select Warehouse') }}">
                                     <option value="">{{ _('None') }}</option>
                                     {% for warehouse in warehouses %}
@@ -110,20 +110,20 @@
                                 </select>
                             </div>
                             {% endif %}
-                            <div class="md:col-span-3 flex flex-col">
+                            <div class="md:col-span-3 min-w-0 flex flex-col">
                                 <input type="text" name="description[]" placeholder="{{ _('e.g., Web Development Services') }}" value="{{ item.description }}" class="form-input item-description" data-calc-trigger>
                             </div>
-                            <div class="md:col-span-2 flex flex-col">
+                            <div class="md:col-span-2 min-w-0 flex flex-col">
                                 {% if item.time_entry_ids %}
                                 <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" value="{{ item.quantity }}" step="0.01" min="0" class="form-input item-quantity bg-gray-100 dark:bg-gray-800 cursor-not-allowed" readonly title="{{ _('Quantity is from logged hours and cannot be edited') }}">
                                 {% else %}
                                 <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" value="{{ item.quantity }}" step="0.01" min="0" class="form-input item-quantity" data-calc-trigger>
                                 {% endif %}
                             </div>
-                            <div class="md:col-span-2 flex flex-col">
+                            <div class="md:col-span-2 min-w-0 flex flex-col">
                                 <input type="number" name="unit_price[]" placeholder="{{ _('Unit Price') }}" value="{{ item.unit_price }}" step="0.01" min="0" class="form-input item-price" data-calc-trigger>
                             </div>
-                            <div class="md:col-span-1 flex flex-col">
+                            <div class="md:col-span-1 min-w-0 flex flex-col">
                                 <button type="button" class="remove-item bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Remove item') }}">
                                     <i class="fas fa-trash"></i>
                                 </button>
@@ -167,15 +167,15 @@
                     
                     <div id="invoice-expenses" class="space-y-2">
                         {% for expense in invoice.expenses %}
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/50 invoice-expense-row hover:shadow-sm transition">
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/50 invoice-expense-row min-w-0 hover:shadow-sm transition">
                             <input type="hidden" name="expense_id[]" value="{{ expense.id }}">
-                            <div class="md:col-span-3 flex flex-col">
+                            <div class="md:col-span-3 min-w-0 flex flex-col">
                                 <input type="text" name="expense_title[]" placeholder="{{ _('e.g., Travel to Client Meeting') }}" value="{{ expense.title }}" class="form-input" data-calc-trigger readonly title="{{ _('Linked expense - title cannot be edited') }}">
                             </div>
-                            <div class="md:col-span-3 flex flex-col">
+                            <div class="md:col-span-3 min-w-0 flex flex-col">
                                 <input type="text" name="expense_description[]" placeholder="{{ _('Description') }}" value="{{ expense.description or '' }}" class="form-input" readonly title="{{ _('Linked expense - description cannot be edited') }}">
                             </div>
-                            <div class="md:col-span-2 flex flex-col">
+                            <div class="md:col-span-2 min-w-0 flex flex-col">
                                 <select name="expense_category[]" class="form-input" disabled title="{{ _('Linked expense - category cannot be edited') }}">
                                     <option value="travel" {% if expense.category == 'travel' %}selected{% endif %}>{{ _('Travel') }}</option>
                                     <option value="meals" {% if expense.category == 'meals' %}selected{% endif %}>{{ _('Meals') }}</option>
@@ -189,13 +189,13 @@
                                     <option value="other" {% if expense.category == 'other' %}selected{% endif %}>{{ _('Other') }}</option>
                                 </select>
                             </div>
-                            <div class="md:col-span-2 flex flex-col">
+                            <div class="md:col-span-2 min-w-0 flex flex-col">
                                 <input type="number" name="expense_amount[]" placeholder="{{ _('Amount') }}" value="{{ expense.total_amount }}" step="0.01" min="0" class="form-input expense-amount" data-calc-trigger readonly title="{{ _('Linked expense - amount cannot be edited') }}">
                             </div>
-                            <div class="md:col-span-1 flex flex-col">
+                            <div class="md:col-span-1 min-w-0 flex flex-col">
                                 <input type="date" name="expense_date[]" value="{{ expense.expense_date.strftime('%Y-%m-%d') if expense.expense_date else '' }}" class="form-input user-date-input text-xs" readonly title="{{ _('Linked expense - date cannot be edited') }}">
                             </div>
-                            <div class="md:col-span-1 flex flex-col">
+                            <div class="md:col-span-1 min-w-0 flex flex-col">
                                 <button type="button" class="remove-expense bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Unlink expense from invoice') }}">
                                     <i class="fas fa-unlink"></i>
                                 </button>
@@ -240,14 +240,14 @@
                     
                     <div id="invoice-goods" class="space-y-2">
                         {% for good in invoice.extra_goods %}
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/50 invoice-good-row hover:shadow-sm transition">
-                            <div class="md:col-span-2 flex flex-col">
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/50 invoice-good-row min-w-0 hover:shadow-sm transition">
+                            <div class="md:col-span-2 min-w-0 flex flex-col">
                                 <input type="text" name="good_name[]" placeholder="{{ _('e.g., Software License') }}" value="{{ good.name }}" class="form-input" data-calc-trigger>
                             </div>
-                            <div class="md:col-span-2 flex flex-col">
+                            <div class="md:col-span-2 min-w-0 flex flex-col">
                                 <input type="text" name="good_description[]" placeholder="{{ _('Description') }}" value="{{ good.description or '' }}" class="form-input">
                             </div>
-                            <div class="md:col-span-2 flex flex-col">
+                            <div class="md:col-span-2 min-w-0 flex flex-col">
                                 <select name="good_category[]" class="form-input">
                                     <option value="product" {% if good.category == 'product' %}selected{% endif %}>{{ _('Product') }}</option>
                                     <option value="service" {% if good.category == 'service' %}selected{% endif %}>{{ _('Service') }}</option>
@@ -256,16 +256,16 @@
                                     <option value="other" {% if good.category == 'other' %}selected{% endif %}>{{ _('Other') }}</option>
                                 </select>
                             </div>
-                            <div class="md:col-span-2 flex flex-col">
+                            <div class="md:col-span-2 min-w-0 flex flex-col">
                                 <input type="number" name="good_quantity[]" placeholder="{{ _('Qty') }}" value="{{ good.quantity }}" step="0.01" min="0" class="form-input good-quantity" data-calc-trigger>
                             </div>
-                            <div class="md:col-span-2 flex flex-col">
+                            <div class="md:col-span-2 min-w-0 flex flex-col">
                                 <input type="number" name="good_unit_price[]" placeholder="{{ _('Price') }}" value="{{ good.unit_price }}" step="0.01" min="0" class="form-input good-price" data-calc-trigger>
                             </div>
-                            <div class="md:col-span-1 flex flex-col">
+                            <div class="md:col-span-1 min-w-0 flex flex-col">
                                 <input type="text" name="good_sku[]" placeholder="{{ _('SKU') }}" value="{{ good.sku or '' }}" class="form-input text-xs">
                             </div>
-                            <div class="md:col-span-1 flex flex-col">
+                            <div class="md:col-span-1 min-w-0 flex flex-col">
                                 <button type="button" class="remove-good bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Remove good') }}">
                                     <i class="fas fa-trash"></i>
                                 </button>
@@ -524,26 +524,26 @@ document.addEventListener('DOMContentLoaded', function() {
             <input type="hidden" name="item_stock_item_id[]" value="">
             <input type="hidden" name="item_warehouse_id[]" value="">
             <input type="hidden" name="item_time_entry_ids[]" value="">
-            <div class="md:col-span-2 flex flex-col">
+            <div class="md:col-span-2 min-w-0 flex flex-col">
                 <select class="form-input item-stock-select text-sm">
                     ${stockItemsHtml}
                 </select>
             </div>
-            <div class="md:col-span-2 flex flex-col">
+            <div class="md:col-span-2 min-w-0 flex flex-col">
                 <select class="form-input item-warehouse-select text-sm">
                     ${warehousesHtml}
                 </select>
             </div>
-            <div class="md:col-span-3 flex flex-col">
+            <div class="md:col-span-3 min-w-0 flex flex-col">
                 <input type="text" name="description[]" placeholder="{{ _('e.g., Web Development Services') }}" class="form-input item-description" data-calc-trigger>
             </div>
-            <div class="md:col-span-2 flex flex-col">
+            <div class="md:col-span-2 min-w-0 flex flex-col">
                 <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" value="1" step="0.01" min="0" class="form-input item-quantity" data-calc-trigger>
             </div>
-            <div class="md:col-span-2 flex flex-col">
+            <div class="md:col-span-2 min-w-0 flex flex-col">
                 <input type="number" name="unit_price[]" placeholder="{{ _('Unit Price') }}" step="0.01" min="0" class="form-input item-price" data-calc-trigger>
             </div>
-            <div class="md:col-span-1 flex flex-col">
+            <div class="md:col-span-1 min-w-0 flex flex-col">
                 <button type="button" class="remove-item bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Remove item') }}">
                     <i class="fas fa-trash"></i>
                 </button>
@@ -599,15 +599,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const addGoodBtn = document.getElementById('add-good');
     addGoodBtn && addGoodBtn.addEventListener('click', function() {
         const row = document.createElement('div');
-        row.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/50 invoice-good-row hover:shadow-sm transition space-y-2';
+        row.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/50 invoice-good-row min-w-0 hover:shadow-sm transition space-y-2';
         row.innerHTML = `
-            <div class="md:col-span-2 flex flex-col">
+            <div class="md:col-span-2 min-w-0 flex flex-col">
                 <input type="text" name="good_name[]" placeholder="{{ _('e.g., Software License') }}" class="form-input" data-calc-trigger>
             </div>
-            <div class="md:col-span-2 flex flex-col">
+            <div class="md:col-span-2 min-w-0 flex flex-col">
                 <input type="text" name="good_description[]" placeholder="{{ _('Description') }}" class="form-input">
             </div>
-            <div class="md:col-span-2 flex flex-col">
+            <div class="md:col-span-2 min-w-0 flex flex-col">
                 <select name="good_category[]" class="form-input">
                     <option value="product">{{ _('Product') }}</option>
                     <option value="service">{{ _('Service') }}</option>
@@ -616,16 +616,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     <option value="other">{{ _('Other') }}</option>
                 </select>
             </div>
-            <div class="md:col-span-2 flex flex-col">
+            <div class="md:col-span-2 min-w-0 flex flex-col">
                 <input type="number" name="good_quantity[]" placeholder="{{ _('Qty') }}" value="1" step="0.01" min="0" class="form-input good-quantity" data-calc-trigger>
             </div>
-            <div class="md:col-span-2 flex flex-col">
+            <div class="md:col-span-2 min-w-0 flex flex-col">
                 <input type="number" name="good_unit_price[]" placeholder="{{ _('Price') }}" step="0.01" min="0" class="form-input good-price" data-calc-trigger>
             </div>
-            <div class="md:col-span-1 flex flex-col">
+            <div class="md:col-span-1 min-w-0 flex flex-col">
                 <input type="text" name="good_sku[]" placeholder="{{ _('SKU') }}" class="form-input text-xs">
             </div>
-            <div class="md:col-span-1 flex flex-col">
+            <div class="md:col-span-1 min-w-0 flex flex-col">
                 <button type="button" class="remove-good bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Remove good') }}">
                     <i class="fas fa-trash"></i>
                 </button>

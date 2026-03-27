@@ -15,6 +15,25 @@
     breadcrumbs=breadcrumbs
 ) }}
 
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+    <h2 class="text-lg font-semibold mb-2">{{ _('Send test email') }}</h2>
+    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ _('Sends the saved template (save changes first). Uses the same rendering as a real invoice email. Default recipient can be set under Admin → Email Configuration.') }}</p>
+    <div class="flex flex-col sm:flex-row flex-wrap gap-4 items-end">
+        <div class="flex-1 min-w-[200px]">
+            <label for="templateTestRecipient" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Recipient') }}</label>
+            <input type="email" id="templateTestRecipient" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100" placeholder="user@example.com">
+        </div>
+        <div class="w-full sm:w-40">
+            <label for="templateTestInvoiceId" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ _('Invoice ID') }} <span class="text-gray-400 font-normal">({{ _('optional') }})</span></label>
+            <input type="number" id="templateTestInvoiceId" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-card-light dark:bg-card-dark text-gray-900 dark:text-gray-100" min="1" placeholder="">
+        </div>
+        <button type="button" id="templateTestSendBtn" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">
+            <i class="fas fa-paper-plane mr-2"></i>{{ _('Send test email') }}
+        </button>
+    </div>
+    <div id="templateTestResult" class="mt-4 hidden"></div>
+</div>
+
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST" id="emailTemplateForm" class="space-y-6">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -558,5 +577,54 @@ function checkEditorAndInit() {
 }
 
 waitForEditorAndInit();
+</script>
+<script>
+(function() {
+    function showTestResult(ok, msg) {
+        const el = document.getElementById('templateTestResult');
+        if (!el) return;
+        el.classList.remove('hidden');
+        el.className = 'mt-4 px-4 py-3 rounded relative ' + (ok
+            ? 'bg-green-100 dark:bg-green-900 border border-green-400 dark:border-green-700 text-green-700 dark:text-green-200'
+            : 'bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200');
+        el.textContent = msg;
+    }
+    document.addEventListener('DOMContentLoaded', async function() {
+        try {
+            const r = await fetch('{{ url_for("admin.get_email_config") }}');
+            const c = await r.json();
+            const inp = document.getElementById('templateTestRecipient');
+            if (inp && c.test_recipient) inp.value = c.test_recipient;
+        } catch (e) {}
+        const btn = document.getElementById('templateTestSendBtn');
+        if (!btn) return;
+        btn.addEventListener('click', async function() {
+            const recipient = document.getElementById('templateTestRecipient').value.trim();
+            const invRaw = document.getElementById('templateTestInvoiceId').value.trim();
+            const body = {};
+            if (recipient) body.recipient = recipient;
+            if (invRaw) body.invoice_id = parseInt(invRaw, 10);
+            btn.disabled = true;
+            const resEl = document.getElementById('templateTestResult');
+            if (resEl) resEl.classList.add('hidden');
+            try {
+                const response = await fetch('{{ url_for("admin.send_email_template_test", template_id=template.id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify(body)
+                });
+                const data = await response.json();
+                showTestResult(data.success, data.message || (data.success ? 'OK' : 'Error'));
+            } catch (err) {
+                showTestResult(false, '{{ _("Failed to send test email.") }}');
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    });
+})();
 </script>
 {% endblock %}

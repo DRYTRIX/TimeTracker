@@ -189,6 +189,8 @@ class PurchaseOrderItem(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
+    stock_item = db.relationship("StockItem", foreign_keys=[stock_item_id], lazy="joined")
+
     def __init__(
         self,
         purchase_order_id,

@@ -1,6 +1,6 @@
 """Inventory Management Routes"""
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
@@ -1947,7 +1947,11 @@ def view_purchase_order(po_id):
     """View purchase order details"""
     purchase_order = PurchaseOrder.query.get_or_404(po_id)
 
-    return render_template("inventory/purchase_orders/view.html", purchase_order=purchase_order)
+    return render_template(
+        "inventory/purchase_orders/view.html",
+        purchase_order=purchase_order,
+        default_received_date=date.today().isoformat(),
+    )
 
 
 @inventory_bp.route("/inventory/purchase-orders/<int:po_id>/edit", methods=["GET", "POST"])

@@ -30,15 +30,15 @@
 
 <!-- Hero: Timer first (primary action) -->
 <div class="{% if active_timer %}bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800{% else %}bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark{% endif %} p-6 rounded-xl shadow-sm dashboard-widget animated-card mb-6" {% if active_timer %}data-timer-start="{{ active_timer.start_time.isoformat() }}" data-today-hours="{{ today_hours }}" data-week-hours="{{ week_hours }}" data-month-hours="{{ month_hours }}"{% endif %}>
-    <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-3">
-            <div class="{% if active_timer %}bg-blue-500/10 dark:bg-blue-400/10{% else %}bg-gray-100 dark:bg-gray-800{% endif %} p-3 rounded-lg">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4 min-w-0">
+        <div class="flex items-center gap-3 min-w-0">
+            <div class="{% if active_timer %}bg-blue-500/10 dark:bg-blue-400/10{% else %}bg-gray-100 dark:bg-gray-800{% endif %} p-3 rounded-lg shrink-0">
                 <i class="fas fa-stopwatch {% if active_timer %}text-blue-600 dark:text-blue-400 animate-pulse{% else %}text-gray-600 dark:text-gray-400{% endif %} text-xl"></i>
             </div>
-            <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Timer') }}</h2>
+            <h2 class="text-lg font-semibold text-text-light dark:text-text-dark truncate">{{ _('Timer') }}</h2>
         </div>
         {% if not active_timer %}
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto sm:justify-end min-w-0">
             {% if last_timer_context %}
             <button type="button" class="btn btn-secondary js-repeat-last-timer" aria-label="{{ _('Start timer with same project, task and notes as last entry') }}" title="{{ _('Start timer with same project, task and notes as last entry') }}">
                 <i class="fas fa-redo" aria-hidden="true"></i>{{ _('Repeat last') }}

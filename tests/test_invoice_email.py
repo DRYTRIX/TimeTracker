@@ -9,7 +9,7 @@ from decimal import Decimal
 from flask import current_app
 from app import db
 from app.models import Invoice, InvoiceEmail, User, Settings, Client, Project
-from app.utils.email import send_invoice_email
+from app.utils.email import send_invoice_email, send_invoice_template_test_email
 from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, InvoiceItemFactory
 
 
@@ -446,3 +446,57 @@ class TestInvoiceEmailModel:
             assert email_dict["status"] == "sent"
             assert "sent_at" in email_dict
             assert "created_at" in email_dict
+
+
+class TestSendInvoiceTemplateTestEmail:
+    """Tests for send_invoice_template_test_email"""
+
+    @patch("app.utils.pdf_generator.InvoicePDFGenerator")
+    def test_send_invoice_template_test_email_success(
+        self, mock_pdf_class, app, test_invoice, mock_mail_send
+    ):
+        mock_instance = MagicMock()
+        mock_instance.generate_pdf.return_value = b"fake_pdf_bytes"
+        mock_pdf_class.return_value = mock_instance
+
+        with app.app_context():
+            from app.models import InvoiceTemplate
+
+            current_app.config["MAIL_SERVER"] = "smtp.test.com"
+            current_app.config["MAIL_DEFAULT_SENDER"] = "noreply@test.com"
+
+            tmpl = InvoiceTemplate(name="Tpl", html="<p>{{ invoice.invoice_number }}</p>", css="")
+            db.session.add(tmpl)
+            db.session.commit()
+
+            success, message = send_invoice_template_test_email(
+                tmpl.id, "preview@example.com", invoice_id=test_invoice.id
+            )
+            assert success is True
+            assert "successfully" in message.lower()
+            mock_mail_send.assert_called_once()
+
+    def test_send_invoice_template_test_email_no_mail_server(self, app, test_invoice):
+        with app.app_context():
+            from app.models import InvoiceTemplate
+
+            current_app.config["MAIL_SERVER"] = "localhost"
+            tmpl = InvoiceTemplate(name="Tpl2", html="<p>x</p>")
+            db.session.add(tmpl)
+            db.session.commit()
+
+            success, message = send_invoice_template_test_email(
+                tmpl.id, "preview@example.com", invoice_id=test_invoice.id
+            )
+            assert success is False
+            assert "not configured" in message.lower()
+
+    def test_send_invoice_template_test_email_template_missing(self, app, test_invoice):
+        with app.app_context():
+            current_app.config["MAIL_SERVER"] = "smtp.test.com"
+
+            success, message = send_invoice_template_test_email(
+                999999, "preview@example.com", invoice_id=test_invoice.id
+            )
+            assert success is False
+            assert "not found" in message.lower()

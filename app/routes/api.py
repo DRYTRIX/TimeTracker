@@ -1550,7 +1550,11 @@ def update_entry(entry_id):
     data = request.get_json() or {}
     reason = data.get("reason")  # Optional reason for the change
 
-    # Optional: start/end time updates (admin only for safety)
+    can_edit_schedule = current_user.is_admin or (
+        entry.user_id == current_user.id and current_user.has_permission("edit_own_time_entries")
+    )
+
+    # Optional: start/end time and assignment updates (admin or edit_own_time_entries on own entry)
     # Accept HTML datetime-local format: YYYY-MM-DDTHH:MM
     def parse_dt_local(dt_str):
         if not dt_str:
@@ -1577,11 +1581,12 @@ def update_entry(entry_id):
         entry_id=entry_id,
         user_id=current_user.id,
         is_admin=current_user.is_admin,
-        project_id=data.get("project_id") if current_user.is_admin else None,
-        client_id=data.get("client_id") if current_user.is_admin else None,
-        task_id=data.get("task_id"),
-        start_time=parse_dt_local(data.get("start_time")) if current_user.is_admin and data.get("start_time") else None,
-        end_time=parse_dt_local(data.get("end_time")) if current_user.is_admin and data.get("end_time") else None,
+        project_id=data.get("project_id") if can_edit_schedule else None,
+        client_id=data.get("client_id") if can_edit_schedule else None,
+        task_id=data.get("task_id") if can_edit_schedule else None,
+        start_time=parse_dt_local(data.get("start_time")) if can_edit_schedule and data.get("start_time") else None,
+        end_time=parse_dt_local(data.get("end_time")) if can_edit_schedule and data.get("end_time") else None,
+        break_seconds=data.get("break_seconds") if can_edit_schedule else None,
         notes=data.get("notes"),
         tags=data.get("tags"),
         billable=data.get("billable"),

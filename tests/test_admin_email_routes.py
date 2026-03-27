@@ -76,6 +76,11 @@ class TestAdminEmailRoutes:
         response = client.post("/admin/email/test", json={"recipient": "test@example.com"})
         assert response.status_code == 302  # Redirect to login
 
+    def test_send_email_template_test_requires_login(self, client):
+        """Test that invoice email template test endpoint requires login"""
+        response = client.post("/admin/email-templates/1/send-test", json={"recipient": "test@example.com"})
+        assert response.status_code == 302  # Redirect to login
+
     @pytest.mark.skip(reason="Authentication/session issues in test - needs investigation")
     @patch("app.utils.email.send_test_email")
     def test_send_test_email_success(self, mock_send, client, admin_user):
