@@ -56,7 +56,13 @@ class TestEmailSmokeTests:
     def test_email_utilities_importable(self):
         """Smoke test: Email utilities can be imported"""
         try:
-            from app.utils.email import send_email, check_email_configuration, send_test_email, init_mail
+            from app.utils.email import (
+                send_email,
+                check_email_configuration,
+                send_test_email,
+                send_invoice_template_test_email,
+                init_mail,
+            )
 
             # If we can import, test passes
             assert True
@@ -77,6 +83,9 @@ class TestEmailSmokeTests:
 
             # Config status route
             assert "/admin/email/config-status" in rules
+
+            # Invoice email template test send
+            assert any("/send-test" in r and "email-templates" in r for r in rules)
 
     def test_email_template_exists(self, app):
         """Smoke test: Email templates exist"""

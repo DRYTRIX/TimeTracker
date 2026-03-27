@@ -595,6 +595,198 @@ TimeTracker - Time Tracking & Project Management
         return False, f"Failed to send test email: {str(e)}"
 
 
+def _build_invoice_email_payload(invoice, email_template_id=None, custom_message=None):
+    """Build PDF and bodies for an invoice email.
+
+    Returns:
+        tuple: (pdf_bytes, html_body, text_body, subject)
+
+    Raises:
+        ValueError: if PDF generation fails completely.
+    """
+    from app.models import Settings
+
+    current_app.logger.info(f"[INVOICE EMAIL] Building payload for invoice {invoice.invoice_number}")
+
+    pdf_bytes = None
+    try:
+        from app.utils.pdf_generator import InvoicePDFGenerator
+
+        settings = Settings.get_settings()
+        pdf_generator = InvoicePDFGenerator(invoice, settings=settings, page_size="A4")
+        pdf_bytes = pdf_generator.generate_pdf()
+        if not pdf_bytes:
+            raise ValueError("PDF generator returned None")
+        current_app.logger.info(f"[INVOICE EMAIL] PDF generated successfully - size: {len(pdf_bytes)} bytes")
+    except Exception as pdf_error:
+        current_app.logger.warning(f"[INVOICE EMAIL] PDF generation failed, trying fallback: {pdf_error}")
+        current_app.logger.exception("[INVOICE EMAIL] PDF generation error details:")
+        try:
+            from app.utils.pdf_generator_fallback import InvoicePDFGeneratorFallback
+
+            settings = Settings.get_settings()
+            pdf_generator = InvoicePDFGeneratorFallback(invoice, settings=settings)
+            pdf_bytes = pdf_generator.generate_pdf()
+            if not pdf_bytes:
+                raise ValueError("PDF fallback generator returned None")
+            current_app.logger.info(f"[INVOICE EMAIL] PDF generated via fallback - size: {len(pdf_bytes)} bytes")
+        except Exception as fallback_error:
+            current_app.logger.error(f"[INVOICE EMAIL] Both PDF generators failed: {fallback_error}")
+            current_app.logger.exception("[INVOICE EMAIL] Fallback PDF generation error details:")
+            raise ValueError(f"PDF generation failed: {str(fallback_error)}") from fallback_error
+
+    if not pdf_bytes:
+        raise ValueError("PDF generation returned empty result")
+
+    settings = Settings.get_settings()
+    company_name = settings.company_name if settings else "Your Company"
+    subject = f"Invoice {invoice.invoice_number} from {company_name}"
+
+    html_body = None
+    text_body = None
+
+    if email_template_id:
+        try:
+            from app.models import InvoiceTemplate
+
+            email_template = InvoiceTemplate.query.get(email_template_id)
+            if email_template and email_template.html:
+                template_html = email_template.html.strip()
+
+                if email_template.css and email_template.css.strip():
+                    css_content = email_template.css.strip()
+                    if not css_content.startswith("<style"):
+                        css_content = f"<style>\n{css_content}\n</style>"
+                    if "<style>" not in template_html and "</style>" not in template_html:
+                        if "</head>" in template_html:
+                            template_html = template_html.replace("</head>", f"{css_content}\n</head>")
+                        elif "<body>" in template_html:
+                            template_html = template_html.replace("<body>", f"{css_content}\n<body>")
+                        else:
+                            template_html = f"{css_content}\n{template_html}"
+
+                if not template_html.strip().startswith("<!DOCTYPE") and not template_html.strip().startswith("<html"):
+                    if "<html" not in template_html:
+                        template_html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+{template_html}
+</body>
+</html>"""
+
+                template = JinjaTemplate(template_html)
+                html_body = template.render(invoice=invoice, company_name=company_name, custom_message=custom_message)
+                text_body = f"Invoice {invoice.invoice_number} - Please see attached PDF for details."
+        except Exception as template_error:
+            current_app.logger.warning(f"[INVOICE EMAIL] Custom template failed: {template_error}")
+            current_app.logger.exception("[INVOICE EMAIL] Template error details:")
+
+    if not html_body:
+        text_body = f"""
+Hello,
+
+Please find attached invoice {invoice.invoice_number} for your records.
+
+Invoice Details:
+- Invoice Number: {invoice.invoice_number}
+- Issue Date: {invoice.issue_date.strftime('%Y-%m-%d') if invoice.issue_date else 'N/A'}
+- Due Date: {invoice.due_date.strftime('%Y-%m-%d') if invoice.due_date else 'N/A'}
+- Amount: {invoice.currency_code} {invoice.total_amount}
+
+"""
+
+        if custom_message:
+            text_body += f"\n{custom_message}\n\n"
+
+        text_body += f"""
+Please remit payment by the due date.
+
+Thank you for your business!
+
+---
+{company_name}
+"""
+
+        try:
+            html_body = render_template(
+                "email/invoice.html", invoice=invoice, company_name=company_name, custom_message=custom_message
+            )
+        except Exception as template_error:
+            current_app.logger.warning(f"[INVOICE EMAIL] HTML template not available: {template_error}")
+            html_body = None
+
+    return pdf_bytes, html_body, text_body, subject
+
+
+def send_invoice_template_test_email(template_id, recipient_email, invoice_id=None, custom_message=None):
+    """Send a test email using a saved invoice email template (same rendering as production).
+
+    Does not create InvoiceEmail records or change invoice status.
+
+    Args:
+        template_id: InvoiceTemplate id (must exist and have HTML).
+        recipient_email: Where to send the test.
+        invoice_id: Optional invoice to use for PDF/context; defaults to latest invoice.
+        custom_message: Optional custom message for template variables.
+
+    Returns:
+        tuple: (success: bool, message: str)
+    """
+    try:
+        if not recipient_email or "@" not in recipient_email:
+            return False, "Invalid recipient email address"
+
+        mail_server = current_app.config.get("MAIL_SERVER")
+        if not mail_server or mail_server == "localhost":
+            return False, "Mail server not configured"
+
+        from app.models import Invoice, InvoiceTemplate
+
+        email_template = InvoiceTemplate.query.get(template_id)
+        if not email_template:
+            return False, "Email template not found"
+        if not email_template.html or not email_template.html.strip():
+            return False, "Email template has no HTML content"
+
+        invoice = None
+        if invoice_id is not None:
+            invoice = Invoice.query.get(invoice_id)
+            if not invoice:
+                return False, "Invoice not found for the given invoice_id."
+        if not invoice:
+            invoice = Invoice.query.order_by(Invoice.id.desc()).first()
+        if not invoice:
+            return False, "No invoice found. Create an invoice first to test with real data."
+
+        pdf_bytes, html_body, text_body, _subject = _build_invoice_email_payload(
+            invoice, email_template_id=template_id, custom_message=custom_message
+        )
+
+        subject = f"Invoice template test: {email_template.name}"
+        sender = current_app.config.get("MAIL_DEFAULT_SENDER", "noreply@timetracker.local")
+
+        msg = Message(
+            subject=subject,
+            recipients=[recipient_email],
+            body=text_body,
+            html=html_body,
+            sender=sender,
+        )
+        msg.attach(f"{invoice.invoice_number}.pdf", "application/pdf", pdf_bytes)
+
+        current_app.logger.info(f"[INVOICE TEMPLATE TEST] Sending to {recipient_email} for template id={template_id}")
+        mail.send(msg)
+        return True, f"Test email sent successfully to {recipient_email}"
+
+    except Exception as e:
+        current_app.logger.error(f"[INVOICE TEMPLATE TEST] Failed: {e}")
+        current_app.logger.exception("[INVOICE TEMPLATE TEST] Trace:")
+        return False, f"Failed to send test email: {str(e)}"
+
+
 def send_invoice_email(invoice, recipient_email, sender_user=None, custom_message=None, email_template_id=None):
     """Send an invoice via email with PDF attachment
 
@@ -609,141 +801,16 @@ def send_invoice_email(invoice, recipient_email, sender_user=None, custom_messag
         tuple: (success: bool, invoice_email: InvoiceEmail or None, message: str)
     """
     try:
-        from app.models import InvoiceEmail, Settings
+        from app.models import InvoiceEmail
 
         current_app.logger.info(f"[INVOICE EMAIL] Sending invoice {invoice.invoice_number} to {recipient_email}")
 
-        # Generate PDF
-        pdf_bytes = None
         try:
-            from app.utils.pdf_generator import InvoicePDFGenerator
-
-            settings = Settings.get_settings()
-            pdf_generator = InvoicePDFGenerator(invoice, settings=settings, page_size="A4")
-            pdf_bytes = pdf_generator.generate_pdf()
-            if not pdf_bytes:
-                raise ValueError("PDF generator returned None")
-            current_app.logger.info(f"[INVOICE EMAIL] PDF generated successfully - size: {len(pdf_bytes)} bytes")
-        except Exception as pdf_error:
-            current_app.logger.warning(f"[INVOICE EMAIL] PDF generation failed, trying fallback: {pdf_error}")
-            current_app.logger.exception("[INVOICE EMAIL] PDF generation error details:")
-            try:
-                from app.utils.pdf_generator_fallback import InvoicePDFGeneratorFallback
-
-                settings = Settings.get_settings()
-                pdf_generator = InvoicePDFGeneratorFallback(invoice, settings=settings)
-                pdf_bytes = pdf_generator.generate_pdf()
-                if not pdf_bytes:
-                    raise ValueError("PDF fallback generator returned None")
-                current_app.logger.info(f"[INVOICE EMAIL] PDF generated via fallback - size: {len(pdf_bytes)} bytes")
-            except Exception as fallback_error:
-                current_app.logger.error(f"[INVOICE EMAIL] Both PDF generators failed: {fallback_error}")
-                current_app.logger.exception("[INVOICE EMAIL] Fallback PDF generation error details:")
-                return False, None, f"PDF generation failed: {str(fallback_error)}"
-
-        if not pdf_bytes:
-            current_app.logger.error("[INVOICE EMAIL] PDF bytes is None after generation")
-            return False, None, "PDF generation returned empty result"
-
-        # Get settings for email subject/body
-        settings = Settings.get_settings()
-        company_name = settings.company_name if settings else "Your Company"
-
-        # Create email subject
-        subject = f"Invoice {invoice.invoice_number} from {company_name}"
-
-        # Get email template if specified
-        html_body = None
-        text_body = None
-
-        if email_template_id:
-            try:
-                from app.models import InvoiceTemplate
-
-                email_template = InvoiceTemplate.query.get(email_template_id)
-                if email_template and email_template.html:
-                    # Use custom template
-                    # Ensure the HTML is properly formatted for email
-                    template_html = email_template.html.strip()
-
-                    # If CSS is provided separately, wrap it in <style> tags
-                    if email_template.css and email_template.css.strip():
-                        css_content = email_template.css.strip()
-                        # Check if CSS is already wrapped in <style> tags
-                        if not css_content.startswith("<style"):
-                            css_content = f"<style>\n{css_content}\n</style>"
-                        # Insert CSS into HTML if not already present
-                        if "<style>" not in template_html and "</style>" not in template_html:
-                            # Try to insert before </head> or at the beginning if no head tag
-                            if "</head>" in template_html:
-                                template_html = template_html.replace("</head>", f"{css_content}\n</head>")
-                            elif "<body>" in template_html:
-                                template_html = template_html.replace("<body>", f"{css_content}\n<body>")
-                            else:
-                                template_html = f"{css_content}\n{template_html}"
-
-                    # Ensure HTML has proper structure
-                    if not template_html.strip().startswith("<!DOCTYPE") and not template_html.strip().startswith(
-                        "<html"
-                    ):
-                        # Wrap in minimal HTML structure if needed
-                        if "<html" not in template_html:
-                            template_html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-</head>
-<body>
-{template_html}
-</body>
-</html>"""
-
-                    template = JinjaTemplate(template_html)
-                    html_body = template.render(
-                        invoice=invoice, company_name=company_name, custom_message=custom_message
-                    )
-                    # Generate text version from HTML if needed
-                    text_body = f"Invoice {invoice.invoice_number} - Please see attached PDF for details."
-            except Exception as template_error:
-                current_app.logger.warning(f"[INVOICE EMAIL] Custom template failed: {template_error}")
-                current_app.logger.exception("[INVOICE EMAIL] Template error details:")
-
-        # Fallback to default template
-        if not html_body:
-            # Create email body
-            text_body = f"""
-Hello,
-
-Please find attached invoice {invoice.invoice_number} for your records.
-
-Invoice Details:
-- Invoice Number: {invoice.invoice_number}
-- Issue Date: {invoice.issue_date.strftime('%Y-%m-%d') if invoice.issue_date else 'N/A'}
-- Due Date: {invoice.due_date.strftime('%Y-%m-%d') if invoice.due_date else 'N/A'}
-- Amount: {invoice.currency_code} {invoice.total_amount}
-
-"""
-
-            if custom_message:
-                text_body += f"\n{custom_message}\n\n"
-
-            text_body += f"""
-Please remit payment by the due date.
-
-Thank you for your business!
-
----
-{company_name}
-"""
-
-            # Render HTML template
-            try:
-                html_body = render_template(
-                    "email/invoice.html", invoice=invoice, company_name=company_name, custom_message=custom_message
-                )
-            except Exception as template_error:
-                current_app.logger.warning(f"[INVOICE EMAIL] HTML template not available: {template_error}")
-                html_body = None
+            pdf_bytes, html_body, text_body, subject = _build_invoice_email_payload(
+                invoice, email_template_id=email_template_id, custom_message=custom_message
+            )
+        except ValueError as ve:
+            return False, None, str(ve)
 
         # Get sender user ID
         sender_id = sender_user.id if sender_user else None
@@ -761,7 +828,7 @@ Thank you for your business!
             recipients=[recipient_email],
             body=text_body,
             html=html_body,
-            sender=current_app.config["MAIL_DEFAULT_SENDER"],
+            sender=current_app.config.get("MAIL_DEFAULT_SENDER", "noreply@timetracker.local"),
         )
 
         # Add attachments

@@ -4887,6 +4887,10 @@ def save_email_config():
         current_app.logger.info("[EMAIL CONFIG] Password updated")
 
     settings.mail_default_sender = data.get("default_sender", "").strip()
+    test_recipient = data.get("test_recipient", "").strip()
+    if test_recipient and "@" not in test_recipient:
+        return jsonify({"success": False, "message": "Invalid test recipient email address"}), 400
+    settings.mail_test_recipient = test_recipient
 
     current_app.logger.info(
         f"[EMAIL CONFIG] Settings: enabled={settings.mail_enabled}, "
@@ -4945,6 +4949,7 @@ def get_email_config():
                 "username": settings.mail_username or "",
                 "password_set": bool(settings.mail_password),
                 "default_sender": settings.mail_default_sender or "",
+                "test_recipient": (getattr(settings, "mail_test_recipient", None) or ""),
             }
         ),
         200,
@@ -5025,6 +5030,45 @@ def create_email_template():
         return redirect(url_for("admin.list_email_templates"))
 
     return render_template("admin/email_templates/create.html")
+
+
+@admin_bp.route("/admin/email-templates/<int:template_id>/send-test", methods=["POST"])
+@limiter.limit("5 per minute")
+@login_required
+@admin_or_permission_required("manage_settings")
+def send_email_template_test(template_id):
+    """Send a test email using a saved invoice email template."""
+    from app.models import Settings
+    from app.utils.email import send_invoice_template_test_email
+
+    data = request.get_json() or {}
+    recipient = (data.get("recipient") or "").strip()
+    if not recipient:
+        settings = Settings.get_settings()
+        recipient = (getattr(settings, "mail_test_recipient", None) or "").strip()
+    if not recipient:
+        return jsonify({"success": False, "message": "Recipient email is required"}), 400
+
+    invoice_id = data.get("invoice_id")
+    if invoice_id is not None and invoice_id != "":
+        try:
+            invoice_id = int(invoice_id)
+        except (TypeError, ValueError):
+            return jsonify({"success": False, "message": "Invalid invoice_id"}), 400
+    else:
+        invoice_id = None
+
+    custom_message = data.get("custom_message")
+    if custom_message is not None:
+        custom_message = str(custom_message).strip() or None
+
+    success, message = send_invoice_template_test_email(
+        template_id, recipient, invoice_id=invoice_id, custom_message=custom_message
+    )
+
+    if success:
+        return jsonify({"success": True, "message": message}), 200
+    return jsonify({"success": False, "message": message}), 500
 
 
 @admin_bp.route("/admin/email-templates/<int:template_id>")

@@ -76,6 +76,13 @@
                 <label for="mailDefaultSender" class="form-label">{{ _('Default Sender') }} *</label>
                 <input type="email" id="mailDefaultSender" class="form-input" placeholder="noreply@yourdomain.com" required>
             </div>
+            
+            <!-- Test recipient (SMTP test + invoice template test) -->
+            <div>
+                <label for="mailTestRecipient" class="form-label">{{ _('Test recipient email') }}</label>
+                <input type="email" id="mailTestRecipient" class="form-input" placeholder="you@example.com">
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Used to prefill “Send Test Email” and invoice template test sends.') }}</p>
+            </div>
         </div>
         
         <!-- Save Button -->
@@ -288,6 +295,11 @@ async function loadConfig() {
         document.getElementById('mailUseSsl').checked = config.use_ssl;
         document.getElementById('mailUsername').value = config.username || '';
         document.getElementById('mailDefaultSender').value = config.default_sender || '';
+        document.getElementById('mailTestRecipient').value = config.test_recipient || '';
+        const rec = document.getElementById('recipientEmail');
+        if (rec && (config.test_recipient || '').trim()) {
+            rec.value = config.test_recipient.trim();
+        }
         
         // Show password status
         const passwordStatus = document.getElementById('passwordStatus');
@@ -321,7 +333,8 @@ document.getElementById('emailConfigForm').addEventListener('submit', async func
         use_ssl: document.getElementById('mailUseSsl').checked,
         username: document.getElementById('mailUsername').value.trim(),
         password: document.getElementById('mailPassword').value,
-        default_sender: document.getElementById('mailDefaultSender').value.trim()
+        default_sender: document.getElementById('mailDefaultSender').value.trim(),
+        test_recipient: document.getElementById('mailTestRecipient').value.trim()
     };
     
     // Disable button and show loading

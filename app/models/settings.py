@@ -138,6 +138,7 @@ class Settings(db.Model):
     mail_username = db.Column(db.String(255), default="", nullable=True)
     mail_password = db.Column(db.String(255), default="", nullable=True)  # Store encrypted in production
     mail_default_sender = db.Column(db.String(255), default="", nullable=True)
+    mail_test_recipient = db.Column(db.String(255), default="", nullable=True)
 
     # Integration OAuth credentials (stored in database, takes precedence over environment variables)
     # Jira
@@ -257,6 +258,7 @@ class Settings(db.Model):
         self.mail_username = kwargs.get("mail_username", "")
         self.mail_password = kwargs.get("mail_password", "")
         self.mail_default_sender = kwargs.get("mail_default_sender", "")
+        self.mail_test_recipient = kwargs.get("mail_test_recipient", "")
 
         # Integration OAuth credentials defaults
         self.jira_client_id = kwargs.get("jira_client_id", "")
@@ -475,6 +477,7 @@ class Settings(db.Model):
             "mail_username": self.mail_username,
             "mail_password_set": bool(self.mail_password),  # Don't expose actual password
             "mail_default_sender": self.mail_default_sender,
+            "mail_test_recipient": getattr(self, "mail_test_recipient", "") or "",
             "jira_client_id": self.jira_client_id or "",
             "jira_client_secret_set": bool(self.jira_client_secret),  # Don't expose actual secret
             "slack_client_id": self.slack_client_id or "",
