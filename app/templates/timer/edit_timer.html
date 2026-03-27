@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block extra_js %}
-{% if current_user.is_admin %}
+{% if can_edit_schedule %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const projectSelect = document.getElementById('project_id');
@@ -193,6 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2">
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+            {% if can_edit_schedule %}
             {% if current_user.is_admin %}
             <!-- Admin notification -->
             <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
@@ -205,6 +206,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             </div>
+            {% else %}
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 mt-1"></i>
+                    <div>
+                        <p class="text-sm text-blue-800 dark:text-blue-200">
+                            {{ _("You can edit this entry's project, task, start and end times, and break.") }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <form method="POST" action="{{ url_for('timer.edit_timer', timer_id=timer.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -288,8 +301,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
 
-                <!-- Source, Billable, Duration -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <!-- Source (admin only), Billable, Duration -->
+                <div class="grid grid-cols-1 {% if show_source_dropdown %}md:grid-cols-3{% else %}md:grid-cols-2{% endif %} gap-4 mb-6">
+                    {% if show_source_dropdown %}
                     <div>
                         <label for="source" class="form-label">
                             <i class="fas fa-tag mr-1"></i>{{ _('Source') }}
@@ -300,6 +314,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </select>
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('How this entry was created') }}</p>
                     </div>
+                    {% endif %}
                     <div class="flex items-center">
                         <div class="flex items-center gap-3 mt-6">
                             <input type="checkbox" id="billable" name="billable" class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-0" {% if timer.billable %}checked{% endif %}>

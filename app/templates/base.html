@@ -164,16 +164,47 @@
             flex-direction: column !important; 
             overflow-x: hidden;
             width: 100%;
+            min-width: 0;
         }
         #mainContentAnchor { 
             flex: 1 0 auto; 
             min-height: 0; 
+            min-width: 0;
             width: 100%;
-            overflow-x: auto;
+            overflow-x: hidden;
         }
         /* Ensure body and html don't cause horizontal overflow */
         html, body { overflow-x: hidden; }
-        #appShell { overflow-x: hidden; width: 100%; }
+        #appShell { overflow-x: hidden; width: 100%; min-width: 0; }
+        /* Header toolbar: allow horizontal scroll without visible scrollbar (narrow phones) */
+        .header-toolbar-scroll {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .header-toolbar-scroll::-webkit-scrollbar {
+            display: none;
+        }
+        /* Issue #573: compact bottom nav on narrow phones without requiring Tailwind arbitrary breakpoint in build */
+        @media (max-width: 400px) {
+            .mobile-bottom-nav {
+                min-height: 3rem;
+            }
+            .mobile-bottom-nav .bottom-nav-text {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                padding: 0;
+                margin: -1px;
+                overflow: hidden;
+                clip: rect(0, 0, 0, 0);
+                white-space: nowrap;
+                border-width: 0;
+            }
+            .mobile-bottom-nav a.relative {
+                padding-top: 0.25rem;
+                padding-bottom: 0.25rem;
+            }
+        }
         
         /* Custom scrollbar styling for sidebar */
         #sidebar {
@@ -1044,17 +1075,17 @@
         </aside>
 
         <!-- Main content: pb for mobile bottom nav + safe-area -->
-        <div id="mainContent" class="flex-1 flex flex-col min-h-screen transition-all duration-200 ease-in-out lg:ml-64 lg:pb-0 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
+        <div id="mainContent" class="flex-1 flex flex-col min-h-screen min-w-0 transition-all duration-200 ease-in-out lg:ml-64 lg:pb-0 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
             <!-- Header -->
-            <header class="bg-card-light dark:bg-card-dark p-4 border-b border-border-light dark:border-border-dark flex justify-between items-center shadow-sm">
+            <header class="bg-card-light dark:bg-card-dark p-3 sm:p-4 border-b border-border-light dark:border-border-dark flex items-center gap-2 min-w-0 shadow-sm">
                 <!-- Mobile menu button -->
-                <button id="mobileSidebarBtn" class="lg:hidden" aria-label="{{ _('Open sidebar') }}" type="button">
-                    <i class="fas fa-bars"></i>
+                <button id="mobileSidebarBtn" class="lg:hidden shrink-0 flex items-center justify-center w-10 h-10 rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Open sidebar') }}" type="button">
+                    <i class="fas fa-bars text-lg"></i>
                 </button>
 
                 <!-- Search (Ctrl+K opens command palette) -->
-                <div class="hidden sm:flex items-center gap-2">
-                    <div class="w-96 relative">
+                <div class="hidden sm:flex flex-1 min-w-0 justify-center px-2">
+                    <div class="w-full max-w-md relative">
                         <form class="navbar-search" role="search" action="{{ url_for('main.search') }}" method="get" autocomplete="off">
                             <label for="header-search" class="sr-only">{{ _('Search') }}</label>
                             <input id="header-search" name="q" type="search" placeholder="{{ _('Search') }}" aria-label="{{ _('Search') }}" data-enhanced-search='{"endpoint": "/api/search", "minChars": 2, "maxResults": 10}' class="w-full bg-background-light dark:bg-gray-700 border border-transparent dark:border-transparent rounded-lg py-2 pl-10 pr-20 text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
@@ -1228,7 +1259,7 @@
             {% endif %}
 
             <!-- Main page content (max-width for readability on large screens) -->
-            <main id="mainContentAnchor" class="flex-1 p-4 sm:p-6 w-full max-w-7xl mx-auto">
+            <main id="mainContentAnchor" class="flex-1 min-w-0 p-4 sm:p-6 w-full max-w-7xl mx-auto overflow-x-hidden">
                 {% block content %}{% endblock %}
             </main>
         </div>
@@ -1239,29 +1270,29 @@
 
         <!-- Mobile Bottom Navigation -->
         {% set _nav_ep = request.endpoint or '' %}
-        <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark flex justify-around items-stretch pb-[env(safe-area-inset-bottom)] shadow-[0_-2px_10px_rgba(0,0,0,0.06)] dark:shadow-[0_-2px_10px_rgba(0,0,0,0.2)]" role="navigation" aria-label="{{ _('Main') }}">
-            <a href="{{ url_for('main.dashboard') }}" class="flex flex-col items-center justify-center min-h-[48px] flex-1 py-2 rounded-t-lg transition-colors {% if _nav_ep == 'main.dashboard' %}text-primary bg-primary/10 dark:bg-primary/20 font-medium{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" aria-label="{{ _('Dashboard') }}" aria-current="{% if _nav_ep == 'main.dashboard' %}page{% endif %}">
-                <i class="fas fa-tachometer-alt text-lg" aria-hidden="true"></i>
-                <span class="text-xs mt-0.5">{{ _('Dashboard') }}</span>
+        <nav class="mobile-bottom-nav lg:hidden fixed bottom-0 inset-x-0 z-40 bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark flex justify-around items-stretch min-h-[52px] pb-[env(safe-area-inset-bottom)] shadow-[0_-2px_10px_rgba(0,0,0,0.06)] dark:shadow-[0_-2px_10px_rgba(0,0,0,0.2)]" role="navigation" aria-label="{{ _('Main') }}">
+            <a href="{{ url_for('main.dashboard') }}" class="relative flex flex-col items-center justify-center min-h-[44px] flex-1 min-w-0 py-1.5 rounded-t-lg transition-colors {% if _nav_ep == 'main.dashboard' %}text-primary bg-primary/10 dark:bg-primary/20 font-medium{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" aria-label="{{ _('Dashboard') }}" aria-current="{% if _nav_ep == 'main.dashboard' %}page{% endif %}">
+                <i class="fas fa-tachometer-alt text-lg shrink-0" aria-hidden="true"></i>
+                <span class="bottom-nav-text text-xs mt-0.5 leading-tight text-center truncate w-full px-0.5">{{ _('Dashboard') }}</span>
             </a>
-            <a href="{{ url_for('projects.list_projects') }}" class="flex flex-col items-center justify-center min-h-[48px] flex-1 py-2 rounded-t-lg transition-colors {% if _nav_ep and _nav_ep.startswith('projects.') %}text-primary bg-primary/10 dark:bg-primary/20 font-medium{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" aria-label="{{ _('Projects') }}" aria-current="{% if _nav_ep and _nav_ep.startswith('projects.') %}page{% endif %}">
-                <i class="fas fa-briefcase text-lg" aria-hidden="true"></i>
-                <span class="text-xs mt-0.5">{{ _('Projects') }}</span>
+            <a href="{{ url_for('projects.list_projects') }}" class="relative flex flex-col items-center justify-center min-h-[44px] flex-1 min-w-0 py-1.5 rounded-t-lg transition-colors {% if _nav_ep and _nav_ep.startswith('projects.') %}text-primary bg-primary/10 dark:bg-primary/20 font-medium{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" aria-label="{{ _('Projects') }}" aria-current="{% if _nav_ep and _nav_ep.startswith('projects.') %}page{% endif %}">
+                <i class="fas fa-briefcase text-lg shrink-0" aria-hidden="true"></i>
+                <span class="bottom-nav-text text-xs mt-0.5 leading-tight text-center truncate w-full px-0.5">{{ _('Projects') }}</span>
             </a>
-            <a href="{{ url_for('timer.time_entries_overview') }}" class="flex flex-col items-center justify-center min-h-[48px] flex-1 py-2 rounded-t-lg transition-colors {% if _nav_ep == 'timer.time_entries_overview' %}text-primary bg-primary/10 dark:bg-primary/20 font-medium{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" aria-label="{{ _('Time entries') }}" aria-current="{% if _nav_ep == 'timer.time_entries_overview' %}page{% endif %}">
-                <i class="fas fa-list-alt text-lg" aria-hidden="true"></i>
-                <span class="text-xs mt-0.5">{{ _('Time entries') }}</span>
+            <a href="{{ url_for('timer.time_entries_overview') }}" class="relative flex flex-col items-center justify-center min-h-[44px] flex-1 min-w-0 py-1.5 rounded-t-lg transition-colors {% if _nav_ep == 'timer.time_entries_overview' %}text-primary bg-primary/10 dark:bg-primary/20 font-medium{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" aria-label="{{ _('Time entries') }}" aria-current="{% if _nav_ep == 'timer.time_entries_overview' %}page{% endif %}">
+                <i class="fas fa-list-alt text-lg shrink-0" aria-hidden="true"></i>
+                <span class="bottom-nav-text text-xs mt-0.5 leading-tight text-center truncate w-full px-0.5">{{ _('Time entries') }}</span>
             </a>
             <a href="{{ url_for('timer.manual_entry') }}" class="flex items-center justify-center flex-shrink-0 w-14 h-14 -mt-5 rounded-full bg-primary text-white hover:bg-primary-dark shadow-lg active:scale-95 transition-all border-4 border-card-light dark:border-card-dark" aria-label="{{ _('New time entry') }}">
                 <i class="fas fa-plus text-xl" aria-hidden="true"></i>
             </a>
-            <a href="{{ url_for('reports.reports') }}" class="flex flex-col items-center justify-center min-h-[48px] flex-1 py-2 rounded-t-lg transition-colors {% if _nav_ep and _nav_ep.startswith('reports.') %}text-primary bg-primary/10 dark:bg-primary/20 font-medium{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" aria-label="{{ _('Reports') }}" aria-current="{% if _nav_ep and _nav_ep.startswith('reports.') %}page{% endif %}">
-                <i class="fas fa-chart-line text-lg" aria-hidden="true"></i>
-                <span class="text-xs mt-0.5">{{ _('Reports') }}</span>
+            <a href="{{ url_for('reports.reports') }}" class="relative flex flex-col items-center justify-center min-h-[44px] flex-1 min-w-0 py-1.5 rounded-t-lg transition-colors {% if _nav_ep and _nav_ep.startswith('reports.') %}text-primary bg-primary/10 dark:bg-primary/20 font-medium{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" aria-label="{{ _('Reports') }}" aria-current="{% if _nav_ep and _nav_ep.startswith('reports.') %}page{% endif %}">
+                <i class="fas fa-chart-line text-lg shrink-0" aria-hidden="true"></i>
+                <span class="bottom-nav-text text-xs mt-0.5 leading-tight text-center truncate w-full px-0.5">{{ _('Reports') }}</span>
             </a>
-            <a href="{{ url_for('auth.profile') }}" class="flex flex-col items-center justify-center min-h-[48px] flex-1 py-2 rounded-t-lg transition-colors {% if _nav_ep and _nav_ep.startswith('auth.profile') %}text-primary bg-primary/10 dark:bg-primary/20 font-medium{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" aria-label="{{ _('Profile') }}" aria-current="{% if _nav_ep and _nav_ep.startswith('auth.profile') %}page{% endif %}">
-                <i class="fas fa-user-circle text-lg" aria-hidden="true"></i>
-                <span class="text-xs mt-0.5">{{ _('Profile') }}</span>
+            <a href="{{ url_for('auth.profile') }}" class="relative flex flex-col items-center justify-center min-h-[44px] flex-1 min-w-0 py-1.5 rounded-t-lg transition-colors {% if _nav_ep and _nav_ep.startswith('auth.profile') %}text-primary bg-primary/10 dark:bg-primary/20 font-medium{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" aria-label="{{ _('Profile') }}" aria-current="{% if _nav_ep and _nav_ep.startswith('auth.profile') %}page{% endif %}">
+                <i class="fas fa-user-circle text-lg shrink-0" aria-hidden="true"></i>
+                <span class="bottom-nav-text text-xs mt-0.5 leading-tight text-center truncate w-full px-0.5">{{ _('Profile') }}</span>
             </a>
         </nav>
 

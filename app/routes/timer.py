@@ -34,6 +34,34 @@ def _parse_optional_int(value):
         return None
 
 
+def _edit_timer_form_projects_tasks(timer, can_edit_schedule):
+    """Active projects/tasks for the edit form; scoped for subcontractors."""
+    from app.utils.scope_filter import apply_project_scope_to_model
+
+    projects = []
+    tasks = []
+    projects_query = Project.query.filter_by(status="active").order_by(Project.name)
+    scope_p = apply_project_scope_to_model(Project, current_user)
+    if scope_p is not None:
+        projects_query = projects_query.filter(scope_p)
+    if current_user.is_admin or scope_p is not None or can_edit_schedule:
+        projects = projects_query.all()
+        if timer.project_id:
+            tasks = Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all()
+    return projects, tasks
+
+
+def _edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown):
+    projects, tasks = _edit_timer_form_projects_tasks(timer, can_edit_schedule)
+    return {
+        "timer": timer,
+        "projects": projects,
+        "tasks": tasks,
+        "can_edit_schedule": can_edit_schedule,
+        "show_source_dropdown": show_source_dropdown,
+    }
+
+
 @timer_bp.route("/timer/start", methods=["POST"])
 @login_required
 def start_timer():
@@ -701,6 +729,11 @@ def edit_timer(timer_id):
     """Edit a completed timer entry"""
     timer = TimeEntry.query.get_or_404(timer_id)
 
+    can_edit_schedule = current_user.is_admin or (
+        timer.user_id == current_user.id and current_user.has_permission("edit_own_time_entries")
+    )
+    show_source_dropdown = current_user.is_admin
+
     # Check if user can edit this timer
     if timer.user_id != current_user.id and not current_user.is_admin:
         flash(_("You can only edit your own timers"), "error")
@@ -738,8 +771,8 @@ def edit_timer(timer_id):
         if update_params["paid"] is False:
             update_params["invoice_number"] = None
 
-        # Admin users can edit additional fields
-        if current_user.is_admin:
+        # Admins and users with edit_own_time_entries can edit schedule, project, and task
+        if can_edit_schedule:
             # Update project if changed
             new_project_id = request.form.get("project_id", type=int)
             if new_project_id and new_project_id != timer.project_id:
@@ -750,13 +783,7 @@ def edit_timer(timer_id):
                     flash(_("Invalid project selected"), "error")
                     return render_template(
                         "timer/edit_timer.html",
-                        timer=timer,
-                        projects=Project.query.filter_by(status="active").order_by(Project.name).all(),
-                        tasks=(
-                            []
-                            if not new_project_id
-                            else Task.query.filter_by(project_id=new_project_id).order_by(Task.name).all()
-                        ),
+                        **_edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown),
                     )
             else:
                 update_params["project_id"] = None  # Don't change if not provided
@@ -774,9 +801,7 @@ def edit_timer(timer_id):
                         flash(_("Invalid task selected for the chosen project"), "error")
                         return render_template(
                             "timer/edit_timer.html",
-                            timer=timer,
-                            projects=Project.query.filter_by(status="active").order_by(Project.name).all(),
-                            tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all(),
+                            **_edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown),
                         )
                 else:
                     update_params["task_id"] = None
@@ -804,9 +829,7 @@ def edit_timer(timer_id):
                         flash(_("Start time cannot be in the future"), "error")
                         return render_template(
                             "timer/edit_timer.html",
-                            timer=timer,
-                            projects=Project.query.filter_by(status="active").order_by(Project.name).all(),
-                            tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all(),
+                            **_edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown),
                         )
 
                     update_params["start_time"] = new_start_time
@@ -814,9 +837,7 @@ def edit_timer(timer_id):
                     flash(_("Invalid start date/time format"), "error")
                     return render_template(
                         "timer/edit_timer.html",
-                        timer=timer,
-                        projects=Project.query.filter_by(status="active").order_by(Project.name).all(),
-                        tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all(),
+                        **_edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown),
                     )
             else:
                 update_params["start_time"] = None
@@ -833,9 +854,7 @@ def edit_timer(timer_id):
                         flash(_("End time must be after start time"), "error")
                         return render_template(
                             "timer/edit_timer.html",
-                            timer=timer,
-                            projects=Project.query.filter_by(status="active").order_by(Project.name).all(),
-                            tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all(),
+                            **_edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown),
                         )
 
                     update_params["end_time"] = new_end_time
@@ -843,9 +862,7 @@ def edit_timer(timer_id):
                     flash(_("Invalid end date/time format"), "error")
                     return render_template(
                         "timer/edit_timer.html",
-                        timer=timer,
-                        projects=Project.query.filter_by(status="active").order_by(Project.name).all(),
-                        tasks=Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all(),
+                        **_edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown),
                     )
             else:
                 update_params["end_time"] = None
@@ -866,17 +883,7 @@ def edit_timer(timer_id):
             flash(_(result.get("message", "Could not update timer")), "error")
             return render_template(
                 "timer/edit_timer.html",
-                timer=timer,
-                projects=(
-                    Project.query.filter_by(status="active").order_by(Project.name).all()
-                    if current_user.is_admin
-                    else []
-                ),
-                tasks=(
-                    Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all()
-                    if current_user.is_admin and timer.project_id
-                    else []
-                ),
+                **_edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown),
             )
 
         entry = result.get("entry")
@@ -914,23 +921,10 @@ def edit_timer(timer_id):
         flash(_("Timer updated successfully"), "success")
         return redirect(url_for("main.dashboard"))
 
-    # Get projects and tasks for admin (or scoped for subcontractors)
-    projects = []
-    tasks = []
-    from app.utils.scope_filter import apply_project_scope_to_model
-
-    projects_query = Project.query.filter_by(status="active").order_by(Project.name)
-    scope_p = apply_project_scope_to_model(Project, current_user)
-    if scope_p is not None:
-        projects_query = projects_query.filter(scope_p)
-    if current_user.is_admin or scope_p is not None:
-        projects = projects_query.all()
-        if timer.project_id:
-            tasks = Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all()
-        if timer.project_id:
-            tasks = Task.query.filter_by(project_id=timer.project_id).order_by(Task.name).all()
-
-    return render_template("timer/edit_timer.html", timer=timer, projects=projects, tasks=tasks)
+    return render_template(
+        "timer/edit_timer.html",
+        **_edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown),
+    )
 
 
 @timer_bp.route("/timer/view/<int:timer_id>")

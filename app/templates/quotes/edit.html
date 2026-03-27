@@ -27,12 +27,12 @@
             <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-border-light dark:border-border-dark flex items-center">
                 <i class="fas fa-info-circle mr-2 text-primary"></i>{{ _('Basic Information') }}
             </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
+                <div class="min-w-0">
                     <label for="title" class="form-label">{{ _('Title') }} <span class="text-red-500">*</span></label>
                     <input type="text" id="title" name="title" required value="{{ quote.title }}" placeholder="{{ _('Quote title') }}" class="form-input">
                 </div>
-                <div>
+                <div class="min-w-0">
                     <label for="client_id" class="form-label">{{ _('Client') }}</label>
                     <select id="client_id" name="client_id" class="form-input" disabled>
                         <option value="{{ quote.client_id }}" selected>{{ quote.client.name }}</option>
@@ -74,28 +74,28 @@
             
             <div id="quote-items" class="space-y-2">
                 {% for item in quote.items %}
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20 quote-item-row hover:shadow-sm transition">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20 quote-item-row min-w-0 hover:shadow-sm transition">
                     <input type="hidden" name="item_id[]" value="{{ item.id }}">
                     <input type="hidden" name="item_stock_item_id[]" value="{{ item.stock_item_id if item.stock_item_id else '' }}">
                     <input type="hidden" name="item_warehouse_id[]" value="{{ item.warehouse_id if item.warehouse_id else '' }}">
-                    <select class="md:col-span-2 form-input item-stock-select text-sm" title="{{ _('Select Stock Item') }}">
+                    <select class="md:col-span-2 min-w-0 form-input item-stock-select text-sm" title="{{ _('Select Stock Item') }}">
                         <option value="">{{ _('None') }}</option>
                         {% for stock_item in stock_items %}
                         <option value="{{ stock_item.id }}" data-price="{{ stock_item.default_price or 0 }}" data-unit="{{ stock_item.unit }}" data-description="{{ stock_item.name }}" {% if item.stock_item_id == stock_item.id %}selected{% endif %}>{{ stock_item.sku }} - {{ stock_item.name }}</option>
                         {% endfor %}
                     </select>
-                    <select class="md:col-span-2 form-input item-warehouse-select text-sm" title="{{ _('Select Warehouse') }}">
+                    <select class="md:col-span-2 min-w-0 form-input item-warehouse-select text-sm" title="{{ _('Select Warehouse') }}">
                         <option value="">{{ _('None') }}</option>
                         {% for warehouse in warehouses %}
                         <option value="{{ warehouse.id }}" {% if item.warehouse_id == warehouse.id %}selected{% endif %}>{{ warehouse.code }} - {{ warehouse.name }}</option>
                         {% endfor %}
                     </select>
-                    <input type="text" name="item_description[]" placeholder="{{ _('Item description') }}" value="{{ item.description }}" class="md:col-span-2 form-input item-description" data-calc-trigger>
-                    <input type="number" name="item_quantity[]" placeholder="{{ _('Qty') }}" value="{{ item.quantity }}" step="0.01" min="0" class="md:col-span-1 form-input item-quantity" data-calc-trigger>
-                    <input type="text" name="item_unit[]" placeholder="{{ _('Unit') }}" value="{{ item.unit or '' }}" class="md:col-span-1 form-input item-unit" placeholder="hrs, pcs, etc.">
-                    <input type="number" name="item_price[]" placeholder="{{ _('Price') }}" value="{{ item.unit_price }}" step="0.01" min="0" class="md:col-span-2 form-input item-price" data-calc-trigger>
-                    <div class="md:col-span-1 flex items-center font-medium item-total">{{ "%.2f"|format(item.total_amount) }}</div>
-                    <button type="button" class="remove-item md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Remove item') }}">
+                    <input type="text" name="item_description[]" placeholder="{{ _('Item description') }}" value="{{ item.description }}" class="md:col-span-2 min-w-0 form-input item-description" data-calc-trigger>
+                    <input type="number" name="item_quantity[]" placeholder="{{ _('Qty') }}" value="{{ item.quantity }}" step="0.01" min="0" class="md:col-span-1 min-w-0 form-input item-quantity" data-calc-trigger>
+                    <input type="text" name="item_unit[]" placeholder="{{ _('Unit') }}" value="{{ item.unit or '' }}" class="md:col-span-1 min-w-0 form-input item-unit" placeholder="hrs, pcs, etc.">
+                    <input type="number" name="item_price[]" placeholder="{{ _('Price') }}" value="{{ item.unit_price }}" step="0.01" min="0" class="md:col-span-2 min-w-0 form-input item-price" data-calc-trigger>
+                    <div class="md:col-span-1 min-w-0 flex items-center font-medium item-total">{{ "%.2f"|format(item.total_amount) }}</div>
+                    <button type="button" class="remove-item md:col-span-1 min-w-0 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Remove item') }}">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -115,12 +115,12 @@
             <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-border-light dark:border-border-dark flex items-center">
                 <i class="fas fa-dollar-sign mr-2 text-primary"></i>{{ _('Financial Details') }}
             </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 min-w-0">
+                <div class="min-w-0">
                     <label for="tax_rate" class="form-label">{{ _('Tax Rate (%)') }}</label>
                     <input type="number" step="0.01" min="0" max="100" id="tax_rate" name="tax_rate" value="{{ quote.tax_rate or 0 }}" class="form-input" data-calc-trigger>
                 </div>
-                <div>
+                <div class="min-w-0">
                     <label for="currency_code" class="form-label">{{ _('Currency') }}</label>
                     <select id="currency_code" name="currency_code" class="form-input">
                         <option value="EUR" {% if quote.currency_code == 'EUR' %}selected{% endif %}>EUR</option>
@@ -128,7 +128,7 @@
                         <option value="GBP" {% if quote.currency_code == 'GBP' %}selected{% endif %}>GBP</option>
                     </select>
                 </div>
-                <div>
+                <div class="min-w-0">
                     <label for="valid_until" class="form-label">{{ _('Valid Until') }}</label>
                     <input type="date" id="valid_until" name="valid_until" value="{{ quote.valid_until.strftime('%Y-%m-%d') if quote.valid_until else '' }}" class="form-input">
                 </div>
@@ -164,8 +164,8 @@
             <h2 class="text-xl font-semibold mb-4 flex items-center">
                 <i class="fas fa-tag mr-2 text-primary"></i>{{ _('Discount') }}
             </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                <div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4 min-w-0">
+                <div class="min-w-0">
                     <label for="discount_type" class="form-label">{{ _('Discount Type') }}</label>
                     <select id="discount_type" name="discount_type" class="form-input">
                         <option value="">{{ _('No Discount') }}</option>
@@ -173,17 +173,17 @@
                         <option value="fixed" {% if quote.discount_type == 'fixed' %}selected{% endif %}>{{ _('Fixed Amount') }}</option>
                     </select>
                 </div>
-                <div>
+                <div class="min-w-0">
                     <label for="discount_amount" class="form-label">{{ _('Discount Amount') }}</label>
                     <input type="number" step="0.01" min="0" id="discount_amount" name="discount_amount" value="{{ quote.discount_amount or '' }}" placeholder="{{ _('0.00') }}" class="form-input">
                 </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
+                <div class="min-w-0">
                     <label for="coupon_code" class="form-label">{{ _('Coupon Code') }}</label>
                     <input type="text" id="coupon_code" name="coupon_code" value="{{ quote.coupon_code or '' }}" placeholder="{{ _('Optional coupon code') }}" class="form-input" style="text-transform: uppercase;">
                 </div>
-                <div>
+                <div class="min-w-0">
                     <label for="discount_reason" class="form-label">{{ _('Discount Reason') }}</label>
                     <input type="text" id="discount_reason" name="discount_reason" value="{{ quote.discount_reason or '' }}" placeholder="{{ _('Reason for discount') }}" class="form-input">
                 </div>
@@ -266,7 +266,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add new item row
     function addItemRow(item = null) {
         const row = document.createElement('div');
-        row.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20 quote-item-row hover:shadow-sm transition';
+        row.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20 quote-item-row min-w-0 hover:shadow-sm transition';
         
         // Build stock items dropdown
         let stockItemsHtml = '<option value="">{{ _("None") }}</option>';
@@ -298,14 +298,14 @@ document.addEventListener('DOMContentLoaded', function() {
             '<input type="hidden" name="item_id[]" value="' + (item ? item.id : '') + '">' +
             '<input type="hidden" name="item_stock_item_id[]" value="' + (item && item.stock_item_id ? item.stock_item_id : '') + '">' +
             '<input type="hidden" name="item_warehouse_id[]" value="' + (item && item.warehouse_id ? item.warehouse_id : '') + '">' +
-            '<select class="md:col-span-2 form-input item-stock-select text-sm">' + stockItemsHtml + '</select>' +
-            '<select class="md:col-span-2 form-input item-warehouse-select text-sm">' + warehousesHtml + '</select>' +
-            '<input type="text" name="item_description[]" placeholder="' + placeholderDesc + '" value="' + (item ? (item.description || '').replace(/"/g, '&quot;') : '') + '" class="md:col-span-2 form-input item-description" data-calc-trigger>' +
-            '<input type="number" name="item_quantity[]" placeholder="' + placeholderQty + '" value="' + (item ? item.quantity : '1') + '" step="0.01" min="0" class="md:col-span-1 form-input item-quantity" data-calc-trigger>' +
-            '<input type="text" name="item_unit[]" placeholder="' + placeholderUnit + '" value="' + (item ? (item.unit || '') : '') + '" class="md:col-span-1 form-input item-unit" placeholder="hrs, pcs, etc.">' +
-            '<input type="number" name="item_price[]" placeholder="' + placeholderPrice + '" value="' + (item ? item.unit_price : '') + '" step="0.01" min="0" class="md:col-span-2 form-input item-price" data-calc-trigger>' +
-            '<div class="md:col-span-1 flex items-center font-medium item-total">0.00</div>' +
-            '<button type="button" class="remove-item md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="' + removeTitle + '">' +
+            '<select class="md:col-span-2 min-w-0 form-input item-stock-select text-sm">' + stockItemsHtml + '</select>' +
+            '<select class="md:col-span-2 min-w-0 form-input item-warehouse-select text-sm">' + warehousesHtml + '</select>' +
+            '<input type="text" name="item_description[]" placeholder="' + placeholderDesc + '" value="' + (item ? (item.description || '').replace(/"/g, '&quot;') : '') + '" class="md:col-span-2 min-w-0 form-input item-description" data-calc-trigger>' +
+            '<input type="number" name="item_quantity[]" placeholder="' + placeholderQty + '" value="' + (item ? item.quantity : '1') + '" step="0.01" min="0" class="md:col-span-1 min-w-0 form-input item-quantity" data-calc-trigger>' +
+            '<input type="text" name="item_unit[]" placeholder="' + placeholderUnit + '" value="' + (item ? (item.unit || '') : '') + '" class="md:col-span-1 min-w-0 form-input item-unit" placeholder="hrs, pcs, etc.">' +
+            '<input type="number" name="item_price[]" placeholder="' + placeholderPrice + '" value="' + (item ? item.unit_price : '') + '" step="0.01" min="0" class="md:col-span-2 min-w-0 form-input item-price" data-calc-trigger>' +
+            '<div class="md:col-span-1 min-w-0 flex items-center font-medium item-total">0.00</div>' +
+            '<button type="button" class="remove-item md:col-span-1 min-w-0 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="' + removeTitle + '">' +
                 '<i class="fas fa-trash"></i>' +
             '</button>';
         itemsContainer.appendChild(row);
