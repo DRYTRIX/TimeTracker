@@ -98,6 +98,7 @@ jobs:
           dart run flutter_launcher_icons -f flutter_launcher_icons_ios.yaml
       
       # Simulator build avoids Apple Development Team / provisioning (device ipa still needs signing locally).
+      # Release mode is not supported for the iOS simulator; use debug (default) or --profile.
       - name: Run tests
         working-directory: mobile
         run: flutter test
@@ -108,7 +109,7 @@ jobs:
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_EXPORTER_OTLP_TOKEN: ${{ secrets.OTEL_EXPORTER_OTLP_TOKEN }}
         run: |
-          flutter build ios --release --simulator \
+          flutter build ios --simulator \
             --dart-define=OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-}" \
             --dart-define=OTEL_EXPORTER_OTLP_TOKEN="${OTEL_EXPORTER_OTLP_TOKEN:-}"
       

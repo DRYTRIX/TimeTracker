@@ -1042,13 +1042,14 @@ jobs:
         working-directory: mobile
         run: flutter test
       
+      # Release mode is invalid for iOS simulator; this validates compilation and produces Runner.app for the artifact zip.
       - name: Build iOS (simulator)
         working-directory: mobile
         env:
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_EXPORTER_OTLP_TOKEN: ${{ secrets.OTEL_EXPORTER_OTLP_TOKEN }}
         run: |
-          flutter build ios --release --simulator \
+          flutter build ios --simulator \
             --dart-define=OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-}" \
             --dart-define=OTEL_EXPORTER_OTLP_TOKEN="${OTEL_EXPORTER_OTLP_TOKEN:-}"
       
