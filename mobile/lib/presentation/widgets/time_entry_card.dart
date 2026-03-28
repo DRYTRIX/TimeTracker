@@ -111,7 +111,7 @@ class TimeEntryCard extends ConsumerWidget {
                     formatDateRange(
                       entry.startTime,
                       entry.endTime,
-                      ref.watch(userPrefsProvider).valueOrNull?.dateFormat,
+                      ref.watch(userPrefsProvider).valueOrNull?.dateFormatKey,
                     ),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,

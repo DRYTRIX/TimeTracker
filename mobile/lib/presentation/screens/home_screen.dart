@@ -273,7 +273,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                     : formatDateRange(
                         entry.startTime,
                         entry.endTime,
-                        ref.watch(userPrefsProvider).valueOrNull?.dateFormat,
+                        ref.watch(userPrefsProvider).valueOrNull?.dateFormatKey,
                       );
                 return Card(
                   margin: const EdgeInsets.only(bottom: AppSpacing.sm),
