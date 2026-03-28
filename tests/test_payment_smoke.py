@@ -12,9 +12,10 @@ from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory
 def setup_payment_test_data(app):
     """Setup test data for payment smoke tests"""
     with app.app_context():
-        # Create user
+        # Create user (password required for local auth login in client tests)
         user = UserFactory()
         user.role = "admin"
+        user.set_password("password123")
         db.session.add(user)
         db.session.commit()
 
@@ -185,7 +186,11 @@ class TestPaymentSmokeTests:
             user = setup_payment_test_data["user"]
 
             # Login
-            client.post("/login", data={"username": user.username}, follow_redirects=True)
+            client.post(
+                "/login",
+                data={"username": user.username, "password": "password123"},
+                follow_redirects=True,
+            )
 
             # Access payments list
             response = client.get("/payments")
@@ -197,7 +202,11 @@ class TestPaymentSmokeTests:
             user = setup_payment_test_data["user"]
 
             # Login
-            client.post("/login", data={"username": user.username}, follow_redirects=True)
+            client.post(
+                "/login",
+                data={"username": user.username, "password": "password123"},
+                follow_redirects=True,
+            )
 
             # Access payment create page
             response = client.get("/payments/create")
@@ -210,7 +219,11 @@ class TestPaymentSmokeTests:
             invoice = setup_payment_test_data["invoice"]
 
             # Login
-            client.post("/login", data={"username": user.username}, follow_redirects=True)
+            client.post(
+                "/login",
+                data={"username": user.username, "password": "password123"},
+                follow_redirects=True,
+            )
 
             # Create payment
             payment_data = {
@@ -285,7 +298,11 @@ class TestPaymentSmokeTests:
             invoice = setup_payment_test_data["invoice"]
 
             # Login
-            client.post("/login", data={"username": user.username}, follow_redirects=True)
+            client.post(
+                "/login",
+                data={"username": user.username, "password": "password123"},
+                follow_redirects=True,
+            )
 
             # Create test payments with different statuses (client context already provides app context)
             payment1 = PaymentFactory(
@@ -329,7 +346,11 @@ class TestPaymentSmokeTests:
             invoice = setup_payment_test_data["invoice"]
 
             # Login
-            client.post("/login", data={"username": user.username}, follow_redirects=True)
+            client.post(
+                "/login",
+                data={"username": user.username, "password": "password123"},
+                follow_redirects=True,
+            )
 
             # Create payment (client context already provides app context)
             payment = Payment(
@@ -380,7 +401,11 @@ class TestPaymentFeatureCompleteness:
             invoice = setup_payment_test_data["invoice"]
 
             # Login
-            client.post("/login", data={"username": user.username}, follow_redirects=True)
+            client.post(
+                "/login",
+                data={"username": user.username, "password": "password123"},
+                follow_redirects=True,
+            )
 
             # CREATE
             payment_data = {

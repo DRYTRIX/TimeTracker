@@ -138,7 +138,7 @@ class _TimeEntriesScreenState extends ConsumerState<TimeEntriesScreen> {
   void _showFilterDialog() {
     final currentFilter = ref.read(timeEntriesProvider).filter;
     final prefs = ref.read(userPrefsProvider).valueOrNull;
-    final dateFormatKey = prefs?.dateFormat;
+    final dateFormatKey = prefs?.dateFormatKey;
     DateTime? startDate;
     DateTime? endDate;
 

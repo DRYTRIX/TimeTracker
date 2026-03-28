@@ -2,6 +2,7 @@
 GitHub integration connector.
 """
 
+import logging
 import os
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
@@ -9,6 +10,8 @@ from typing import Any, Dict, Optional
 import requests
 
 from app.integrations.base import BaseConnector
+
+logger = logging.getLogger(__name__)
 
 
 class GitHubConnector(BaseConnector):

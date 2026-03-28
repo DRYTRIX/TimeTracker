@@ -296,7 +296,9 @@ def test_non_admin_cannot_access_roles(authenticated_client):
     """Test that non-admin users cannot access roles management"""
     # Try to access roles list as authenticated regular user
     response = authenticated_client.get("/admin/roles", follow_redirects=True)
-    # Should redirect to dashboard or show error
-    assert response.status_code == 200
-    # Verify not on roles page (should be redirected or see error)
+    # Deny with 403, redirect away, or show an error page (all acceptable)
+    assert response.status_code in (200, 403)
+    if response.status_code == 403:
+        return
+    # Verify not on full roles management UI
     assert b"Roles & Permissions" not in response.data or b"Administrator access required" in response.data

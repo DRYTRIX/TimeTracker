@@ -13,8 +13,13 @@ _creating_settings = threading.local()
 def _session_in_flush(session):
     """Return True if the session is currently in a flush (to avoid nested add+commit)."""
     try:
-        # SQLAlchemy sets _flushing on the session during flush
+        # SQLAlchemy sets _flushing for the outer flush() call.
         if getattr(session, "_flushing", False):
+            return True
+        # During flush_context.execute(), SA 2.0 sets _warn_on_events while disallowing
+        # Session.add() etc. ScopedSession/proxy edge cases can leave _flushing unreadable;
+        # _warn_on_events reliably marks the "execution stage" of a flush.
+        if getattr(session, "_warn_on_events", False):
             return True
         # Fallback: in a transaction and inside a flush context (if exposed)
         if (
