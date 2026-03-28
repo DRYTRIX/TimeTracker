@@ -266,23 +266,28 @@ def login():
                 # This mode is for trusted environments only
                 pass
 
-            # Log in the user (password validation passed or password not required)
-            login_user(user, remember=True)
+            from app.telemetry.otel_setup import business_span
 
-            # Auto-migrate user from legacy role to new role system if needed
-            if not user.roles and user.role:
-                from app.utils.role_migration import migrate_single_user
+            with business_span("auth.login", user_id=user.id, auth_method=auth_method):
+                # Log in the user (password validation passed or password not required)
+                login_user(user, remember=True)
 
-                if migrate_single_user(user.id):
-                    current_app.logger.info(
-                        "Auto-migrated user '%s' from legacy role '%s' to new role system", user.username, user.role
-                    )
+                # Auto-migrate user from legacy role to new role system if needed
+                if not user.roles and user.role:
+                    from app.utils.role_migration import migrate_single_user
 
-            user.update_last_login()
-            current_app.logger.info("User '%s' logged in successfully", user.username)
+                    if migrate_single_user(user.id):
+                        current_app.logger.info(
+                            "Auto-migrated user '%s' from legacy role '%s' to new role system",
+                            user.username,
+                            user.role,
+                        )
 
-            # Track successful login (log_event is fast, track_event is deferred to avoid blocking)
-            log_event("auth.login", user_id=user.id, auth_method=auth_method)
+                user.update_last_login()
+                current_app.logger.info("User '%s' logged in successfully", user.username)
+
+                # Track successful login (log_event is fast, track_event is deferred to avoid blocking)
+                log_event("auth.login", user_id=user.id, auth_method=auth_method)
             # Defer track_event to avoid blocking redirect - PostHog calls can be slow/timeout
             import threading
 
@@ -326,9 +331,12 @@ def logout():
     username = current_user.username
     user_id = current_user.id
 
-    # Track logout event before logging out
-    log_event("auth.logout", user_id=user_id)
-    track_event(user_id, "auth.logout", {})
+    from app.telemetry.otel_setup import business_span
+
+    with business_span("auth.logout", user_id=user_id):
+        # Track logout event before logging out
+        log_event("auth.logout", user_id=user_id)
+        track_event(user_id, "auth.logout", {})
 
     # Try OIDC end-session if enabled and configured
     try:
@@ -1089,25 +1097,29 @@ def oidc_callback():
         except Exception:
             pass
 
-        # Login
-        login_user(user, remember=True)
+        from app.telemetry.otel_setup import business_span
 
-        # Auto-migrate user from legacy role to new role system if needed
-        if not user.roles and user.role:
-            from app.utils.role_migration import migrate_single_user
+        with business_span("auth.login", user_id=user.id, auth_method="oidc"):
+            login_user(user, remember=True)
 
-            if migrate_single_user(user.id):
-                current_app.logger.info(
-                    "Auto-migrated OIDC user '%s' from legacy role '%s' to new role system", user.username, user.role
-                )
+            # Auto-migrate user from legacy role to new role system if needed
+            if not user.roles and user.role:
+                from app.utils.role_migration import migrate_single_user
 
-        try:
-            user.update_last_login()
-        except Exception:
-            pass
+                if migrate_single_user(user.id):
+                    current_app.logger.info(
+                        "Auto-migrated OIDC user '%s' from legacy role '%s' to new role system",
+                        user.username,
+                        user.role,
+                    )
 
-        # Track successful OIDC login (log_event is fast, track_event is deferred to avoid blocking)
-        log_event("auth.login", user_id=user.id, auth_method="oidc")
+            try:
+                user.update_last_login()
+            except Exception:
+                pass
+
+            # Track successful OIDC login (log_event is fast, track_event is deferred to avoid blocking)
+            log_event("auth.login", user_id=user.id, auth_method="oidc")
         # Defer track_event to avoid blocking redirect - PostHog calls can be slow/timeout
         import threading
 

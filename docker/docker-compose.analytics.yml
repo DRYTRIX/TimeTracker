@@ -13,6 +13,9 @@ services:
       # OTEL OTLP export
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       - OTEL_EXPORTER_OTLP_TOKEN=${OTEL_EXPORTER_OTLP_TOKEN:-}
+      - ENABLE_TRACING=${ENABLE_TRACING:-true}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - OTEL_METRICS_EXPORT_INTERVAL_MS=${OTEL_METRICS_EXPORT_INTERVAL_MS:-60000}
       
       # Telemetry (opt-in detailed analytics; base telemetry is always-on)
       - ENABLE_TELEMETRY=${ENABLE_TELEMETRY:-false}

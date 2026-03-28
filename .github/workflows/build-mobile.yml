@@ -45,14 +45,19 @@ jobs:
         working-directory: mobile
         run: dart run flutter_launcher_icons
       
-      # Skip tests for now - mobile app is incomplete (tests exist but lib/ source code is missing)
-      # - name: Run tests
-      #   working-directory: mobile
-      #   run: flutter test
+      - name: Run tests
+        working-directory: mobile
+        run: flutter test
       
       - name: Build APK
         working-directory: mobile
-        run: flutter build apk --release
+        env:
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_EXPORTER_OTLP_TOKEN: ${{ secrets.OTEL_EXPORTER_OTLP_TOKEN }}
+        run: |
+          flutter build apk --release \
+            --dart-define=OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-}" \
+            --dart-define=OTEL_EXPORTER_OTLP_TOKEN="${OTEL_EXPORTER_OTLP_TOKEN:-}"
       
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -92,43 +97,34 @@ jobs:
           dart run flutter_launcher_icons
           dart run flutter_launcher_icons -f flutter_launcher_icons_ios.yaml
       
-      - name: Configure iOS project for device build without code signing
+      # Simulator build avoids Apple Development Team / provisioning (device ipa still needs signing locally).
+      - name: Run tests
         working-directory: mobile
+        run: flutter test
+      
+      - name: Build iOS (simulator)
+        working-directory: mobile
+        env:
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_EXPORTER_OTLP_TOKEN: ${{ secrets.OTEL_EXPORTER_OTLP_TOKEN }}
         run: |
-          # Disable code signing requirements in Xcode project
-          sed -i '' 's/DEVELOPMENT_TEAM = .*;/DEVELOPMENT_TEAM = "";/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/CODE_SIGN_IDENTITY = .*;/CODE_SIGN_IDENTITY = "";/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/CODE_SIGN_IDENTITY\[sdk=iphoneos\*\] = .*;/CODE_SIGN_IDENTITY[sdk=iphoneos*] = "";/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/CODE_SIGNING_REQUIRED = .*;/CODE_SIGNING_REQUIRED = NO;/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/CODE_SIGNING_ALLOWED = .*;/CODE_SIGNING_ALLOWED = NO;/g' ios/Runner.xcodeproj/project.pbxproj
-          # Also set for all configurations
-          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/Runner.xcodeproj/project.pbxproj
-      
-      # Skip tests for now - mobile app is incomplete (tests exist but lib/ source code is missing)
-      # - name: Run tests
-      #   working-directory: mobile
-      #   run: flutter test
-      
-      - name: Build iOS
-        working-directory: mobile
-        run: flutter build ios --release --no-codesign
+          flutter build ios --release --simulator \
+            --dart-define=OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-}" \
+            --dart-define=OTEL_EXPORTER_OTLP_TOKEN="${OTEL_EXPORTER_OTLP_TOKEN:-}"
       
       - name: Create iOS archive
         if: success()
         working-directory: mobile
         run: |
           mkdir -p dist
-          # Package the built iOS app (IPA would require codesigning, so we'll package the .app)
-          if [ -d "build/ios/iphoneos/Runner.app" ]; then
-            cd build/ios/iphoneos
+          if [ -d "build/ios/iphonesimulator/Runner.app" ]; then
+            cd build/ios/iphonesimulator
             zip -r ../../../dist/TimeTracker-iOS.zip Runner.app
             cd ../../..
           else
-            echo "Warning: Runner.app not found at build/ios/iphoneos/Runner.app"
-            echo "Listing build/ios directory:"
-            ls -la build/ios/ || echo "build/ios directory does not exist"
-            echo "Listing build directory:"
-            ls -la build/ || echo "build directory does not exist"
+            echo "Warning: Runner.app not found at build/ios/iphonesimulator/Runner.app"
+            ls -la build/ios/ || true
+            ls -la build/ || true
           fi
       
       - name: Upload iOS build

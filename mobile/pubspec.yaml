@@ -42,6 +42,9 @@ dependencies:
   package_info_plus: ^8.0.0
   google_fonts: ^8.0.0
 
+  # OpenTelemetry OTLP/HTTP traces (same env names as server: OTEL_EXPORTER_OTLP_* via --dart-define)
+  opentelemetry: ^0.18.11
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

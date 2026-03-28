@@ -12,7 +12,7 @@ import platform
 import base64
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from urllib import request
 from urllib.parse import urlparse
 
@@ -111,6 +111,36 @@ def _remove_pii(properties: Dict[str, Any]) -> Dict[str, Any]:
     return {k: v for k, v in properties.items() if k.lower() not in pii_keys}
 
 
+def event_category_for_event_name(event_name: str) -> str:
+    """First segment of dotted event names; product analytics screen events use analytics."""
+    if event_name.startswith("$"):
+        return "analytics"
+    if "." in event_name:
+        return event_name.split(".", 1)[0]
+    return "general"
+
+
+def _otlp_correlation_attributes(event_name: str) -> List[Dict[str, Any]]:
+    """trace_id, span_id, event_category for OTLP log records (no PII)."""
+    rows = [
+        {"key": "event_category", "value": {"stringValue": event_category_for_event_name(event_name)}},
+    ]
+    try:
+        from app.telemetry.otel_setup import get_trace_context_for_logs, is_otel_tracing_active
+
+        if is_otel_tracing_active():
+            ctx = get_trace_context_for_logs()
+            tid = ctx.get("trace_id")
+            sid = ctx.get("span_id")
+            if tid:
+                rows.append({"key": "trace_id", "value": {"stringValue": tid}})
+            if sid:
+                rows.append({"key": "span_id", "value": {"stringValue": sid}})
+    except Exception:
+        pass
+    return rows
+
+
 def _to_otlp_any_value(value: Any) -> Dict[str, Any]:
     if isinstance(value, bool):
         return {"boolValue": value}
@@ -139,6 +169,7 @@ def _build_otlp_logs_payload(
         {"key": "identity", "value": {"stringValue": str(identity)}},
         {"key": "detailed", "value": {"boolValue": bool(detailed)}},
     ]
+    record_attributes.extend(_otlp_correlation_attributes(event_name))
     for key, value in safe_props.items():
         record_attributes.append({"key": str(key), "value": _to_otlp_any_value(value)})
 

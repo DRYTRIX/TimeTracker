@@ -2,6 +2,7 @@ import csv
 import io
 import json
 import logging
+import time
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
@@ -152,6 +153,7 @@ def create_invoice():
 
         # Generate invoice number
         invoice_number = Invoice.generate_invoice_number()
+        _invoice_create_t0 = time.monotonic()
 
         # Track project selected for invoice
         track_invoice_project_selected(
@@ -184,6 +186,23 @@ def create_invoice():
         if not safe_commit("create_invoice", {"invoice_number": invoice_number, "project_id": project_id}):
             flash(_("Could not create invoice due to a database error. Please check server logs."), "error")
             return render_template("invoices/create.html")
+
+        from app.telemetry.otel_setup import (
+            business_span,
+            record_invoice_created,
+            record_invoice_duration_seconds,
+        )
+
+        with business_span(
+            "invoice.create",
+            user_id=current_user.id,
+            source="web",
+            has_tax=float(tax_rate) > 0,
+            has_notes=bool(notes),
+        ):
+            pass
+        record_invoice_created()
+        record_invoice_duration_seconds(time.monotonic() - _invoice_create_t0, "create")
 
         # Track invoice created
         track_invoice_generated(
@@ -1134,7 +1153,15 @@ def export_invoice_pdf(invoice_id):
         current_app.logger.info(
             f"[PDF_EXPORT] Starting PDF generation - PageSize: '{page_size}', InvoiceID: {invoice_id}"
         )
-        pdf_bytes = pdf_generator.generate_pdf()
+        from opentelemetry import trace
+
+        from app.telemetry.otel_setup import business_span, record_invoice_duration_seconds
+
+        _pdf_t0 = time.monotonic()
+        with business_span("invoice.generate_pdf", user_id=current_user.id, page_size=page_size):
+            pdf_bytes = pdf_generator.generate_pdf()
+            trace.get_current_span().set_attribute("pdf_size_bytes", len(pdf_bytes))
+        record_invoice_duration_seconds(time.monotonic() - _pdf_t0, "pdf")
         # Optionally embed Factur-X CII XML in PDF (strict: fail export if embed fails)
         if getattr(settings, "invoices_zugferd_pdf", False):
             from app.utils.zugferd import embed_zugferd_xml_in_pdf
@@ -1201,7 +1228,15 @@ def export_invoice_pdf(invoice_id):
 
             settings = Settings.get_settings()
             pdf_generator = InvoicePDFGeneratorFallback(invoice, settings=settings)
-            pdf_bytes = pdf_generator.generate_pdf()
+            from opentelemetry import trace
+
+            from app.telemetry.otel_setup import business_span, record_invoice_duration_seconds
+
+            _pdf_t0 = time.monotonic()
+            with business_span("invoice.generate_pdf", user_id=current_user.id, page_size=page_size, generator="fallback"):
+                pdf_bytes = pdf_generator.generate_pdf()
+                trace.get_current_span().set_attribute("pdf_size_bytes", len(pdf_bytes))
+            record_invoice_duration_seconds(time.monotonic() - _pdf_t0, "pdf")
             if getattr(settings, "invoices_zugferd_pdf", False):
                 from app.utils.zugferd import embed_zugferd_xml_in_pdf
 

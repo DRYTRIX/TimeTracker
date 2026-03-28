@@ -131,6 +131,9 @@ dmypy.json
 
 # Application specific
 data/
+# Flutter app source lives under mobile/lib/data/ (do not treat as runtime data dir)
+!mobile/lib/data/
+!mobile/lib/data/**
 logs/
 backups/
 *.db

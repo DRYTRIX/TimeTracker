@@ -1,9 +1,10 @@
 import 'dart:async';
-import '../../core/config/app_config.dart';
-import '../../data/api/api_client.dart';
-import '../../data/local/database/sync_service.dart';
-import '../../utils/auth/auth_service.dart';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:timetracker_mobile/core/config/app_config.dart';
+import 'package:timetracker_mobile/data/api/api_client.dart';
+import 'package:timetracker_mobile/data/storage/sync_service.dart';
+import 'package:timetracker_mobile/utils/auth/auth_service.dart';
 
 class SyncUseCase {
   final Connectivity _connectivity = Connectivity();
@@ -47,13 +48,12 @@ class SyncUseCase {
         return false;
       }
 
-      final apiClient = ApiClient(baseUrl: serverUrl);
+      final trustedHosts = await AppConfig.getTrustedInsecureHosts();
+      final apiClient = ApiClient(baseUrl: serverUrl, trustedInsecureHosts: trustedHosts);
       await apiClient.setAuthToken(token);
 
       final syncService = SyncService(apiClient);
-
-      await syncService.processQueue();
-      await syncService.syncFromServer();
+      await syncService.syncAll();
 
       return true;
     } catch (_) {

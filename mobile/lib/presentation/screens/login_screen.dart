@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:timetracker_mobile/core/config/app_config.dart';
 import 'package:timetracker_mobile/core/constants/app_constants.dart';
+import 'package:timetracker_mobile/core/telemetry/mobile_otel.dart';
 import 'package:timetracker_mobile/data/api/api_client.dart';
 import 'package:timetracker_mobile/utils/network/connection_diagnostics.dart';
 import 'package:timetracker_mobile/utils/ssl/certificate_error.dart';
@@ -110,7 +111,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       final apiClient = ApiClient(baseUrl: serverUrl, trustedInsecureHosts: trustedHosts);
       await apiClient.setAuthToken(token);
-      final validationResponse = await apiClient.validateTokenRaw();
+      final validationResponse = await runMobileSpan(
+        'mobile.login.validate_token',
+        () => apiClient.validateTokenRaw(),
+      );
       final status = validationResponse.statusCode;
       if (status != 200) {
         setState(() {
