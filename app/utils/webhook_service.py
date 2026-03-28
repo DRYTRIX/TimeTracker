@@ -98,6 +98,12 @@ class WebhookService:
                     duration_ms=duration_ms,
                 )
                 logger.info(f"Webhook {webhook.id} delivered successfully: {event_type}")
+                try:
+                    from app.telemetry.otel_setup import record_webhook_delivery
+
+                    record_webhook_delivery(event_type, True)
+                except Exception:
+                    pass
             else:
                 # HTTP error
                 delivery.mark_failed(
@@ -108,6 +114,12 @@ class WebhookService:
                     duration_ms=duration_ms,
                 )
                 logger.warning(f"Webhook {webhook.id} failed with HTTP {response.status_code}: {event_type}")
+                try:
+                    from app.telemetry.otel_setup import record_webhook_delivery
+
+                    record_webhook_delivery(event_type, False)
+                except Exception:
+                    pass
 
                 # Schedule retry if not exceeded max retries
                 WebhookService._schedule_retry(delivery, webhook)
@@ -120,6 +132,12 @@ class WebhookService:
                 duration_ms=duration_ms,
             )
             logger.warning(f"Webhook {webhook.id} timed out: {event_type}")
+            try:
+                from app.telemetry.otel_setup import record_webhook_delivery
+
+                record_webhook_delivery(event_type, False)
+            except Exception:
+                pass
             WebhookService._schedule_retry(delivery, webhook)
 
         except requests.exceptions.ConnectionError as e:
@@ -130,6 +148,12 @@ class WebhookService:
                 duration_ms=duration_ms,
             )
             logger.warning(f"Webhook {webhook.id} connection error: {event_type}")
+            try:
+                from app.telemetry.otel_setup import record_webhook_delivery
+
+                record_webhook_delivery(event_type, False)
+            except Exception:
+                pass
             WebhookService._schedule_retry(delivery, webhook)
 
         except Exception as e:
@@ -138,6 +162,12 @@ class WebhookService:
                 error_message=f"Unexpected error: {str(e)[:500]}", error_type="unknown_error", duration_ms=duration_ms
             )
             logger.error(f"Webhook {webhook.id} unexpected error: {event_type}", exc_info=True)
+            try:
+                from app.telemetry.otel_setup import record_webhook_delivery
+
+                record_webhook_delivery(event_type, False)
+            except Exception:
+                pass
             WebhookService._schedule_retry(delivery, webhook)
 
         finally:

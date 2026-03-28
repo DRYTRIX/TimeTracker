@@ -50,7 +50,11 @@ def reports():
 
     # Use service layer to get reports summary (optimized queries)
     reporting_service = ReportingService()
-    result = reporting_service.get_reports_summary(user_id=current_user.id, is_admin=current_user.is_admin)
+    from app.telemetry.otel_setup import business_span, record_report_generated
+
+    with business_span("report.generate", user_id=current_user.id, report_type="summary"):
+        result = reporting_service.get_reports_summary(user_id=current_user.id, is_admin=current_user.is_admin)
+    record_report_generated()
 
     # Track report access
     log_event("report.viewed", user_id=current_user.id, report_type="summary")
@@ -1195,8 +1199,17 @@ def export_project_excel():
 
     projects_data = list(projects_map.values())
 
-    # Create Excel file
-    output, filename = create_project_report_excel(projects_data, start_date, end_date)
+    from app.telemetry.otel_setup import business_span, record_export_duration_seconds
+
+    _exp_t0 = time.monotonic()
+    with business_span(
+        "report.export",
+        user_id=current_user.id,
+        export_type="project_report",
+        num_projects=len(projects_data),
+    ):
+        output, filename = create_project_report_excel(projects_data, start_date, end_date)
+    record_export_duration_seconds(time.monotonic() - _exp_t0, "project_report")
 
     # Track event
     log_event("export.excel", user_id=current_user.id, export_type="project_report", num_projects=len(projects_data))

@@ -356,6 +356,17 @@ class TimeTrackingService:
                 "error": "database_error",
             }
 
+        from app.telemetry.otel_setup import business_span
+
+        with business_span(
+            "timer.persist",
+            user_id=user_id,
+            project_based=bool(project_id),
+            client_only=bool(client_id and not project_id),
+            has_task=bool(task_id),
+        ):
+            pass
+
         return {"success": True, "message": "Time entry created successfully", "entry": entry}
 
     def get_user_entries(

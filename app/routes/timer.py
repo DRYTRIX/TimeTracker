@@ -227,6 +227,17 @@ def start_timer():
         task_id,
     )
 
+    from app.telemetry.otel_setup import business_span
+
+    with business_span(
+        "timer.start",
+        user_id=current_user.id,
+        project_based=bool(project_id),
+        client_only=bool(client_id and not project_id),
+        has_task=bool(task_id),
+    ):
+        pass
+
     # Track timer started event
     log_event(
         "timer.started",
@@ -372,6 +383,17 @@ def start_timer_from_template(template_id):
         flash(_("Could not start timer due to a database error. Please check server logs."), "error")
         return redirect(url_for("time_entry_templates.list_templates"))
 
+    from app.telemetry.otel_setup import business_span
+
+    with business_span(
+        "timer.start",
+        user_id=current_user.id,
+        source="template",
+        template_id=template_id,
+        project_id=template.project_id,
+    ):
+        pass
+
     # Track events
     log_event(
         "timer.started.from_template", user_id=current_user.id, template_id=template_id, project_id=template.project_id
@@ -457,6 +479,17 @@ def start_timer_for_project(project_id):
         task_id,
     )
 
+    from app.telemetry.otel_setup import business_span
+
+    with business_span(
+        "timer.start",
+        user_id=current_user.id,
+        source="project_link",
+        project_id=project_id,
+        has_task=bool(task_id),
+    ):
+        pass
+
     # Emit WebSocket event for real-time updates
     try:
         socketio.emit(
@@ -507,8 +540,17 @@ def stop_timer():
         active_timer.stop_timer()
         current_app.logger.info("Stopped timer id=%s for user=%s", active_timer.id, current_user.username)
 
-        # Track timer stopped event
+        from app.telemetry.otel_setup import business_span
+
         duration_seconds = active_timer.duration_seconds if active_timer.duration_seconds else 0
+        with business_span(
+            "timer.stop",
+            user_id=current_user.id,
+            duration_seconds=int(duration_seconds) if duration_seconds is not None else 0,
+        ):
+            pass
+
+        # Track timer stopped event
         log_event(
             "timer.stopped",
             user_id=current_user.id,

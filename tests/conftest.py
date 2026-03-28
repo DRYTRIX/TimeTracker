@@ -993,6 +993,22 @@ def installation_config(temp_dir):
 
 
 # ============================================================================
+# OpenTelemetry teardown (allows each test app to re-run init_opentelemetry)
+# ============================================================================
+
+
+@pytest.fixture(autouse=True)
+def _reset_opentelemetry_after_test():
+    yield
+    try:
+        from app.telemetry.otel_setup import reset_for_testing
+
+        reset_for_testing()
+    except Exception:
+        pass
+
+
+# ============================================================================
 # Pytest Markers
 # ============================================================================
 

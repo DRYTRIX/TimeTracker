@@ -62,6 +62,13 @@ def log_event(name: str, **kwargs):
     """Log an event with structured JSON format including request context"""
     try:
         extra = {"request_id": getattr(g, "request_id", None), "event": name, **kwargs}
+        try:
+            from app.telemetry.otel_setup import get_trace_context_for_logs, is_otel_tracing_active
+
+            if is_otel_tracing_active():
+                extra.update(get_trace_context_for_logs())
+        except Exception:
+            pass
         json_logger.info(name, extra=extra)
     except Exception as e:
         logging.getLogger(__name__).debug("Structured log_event failed: %s", e)
@@ -296,6 +303,14 @@ def create_app(config=None):
         pass
 
     logger.info("Audit logging event listeners registered")
+
+    # OpenTelemetry (traces + OTLP metrics) — same OTLP credentials as manual log export
+    try:
+        from app.telemetry.otel_setup import init_opentelemetry
+
+        init_opentelemetry(app)
+    except Exception as e:
+        logger.warning("OpenTelemetry initialization skipped: %s", e)
 
     # Initialize Settings from environment variables on startup.
     # Skip during bootstrap/migration runs to avoid DB access before schema exists.
@@ -580,12 +595,21 @@ def create_app(config=None):
     # Record Prometheus metrics and log write operations
     @app.after_request
     def record_metrics_and_log(response):
+        latency = time.time() - getattr(g, "_start_time", time.time())
         try:
             # Record Prometheus metrics
-            latency = time.time() - getattr(g, "_start_time", time.time())
             endpoint = request.endpoint or "unknown"
             REQUEST_LATENCY.labels(endpoint=endpoint).observe(latency)
             REQUEST_COUNT.labels(method=request.method, endpoint=endpoint, http_status=response.status_code).inc()
+        except Exception:
+            pass
+
+        try:
+            from app.telemetry.otel_setup import inject_traceparent_headers, record_http_server_metrics
+
+            route = getattr(request.url_rule, "rule", None) or (request.endpoint or "unknown")
+            record_http_server_metrics(request.method, route, response.status_code, latency)
+            response = inject_traceparent_headers(response)
         except Exception:
             pass
 

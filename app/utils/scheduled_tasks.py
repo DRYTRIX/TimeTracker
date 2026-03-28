@@ -618,6 +618,25 @@ def register_scheduled_tasks(scheduler, app=None):
         )
         logger.info("Registered base telemetry heartbeat task")
 
+        try:
+            from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
+
+            from app.telemetry.otel_setup import record_background_job_outcome
+
+            def _otel_apscheduler_listener(event):
+                try:
+                    if event.code == EVENT_JOB_ERROR:
+                        record_background_job_outcome(event.job_id, False)
+                    elif event.code == EVENT_JOB_EXECUTED:
+                        record_background_job_outcome(event.job_id, True)
+                except Exception:
+                    pass
+
+            scheduler.add_listener(_otel_apscheduler_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
+            logger.info("Registered OpenTelemetry APScheduler listener")
+        except Exception as listener_err:
+            logger.debug("OpenTelemetry APScheduler listener not registered: %s", listener_err)
+
     except Exception as e:
         logger.error(f"Error registering scheduled tasks: {e}")
 

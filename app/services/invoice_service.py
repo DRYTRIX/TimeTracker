@@ -2,6 +2,7 @@
 Service for invoice business logic.
 """
 
+import time
 from datetime import date
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
@@ -36,6 +37,7 @@ class InvoiceService:
         Returns:
             dict with 'success', 'message', and 'invoice' keys
         """
+        t0 = time.monotonic()
         # Validate project
         project = self.project_repo.get_by_id(project_id)
         if not project:
@@ -139,6 +141,24 @@ class InvoiceService:
             {"invoice_id": invoice.id, "project_id": project_id, "client_id": project.client_id},
         )
 
+        from app.telemetry.otel_setup import (
+            business_span,
+            record_invoice_created,
+            record_invoice_duration_seconds,
+        )
+
+        line_item_count = len(grouped_entries)
+        with business_span(
+            "invoice.create",
+            user_id=created_by,
+            source="from_entries",
+            line_item_count=line_item_count,
+            time_entry_count=len(entries),
+        ):
+            pass
+        record_invoice_created()
+        record_invoice_duration_seconds(time.monotonic() - t0, "create")
+
         return {"success": True, "message": "Invoice created successfully", "invoice": invoice}
 
     def create_invoice(
@@ -163,6 +183,7 @@ class InvoiceService:
         Returns:
             dict with 'success', 'message', and 'invoice' keys
         """
+        t0 = time.monotonic()
         # Validate project
         project = self.project_repo.get_by_id(project_id)
         if not project:
@@ -218,6 +239,23 @@ class InvoiceService:
 
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send client notification for invoice {invoice.id}: {e}", exc_info=True)
+
+        from app.telemetry.otel_setup import (
+            business_span,
+            record_invoice_created,
+            record_invoice_duration_seconds,
+        )
+
+        with business_span(
+            "invoice.create",
+            user_id=created_by,
+            source="api",
+            has_tax=float(tax_rate or 0) > 0,
+            has_notes=bool(notes),
+        ):
+            pass
+        record_invoice_created()
+        record_invoice_duration_seconds(time.monotonic() - t0, "create")
 
         return {"success": True, "message": "Invoice created successfully", "invoice": invoice}
 
