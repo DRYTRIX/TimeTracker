@@ -5,6 +5,7 @@ import 'package:timetracker_mobile/data/models/timer.dart';
 import 'package:timetracker_mobile/data/models/time_entry.dart';
 import 'package:timetracker_mobile/data/models/project.dart';
 import 'package:timetracker_mobile/data/models/task.dart';
+import 'package:timetracker_mobile/core/telemetry/mobile_otel.dart';
 import 'package:timetracker_mobile/data/storage/local_storage.dart';
 import 'package:timetracker_mobile/data/storage/sync_service.dart';
 
@@ -94,11 +95,15 @@ class TimeTrackingRepository {
         return timer;
       }
 
-      final response = await apiClient!.startTimer(
-        projectId: projectId,
-        taskId: taskId,
-        notes: notes,
-        templateId: templateId,
+      final response = await runMobileSpan(
+        'mobile.timer.start',
+        () => apiClient!.startTimer(
+          projectId: projectId,
+          taskId: taskId,
+          notes: notes,
+          templateId: templateId,
+        ),
+        attributes: {'project_id': '$projectId'},
       );
       final timer = Timer.fromJson(response['timer'] as Map<String, dynamic>);
       await LocalStorage.saveTimer(timer);
@@ -114,7 +119,10 @@ class TimeTrackingRepository {
       throw Exception('Not connected to server');
     }
     try {
-      final response = await apiClient!.stopTimer();
+      final response = await runMobileSpan(
+        'mobile.timer.stop',
+        () => apiClient!.stopTimer(),
+      );
       final entry = TimeEntry.fromJson(response['time_entry'] as Map<String, dynamic>);
       await LocalStorage.clearTimer();
       return entry;
@@ -334,7 +342,12 @@ class TimeTrackingRepository {
 
   /// Sync pending operations
   Future<void> syncPending() async {
-    await _syncService?.syncAll();
+    await runMobileSpan(
+      'mobile.sync.pending',
+      () async {
+        await _syncService?.syncAll();
+      },
+    );
   }
 
   // ==================== Project Operations ====================

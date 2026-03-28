@@ -960,13 +960,29 @@ jobs:
         working-directory: mobile
         run: dart run flutter_launcher_icons
       
+      - name: Run mobile tests
+        working-directory: mobile
+        run: flutter test
+      
       - name: Build APK
         working-directory: mobile
-        run: flutter build apk --release
+        env:
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_EXPORTER_OTLP_TOKEN: ${{ secrets.OTEL_EXPORTER_OTLP_TOKEN }}
+        run: |
+          flutter build apk --release \
+            --dart-define=OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-}" \
+            --dart-define=OTEL_EXPORTER_OTLP_TOKEN="${OTEL_EXPORTER_OTLP_TOKEN:-}"
       
       - name: Build App Bundle
         working-directory: mobile
-        run: flutter build appbundle --release
+        env:
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_EXPORTER_OTLP_TOKEN: ${{ secrets.OTEL_EXPORTER_OTLP_TOKEN }}
+        run: |
+          flutter build appbundle --release \
+            --dart-define=OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-}" \
+            --dart-define=OTEL_EXPORTER_OTLP_TOKEN="${OTEL_EXPORTER_OTLP_TOKEN:-}"
         continue-on-error: true
       
       - name: Upload Android APK
@@ -1022,42 +1038,36 @@ jobs:
           dart run flutter_launcher_icons
           dart run flutter_launcher_icons -f flutter_launcher_icons_ios.yaml
       
-      - name: Configure iOS project for device build without code signing
+      - name: Run mobile tests
         working-directory: mobile
-        run: |
-          # Disable code signing requirements in Xcode project
-          sed -i '' 's/DEVELOPMENT_TEAM = .*;/DEVELOPMENT_TEAM = "";/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/CODE_SIGN_IDENTITY = .*;/CODE_SIGN_IDENTITY = "";/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/CODE_SIGN_IDENTITY\[sdk=iphoneos\*\] = .*;/CODE_SIGN_IDENTITY[sdk=iphoneos*] = "";/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/CODE_SIGNING_REQUIRED = .*;/CODE_SIGNING_REQUIRED = NO;/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/CODE_SIGNING_ALLOWED = .*;/CODE_SIGNING_ALLOWED = NO;/g' ios/Runner.xcodeproj/project.pbxproj
-          # Also set for all configurations
-          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/Runner.xcodeproj/project.pbxproj
+        run: flutter test
       
-      - name: Build iOS (no codesign)
+      - name: Build iOS (simulator)
         working-directory: mobile
-        run: flutter build ios --release --no-codesign
+        env:
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_EXPORTER_OTLP_TOKEN: ${{ secrets.OTEL_EXPORTER_OTLP_TOKEN }}
+        run: |
+          flutter build ios --release --simulator \
+            --dart-define=OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-}" \
+            --dart-define=OTEL_EXPORTER_OTLP_TOKEN="${OTEL_EXPORTER_OTLP_TOKEN:-}"
       
       - name: Create iOS archive
         if: success()
         working-directory: mobile
         run: |
           mkdir -p dist
-          # Package the built iOS app (IPA would require codesigning, so we'll package the .app)
-          if [ -d "build/ios/iphoneos/Runner.app" ]; then
-            cd build/ios/iphoneos
+          if [ -d "build/ios/iphonesimulator/Runner.app" ]; then
+            cd build/ios/iphonesimulator
             zip -r ../../../dist/TimeTracker-iOS-${{ needs.determine-version.outputs.version }}.zip Runner.app
             cd ../../..
-            echo "✅ iOS archive created successfully"
+            echo "✅ iOS simulator archive created successfully"
             ls -lh dist/
           else
-            echo "❌ ERROR: Runner.app not found at build/ios/iphoneos/Runner.app"
-            echo "Listing build/ios directory:"
-            ls -la build/ios/ || echo "build/ios directory does not exist"
-            echo "Listing build directory:"
-            ls -la build/ || echo "build directory does not exist"
-            echo "Searching for Runner.app:"
-            find build -name "Runner.app" -type d 2>/dev/null || echo "Runner.app not found anywhere"
+            echo "❌ ERROR: Runner.app not found at build/ios/iphonesimulator/Runner.app"
+            ls -la build/ios/ || true
+            ls -la build/ || true
+            find build -name "Runner.app" -type d 2>/dev/null || true
             exit 1
           fi
       
