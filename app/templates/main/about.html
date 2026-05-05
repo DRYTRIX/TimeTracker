@@ -40,7 +40,7 @@
     </div>
 </div>
 
-{% if current_user.is_authenticated and current_user.ui_show_donate %}
+{% if current_user.is_authenticated and current_user.ui_show_donate and not is_license_activated %}
 <div class="mb-6 sm:mb-8 p-4 sm:p-5 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
     <p class="text-sm text-text-light dark:text-text-dark">{{ _('TimeTracker is free and open source. You can donate or buy a supporter license — features are never locked.') }}</p>
     <button type="button" class="btn btn-primary flex-shrink-0 w-full sm:w-auto text-center js-open-support-modal">{{ _('Support TimeTracker') }}</button>

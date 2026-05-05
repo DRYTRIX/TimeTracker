@@ -15,7 +15,7 @@
     actions_html=None
 ) }}
 
-{% if current_user.is_authenticated and current_user.ui_show_donate %}
+{% if current_user.is_authenticated and current_user.ui_show_donate and not is_license_activated %}
 <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
     {{ _('Enjoying TimeTracker?') }} {{ _('Support development or get a supporter license — the app stays free for everyone.') }}
     <button type="button" class="text-primary hover:underline font-medium js-open-support-modal">{{ _('Open support') }}</button>
