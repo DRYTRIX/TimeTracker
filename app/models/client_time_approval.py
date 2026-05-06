@@ -26,14 +26,29 @@ class ClientTimeApproval(db.Model):
     __tablename__ = "client_time_approvals"
 
     id = db.Column(db.Integer, primary_key=True)
-    time_entry_id = db.Column(db.Integer, db.ForeignKey("time_entries.id"), nullable=False, index=True)
-    project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False, index=True)
-    client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=False, index=True)
+    time_entry_id = db.Column(
+        db.Integer, db.ForeignKey("time_entries.id"), nullable=False, index=True
+    )
+    project_id = db.Column(
+        db.Integer, db.ForeignKey("projects.id"), nullable=False, index=True
+    )
+    client_id = db.Column(
+        db.Integer, db.ForeignKey("clients.id"), nullable=False, index=True
+    )
 
     # Approval workflow
-    status = db.Column(SQLEnum(ClientApprovalStatus), default=ClientApprovalStatus.PENDING, nullable=False, index=True)
-    requested_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
-    approved_by = db.Column(db.Integer, nullable=True)  # Client contact ID (not user ID)
+    status = db.Column(
+        SQLEnum(ClientApprovalStatus, values_callable=lambda x: [e.value for e in x]),
+        default=ClientApprovalStatus.PENDING,
+        nullable=False,
+        index=True,
+    )
+    requested_by = db.Column(
+        db.Integer, db.ForeignKey("users.id"), nullable=False, index=True
+    )
+    approved_by = db.Column(
+        db.Integer, nullable=True
+    )  # Client contact ID (not user ID)
 
     # Timestamps
     requested_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -47,12 +62,20 @@ class ClientTimeApproval(db.Model):
 
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     # Relationships
-    time_entry = db.relationship("TimeEntry", backref=db.backref("client_approvals", lazy="dynamic"))
-    project = db.relationship("Project", backref=db.backref("client_approvals", lazy="dynamic"))
-    client = db.relationship("Client", backref=db.backref("time_approvals", lazy="dynamic"))
+    time_entry = db.relationship(
+        "TimeEntry", backref=db.backref("client_approvals", lazy="dynamic")
+    )
+    project = db.relationship(
+        "Project", backref=db.backref("client_approvals", lazy="dynamic")
+    )
+    client = db.relationship(
+        "Client", backref=db.backref("time_approvals", lazy="dynamic")
+    )
     requester = db.relationship("User", foreign_keys=[requested_by])
 
     def __repr__(self):
@@ -64,10 +87,14 @@ class ClientTimeApproval(db.Model):
             "time_entry_id": self.time_entry_id,
             "project_id": self.project_id,
             "client_id": self.client_id,
-            "status": self.status.value if isinstance(self.status, ClientApprovalStatus) else self.status,
+            "status": self.status.value
+            if isinstance(self.status, ClientApprovalStatus)
+            else self.status,
             "requested_by": self.requested_by,
             "approved_by": self.approved_by,
-            "requested_at": self.requested_at.isoformat() if self.requested_at else None,
+            "requested_at": self.requested_at.isoformat()
+            if self.requested_at
+            else None,
             "approved_at": self.approved_at.isoformat() if self.approved_at else None,
             "rejected_at": self.rejected_at.isoformat() if self.rejected_at else None,
             "request_comment": self.request_comment,
@@ -103,15 +130,23 @@ class ClientApprovalPolicy(db.Model):
     __tablename__ = "client_approval_policies"
 
     id = db.Column(db.Integer, primary_key=True)
-    client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=False, index=True)
-    project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=True, index=True)
+    client_id = db.Column(
+        db.Integer, db.ForeignKey("clients.id"), nullable=False, index=True
+    )
+    project_id = db.Column(
+        db.Integer, db.ForeignKey("projects.id"), nullable=True, index=True
+    )
 
     # Approval requirements
     requires_approval = db.Column(db.Boolean, default=True, nullable=False)
-    auto_approve_after_days = db.Column(db.Integer, nullable=True)  # Auto-approve if no response
+    auto_approve_after_days = db.Column(
+        db.Integer, nullable=True
+    )  # Auto-approve if no response
 
     # Conditions
-    min_hours = db.Column(db.Numeric(10, 2), nullable=True)  # Require approval if >= this many hours
+    min_hours = db.Column(
+        db.Numeric(10, 2), nullable=True
+    )  # Require approval if >= this many hours
     billable_only = db.Column(db.Boolean, default=False, nullable=False)
 
     # Status
@@ -119,14 +154,22 @@ class ClientApprovalPolicy(db.Model):
 
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     # Relationships
-    client = db.relationship("Client", backref=db.backref("approval_policies", lazy="dynamic"))
-    project = db.relationship("Project", backref=db.backref("client_approval_policies", lazy="dynamic"))
+    client = db.relationship(
+        "Client", backref=db.backref("approval_policies", lazy="dynamic")
+    )
+    project = db.relationship(
+        "Project", backref=db.backref("client_approval_policies", lazy="dynamic")
+    )
 
     def __repr__(self):
-        return f"<ClientApprovalPolicy client={self.client_id} project={self.project_id}>"
+        return (
+            f"<ClientApprovalPolicy client={self.client_id} project={self.project_id}>"
+        )
 
     def to_dict(self):
         return {
