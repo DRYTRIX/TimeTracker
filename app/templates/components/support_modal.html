@@ -36,20 +36,26 @@
                 </div>
                 <p id="supportSocialLine" class="text-xs text-text-muted-light dark:text-text-muted-dark text-center">{{ _('Trusted by teams and freelancers who want simple, reliable time tracking.') }}</p>
                 <p id="supportModalOffline" class="hidden text-sm text-amber-700 dark:text-amber-300"></p>
+                {% if not is_license_activated %}
                 <div class="flex flex-col sm:flex-row gap-2">
                     <a href="#" rel="noopener noreferrer" data-support-tier="eur5" class="support-tier-btn btn btn-secondary text-center flex-1">{{ _('Donate') }} (€5)</a>
                     <a href="#" rel="noopener noreferrer" data-support-tier="eur10" class="support-tier-btn btn btn-secondary text-center flex-1">{{ _('Donate') }} (€10)</a>
                     <a href="#" rel="noopener noreferrer" data-support-tier="eur25" class="support-tier-btn btn btn-secondary text-center flex-1">{{ _('Donate') }} (€25)</a>
                 </div>
+                {% endif %}
                 <div class="flex flex-col sm:flex-row gap-2">
+                    {% if not is_license_activated %}
                     <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" data-support-tier="license" class="btn btn-primary text-center flex-1">
                         {{ _('Buy license (€25)') }} <i class="fas fa-external-link-alt text-xs ml-1" aria-hidden="true"></i>
                     </a>
+                    {% endif %}
                     <button type="button" id="supportShareBtn" class="btn btn-secondary text-center flex-1">{{ _('Love TimeTracker? Share it') }}</button>
                 </div>
+                {% if not is_license_activated %}
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark">
                     {{ _('A license is a supporter badge — it does not lock features. You keep full access either way.') }}
                 </p>
+                {% endif %}
             </div>
         </div>
     </div>
