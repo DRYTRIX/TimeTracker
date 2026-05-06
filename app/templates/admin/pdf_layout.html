@@ -1054,6 +1054,22 @@
     background: linear-gradient(90deg, #7c3aed, #9333ea);
 }
 
+.preview-template-fallback-notice {
+    margin: 0.5rem 0.75rem 0;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: #92400e;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 0.375rem;
+}
+
+.dark .preview-template-fallback-notice {
+    color: #fcd34d;
+    background: rgba(120, 53, 15, 0.35);
+    border-color: #b45309;
+}
+
 /* Error State */
 .preview-error {
     position: absolute;
@@ -2334,6 +2350,7 @@
                     </button>
                 </div>
             </div>
+            <div id="preview-template-fallback-notice" class="preview-template-fallback-notice" style="display: none;" role="status" aria-live="polite"></div>
             
             <!-- Content Wrapper -->
             <div class="preview-content-wrapper" id="preview-content-wrapper">
@@ -2431,9 +2448,29 @@ const PAGE_SIZE_DIMENSIONS = {
     'Tabloid': { width: 792, height: 1224 }
 };
 
+// Issue #600: Detect built-in invoice table groups from Jinja in child Text (header may be customized away from keywords)
+function inferTableNameFromJinjaContent(child) {
+    if (!child) return null;
+    const isGrp = child.className === 'Group' || (child.getClassName && child.getClassName() === 'Group') || (child.constructor && child.constructor.name === 'Group');
+    if (!isGrp) return null;
+    const children = child.getChildren ? child.getChildren() : (child.children || []);
+    for (let i = 0; i < children.length; i++) {
+        const c = children[i];
+        if (!c || c.className !== 'Text' || !c.attrs) continue;
+        const t = String(c.attrs.text || '');
+        if (t.indexOf('all_line_items') !== -1 || t.indexOf('invoice.items') !== -1) return 'items-table';
+        if (t.indexOf('invoice.expenses') !== -1) return 'expenses-table';
+    }
+    return null;
+}
+
 // Issue #504: Infer table type from group structure (supports localized headers)
 function inferTableNameFromGroup(child, excludeNode) {
-    if (!child || child === excludeNode || (child.className !== 'Group' && (!child.constructor || child.constructor.name !== 'Group'))) return null;
+    if (!child || child === excludeNode) return null;
+    const isGrp = child.className === 'Group' || (child.getClassName && child.getClassName() === 'Group') || (child.constructor && child.constructor.name === 'Group');
+    if (!isGrp) return null;
+    const fromJinja = inferTableNameFromJinjaContent(child);
+    if (fromJinja) return fromJinja;
     const children = child.getChildren ? child.getChildren() : (child.children || []);
     if (children.length < 3) return null;
     const textElements = children.filter(function(c) { return c.className === 'Text'; });
@@ -2458,11 +2495,108 @@ function inferTableNameFromGroup(child, excludeNode) {
     return null;
 }
 
+// Issue #600: Restore table / decorative group attrs from saved design_json by (x,y), not layer index order
+function collectTableMetaFromLayerJson(layerJson) {
+    const out = [];
+    if (!layerJson || !layerJson.children) return out;
+    layerJson.children.forEach(function(jsonChild) {
+        if (!jsonChild || jsonChild.className !== 'Group') return;
+        const a = jsonChild.attrs || {};
+        const n = a.name || '';
+        const pt = a.pdfTable || '';
+        let tableName = null;
+        if (n === 'items-table' || n === 'expenses-table') tableName = n;
+        else if (pt === 'items-table' || pt === 'expenses-table') tableName = pt;
+        if (!tableName) return;
+        out.push({ name: tableName, x: Math.round(a.x || 0), y: Math.round(a.y || 0) });
+    });
+    return out;
+}
+
+function collectDecorativeMetaFromLayerJson(layerJson) {
+    const out = [];
+    if (!layerJson || !layerJson.children) return out;
+    layerJson.children.forEach(function(jsonChild) {
+        if (!jsonChild || jsonChild.className !== 'Group') return;
+        const a = jsonChild.attrs || {};
+        const savedName = a.name || '';
+        if (!savedName || savedName.indexOf('decorative-image') === -1) return;
+        out.push({
+            x: Math.round(a.x || 0),
+            y: Math.round(a.y || 0),
+            imageUrl: typeof a.imageUrl === 'string' ? a.imageUrl : ''
+        });
+    });
+    return out;
+}
+
+function applyTableMetaFromSavedJson(layerRef, layerJson) {
+    const meta = collectTableMetaFromLayerJson(layerJson);
+    if (!meta.length || !layerRef || !layerRef.children) return;
+    const tolerance = 5;
+    const pool = meta.slice();
+    layerRef.children.forEach(function(liveChild) {
+        const isGroup = liveChild && (liveChild.className === 'Group' || (liveChild.constructor && liveChild.constructor.name === 'Group'));
+        if (!isGroup) return;
+        const lx = Math.round(liveChild.x());
+        const ly = Math.round(liveChild.y());
+        for (let t = 0; t < pool.length; t++) {
+            const tg = pool[t];
+            if (!tg) continue;
+            if (Math.abs(tg.x - lx) <= tolerance && Math.abs(tg.y - ly) <= tolerance) {
+                const savedName = tg.name;
+                if (liveChild.setAttr) {
+                    liveChild.setAttr('name', savedName);
+                    liveChild.setAttr('pdfTable', savedName);
+                }
+                if (liveChild.attrs) {
+                    liveChild.attrs.name = savedName;
+                    liveChild.attrs.pdfTable = savedName;
+                }
+                if (liveChild.name) liveChild.name(savedName);
+                pool[t] = null;
+                break;
+            }
+        }
+    });
+}
+
+function applyDecorativeMetaFromSavedJson(layerRef, layerJson) {
+    const meta = collectDecorativeMetaFromLayerJson(layerJson);
+    if (!meta.length || !layerRef || !layerRef.children) return;
+    const tolerance = 5;
+    const pool = meta.slice();
+    layerRef.children.forEach(function(liveChild) {
+        const isGroup = liveChild && (liveChild.className === 'Group' || (liveChild.constructor && liveChild.constructor.name === 'Group'));
+        if (!isGroup) return;
+        const lx = Math.round(liveChild.x());
+        const ly = Math.round(liveChild.y());
+        for (let t = 0; t < pool.length; t++) {
+            const m = pool[t];
+            if (!m) continue;
+            if (Math.abs(m.x - lx) <= tolerance && Math.abs(m.y - ly) <= tolerance) {
+                const url = m.imageUrl;
+                if (liveChild.setAttr) {
+                    liveChild.setAttr('name', 'decorative-image');
+                    liveChild.setAttr('imageUrl', url || '');
+                }
+                if (liveChild.attrs) {
+                    liveChild.attrs.name = 'decorative-image';
+                    liveChild.attrs.imageUrl = url || '';
+                }
+                if (liveChild.name) liveChild.name('decorative-image');
+                pool[t] = null;
+                break;
+            }
+        }
+    });
+}
+
 function ensureTableGroupNames(layerRef, bgRef) {
     if (!layerRef || !layerRef.children) return;
     const bg = bgRef || (typeof background !== 'undefined' ? background : null);
     layerRef.children.forEach(function(child) {
-        const isGroup = child && (child.className === 'Group' || (child.constructor && child.constructor.name === 'Group'));
+        const isGroup = child && (child.className === 'Group' || (child.getClassName && child.getClassName() === 'Group') || (child.constructor && child.constructor.name === 'Group'));
         if (!child || child === bg || !isGroup) return;
         const currentName = child.getAttr ? child.getAttr('name') : (child.attrs && child.attrs.name);
         if (currentName === 'items-table' || currentName === 'expenses-table') return;
@@ -4565,6 +4699,8 @@ function initializePDFEditor() {
     const previewBtnFullscreen = document.getElementById('preview-btn-fullscreen');
     const previewBtnRetry = document.getElementById('preview-btn-retry');
     const previewBtnCloseError = document.getElementById('preview-btn-close-error');
+    const previewTemplateFallbackNotice = document.getElementById('preview-template-fallback-notice');
+    const PREVIEW_FALLBACK_MSG = {{ _('Could not apply unsaved canvas changes to the preview. Showing the last saved template instead.')|tojson }};
     
     // Early return if essential elements are missing
     if (!previewModal || !previewFrame) {
@@ -4972,7 +5108,20 @@ function initializePDFEditor() {
         
         // Preview POST includes current canvas as template_json when the modal page size matches the editor.
         // The invoice preview endpoint prefers that form JSON over the database so unsaved edits show up.
-        const { html, css, json } = generateCode();
+        const gen = generateCode();
+        const html = gen.html;
+        const css = gen.css;
+        const json = gen.json;
+        const templateJsonOk = gen.ok !== false;
+        if (previewTemplateFallbackNotice) {
+            if (!templateJsonOk) {
+                previewTemplateFallbackNotice.textContent = PREVIEW_FALLBACK_MSG + (gen.errorMessage ? ' (' + gen.errorMessage + ')' : '');
+                previewTemplateFallbackNotice.style.display = 'block';
+                console.error('[PDF_PREVIEW] generateCode failed; using saved DB template for preview.', gen.errorMessage);
+            } else {
+                previewTemplateFallbackNotice.style.display = 'none';
+            }
+        }
         
         const fd = new FormData();
         fd.append('html', html);
@@ -4985,7 +5134,8 @@ function initializePDFEditor() {
         
         // Only send template_json if previewing the same size as the current editor
         // Otherwise, backend will load the saved template for the selected page size
-        if (pageSizeForPreview === currentMainPageSize && json && json.trim()) {
+        // Issue #600: Never send empty/fallback JSON from a failed generateCode() — that would blank the preview.
+        if (pageSizeForPreview === currentMainPageSize && templateJsonOk && json && json.trim()) {
             fd.append('template_json', json);
         }
         
@@ -5247,38 +5397,46 @@ function initializePDFEditor() {
                 }
             };
             
+            // Issue #600: Infer/fix table group names before walking the layer (preview + save)
+            if (layer && typeof ensureTableGroupNames === 'function') {
+                const bgRef = typeof background !== 'undefined' ? background : null;
+                ensureTableGroupNames(layer, bgRef);
+            }
+            
             // Legacy HTML/CSS generation for backward compatibility (preview)
             let bodyContent = '';
             
             if (!layer || !layer.children) {
                 console.error('Layer or children not found');
-                return { html: '<div class="invoice-wrapper"></div>', css: '', json: JSON.stringify(templateJson, null, 2) };
+                return { html: '<div class="invoice-wrapper"></div>', css: '', json: JSON.stringify(templateJson, null, 2), ok: true };
             }
             
             layer.children.forEach((child, index) => {
                 if (!child || child === background || child.className === 'Transformer') return;
                 
+                const ca = child.attrs || {};
+                
                 // Filter out invisible elements
-                if (child.attrs && (child.attrs.opacity === 0 || child.attrs.visible === false)) {
-                    console.log('Skipping invisible element in code generation:', child.className, child.attrs.name || 'unnamed');
+                if (ca.opacity === 0 || ca.visible === false) {
+                    console.log('Skipping invisible element in code generation:', child.className, ca.name || 'unnamed');
                     return;
                 }
                 
                 // Filter out grid lines and page border - they should not be included in the exported template
-                if (child.className === 'Line' && child.attrs.name === 'grid-line') return;
-                if (child.className === 'Rect' && child.attrs.name === 'page-border') return;
+                if (child.className === 'Line' && ca.name === 'grid-line') return;
+                if (child.className === 'Rect' && ca.name === 'page-border') return;
                 // Filter out warning indicator dots - they should not be included in the exported template
-                if (child.className === 'Circle' && child.attrs.name === 'warning-indicator') return;
+                if (child.className === 'Circle' && ca.name === 'warning-indicator') return;
                 
                 // Filter out background rectangles - any rectangle with name="background" or matching full page dimensions
                 if (child.className === 'Rect') {
-                    const rectName = child.attrs.name || '';
-                    const rectX = child.attrs.x || 0;
-                    const rectY = child.attrs.y || 0;
-                    const rectWidth = child.attrs.width || 0;
-                    const rectHeight = child.attrs.height || 0;
-                    const rectFill = child.attrs.fill || '';
-                    const rectStroke = child.attrs.stroke || '';
+                    const rectName = ca.name || '';
+                    const rectX = ca.x || 0;
+                    const rectY = ca.y || 0;
+                    const rectWidth = ca.width || 0;
+                    const rectHeight = ca.height || 0;
+                    const rectFill = ca.fill || '';
+                    const rectStroke = ca.stroke || '';
                     
                     // Filter out if name is "background" or "page-border"
                     if (rectName === 'background' || rectName === 'page-border') {
@@ -5290,7 +5448,7 @@ function initializePDFEditor() {
                     // These are placeholder rectangles that should not appear in the preview
                     const parent = child.getParent && child.getParent();
                     if (parent) {
-                        const parentName = parent.attrs ? (parent.attrs.name || '') : '';
+                        const parentName = (parent.attrs && parent.attrs.name) ? parent.attrs.name : '';
                         if (parentName && parentName.includes('decorative-image')) {
                             console.log('Skipping rectangle inside decorative-image group:', {rectName, parentName});
                             return;
@@ -5325,7 +5483,7 @@ function initializePDFEditor() {
                     }
                 }
                 
-                const attrs = child.attrs;
+                const attrs = child.attrs || {};
                 const x = Math.round(attrs.x || 0);
                 const y = Math.round(attrs.y || 0);
                 const opacity = attrs.opacity !== undefined ? attrs.opacity : 1;
@@ -5524,7 +5682,7 @@ function initializePDFEditor() {
                     // Legacy HTML for preview
                     bodyContent += `  <hr class="line-element" style="position:absolute;left:${adjustedX}px;top:${adjustedY}px;width:${width}px;border:none;border-top:${strokeWidth}px solid ${stroke};margin:0;opacity:${opacity}">\n`;
                 }
-                    } else if (child.className === 'Group' || (child.constructor && child.constructor.name === 'Group') || child.children) {
+                    } else if (child.className === 'Group' || (child.getClassName && child.getClassName() === 'Group') || (child.constructor && child.constructor.name === 'Group') || child.children) {
                     // It's a Group element (check multiple ways since className might be undefined after JSON restore)
                     // Check if this is a table by looking at the group's name (use getAttr too - Konva may store name there after load)
                     const nameAttr = (child.getAttr && child.getAttr('name')) || (child.attrs && child.attrs.name) || '';
@@ -5856,6 +6014,154 @@ function initializePDFEditor() {
                 }
             });
             
+            // Issue #600: Tables nested under another Group (or skipped if className was wrong) must still become template_json + preview HTML
+            (function appendMissingTableGroupsDeep() {
+                if (!layer || typeof layer.find !== 'function') return;
+                const tol = 8;
+                const groups = layer.find('Group');
+                if (!groups || !groups.length) return;
+                function tableAlreadyAt(axPt, ayPt, dataNeedle) {
+                    return templateJson.elements.some(function(e) {
+                        if (!e || e.type !== 'table' || e.data == null) return false;
+                        if (String(e.data).indexOf(dataNeedle) === -1) return false;
+                        return Math.abs((e.x || 0) - axPt) <= tol && Math.abs((e.y || 0) - ayPt) <= tol;
+                    });
+                }
+                function absPos(g) {
+                    if (g.getAbsolutePosition) {
+                        const p = g.getAbsolutePosition();
+                        return { x: Math.round(p.x), y: Math.round(p.y) };
+                    }
+                    return { x: Math.round(g.x()), y: Math.round(g.y()) };
+                }
+                groups.forEach(function(g) {
+                    // Top-level layer children are handled by the main layer.children loop only.
+                    // Running this pass on them duplicates tables because coords can differ (attrs vs getAbsolutePosition / transforms).
+                    const par = g.getParent && g.getParent();
+                    if (!par || par === layer) return;
+                    const a = g.attrs || {};
+                    const nameAttr = (g.getAttr && g.getAttr('name')) || a.name || '';
+                    const pdfTableAttr = (g.getAttr && g.getAttr('pdfTable')) || a.pdfTable || '';
+                    let isItems = nameAttr === 'items-table' || pdfTableAttr === 'items-table';
+                    let isExpenses = nameAttr === 'expenses-table' || pdfTableAttr === 'expenses-table';
+                    if (!isItems && !isExpenses) {
+                        const inf = inferTableNameFromGroup(g, background) || inferTableNameFromJinjaContent(g);
+                        if (inf === 'items-table') isItems = true;
+                        if (inf === 'expenses-table') isExpenses = true;
+                    }
+                    if (!isItems && !isExpenses) return;
+                    const pos = absPos(g);
+                    const x = pos.x;
+                    const y = pos.y;
+                    const axPt = pxToPt(x);
+                    const ayPt = pxToPt(y);
+                    const opacity = g.opacity !== undefined ? g.opacity() : 1;
+                    const gChildren = g.getChildren ? g.getChildren() : (g.children || []);
+                    const textElements = gChildren.filter(function(c) { return c.className === 'Text'; });
+                    if (isItems) {
+                        if (tableAlreadyAt(axPt, ayPt, 'all_line_items')) return;
+                        const headerText = textElements[0] ? (textElements[0].attrs.text || '') : '';
+                        let headerParts = ['Description', 'Qty', 'Unit Price', 'Total'];
+                        if (headerText && headerText.indexOf('|') !== -1) {
+                            headerParts = headerText.split('|').map(function(part) { return part.trim(); }).filter(function(part) { return part.length > 0; });
+                            while (headerParts.length < 4) {
+                                headerParts.push(['Description', 'Qty', 'Unit Price', 'Total'][headerParts.length]);
+                            }
+                        }
+                        {% raw %}
+                        const itemsDataDeep = '{{ invoice.all_line_items }}';
+                        const itemsRowTemplateDeep = {
+                            description: '{{ item.description }}',
+                            quantity: '{{ item.quantity }}',
+                            unit_price: '{{ format_money(item.unit_price) }}',
+                            total_amount: '{{ format_money(item.total_amount) }}'
+                        };
+                        {% endraw %}
+                        templateJson.elements.push({
+                            type: 'table',
+                            x: axPt,
+                            y: ayPt,
+                            width: pxToPt(515),
+                            opacity: opacity,
+                            columns: [
+                                {width: 250, header: headerParts[0] || 'Description', field: 'description', align: 'left'},
+                                {width: 70, header: headerParts[1] || 'Qty', field: 'quantity', align: 'center'},
+                                {width: 110, header: headerParts[2] || 'Unit Price', field: 'unit_price', align: 'right'},
+                                {width: 110, header: headerParts[3] || 'Total', field: 'total_amount', align: 'right'}
+                            ],
+                            data: itemsDataDeep,
+                            row_template: itemsRowTemplateDeep
+                        });
+                        bodyContent += '  <!-- Items Table Start (nested/heal) -->\n';
+                        bodyContent += '  <div style="position:absolute;left:' + x + 'px;top:' + y + 'px;opacity:' + opacity + ';width:515px;">\n';
+                        bodyContent += '    <table style="width:100%;border-collapse:collapse;font-size:11px;background:white;"><thead><tr style="background-color:#f8f9fa;border-bottom:2px solid #333;">';
+                        bodyContent += '<th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;">' + String(headerParts[0] || 'Description').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</th>';
+                        bodyContent += '<th style="text-align:center;padding:10px;font-weight:bold;font-size:12px;width:70px;">' + String(headerParts[1] || 'Qty').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</th>';
+                        bodyContent += '<th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;">' + String(headerParts[2] || 'Unit Price').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</th>';
+                        bodyContent += '<th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;">' + String(headerParts[3] || 'Total').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</th>';
+                        bodyContent += '</tr></thead><tbody>';
+                        {% raw %}
+                        bodyContent += '        {% if invoice.all_line_items %}\n        {% for item in invoice.all_line_items %}\n        <tr style="border-bottom:1px solid #ddd;">\n          <td style="padding:10px;vertical-align:top;">{{ item.description }}</td>\n          <td style="padding:10px;text-align:center;vertical-align:top;">{{ item.quantity }}</td>\n          <td style="padding:10px;text-align:right;vertical-align:top;">{{ format_money(item.unit_price) }}</td>\n          <td style="padding:10px;text-align:right;vertical-align:top;font-weight:bold;">{{ format_money(item.total_amount) }}</td>\n        </tr>\n        {% endfor %}\n        {% else %}\n        <tr><td colspan="4" style="padding:10px;text-align:center;color:#999;">No items</td></tr>\n        {% endif %}\n';
+                        {% endraw %}
+                        bodyContent += '</tbody></table></div>\n  <!-- Items Table End (nested/heal) -->\n';
+                        return;
+                    }
+                    if (isExpenses) {
+                        if (tableAlreadyAt(axPt, ayPt, 'invoice.expenses')) return;
+                        const headerText = textElements[0] ? (textElements[0].attrs.text || '') : '';
+                        let headerParts = ['Expense', 'Date', 'Category', 'Amount'];
+                        if (headerText && headerText.indexOf('|') !== -1) {
+                            headerParts = headerText.split('|').map(function(part) { return part.trim(); }).filter(function(part) { return part.length > 0; });
+                            while (headerParts.length < 4) {
+                                headerParts.push(['Expense', 'Date', 'Category', 'Amount'][headerParts.length]);
+                            }
+                        }
+                        {% raw %}
+                        const expensesDataDeep = '{{ invoice.expenses }}';
+                        const expensesRowTemplateDeep = {
+                            title: '{{ expense.title }}',
+                            expense_date: '{{ expense.expense_date }}',
+                            category: '{{ expense.category }}',
+                            total_amount: '{{ format_money(expense.total_amount) }}'
+                        };
+                        {% endraw %}
+                        templateJson.elements.push({
+                            type: 'table',
+                            x: axPt,
+                            y: ayPt,
+                            width: pxToPt(515),
+                            opacity: opacity,
+                            columns: [
+                                {width: 200, header: headerParts[0] || 'Expense', field: 'title', align: 'left'},
+                                {width: 100, header: headerParts[1] || 'Date', field: 'expense_date', align: 'center'},
+                                {width: 105, header: headerParts[2] || 'Category', field: 'category', align: 'left'},
+                                {width: 110, header: headerParts[3] || 'Amount', field: 'total_amount', align: 'right'}
+                            ],
+                            data: expensesDataDeep,
+                            row_template: expensesRowTemplateDeep,
+                            style: {
+                                headerBackground: '#fff3cd',
+                                headerTextColor: '#856404',
+                                rowBackground: '#fffbf0',
+                                rowTextColor: '#856404'
+                            }
+                        });
+                        bodyContent += '  <!-- Expenses Table Start (nested/heal) -->\n';
+                        bodyContent += '  <div style="position:absolute;left:' + x + 'px;top:' + y + 'px;opacity:' + opacity + ';width:515px;">';
+                        bodyContent += '<table style="width:100%;border-collapse:collapse;font-size:11px;background:#fffbf0;"><thead><tr style="background-color:#fff3cd;border-bottom:2px solid #856404;">';
+                        bodyContent += '<th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;color:#856404;">' + String(headerParts[0] || 'Expense').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</th>';
+                        bodyContent += '<th style="text-align:center;padding:10px;font-weight:bold;font-size:12px;width:100px;color:#856404;">' + String(headerParts[1] || 'Date').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</th>';
+                        bodyContent += '<th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;width:110px;color:#856404;">' + String(headerParts[2] || 'Category').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</th>';
+                        bodyContent += '<th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;color:#856404;">' + String(headerParts[3] || 'Amount').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</th>';
+                        bodyContent += '</tr></thead><tbody>';
+                        {% raw %}
+                        bodyContent += '        {% if invoice.expenses %}\n        {% for expense in invoice.expenses %}\n        <tr style="border-bottom:1px solid #f0e5c1;">\n          <td style="padding:10px;vertical-align:top;color:#856404;">{{ expense.title }}</td>\n          <td style="padding:10px;text-align:center;vertical-align:top;color:#856404;">{{ expense.expense_date }}</td>\n          <td style="padding:10px;vertical-align:top;color:#856404;">{{ expense.category }}</td>\n          <td style="padding:10px;text-align:right;vertical-align:top;font-weight:bold;color:#856404;">{{ format_money(expense.total_amount) }}</td>\n        </tr>\n        {% endfor %}\n        {% else %}\n        <tr><td colspan="4" style="padding:10px;text-align:center;color:#999;">No expenses</td></tr>\n        {% endif %}\n';
+                        {% endraw %}
+                        bodyContent += '</tbody></table></div>\n  <!-- Expenses Table End (nested/heal) -->\n';
+                    }
+                });
+            })();
+            
             // Legacy HTML/CSS generation for preview (backward compatibility)
             const widthPx = dimensions.width;
             const heightPx = dimensions.height;
@@ -5932,27 +6238,36 @@ table tr:last-child td {
             return { 
                 html,  // Legacy HTML for preview
                 css,   // Legacy CSS for preview
-                json: JSON.stringify(templateJson, null, 2)  // ReportLab template JSON
+                json: JSON.stringify(templateJson, null, 2),  // ReportLab template JSON
+                ok: true
             };
         } catch (error) {
             console.error('Error in generateCode():', error);
             console.error('Stack trace:', error.stack);
-            // Return minimal valid structure on error
             const currentSize = (pageSizeSelector && pageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
             const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
             const widthPx = dimensions.width;
             const heightPx = dimensions.height;
+            const errMsg = (error && error.message) ? String(error.message) : String(error);
+            // Issue #600: Do not return pseudo-valid empty template_json (caller must omit JSON and fall back to DB)
             return {
-                html: `<div class="invoice-wrapper"><p style="color: red; padding: 20px;">Error generating template: ${error.message}</p></div>`,
+                html: `<div class="invoice-wrapper"><p style="color: red; padding: 20px;">Error generating template: ${errMsg}</p></div>`,
                 css: `@page { size: ${currentSize}; margin: 0; } html, body { margin: 0; padding: 0; width: ${widthPx}px; height: ${heightPx}px; } .invoice-wrapper { width: ${widthPx}px; height: ${heightPx}px; background: white; padding: 0; }`,
-                json: JSON.stringify({ page: { size: currentSize, margin: { top: 20, right: 20, bottom: 20, left: 20 } }, elements: [], styles: {} }, null, 2)
+                json: null,
+                ok: false,
+                errorMessage: errMsg
             };
         }
     }
     
     // View code
     document.getElementById('btn-code').addEventListener('click', function() {
-        const { html, css } = generateCode();
+        const gc = generateCode();
+        const html = gc.html;
+        const css = gc.css;
+        if (gc.ok === false) {
+            console.error('generateCode failed (view code):', gc.errorMessage);
+        }
         
         // Log for debugging
         console.log('=== GENERATED HTML ===');
@@ -6211,7 +6526,10 @@ table tr:last-child td {
             decorativeImageUrlMap.set(`index_${index}`, imageUrl || '');
         });
 
-        const { html, css, json } = generateCode();
+        const gcSave = generateCode();
+        const html = gcSave.html;
+        const css = gcSave.css;
+        const json = gcSave.json;
 
         // Log what we're saving for debugging
         const hasForLoop = html.includes('{' + '% for item in invoice.all_line_items') || html.includes('{' + '% for item in invoice.items');
@@ -6226,6 +6544,11 @@ table tr:last-child td {
 
         // Save both legacy HTML/CSS and new JSON template
         // Ensure JSON is always present and valid
+        if (gcSave.ok === false) {
+            console.error('generateCode failed on save:', gcSave.errorMessage);
+            alert({{ _('Error: Could not generate template from the canvas. Fix any issues shown in the browser console, then try again.')|tojson }} + (gcSave.errorMessage ? '\n\n' + gcSave.errorMessage : ''));
+            return;
+        }
         if (!json || !json.trim()) {
             console.error('No JSON generated from template!');
             alert('Error: Could not generate template JSON. Please try again.');
@@ -6495,10 +6818,13 @@ table tr:last-child td {
     
     // Save design state
     window.saveDesignState = function() {
+        const gc = generateCode();
         return {
             json: stage.toJSON(),
-            html: generateCode().html,
-            css: generateCode().css
+            html: gc.html,
+            css: gc.css,
+            ok: gc.ok,
+            errorMessage: gc.errorMessage
         };
     };
     
@@ -6582,39 +6908,11 @@ table tr:last-child td {
                 stage = restoredStage;
                 layer = stage.children[0];
                 
-                // Issue #432: Synchronously restore name and imageUrl from saved JSON onto live nodes
-                // (Konva may not restore custom attrs; this ensures they are set before any setTimeout)
+                // Issue #432 / #600: Restore table + decorative Group attrs from saved JSON by (x,y); index order can diverge after Konva restore
                 const layerJson = savedJson.children && savedJson.children[0];
                 if (layerJson && layerJson.children && layer.children) {
-                    for (let i = 0; i < layer.children.length; i++) {
-                        const liveChild = layer.children[i];
-                        const jsonChild = layerJson.children[i];
-                        const isGroup = liveChild && (liveChild.className === 'Group' || (liveChild.constructor && liveChild.constructor.name === 'Group'));
-                        if (!liveChild || !jsonChild || !isGroup) continue;
-                        const savedName = (jsonChild.attrs && jsonChild.attrs.name) ? jsonChild.attrs.name : '';
-                        if (savedName && savedName.includes('decorative-image')) {
-                            const savedImageUrl = (jsonChild.attrs && jsonChild.attrs.imageUrl) ? jsonChild.attrs.imageUrl : '';
-                            if (liveChild.setAttr) {
-                                liveChild.setAttr('name', 'decorative-image');
-                                liveChild.setAttr('imageUrl', savedImageUrl || '');
-                            }
-                            if (liveChild.attrs) {
-                                liveChild.attrs.name = 'decorative-image';
-                                liveChild.attrs.imageUrl = savedImageUrl || '';
-                            }
-                            if (liveChild.name) liveChild.name('decorative-image');
-                        } else if (savedName === 'items-table' || savedName === 'expenses-table') {
-                            if (liveChild.setAttr) {
-                                liveChild.setAttr('name', savedName);
-                                liveChild.setAttr('pdfTable', savedName);
-                            }
-                            if (liveChild.attrs) {
-                                liveChild.attrs.name = savedName;
-                                liveChild.attrs.pdfTable = savedName;
-                            }
-                            if (liveChild.name) liveChild.name(savedName);
-                        }
-                    }
+                    applyTableMetaFromSavedJson(layer, layerJson);
+                    applyDecorativeMetaFromSavedJson(layer, layerJson);
                 }
                 
                 // Debug: Log the saved JSON to check if imageUrl is there
