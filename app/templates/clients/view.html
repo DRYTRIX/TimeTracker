@@ -572,7 +572,6 @@ function toggleImportant(noteId, setImportant) {
 }
 
 {% if can_invoice_unbilled_time|default(false) and unbilled_invoice_preview is defined and unbilled_invoice_preview %}
-<script>
 (function () {
   const btn = document.getElementById('client-invoice-unbilled-btn');
   if (!btn || btn.disabled) return;
@@ -622,7 +621,6 @@ function toggleImportant(noteId, setImportant) {
     }
   });
 })();
-</script>
 {% endif %}
 
 async function confirmDeleteNote(noteId) {
