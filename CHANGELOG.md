@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.3] - 2026-05-06
+
+### Fixed
+- **Approvals status values stored correctly** — `ClientApprovalStatus` values are now bound to the Postgres enum values (not the Python enum member names), preventing mismatches between API payloads/UI state and the persisted status.
+- **Clients view delete-note confirmation** — Removed a nested `<script>` tag that could orphan `confirmDeleteNote`, causing delete confirmation to break in the clients view.
+
 ## [5.5.2] - 2026-04-30
 
 ### Fixed
