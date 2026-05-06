@@ -108,10 +108,22 @@ class KanbanColumn(db.Model):
 
     @classmethod
     def get_valid_status_keys(cls, project_id=None):
-        """Get list of all valid status keys (for validation). If project_id is None, returns global column keys."""
+        """Get list of all valid status keys (for validation).
+
+        If project_id is None, returns global column keys.
+
+        If project_id is set but the project has no project-specific
+        columns, fall back to the configured global columns. The kanban
+        UI renders global columns in that case, so the validator must
+        accept the same set — otherwise drops to globally-defined columns
+        like "on_hold" come back as 400 "Invalid status".
+        """
         columns = cls.get_active_columns(project_id=project_id)
+        if not columns and project_id is not None:
+            columns = cls.get_active_columns(project_id=None)
         if not columns:
-            # Fallback to default statuses if table doesn't exist
+            # Last-ditch fallback if even global columns are missing
+            # (e.g. table not yet seeded during a fresh migration).
             return ["todo", "in_progress", "review", "done", "cancelled"]
         return [col.key for col in columns]
 
