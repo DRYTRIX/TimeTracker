@@ -829,7 +829,8 @@ def bulk_update_status():
         return redirect(url_for("invoices.list_invoices"))
 
     # Validate status
-    valid_statuses = ["draft", "sent", "paid", "overdue", "cancelled"]
+    # Mirror the single-update validator so bulk update can also set "issued".
+    valid_statuses = ["draft", "issued", "sent", "paid", "overdue", "cancelled"]
     if not new_status or new_status not in valid_statuses:
         flash(_("Invalid status value"), "error")
         return redirect(url_for("invoices.list_invoices"))

@@ -107,6 +107,19 @@ class KanbanColumn(db.Model):
             return None
 
     @classmethod
+    def get_columns_with_global_fallback(cls, project_id=None):
+        """Return the column objects the kanban UI should render for a project.
+
+        If the project has project-specific columns, return those.
+        Otherwise return the global columns (project_id IS NULL).
+        Mirrors the validator behaviour in get_valid_status_keys().
+        """
+        cols = cls.get_active_columns(project_id=project_id)
+        if not cols and project_id is not None:
+            cols = cls.get_active_columns(project_id=None)
+        return cols
+
+    @classmethod
     def get_valid_status_keys(cls, project_id=None):
         """Get list of all valid status keys (for validation).
 

@@ -1327,7 +1327,7 @@ def download_attachment(attachment_id):
     if attachment and attachment.client_id == client.id and attachment.is_visible_to_client:
         # Get file directory - file_path is relative to static or uploads folder
         if attachment.file_path.startswith("uploads/"):
-            file_dir = os.path.join(current_app.root_path, "..", "uploads")
+            file_dir = os.path.join(current_app.root_path, "..", "app/static/uploads")
             filename = os.path.basename(attachment.file_path)
         else:
             file_dir = os.path.join(current_app.root_path, "static", os.path.dirname(attachment.file_path))
@@ -1344,7 +1344,7 @@ def download_attachment(attachment_id):
         if project and project.client_id == client.id and attachment.is_visible_to_client:
             # Get file directory
             if attachment.file_path.startswith("uploads/"):
-                file_dir = os.path.join(current_app.root_path, "..", "uploads")
+                file_dir = os.path.join(current_app.root_path, "..", "app/static/uploads")
                 filename = os.path.basename(attachment.file_path)
             else:
                 file_dir = os.path.join(current_app.root_path, "static", os.path.dirname(attachment.file_path))

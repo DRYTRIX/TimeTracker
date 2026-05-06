@@ -467,7 +467,7 @@ def upload_attachment(channel_id):
         "csv",
         "json",
     }
-    UPLOAD_FOLDER = "uploads/chat_attachments"
+    UPLOAD_FOLDER = "app/static/uploads/chat_attachments"
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
     def allowed_file(filename):

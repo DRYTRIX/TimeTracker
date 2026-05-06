@@ -138,7 +138,11 @@ def list_tasks():
     kanban_columns = KanbanColumn.get_active_columns(project_id=None) if KanbanColumn else []
 
     # Pre-calculate task counts by status for summary cards (avoid template iteration)
-    task_counts = {"todo": 0, "in_progress": 0, "review": 0, "done": 0}
+    task_counts = (
+        {col.key: 0 for col in kanban_columns}
+        if kanban_columns
+        else {"todo": 0, "in_progress": 0, "review": 0, "done": 0}
+    )
     for task in result["tasks"]:
         if task.status in task_counts:
             task_counts[task.status] += 1
@@ -191,7 +195,7 @@ def create_task():
             flash(_("Project and task name are required"), "error")
             projects = Project.query.filter_by(status="active").order_by(Project.name).all()
             users = User.query.order_by(User.username).all()
-            return render_template("tasks/create.html", projects=projects, users=users)
+            return render_template("tasks/create.html", projects=projects, users=users, kanban_columns=KanbanColumn.get_active_columns(project_id=None))
 
         # Sanitize and validate name
         try:
@@ -200,7 +204,7 @@ def create_task():
             flash(_("Invalid task name: %(error)s", error=str(e)), "error")
             projects = Project.query.filter_by(status="active").order_by(Project.name).all()
             users = User.query.order_by(User.username).all()
-            return render_template("tasks/create.html", projects=projects, users=users)
+            return render_template("tasks/create.html", projects=projects, users=users, kanban_columns=KanbanColumn.get_active_columns(project_id=None))
 
         # Validate project exists
         project = Project.query.get(project_id)
@@ -208,15 +212,16 @@ def create_task():
             flash(_("Selected project does not exist"), "error")
             projects = Project.query.filter_by(status="active").order_by(Project.name).all()
             users = User.query.order_by(User.username).all()
-            return render_template("tasks/create.html", projects=projects, users=users)
+            return render_template("tasks/create.html", projects=projects, users=users, kanban_columns=KanbanColumn.get_active_columns(project_id=None))
 
         # Validate priority
         if priority not in ["low", "medium", "high", "urgent"]:
             priority = "medium"
 
-        # Validate initial status
+        # Validate initial status against the configured kanban columns
         status = request.form.get("status", "todo").strip()
-        if status not in ("todo", "in_progress", "review", "done", "cancelled"):
+        valid_statuses = KanbanColumn.get_valid_status_keys(project_id=project_id)
+        if status not in valid_statuses:
             status = "todo"
 
         # Parse estimated hours
@@ -238,7 +243,7 @@ def create_task():
                 flash(_("Invalid due date format"), "error")
                 projects = Project.query.filter_by(status="active").order_by(Project.name).all()
                 users = User.query.order_by(User.username).all()
-                return render_template("tasks/create.html", projects=projects, users=users)
+                return render_template("tasks/create.html", projects=projects, users=users, kanban_columns=KanbanColumn.get_active_columns(project_id=None))
 
         # Gantt color (hex e.g. #3b82f6)
         color_val = request.form.get("color", "").strip()
@@ -273,7 +278,7 @@ def create_task():
             flash(_(result["message"]), "error")
             projects = Project.query.filter_by(status="active").order_by(Project.name).all()
             users = User.query.order_by(User.username).all()
-            return render_template("tasks/create.html", projects=projects, users=users)
+            return render_template("tasks/create.html", projects=projects, users=users, kanban_columns=KanbanColumn.get_active_columns(project_id=None))
 
         task = result["task"]
 
@@ -308,7 +313,7 @@ def create_task():
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()
     users = User.query.order_by(User.username).all()
 
-    return render_template("tasks/create.html", projects=projects, users=users)
+    return render_template("tasks/create.html", projects=projects, users=users, kanban_columns=KanbanColumn.get_active_columns(project_id=None))
 
 
 @tasks_bp.route("/tasks/<int:task_id>")
@@ -413,14 +418,14 @@ def edit_task(task_id):
         # Validate required fields
         if not name:
             flash(_("Task name is required"), "error")
-            return render_template("tasks/edit.html", task=task, projects=projects, users=users)
+            return render_template("tasks/edit.html", task=task, projects=projects, users=users, kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id))
 
         # Sanitize and validate name
         try:
             name = validate_string(sanitize_input(name), min_length=1, max_length=200)
         except Exception as e:
             flash(_("Invalid task name: %(error)s", error=str(e)), "error")
-            return render_template("tasks/edit.html", task=task, projects=projects, users=users)
+            return render_template("tasks/edit.html", task=task, projects=projects, users=users, kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id))
 
         # Sanitize description
         if description:
@@ -432,11 +437,11 @@ def edit_task(task_id):
         # Validate project selection
         if not project_id:
             flash(_("Project is required"), "error")
-            return render_template("tasks/edit.html", task=task, projects=projects, users=users)
+            return render_template("tasks/edit.html", task=task, projects=projects, users=users, kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id))
         new_project = Project.query.filter_by(id=project_id, status="active").first()
         if not new_project:
             flash(_("Selected project does not exist or is inactive"), "error")
-            return render_template("tasks/edit.html", task=task, projects=projects, users=users)
+            return render_template("tasks/edit.html", task=task, projects=projects, users=users, kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id))
 
         # Validate priority
         if priority not in ["low", "medium", "high", "urgent"]:
@@ -459,7 +464,7 @@ def edit_task(task_id):
                 due_date = datetime.strptime(due_date_str, "%Y-%m-%d").date()
             except ValueError:
                 flash(_("Invalid due date format"), "error")
-                return render_template("tasks/edit.html", task=task, projects=projects, users=users)
+                return render_template("tasks/edit.html", task=task, projects=projects, users=users, kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id))
 
         # Update task
         # Handle project change first so any early returns (status flows) still persist it
@@ -524,7 +529,7 @@ def edit_task(task_id):
                             flash(
                                 _("Could not update status due to a database error. Please check server logs."), "error"
                             )
-                        return render_template("tasks/edit.html", task=task, projects=projects, users=users)
+                        return render_template("tasks/edit.html", task=task, projects=projects, users=users, kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id))
                     else:
                         task.start_task()
                         db.session.add(
@@ -576,17 +581,17 @@ def edit_task(task_id):
                     )
                     if not safe_commit("edit_task_status_change", {"task_id": task.id, "status": selected_status}):
                         flash("Could not update status due to a database error. Please check server logs.", "error")
-                        return render_template("tasks/edit.html", task=task, projects=projects, users=users)
+                        return render_template("tasks/edit.html", task=task, projects=projects, users=users, kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id))
             except ValueError as e:
                 flash(str(e), "error")
-                return render_template("tasks/edit.html", task=task, projects=projects, users=users)
+                return render_template("tasks/edit.html", task=task, projects=projects, users=users, kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id))
 
         # Always update the updated_at timestamp to local time after edits
         task.updated_at = now_in_app_timezone()
 
         if not safe_commit("edit_task", {"task_id": task.id}):
             flash(_("Could not update task due to a database error. Please check server logs."), "error")
-            return render_template("tasks/edit.html", task=task, projects=projects, users=users)
+            return render_template("tasks/edit.html", task=task, projects=projects, users=users, kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id))
 
         # Log task update
         app_module.log_event("task.updated", user_id=current_user.id, task_id=task.id, project_id=task.project_id)
@@ -611,7 +616,7 @@ def edit_task(task_id):
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()
     users = User.query.order_by(User.username).all()
 
-    return render_template("tasks/edit.html", task=task, projects=projects, users=users)
+    return render_template("tasks/edit.html", task=task, projects=projects, users=users, kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id))
 
 
 @tasks_bp.route("/tasks/<int:task_id>/status", methods=["POST"])

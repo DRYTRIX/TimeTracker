@@ -917,7 +917,8 @@ def send_quote(quote_id):
         send_quote_sent_notification(quote, quote.creator)
 
     # Notify admins
-    admins = User.query.filter_by(role="admin", is_active=True).all()
+    # Use the User.is_admin property so RBAC Role-based admins are notified, not just legacy role="admin" users.
+    admins = [u for u in User.query.filter_by(is_active=True).all() if u.is_admin]
     for admin in admins:
         if admin.id != quote.creator_id and admin.email:
             send_quote_sent_notification(quote, admin)
@@ -1022,8 +1023,8 @@ def accept_quote(quote_id):
         if quote.creator and quote.creator.email:
             send_quote_accepted_notification(quote, quote.creator)
 
-        # Notify admins
-        admins = User.query.filter_by(role="admin", is_active=True).all()
+        # Notify admins (use User.is_admin so RBAC Role-based admins are notified, not just legacy role="admin").
+        admins = [u for u in User.query.filter_by(is_active=True).all() if u.is_admin]
         for admin in admins:
             if admin.id != quote.creator_id and admin.email:
                 send_quote_accepted_notification(quote, admin)
@@ -1117,7 +1118,7 @@ def upload_attachment(quote_id):
 
     # File upload configuration
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "pdf", "doc", "docx", "txt", "xls", "xlsx", "zip", "rar"}
-    UPLOAD_FOLDER = "uploads/quote_attachments"
+    UPLOAD_FOLDER = "app/static/uploads/quote_attachments"
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
     def allowed_file(filename):
@@ -1317,7 +1318,8 @@ def request_approval(quote_id):
     from app.utils.email import send_quote_approval_request_notification
 
     # Notify admins (default approvers)
-    admins = User.query.filter_by(role="admin", is_active=True).all()
+    # Use the User.is_admin property so RBAC Role-based admins are notified, not just legacy role="admin" users.
+    admins = [u for u in User.query.filter_by(is_active=True).all() if u.is_admin]
     for admin in admins:
         if admin.email:
             send_quote_approval_request_notification(quote, admin)
