@@ -137,9 +137,7 @@ class KanbanColumn(db.Model):
         if not columns:
             # Last-ditch fallback if even global columns are missing
             # (e.g. table not yet seeded during a fresh migration).
-            # Keep this aligned with the keys initialize_default_columns seeds
-            # plus any well-known optional columns users tend to enable.
-            return ["todo", "in_progress", "review", "done", "on_hold", "cancelled"]
+            return ["todo", "in_progress", "review", "done", "cancelled"]
         return [col.key for col in columns]
 
     @classmethod

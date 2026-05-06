@@ -1260,7 +1260,7 @@
                             <i class="fas fa-wand-magic-sparkles"></i>
                         </button>
                         {% endif %}
-                        {% if current_user.is_authenticated %}
+                        {% if current_user.is_authenticated and not is_license_activated %}
                         <button type="button" id="headerSupportBtn" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-amber-800 dark:text-amber-200 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 dark:border-amber-500/40 focus:outline-none focus:ring-2 focus:ring-amber-500/40" title="{{ _('Support TimeTracker') }}">
                             <i class="fas fa-heart text-amber-600 dark:text-amber-300" aria-hidden="true"></i>
                             <span class="max-w-[10rem] truncate">{{ _('Support TimeTracker') }}</span>
@@ -1325,7 +1325,7 @@
                             {% if current_user.is_authenticated %}
                             <li><a href="{{ url_for('user.license') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-key w-4"></i> {{ _('License') }}</a></li>
                             {% endif %}
-                            {% if current_user.is_authenticated %}
+                            {% if current_user.is_authenticated and not is_license_activated %}
                             <li><button type="button" class="js-open-support-modal w-full text-left flex flex-col gap-0.5 px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-100 dark:hover:bg-gray-700"><span class="font-medium"><i class="fas fa-heart w-4" aria-hidden="true"></i> {{ _('Support TimeTracker') }}</span><span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Donate or get a supporter license') }}</span></button></li>
                             {% endif %}
                             <li class="border-t border-border-light dark:border-border-dark"><a href="{{ url_for('auth.logout') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-sign-out-alt w-4"></i> {{ _('Logout') }}</a></li>
