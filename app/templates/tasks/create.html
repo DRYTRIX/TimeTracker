@@ -81,7 +81,11 @@
                             </span>
                             <span id="statusPreview" class="status-badge status-{{ request.form.get('status') or request.args.get('status') or 'todo' }}">
                                 {% set status_preview = request.form.get('status') or request.args.get('status') or 'todo' %}
-                                {% if status_preview == 'in_progress' %}{{ _('In Progress') }}{% elif status_preview == 'review' %}{{ _('Review') }}{% elif status_preview == 'done' %}{{ _('Done') }}{% elif status_preview == 'cancelled' %}{{ _('Cancelled') }}{% else %}{{ _('To Do') }}{% endif %}
+                                {%- set _matched = namespace(label=None) -%}
+                                {%- for col in kanban_columns -%}
+                                  {%- if col.key == status_preview -%}{%- set _matched.label = col.label -%}{%- endif -%}
+                                {%- endfor -%}
+                                {{ _(_matched.label) if _matched.label else _('To Do') }}
                             </span>
                         </div>
 
@@ -470,11 +474,9 @@ document.addEventListener('DOMContentLoaded', function() {
             high: { text: '{{ _('High') }}', class: 'priority-high' },
             urgent: { text: '{{ _('Urgent') }}', class: 'priority-urgent' },
         } : {
-            todo: { text: '{{ _('To Do') }}', class: 'status-todo' },
-            in_progress: { text: '{{ _('In Progress') }}', class: 'status-in_progress' },
-            review: { text: '{{ _('Review') }}', class: 'status-review' },
-            done: { text: '{{ _('Done') }}', class: 'status-done' },
-            cancelled: { text: '{{ _('Cancelled') }}', class: 'status-cancelled' },
+            {%- for col in kanban_columns %}
+            {{ col.key }}: { text: '{{ _(col.label) }}', class: 'status-{{ col.key }}' },
+            {%- endfor %}
         };
         const def = map[value] || Object.values(map)[0];
         // Reset classes preserving base class

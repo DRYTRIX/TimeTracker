@@ -650,11 +650,9 @@ document.addEventListener('DOMContentLoaded', function() {
             high: { text: '{{ _('High') }}', class: 'priority-high' },
             urgent: { text: '{{ _('Urgent') }}', class: 'priority-urgent' },
         } : {
-            todo: { text: '{{ _('To Do') }}', class: 'status-todo' },
-            in_progress: { text: '{{ _('In Progress') }}', class: 'status-in_progress' },
-            review: { text: '{{ _('Review') }}', class: 'status-review' },
-            done: { text: '{{ _('Done') }}', class: 'status-done' },
-            cancelled: { text: '{{ _('Cancelled') }}', class: 'status-cancelled' },
+            {%- for col in kanban_columns %}
+            {{ col.key }}: { text: '{{ _(col.label) }}', class: 'status-{{ col.key }}' },
+            {%- endfor %}
         };
         const def = map[value] || Object.values(map)[0];
         element.className = element.className.split(' ').filter(c => !c.startsWith(type === 'priority' ? 'priority-' : 'status-')).join(' ').trim();
