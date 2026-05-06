@@ -1254,7 +1254,7 @@ def upload_client_attachment(client_id):
 
     # File upload configuration
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "pdf", "doc", "docx", "txt", "xls", "xlsx", "zip", "rar"}
-    UPLOAD_FOLDER = "uploads/client_attachments"
+    UPLOAD_FOLDER = "app/static/uploads/client_attachments"
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
     def allowed_file(filename):

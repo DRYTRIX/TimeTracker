@@ -104,6 +104,46 @@ class Config:
     OIDC_ADMIN_EMAILS = [e.strip().lower() for e in os.getenv("OIDC_ADMIN_EMAILS", "").split(",") if e.strip()]
     OIDC_POST_LOGOUT_REDIRECT_URI = os.getenv("OIDC_POST_LOGOUT_REDIRECT_URI")
 
+    # OIDC group -> RBAC Role name mapping (JSON object).
+    # Example:
+    #   OIDC_ROLE_GROUP_MAP='{"timetracker-super-admin":"super_admin","timetracker-admin":"admin","timetracker-manager":"manager","timetracker-viewer":"viewer"}'
+    # Empty/invalid JSON disables the feature; the legacy OIDC_ADMIN_GROUP path keeps working.
+    _oidc_role_map_raw = os.getenv("OIDC_ROLE_GROUP_MAP", "").strip()
+    OIDC_ROLE_GROUP_MAP: dict = {}
+    if _oidc_role_map_raw:
+        try:
+            import json as _json
+
+            _parsed = _json.loads(_oidc_role_map_raw)
+            if isinstance(_parsed, dict):
+                # Ensure values are strings (Role names)
+                OIDC_ROLE_GROUP_MAP = {str(k): str(v) for k, v in _parsed.items() if k and v}
+        except Exception:
+            # Defer the warning to first OIDC callback so it lands in the app log,
+            # but don't crash the app. OIDC_ROLE_GROUP_MAP stays {} = no-op.
+            pass
+
+    # Sync mode for OIDC role assignment:
+    #   "additive" (default, safe) — only ADD roles matching groups; never revoke.
+    #   "sync"                     — also REMOVE mapped roles when the group is gone.
+    # Council recommendation: ship additive first, flip to sync only after observing one
+    # full re-login cycle for every active user.
+    OIDC_ROLE_SYNC_MODE = os.getenv("OIDC_ROLE_SYNC_MODE", "additive").strip().lower()
+    if OIDC_ROLE_SYNC_MODE not in ("additive", "sync"):
+        OIDC_ROLE_SYNC_MODE = "additive"
+
+    # Escape hatch: user IDs that must NEVER have roles revoked by OIDC sync,
+    # regardless of OIDC_ROLE_SYNC_MODE. Comma-separated integers.
+    # Strongly recommended for the bootstrap super_admin user (id 1) so a
+    # misconfigured OIDC_ROLE_GROUP_MAP cannot lock you out of your own instance.
+    OIDC_NEVER_REVOKE_USER_IDS: set = set()
+    _never_revoke_raw = os.getenv("OIDC_NEVER_REVOKE_USER_IDS", "").strip()
+    if _never_revoke_raw:
+        for _x in _never_revoke_raw.split(","):
+            _x = _x.strip()
+            if _x.isdigit():
+                OIDC_NEVER_REVOKE_USER_IDS.add(int(_x))
+
     # OIDC metadata fetch configuration (for DNS resolution issues)
     OIDC_METADATA_FETCH_TIMEOUT = int(os.getenv("OIDC_METADATA_FETCH_TIMEOUT", 10))  # seconds
     OIDC_METADATA_RETRY_ATTEMPTS = int(os.getenv("OIDC_METADATA_RETRY_ATTEMPTS", 3))  # number of retries

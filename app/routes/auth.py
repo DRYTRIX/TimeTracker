@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask import (
     Blueprint,
     current_app,
@@ -1427,6 +1429,69 @@ def oidc_callback():
                     current_app.logger.warning("DB commit failed promoting user to admin from OIDC; continuing")
         except Exception:
             pass
+
+        # OIDC group -> RBAC Role mapping (additive by default).
+        # When OIDC_ROLE_GROUP_MAP is configured, sync user.roles based on the
+        # groups claim. Default mode is "additive" — only adds roles that match
+        # the user's groups; never revokes. To enable revocation of roles
+        # mapped to groups the user no longer belongs to, set
+        # OIDC_ROLE_SYNC_MODE=sync. The OIDC_NEVER_REVOKE_USER_IDS escape
+        # hatch keeps specific user IDs immune to revocation regardless of mode.
+        try:
+            role_map = getattr(Config, "OIDC_ROLE_GROUP_MAP", {}) or {}
+            if role_map and isinstance(groups, (list, tuple)):
+                from app.models import Role
+
+                sync_mode = getattr(Config, "OIDC_ROLE_SYNC_MODE", "additive")
+                never_revoke = getattr(Config, "OIDC_NEVER_REVOKE_USER_IDS", set()) or set()
+
+                # Compute target Role names from the user's groups
+                target_role_names = {role_map[g] for g in groups if g in role_map}
+
+                # Look up Role objects by name (only those that actually exist in DB)
+                target_roles = (
+                    Role.query.filter(Role.name.in_(target_role_names)).all() if target_role_names else []
+                )
+                target_role_set = set(target_roles)
+                current_role_set = set(user.roles)
+                roles_changed = False
+
+                # ADD: any target roles the user doesn't already have
+                for r in target_role_set - current_role_set:
+                    user.roles.append(r)
+                    roles_changed = True
+                    current_app.logger.info(
+                        "OIDC role sync: added role %s to user %s (matched group)", r.name, user.username
+                    )
+
+                # REMOVE: only in sync mode AND only mapped roles (never revoke roles
+                # assigned manually outside OIDC scope) AND only if user not protected.
+                if sync_mode == "sync" and user.id not in never_revoke:
+                    mapped_role_names = set(role_map.values())
+                    for r in current_role_set - target_role_set:
+                        if r.name in mapped_role_names:
+                            user.roles.remove(r)
+                            roles_changed = True
+                            current_app.logger.info(
+                                "OIDC role sync: removed role %s from user %s (no matching group)",
+                                r.name,
+                                user.username,
+                            )
+
+                if roles_changed:
+                    if not safe_commit("oidc_sync_roles", {"user_id": user.id}):
+                        current_app.logger.warning(
+                            "DB commit failed syncing OIDC roles for user_id=%s", user.id
+                        )
+            elif getattr(Config, "_oidc_role_map_raw", None):
+                # User configured the env var but it failed to parse; surface once per login.
+                current_app.logger.warning(
+                    "OIDC_ROLE_GROUP_MAP is set but failed to parse as a JSON object; role sync disabled."
+                )
+        except Exception as e:
+            current_app.logger.exception(
+                "OIDC role sync failed for user_id=%s: %s", getattr(user, "id", None), e
+            )
 
         # Check if user is active
         if not user.is_active:

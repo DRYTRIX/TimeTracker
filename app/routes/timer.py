@@ -172,7 +172,7 @@ def start_timer():
         current_app.logger.warning("Start timer denied: user has no access to client_id=%s", client_id)
         return redirect(url_for("main.dashboard"))
 
-    can_start, _ = TimeTrackingService().can_start_timer(current_user.id)
+    can_start, _unused = TimeTrackingService().can_start_timer(current_user.id)
     if not can_start:
         flash(_("You already have an active timer. Stop it before starting a new one."), "error")
         current_app.logger.info("Start timer blocked: user already has an active timer")
@@ -336,7 +336,7 @@ def start_timer_from_template(template_id):
     # Load template
     template = TimeEntryTemplate.query.filter_by(id=template_id, user_id=current_user.id).first_or_404()
 
-    can_start, _ = TimeTrackingService().can_start_timer(current_user.id)
+    can_start, _unused = TimeTrackingService().can_start_timer(current_user.id)
     if not can_start:
         flash(_("You already have an active timer. Stop it before starting a new one."), "error")
         return redirect(url_for("main.dashboard"))
@@ -450,7 +450,7 @@ def start_timer_for_project(project_id):
         current_app.logger.warning("Start timer (GET) denied: user has no access to project_id=%s", project_id)
         return redirect(url_for("main.dashboard"))
 
-    can_start, _ = TimeTrackingService().can_start_timer(current_user.id)
+    can_start, _unused = TimeTrackingService().can_start_timer(current_user.id)
     if not can_start:
         flash(_("You already have an active timer. Stop it before starting a new one."), "error")
         current_app.logger.info("Start timer (GET) blocked: user already has an active timer")
@@ -2019,7 +2019,7 @@ def resume_timer_by_id(timer_id):
         flash(_("You can only resume your own timers"), "error")
         return redirect(url_for("main.dashboard"))
 
-    can_start, _ = TimeTrackingService().can_start_timer(current_user.id)
+    can_start, _unused = TimeTrackingService().can_start_timer(current_user.id)
     if not can_start:
         flash("You already have an active timer. Stop it before resuming another one.", "error")
         current_app.logger.info("Resume timer blocked: user already has an active timer")

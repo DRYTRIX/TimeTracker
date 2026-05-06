@@ -77,11 +77,9 @@
                             <div>
                                 <label for="status" class="form-label">{{ _('Status') }}</label>
                                 <select id="status" name="status" class="form-input">
-                                    <option value="todo" {% if task.status == 'todo' %}selected{% endif %}>{{ _('To Do') }}</option>
-                                    <option value="in_progress" {% if task.status == 'in_progress' %}selected{% endif %}>{{ _('In Progress') }}</option>
-                                    <option value="review" {% if task.status == 'review' %}selected{% endif %}>{{ _('Review') }}</option>
-                                    <option value="done" {% if task.status == 'done' %}selected{% endif %}>{{ _('Done') }}</option>
-                                    <option value="cancelled" {% if task.status == 'cancelled' %}selected{% endif %}>{{ _('Cancelled') }}</option>
+                                    {% for col in kanban_columns %}
+                                    <option value="{{ col.key }}" {% if task.status == col.key %}selected{% endif %}>{{ _(col.label) }}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
                         </div>
@@ -652,11 +650,9 @@ document.addEventListener('DOMContentLoaded', function() {
             high: { text: '{{ _('High') }}', class: 'priority-high' },
             urgent: { text: '{{ _('Urgent') }}', class: 'priority-urgent' },
         } : {
-            todo: { text: '{{ _('To Do') }}', class: 'status-todo' },
-            in_progress: { text: '{{ _('In Progress') }}', class: 'status-in_progress' },
-            review: { text: '{{ _('Review') }}', class: 'status-review' },
-            done: { text: '{{ _('Done') }}', class: 'status-done' },
-            cancelled: { text: '{{ _('Cancelled') }}', class: 'status-cancelled' },
+            {%- for col in kanban_columns %}
+            {{ col.key }}: { text: '{{ _(col.label) }}', class: 'status-{{ col.key }}' },
+            {%- endfor %}
         };
         const def = map[value] || Object.values(map)[0];
         element.className = element.className.split(' ').filter(c => !c.startsWith(type === 'priority' ? 'priority-' : 'status-')).join(' ').trim();

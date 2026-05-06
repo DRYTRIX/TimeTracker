@@ -276,7 +276,7 @@ def upload_comment_attachment(comment_id):
 
     # File upload configuration
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "pdf", "doc", "docx", "txt", "xls", "xlsx", "zip", "rar"}
-    UPLOAD_FOLDER = "uploads/comment_attachments"
+    UPLOAD_FOLDER = "app/static/uploads/comment_attachments"
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
     def allowed_file(filename):

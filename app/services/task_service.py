@@ -43,7 +43,10 @@ class TaskService:
         self.task_repo = TaskRepository()
         self.project_repo = ProjectRepository()
 
-    VALID_STATUSES = ("todo", "in_progress", "review", "done", "cancelled")
+    # Last-ditch fallback — only used if KanbanColumn lookup fails.
+    # The real validation happens via KanbanColumn.get_valid_status_keys(project_id=...)
+    # so users with custom kanban columns (e.g. on_hold) aren't silently coerced to todo.
+    VALID_STATUSES = ("todo", "in_progress", "review", "done", "on_hold", "cancelled")
 
     def create_task(
         self,
@@ -82,7 +85,16 @@ class TaskService:
         if not project:
             return {"success": False, "message": "Invalid project", "error": "invalid_project"}
 
-        task_status = status if status and status in self.VALID_STATUSES else TaskStatus.TODO.value
+        # Validate status against the configured kanban columns for this project.
+        # Falls back to the hardcoded VALID_STATUSES tuple if KanbanColumn is unavailable
+        # (e.g. table not yet seeded during a fresh migration).
+        try:
+            from app.models import KanbanColumn
+
+            allowed = set(KanbanColumn.get_valid_status_keys(project_id=project_id) or self.VALID_STATUSES)
+        except Exception:
+            allowed = set(self.VALID_STATUSES)
+        task_status = status if status and status in allowed else TaskStatus.TODO.value
 
         # Create task
         task = self.task_repo.create(
