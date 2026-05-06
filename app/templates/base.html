@@ -1184,7 +1184,7 @@
                             <span class="ml-3 sidebar-label">{{ _('Help') }}</span>
                         </a>
                     </li>
-                    {% if current_user.is_authenticated and current_user.ui_show_donate %}
+                    {% if current_user.is_authenticated and current_user.ui_show_donate and not is_license_activated %}
                     <li class="mt-2">
                         <button type="button" class="sidebar-nav-item w-full text-left flex items-center p-2 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30 transition-all duration-200 group js-open-support-modal" title="{{ _('Open support options') }}">
                             <i class="fas fa-heart w-6 text-center group-hover:scale-110 transition-transform" aria-hidden="true"></i>
@@ -1353,7 +1353,7 @@
                 {% endwith %}
             </div>
 
-            {% if current_user.is_authenticated and current_user.ui_show_donate %}
+            {% if current_user.is_authenticated and current_user.ui_show_donate and not is_license_activated %}
             <!-- Dismissible Support Banner -->
             <div id="supportBanner" class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-3 opacity-0 invisible max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
                 <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
