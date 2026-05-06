@@ -9,28 +9,54 @@ class KanbanColumn(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(
-        db.Integer, db.ForeignKey("projects.id", ondelete="CASCADE"), nullable=True, index=True
+        db.Integer,
+        db.ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
     )  # NULL = global columns
-    key = db.Column(db.String(50), nullable=False, index=True)  # Internal identifier (e.g. 'in_progress')
-    label = db.Column(db.String(100), nullable=False)  # Display name (e.g. 'In Progress')
+    key = db.Column(
+        db.String(50), nullable=False, index=True
+    )  # Internal identifier (e.g. 'in_progress')
+    label = db.Column(
+        db.String(100), nullable=False
+    )  # Display name (e.g. 'In Progress')
     icon = db.Column(db.String(100), default="fas fa-circle")  # Font Awesome icon class
-    color = db.Column(db.String(50), default="secondary")  # Bootstrap color class or hex
-    position = db.Column(db.Integer, nullable=False, default=0, index=True)  # Order in kanban board
-    is_active = db.Column(db.Boolean, default=True, nullable=False)  # Can be disabled without deletion
-    is_system = db.Column(db.Boolean, default=False, nullable=False)  # System columns cannot be deleted
-    is_complete_state = db.Column(db.Boolean, default=False, nullable=False)  # Marks task as completed
+    color = db.Column(
+        db.String(50), default="secondary"
+    )  # Bootstrap color class or hex
+    position = db.Column(
+        db.Integer, nullable=False, default=0, index=True
+    )  # Order in kanban board
+    is_active = db.Column(
+        db.Boolean, default=True, nullable=False
+    )  # Can be disabled without deletion
+    is_system = db.Column(
+        db.Boolean, default=False, nullable=False
+    )  # System columns cannot be deleted
+    is_complete_state = db.Column(
+        db.Boolean, default=False, nullable=False
+    )  # Marks task as completed
     created_at = db.Column(db.DateTime, default=now_in_app_timezone, nullable=False)
-    updated_at = db.Column(db.DateTime, default=now_in_app_timezone, onupdate=now_in_app_timezone, nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=now_in_app_timezone,
+        onupdate=now_in_app_timezone,
+        nullable=False,
+    )
 
     # Unique constraint: key must be unique per project (or globally if project_id is NULL)
-    __table_args__ = (db.UniqueConstraint("key", "project_id", name="uq_kanban_column_key_project"),)
+    __table_args__ = (
+        db.UniqueConstraint("key", "project_id", name="uq_kanban_column_key_project"),
+    )
 
     def __init__(self, **kwargs):
         """Initialize a new KanbanColumn"""
         super(KanbanColumn, self).__init__(**kwargs)
 
     def __repr__(self):
-        project_info = f" project_id={self.project_id}" if self.project_id else " global"
+        project_info = (
+            f" project_id={self.project_id}" if self.project_id else " global"
+        )
         return f"<KanbanColumn {self.key}: {self.label}{project_info}>"
 
     def to_dict(self):
@@ -137,7 +163,9 @@ class KanbanColumn(db.Model):
         if not columns:
             # Last-ditch fallback if even global columns are missing
             # (e.g. table not yet seeded during a fresh migration).
-            return ["todo", "in_progress", "review", "done", "cancelled"]
+            # Keep this aligned with the keys initialize_default_columns seeds
+            # plus any well-known optional columns users tend to enable.
+            return ["todo", "in_progress", "review", "done", "on_hold", "cancelled"]
         return [col.key for col in columns]
 
     @classmethod
@@ -213,7 +241,9 @@ class KanbanColumn(db.Model):
             column = cls.query.get(col_id)
             if column:
                 # Verify the column belongs to the correct project
-                if (project_id is None and column.project_id is None) or (column.project_id == project_id):
+                if (project_id is None and column.project_id is None) or (
+                    column.project_id == project_id
+                ):
                     column.position = position
                     column.updated_at = now_in_app_timezone()
 
