@@ -234,9 +234,7 @@ def register_template_filters(app):
                 "th": ["style", "class", "id"],
                 "td": ["style", "class", "id"],
             }
-            return bleach.clean(
-                text, tags=allowed_tags, attributes=allowed_attrs, strip=True
-            )
+            return bleach.clean(text, tags=allowed_tags, attributes=allowed_attrs, strip=True)
 
         # Process as markdown
         if _md is None:
@@ -255,9 +253,7 @@ def register_template_filters(app):
         text = _normalize_toastui_markdown(text)
 
         # Convert markdown to HTML
-        html = _md.markdown(
-            text, extensions=["extra", "sane_lists", "smarty", "codehilite"]
-        )
+        html = _md.markdown(text, extensions=["extra", "sane_lists", "smarty", "codehilite"])
         if bleach is None:
             return html
 
@@ -337,9 +333,7 @@ def register_template_filters(app):
             "th": ["style", "class", "id"],
             "td": ["style", "class", "id"],
         }
-        return bleach.clean(
-            html, tags=allowed_tags, attributes=allowed_attrs, strip=True
-        )
+        return bleach.clean(html, tags=allowed_tags, attributes=allowed_attrs, strip=True)
 
     # Additional filters for PDFs / i18n-friendly formatting
     import datetime
@@ -412,9 +406,7 @@ def register_template_filters(app):
             "AED": "د.إ",
             "SAR": "﷼",
         }
-        symbol = currency_symbols.get(
-            (currency_code or "").upper(), currency_code or "EUR"
-        )
+        symbol = currency_symbols.get((currency_code or "").upper(), currency_code or "EUR")
         return f"{symbol} {num_str}"
 
     @app.template_filter("timeago")
