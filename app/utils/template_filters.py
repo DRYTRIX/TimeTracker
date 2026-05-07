@@ -1,12 +1,9 @@
-from flask import Blueprint
-
 from app.utils.timezone import (
     format_local_datetime,
     format_user_datetime,
     get_user_date_format,
     get_user_datetime_format,
     get_user_time_format,
-    utc_to_local,
 )
 
 try:
@@ -15,6 +12,38 @@ try:
 except Exception:
     _md = None
     bleach = None
+
+
+# Punctuation chars Python's `markdown` library recognizes as valid backslash
+# escapes. CommonMark allows escaping any ASCII punctuation, but Python
+# markdown only honors this subset. Anything outside it (e.g. `\,`, `\:`)
+# leaks through to the rendered HTML as a literal backslash + char.
+_PYMD_ESCAPABLE = r"\\`*_{}()\[\]#+\-.!"
+
+
+def _normalize_toastui_markdown(text):
+    """Clean up artefacts of Toast UI Editor's WYSIWYG-to-markdown conversion.
+
+    Toast UI follows CommonMark and over-escapes punctuation when round-
+    tripping rich text through its editor. Two patterns matter for display:
+
+    1. Line-leading ``\\- `` (also ``\\* ``, ``\\+ ``) prevents Python markdown
+       from parsing the line as a list item. Toast UI emits this when the
+       user inserts a bullet via WYSIWYG, so unescaping restores the list.
+    2. Backslash-escaped punctuation Python markdown does not recognize
+       (commas, colons, semicolons, etc.) renders as a literal ``\\,`` in
+       the HTML output. Stripping the backslash is safe because none of
+       those chars carry markdown meaning anywhere in a paragraph.
+    """
+    import re
+
+    if not text:
+        return text
+    # Restore line-leading bullets that Toast UI escaped.
+    text = re.sub(r"^(\s*)\\([\-+*])(\s)", r"\1\2\3", text, flags=re.MULTILINE)
+    # Drop backslashes before punctuation Python markdown does not handle.
+    text = re.sub(r"\\([^" + _PYMD_ESCAPABLE + r"])", r"\1", text)
+    return text
 
 
 def register_template_filters(app):
@@ -198,7 +227,9 @@ def register_template_filters(app):
                 "th": ["style", "class", "id"],
                 "td": ["style", "class", "id"],
             }
-            return bleach.clean(text, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+            return bleach.clean(
+                text, tags=allowed_tags, attributes=allowed_attrs, strip=True
+            )
 
         # Process as markdown
         if _md is None:
@@ -209,8 +240,17 @@ def register_template_filters(app):
                 return text
             return escape(text).replace("\n", "<br>")
 
+        # Toast UI Editor (used on the task/note edit pages) over-escapes
+        # punctuation when serialising WYSIWYG content back to markdown.
+        # Strip the escapes Python markdown can't honour so the rendered
+        # output isn't peppered with literal backslashes and so escaped
+        # bullets render as real list items.
+        text = _normalize_toastui_markdown(text)
+
         # Convert markdown to HTML
-        html = _md.markdown(text, extensions=["extra", "sane_lists", "smarty", "codehilite"])
+        html = _md.markdown(
+            text, extensions=["extra", "sane_lists", "smarty", "codehilite"]
+        )
         if bleach is None:
             return html
 
@@ -290,7 +330,9 @@ def register_template_filters(app):
             "th": ["style", "class", "id"],
             "td": ["style", "class", "id"],
         }
-        return bleach.clean(html, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+        return bleach.clean(
+            html, tags=allowed_tags, attributes=allowed_attrs, strip=True
+        )
 
     # Additional filters for PDFs / i18n-friendly formatting
     import datetime
@@ -363,7 +405,9 @@ def register_template_filters(app):
             "AED": "د.إ",
             "SAR": "﷼",
         }
-        symbol = currency_symbols.get((currency_code or "").upper(), currency_code or "EUR")
+        symbol = currency_symbols.get(
+            (currency_code or "").upper(), currency_code or "EUR"
+        )
         return f"{symbol} {num_str}"
 
     @app.template_filter("timeago")
