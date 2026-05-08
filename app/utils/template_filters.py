@@ -1,12 +1,9 @@
-from flask import Blueprint
-
 from app.utils.timezone import (
     format_local_datetime,
     format_user_datetime,
     get_user_date_format,
     get_user_datetime_format,
     get_user_time_format,
-    utc_to_local,
 )
 
 try:
@@ -15,6 +12,45 @@ try:
 except Exception:
     _md = None
     bleach = None
+
+
+# Punctuation chars Python's `markdown` library recognizes as valid backslash
+# escapes. CommonMark allows escaping any ASCII punctuation, but Python
+# markdown only honors this subset. Anything outside it (e.g. `\,`, `\:`)
+# leaks through to the rendered HTML as a literal backslash + char.
+_PYMD_ESCAPABLE = r"\\`*_{}()\[\]#+\-.!"
+
+
+def _normalize_toastui_markdown(text):
+    """Clean up artefacts of Toast UI Editor's WYSIWYG-to-markdown conversion.
+
+    Toast UI follows CommonMark and over-escapes punctuation when round-
+    tripping rich text through its editor. Three patterns matter for display:
+
+    1. Line-leading ``\\- `` (also ``\\* ``, ``\\+ ``) prevents Python markdown
+       from parsing the line as a list item. Toast UI emits this when the
+       user inserts a bullet via WYSIWYG, so unescaping restores the list.
+    2. Backslash-escaped punctuation Python markdown does not recognize
+       (commas, colons, semicolons, etc.) renders as a literal ``\\,`` in
+       the HTML output. Stripping the backslash is safe because none of
+       those chars carry markdown meaning anywhere in a paragraph.
+    3. ``~~text~~`` strikethrough is part of CommonMark/GFM but the Python
+       ``markdown`` library's ``extra`` extension does not implement it,
+       so it leaks through as literal ``~~...~~`` text. Convert to inline
+       ``<del>`` HTML, which markdown passes through and bleach allows.
+    """
+    import re
+
+    if not text:
+        return text
+    # Restore line-leading bullets that Toast UI escaped.
+    text = re.sub(r"^(\s*)\\([\-+*])(\s)", r"\1\2\3", text, flags=re.MULTILINE)
+    # Drop backslashes before punctuation Python markdown does not handle.
+    text = re.sub(r"\\([^" + _PYMD_ESCAPABLE + r"])", r"\1", text)
+    # Convert ~~strikethrough~~ to <del>...</del>. Non-greedy and same-line
+    # only so multiple strikethroughs on one line each get their own pair.
+    text = re.sub(r"~~(.+?)~~", r"<del>\1</del>", text)
+    return text
 
 
 def register_template_filters(app):
@@ -208,6 +244,13 @@ def register_template_filters(app):
             except Exception:
                 return text
             return escape(text).replace("\n", "<br>")
+
+        # Toast UI Editor (used on the task/note edit pages) over-escapes
+        # punctuation when serialising WYSIWYG content back to markdown.
+        # Strip the escapes Python markdown can't honour so the rendered
+        # output isn't peppered with literal backslashes and so escaped
+        # bullets render as real list items.
+        text = _normalize_toastui_markdown(text)
 
         # Convert markdown to HTML
         html = _md.markdown(text, extensions=["extra", "sane_lists", "smarty", "codehilite"])
