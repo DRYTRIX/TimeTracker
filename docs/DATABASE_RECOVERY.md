@@ -41,6 +41,12 @@ services:
       - TT_SKIP_DB_CLEANUP=true
 ```
 
+## Full archive restore (intentional rollback to a backup)
+
+If you need to **replace the live database** with a previously created **full system ZIP backup** (Admin → Backups, or `flask backup_create`), use the dedicated restore flow rather than deleting volumes alone. That path runs `pg_restore` or replaces the SQLite file, restores bundled uploads, and runs migrations to the current code version.
+
+See **[Backup and full archive restore](admin/BACKUP_AND_RESTORE.md)** for step-by-step behaviour, concurrency caveats during restore, and multi-process notes.
+
 ## Manual Recovery
 
 If automatic cleanup doesn't resolve the issue, you can manually reset the database:

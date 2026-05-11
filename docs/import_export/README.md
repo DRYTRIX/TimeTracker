@@ -18,6 +18,7 @@ The TimeTracker Import/Export system enables seamless data migration, GDPR-compl
 ## Quick Links
 
 - **User Guide**: [IMPORT_EXPORT_GUIDE.md](../IMPORT_EXPORT_GUIDE.md)
+- **Full system ZIP backup / restore (operations)**: [BACKUP_AND_RESTORE](../admin/BACKUP_AND_RESTORE.md) — same restore pipeline as Admin → Backups; concurrency and Docker notes
 - **Implementation Summary**: [IMPORT_EXPORT_IMPLEMENTATION_SUMMARY.md](../../IMPORT_EXPORT_IMPLEMENTATION_SUMMARY.md)
 - **API Documentation**: See User Guide → API Documentation section
 

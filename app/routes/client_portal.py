@@ -22,6 +22,9 @@ from flask import (
 )
 from flask_babel import gettext as _
 from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.utils.backup import is_database_restore_in_progress
 
 from app import db
 from app.models import (
@@ -136,17 +139,27 @@ def handle_internal_error(error):
 
 def get_current_client():
     """Get the currently logged-in client from session (either Client or User portal access)"""
-    # Check for Client portal authentication
-    client_id = session.get("client_portal_id")
-    if client_id:
-        return Client.query.get(client_id)
+    from flask import has_app_context
 
-    # Check for User portal authentication
-    user_id = session.get("_user_id")
-    if user_id:
-        user = User.query.get(user_id)
-        if user and user.is_client_portal_user:
-            return user.client  # Return the Client object linked to the user
+    if has_app_context() and is_database_restore_in_progress(current_app._get_current_object()):
+        return None
+
+    try:
+        client_id = session.get("client_portal_id")
+        if client_id:
+            return Client.query.get(client_id)
+
+        user_id = session.get("_user_id")
+        if user_id:
+            user = User.query.get(user_id)
+            if user and user.is_client_portal_user:
+                return user.client
+    except SQLAlchemyError:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return None
 
     return None
 

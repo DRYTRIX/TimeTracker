@@ -266,6 +266,8 @@ Admins can create full database backups:
 4. Wait for restore to complete
 5. Review Import History for results (JSON restores only; ZIP restores do not create import history entries)
 
+**Full ZIP restore and concurrent use**: A ZIP restore uses the same pipeline as **Admin → Backups → Restore** (`pg_restore --clean` on PostgreSQL). While restore runs, the database schema may be temporarily missing or inconsistent; other browser tabs or API clients can see database errors until the job finishes. The app sets an internal “restore in progress” flag so some global template logic avoids extra queries during that window, but you should still treat restore as **maintenance** (quiet period or stop traffic) for predictable behaviour. Details: [Backup and full archive restore](admin/BACKUP_AND_RESTORE.md).
+
 #### Best Practices
 
 - Create backups regularly (daily or weekly)

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.4] - 2026-05-11
+
+### Fixed
+
+- **Full database restore** — Admin restore cleanup no longer uses `current_app` from a background thread outside Flask application context. While `restore_backup` runs (archive extract through Alembic upgrade), the app sets `_database_restore_in_progress`; the client portal global context processor skips non-essential database reads during that window and rolls back the session on `SQLAlchemyError` so login and error pages can render when PostgreSQL schema is briefly torn during `pg_restore --clean`.
+
+### Documentation
+
+- **Backup and restore** — Added [docs/admin/BACKUP_AND_RESTORE.md](docs/admin/BACKUP_AND_RESTORE.md) and cross-links from the admin index, [DATABASE_RECOVERY.md](DATABASE_RECOVERY.md), and import/export guides for operational behaviour during restore.
+
 ## [5.5.3] - 2026-05-06
 
 ### Fixed
