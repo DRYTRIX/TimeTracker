@@ -12,6 +12,15 @@ from zipfile import ZIP_DEFLATED, ZipFile
 logger = logging.getLogger(__name__)
 
 
+def is_database_restore_in_progress(app) -> bool:
+    """True while ``restore_backup`` is running (extract → DB restore → migrations).
+
+    Other request greenlets in the same Gunicorn worker can still run; they should
+    avoid non-essential database reads (see client portal context processor).
+    """
+    return bool(getattr(app, "_database_restore_in_progress", False))
+
+
 def get_backup_root_dir(app) -> str:
     """Return the directory where backup archives should be stored.
 
@@ -245,6 +254,8 @@ def restore_backup(app, archive_path: str, progress_callback=None) -> tuple[bool
             logger.debug(f"Progress callback failed: {e}")
 
     try:
+        setattr(app, "_database_restore_in_progress", True)
+
         # Extract archive
         with ZipFile(archive_path, mode="r") as zf:
             zf.extractall(tmp_dir)
@@ -385,6 +396,10 @@ def restore_backup(app, archive_path: str, progress_callback=None) -> tuple[bool
         _progress("Restore completed successfully", 100)
         return True, "Restore completed successfully"
     finally:
+        try:
+            delattr(app, "_database_restore_in_progress")
+        except AttributeError:
+            pass
         try:
             shutil.rmtree(tmp_dir, ignore_errors=True)
         except Exception as e:

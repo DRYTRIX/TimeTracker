@@ -22,6 +22,9 @@ Complete guides for TimeTracker administrators.
 ### Monitoring
 - See [monitoring/](monitoring/) for monitoring and analytics setup
 
+### Backup and disaster recovery
+- **[Backup and full archive restore](BACKUP_AND_RESTORE.md)** — ZIP backups, `pg_restore` / SQLite restore, behaviour during restore, and operational notes for Docker
+
 ## 🔧 Common Tasks
 
 1. **Initial Setup**: Start with [Docker Compose Setup](configuration/DOCKER_COMPOSE_SETUP.md)

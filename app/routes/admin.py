@@ -4225,7 +4225,7 @@ def restore(filename=None):
                     "message": str(e),
                 }
             finally:
-                safe_file_remove(temp_path, current_app.logger)
+                safe_file_remove(temp_path, app_obj.logger)
 
         # Run restore in background to keep request responsive
         t = threading.Thread(target=_do_restore, daemon=True)
