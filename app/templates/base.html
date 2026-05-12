@@ -1370,7 +1370,7 @@
             {% if current_user.is_authenticated and current_user.ui_show_donate and not is_license_activated %}
             <!-- Dismissible Support Banner -->
             <div id="supportBanner" class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-3 opacity-0 invisible max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
-                <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+                <div class="w-full flex items-center justify-between gap-4">
                     <div class="flex items-center gap-3 flex-1">
                         <i class="fas fa-mug-saucer text-amber-600 dark:text-amber-400 text-lg"></i>
                         <div class="flex-1">
@@ -1414,13 +1414,15 @@
             </div>
             {% endif %}
 
-            <!-- Main page content (max-width for readability on large screens) -->
-            <main id="mainContentAnchor" class="flex-1 min-w-0 p-4 sm:p-6 w-full max-w-7xl mx-auto overflow-x-hidden">
-                {% block content %}{% endblock %}
-            </main>
-            {% if current_user.is_authenticated %}
-            <p class="text-center text-xs text-text-muted-light dark:text-text-muted-dark px-4 pb-2 max-w-7xl mx-auto w-full">{{ _('Built by an independent developer') }}</p>
-            {% endif %}
+            <!-- Main page content: full width of column; inner pages may use their own max-w-* -->
+            <div class="flex-1 flex flex-col min-w-0 w-full">
+                <main id="mainContentAnchor" class="flex-1 min-h-0 min-w-0 w-full p-4 sm:p-6 overflow-x-hidden">
+                    {% block content %}{% endblock %}
+                </main>
+                {% if current_user.is_authenticated %}
+                <p class="text-center text-xs text-text-muted-light dark:text-text-muted-dark px-4 pb-2 w-full shrink-0">{{ _('Built by an independent developer') }}</p>
+                {% endif %}
+            </div>
         </div>
 
         {% if current_user.is_authenticated %}

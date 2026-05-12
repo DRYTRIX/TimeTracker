@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Main column layout and footer alignment** — Removed an extra closing `</div>` in `{% block content %}` on admin backups, admin API tokens, and quote detail templates. Invalid HTML caused the browser to recover by closing ancestor nodes early (including `#mainContent`), leaving modals and page chrome mis-nested so the authenticated “Built by an independent developer” line no longer lined up with the content column.
+
+### Changed
+
+- **App shell uses full main-column width** — `base.html` no longer caps `<main id="mainContentAnchor">` or the attribution line with `max-w-7xl`; the main area and support banner inner row span the width beside the sidebar (padding unchanged). `<main>` and the footer line sit in a shared `flex-1 flex flex-col min-w-0 w-full` wrapper so the column grows vertically with the layout.
+
 ## [5.5.4] - 2026-05-11
 
 ### Fixed
