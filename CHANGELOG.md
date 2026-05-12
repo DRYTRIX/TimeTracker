@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.5] - 2026-05-12
+
 ### Fixed
 
 - **Main column layout and footer alignment** — Removed an extra closing `</div>` in `{% block content %}` on admin backups, admin API tokens, and quote detail templates. Invalid HTML caused the browser to recover by closing ancestor nodes early (including `#mainContent`), leaving modals and page chrome mis-nested so the authenticated “Built by an independent developer” line no longer lined up with the content column.
