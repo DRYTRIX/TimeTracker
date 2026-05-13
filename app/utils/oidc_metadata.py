@@ -277,8 +277,9 @@ def create_optimized_session(timeout: int = 10) -> requests.Session:
     session.mount("http://", adapter)
     session.mount("https://", adapter)
 
-    # Set default timeout
-    session.timeout = timeout
+    # Set default timeout; requests.Session has no typed ``timeout`` attribute
+    # but we stash it for callers to read.
+    session.timeout = timeout  # type: ignore[attr-defined]
 
     return session
 
@@ -423,7 +424,7 @@ def fetch_oidc_metadata(
         Tuple of (metadata_dict: Optional[Dict], error_message: Optional[str], diagnostics: Optional[Dict])
         Returns (None, error_message, diagnostics) on failure, (metadata, None, diagnostics) on success
     """
-    diagnostics = {
+    diagnostics: dict = {
         "dns_resolution": {},
         "strategies_tried": [],
         "connection_pool_stats": {},

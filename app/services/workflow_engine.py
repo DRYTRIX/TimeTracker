@@ -48,7 +48,7 @@ class WorkflowEngine:
 
             event_value = event_data[field]
 
-            if not WorkflowEngine._compare_values(event_value, operator, value):
+            if not WorkflowEngine._compare_values(event_value, operator or "", value):
                 return False
 
         return True
@@ -172,7 +172,7 @@ class WorkflowEngine:
         action_type = action.get("type")
 
         if action_type == "log_time":
-            return WorkflowEngine._action_log_time(action, context)
+            return WorkflowEngine._action_log_time(action, context, rule)
         elif action_type == "send_notification":
             return WorkflowEngine._action_send_notification(action, context)
         elif action_type == "update_status":
@@ -339,7 +339,7 @@ class WorkflowEngine:
     @staticmethod
     def _action_send_email(action: Dict, context: Dict) -> Dict:
         """Send email"""
-        from app.utils.email import send_email
+        from app.utils.email import send_template_email
 
         to = WorkflowEngine._resolve_template(action.get("to"), context)
         subject = WorkflowEngine._resolve_template(action.get("subject"), context)
@@ -349,7 +349,7 @@ class WorkflowEngine:
         # Resolve template variables in data
         resolved_data = {k: WorkflowEngine._resolve_template(v, context) for k, v in data.items()}
 
-        send_email(to=to, subject=subject, template=template, **resolved_data)
+        send_template_email(to=to, subject=subject, template=template, **resolved_data)
 
         return {"sent": True, "to": to}
 
@@ -361,6 +361,9 @@ class WorkflowEngine:
         url = action.get("url")
         method = action.get("method", "POST")
         payload = action.get("payload", {})
+
+        if not url:
+            return {"sent": False, "error": "missing url"}
 
         # Resolve template variables in payload
         resolved_payload = {k: WorkflowEngine._resolve_template(v, context) for k, v in payload.items()}

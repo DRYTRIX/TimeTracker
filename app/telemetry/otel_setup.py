@@ -423,12 +423,7 @@ def init_opentelemetry(app: Any) -> bool:
         _initialized = True
         return False
 
-    if (
-        conn
-        and not testing_memory
-        and not enable_trace_flag
-        and not enable_metrics_flag
-    ):
+    if conn and not testing_memory and not enable_trace_flag and not enable_metrics_flag:
         _initialized = True
         return False
 
@@ -478,9 +473,7 @@ def init_opentelemetry(app: Any) -> bool:
             _metrics_enabled = True
         else:
             _discard_reader = InMemoryMetricReader()
-            metrics_api.set_meter_provider(
-                MeterProvider(resource=resource, metric_readers=[_discard_reader])
-            )
+            metrics_api.set_meter_provider(MeterProvider(resource=resource, metric_readers=[_discard_reader]))
             _metrics_enabled = False
     else:
         from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
@@ -503,7 +496,10 @@ def init_opentelemetry(app: Any) -> bool:
         if enable_metrics_flag:
             interval_ms = int(os.getenv("OTEL_METRICS_EXPORT_INTERVAL_MS", "60000"))
             metric_exp = OTLPMetricExporter(endpoint=metrics_endpoint, headers=headers)
-            reader = PeriodicExportingMetricReader(metric_exp, export_interval_millis=interval_ms)
+            # Both ``InMemoryMetricReader`` (used in the dev branch above) and
+            # ``PeriodicExportingMetricReader`` are valid ``MetricReader``s; mypy
+            # narrowed ``reader`` to the first one in the if/else.
+            reader = PeriodicExportingMetricReader(metric_exp, export_interval_millis=interval_ms)  # type: ignore[assignment]
             mp = MeterProvider(resource=resource, metric_readers=[reader])
             metrics_api.set_meter_provider(mp)
             _metrics_enabled = True
@@ -511,9 +507,7 @@ def init_opentelemetry(app: Any) -> bool:
             from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 
             _discard_reader2 = InMemoryMetricReader()
-            metrics_api.set_meter_provider(
-                MeterProvider(resource=resource, metric_readers=[_discard_reader2])
-            )
+            metrics_api.set_meter_provider(MeterProvider(resource=resource, metric_readers=[_discard_reader2]))
             _metrics_enabled = False
 
     if _metrics_enabled:

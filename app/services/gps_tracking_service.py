@@ -98,13 +98,15 @@ class GPSTrackingService:
         amount = float(track.distance_km) * rate
 
         # Create expense
+        mileage_title = f"Mileage: {track.start_location or 'Start'} → {track.end_location or 'End'}"
         expense = Expense(
             user_id=track.user_id,
             project_id=project_id,
-            date=track.started_at.date(),
+            title=mileage_title,
+            expense_date=track.started_at.date(),
             amount=amount,
-            category="mileage",
-            description=f"Mileage: {track.start_location or 'Start'} to {track.end_location or 'End'}",
+            category="travel",
+            description=mileage_title,
             notes=f"GPS tracked: {track.distance_km}km ({track.distance_miles} miles)",
         )
 

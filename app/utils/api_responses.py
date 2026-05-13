@@ -3,15 +3,19 @@ Consistent API response helpers.
 Provides standardized response formats for all API endpoints.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from flask import Response, jsonify
 from marshmallow import ValidationError
 
+# Flask views may return ``(body, status_code)`` tuples; the WSGI layer normalizes
+# them to a ``Response``. Annotate accordingly so callers and mypy agree.
+ApiResponse = Union[Response, Tuple[Response, int], Tuple[str, int]]
+
 
 def success_response(
     data: Any = None, message: Optional[str] = None, status_code: int = 200, meta: Optional[Dict[str, Any]] = None
-) -> Response:
+) -> ApiResponse:
     """
     Create a successful API response.
 
@@ -24,7 +28,7 @@ def success_response(
     Returns:
         Flask JSON response
     """
-    response = {
+    response: Dict[str, Any] = {
         "success": True,
     }
 
@@ -46,7 +50,7 @@ def error_response(
     status_code: int = 400,
     errors: Optional[Dict[str, List[str]]] = None,
     details: Optional[Dict[str, Any]] = None,
-) -> Response:
+) -> ApiResponse:
     """
     Create an error API response.
 
@@ -77,7 +81,7 @@ def error_response(
     return jsonify(response), status_code
 
 
-def validation_error_response(errors: Dict[str, List[str]], message: str = "Validation failed") -> Response:
+def validation_error_response(errors: Dict[str, List[str]], message: str = "Validation failed") -> ApiResponse:
     """
     Create a validation error response.
 
@@ -91,7 +95,7 @@ def validation_error_response(errors: Dict[str, List[str]], message: str = "Vali
     return error_response(message=message, error_code="validation_error", status_code=400, errors=errors)
 
 
-def not_found_response(resource: str = "Resource", resource_id: Optional[Any] = None) -> Response:
+def not_found_response(resource: str = "Resource", resource_id: Optional[Any] = None) -> ApiResponse:
     """
     Create a not found error response.
 
@@ -109,7 +113,7 @@ def not_found_response(resource: str = "Resource", resource_id: Optional[Any] = 
     return error_response(message=message, error_code="not_found", status_code=404)
 
 
-def unauthorized_response(message: str = "Authentication required") -> Response:
+def unauthorized_response(message: str = "Authentication required") -> ApiResponse:
     """
     Create an unauthorized error response.
 
@@ -122,7 +126,7 @@ def unauthorized_response(message: str = "Authentication required") -> Response:
     return error_response(message=message, error_code="unauthorized", status_code=401)
 
 
-def forbidden_response(message: str = "Insufficient permissions") -> Response:
+def forbidden_response(message: str = "Insufficient permissions") -> ApiResponse:
     """
     Create a forbidden error response.
 
@@ -137,7 +141,7 @@ def forbidden_response(message: str = "Insufficient permissions") -> Response:
 
 def paginated_response(
     items: List[Any], page: int, per_page: int, total: int, message: Optional[str] = None
-) -> Response:
+) -> ApiResponse:
     """
     Create a paginated response.
 
@@ -167,7 +171,7 @@ def paginated_response(
     return success_response(data=items, message=message, meta={"pagination": pagination})
 
 
-def handle_validation_error(error: ValidationError) -> Response:
+def handle_validation_error(error: ValidationError) -> ApiResponse:
     """
     Handle Marshmallow validation errors.
 
@@ -186,7 +190,7 @@ def handle_validation_error(error: ValidationError) -> Response:
     return validation_error_response(errors=errors)
 
 
-def created_response(data: Any, message: Optional[str] = None, location: Optional[str] = None) -> Response:
+def created_response(data: Any, message: Optional[str] = None, location: Optional[str] = None) -> ApiResponse:
     """
     Create a 201 Created response.
 
@@ -211,7 +215,7 @@ def created_response(data: Any, message: Optional[str] = None, location: Optiona
     return response
 
 
-def no_content_response() -> Response:
+def no_content_response() -> ApiResponse:
     """
     Create a 204 No Content response.
 

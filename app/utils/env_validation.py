@@ -4,7 +4,7 @@ Ensures required configuration is present and valid.
 """
 
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from flask import current_app
 
@@ -144,7 +144,7 @@ def validate_optional_env_vars() -> Dict[str, bool]:
     return results
 
 
-def validate_all(raise_on_error: bool = False) -> Tuple[bool, Dict[str, any]]:
+def validate_all(raise_on_error: bool = False) -> Tuple[bool, Dict[str, Any]]:
     """
     Validate all environment configuration.
 
@@ -154,7 +154,7 @@ def validate_all(raise_on_error: bool = False) -> Tuple[bool, Dict[str, any]]:
     Returns:
         Tuple of (is_valid, validation_results)
     """
-    results = {"required": {}, "optional": {}, "production": {}, "warnings": []}
+    results: Dict[str, Any] = {"required": {}, "optional": {}, "production": {}, "warnings": []}
 
     # Required vars (minimal set)
     required_vars = []  # Most vars have defaults, but SECRET_KEY is critical in production

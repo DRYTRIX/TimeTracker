@@ -151,6 +151,8 @@ class GamificationService:
         if not period_start or not period_end:
             period_start, period_end = self._get_period_dates(leaderboard.period)
 
+        assert period_start is not None and period_end is not None
+
         # Calculate scores based on type
         scores = self._calculate_scores(leaderboard, period_start, period_end)
 

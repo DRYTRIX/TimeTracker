@@ -174,7 +174,7 @@ class ModuleRegistry:
         Returns:
             List of ModuleDefinition objects that depend on the given module
         """
-        dependents = []
+        dependents: list = []
         target_module = cls.get(module_id)
         if not target_module:
             return dependents

@@ -14,12 +14,12 @@ from flask import current_app
 
 # Try to import Redis
 try:
-    import redis
+    import redis  # type: ignore[import-not-found]
 
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
-    redis = None
+    redis = None  # type: ignore[assignment]
 
 
 class InMemoryCache:
@@ -114,7 +114,9 @@ class RedisCache:
             data = self._client.get(key)
             if data is None:
                 return None
-            return pickle.loads(data)
+            # ``redis.Redis.get`` is typed as returning ``Awaitable | Any``; we use
+            # the sync client so ``data`` is concretely ``bytes`` at runtime.
+            return pickle.loads(data)  # type: ignore[arg-type]
         except Exception as e:
             if current_app:
                 current_app.logger.error(f"Redis get error: {e}")

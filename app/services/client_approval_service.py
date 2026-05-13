@@ -54,6 +54,7 @@ class ClientApprovalService:
         # Real-time: emit to client portal room
         try:
             from app import socketio
+
             socketio.emit(
                 "client_approval_update",
                 {"approval_id": approval.id, "status": approval.status.value, "event": "requested"},
@@ -130,6 +131,7 @@ class ClientApprovalService:
             return
         try:
             from app import socketio
+
             socketio.emit(
                 "client_approval_update",
                 {"approval_id": approval.id, "status": approval.status.value, "event": event},
@@ -151,10 +153,10 @@ class ClientApprovalService:
         for contact in contacts:
             if contact.email:
                 # Send email notification
-                from app.utils.email import send_email
+                from app.utils.email import send_template_email
 
                 try:
-                    send_email(
+                    send_template_email(
                         to=contact.email,
                         subject=f"Time Entry Approval Requested - {approval.time_entry.project.name}",
                         template="email/client_approval_request.html",

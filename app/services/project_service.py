@@ -2,7 +2,7 @@
 Service for project business logic.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from app import db
 from app.constants import ProjectStatus, WebhookEvent
@@ -428,7 +428,7 @@ class ProjectService:
         # Get tasks with eager loading (already loaded but need to order)
         tasks = (
             Task.query.filter_by(project_id=project_id)
-            .options(joinedload(Task.assigned_user))
+            .options(joinedload(cast(Any, Task.assigned_user)))
             .order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc())
             .all()
         )

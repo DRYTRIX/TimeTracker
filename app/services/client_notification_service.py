@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 from app import db
 from app.models import Client, Contact
 from app.models.client_notification import ClientNotification, ClientNotificationPreferences, NotificationType
-from app.utils.email import send_email
+from app.utils.email import send_template_email
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +45,7 @@ class ClientNotificationService:
         # Real-time: emit to client portal room
         try:
             from app import socketio
+
             socketio.emit(
                 "client_notification",
                 {
@@ -227,7 +228,7 @@ class ClientNotificationService:
         for contact in contacts:
             if contact.email:
                 try:
-                    send_email(
+                    send_template_email(
                         to=contact.email,
                         subject=notification.title,
                         template="email/client_notification.html",

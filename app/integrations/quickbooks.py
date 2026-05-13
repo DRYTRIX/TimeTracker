@@ -173,8 +173,12 @@ class QuickBooksConnector(BaseConnector):
             if not realm_id:
                 return {"success": False, "message": "QuickBooks company not configured"}
 
+            access_token = self.get_access_token()
+            if not access_token:
+                return {"success": False, "message": "QuickBooks access token not available"}
+
             company_info = self._api_request(
-                "GET", f"/v3/company/{realm_id}/companyinfo/{realm_id}", self.get_access_token(), realm_id
+                "GET", f"/v3/company/{realm_id}/companyinfo/{realm_id}", access_token, realm_id
             )
 
             if company_info:
@@ -441,7 +445,7 @@ class QuickBooksConnector(BaseConnector):
             raise ValueError(error_msg)
 
         # Build QuickBooks invoice structure
-        qb_invoice = {"CustomerRef": {"value": customer_qb_id}, "Line": []}
+        qb_invoice: Dict[str, Any] = {"CustomerRef": {"value": customer_qb_id}, "Line": []}
 
         # Add invoice items
         for item in invoice.items:
@@ -486,7 +490,7 @@ class QuickBooksConnector(BaseConnector):
                         logger.warning(f"Error looking up QuickBooks item '{item_qb_name}': {e}")
 
                 # Build line item
-                line_item = {
+                line_item: Dict[str, Any] = {
                     "Amount": float(item.quantity * item.unit_price),
                     "DetailType": "SalesItemLineDetail",
                     "SalesItemLineDetail": {
@@ -604,7 +608,7 @@ class QuickBooksConnector(BaseConnector):
                     raise ValueError(error_msg)
 
         # Build QuickBooks expense structure
-        qb_expense = {
+        qb_expense: Dict[str, Any] = {
             "PaymentType": "Cash",
             "AccountRef": {"value": account_id},
             "Line": [

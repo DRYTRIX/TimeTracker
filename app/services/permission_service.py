@@ -2,10 +2,10 @@
 Service for permission and role management.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from app import db
-from app.models import Permission, Role, User
+from app.models import Permission, Role
 from app.repositories import UserRepository
 from app.utils.db import safe_commit
 
@@ -32,12 +32,10 @@ class PermissionService:
         if user.role == "admin":
             return True
 
-        # Check role permissions
+        # Check role permissions (legacy string role on User + Role.permissions)
         role = Role.query.filter_by(name=user.role).first()
-        if role:
-            permission = Permission.query.filter_by(name=permission_name, role_id=role.id).first()
-            if permission and permission.granted:
-                return True
+        if role and role.has_permission(permission_name):
+            return True
 
         return False
 
@@ -52,14 +50,13 @@ class PermissionService:
         if not role:
             return {"success": False, "message": "Role not found", "error": "invalid_role"}
 
-        # Check if permission already exists
-        permission = Permission.query.filter_by(name=permission_name, role_id=role.id).first()
-
-        if permission:
-            permission.granted = True
-        else:
-            permission = Permission(name=permission_name, role_id=role.id, granted=True)
+        permission = Permission.query.filter_by(name=permission_name).first()
+        if not permission:
+            permission = Permission(name=permission_name, category="general")
             db.session.add(permission)
+
+        if not role.has_permission(permission_name):
+            role.add_permission(permission)
 
         if not safe_commit("grant_permission", {"role": role_name, "permission": permission_name}):
             return {
@@ -81,10 +78,9 @@ class PermissionService:
         if not role:
             return {"success": False, "message": "Role not found", "error": "invalid_role"}
 
-        permission = Permission.query.filter_by(name=permission_name, role_id=role.id).first()
-
-        if permission:
-            permission.granted = False
+        permission = Permission.query.filter_by(name=permission_name).first()
+        if permission and role.has_permission(permission_name):
+            role.remove_permission(permission)
 
             if not safe_commit("revoke_permission", {"role": role_name, "permission": permission_name}):
                 return {
@@ -111,11 +107,8 @@ class PermissionService:
         if user.role == "admin":
             return ["admin:all"]
 
-        # Get role permissions
         role = Role.query.filter_by(name=user.role).first()
         if not role:
             return []
 
-        permissions = Permission.query.filter_by(role_id=role.id, granted=True).all()
-
-        return [p.name for p in permissions]
+        return role.get_permission_names()

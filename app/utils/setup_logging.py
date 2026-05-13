@@ -33,7 +33,9 @@ def setup_logging(app: Flask) -> None:
         from logging.handlers import RotatingFileHandler
 
         file_handler = RotatingFileHandler(log_file, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8")
-        handlers.append(file_handler)
+        # RotatingFileHandler is a StreamHandler subclass; the stdlib stubs
+        # parameterise StreamHandler[TextIO] which doesn't accept it directly.
+        handlers.append(file_handler)  # type: ignore[arg-type]
     except (PermissionError, OSError) as e:
         print(f"Warning: Could not create log file '{log_file}': {e}")
         print("Logging to console only")

@@ -32,7 +32,7 @@ from app.models import InvoicePDFTemplate, QuotePDFTemplate, Settings
 try:
     from babel.dates import format_date as babel_format_date
 except Exception:
-    babel_format_date = None
+    babel_format_date = None  # type: ignore[assignment]
 from pathlib import Path
 
 from flask import render_template

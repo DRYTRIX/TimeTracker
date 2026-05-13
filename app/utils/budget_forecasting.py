@@ -17,7 +17,7 @@ from app import db
 from app.models import Project, ProjectCost, TimeEntry, User
 
 
-def calculate_burn_rate(project_id: int, days: int = 30) -> Dict:
+def calculate_burn_rate(project_id: int, days: int = 30) -> Optional[Dict]:
     """
     Calculate the burn rate for a project based on recent activity.
 
@@ -79,7 +79,7 @@ def calculate_burn_rate(project_id: int, days: int = 30) -> Dict:
     }
 
 
-def estimate_completion_date(project_id: int, analysis_days: int = 30) -> Dict:
+def estimate_completion_date(project_id: int, analysis_days: int = 30) -> Optional[Dict]:
     """
     Estimate project completion date based on burn rate and remaining budget.
 
@@ -150,7 +150,7 @@ def estimate_completion_date(project_id: int, analysis_days: int = 30) -> Dict:
     }
 
 
-def analyze_resource_allocation(project_id: int, days: int = 30) -> Dict:
+def analyze_resource_allocation(project_id: int, days: int = 30) -> Optional[Dict]:
     """
     Analyze resource allocation and costs per team member.
 
@@ -235,7 +235,7 @@ def analyze_resource_allocation(project_id: int, days: int = 30) -> Dict:
     }
 
 
-def analyze_cost_trends(project_id: int, days: int = 90, granularity: str = "week") -> Dict:
+def analyze_cost_trends(project_id: int, days: int = 90, granularity: str = "week") -> Optional[Dict]:
     """
     Analyze cost trends over time for a project.
 
@@ -278,7 +278,7 @@ def analyze_cost_trends(project_id: int, days: int = 90, granularity: str = "wee
     hourly_rate = float(project.hourly_rate or 0)
 
     # Group by period
-    period_costs = defaultdict(float)
+    period_costs: dict = defaultdict(float)
 
     for entry in time_entries:
         if entry.duration_seconds is None:
@@ -336,7 +336,7 @@ def analyze_cost_trends(project_id: int, days: int = 90, granularity: str = "wee
     }
 
 
-def get_budget_status(project_id: int) -> Dict:
+def get_budget_status(project_id: int) -> Optional[Dict]:
     """
     Get comprehensive budget status for a project.
 
@@ -414,7 +414,7 @@ def _calculate_confidence(project_id: int, days: int) -> str:
     hourly_rate = float(project.hourly_rate or 0)
 
     # Group by day
-    daily_costs = defaultdict(float)
+    daily_costs: dict = defaultdict(float)
 
     time_entries = TimeEntry.query.filter(
         TimeEntry.project_id == project_id,

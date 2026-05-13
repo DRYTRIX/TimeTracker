@@ -87,7 +87,7 @@ class InvoiceService:
 
         # Create invoice items from time entries
         # Group entries by task for better organization
-        grouped_entries = {}
+        grouped_entries: Dict[str, Dict[str, Any]] = {}
         for entry in entries:
             if entry.duration_seconds:
                 hours = Decimal(str(entry.duration_seconds / 3600))
@@ -117,14 +117,14 @@ class InvoiceService:
             rate = project.hourly_rate or Decimal("0.00")
 
             # Store all time entry IDs as comma-separated string
-            time_entry_ids = ",".join(str(entry.id) for entry in group["entries"])
+            time_entry_ids_csv = ",".join(str(entry.id) for entry in group["entries"])
 
             item = InvoiceItem(
                 invoice_id=invoice.id,
                 description=group["description"],
                 quantity=group["total_hours"],
                 unit_price=rate,
-                time_entry_ids=time_entry_ids,
+                time_entry_ids=time_entry_ids_csv,
             )
             db.session.add(item)
 
@@ -141,11 +141,7 @@ class InvoiceService:
             {"invoice_id": invoice.id, "project_id": project_id, "client_id": project.client_id},
         )
 
-        from app.telemetry.otel_setup import (
-            business_span,
-            record_invoice_created,
-            record_invoice_duration_seconds,
-        )
+        from app.telemetry.otel_setup import business_span, record_invoice_created, record_invoice_duration_seconds
 
         line_item_count = len(grouped_entries)
         with business_span(
@@ -240,11 +236,7 @@ class InvoiceService:
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send client notification for invoice {invoice.id}: {e}", exc_info=True)
 
-        from app.telemetry.otel_setup import (
-            business_span,
-            record_invoice_created,
-            record_invoice_duration_seconds,
-        )
+        from app.telemetry.otel_setup import business_span, record_invoice_created, record_invoice_duration_seconds
 
         with business_span(
             "invoice.create",
@@ -322,7 +314,7 @@ class InvoiceService:
         time_entry_ids = set()
 
         # Collect all time entry IDs from invoice items
-        for item in invoice.items:
+        for item in InvoiceItem.query.filter_by(invoice_id=invoice.id).all():
             if item.time_entry_ids:
                 # Parse comma-separated IDs
                 ids = [int(id_str.strip()) for id_str in item.time_entry_ids.split(",") if id_str.strip().isdigit()]
@@ -567,13 +559,14 @@ class InvoiceService:
 
         grouped_time_entries = []
         current_date = None
-        current_bucket = None
+        current_bucket: Optional[Dict[str, Any]] = None
         for entry in unbilled_entries:
             entry_date = entry.start_time.date() if entry.start_time else None
             if entry_date != current_date:
                 current_date = entry_date
                 current_bucket = {"date": current_date, "entries": [], "total_hours": 0.0}
                 grouped_time_entries.append(current_bucket)
+            assert current_bucket is not None
             current_bucket["entries"].append(entry)
             current_bucket["total_hours"] += float(entry.duration_hours or 0)
 
@@ -801,13 +794,17 @@ class InvoiceService:
         best_pid = None
         best_hours = Decimal("-1")
         for pid, elist in groups.items():
-            hrs = sum(self._time_entry_hours_decimal(e) for e in elist)
+            hrs = sum((self._time_entry_hours_decimal(e) for e in elist), start=Decimal(0))
             if hrs > best_hours or (hrs == best_hours and (best_pid is None or pid < best_pid)):
                 best_hours = hrs
                 best_pid = pid
 
         if best_pid is None:
-            return {"success": False, "error": "no_unbilled_entries", "message": "No unbilled time entries for this client."}
+            return {
+                "success": False,
+                "error": "no_unbilled_entries",
+                "message": "No unbilled time entries for this client.",
+            }
 
         client = Client.query.get(client_id)
         issue_date = date.today()
@@ -877,7 +874,9 @@ class InvoiceService:
 
         invoice.calculate_totals()
 
-        if not safe_commit("create_client_unbilled_invoice", {"client_id": client_id, "acting_user_id": acting_user_id}):
+        if not safe_commit(
+            "create_client_unbilled_invoice", {"client_id": client_id, "acting_user_id": acting_user_id}
+        ):
             return {
                 "success": False,
                 "error": "database_error",

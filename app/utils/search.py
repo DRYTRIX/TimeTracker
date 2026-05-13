@@ -142,7 +142,7 @@ def global_search(query: str, user_id: Optional[int] = None, limit_per_type: int
     Returns:
         dict with search results by entity type
     """
-    results = {
+    results: Dict[str, List[Any]] = {
         "projects": search_projects(query, user_id=user_id)[:limit_per_type],
         "time_entries": search_time_entries(query, user_id=user_id)[:limit_per_type],
         "tasks": search_tasks(query)[:limit_per_type],

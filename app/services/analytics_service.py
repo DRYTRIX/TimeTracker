@@ -171,7 +171,7 @@ class AnalyticsService:
             entry_date = entry.start_time.date()
             hours = (entry.duration_seconds or 0) / 3600
             if entry_date not in daily_hours:
-                daily_hours[entry_date] = 0
+                daily_hours[entry_date] = 0.0
             daily_hours[entry_date] += hours
 
         # Create trend data

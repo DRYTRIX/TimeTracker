@@ -43,7 +43,7 @@ class TextAlign(str, Enum):
 
 
 # Page size dimensions in mm (standard ISO/ANSI sizes)
-PAGE_SIZE_DIMENSIONS_MM = {
+PAGE_SIZE_DIMENSIONS_MM: Dict[PageSize, Dict[str, float]] = {
     PageSize.A4: {"width": 210, "height": 297},
     PageSize.A5: {"width": 148, "height": 210},
     PageSize.A3: {"width": 297, "height": 420},

@@ -158,8 +158,8 @@ class UnpaidHoursService:
         total_hours = sum(entry.duration_hours or 0 for entry in entries)
 
         # Group by client
-        by_client = {}
-        by_project = {}
+        by_client: Dict[str, Dict[str, Any]] = {}
+        by_project: Dict[str, Dict[str, Any]] = {}
 
         for entry in entries:
             client = None
@@ -204,7 +204,7 @@ class UnpaidHoursService:
         Returns:
             Dict mapping salesman initial to list of TimeEntry objects
         """
-        grouped = {}
+        grouped: dict = {}
         unassigned = []
 
         for entry in entries:

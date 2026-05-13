@@ -64,7 +64,7 @@ class AbsolutePositionedFlowable(Flowable):
         return (0, 0)
 
 
-def _normalize_color(color: Any) -> str:
+def _normalize_color(color: Any) -> Optional[str]:
     """
     Convert color to hex format for ReportLab.
     Handles named colors, hex colors, and returns default if invalid.
@@ -347,7 +347,7 @@ class ReportLabTemplateRenderer:
         # Sort elements by y position (top to bottom) for proper rendering order
         sorted_elements = sorted(elements, key=lambda e: e.get("y", 0))
 
-        element_types = {}
+        element_types: dict = {}
         for element in sorted_elements:
             element_type = element.get("type")
             element_types[element_type] = element_types.get(element_type, 0) + 1
@@ -842,7 +842,7 @@ class ReportLabTemplateRenderer:
         # Resolve from context (which is a dict)
         try:
             parts = var_name.split(".")
-            value = self.context
+            value: Any = self.context
 
             # Navigate through nested attributes/dict keys
             for part in parts:

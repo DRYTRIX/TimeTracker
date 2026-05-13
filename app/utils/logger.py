@@ -5,9 +5,7 @@ Enhanced logging utilities.
 import logging
 from typing import Any, Dict, Optional
 
-from flask import current_app, g, request
-
-from app.utils.performance import get_performance_metrics
+from flask import g, request
 
 
 def get_logger(name: str) -> logging.Logger:
