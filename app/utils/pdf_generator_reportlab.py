@@ -349,6 +349,8 @@ class ReportLabTemplateRenderer:
 
         element_types: dict = {}
         for element in sorted_elements:
+            if element.get("hidden"):
+                continue
             element_type = element.get("type")
             element_types[element_type] = element_types.get(element_type, 0) + 1
 
@@ -910,6 +912,8 @@ class ReportLabTemplateRenderer:
 
         for element_data in getattr(self, "absolute_elements", []):
             element = element_data["element"]
+            if element.get("hidden"):
+                continue
             element_type = element.get("type")
 
             # Get position (already in points from generateCode); coerce to float (JSON may give int/str)
@@ -1026,8 +1030,35 @@ class ReportLabTemplateRenderer:
         # Calculate line height (font size * 1.2 for spacing)
         line_height = size * 1.2
 
-        # Draw each line separately
+        valign = style.get("verticalAlign", "top")
+        box_h = float(element.get("height") or 0)
+        total_text_height = line_height * max(1, len(lines))
         current_y = y
+        if box_h > 0:
+            if valign == "middle":
+                current_y = y - (box_h - total_text_height) / 2.0
+            elif valign == "bottom":
+                current_y = y - box_h + total_text_height
+
+        if align == "justify" and constrained_width > 0:
+            joined = "<br/>".join(lines) if lines else text
+            ps = ParagraphStyle(
+                name="_pdf_editor_justify",
+                fontName=font,
+                fontSize=size,
+                leading=line_height,
+                alignment=TA_JUSTIFY,
+                textColor=colors.black,
+            )
+            if color_hex:
+                ps.textColor = colors.HexColor(color_hex)
+            para = Paragraph(joined, ps)
+            w, h = para.wrap(constrained_width, page_height)
+            para.drawOn(canv, x, current_y - h + size * 0.15)
+            canv.restoreState()
+            return
+
+        # Draw each line separately
         for line in lines:
             # Skip empty lines but still advance y position
             if not line.strip() and len(lines) > 1:
