@@ -215,12 +215,18 @@ jobs:
       - name: Run security tests
         env:
           PYTHONPATH: ${{ github.workspace }}
-        run: |
-          pytest -m security -v --tb=short
+        run: bash scripts/ci/security-pytest.sh
       
       - name: Run Safety dependency check
         run: |
-          safety check --file requirements.txt --json > safety-report.json
+          mkdir -p "${{ github.workspace }}/.test_installation_config"
+          REPORT="${{ github.workspace }}/.test_installation_config/safety-report.json"
+          EC=0
+          python -m safety check --file requirements.txt --save-json "${REPORT}" >/dev/null || EC=$?
+          if [ -f "${REPORT}" ]; then
+            python "${{ github.workspace }}/scripts/ci/sanitize_safety_report.py" "${REPORT}" "${{ github.workspace }}"
+          fi
+          exit "${EC}"
       
       - name: Upload security reports
         if: always()
@@ -228,7 +234,7 @@ jobs:
         with:
           name: security-reports
           path: |
-            safety-report.json
+            .test_installation_config/safety-report.json
 
   # ============================================================================
   # Code Quality

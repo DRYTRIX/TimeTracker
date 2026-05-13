@@ -45,7 +45,7 @@ goto end
 
 :security
 echo Running security tests...
-python -m pytest -m security -v
+bash scripts/ci/security-pytest.sh
 goto end
 
 :all

@@ -203,12 +203,17 @@ jobs:
       
       - name: Install security tools
         run: |
-          pip install safety
+          pip install 'safety==3.7.0'
       
       - name: Run Safety
         run: |
-          safety check --file requirements.txt --json > safety-report.json || true
-          safety check --file requirements.txt || true
+          mkdir -p .test_installation_config
+          REPORT=".test_installation_config/safety-report.json"
+          python -m safety check --file requirements.txt --save-json "${REPORT}" >/dev/null || true
+          if [ -f "${REPORT}" ]; then
+            python scripts/ci/sanitize_safety_report.py "${REPORT}" "${{ github.workspace }}"
+          fi
+          python -m safety check --file requirements.txt || true
       
       - name: Upload security reports
         if: always()
@@ -216,7 +221,7 @@ jobs:
         with:
           name: security-audit-reports
           path: |
-            safety-report.json
+            .test_installation_config/safety-report.json
 
   # ============================================================================
   # Determine Version

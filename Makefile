@@ -71,7 +71,7 @@ test-integration:
 	pytest -m integration -v
 
 test-security:
-	pytest -m security -v
+	bash scripts/ci/security-pytest.sh
 
 test-database:
 	pytest -m database -v

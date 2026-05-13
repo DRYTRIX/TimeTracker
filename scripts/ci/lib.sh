@@ -16,7 +16,7 @@ ci_init_env() {
   export FLASK_APP="${FLASK_APP:-app.py}"
   export FLASK_ENV="${FLASK_ENV:-testing}"
   export INSTALLATION_CONFIG_DIR="${INSTALLATION_CONFIG_DIR:-${CI_ROOT}/.test_installation_config}"
-  mkdir -p "${INSTALLATION_CONFIG_DIR}"
+  mkdir -p "${INSTALLATION_CONFIG_DIR}" "${INSTALLATION_CONFIG_DIR}/pytest-cache"
 }
 
 ci_cleanup() {
@@ -75,15 +75,49 @@ ci_code_quality() {
   ci_mypy
 }
 
+# Exact security test selection (no -m security → no "deselected" noise). When adding a
+# security test outside tests/test_security.py or tests/test_oidc_session_cookie_bloat.py,
+# append its node id here (see: rg 'pytest.mark.security' tests).
+_ci_security_tests=(
+  tests/test_security.py
+  tests/test_oidc_session_cookie_bloat.py
+  tests/test_oidc_logout.py::test_logout_without_post_logout_uri_config
+  tests/test_oidc_logout.py::test_logout_with_post_logout_uri_config
+  tests/test_oidc_logout.py::test_logout_oidc_provider_has_revocation_endpoint_only
+  tests/test_oidc_logout.py::test_logout_local_auth_method
+  tests/test_oidc_logout.py::test_logout_clears_oidc_id_token_from_session
+  tests/test_oidc_logout.py::test_logout_uses_cached_oidc_id_token_hint_when_present
+  tests/test_oidc_logout.py::test_logout_with_both_auth_method_no_post_logout_uri
+  tests/test_oidc_logout.py::test_logout_provider_metadata_load_fails_gracefully
+  tests/test_time_entry_duplication.py::test_duplicate_own_entry_only
+  tests/test_time_entry_duplication.py::test_admin_can_duplicate_any_entry
+  tests/test_admin_settings_logo.py::test_logo_upload_requires_admin
+  tests/test_admin_settings_logo.py::test_remove_logo_requires_admin
+)
+
 ci_security_pytest() {
   ci_log "Security tests (pytest)"
-  pytest -m security -v --tb=short
+  # Writable cache when repo .pytest_cache is not writable.
+  pytest -o "cache_dir=${INSTALLATION_CONFIG_DIR}/pytest-cache" \
+    -v --tb=short --no-cov \
+    -W "ignore:Can't sort tables for DROP:sqlalchemy.exc.SAWarning" \
+    "${_ci_security_tests[@]}"
 }
 
 ci_safety() {
   ci_log "Safety (requirements.txt)"
-  safety check --file requirements.txt --json > "${CI_ROOT}/safety-report.json"
-  echo "Wrote ${CI_ROOT}/safety-report.json"
+  local report="${INSTALLATION_CONFIG_DIR}/safety-report.json"
+  echo "Scanning requirements.txt (writes ${report}; may take a few minutes)..." >&2
+  local ec=0
+  python -m safety check --file requirements.txt --save-json "${report}" >/dev/null || ec=$?
+  if [[ -f "${report}" ]]; then
+    python "${CI_ROOT}/scripts/ci/sanitize_safety_report.py" "${report}" "${CI_ROOT}"
+  fi
+  echo "Wrote ${report}"
+  if [[ "${ec}" -ne 0 ]]; then
+    echo "Safety exited with code ${ec} (non-zero usually means reported vulnerabilities; see the JSON)." >&2
+    return "${ec}"
+  fi
 }
 
 ci_security() {
@@ -293,7 +327,7 @@ Commands (run one at a time):
   isort             isort --check-only only
   mypy              mypy only (non-fatal)
   security          security pytest + safety
-  security-pytest   pytest -m security only
+  security-pytest   security pytest only (explicit node list; see lib.sh)
   safety            safety check only
   unit-models       unit matrix: models
   unit-routes       unit matrix: routes (-n 0)
