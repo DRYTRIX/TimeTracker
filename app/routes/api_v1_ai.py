@@ -9,7 +9,10 @@ api_v1_ai_bp = Blueprint("api_v1_ai", __name__, url_prefix="/api/v1")
 
 
 def _ai_error_response(exc: AIServiceError):
-    return jsonify({"success": False, "error": exc.message, "message": exc.message, "error_code": exc.code}), exc.status_code
+    return (
+        jsonify({"success": False, "error": exc.message, "message": exc.message, "error_code": exc.code}),
+        exc.status_code,
+    )
 
 
 @api_v1_ai_bp.route("/ai/context-preview", methods=["GET"])
@@ -17,7 +20,9 @@ def _ai_error_response(exc: AIServiceError):
 def ai_context_preview():
     try:
         service = LLMService()
-        return jsonify({"success": True, "context": service.context_preview(g.api_user), "provider": service.config.public_dict()})
+        return jsonify(
+            {"success": True, "context": service.context_preview(g.api_user), "provider": service.config.public_dict()}
+        )
     except AIServiceError as exc:
         return _ai_error_response(exc)
 

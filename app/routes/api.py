@@ -52,7 +52,9 @@ def ai_context_preview():
     """Return the compact context preview that would be sent to the configured AI provider."""
     try:
         service = LLMService()
-        return jsonify({"ok": True, "context": service.context_preview(current_user), "provider": service.config.public_dict()})
+        return jsonify(
+            {"ok": True, "context": service.context_preview(current_user), "provider": service.config.public_dict()}
+        )
     except AIServiceError as exc:
         return _ai_error_response(exc)
 
@@ -384,9 +386,7 @@ def api_stop_timer():
         {"user_id": current_user.id, "timer_id": entry.id, "duration": entry.duration_formatted},
     )
 
-    return jsonify(
-        {"success": True, "duration": entry.duration_formatted, "duration_hours": entry.duration_hours}
-    )
+    return jsonify({"success": True, "duration": entry.duration_formatted, "duration_hours": entry.duration_hours})
 
 
 # --- Idle control: stop at specific time ---
@@ -1508,16 +1508,13 @@ def week_comparison():
     user_id = current_user.id
 
     def sum_hours_by_day(start_dt, end_dt, end_exclusive=False):
-        q = (
-            db.session.query(
-                func.date(TimeEntry.start_time).label("day"),
-                func.sum(TimeEntry.duration_seconds),
-            )
-            .filter(
-                TimeEntry.user_id == user_id,
-                TimeEntry.end_time.isnot(None),
-                TimeEntry.start_time >= start_dt,
-            )
+        q = db.session.query(
+            func.date(TimeEntry.start_time).label("day"),
+            func.sum(TimeEntry.duration_seconds),
+        ).filter(
+            TimeEntry.user_id == user_id,
+            TimeEntry.end_time.isnot(None),
+            TimeEntry.start_time >= start_dt,
         )
         if end_exclusive:
             q = q.filter(TimeEntry.start_time < end_dt)

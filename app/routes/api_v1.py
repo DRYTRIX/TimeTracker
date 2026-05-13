@@ -56,8 +56,8 @@ from app.models import (
     WebhookDelivery,
 )
 from app.models.time_entry import local_now
-from app.services.global_search_service import run_global_search
 from app.models.time_entry_approval import ApprovalStatus, TimeEntryApproval
+from app.services.global_search_service import run_global_search
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import (
     error_response,
@@ -522,7 +522,9 @@ def update_per_diem(pd_id):
             try:
                 setattr(pd, numfield, int(data[numfield]))
             except (ValueError, TypeError):
-                return validation_error_response({numfield: ["Invalid value."]}, message="Invalid value for " + numfield)
+                return validation_error_response(
+                    {numfield: ["Invalid value."]}, message="Invalid value for " + numfield
+                )
     for ratefield in ("full_day_rate", "half_day_rate", "breakfast_deduction", "lunch_deduction", "dinner_deduction"):
         if ratefield in data:
             try:
@@ -530,7 +532,9 @@ def update_per_diem(pd_id):
 
                 setattr(pd, ratefield, Decimal(str(data[ratefield])))
             except (ValueError, TypeError, InvalidOperation):
-                return validation_error_response({ratefield: ["Invalid value."]}, message="Invalid value for " + ratefield)
+                return validation_error_response(
+                    {ratefield: ["Invalid value."]}, message="Invalid value for " + ratefield
+                )
     if "start_date" in data:
         parsed = _parse_date(data["start_date"])
         if parsed:
@@ -3702,7 +3706,9 @@ def list_transfers_api():
         transfers.append(
             {
                 "reference_id": ref_id,
-                "moved_at": (in_m.moved_at or out_m.moved_at).isoformat() if (in_m.moved_at or out_m.moved_at) else None,
+                "moved_at": (
+                    (in_m.moved_at or out_m.moved_at).isoformat() if (in_m.moved_at or out_m.moved_at) else None
+                ),
                 "stock_item_id": out_m.stock_item_id,
                 "from_warehouse_id": out_m.warehouse_id,
                 "to_warehouse_id": in_m.warehouse_id,

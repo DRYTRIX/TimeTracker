@@ -907,7 +907,11 @@ def sync_integrations():
                     "sync",
                     bool(result.get("success")),
                     result.get("message"),
-                    ({"synced_count": _n, "synced_items": _n, "trigger": "scheduler"} if _n or result.get("success") else {"trigger": "scheduler"}),
+                    (
+                        {"synced_count": _n, "synced_items": _n, "trigger": "scheduler"}
+                        if _n or result.get("success")
+                        else {"trigger": "scheduler"}
+                    ),
                 )
 
             except Exception as e:

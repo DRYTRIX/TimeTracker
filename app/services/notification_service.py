@@ -103,14 +103,12 @@ def completed_projects_today_count(user_id: int, start_utc: datetime, end_utc: d
 
 
 def _completed_entry_count_today(user_id: int, start_utc: datetime, end_utc: datetime) -> int:
-    return (
-        TimeEntry.query.filter(
-            TimeEntry.user_id == user_id,
-            TimeEntry.start_time >= start_utc,
-            TimeEntry.start_time < end_utc,
-            TimeEntry.end_time.isnot(None),
-        ).count()
-    )
+    return TimeEntry.query.filter(
+        TimeEntry.user_id == user_id,
+        TimeEntry.start_time >= start_utc,
+        TimeEntry.start_time < end_utc,
+        TimeEntry.end_time.isnot(None),
+    ).count()
 
 
 def _in_hour_slot(user_local_now: datetime, target_hour: int, slot_minutes: int) -> bool:

@@ -5,11 +5,11 @@ Consent-aware telemetry service backed by Grafana Cloud OTLP.
 - Detailed analytics is sent only when the user opted in.
 """
 
+import base64
 import json
 import logging
 import os
 import platform
-import base64
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -77,10 +77,7 @@ def _otlp_enabled() -> bool:
     from app.config.analytics_defaults import get_analytics_config
 
     config = get_analytics_config()
-    endpoint = (
-        config.get("otel_exporter_otlp_endpoint")
-        or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
-    )
+    endpoint = config.get("otel_exporter_otlp_endpoint") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
     token = config.get("otel_exporter_otlp_token") or os.getenv("OTEL_EXPORTER_OTLP_TOKEN", "")
     return bool(endpoint and token)
 

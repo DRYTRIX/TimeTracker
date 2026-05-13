@@ -2,7 +2,8 @@ import json
 from datetime import datetime
 
 from flask import current_app, g, request, session, url_for
-from flask_babel import get_locale, gettext as _
+from flask_babel import get_locale
+from flask_babel import gettext as _
 from flask_login import current_user
 
 from app.models import Settings
@@ -214,9 +215,7 @@ def register_context_processors(app):
                 long_session_minutes = get_long_session_minutes()
 
                 if not session.get("support_session_started_at"):
-                    session["support_session_started_at"] = (
-                        datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
-                    )
+                    session["support_session_started_at"] = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 
                 lp_message = ""
                 lp_action = _("Support")
@@ -249,9 +248,7 @@ def register_context_processors(app):
                             else None
                         ),
                         "i18n": {
-                            "offlineNote": _(
-                                "You appear to be offline. Reconnect to open donation or checkout links."
-                            ),
+                            "offlineNote": _("You appear to be offline. Reconnect to open donation or checkout links."),
                             "shareSuccess": _("Link copied to clipboard"),
                             "shareFail": _("Could not copy link"),
                             "supportAction": _("Support"),

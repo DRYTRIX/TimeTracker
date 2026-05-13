@@ -258,6 +258,7 @@ def api_messages(channel_id):
                     errors.setdefault("attachment_size", []).append("Invalid value.")
             if errors:
                 from app.utils.api_responses import validation_error_response
+
                 return validation_error_response(errors, message="Invalid attachment data.")
 
         message = ChatMessage(

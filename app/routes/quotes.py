@@ -381,7 +381,9 @@ def create_quote():
                 except (ValueError, InvalidOperation):
                     pass
 
-            for title, qe_desc, cat, amount, qe_d in zip(qe_titles, qe_descriptions, qe_categories, qe_amounts, qe_dates):
+            for title, qe_desc, cat, amount, qe_d in zip(
+                qe_titles, qe_descriptions, qe_categories, qe_amounts, qe_dates
+            ):
                 title_s = (title or "").strip()
                 qe_desc_s = (qe_desc or "").strip()
                 if not title_s and not qe_desc_s and not (amount and str(amount).strip()):

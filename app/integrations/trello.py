@@ -180,9 +180,7 @@ class TrelloConnector(BaseConnector):
         except Exception as e:
             return {"success": False, "message": f"Sync failed: {str(e)}"}
 
-    def _sync_trello_to_timetracker(
-        self, api_key: str, token: str, actor_id: int, client_id: int
-    ) -> Dict[str, Any]:
+    def _sync_trello_to_timetracker(self, api_key: str, token: str, actor_id: int, client_id: int) -> Dict[str, Any]:
         """Sync Trello boards and cards to TimeTracker projects and tasks."""
         from app import db
         from app.models import Project, Task
@@ -282,9 +280,7 @@ class TrelloConnector(BaseConnector):
 
         return {"success": True, "synced_count": synced_count, "errors": errors}
 
-    def _sync_timetracker_to_trello(
-        self, api_key: str, token: str, actor_id: int, client_id: int
-    ) -> Dict[str, Any]:
+    def _sync_timetracker_to_trello(self, api_key: str, token: str, actor_id: int, client_id: int) -> Dict[str, Any]:
         """Sync TimeTracker tasks to Trello cards."""
         from app import db
         from app.models import Project, Task

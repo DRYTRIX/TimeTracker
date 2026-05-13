@@ -26,9 +26,7 @@ def build_support_checkout_urls(config: Dict[str, Any] | Any) -> Dict[str, str]:
     else:
         purchase = ""
     if not purchase:
-        purchase = os.getenv(
-            "SUPPORT_PURCHASE_URL", "https://timetracker.drytrix.com/support.html"
-        ).strip()
+        purchase = os.getenv("SUPPORT_PURCHASE_URL", "https://timetracker.drytrix.com/support.html").strip()
 
     def _tier(env_name: str) -> str:
         v = os.getenv(env_name, "").strip()

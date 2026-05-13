@@ -1860,10 +1860,14 @@ def new_purchase_order():
                 if desc.strip():
                     try:
                         quantity = (
-                            Decimal(item_quantities[i]) if i < len(item_quantities) and item_quantities[i] else Decimal("1")
+                            Decimal(item_quantities[i])
+                            if i < len(item_quantities) and item_quantities[i]
+                            else Decimal("1")
                         )
                         unit_cost = (
-                            Decimal(item_unit_costs[i]) if i < len(item_unit_costs) and item_unit_costs[i] else Decimal("0")
+                            Decimal(item_unit_costs[i])
+                            if i < len(item_unit_costs) and item_unit_costs[i]
+                            else Decimal("0")
                         )
                         if quantity <= 0:
                             raise ValueError("quantity must be greater than zero")
@@ -1904,7 +1908,9 @@ def new_purchase_order():
                         current_app.logger.warning(f"Invalid quantity or cost for purchase order item: {e}")
 
             purchase_order.calculate_totals()
-            if not safe_commit("create_purchase_order", {"supplier_id": supplier.id, "po_number": purchase_order.po_number}):
+            if not safe_commit(
+                "create_purchase_order", {"supplier_id": supplier.id, "po_number": purchase_order.po_number}
+            ):
                 flash(_("Could not create purchase order due to a database error."), "error")
                 return redirect(url_for("inventory.new_purchase_order"))
 

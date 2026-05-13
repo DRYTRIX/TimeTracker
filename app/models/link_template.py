@@ -95,6 +95,7 @@ class LinkTemplate(db.Model):
                     db.session.expunge_all()  # Clear all objects from session
                 except Exception as e:
                     import logging
+
                     logging.getLogger(__name__).debug("Link template rollback/expunge failed: %s", e)
                 return []
             raise
@@ -112,5 +113,6 @@ class LinkTemplate(db.Model):
                 db.session.rollback()
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).debug("Link template rollback failed: %s", e)
             return []

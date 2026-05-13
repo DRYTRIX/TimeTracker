@@ -1,9 +1,9 @@
 """API Documentation with Swagger UI"""
 
 from flask import Blueprint, current_app, jsonify, render_template_string
+from flask_swagger_ui import get_swaggerui_blueprint
 
 from app.config.analytics_defaults import get_version_from_setup
-from flask_swagger_ui import get_swaggerui_blueprint
 
 # Create blueprint for serving OpenAPI spec
 api_docs_bp = Blueprint("api_docs", __name__)
@@ -171,7 +171,10 @@ Example: `2024-01-15T14:30:00Z`
             "license": {"name": "MIT"},
         },
         "servers": [
-            {"url": "/api/v1", "description": "Versioned REST API (token auth); OpenAPI paths are relative to this base."},
+            {
+                "url": "/api/v1",
+                "description": "Versioned REST API (token auth); OpenAPI paths are relative to this base.",
+            },
             {
                 "url": "",
                 "description": "Application origin only (HTML, static assets, session `/api/*`, and other non-spec routes—not covered by this document).",
@@ -292,7 +295,10 @@ Example: `2024-01-15T14:30:00Z`
             {"name": "Users", "description": "User management operations"},
             {"name": "Invoices", "description": "Invoice operations"},
             {"name": "Expenses", "description": "Expense operations"},
-            {"name": "AI Helper", "description": "Server-side AI helper for chat, context preview, and confirmed actions"},
+            {
+                "name": "AI Helper",
+                "description": "Server-side AI helper for chat, context preview, and confirmed actions",
+            },
         ],
         "paths": {
             "/info": {
@@ -358,7 +364,10 @@ Example: `2024-01-15T14:30:00Z`
                             }
                         },
                     },
-                    "responses": {"200": {"description": "AI response"}, "400": {"description": "AI disabled or invalid input"}},
+                    "responses": {
+                        "200": {"description": "AI response"},
+                        "400": {"description": "AI disabled or invalid input"},
+                    },
                 }
             },
             "/ai/actions/confirm": {
@@ -378,7 +387,10 @@ Example: `2024-01-15T14:30:00Z`
                             }
                         },
                     },
-                    "responses": {"200": {"description": "Action completed"}, "400": {"description": "Unsupported action"}},
+                    "responses": {
+                        "200": {"description": "Action completed"},
+                        "400": {"description": "Unsupported action"},
+                    },
                 }
             },
             "/projects": {

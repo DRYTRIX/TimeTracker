@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from jinja2.sandbox import SecurityError, SandboxedEnvironment
+from jinja2.sandbox import SandboxedEnvironment, SecurityError
 
 
 def render_sandboxed_string(source: str, *, autoescape: bool = True, **context: Any) -> str:

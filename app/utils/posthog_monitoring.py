@@ -15,9 +15,11 @@ def is_monitoring_enabled() -> bool:
     """Check if monitoring telemetry is enabled and user opted in."""
     from app.utils.telemetry import is_telemetry_enabled
 
-    return bool(os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")) and bool(
-        os.getenv("OTEL_EXPORTER_OTLP_TOKEN", "")
-    ) and is_telemetry_enabled()
+    return (
+        bool(os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", ""))
+        and bool(os.getenv("OTEL_EXPORTER_OTLP_TOKEN", ""))
+        and is_telemetry_enabled()
+    )
 
 
 # ============================================================================

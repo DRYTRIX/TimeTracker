@@ -108,8 +108,5 @@ def _task_summary_for_projects(project_ids: List[int]) -> Dict[str, Any]:
         if t.project_id not in by_project:
             by_project[t.project_id] = {}
         by_project[t.project_id][status] = by_project[t.project_id].get(status, 0) + 1
-    by_project_list = [
-        {"project_id": pid, "by_status": by_project[pid]}
-        for pid in sorted(by_project.keys())
-    ]
+    by_project_list = [{"project_id": pid, "by_status": by_project[pid]} for pid in sorted(by_project.keys())]
     return {"by_status": by_status, "total": len(tasks), "by_project": by_project_list}

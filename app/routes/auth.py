@@ -17,7 +17,6 @@ from flask_login import current_user, login_required, login_user, logout_user
 from app import db, limiter, log_event, oauth, track_event
 from app.config import Config
 from app.models import User
-from app.utils.cache import get_cache
 from app.utils.auth_method import (
     auth_includes_ldap,
     auth_includes_local,
@@ -26,6 +25,7 @@ from app.utils.auth_method import (
     normalize_auth_method,
     requires_password_form,
 )
+from app.utils.cache import get_cache
 from app.utils.config_manager import ConfigManager
 from app.utils.db import safe_commit
 from app.utils.posthog_funnels import track_onboarding_started
@@ -188,9 +188,7 @@ def forgot_password():
         identifier = (request.form.get("identifier") or "").strip()
         # Do not reveal whether a user exists.
         flash(
-            _(
-                "If an account matches what you entered and email is configured, you'll receive a reset link shortly."
-            ),
+            _("If an account matches what you entered and email is configured, you'll receive a reset link shortly."),
             "info",
         )
 
@@ -461,9 +459,7 @@ def login():
                 from app.services.ldap_service import LDAPService
 
                 if requires_password and not password:
-                    log_event(
-                        "auth.login_failed", user_id=user.id, reason="password_required", auth_method=auth_method
-                    )
+                    log_event("auth.login_failed", user_id=user.id, reason="password_required", auth_method=auth_method)
                     flash(_("Password is required"), "error")
                     return render_template("auth/login.html", **_login_template_vars())
                 lu = LDAPService.authenticate(username, password)
@@ -1449,9 +1445,7 @@ def oidc_callback():
                 target_role_names = {role_map[g] for g in groups if g in role_map}
 
                 # Look up Role objects by name (only those that actually exist in DB)
-                target_roles = (
-                    Role.query.filter(Role.name.in_(target_role_names)).all() if target_role_names else []
-                )
+                target_roles = Role.query.filter(Role.name.in_(target_role_names)).all() if target_role_names else []
                 target_role_set = set(target_roles)
                 current_role_set = set(user.roles)
                 roles_changed = False
@@ -1480,18 +1474,14 @@ def oidc_callback():
 
                 if roles_changed:
                     if not safe_commit("oidc_sync_roles", {"user_id": user.id}):
-                        current_app.logger.warning(
-                            "DB commit failed syncing OIDC roles for user_id=%s", user.id
-                        )
+                        current_app.logger.warning("DB commit failed syncing OIDC roles for user_id=%s", user.id)
             elif getattr(Config, "_oidc_role_map_raw", None):
                 # User configured the env var but it failed to parse; surface once per login.
                 current_app.logger.warning(
                     "OIDC_ROLE_GROUP_MAP is set but failed to parse as a JSON object; role sync disabled."
                 )
         except Exception as e:
-            current_app.logger.exception(
-                "OIDC role sync failed for user_id=%s: %s", getattr(user, "id", None), e
-            )
+            current_app.logger.exception("OIDC role sync failed for user_id=%s: %s", getattr(user, "id", None), e)
 
         # Check if user is active
         if not user.is_active:

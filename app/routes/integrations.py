@@ -958,8 +958,9 @@ def sync_integration(integration_id):
         return redirect(url_for("integrations.view_integration", integration_id=integration_id))
 
     try:
-        from app.utils.integration_sync_context import sync_result_item_count
         from datetime import datetime
+
+        from app.utils.integration_sync_context import sync_result_item_count
 
         sync_result = connector.sync_data()
 

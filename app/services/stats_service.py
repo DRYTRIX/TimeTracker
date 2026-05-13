@@ -102,9 +102,9 @@ class StatsService:
             "this_week_hours": this_week_hours,
             "this_month_hours": this_month_hours,
             "last_7_days": last_7_days,
-            "estimated_value_tracked": round(estimated_value_tracked, 2)
-            if estimated_value_tracked and estimated_value_tracked > 0
-            else None,
+            "estimated_value_tracked": (
+                round(estimated_value_tracked, 2) if estimated_value_tracked and estimated_value_tracked > 0 else None
+            ),
             "estimated_value_currency": currency,
         }
         return payload
