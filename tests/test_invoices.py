@@ -1,5 +1,4 @@
 import pytest
-import sys
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 from unittest.mock import patch
@@ -1037,9 +1036,6 @@ def test_pdf_fallback_generator_includes_extra_goods(app, sample_invoice, sample
 
 @pytest.mark.smoke
 @pytest.mark.invoices
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="WeasyPrint requires gobject-2.0-0 library on Windows which may not be available"
-)
 def test_pdf_export_with_extra_goods_smoke(app, sample_invoice, sample_user):
     """Smoke test: Generate PDF with extra goods without errors."""
     from app.utils.pdf_generator import InvoicePDFGenerator
@@ -1640,7 +1636,6 @@ def test_invoice_view_peppol_check_exception_shows_generic_warning(app, client, 
 
 @pytest.mark.smoke
 @pytest.mark.invoices
-@pytest.mark.skip(reason="Temporarily disabled due to intermittent ObjectDeletedError in CI")
 def test_invoice_list_has_delete_buttons(app, client, admin_user, project):
     """Smoke test: Verify that the invoice list page has delete buttons."""
     from app.models import Client
