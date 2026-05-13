@@ -11,9 +11,28 @@ from app.utils.secret_crypto import decrypt_if_needed, encrypt_if_possible, is_c
 _creating_settings = threading.local()
 
 
+def _session_proxy_to_session(session):
+    """Resolve Flask-SQLAlchemy scoped_session to the real ORM Session.
+
+    Private flags like ``_flushing`` live on the underlying Session; ``scoped_session``
+    does not delegate them, so flush detection must use the unwrapped instance.
+    """
+    if session is None:
+        return None
+    if callable(session):
+        try:
+            return session()
+        except Exception:
+            return session
+    return session
+
+
 def _session_in_flush(session):
     """Return True if the session is currently in a flush (to avoid nested add+commit)."""
     try:
+        session = _session_proxy_to_session(session)
+        if session is None:
+            return False
         # SQLAlchemy sets _flushing for the outer flush() call.
         if getattr(session, "_flushing", False):
             return True
