@@ -177,7 +177,7 @@ class ExpenseService:
             return {"success": False, "message": "Access denied", "error": "access_denied"}
 
         # Update fields
-        for field in ("title", "description", "category", "currency_code", "payment_method", "status", "tags"):
+        for field in ("title", "description", "category", "currency_code", "payment_method", "status", "tags", "notes"):
             if field in kwargs:
                 setattr(expense, field, kwargs[field])
         if "amount" in kwargs:

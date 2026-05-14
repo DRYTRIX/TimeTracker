@@ -140,7 +140,7 @@ def update_expense(expense_id):
 
     data = request.get_json() or {}
     update_kwargs = {}
-    for field in ("title", "description", "category", "currency_code", "payment_method", "status", "tags"):
+    for field in ("title", "description", "category", "currency_code", "payment_method", "status", "tags", "notes"):
         if field in data:
             update_kwargs[field] = data[field]
     if "amount" in data:
