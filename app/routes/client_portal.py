@@ -529,7 +529,7 @@ def dashboard_preferences_post():
     except (TypeError, ValueError):
         uid = None
 
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     widget_ids = data.get("widget_ids")
     widget_order = data.get("widget_order")
 
