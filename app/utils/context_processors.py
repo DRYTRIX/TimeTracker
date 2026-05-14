@@ -36,6 +36,7 @@ def register_context_processors(app):
                 resolved_date = get_resolved_date_format_key()
                 resolved_time = get_resolved_time_format_key()
                 resolved_week_start = get_resolved_week_start_day()
+                ai_cfg = settings.get_ai_config()
                 return {
                     "settings": settings,
                     "currency": settings.currency,
@@ -44,6 +45,7 @@ def register_context_processors(app):
                     "resolved_time_format_key": resolved_time,
                     "resolved_week_start_day": resolved_week_start,
                     "is_license_activated": is_license_activated(settings),
+                    "ai_enabled": bool(ai_cfg.get("enabled")),
                 }
         except Exception as e:
             # Log the error but continue with defaults
@@ -66,6 +68,10 @@ def register_context_processors(app):
             resolved_date = "YYYY-MM-DD"
             resolved_time = "24h"
             resolved_week_start = 1
+        try:
+            ai_enabled = bool(current_app.config.get("AI_ENABLED", False))
+        except Exception:
+            ai_enabled = False
         return {
             "settings": None,
             "currency": "EUR",
@@ -74,6 +80,7 @@ def register_context_processors(app):
             "resolved_time_format_key": resolved_time,
             "resolved_week_start_day": resolved_week_start,
             "is_license_activated": False,
+            "ai_enabled": ai_enabled,
         }
 
     @app.context_processor

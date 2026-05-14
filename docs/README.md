@@ -9,6 +9,7 @@ Welcome to the comprehensive TimeTracker documentation. Everything you need to i
 - **[🚀 Getting Started Guide](GETTING_STARTED.md)** — Complete beginner tutorial (⭐ Start here!)
 - **[Main README](../README.md)** — Product overview and quick start
 - **[Installation Guide](../INSTALLATION.md)** — Step-by-step installation (Docker, SQLite)
+- **[Uninstall / remove data](../UNINSTALL.md)** — Stop Docker, remove volumes, **disable or remove the AI helper**
 - **[Architecture](ARCHITECTURE.md)** — System overview and design
 - **[Development Guide](DEVELOPMENT.md)** — Run locally, tests, releases
 - **[API Quick Reference](API.md)** — REST API overview and examples
@@ -195,6 +196,7 @@ See [REST API Documentation](api/REST_API.md) for complete examples and endpoint
 2. **[Getting Started Guide](GETTING_STARTED.md)** — Complete beginner tutorial
 3. **[Docker Compose Setup](admin/configuration/DOCKER_COMPOSE_SETUP.md)** — Recommended deployment method
 4. **[Requirements](REQUIREMENTS.md)** — System requirements
+5. **[Uninstall / remove data](../UNINSTALL.md)** — Tear down containers, volumes, and optional AI (Ollama)
 
 ### Database & Migrations
 - **[Database Migrations](../migrations/README.md)** — Database schema management with Flask-Migrate
@@ -208,6 +210,7 @@ See [REST API Documentation](api/REST_API.md) for complete examples and endpoint
 ## 🛠️ Troubleshooting
 
 ### Common Issues
+- **[Uninstall / remove data](../UNINSTALL.md)** — Stop Docker, remove volumes, disable AI helper and Ollama
 - **[Docker Startup Troubleshooting](admin/configuration/DOCKER_STARTUP_TROUBLESHOOTING.md)** — Docker won't start
 - **[Database Connection Issues](../docker/TROUBLESHOOTING_DB_CONNECTION.md)** — Can't connect to database
 - **[PDF Generation Issues](PDF_GENERATION_TROUBLESHOOTING.md)** — PDFs not generating

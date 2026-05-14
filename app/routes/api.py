@@ -52,6 +52,8 @@ def ai_context_preview():
     """Return the compact context preview that would be sent to the configured AI provider."""
     try:
         service = LLMService()
+        if not service.is_enabled():
+            return jsonify({"ok": False, "error": "AI helper is disabled", "error_code": "ai_disabled"}), 503
         return jsonify(
             {"ok": True, "context": service.context_preview(current_user), "provider": service.config.public_dict()}
         )
@@ -89,7 +91,10 @@ def ai_confirm_action():
     """Execute a user-confirmed AI proposed action."""
     data = request.get_json(silent=True) or {}
     try:
-        result = LLMService().confirm_action(current_user, data.get("action") or {})
+        service = LLMService()
+        if not service.is_enabled():
+            return jsonify({"ok": False, "error": "AI helper is disabled", "error_code": "ai_disabled"}), 503
+        result = service.confirm_action(current_user, data.get("action") or {})
         return jsonify(result)
     except AIServiceError as exc:
         return _ai_error_response(exc)

@@ -71,9 +71,13 @@ class LLMService:
     def __init__(self, config: Optional[AIProviderConfig] = None):
         self.config = config or AIProviderConfig.from_settings()
 
+    def is_enabled(self) -> bool:
+        """True when the AI helper feature flag is on (may still be misconfigured for LLM calls)."""
+        return bool(self.config.enabled)
+
     def ensure_enabled(self) -> None:
         if not self.config.enabled:
-            raise AIServiceError("AI helper is not enabled.", "ai_disabled", 400)
+            raise AIServiceError("AI helper is disabled.", "ai_disabled", 503)
         if not self.config.base_url or not self.config.model:
             raise AIServiceError("AI helper is not fully configured.", "ai_not_configured", 400)
         if self.config.provider == "openai_compatible" and not self.config.api_key:

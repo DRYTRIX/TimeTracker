@@ -22,6 +22,8 @@ def app():
     app = create_app(
         {
             "TESTING": True,
+            "FLASK_ENV": "testing",
+            "AI_ENABLED": False,
             "SQLALCHEMY_DATABASE_URI": f"sqlite:///{unique_db_path}",
             "SQLALCHEMY_ENGINE_OPTIONS": {
                 "pool_pre_ping": True,
@@ -181,7 +183,8 @@ class TestAPIAuthentication:
 class TestAIHelperAPI:
     """Test shared AI helper API endpoints."""
 
-    def test_ai_context_preview_uses_token_auth(self, client, api_token, test_project):
+    def test_ai_context_preview_uses_token_auth(self, app, client, api_token, test_project):
+        app.config["AI_ENABLED"] = True
         headers = {"Authorization": f"Bearer {api_token}"}
         response = client.get("/api/v1/ai/context-preview", headers=headers)
 
@@ -191,11 +194,19 @@ class TestAIHelperAPI:
         assert "context" in data
         assert "provider" in data
 
+    def test_ai_context_preview_returns_503_when_disabled(self, client, api_token):
+        headers = {"Authorization": f"Bearer {api_token}"}
+        response = client.get("/api/v1/ai/context-preview", headers=headers)
+        assert response.status_code == 503
+        data = json.loads(response.data)
+        assert data["success"] is False
+        assert data["error_code"] == "ai_disabled"
+
     def test_ai_chat_returns_disabled_error_when_not_enabled(self, client, api_token):
         headers = {"Authorization": f"Bearer {api_token}", "Content-Type": "application/json"}
         response = client.post("/api/v1/ai/chat", json={"prompt": "What did I do today?"}, headers=headers)
 
-        assert response.status_code == 400
+        assert response.status_code == 503
         data = json.loads(response.data)
         assert data["error_code"] == "ai_disabled"
 

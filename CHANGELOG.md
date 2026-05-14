@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.6] - 2026-05-14
+
+### Documentation
+
+- **Uninstall / AI** — Expanded [UNINSTALL.md](UNINSTALL.md) with a dedicated **Disabling or removing the AI helper** section (admin UI, `.env`, Docker `ai` profile, `ollama_data` volume vs full `down -v`, API token scopes `read:ai` / `write:ai`, hosted provider keys).
+- **Version** — Documented release **5.5.6** to match `setup.py` (single source of truth for the application version).
+
 ## [5.5.5] - 2026-05-12
 
 ### Fixed

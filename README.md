@@ -6,7 +6,7 @@
 
 **Track time. Manage projects. Generate invoices. All in one place.**
 
-[🆕 What's New](#-whats-new) • [🚀 Quick Start](#-quick-start) • [✨ Features](#-features) • [📸 Screenshots](#-screenshots) • [📖 Getting Started](docs/GETTING_STARTED.md) • [📚 Documentation](docs/) • [📋 Changelog](CHANGELOG.md) • [🐳 Deploy](#-deployment)
+[🆕 What's New](#-whats-new) • [🚀 Quick Start](#-quick-start) • [✨ Features](#-features) • [📸 Screenshots](#-screenshots) • [📖 Getting Started](docs/GETTING_STARTED.md) • [📚 Documentation](docs/) • [🗑️ Uninstall](UNINSTALL.md) • [📋 Changelog](CHANGELOG.md) • [🐳 Deploy](#-deployment)
 
 ---
 
@@ -433,7 +433,11 @@ docker-compose up -d
 
 **First login creates the admin account** — just enter your username! For setup problems, see [INSTALLATION.md](INSTALLATION.md).
 
+**Default install (no bundled AI):** the main `docker-compose.yml` starts the app and PostgreSQL only. The optional **Ollama** stack is not started unless you opt in (see [AI Helper](#ai-helper-ollama-or-hosted) below).
+
 **📖 See the complete setup guide:** [`docs/admin/configuration/DOCKER_COMPOSE_SETUP.md`](docs/admin/configuration/DOCKER_COMPOSE_SETUP.md)
+
+**🗑️ Removing TimeTracker:** [UNINSTALL.md](UNINSTALL.md)
 
 **🔧 Troubleshooting:**
 - **Port already in use?** Change ports in `docker-compose.yml` or stop conflicting services
@@ -587,6 +591,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory. See 
 **For Administrators:**
 - **[Docker Compose Setup](docs/admin/configuration/DOCKER_COMPOSE_SETUP.md)** — Production deployment guide
 - **[Configuration Guide](docs/admin/configuration/DOCKER_COMPOSE_SETUP.md)** — All configuration options
+- **[Uninstall / remove data](UNINSTALL.md)** — Tear down Docker, volumes, and optional AI (Ollama); [AI helper only](UNINSTALL.md#disabling-or-removing-the-ai-helper)
 - **[OIDC/SSO Setup](docs/admin/configuration/OIDC_SETUP.md)** — Enterprise authentication
 - **[Email Configuration](docs/admin/configuration/EMAIL_CONFIGURATION.md)** — Email setup
 - **[Version Management](docs/admin/deployment/VERSION_MANAGEMENT.md)** — Updates and releases
@@ -706,10 +711,10 @@ docker-compose -f docker/docker-compose.remote.yml up -d
 
 ## AI Helper (Ollama or hosted)
 
-TimeTracker includes an optional **server-side AI helper** for the web app and API clients.
+TimeTracker includes an optional **server-side AI helper** for the web app and API clients. **New installs default to AI off** (`AI_ENABLED=false` in `env.example` and in the root `docker-compose.yml` app service) so time tracking works without downloading a large language model.
 
-- **Enable**: set `AI_ENABLED=true`
-- **Ollama (default)**: set `AI_PROVIDER=ollama`, `AI_MODEL=...`, and `AI_BASE_URL` to `http://ollama:11434` when using the bundled stack in `docker-compose.yml`, or `http://127.0.0.1:11434` when Ollama runs on the host outside Docker.
+- **Enable (any setup)**: set `AI_ENABLED=true` (environment or **Admin → System Settings → AI Helper**).
+- **Ollama**: set `AI_PROVIDER=ollama`, `AI_MODEL=...`, and `AI_BASE_URL` to `http://ollama:11434` when Ollama runs in Docker on the same Compose network, or `http://127.0.0.1:11434` when Ollama runs on the host.
 - **Hosted OpenAI-compatible**: set `AI_PROVIDER=openai_compatible` and `AI_API_KEY=...`
 
 The AI helper is exposed as:
@@ -717,16 +722,27 @@ The AI helper is exposed as:
 - Session web UI JSON: `POST /api/ai/chat` (same-origin, login required)
 - REST API v1: `POST /api/v1/ai/chat` (API token required, scopes `read:ai`/`write:ai`)
 
-### Bundled Ollama service (Docker Compose)
+### Bundled Ollama service (Docker Compose, opt-in)
 
-`docker-compose.yml` ships a CPU-only `ollama` service plus a one-shot `ollama-init` sidecar that pulls the model defined by `AI_MODEL` (default `llama3.1`, ~4.7 GB) on first boot. The `app` service waits for the pull to finish before starting.
+The root `docker-compose.yml` defines a CPU-only **`ollama`** service and a one-shot **`ollama-init`** sidecar that pulls `AI_MODEL` (default `llama3.1`, ~4.7 GB) into the `ollama_data` volume. These services use the Compose **`ai`** profile so they **do not start by default**.
 
-- The app reaches it at `http://ollama:11434` over the Docker network — no host ports need to be opened.
-- Change the model by setting `AI_MODEL` in `.env` (e.g. `AI_MODEL=qwen2.5:3b` for lighter hardware) and re-running `docker compose up -d`; the init sidecar will pull the new model.
-- Pulled models are cached in the `ollama_data` named volume, so subsequent boots are instant.
+**Enable bundled Ollama:**
+
+1. In `.env`, set `AI_ENABLED=true`, `AI_PROVIDER=ollama`, `AI_BASE_URL=http://ollama:11434`, and your desired `AI_MODEL`.
+2. Start the stack with the profile:
+
+   ```bash
+   docker compose --profile ai up -d
+   ```
+
+- The app reaches Ollama at `http://ollama:11434` over the Docker network — no host ports need to be opened.
+- Change the model by setting `AI_MODEL` in `.env` (e.g. `AI_MODEL=qwen2.5:3b` for lighter hardware) and re-running `docker compose --profile ai up -d`; the init sidecar will pull the new model when needed.
+- Pulled models are cached in the `ollama_data` named volume, so subsequent boots are faster.
 - Verify in the UI: **Admin → System Settings → AI helper**, then click *Test connection*.
-- To pull additional models manually: `docker compose exec ollama ollama pull <model>`.
-- To use a hosted provider instead, set `AI_PROVIDER=openai_compatible`, `AI_BASE_URL=https://api.your-provider.example/`, `AI_API_KEY=…` in `.env`; the in-cluster Ollama can stay running or be removed.
+- To pull additional models manually: `docker compose exec ollama ollama pull <model>` (with the `ai` profile active).
+- **Hosted provider only (no Ollama containers):** set `AI_PROVIDER=openai_compatible`, `AI_BASE_URL`, and `AI_API_KEY` in `.env`; keep `docker compose up -d` without the `ai` profile.
+
+**Disable or remove AI** (turn off LLM calls, stop Ollama, revoke tokens, delete `ollama_data` safely): [UNINSTALL.md](UNINSTALL.md#disabling-or-removing-the-ai-helper).
 
 ### Encrypting stored secrets (recommended)
 

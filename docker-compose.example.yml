@@ -39,6 +39,14 @@ services:
       - OTEL_DEBUG_LOGGING=${OTEL_DEBUG_LOGGING:-false}
       - ENABLE_TELEMETRY=${ENABLE_TELEMETRY:-false}
       - TELE_SALT=${TELE_SALT:-}
+      # AI helper (off by default; no Ollama in this compose — use external provider or root docker-compose --profile ai)
+      - AI_ENABLED=${AI_ENABLED:-false}
+      - AI_PROVIDER=${AI_PROVIDER:-ollama}
+      - AI_BASE_URL=${AI_BASE_URL:-http://127.0.0.1:11434}
+      - AI_MODEL=${AI_MODEL:-llama3.1}
+      - AI_API_KEY=${AI_API_KEY:-}
+      - AI_TIMEOUT_SECONDS=${AI_TIMEOUT_SECONDS:-60}
+      - AI_CONTEXT_LIMIT=${AI_CONTEXT_LIMIT:-40}
     ports:
       - "8080:8080"
     volumes:
