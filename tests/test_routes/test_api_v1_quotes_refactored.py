@@ -50,12 +50,12 @@ class TestAPIQuotesRefactored:
         assert "quote" in data
         assert data["quote"]["id"] == quote.id
 
-    def test_create_quote_uses_service_layer(self, app, client_with_token, client):
+    def test_create_quote_uses_service_layer(self, app, client_with_token, test_client):
         """Test that create_quote route uses service layer"""
         response = client_with_token.post(
             "/api/v1/quotes",
             json={
-                "client_id": client.id,
+                "client_id": test_client.id,
                 "title": "Test Quote",
                 "description": "Test description",
                 "tax_rate": 21.0,
