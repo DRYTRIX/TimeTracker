@@ -433,8 +433,13 @@ def check_audit_table_exists(force_check=False):
         return _audit_table_exists
 
     try:
-        # Try to check if the table exists
-        inspector = sqlalchemy_inspect(db.engine)
+        # Prefer the current session connection so SQLite tests do not open a
+        # second connection while a flush is acquiring a write lock.
+        try:
+            bind = db.session.connection()
+        except Exception:
+            bind = db.engine
+        inspector = sqlalchemy_inspect(bind)
         tables = inspector.get_table_names()
         exists = "audit_logs" in tables
         _audit_table_exists = exists
