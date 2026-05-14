@@ -10,6 +10,7 @@ import pytest
 import re
 from datetime import datetime, date, timedelta
 from decimal import Decimal
+from types import SimpleNamespace
 from app import db, create_app
 from app.models import User, Project, Settings, Client, Payment, Invoice, Expense
 from factories import ClientFactory, ProjectFactory, InvoiceFactory
@@ -176,7 +177,8 @@ def sample_client(app):
     """Create a sample client."""
     with app.app_context():
         client = ClientFactory(name="Test Client", email="test@example.com")
-        return client
+        db.session.commit()
+        return SimpleNamespace(id=client.id, name=client.name)
 
 
 @pytest.fixture
@@ -187,7 +189,8 @@ def sample_project(app, sample_client):
         project = ProjectFactory(
             name="Test Project", client_id=sample_client.id, status="active", hourly_rate=Decimal("100.00")
         )
-        return project
+        db.session.commit()
+        return SimpleNamespace(id=project.id, name=project.name, client_id=project.client_id)
 
 
 @pytest.fixture
@@ -450,19 +453,26 @@ def test_settings_currency_can_be_changed(app):
     """Test that currency setting can be changed."""
     with app.app_context():
         settings = Settings.get_settings()
+        # get_settings() may return a transient (in-memory) instance in some
+        # edge cases (e.g. during flush). Ensure we have a persistent row.
+        if settings not in db.session or getattr(settings, "id", None) is None:
+            db.session.add(settings)
+            db.session.commit()
+
         original_currency = settings.currency
 
         # Change to USD
         settings.currency = "USD"
         db.session.commit()
 
-        # Verify change
-        db.session.expire(settings)
-        db.session.refresh(settings)
-        assert settings.currency == "USD"
+        # Re-query to verify (more robust than refresh, which would fail on
+        # transient instances).
+        fresh = Settings.query.first()
+        assert fresh is not None
+        assert fresh.currency == "USD"
 
         # Change back
-        settings.currency = original_currency
+        fresh.currency = original_currency
         db.session.commit()
 
 
