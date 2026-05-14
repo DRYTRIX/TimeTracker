@@ -296,21 +296,23 @@ class TestProjectCostMethods:
         from unittest.mock import patch
         from datetime import datetime as dt
 
+        # Note: patching app.models.project_cost.datetime does NOT affect the
+        # column-default factory (it captured datetime.utcnow at class
+        # definition time), so we set updated_at explicitly on the instance.
         t0 = dt(2024, 1, 1, 10, 0, 0)
         t1 = dt(2024, 1, 1, 10, 0, 1)
         with app.app_context():
-            with patch("app.models.project_cost.datetime") as mock_dt:
-                mock_dt.utcnow.side_effect = [t0, t1]  # initial updated_at, then in mark_as_invoiced
-                cost = ProjectCost(
-                    project_id=test_project,
-                    user_id=test_user,
-                    description="Test cost",
-                    category="materials",
-                    amount=Decimal("75.00"),
-                    cost_date=date.today(),
-                )
-                db.session.add(cost)
-                db.session.commit()
+            cost = ProjectCost(
+                project_id=test_project,
+                user_id=test_user,
+                description="Test cost",
+                category="materials",
+                amount=Decimal("75.00"),
+                cost_date=date.today(),
+            )
+            cost.updated_at = t0
+            db.session.add(cost)
+            db.session.commit()
 
             original_updated_at = cost.updated_at
 
