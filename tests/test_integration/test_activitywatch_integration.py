@@ -67,7 +67,7 @@ class TestActivityWatchConnector:
         connector = ActivityWatchConnector(activitywatch_integration, None)
         assert connector.provider_name == "activitywatch"
 
-    @patch("app.integrations.activitywatch.requests.get")
+    @patch("app.integrations.activitywatch.session_request")
     def test_test_connection_success(self, mock_get, activitywatch_integration):
         """Test connection when aw-server returns buckets."""
         mock_resp = Mock()
@@ -83,9 +83,10 @@ class TestActivityWatchConnector:
         assert "Connected to ActivityWatch" in result["message"]
         mock_get.assert_called_once()
         call_args = mock_get.call_args
-        assert "buckets" in call_args[0][0]
+        # session_request signature: (session, method, url, **kw). URL is positional arg 2.
+        assert "buckets" in call_args[0][2]
 
-    @patch("app.integrations.activitywatch.requests.get")
+    @patch("app.integrations.activitywatch.session_request")
     def test_test_connection_failure(self, mock_get, activitywatch_integration):
         """Test connection when aw-server is unreachable."""
         mock_get.side_effect = Exception("Connection refused")
@@ -96,7 +97,7 @@ class TestActivityWatchConnector:
         assert result["success"] is False
         assert "message" in result
 
-    @patch("app.integrations.activitywatch.requests.get")
+    @patch("app.integrations.activitywatch.session_request")
     def test_sync_data_imports_events(self, mock_get, db_session, activitywatch_integration, test_project):
         """Test sync imports ActivityWatch events as time entries."""
         # buckets: dict format
@@ -131,7 +132,7 @@ class TestActivityWatchConnector:
         assert link.time_entry_id == entry.id
         assert "aw-watcher-window_testhost" in link.external_uid
 
-    @patch("app.integrations.activitywatch.requests.get")
+    @patch("app.integrations.activitywatch.session_request")
     def test_sync_data_skips_duplicates(self, mock_get, db_session, activitywatch_integration, test_project):
         """Test sync skips already imported events (idempotency)."""
         ts_raw = "2024-01-15T10:00:00.000000Z"

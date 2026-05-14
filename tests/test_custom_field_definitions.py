@@ -4,8 +4,7 @@ Tests model creation, deletion, and client field cleanup.
 """
 
 import pytest
-from datetime import datetime
-from app.models import CustomFieldDefinition, Client, User
+from app.models import CustomFieldDefinition, Client
 from app import db
 
 
@@ -164,7 +163,9 @@ def test_count_clients_with_value_ignores_other_fields(app, admin_user, test_cli
 
 @pytest.mark.integration
 @pytest.mark.database
-def test_delete_custom_field_removes_from_clients(app, admin_user, test_client, admin_authenticated_client):
+def test_delete_custom_field_removes_from_clients(
+    app, admin_user, test_client, admin_authenticated_client
+):
     """Test that deleting a custom field definition removes it from all clients."""
     with app.app_context():
         # Create custom field definition
@@ -203,7 +204,9 @@ def test_delete_custom_field_removes_from_clients(app, admin_user, test_client, 
 
 @pytest.mark.integration
 @pytest.mark.database
-def test_delete_custom_field_multiple_clients(app, admin_user, test_client, admin_authenticated_client):
+def test_delete_custom_field_multiple_clients(
+    app, admin_user, test_client, admin_authenticated_client
+):
     """Test that deleting a custom field removes it from multiple clients."""
     with app.app_context():
         # Create custom field definition
@@ -245,7 +248,9 @@ def test_delete_custom_field_multiple_clients(app, admin_user, test_client, admi
 
 @pytest.mark.integration
 @pytest.mark.database
-def test_delete_custom_field_no_clients_affected(app, admin_user, admin_authenticated_client):
+def test_delete_custom_field_no_clients_affected(
+    app, admin_user, admin_authenticated_client
+):
     """Test deleting a custom field when no clients have values."""
     with app.app_context():
         # Create custom field definition
@@ -272,7 +277,9 @@ def test_delete_custom_field_no_clients_affected(app, admin_user, admin_authenti
 
 @pytest.mark.integration
 @pytest.mark.database
-def test_delete_custom_field_preserves_other_fields(app, admin_user, test_client, admin_authenticated_client):
+def test_delete_custom_field_preserves_other_fields(
+    app, admin_user, test_client, admin_authenticated_client
+):
     """Test that deleting one custom field doesn't affect other custom fields."""
     with app.app_context():
         # Create two custom field definitions
@@ -289,9 +296,13 @@ def test_delete_custom_field_preserves_other_fields(app, admin_user, test_client
         db.session.add_all([definition1, definition2])
         db.session.commit()
 
-        # Set both fields for client
-        test_client.set_custom_field("field1", "value1")
-        test_client.set_custom_field("field2", "value2")
+        # Set both fields for client. Re-query the client into the current
+        # session so the two JSON mutations are written back through the
+        # active session's identity map; the `test_client` fixture instance
+        # may belong to a different session after the fixture commit.
+        client = Client.query.get(test_client.id)
+        client.set_custom_field("field1", "value1")
+        client.set_custom_field("field2", "value2")
         db.session.commit()
 
         # Delete only definition1
@@ -306,4 +317,3 @@ def test_delete_custom_field_preserves_other_fields(app, admin_user, test_client
         client_after = Client.query.get(test_client.id)
         assert client_after.get_custom_field("field1") is None
         assert client_after.get_custom_field("field2") == "value2"
-
