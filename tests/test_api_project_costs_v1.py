@@ -1,4 +1,7 @@
 import pytest
+import uuid
+import tempfile
+import os
 
 pytestmark = [pytest.mark.api, pytest.mark.integration]
 
@@ -10,10 +13,12 @@ from app.models import User, Project, Client, ApiToken
 
 @pytest.fixture
 def app():
+    unique_db_path = os.path.join(tempfile.gettempdir(), f"test_api_project_costs_{uuid.uuid4().hex}.sqlite")
+
     app = create_app(
         {
             "TESTING": True,
-            "SQLALCHEMY_DATABASE_URI": "sqlite:///test_api_project_costs.sqlite",
+            "SQLALCHEMY_DATABASE_URI": f"sqlite:///{unique_db_path}",
             "WTF_CSRF_ENABLED": False,
         }
     )
