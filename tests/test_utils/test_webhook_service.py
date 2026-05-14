@@ -28,6 +28,11 @@ def test_webhook(db_session, test_user):
         events=["project.created"],
         user_id=test_user.id,
         is_active=True,
+        # Disable retries so timeout/http-error tests can assert the
+        # immediate `failed` status without _schedule_retry flipping it
+        # to `retrying`. Retry behaviour itself is exercised in
+        # test_retry_failed_deliveries.
+        max_retries=0,
     )
     webhook.set_secret()
     db_session.add(webhook)
