@@ -363,13 +363,14 @@ class ReportLabTemplateRenderer:
                 # Tables are rendered as flowables (they flow naturally)
                 # Add spacer to position table vertically based on y coordinate
                 table_y = element.get("y", 0)
+                page_config = self.template.get("page", {})
+                margins = page_config.get("margin", {"top": 20, "right": 20, "bottom": 20, "left": 20})
+                margin_top = margins.get("top", 20) * mm
+                margin_left = margins.get("left", 20) * mm
                 if table_y > 0:
                     # Tables are flowables, so they start from the top margin
                     # The y position in the template is from top of page (0,0 = top-left)
                     # We need to position the table relative to the top margin
-                    page_config = self.template.get("page", {})
-                    margins = page_config.get("margin", {"top": 20, "right": 20, "bottom": 20, "left": 20})
-                    margin_top = margins.get("top", 20) * mm
                     # table_y is absolute from top of page, so we need to account for the margin
                     # The spacer should position the table at the correct y position
                     spacer_height = max(0, table_y - margin_top)
@@ -378,12 +379,36 @@ class ReportLabTemplateRenderer:
 
                 table_flowable = self._render_table(element)
                 if table_flowable:
-                    # Wrap table to respect width if specified
-                    table_width = element.get("width")
-                    if table_width:
-                        # Table width is already set in _render_table via colWidths
-                        pass
-                    story.append(table_flowable)
+                    col_widths = self._scaled_table_col_widths(element)
+                    total_table_w = sum(col_widths) if col_widths else 0.0
+                    table_x = element.get("x") or 0
+                    try:
+                        table_x_f = float(table_x)
+                    except (TypeError, ValueError):
+                        table_x_f = 0.0
+                    try:
+                        margin_left_f = float(margin_left)
+                    except (TypeError, ValueError):
+                        margin_left_f = 0.0
+                    left_offset = max(0.0, table_x_f - margin_left_f)
+                    if left_offset > 0.01 and total_table_w > 0.01:
+                        spacer_para = Paragraph("", self._get_style({"style": {}}, "NormalText"))
+                        outer = Table([[spacer_para, table_flowable]], colWidths=[left_offset, total_table_w])
+                        outer.setStyle(
+                            TableStyle(
+                                [
+                                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                                ]
+                            )
+                        )
+                        outer.hAlign = "LEFT"
+                        story.append(outer)
+                    else:
+                        story.append(table_flowable)
             else:
                 # For absolute positioning, store element data to draw in page callback
                 element_data = {"element": element, "renderer": self}
@@ -665,6 +690,41 @@ class ReportLabTemplateRenderer:
             total_amount=amt,
         )
 
+    def _scaled_table_col_widths(self, element: Dict[str, Any]) -> List[float]:
+        """Column widths in points, scaled so their sum matches element.width when set."""
+        columns = element.get("columns") or []
+        if not columns:
+            return []
+        raw: List[float] = []
+        for c in columns:
+            try:
+                raw.append(float(c.get("width", 100) or 100))
+            except (TypeError, ValueError):
+                raw.append(100.0)
+        s = sum(raw)
+        if s <= 0:
+            raw = [100.0] * len(columns)
+            s = sum(raw)
+        target_f: Optional[float] = None
+        tw = element.get("width")
+        if tw is not None:
+            try:
+                twf = float(tw)
+                if twf > 0:
+                    target_f = twf
+            except (TypeError, ValueError):
+                target_f = None
+        if target_f is not None and abs(s - target_f) > 0.01:
+            scale = target_f / s
+            raw = [w * scale for w in raw]
+        min_w = 10.0
+        raw = [max(min_w, w) for w in raw]
+        s2 = sum(raw)
+        if target_f is not None and s2 > target_f + 0.01:
+            scale2 = target_f / s2
+            raw = [w * scale2 for w in raw]
+        return raw
+
     def _render_table(self, element: Dict[str, Any]) -> Table:
         """Render a table element"""
         columns = element.get("columns", [])
@@ -732,14 +792,8 @@ class ReportLabTemplateRenderer:
                 empty_row.extend([Paragraph("", self._get_style({"style": {}}, "NormalText"))] * (num_cols - 1))
                 table_data.append(empty_row)
 
-        # Calculate column widths (convert from points to ReportLab units)
-        # Note: columns already have width in points from generateCode
-        col_widths = []
-        total_width = 0
-        for col in columns:
-            col_width = col.get("width", 100)  # Already in points
-            col_widths.append(col_width)
-            total_width += col_width
+        # Column widths in points (scaled to element.width when set)
+        col_widths = self._scaled_table_col_widths(element)
 
         # Create table with proper column widths
         table = Table(table_data, colWidths=col_widths, repeatRows=1)
@@ -761,6 +815,15 @@ class ReportLabTemplateRenderer:
         row_bg = colors.HexColor(style_config.get("rowBackground", "#ffffff"))
         row_text_color = colors.HexColor(style_config.get("rowTextColor", "#000000"))
 
+        try:
+            grid_w = float(style_config.get("borderWidth", 0.5))
+        except (TypeError, ValueError):
+            grid_w = 0.5
+        if grid_w <= 0:
+            grid_w = 0.5
+        grid_color_hex = _normalize_color(style_config.get("borderColor", "#e2e8f0")) or "#e2e8f0"
+        grid_color = colors.HexColor(grid_color_hex)
+
         commands = [
             # Header row styling
             ("BACKGROUND", (0, 0), (-1, 0), header_bg),
@@ -776,7 +839,7 @@ class ReportLabTemplateRenderer:
             ("FONTSIZE", (0, 1), (-1, -1), 10),
             ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#ffffff"), colors.HexColor("#f9fafb")]),
             # Grid and borders
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+            ("GRID", (0, 0), (-1, -1), grid_w, grid_color),
         ]
 
         # Apply column alignments (both header and data rows)

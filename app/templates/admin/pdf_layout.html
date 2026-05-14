@@ -2263,6 +2263,7 @@
             </div>
             <div id="pdf-marquee" class="pdf-editor-marquee"></div>
         </div>
+    </div>
 
     <!-- RIGHT: Properties Panel -->
     <div class="properties-panel">
@@ -6120,7 +6121,14 @@ async function initializePDFEditor() {
                     // Extract actual header text from the table group's first Text child
                     const children = child.getChildren ? child.getChildren() : (child.children || []);
                     const textElements = children.filter(c => c.className === 'Text');
-                    const headerText = textElements[0] ? (textElements[0].attrs.text || '') : '';
+                    const lineElements = children.filter(c => c.className === 'Line');
+                    const headerEl = textElements[0];
+                    const itemsEl = textElements[1];
+                    const lineEl = lineElements[0];
+                    const headerAttrs = headerEl ? headerEl.attrs : {};
+                    const itemsAttrs = itemsEl ? itemsEl.attrs : {};
+                    const lineAttrs = lineEl ? lineEl.attrs : {};
+                    const headerText = headerEl ? (headerAttrs.text || '') : '';
                     
                     // Parse header text (format: "Description | Qty | Price | Total" or German equivalent)
                     // Default to English if header text is empty or doesn't contain |
@@ -6132,6 +6140,19 @@ async function initializePDFEditor() {
                             headerParts.push(['Description', 'Qty', 'Unit Price', 'Total'][headerParts.length]);
                         }
                     }
+                    const tableWidthPx = Math.max(50, Math.round(headerAttrs.width || itemsAttrs.width || 515));
+                    const itemsFracs = [250 / 540, 70 / 540, 110 / 540, 110 / 540];
+                    const totalPtItems = pxToPt(tableWidthPx);
+                    let colPtsItems = itemsFracs.map(f => f * totalPtItems);
+                    const sumCI = colPtsItems.reduce((a, b) => a + b, 0);
+                    if (sumCI > 0) {
+                        colPtsItems = colPtsItems.map(p => (p * totalPtItems) / sumCI);
+                    }
+                    const headerTextHex = rgbToHex(headerAttrs.fill || '#000000');
+                    const itemsTextHex = rgbToHex(itemsAttrs.fill || '#000000');
+                    const lineStrokeHex = rgbToHex(lineAttrs.stroke || '#333333');
+                    const _rawLineW = Number(lineAttrs.strokeWidth);
+                    const lineStrokeW = (Number.isFinite(_rawLineW) && _rawLineW > 0) ? _rawLineW : 1;
                     
                     // Add to ReportLab template JSON - items table
                     {% raw %}
@@ -6147,39 +6168,47 @@ async function initializePDFEditor() {
                         type: 'table',
                         x: pxToPt(x),
                         y: pxToPt(y),
-                        width: pxToPt(515),
+                        width: totalPtItems,
                         opacity: opacity,
                         columns: [
-                            {width: 250, header: headerParts[0] || 'Description', field: 'description', align: 'left'},
-                            {width: 70, header: headerParts[1] || 'Qty', field: 'quantity', align: 'center'},
-                            {width: 110, header: headerParts[2] || 'Unit Price', field: 'unit_price', align: 'right'},
-                            {width: 110, header: headerParts[3] || 'Total', field: 'total_amount', align: 'right'}
+                            {width: colPtsItems[0], header: headerParts[0] || 'Description', field: 'description', align: 'left'},
+                            {width: colPtsItems[1], header: headerParts[1] || 'Qty', field: 'quantity', align: 'center'},
+                            {width: colPtsItems[2], header: headerParts[2] || 'Unit Price', field: 'unit_price', align: 'right'},
+                            {width: colPtsItems[3], header: headerParts[3] || 'Total', field: 'total_amount', align: 'right'}
                         ],
                         data: itemsData,
-                        row_template: itemsRowTemplate
+                        row_template: itemsRowTemplate,
+                        style: {
+                            headerBackground: '#f8f9fa',
+                            headerTextColor: headerTextHex,
+                            rowBackground: '#ffffff',
+                            rowTextColor: itemsTextHex,
+                            borderColor: lineStrokeHex,
+                            borderWidth: lineStrokeW
+                        }
                     });
                     
                     // Legacy HTML for preview
                     bodyContent += `  <!-- Items Table Start -->\n`;
-                    bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity};width:515px;">\n`;
+                    bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity};width:${tableWidthPx}px;">\n`;
                     bodyContent += `    <table style="width:100%;border-collapse:collapse;font-size:11px;background:white;">\n`;
                     bodyContent += `      <thead>\n`;
-                    bodyContent += `        <tr style="background-color:#f8f9fa;border-bottom:2px solid #333;">\n`;
-                    bodyContent += `          <th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;">${(headerParts[0] || 'Description').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
-                    bodyContent += `          <th style="text-align:center;padding:10px;font-weight:bold;font-size:12px;width:70px;">${(headerParts[1] || 'Qty').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
-                    bodyContent += `          <th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;">${(headerParts[2] || 'Unit Price').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
-                    bodyContent += `          <th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;">${(headerParts[3] || 'Total').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `        <tr style="background-color:#f8f9fa;border-bottom:${lineStrokeW}px solid ${lineStrokeHex};">\n`;
+                    bodyContent += `          <th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;color:${headerTextHex};">${(headerParts[0] || 'Description').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:center;padding:10px;font-weight:bold;font-size:12px;width:70px;color:${headerTextHex};">${(headerParts[1] || 'Qty').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;color:${headerTextHex};">${(headerParts[2] || 'Unit Price').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;color:${headerTextHex};">${(headerParts[3] || 'Total').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
                     bodyContent += `        </tr>\n`;
                     bodyContent += `      </thead>\n`;
                     bodyContent += `      <tbody>\n`;
                     {% raw %}
                     bodyContent += `        {% if invoice.all_line_items %}\n`;
                     bodyContent += `        {% for item in invoice.all_line_items %}\n`;
-                    bodyContent += `        <tr style="border-bottom:1px solid #ddd;">\n`;
-                    bodyContent += `          <td style="padding:10px;vertical-align:top;">{{ item.description }}</td>\n`;
-                    bodyContent += `          <td style="padding:10px;text-align:center;vertical-align:top;">{{ item.quantity }}</td>\n`;
-                    bodyContent += `          <td style="padding:10px;text-align:right;vertical-align:top;">{{ format_money(item.unit_price) }}</td>\n`;
-                    bodyContent += `          <td style="padding:10px;text-align:right;vertical-align:top;font-weight:bold;">{{ format_money(item.total_amount) }}</td>\n`;
+                    bodyContent += `        <tr style="border-bottom:${lineStrokeW}px solid ${lineStrokeHex};">\n`;
+                    bodyContent += `          <td style="padding:10px;vertical-align:top;color:${itemsTextHex};">{{ item.description }}</td>\n`;
+                    bodyContent += `          <td style="padding:10px;text-align:center;vertical-align:top;color:${itemsTextHex};">{{ item.quantity }}</td>\n`;
+                    bodyContent += `          <td style="padding:10px;text-align:right;vertical-align:top;color:${itemsTextHex};">{{ format_money(item.unit_price) }}</td>\n`;
+                    bodyContent += `          <td style="padding:10px;text-align:right;vertical-align:top;font-weight:bold;color:${itemsTextHex};">{{ format_money(item.total_amount) }}</td>\n`;
                     bodyContent += `        </tr>\n`;
                     bodyContent += `        {% endfor %}\n`;
                     bodyContent += `        {% else %}\n`;
@@ -6196,7 +6225,14 @@ async function initializePDFEditor() {
                     // Extract actual header text from the table group's first Text child
                     const children = child.getChildren ? child.getChildren() : (child.children || []);
                     const textElements = children.filter(c => c.className === 'Text');
-                    const headerText = textElements[0] ? (textElements[0].attrs.text || '') : '';
+                    const lineElements = children.filter(c => c.className === 'Line');
+                    const headerEl = textElements[0];
+                    const itemsEl = textElements[1];
+                    const lineEl = lineElements[0];
+                    const headerAttrs = headerEl ? headerEl.attrs : {};
+                    const itemsAttrs = itemsEl ? itemsEl.attrs : {};
+                    const lineAttrs = lineEl ? lineEl.attrs : {};
+                    const headerText = headerEl ? (headerAttrs.text || '') : '';
                     
                     // Parse header text (format: "Expense | Date | Category | Amount" or localized)
                     // Default to English if header text is empty or doesn't contain |
@@ -6208,6 +6244,24 @@ async function initializePDFEditor() {
                             headerParts.push(['Expense', 'Date', 'Category', 'Amount'][headerParts.length]);
                         }
                     }
+                    const defExpHeaderBg = '#fff3cd';
+                    const defExpHeaderText = '#856404';
+                    const defExpRowBg = '#fffbf0';
+                    const defExpRowText = '#856404';
+                    const defExpBorder = '#856404';
+                    const tableWidthPxExp = Math.max(50, Math.round(headerAttrs.width || itemsAttrs.width || 515));
+                    const expFracs = [200 / 515, 100 / 515, 105 / 515, 110 / 515];
+                    const totalPtExp = pxToPt(tableWidthPxExp);
+                    let colPtsExp = expFracs.map(f => f * totalPtExp);
+                    const sumCE = colPtsExp.reduce((a, b) => a + b, 0);
+                    if (sumCE > 0) {
+                        colPtsExp = colPtsExp.map(p => (p * totalPtExp) / sumCE);
+                    }
+                    const expHeaderTextHex = rgbToHex(headerAttrs.fill || defExpHeaderText);
+                    const expItemsTextHex = rgbToHex(itemsAttrs.fill || defExpRowText);
+                    const expLineStrokeHex = rgbToHex(lineAttrs.stroke || defExpBorder);
+                    const _rawExpLW = Number(lineAttrs.strokeWidth);
+                    const expLineStrokeW = (Number.isFinite(_rawExpLW) && _rawExpLW > 0) ? _rawExpLW : 1;
                     
                     // Add to ReportLab template JSON - expenses table
                     {% raw %}
@@ -6223,45 +6277,47 @@ async function initializePDFEditor() {
                         type: 'table',
                         x: pxToPt(x),
                         y: pxToPt(y),
-                        width: pxToPt(515),
+                        width: totalPtExp,
                         opacity: opacity,
                         columns: [
-                            {width: 200, header: headerParts[0] || 'Expense', field: 'title', align: 'left'},
-                            {width: 100, header: headerParts[1] || 'Date', field: 'expense_date', align: 'center'},
-                            {width: 105, header: headerParts[2] || 'Category', field: 'category', align: 'left'},
-                            {width: 110, header: headerParts[3] || 'Amount', field: 'total_amount', align: 'right'}
+                            {width: colPtsExp[0], header: headerParts[0] || 'Expense', field: 'title', align: 'left'},
+                            {width: colPtsExp[1], header: headerParts[1] || 'Date', field: 'expense_date', align: 'center'},
+                            {width: colPtsExp[2], header: headerParts[2] || 'Category', field: 'category', align: 'left'},
+                            {width: colPtsExp[3], header: headerParts[3] || 'Amount', field: 'total_amount', align: 'right'}
                         ],
                         data: expensesData,
                         row_template: expensesRowTemplate,
                         style: {
-                            headerBackground: '#fff3cd',
-                            headerTextColor: '#856404',
-                            rowBackground: '#fffbf0',
-                            rowTextColor: '#856404'
+                            headerBackground: defExpHeaderBg,
+                            headerTextColor: expHeaderTextHex,
+                            rowBackground: defExpRowBg,
+                            rowTextColor: expItemsTextHex,
+                            borderColor: expLineStrokeHex,
+                            borderWidth: expLineStrokeW
                         }
                     });
                     
                     // Legacy HTML for preview
                     bodyContent += `  <!-- Expenses Table Start -->\n`;
-                    bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity};width:515px;">\n`;
-                    bodyContent += `    <table style="width:100%;border-collapse:collapse;font-size:11px;background:#fffbf0;">\n`;
+                    bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity};width:${tableWidthPxExp}px;">\n`;
+                    bodyContent += `    <table style="width:100%;border-collapse:collapse;font-size:11px;background:${defExpRowBg};">\n`;
                     bodyContent += `      <thead>\n`;
-                    bodyContent += `        <tr style="background-color:#fff3cd;border-bottom:2px solid #856404;">\n`;
-                    bodyContent += `          <th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;color:#856404;">${(headerParts[0] || 'Expense').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
-                    bodyContent += `          <th style="text-align:center;padding:10px;font-weight:bold;font-size:12px;width:100px;color:#856404;">${(headerParts[1] || 'Date').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
-                    bodyContent += `          <th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;width:110px;color:#856404;">${(headerParts[2] || 'Category').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
-                    bodyContent += `          <th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;color:#856404;">${(headerParts[3] || 'Amount').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `        <tr style="background-color:${defExpHeaderBg};border-bottom:${expLineStrokeW}px solid ${expLineStrokeHex};">\n`;
+                    bodyContent += `          <th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;color:${expHeaderTextHex};">${(headerParts[0] || 'Expense').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:center;padding:10px;font-weight:bold;font-size:12px;width:100px;color:${expHeaderTextHex};">${(headerParts[1] || 'Date').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:left;padding:10px;font-weight:bold;font-size:12px;width:110px;color:${expHeaderTextHex};">${(headerParts[2] || 'Category').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
+                    bodyContent += `          <th style="text-align:right;padding:10px;font-weight:bold;font-size:12px;width:110px;color:${expHeaderTextHex};">${(headerParts[3] || 'Amount').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</th>\n`;
                     bodyContent += `        </tr>\n`;
                     bodyContent += `      </thead>\n`;
                     bodyContent += `      <tbody>\n`;
                     {% raw %}
                     bodyContent += `        {% if invoice.expenses %}\n`;
                     bodyContent += `        {% for expense in invoice.expenses %}\n`;
-                    bodyContent += `        <tr style="border-bottom:1px solid #f0e5c1;">\n`;
-                    bodyContent += `          <td style="padding:10px;vertical-align:top;color:#856404;">{{ expense.title }}</td>\n`;
-                    bodyContent += `          <td style="padding:10px;text-align:center;vertical-align:top;color:#856404;">{{ expense.expense_date }}</td>\n`;
-                    bodyContent += `          <td style="padding:10px;vertical-align:top;color:#856404;">{{ expense.category }}</td>\n`;
-                    bodyContent += `          <td style="padding:10px;text-align:right;vertical-align:top;font-weight:bold;color:#856404;">{{ format_money(expense.total_amount) }}</td>\n`;
+                    bodyContent += `        <tr style="border-bottom:${expLineStrokeW}px solid #f0e5c1;">\n`;
+                    bodyContent += `          <td style="padding:10px;vertical-align:top;color:${expItemsTextHex};">{{ expense.title }}</td>\n`;
+                    bodyContent += `          <td style="padding:10px;text-align:center;vertical-align:top;color:${expItemsTextHex};">{{ expense.expense_date }}</td>\n`;
+                    bodyContent += `          <td style="padding:10px;vertical-align:top;color:${expItemsTextHex};">{{ expense.category }}</td>\n`;
+                    bodyContent += `          <td style="padding:10px;text-align:right;vertical-align:top;font-weight:bold;color:${expItemsTextHex};">{{ format_money(expense.total_amount) }}</td>\n`;
                     bodyContent += `        </tr>\n`;
                     bodyContent += `        {% endfor %}\n`;
                     bodyContent += `        {% else %}\n`;

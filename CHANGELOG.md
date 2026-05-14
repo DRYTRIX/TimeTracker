@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.7] - 2026-05-14
+
+### Fixed
+
+- **Invoice PDF designer layout** — Restored the missing canvas-area wrapper in the invoice PDF designer so the properties panel sits in the third grid column beside the canvas instead of stacking below it (`app/templates/admin/pdf_layout.html`).
+- **Invoice PDF preview vs export (#622)** — The JSON-to-HTML preview path now uses the same table style keys as export (header and row text, row background, border width) so the preview matches generated PDFs.
+
+### Changed
+
+- **Designer template JSON and ReportLab export** — Saving template JSON from the designer reads items-table and expenses-table width, colors, and separator line settings from the Konva group children; column widths scale to the chosen table width and a style block is emitted for ReportLab (`app/routes/admin.py`, `pdf_layout.html`).
+- **ReportLab invoice tables** — Column widths scale to `element.width`; tables are wrapped in a two-column outer table so horizontal offset from the left margin is honored; `borderColor` and `borderWidth` from template style are applied (`app/utils/pdf_generator_reportlab.py`).
+
+### Documentation
+
+- **Version** — Documented release **5.5.7** to match `setup.py` (single source of truth for the application version).
+
 ## [5.5.6] - 2026-05-14
 
 ### Documentation

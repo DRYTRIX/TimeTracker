@@ -498,10 +498,19 @@ body {{
             table_style = element.get("style", {})
             border_color = format_color(table_style.get("borderColor", "#000000"))
             header_bg = format_color(table_style.get("headerBackground", "#f8f9fa"))
+            header_text_color = format_color(table_style.get("headerTextColor", "#000000"))
+            row_bg = format_color(table_style.get("rowBackground", "#ffffff"))
+            row_text_color = format_color(table_style.get("rowTextColor", "#000000"))
+            try:
+                border_w = float(table_style.get("borderWidth", 1))
+            except (TypeError, ValueError):
+                border_w = 1.0
+            if border_w < 0.5:
+                border_w = 0.5
 
             style_parts = [style_str_base]
             style_parts.append(f"width: {width_px_elem}px")
-            style_parts.append(f"border: 1px solid {border_color}")
+            style_parts.append(f"border: {border_w}px solid {border_color}")
             style_str = "; ".join(style_parts) + ";"
 
             table_html = f'<table class="element table-element" style="{style_str}"><thead><tr>'
@@ -512,7 +521,7 @@ body {{
                 align = col.get("align", "left")
                 col_width = col.get("width", None)
                 width_attr = f' width="{int(col_width * 96 / 72)}px"' if col_width else ""
-                table_html += f'<th style="text-align: {align}; background-color: {header_bg};"{width_attr}>{html_escape.escape(header)}</th>'
+                table_html += f'<th style="text-align: {align}; background-color: {header_bg}; color: {header_text_color};"{width_attr}>{html_escape.escape(header)}</th>'
             table_html += "</tr></thead><tbody>"
 
             # Resolve table data from element's data source (e.g. invoice.all_line_items or invoice.items)
@@ -576,7 +585,7 @@ body {{
                             value = ""
 
                         value_escaped = html_escape.escape(str(value))
-                        table_html += f'<td style="text-align: {align};">{value_escaped}</td>'
+                        table_html += f'<td style="text-align: {align}; color: {row_text_color}; background-color: {row_bg};">{value_escaped}</td>'
                     table_html += "</tr>"
             else:
                 # No data available, show template placeholders
