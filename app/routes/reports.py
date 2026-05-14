@@ -25,9 +25,9 @@ from app.models import (
 )
 from app.repositories import TimeEntryRepository
 from app.services.scheduled_report_service import ScheduledReportService
-from app.utils.support_report_generation import record_report_generation_for_current_user
 from app.utils.excel_export import create_project_report_excel, create_time_entries_excel
 from app.utils.posthog_monitoring import track_error, track_export_performance, track_validation_error
+from app.utils.support_report_generation import record_report_generation_for_current_user
 
 # Optional PowerPoint export - only import if available
 try:
@@ -36,7 +36,7 @@ try:
     PPTX_EXPORT_AVAILABLE = True
 except ImportError:
     PPTX_EXPORT_AVAILABLE = False
-    create_report_powerpoint = None
+    create_report_powerpoint = None  # type: ignore[assignment]
 
 reports_bp = Blueprint("reports", __name__)
 from app.utils.module_helpers import module_enabled

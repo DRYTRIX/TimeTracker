@@ -1269,7 +1269,7 @@
                         <a href="{{ url_for('main.help') }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50" aria-label="{{ _('Help') }}" title="{{ _('Help') }}">
                             <i class="fas fa-life-ring"></i>
                         </a>
-                        {% if current_user.is_authenticated %}
+                        {% if current_user.is_authenticated and ai_enabled %}
                         <button type="button" data-ai-helper-open class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50" aria-label="{{ _('AI Helper') }}" title="{{ _('AI Helper') }}">
                             <i class="fas fa-wand-magic-sparkles"></i>
                         </button>
@@ -1503,6 +1503,7 @@
             {% if is_module_enabled('team_chat') %}
             {% include 'components/persistent_chat_widget.html' %}
             {% endif %}
+            {% if ai_enabled %}
             <div id="aiHelperRoot" class="shrink-0 relative z-[70]">
                 <button type="button" id="aiHelperFab" data-ai-helper-open class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50" aria-label="{{ _('Open AI Helper') }}" title="{{ _('AI Helper') }}">
                     <i class="fas fa-wand-magic-sparkles text-xl" aria-hidden="true"></i>
@@ -1535,6 +1536,9 @@
                 </div>
             </form>
         </section>
+            {% else %}
+        </div>
+            {% endif %}
         {% endif %}
 
     </div>
@@ -1558,7 +1562,9 @@
     <script src="{{ url_for('static', filename='floating-actions.js') }}?v={{ app_version }}"></script>
     <script src="{{ url_for('static', filename='floating-timer-bar.js') }}"></script>
     <script src="{{ url_for('static', filename='idle.js') }}"></script>
+    {% if ai_enabled %}
     <script src="{{ url_for('static', filename='ai-helper.js') }}?v={{ app_version }}-ai1"></script>
+    {% endif %}
     {% endif %}
     {% if is_admin_user %}
     <script src="{{ url_for('static', filename='admin-version-update.js') }}?v={{ app_version }}"></script>

@@ -278,7 +278,7 @@ class GitLabConnector(BaseConnector):
                     issues_response = requests.get(
                         f"{base_url}/api/v4/projects/{repo_id}/issues",
                         headers=headers,
-                        params={"state": "opened", "per_page": 100},
+                        params={"state": "opened", "per_page": "100"},
                         timeout=30,
                     )
                     if issues_response.status_code != 200:

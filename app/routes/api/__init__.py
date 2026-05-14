@@ -26,6 +26,7 @@ try:
         api_legacy_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(api_legacy_module)
         api_bp = api_legacy_module.api_bp
+        _get_client_id_from_session = api_legacy_module._get_client_id_from_session
     else:
         raise ImportError("Could not load api.py module")
 except Exception:
@@ -41,4 +42,4 @@ except Exception:
     else:
         raise
 
-__all__ = ["api_v1_bp", "api_bp"]
+__all__ = ["api_v1_bp", "api_bp", "_get_client_id_from_session"]

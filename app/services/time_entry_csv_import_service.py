@@ -11,7 +11,7 @@ from app.services import TimeTrackingService
 from app.utils.scope_filter import user_can_access_project
 
 
-def _parse_dt(val: str):
+def _parse_dt(val: Any):
     if not val or not str(val).strip():
         return None
     s = str(val).strip()

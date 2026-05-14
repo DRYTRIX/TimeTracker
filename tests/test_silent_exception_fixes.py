@@ -104,28 +104,23 @@ def test_team_chat_api_message_invalid_attachment_size_returns_400(app, client):
     with app.app_context():
         user = User(username="chatuser", email="chat@test.com", role="user")
         user.is_active = True
+        user.set_password("chatpass123")
         db.session.add(user)
-        db.session.commit()
+        db.session.flush()
         user_id = user.id
-        # Ensure team_chat module is enabled for this test
         settings = Settings.get_settings()
-        if hasattr(settings, "enabled_modules") and settings.enabled_modules is not None:
-            mods = list(settings.enabled_modules) if isinstance(settings.enabled_modules, (list, tuple)) else []
-            if "team_chat" not in mods:
-                mods.append("team_chat")
-                settings.enabled_modules = mods
-                db.session.commit()
+        disabled = list(settings.disabled_module_ids or [])
+        if "team_chat" in disabled:
+            settings.disabled_module_ids = [x for x in disabled if x != "team_chat"]
+            db.session.add(settings)
         channel = ChatChannel(name="Test", channel_type="public", created_by=user_id)
         db.session.add(channel)
         db.session.flush()
-        ChatChannelMember(channel_id=channel.id, user_id=user_id, is_admin=True)
-        db.session.add(channel)
+        db.session.add(ChatChannelMember(channel_id=channel.id, user_id=user_id, is_admin=True))
         db.session.commit()
         channel_id = channel.id
 
-    with client.session_transaction() as sess:
-        sess["_user_id"] = str(user_id)
-        sess["_fresh"] = True
+    client.post("/login", data={"username": "chatuser", "password": "chatpass123"}, follow_redirects=True)
 
     r = client.post(
         f"/api/chat/channels/{channel_id}/messages",
@@ -137,14 +132,14 @@ def test_team_chat_api_message_invalid_attachment_size_returns_400(app, client):
         },
         content_type="application/json",
     )
-    # If module is disabled we may get 403/404; only assert when we hit the validation
-    if r.status_code == 400:
-        data = r.get_json()
-        assert data.get("error_code") == "validation_error"
-        errors = data.get("errors") or {}
-        assert "attachment_size" in errors
-    else:
-        pytest.skip("team_chat module not available or route not registered")
+    assert r.status_code == 400, (
+        "Expected 400 validation_error for invalid attachment_size; "
+        f"got {r.status_code} (ensure team chat API is registered)"
+    )
+    data = r.get_json()
+    assert data.get("error_code") == "validation_error"
+    errors = data.get("errors") or {}
+    assert "attachment_size" in errors
 
 
 # --- Expenses bulk_update: invalid payload or empty selection ---

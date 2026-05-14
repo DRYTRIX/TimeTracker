@@ -17,8 +17,7 @@ from app.utils.db import safe_commit
 logger = logging.getLogger(__name__)
 
 try:
-    from ldap3 import Connection, SIMPLE, SUBTREE, Tls
-    from ldap3 import Server
+    from ldap3 import SIMPLE, SUBTREE, Connection, Server, Tls
     from ldap3.core.exceptions import LDAPException
     from ldap3.utils.conv import escape_filter_chars
 except ImportError:  # pragma: no cover - exercised when ldap3 missing

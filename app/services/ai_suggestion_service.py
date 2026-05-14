@@ -46,7 +46,7 @@ class AISuggestionService:
 
     def _analyze_recent_patterns(self, user_id: int) -> List[Dict]:
         """Analyze recent time entry patterns"""
-        suggestions = []
+        suggestions: list = []
 
         # Get recent entries (last 30 days)
         cutoff = datetime.utcnow() - timedelta(days=30)
@@ -63,7 +63,7 @@ class AISuggestionService:
             return suggestions
 
         # Find most common project/task combinations
-        project_task_counts = {}
+        project_task_counts: dict = {}
         for entry in recent_entries:
             key = (entry.project_id, entry.task_id)
             project_task_counts[key] = project_task_counts.get(key, 0) + 1
@@ -129,7 +129,7 @@ class AISuggestionService:
 
     def _suggest_by_time_pattern(self, user_id: int) -> List[Dict]:
         """Suggest based on time-of-day patterns"""
-        suggestions = []
+        suggestions: list = []
         current_hour = datetime.utcnow().hour
 
         # Get entries by hour of day
@@ -146,7 +146,7 @@ class AISuggestionService:
         hour_entries = [e for e in recent_entries if e.start_time.hour == current_hour]
 
         if hour_entries:
-            project_counts = {}
+            project_counts: dict = {}
             for entry in hour_entries:
                 project_counts[entry.project_id] = project_counts.get(entry.project_id, 0) + 1
 

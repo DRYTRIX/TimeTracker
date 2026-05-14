@@ -184,7 +184,9 @@ def stripe_webhook():
 
     if event_type in ("payment_intent.succeeded", "checkout.session.completed"):
         invoice_id = _parse_invoice_id(data_obj)
-        transaction_id = (data_obj.get("payment_intent") if event_type == "checkout.session.completed" else data_obj.get("id")) or ""
+        transaction_id = (
+            data_obj.get("payment_intent") if event_type == "checkout.session.completed" else data_obj.get("id")
+        ) or ""
         if not invoice_id or not transaction_id:
             return jsonify({"status": "ignored"}), 200
 

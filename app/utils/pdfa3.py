@@ -91,7 +91,7 @@ def _minimal_srgb_icc_profile() -> bytes:
     header[80:84] = b"lcms"
 
     # Tag table: desc, wtpt, rXYZ, gXYZ, bXYZ, rTRC, gTRC, bTRC, cprt
-    tags = []
+    tags: list = []
 
     def _xyz_tag(x: float, y: float, z: float) -> bytes:
         return (
@@ -271,10 +271,10 @@ def convert_to_pdfa3(pdf_bytes: bytes) -> Tuple[bytes, Optional[str]]:
             )
         except Exception as ex:
             if "tuple" in str(ex).lower():
+                # Some pikepdf versions reject tuple force_version; retry without it.
                 pdf.save(
                     out,
                     min_version=pdf_version,
-                    force_version=None,
                     fix_metadata_version=False,
                 )
             else:

@@ -9,7 +9,18 @@ api_v1_ai_bp = Blueprint("api_v1_ai", __name__, url_prefix="/api/v1")
 
 
 def _ai_error_response(exc: AIServiceError):
-    return jsonify({"success": False, "error": exc.message, "message": exc.message, "error_code": exc.code}), exc.status_code
+    return (
+        jsonify({"success": False, "error": exc.message, "message": exc.message, "error_code": exc.code}),
+        exc.status_code,
+    )
+
+
+def _ai_disabled_response():
+    msg = "AI helper is disabled"
+    return (
+        jsonify({"success": False, "error": msg, "message": msg, "error_code": "ai_disabled"}),
+        503,
+    )
 
 
 @api_v1_ai_bp.route("/ai/context-preview", methods=["GET"])
@@ -17,7 +28,11 @@ def _ai_error_response(exc: AIServiceError):
 def ai_context_preview():
     try:
         service = LLMService()
-        return jsonify({"success": True, "context": service.context_preview(g.api_user), "provider": service.config.public_dict()})
+        if not service.is_enabled():
+            return _ai_disabled_response()
+        return jsonify(
+            {"success": True, "context": service.context_preview(g.api_user), "provider": service.config.public_dict()}
+        )
     except AIServiceError as exc:
         return _ai_error_response(exc)
 
@@ -38,7 +53,10 @@ def ai_chat():
 def ai_confirm_action():
     data = request.get_json(silent=True) or {}
     try:
-        result = LLMService().confirm_action(g.api_user, data.get("action") or {})
+        service = LLMService()
+        if not service.is_enabled():
+            return _ai_disabled_response()
+        result = service.confirm_action(g.api_user, data.get("action") or {})
         return jsonify({"success": True, **result})
     except AIServiceError as exc:
         return _ai_error_response(exc)

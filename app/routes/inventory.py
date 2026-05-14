@@ -1747,26 +1747,25 @@ def edit_supplier(supplier_id):
 @login_required
 @admin_or_permission_required("manage_suppliers")
 def delete_supplier(supplier_id):
-    """Delete supplier"""
+    """Delete (deactivate) supplier.
+
+    Performs a soft delete by setting ``is_active=False`` so historical
+    purchase orders, stock items and audit data referencing the supplier
+    remain intact. Matches the behaviour of the API v1 endpoint.
+    """
     supplier = Supplier.query.get_or_404(supplier_id)
-
-    # Check if supplier has associated stock items
-    item_count = SupplierStockItem.query.filter_by(supplier_id=supplier_id).count()
-
-    if item_count > 0:
-        flash(_("Cannot delete supplier with associated stock items. Remove items first."), "error")
-        return redirect(url_for("inventory.view_supplier", supplier_id=supplier_id))
 
     try:
         code = supplier.code
-        db.session.delete(supplier)
+        supplier.is_active = False
+        supplier.updated_at = datetime.utcnow()
         safe_commit()
 
         log_event("supplier_deleted", supplier_code=code)
-        flash(_("Supplier deleted successfully."), "success")
+        flash(_("Supplier deactivated successfully."), "success")
     except Exception as e:
         db.session.rollback()
-        flash(_("Error deleting supplier: %(error)s", error=str(e)), "error")
+        flash(_("Error deactivating supplier: %(error)s", error=str(e)), "error")
 
     return redirect(url_for("inventory.list_suppliers"))
 
@@ -1860,10 +1859,14 @@ def new_purchase_order():
                 if desc.strip():
                     try:
                         quantity = (
-                            Decimal(item_quantities[i]) if i < len(item_quantities) and item_quantities[i] else Decimal("1")
+                            Decimal(item_quantities[i])
+                            if i < len(item_quantities) and item_quantities[i]
+                            else Decimal("1")
                         )
                         unit_cost = (
-                            Decimal(item_unit_costs[i]) if i < len(item_unit_costs) and item_unit_costs[i] else Decimal("0")
+                            Decimal(item_unit_costs[i])
+                            if i < len(item_unit_costs) and item_unit_costs[i]
+                            else Decimal("0")
                         )
                         if quantity <= 0:
                             raise ValueError("quantity must be greater than zero")
@@ -1904,7 +1907,9 @@ def new_purchase_order():
                         current_app.logger.warning(f"Invalid quantity or cost for purchase order item: {e}")
 
             purchase_order.calculate_totals()
-            if not safe_commit("create_purchase_order", {"supplier_id": supplier.id, "po_number": purchase_order.po_number}):
+            if not safe_commit(
+                "create_purchase_order", {"supplier_id": supplier.id, "po_number": purchase_order.po_number}
+            ):
                 flash(_("Could not create purchase order due to a database error."), "error")
                 return redirect(url_for("inventory.new_purchase_order"))
 

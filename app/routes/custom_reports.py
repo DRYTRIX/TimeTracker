@@ -431,12 +431,12 @@ def generate_report_data(config, user_id=None):
         client_data = {}
         data_list = []
 
-        for e in entries:
+        for entry in entries:
             client = None
-            if e.project and e.project.client_obj:
-                client = e.project.client_obj
-            elif e.client:
-                client = e.client
+            if entry.project and entry.project.client_obj:
+                client = entry.project.client_obj
+            elif entry.client:
+                client = entry.client
 
             client_name = client.name if client else "Unknown"
             salesman = None
@@ -444,16 +444,16 @@ def generate_report_data(config, user_id=None):
                 salesman = client.custom_fields.get("salesman")
 
             entry_data = {
-                "id": e.id,
-                "date": e.start_time.strftime("%Y-%m-%d") if e.start_time else "",
-                "project": e.project.name if e.project else "",
+                "id": entry.id,
+                "date": entry.start_time.strftime("%Y-%m-%d") if entry.start_time else "",
+                "project": entry.project.name if entry.project else "",
                 "client": client_name,
                 "salesman": salesman or "",
-                "user": e.user.username if e.user else "",
-                "duration": e.duration_hours,
-                "notes": e.notes or "",
-                "billable": e.billable,
-                "paid": e.paid,
+                "user": entry.user.username if entry.user else "",
+                "duration": entry.duration_hours,
+                "notes": entry.notes or "",
+                "billable": entry.billable,
+                "paid": entry.paid,
             }
 
             data_list.append(entry_data)
@@ -461,7 +461,7 @@ def generate_report_data(config, user_id=None):
             # Group by client for summary
             if client_name not in client_data:
                 client_data[client_name] = {"hours": 0, "entries": []}
-            client_data[client_name]["hours"] += e.duration_hours or 0
+            client_data[client_name]["hours"] += entry.duration_hours or 0
             client_data[client_name]["entries"].append(entry_data)
 
         return {

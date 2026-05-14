@@ -243,7 +243,7 @@ class GitHubConnector(BaseConnector):
                         issues_response = requests.get(
                             f"https://api.github.com/repos/{repo}/issues",
                             headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"},
-                            params={"state": "open", "per_page": 100},
+                            params={"state": "open", "per_page": "100"},
                             timeout=30,
                         )
 

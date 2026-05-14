@@ -71,9 +71,13 @@ class LLMService:
     def __init__(self, config: Optional[AIProviderConfig] = None):
         self.config = config or AIProviderConfig.from_settings()
 
+    def is_enabled(self) -> bool:
+        """True when the AI helper feature flag is on (may still be misconfigured for LLM calls)."""
+        return bool(self.config.enabled)
+
     def ensure_enabled(self) -> None:
         if not self.config.enabled:
-            raise AIServiceError("AI helper is not enabled.", "ai_disabled", 400)
+            raise AIServiceError("AI helper is disabled.", "ai_disabled", 503)
         if not self.config.base_url or not self.config.model:
             raise AIServiceError("AI helper is not fully configured.", "ai_not_configured", 400)
         if self.config.provider == "openai_compatible" and not self.config.api_key:
@@ -101,9 +105,11 @@ class LLMService:
         )
         active_timer = next((entry for entry in recent_entries if entry.end_time is None), None)
         if active_timer is None:
-            active_timer = TimeEntry.query.options(joinedload(TimeEntry.project), joinedload(TimeEntry.task)).filter_by(
-                user_id=user.id, end_time=None
-            ).first()
+            active_timer = (
+                TimeEntry.query.options(joinedload(TimeEntry.project), joinedload(TimeEntry.task))
+                .filter_by(user_id=user.id, end_time=None)
+                .first()
+            )
 
         tasks = (
             Task.query.options(joinedload(Task.project))
@@ -208,16 +214,21 @@ class LLMService:
             content = ((choices[0] or {}).get("message") or {}).get("content") or ""
         return {"content": content, "raw": data}
 
-    def _build_messages(self, prompt: str, context: Dict[str, Any], history: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    def _build_messages(
+        self, prompt: str, context: Dict[str, Any], history: List[Dict[str, str]]
+    ) -> List[Dict[str, str]]:
         instructions = (
             f"{self.config.system_prompt}\n\n"
             "Use only the TimeTracker context provided. If suggesting a write action, include a short explanation and "
-            "a JSON block like {\"actions\":[{\"type\":\"create_time_entry\",\"label\":\"...\",\"payload\":{...}}]}. "
+            'a JSON block like {"actions":[{"type":"create_time_entry","label":"...","payload":{...}}]}. '
             "Supported action types are create_time_entry, start_timer, and summary. Never claim an action was executed."
         )
         messages = [
             {"role": "system", "content": instructions},
-            {"role": "system", "content": "TimeTracker context:\n" + json.dumps(context, default=str, ensure_ascii=False)},
+            {
+                "role": "system",
+                "content": "TimeTracker context:\n" + json.dumps(context, default=str, ensure_ascii=False),
+            },
         ]
         for item in history[-8:]:
             role = item.get("role")
@@ -248,9 +259,13 @@ class LLMService:
             raise AIServiceError("Project is required to start a timer.", "validation_error", 400)
         if not user_can_access_project(user, project_id):
             raise AIServiceError("You cannot access that project.", "forbidden", 403)
-        result = TimeTrackingService().start_timer(user_id=user.id, project_id=project_id, task_id=task_id, notes=payload.get("notes"))
+        result = TimeTrackingService().start_timer(
+            user_id=user.id, project_id=project_id, task_id=task_id, notes=payload.get("notes")
+        )
         if not result.get("success"):
-            raise AIServiceError(result.get("message") or "Could not start timer.", result.get("error") or "action_failed", 400)
+            raise AIServiceError(
+                result.get("message") or "Could not start timer.", result.get("error") or "action_failed", 400
+            )
         timer = result.get("timer")
         return {"ok": True, "type": "start_timer", "timer": self._entry_dict(timer)}
 
@@ -271,7 +286,9 @@ class LLMService:
             billable=bool(payload.get("billable", True)),
         )
         if not result.get("success"):
-            raise AIServiceError(result.get("message") or "Could not create time entry.", result.get("error") or "action_failed", 400)
+            raise AIServiceError(
+                result.get("message") or "Could not create time entry.", result.get("error") or "action_failed", 400
+            )
         entry = result.get("entry")
         return {"ok": True, "type": "create_time_entry", "entry": self._entry_dict(entry)}
 

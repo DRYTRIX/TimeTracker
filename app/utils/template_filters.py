@@ -10,8 +10,8 @@ try:
     import bleach
     import markdown as _md
 except Exception:
-    _md = None
-    bleach = None
+    _md = None  # type: ignore[assignment]
+    bleach = None  # type: ignore[assignment]
 
 
 # Punctuation chars Python's `markdown` library recognizes as valid backslash

@@ -160,7 +160,9 @@ class TestWebhookDelivery:
         db_session.add(delivery)
         db_session.commit()
 
-        next_retry = now_in_app_timezone() + timedelta(minutes=5)
+        # The next_retry_at column is naive (no timezone), so use a naive datetime
+        # to avoid naive/aware comparison mismatches after commit/reload.
+        next_retry = (now_in_app_timezone() + timedelta(minutes=5)).replace(tzinfo=None)
         delivery.mark_retrying(next_retry)
         db_session.commit()
 

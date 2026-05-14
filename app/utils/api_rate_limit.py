@@ -32,8 +32,9 @@ def _limits_from_config() -> Tuple[int, int]:
 
 def _redis_client():
     try:
-        import redis
         from urllib.parse import urlparse
+
+        import redis
 
         if not current_app.config.get("REDIS_ENABLED", True):
             return None

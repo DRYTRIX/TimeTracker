@@ -176,9 +176,11 @@ class XeroConnector(BaseConnector):
             if not tenant_id:
                 return {"success": False, "message": "Xero tenant not configured"}
 
-            organisation_info = self._api_request(
-                "GET", f"/api.xro/2.0/Organisation", self.get_access_token(), tenant_id
-            )
+            access_token = self.get_access_token()
+            if not access_token:
+                return {"success": False, "message": "Xero access token not available"}
+
+            organisation_info = self._api_request("GET", "/api.xro/2.0/Organisation", access_token, tenant_id)
 
             if organisation_info:
                 org_name = organisation_info.get("Organisations", [{}])[0].get("Name", "Unknown")
@@ -235,6 +237,9 @@ class XeroConnector(BaseConnector):
                 return {"success": False, "message": "Xero tenant not configured"}
 
             access_token = self.get_access_token()
+            if not access_token:
+                return {"success": False, "message": "Xero access token not available"}
+
             synced_count = 0
             errors = []
 

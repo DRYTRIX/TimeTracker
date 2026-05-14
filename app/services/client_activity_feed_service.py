@@ -22,9 +22,7 @@ def get_client_activity_feed(
     Each feed item is a dict: feed_type, created_at, description, action, project_name,
     project_id, link_url, user_display_name, entity_type, entity_id, extra.
     """
-    project_ids = [
-        p.id for p in Project.query.filter_by(client_id=client_id).with_entities(Project.id).all()
-    ]
+    project_ids = [p.id for p in Project.query.filter_by(client_id=client_id).with_entities(Project.id).all()]
     if not project_ids:
         return []
 
@@ -46,7 +44,9 @@ def get_client_activity_feed(
         row[0]
         for row in TimeEntry.query.filter(
             TimeEntry.project_id.in_(project_ids),
-        ).with_entities(TimeEntry.id).all()
+        )
+        .with_entities(TimeEntry.id)
+        .all()
     ]
     time_entry_activities = []
     if time_entry_ids:
@@ -71,9 +71,7 @@ def get_client_activity_feed(
         project_name = None
         if te and te.project_id:
             project_name = projects.get(te.project_id) or (te.project.name if te.project else None)
-        feed_items.append(
-            _activity_to_feed_item(act, project_name, "/client-portal/time-entries")
-        )
+        feed_items.append(_activity_to_feed_item(act, project_name, "/client-portal/time-entries"))
 
     # Comments: client-visible only (is_internal == False)
     comments = (
@@ -91,19 +89,26 @@ def get_client_activity_feed(
         if c.author:
             author_name = getattr(c.author, "display_name", None) or getattr(c.author, "username", None)
         elif c.client_contact:
-            author_name = f"{c.client_contact.first_name or ''} {c.client_contact.last_name or ''}".strip() or c.client_contact.email
-        feed_items.append({
-            "feed_type": "comment",
-            "created_at": c.created_at,
-            "description": (c.content[:200] + "…") if c.content and len(c.content) > 200 else (c.content or ""),
-            "action": "commented",
-            "project_name": projects.get(c.project_id) if c.project_id else None,
-            "project_id": c.project_id,
-            "link_url": f"/client-portal/projects/{c.project_id}/comments" if c.project_id else "/client-portal/projects",
-            "user_display_name": author_name,
-            "entity_type": "comment",
-            "entity_id": c.id,
-        })
+            author_name = (
+                f"{c.client_contact.first_name or ''} {c.client_contact.last_name or ''}".strip()
+                or c.client_contact.email
+            )
+        feed_items.append(
+            {
+                "feed_type": "comment",
+                "created_at": c.created_at,
+                "description": (c.content[:200] + "…") if c.content and len(c.content) > 200 else (c.content or ""),
+                "action": "commented",
+                "project_name": projects.get(c.project_id) if c.project_id else None,
+                "project_id": c.project_id,
+                "link_url": (
+                    f"/client-portal/projects/{c.project_id}/comments" if c.project_id else "/client-portal/projects"
+                ),
+                "user_display_name": author_name,
+                "entity_type": "comment",
+                "entity_id": c.id,
+            }
+        )
 
     if since:
         feed_items = [i for i in feed_items if i["created_at"] and i["created_at"] >= since]

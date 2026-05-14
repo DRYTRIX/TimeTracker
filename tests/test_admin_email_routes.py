@@ -20,27 +20,25 @@ class TestAdminEmailRoutes:
         # Login as regular user
         with client:
             client.post(
-                "/auth/login", data={"username": regular_user.username, "password": "password"}, follow_redirects=True
+                "/login", data={"username": regular_user.username, "password": "password"}, follow_redirects=True
             )
 
             response = client.get("/admin/email")
             # Should redirect or show error (depends on permission system)
             assert response.status_code in [302, 403]
 
-    @pytest.mark.skip(reason="Authentication/session issues in test - needs investigation")
     def test_email_support_page_admin_access(self, client, admin_user):
         """Test that admin can access email support page"""
         # Login as admin
         with client:
             client.post(
-                "/auth/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
+                "/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
             )
 
             response = client.get("/admin/email")
             assert response.status_code == 200
             assert b"Email Configuration" in response.data or b"email" in response.data.lower()
 
-    @pytest.mark.skip(reason="Authentication/session issues in test - needs investigation")
     @patch("app.utils.email.check_email_configuration")
     def test_email_support_shows_configuration_status(self, mock_test_config, client, admin_user):
         """Test that email support page shows configuration status"""
@@ -63,7 +61,7 @@ class TestAdminEmailRoutes:
         # Login as admin
         with client:
             client.post(
-                "/auth/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
+                "/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
             )
 
             response = client.get("/admin/email")
@@ -81,7 +79,6 @@ class TestAdminEmailRoutes:
         response = client.post("/admin/email-templates/1/send-test", json={"recipient": "test@example.com"})
         assert response.status_code == 302  # Redirect to login
 
-    @pytest.mark.skip(reason="Authentication/session issues in test - needs investigation")
     @patch("app.utils.email.send_test_email")
     def test_send_test_email_success(self, mock_send, client, admin_user):
         """Test sending test email successfully"""
@@ -90,7 +87,7 @@ class TestAdminEmailRoutes:
         # Login as admin
         with client:
             client.post(
-                "/auth/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
+                "/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
             )
 
             response = client.post(
@@ -102,7 +99,6 @@ class TestAdminEmailRoutes:
             assert data["success"] is True
             assert "successfully" in data["message"].lower()
 
-    @pytest.mark.skip(reason="Authentication/session issues in test - needs investigation")
     @patch("app.utils.email.send_test_email")
     def test_send_test_email_failure(self, mock_send, client, admin_user):
         """Test sending test email with failure"""
@@ -111,7 +107,7 @@ class TestAdminEmailRoutes:
         # Login as admin
         with client:
             client.post(
-                "/auth/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
+                "/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
             )
 
             response = client.post(
@@ -123,13 +119,12 @@ class TestAdminEmailRoutes:
             assert data["success"] is False
             assert "Failed" in data["message"]
 
-    @pytest.mark.skip(reason="Authentication/session issues in test - needs investigation")
     def test_send_test_email_no_recipient(self, client, admin_user):
         """Test sending test email without recipient"""
         # Login as admin
         with client:
             client.post(
-                "/auth/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
+                "/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
             )
 
             response = client.post("/admin/email/test", json={}, content_type="application/json")
@@ -139,13 +134,12 @@ class TestAdminEmailRoutes:
             assert data["success"] is False
             assert "required" in data["message"].lower()
 
-    @pytest.mark.skip(reason="Authentication/session issues in test - needs investigation")
     def test_email_config_status_endpoint(self, client, admin_user):
         """Test email configuration status endpoint"""
         # Login as admin
         with client:
             client.post(
-                "/auth/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
+                "/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
             )
 
             response = client.get("/admin/email/config-status")
@@ -162,7 +156,7 @@ class TestAdminEmailRoutes:
         # Login as admin
         with client:
             client.post(
-                "/auth/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
+                "/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
             )
 
             # Send multiple requests rapidly

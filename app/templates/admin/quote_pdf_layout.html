@@ -3,6 +3,7 @@
 {% block title %}{{ _('PDF Quote Designer') }}{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pdf_editor.css') }}">
 <style>
 /* Main Layout */
 .designer-layout {
@@ -1520,6 +1521,14 @@
         <input type="checkbox" id="snap-to-grid" class="mr-2" checked>
         <span>{{ _('Snap to Grid (10px)') }}</span>
     </label>
+    <label class="inline-flex items-center ml-4">
+        <input type="checkbox" id="pdf-smart-guides" class="mr-2" checked>
+        <span>{{ _('Smart guides') }}</span>
+    </label>
+    <label class="inline-flex items-center ml-4">
+        <input type="checkbox" id="pdf-rulers" class="mr-2">
+        <span>{{ _('Rulers') }}</span>
+    </label>
     <form id="form-reset" method="POST" action="{{ url_for('admin.quote_pdf_layout_reset') }}" class="inline">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="button" onclick="confirmResetPdfLayout()" class="btn btn-danger">
@@ -2006,7 +2015,25 @@
                 </div>
             </div>
         </div>
-        <div id="canvas-container"></div>
+        <div id="pdf-editor-host" class="pdf-editor-marquee-host" style="position:relative;width:100%;height:100%;min-height:400px;">
+            <div id="pdf-editor-ruler-wrap" class="pdf-editor-ruler-wrap" style="width:100%;height:100%;">
+                <div style="display:flex;flex-direction:row;">
+                    <div class="pdf-editor-ruler-corner" id="pdf-ruler-corner" style="display:none;width:20px;height:20px;"></div>
+                    <div class="pdf-editor-ruler-h" id="pdf-ruler-h" style="display:none;flex:1;min-width:0;height:20px;">
+                        <div class="pdf-editor-ruler-h-inner" id="pdf-ruler-h-inner"></div>
+                        <div class="pdf-editor-ruler-cursor" id="pdf-ruler-h-cursor" style="display:none;left:0;"></div>
+                    </div>
+                </div>
+                <div class="pdf-editor-canvas-row" style="display:flex;align-items:stretch;">
+                    <div class="pdf-editor-ruler-v" id="pdf-ruler-v" style="display:none;width:20px;">
+                        <div class="pdf-editor-ruler-v-inner" id="pdf-ruler-v-inner"></div>
+                        <div class="pdf-editor-ruler-cursor" id="pdf-ruler-v-cursor" style="display:none;top:0;"></div>
+                    </div>
+                    <div id="canvas-container" style="flex:1;min-width:0;min-height:400px;"></div>
+                </div>
+            </div>
+            <div id="pdf-marquee" class="pdf-editor-marquee"></div>
+        </div>
     </div>
 
     <!-- RIGHT: Properties Panel -->
@@ -2035,6 +2062,13 @@
         </div>
         <div id="properties-content">
             <p class="text-sm text-gray-500 italic">{{ _('Select an element to edit its properties') }}</p>
+        </div>
+        <div id="pdf-layers-panel" class="pdf-editor-layers-panel">
+            <h4>
+                <i class="fas fa-layer-group"></i>
+                {{ _('Layers') }}
+            </h4>
+            <div id="pdf-layers-list"></div>
         </div>
     </div>
 </div>
@@ -2304,6 +2338,7 @@ function checkOverlaps(element, allElements) {
         if (otherElement === element || 
             elementName === 'background' || 
             elementName === 'page-border' ||
+            elementName === 'smart-guide' ||
             otherElement.className === 'Transformer') {
             continue;
         }
@@ -2334,7 +2369,7 @@ function checkOverlaps(element, allElements) {
 let konvaLoadAttempts = 0;
 const maxKonvaLoadAttempts = 100; // 5 seconds max wait
 
-function initializePDFEditor() {
+async function initializePDFEditor() {
     konvaLoadAttempts++;
     
     if (typeof Konva === 'undefined') {
@@ -2367,6 +2402,19 @@ function initializePDFEditor() {
     }
     
     console.log('✅ Konva.js loaded successfully, initializing editor...');
+    if (!window.__PDF_EDITOR_HELPERS__) {
+        try {
+            window.__PDF_EDITOR_HELPERS__ = await import('{{ url_for("static", filename="js/pdf_editor/helpers.mjs") }}');
+        } catch (err) {
+            console.warn('PDF editor helpers import failed', err);
+            window.__PDF_EDITOR_HELPERS__ = {
+                snapDragByGuides: function () { return { dx: 0, dy: 0, guides: [] }; },
+                unionClientRect: function () { return { x: 0, y: 0, width: 0, height: 0, right: 0, bottom: 0 }; },
+                distributeHorizontal: function () {},
+                distributeVertical: function () {}
+            };
+        }
+    }
     
     // Initialize Konva Stage
     const container = document.getElementById('canvas-container');
@@ -2394,6 +2442,8 @@ function initializePDFEditor() {
     let selectedElement = null;
     let snapToGrid = true;
     const gridSize = 10;
+    let smartGuidesEnabled = true;
+    let rulersEnabled = false;
     
     // Base fit scale (for auto-fitting to container)
     let baseFitScale = 1;
@@ -2534,6 +2584,62 @@ function initializePDFEditor() {
     }
     
     drawGrid();
+    
+    let marqueeSelecting = false;
+    let marqueeStart = null;
+    const marqueeDiv = document.getElementById('pdf-marquee');
+    const pdfEditorHost = document.getElementById('pdf-editor-host');
+    stage.on('mousedown', function (e) {
+        if (e.target !== background) return;
+        marqueeSelecting = true;
+        marqueeStart = stage.getRelativePointerPosition();
+        if (marqueeDiv) marqueeDiv.style.display = 'block';
+    });
+    stage.on('mousemove', function (e) {
+        if (!marqueeSelecting || !marqueeStart || !marqueeDiv || !pdfEditorHost) return;
+        const p = stage.getRelativePointerPosition();
+        const scr = stage.getClientRect({ relativeTo: pdfEditorHost });
+        marqueeDiv.style.left = (scr.x + Math.min(marqueeStart.x, p.x) * stage.scaleX()) + 'px';
+        marqueeDiv.style.top = (scr.y + Math.min(marqueeStart.y, p.y) * stage.scaleY()) + 'px';
+        marqueeDiv.style.width = (Math.abs(p.x - marqueeStart.x) * stage.scaleX()) + 'px';
+        marqueeDiv.style.height = (Math.abs(p.y - marqueeStart.y) * stage.scaleY()) + 'px';
+    });
+    stage.on('mouseup', function (e) {
+        if (!marqueeSelecting || !marqueeStart) return;
+        marqueeSelecting = false;
+        if (marqueeDiv) {
+            marqueeDiv.style.display = 'none';
+            marqueeDiv.style.width = '0';
+            marqueeDiv.style.height = '0';
+        }
+        const p = stage.getRelativePointerPosition();
+        const x1 = Math.min(marqueeStart.x, p.x);
+        const y1 = Math.min(marqueeStart.y, p.y);
+        const x2 = Math.max(marqueeStart.x, p.x);
+        const y2 = Math.max(marqueeStart.y, p.y);
+        if (Math.abs(x2 - x1) < 3 && Math.abs(y2 - y1) < 3) {
+            if (!e.evt.shiftKey) applySelection([]);
+            return;
+        }
+        const box = { x: x1, y: y1, width: x2 - x1, height: y2 - y1 };
+        const picked = [];
+        layer.getChildren().forEach(function (child) {
+            if (!child || child === background || child.className === 'Transformer') return;
+            const nm = child.attrs && child.attrs.name;
+            if (nm === 'page-border' || nm === 'grid-line' || nm === 'smart-guide') return;
+            if (child.getAttr && child.getAttr('pdfLocked')) return;
+            if (!child.draggable()) return;
+            const cb = child.getClientRect({ relativeTo: layer });
+            if (Konva.Util.haveIntersection(box, cb)) picked.push(child);
+        });
+        if (e.evt.shiftKey) {
+            const merged = selectedNodes.slice();
+            picked.forEach(function (n) { if (merged.indexOf(n) < 0) merged.push(n); });
+            applySelection(merged);
+        } else {
+            applySelection(picked);
+        }
+    });
     
     // Element templates
     {% raw %}
@@ -2973,7 +3079,7 @@ function initializePDFEditor() {
                     targetNode = node.parent;
                 }
             }
-            selectElement(targetNode);
+            selectElement(targetNode, e);
             e.cancelBubble = true;
         });
         
@@ -2982,7 +3088,7 @@ function initializePDFEditor() {
         const isTextNode = node.className === 'Text' || (node.getType && node.getType() === 'Text') || 
                           (node.constructor && node.constructor.name === 'Text');
         if (isTextNode && node.parent && node.parent.attrs && 
-            (node.parent.attrs.name === 'items-table' || node.parent.attrs.name === 'expenses-table')) {
+            (node.parent.attrs.name === 'items-table' || node.parent.attrs.name === 'expenses-table' || node.parent.attrs.name === 'quote-items-table')) {
             // Change cursor on hover to indicate editability
             node.on('mouseenter', function() {
                 stage.container().style.cursor = 'text';
@@ -2993,7 +3099,7 @@ function initializePDFEditor() {
             
             node.on('dblclick', function(e) {
                 // Select the individual text element for editing
-                selectElement(node);
+                selectElement(node, null);
                 e.cancelBubble = true;
                 // Focus the text content textarea in properties panel if available
                 setTimeout(() => {
@@ -3008,7 +3114,7 @@ function initializePDFEditor() {
             });
         }
         
-        // Add snap to grid on drag
+        // Add snap to grid on drag + optional smart guides
         node.on('dragmove', function() {
             if (snapToGrid) {
                 node.position({
@@ -3016,9 +3122,23 @@ function initializePDFEditor() {
                     y: Math.round(node.y() / gridSize) * gridSize
                 });
             }
+            const inSel = selectedNodes.indexOf(node) >= 0;
+            const moveSet = (inSel && selectedNodes.length) ? selectedNodes : [node];
+            if (smartGuidesEnabled && window.__PDF_EDITOR_HELPERS__ && window.__PDF_EDITOR_HELPERS__.snapDragByGuides) {
+                const snap = window.__PDF_EDITOR_HELPERS__.snapDragByGuides(layer, moveSet, 6);
+                if (snap.dx || snap.dy) {
+                    moveSet.forEach(function (n) {
+                        n.position({ x: n.x() + snap.dx, y: n.y() + snap.dy });
+                    });
+                    drawGuideLines(snap.guides);
+                } else {
+                    clearGuideLines();
+                }
+            }
         });
         
         node.on('dragend', function() {
+            clearGuideLines();
             // Update properties panel if visible
             const propX = document.getElementById('prop-x');
             const propY = document.getElementById('prop-y');
@@ -3032,75 +3152,289 @@ function initializePDFEditor() {
     document.getElementById('snap-to-grid')?.addEventListener('change', function(e) {
         snapToGrid = e.target.checked;
     });
+    document.getElementById('pdf-smart-guides')?.addEventListener('change', function(e) {
+        smartGuidesEnabled = e.target.checked;
+        if (!smartGuidesEnabled) clearGuideLines();
+    });
+    document.getElementById('pdf-rulers')?.addEventListener('change', function(e) {
+        rulersEnabled = e.target.checked;
+        const c = document.getElementById('pdf-ruler-corner');
+        const h = document.getElementById('pdf-ruler-h');
+        const v = document.getElementById('pdf-ruler-v');
+        if (c) c.style.display = rulersEnabled ? 'block' : 'none';
+        if (h) h.style.display = rulersEnabled ? 'block' : 'none';
+        if (v) v.style.display = rulersEnabled ? 'block' : 'none';
+    });
     
-    function selectElement(node) {
-        // Remove previous selection
-        layer.find('Transformer').forEach(t => t.destroy());
-        
-        selectedElement = node;
-        
+    let selectedNodes = [];
+    function syncSelectedFromNodes() {
+        selectedElement = selectedNodes.length ? selectedNodes[0] : null;
+    }
+    function isPdfLocked(node) {
+        return !!(node && node.getAttr && node.getAttr('pdfLocked'));
+    }
+    function isPdfHidden(node) {
+        return !!(node && node.getAttr && node.getAttr('pdfHidden'));
+    }
+    function clearGuideLines() {
+        layer.find('.smart-guide').forEach(function (ln) { ln.destroy(); });
+        layer.draw();
+    }
+    function drawGuideLines(guides) {
+        clearGuideLines();
+        if (!guides || !guides.length) return;
+        guides.forEach(function (g) {
+            if (g.kind === 'v') {
+                layer.add(new Konva.Line({
+                    points: [g.x, g.y1, g.x, g.y2],
+                    stroke: '#ec4899',
+                    strokeWidth: 1,
+                    listening: false,
+                    name: 'smart-guide'
+                }));
+            } else {
+                layer.add(new Konva.Line({
+                    points: [g.x1, g.y, g.x2, g.y],
+                    stroke: '#ec4899',
+                    strokeWidth: 1,
+                    listening: false,
+                    name: 'smart-guide'
+                }));
+            }
+        });
+        layer.find('Transformer').forEach(function (t) { t.moveToTop(); });
+        layer.draw();
+    }
+    function refreshLayersPanel() {
+        const list = document.getElementById('pdf-layers-list');
+        if (!list || !layer) return;
+        const rows = [];
+        const ch = layer.getChildren() || [];
+        for (let i = ch.length - 1; i >= 0; i--) {
+            const n = ch[i];
+            if (!n || n === background || n.className === 'Transformer') continue;
+            const nm = (n.attrs && n.attrs.name) || n.className || 'element';
+            if (nm === 'background' || nm === 'page-border' || nm === 'grid-line') continue;
+            const id = 'lyr-' + i + '-' + (n._id || '');
+            const active = selectedNodes.indexOf(n) >= 0;
+            const eye = isPdfHidden(n) ? 'fa-eye-slash' : 'fa-eye';
+            const lock = isPdfLocked(n) ? 'fa-lock' : 'fa-unlock';
+            rows.push(
+                '<div class="pdf-editor-layer-row' + (active ? ' active' : '') + '" data-node-index="' + i + '">' +
+                '<button type="button" class="pdf-layer-eye" data-idx="' + i + '" title="Toggle visibility"><i class="fas ' + eye + '"></i></button>' +
+                '<button type="button" class="pdf-layer-lock" data-idx="' + i + '" title="Toggle lock"><i class="fas ' + lock + '"></i></button>' +
+                '<span class="layer-name">' + String(nm).replace(/</g, '&lt;') + '</span></div>'
+            );
+        }
+        list.innerHTML = rows.join('') || '<p class="text-xs text-gray-500">—</p>';
+        list.querySelectorAll('.pdf-editor-layer-row').forEach(function (row) {
+            row.addEventListener('click', function (ev) {
+                if (ev.target.closest('button')) return;
+                const idx = parseInt(row.getAttribute('data-node-index'), 10);
+                const node = layer.getChildren()[idx];
+                if (node) selectElement(node, null);
+            });
+        });
+        list.querySelectorAll('.pdf-layer-eye').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const node = layer.getChildren()[idx];
+                if (!node) return;
+                const h = !node.getAttr('pdfHidden');
+                node.setAttr('pdfHidden', h);
+                node.opacity(h ? 0.25 : 1);
+                layer.draw();
+                refreshLayersPanel();
+                scheduleQuoteEditorHistoryPush();
+            });
+        });
+        list.querySelectorAll('.pdf-layer-lock').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const node = layer.getChildren()[idx];
+                if (!node) return;
+                const lk = !node.getAttr('pdfLocked');
+                node.setAttr('pdfLocked', lk);
+                refreshLayersPanel();
+            });
+        });
+    }
+
+    function selectElement(node, evt) {
+        if (!node || node === background) return;
+        if (isPdfLocked(node)) return;
+        let add = false;
+        if (evt && evt.evt) {
+            add = !!(evt.evt.shiftKey || evt.evt.ctrlKey || evt.evt.metaKey);
+        }
+        let next = selectedNodes.slice();
+        if (add) {
+            const ix = next.indexOf(node);
+            if (ix >= 0) next.splice(ix, 1);
+            else next.push(node);
+        } else {
+            next = [node];
+        }
+        applySelection(next);
+    }
+
+    function applySelection(nodes) {
+        layer.find('Transformer').forEach(function (t) { t.destroy(); });
+        selectedNodes = (nodes || []).filter(function (n) {
+            return n && n.getLayer && n.getLayer() === layer && !isPdfLocked(n) && n !== background;
+        });
+        syncSelectedFromNodes();
+        clearGuideLines();
+        if (!selectedNodes.length) {
+            layer.draw();
+            const pc = document.getElementById('properties-content');
+            if (pc) pc.innerHTML = '<p class="text-sm text-gray-500 italic">{{ _("Select an element to edit its properties") }}</p>';
+            refreshLayersPanel();
+            return;
+        }
         const transformer = new Konva.Transformer({
-            nodes: [node],
+            nodes: selectedNodes,
             enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
             rotateEnabled: false,
-            boundBoxFunc: function(oldBox, newBox) {
-                if (newBox.width < 20 || newBox.height < 20) {
-                    return oldBox;
-                }
+            borderStroke: '#667eea',
+            borderStrokeWidth: 2,
+            anchorFill: '#667eea',
+            anchorStroke: '#ffffff',
+            anchorStrokeWidth: 2,
+            anchorSize: 8,
+            boundBoxFunc: function (oldBox, newBox) {
+                if (newBox.width < 20 || newBox.height < 20) return oldBox;
                 return newBox;
             }
         });
-        
-        // For Image nodes, convert scale changes to width/height changes
-        // This ensures the size is stored correctly when resizing
-        if (node.className === 'Image') {
-            transformer.on('transformend', function() {
-                const image = node;
-                const scaleX = image.scaleX();
-                const scaleY = image.scaleY();
-                
-                // Update width and height based on scale
-                const newWidth = image.width() * scaleX;
-                const newHeight = image.height() * scaleY;
-                
-                // Reset scale to 1 and apply the new dimensions
-                image.width(newWidth);
-                image.height(newHeight);
+        if (selectedNodes.length === 1 && selectedNodes[0].className === 'Image') {
+            const image = selectedNodes[0];
+            let currentScaleX = image.scaleX();
+            let currentScaleY = image.scaleY();
+            let originalWidth = image.width() * currentScaleX;
+            let originalHeight = image.height() * currentScaleY;
+            if (currentScaleX !== 1 || currentScaleY !== 1) {
+                image.width(originalWidth);
+                image.height(originalHeight);
                 image.scaleX(1);
                 image.scaleY(1);
-                
-                // Update properties panel if visible
-                if (selectedElement === image) {
-                    updatePropertiesPanel(image);
-                }
-                
                 layer.draw();
+            }
+            const handleTransformEnd = function () {
+                const scaleX = image.scaleX();
+                const scaleY = image.scaleY();
+                if (scaleX !== 1 || scaleY !== 1) {
+                    const newWidth = originalWidth * scaleX;
+                    const newHeight = originalHeight * scaleY;
+                    image.width(newWidth);
+                    image.height(newHeight);
+                    image.scaleX(1);
+                    image.scaleY(1);
+                    originalWidth = newWidth;
+                    originalHeight = newHeight;
+                    if (selectedNodes.length === 1 && selectedNodes[0] === image) updatePropertiesPanel(image);
+                    layer.draw();
+                }
+            };
+            transformer.on('transformend', handleTransformEnd);
+            transformer.on('transform', function () {
+                if (selectedNodes.length === 1 && selectedNodes[0] === image) updatePropertiesPanel(image);
+                if (selectedNodes.length === 1) checkElementWarnings(selectedNodes[0]);
             });
         }
-        
-        layer.add(transformer);
-        transformer.on('transformend', function() {
+        transformer.on('transformend', function () {
+            selectedNodes.forEach(function (n) { checkElementWarnings(n); });
+            updateWarningPanel();
             scheduleQuoteEditorHistoryPush();
         });
-        
-        // Explicitly hide rotation handle if it exists (backup for rotateEnabled: false)
+        layer.add(transformer);
         transformer.forceUpdate();
         const rotationHandle = transformer.findOne('.rotater');
-        if (rotationHandle) {
-            rotationHandle.visible(false);
-        }
-        
-        // Remove any warning indicator dots that might exist
-        layer.find('.warning-indicator').forEach(indicator => {
-            indicator.destroy();
-        });
-        
+        if (rotationHandle) rotationHandle.visible(false);
         layer.draw();
-        
-        // Update properties panel
-        updatePropertiesPanel(node);
+        if (selectedNodes.length === 1) updatePropertiesPanel(selectedNodes[0]);
+        else updatePropertiesPanelMulti(selectedNodes);
+        selectedNodes.forEach(function (n) { checkElementWarnings(n); });
+        updateWarningPanel();
+        refreshLayersPanel();
     }
     
+    function pdfGroupSelection() {
+        if (!window.__PDF_EDITOR_HELPERS__ || typeof window.__PDF_EDITOR_HELPERS__.unionClientRect !== 'function') return;
+        if (selectedNodes.length < 2) return;
+        const box = window.__PDF_EDITOR_HELPERS__.unionClientRect(selectedNodes);
+        const gid = 'pdfgrp-' + Date.now();
+        const group = new Konva.Group({
+            x: box.x,
+            y: box.y,
+            draggable: true,
+            name: 'user-group'
+        });
+        group.setAttr('pdfGroupId', gid);
+        const toGroup = selectedNodes.slice();
+        toGroup.forEach(function (n) {
+            const abs = n.getAbsolutePosition();
+            n.moveTo(group);
+            n.position({ x: abs.x - box.x, y: abs.y - box.y });
+        });
+        layer.add(group);
+        setupSelection(group);
+        applySelection([group]);
+        layer.draw();
+        scheduleQuoteEditorHistoryPush();
+    }
+    function pdfUngroupSelection() {
+        if (selectedNodes.length !== 1) return;
+        const g = selectedNodes[0];
+        if (!g || g.className !== 'Group') return;
+        const nm = g.attrs && g.attrs.name;
+        if (nm !== 'user-group') return;
+        const kids = g.getChildren().slice();
+        kids.forEach(function (child) {
+            const abs = child.getAbsolutePosition();
+            child.moveTo(layer);
+            child.position({ x: abs.x, y: abs.y });
+        });
+        g.destroy();
+        applySelection(kids);
+        layer.draw();
+        scheduleQuoteEditorHistoryPush();
+    }
+
+    function updatePropertiesPanelMulti(nodes) {
+        const propsContent = document.getElementById('properties-content');
+        if (!propsContent) return;
+        const MIXED = '{{ _("Mixed") }}';
+        const n = nodes.length;
+        const xs = nodes.map(function (x) { return Math.round(x.x()); });
+        const ys = nodes.map(function (x) { return Math.round(x.y()); });
+        const sameX = xs.every(function (v) { return v === xs[0]; });
+        const sameY = ys.every(function (v) { return v === ys[0]; });
+        let html = '<div class="space-y-4"><p class="text-sm text-gray-600">' + n + ' {{ _("elements selected") }}</p>';
+        html += '<div class="property-group"><div class="property-label">Position X</div>';
+        html += '<input type="number" id="prop-x" value="' + (sameX ? xs[0] : '') + '" placeholder="' + MIXED + '" class="property-input"></div>';
+        html += '<div class="property-group"><div class="property-label">Position Y</div>';
+        html += '<input type="number" id="prop-y" value="' + (sameY ? ys[0] : '') + '" placeholder="' + MIXED + '" class="property-input"></div>';
+        html += '<p class="text-xs text-gray-500">{{ _("Edits apply to all selected elements. Leave blank to keep each value unchanged.") }}</p></div>';
+        propsContent.innerHTML = html;
+        const px = document.getElementById('prop-x');
+        const py = document.getElementById('prop-y');
+        function applyMultiPos() {
+            const rawX = px && px.value !== '' ? parseInt(px.value, 10) : null;
+            const rawY = py && py.value !== '' ? parseInt(py.value, 10) : null;
+            if (rawX === null && rawY === null) return;
+            nodes.forEach(function (node) {
+                if (rawX !== null && !isNaN(rawX)) node.x(rawX);
+                if (rawY !== null && !isNaN(rawY)) node.y(rawY);
+            });
+            layer.draw();
+            scheduleQuoteEditorHistoryPush();
+        }
+        if (px) px.addEventListener('change', applyMultiPos);
+        if (py) py.addEventListener('change', applyMultiPos);
+    }
     function updatePropertiesPanel(node) {
         const propsContent = document.getElementById('properties-content');
         if (!propsContent) {
@@ -3195,6 +3529,25 @@ function initializePDFEditor() {
             html += '<div class="property-label">Text Color</div>';
             html += `<input type="color" id="prop-fill" value="${rgbToHex(attrs.fill || '#000000')}" class="property-input">`;
             html += '</div>';
+            
+            html += '<div class="property-group">';
+            html += '<div class="property-label">{{ _("Text align") }}</div>';
+            html += '<div class="prop-segmented" id="prop-text-align">';
+            const curAlign = attrs.align || 'left';
+            ['left', 'center', 'right', 'justify'].forEach(function (al) {
+                const ic = al === 'justify' ? 'justify' : al === 'center' ? 'center' : al === 'right' ? 'right' : 'left';
+                html += '<button type="button" class="prop-align-btn' + (curAlign === al ? ' active' : '') + '" data-align="' + al + '"><i class="fas fa-align-' + ic + '"></i></button>';
+            });
+            html += '</div></div>';
+            html += '<div class="property-group">';
+            html += '<div class="property-label">{{ _("Vertical align (text box)") }}</div>';
+            html += '<div class="prop-segmented" id="prop-text-valign">';
+            const curVA = attrs.verticalAlign || 'top';
+            [['top', 'arrow-up'], ['middle', 'arrows-alt-v'], ['bottom', 'arrow-down']].forEach(function (pair) {
+                const v = pair[0];
+                html += '<button type="button" class="prop-valign-btn' + (curVA === v ? ' active' : '') + '" data-valign="' + v + '"><i class="fas fa-' + pair[1] + '"></i></button>';
+            });
+            html += '</div></div>';
             
             html += '<div class="property-group">';
             html += '<div class="property-label">Width</div>';
@@ -3465,7 +3818,7 @@ function initializePDFEditor() {
     }
     
     function attachPropertyListeners() {
-        if (!selectedElement) return;
+        if (selectedNodes.length !== 1 || !selectedNodes[0]) return;
         
         const propX = document.getElementById('prop-x');
         const propY = document.getElementById('prop-y');
@@ -3527,6 +3880,33 @@ function initializePDFEditor() {
                 scheduleQuoteEditorHistoryPush();
             });
         }
+        document.querySelectorAll('.prop-align-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const al = btn.getAttribute('data-align');
+                selectedNodes.forEach(function (n) {
+                    if (n.className === 'Text' && typeof n.align === 'function') n.align(al);
+                });
+                document.querySelectorAll('.prop-align-btn').forEach(function (b) {
+                    b.classList.toggle('active', b === btn);
+                });
+                layer.draw();
+                scheduleQuoteEditorHistoryPush();
+            });
+        });
+        document.querySelectorAll('.prop-valign-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const va = btn.getAttribute('data-valign');
+                selectedNodes.forEach(function (n) {
+                    if (n.className === 'Text' && typeof n.verticalAlign === 'function') n.verticalAlign(va);
+                    if (n.className === 'Text') n.setAttr('verticalAlign', va);
+                });
+                document.querySelectorAll('.prop-valign-btn').forEach(function (b) {
+                    b.classList.toggle('active', b === btn);
+                });
+                layer.draw();
+                scheduleQuoteEditorHistoryPush();
+            });
+        });
         
         // Function to update decorative image element with uploaded image (moved outside to be accessible)
         window.updateDecorativeImageElement = function(element, imageUrl) {
@@ -4798,6 +5178,9 @@ function initializePDFEditor() {
             
             layer.children.forEach((child, index) => {
                 if (!child || child === background || child.className === 'Transformer') return;
+                const ca = child.attrs || {};
+                if (ca.name === 'smart-guide') return;
+                if (child.getAttr && child.getAttr('pdfHidden')) return;
                 
                 // Filter out invisible elements
                 if (child.attrs && (child.attrs.opacity === 0 || child.attrs.visible === false)) {
@@ -4866,7 +5249,7 @@ function initializePDFEditor() {
                     }
                 }
                 
-                const attrs = child.attrs;
+                const attrs = child.attrs || {};
                 const x = Math.round(attrs.x || 0);
                 const y = Math.round(attrs.y || 0);
                 const opacity = attrs.opacity !== undefined ? attrs.opacity : 1;
@@ -4883,6 +5266,7 @@ function initializePDFEditor() {
                 const color = attrs.fill || 'black';
                 const text = attrs.text || '';
                 const textAlign = attrs.align || 'left';
+                const vAlign = attrs.verticalAlign || 'top';
                 
                 // Map font family to ReportLab font names
                 let reportLabFont = 'Helvetica';
@@ -4899,8 +5283,7 @@ function initializePDFEditor() {
                     reportLabFont += '-Oblique';
                 }
                 
-                // Add to ReportLab template JSON
-                templateJson.elements.push({
+                const textEl = {
                     type: 'text',
                     x: pxToPt(x),
                     y: pxToPt(y),
@@ -4911,9 +5294,14 @@ function initializePDFEditor() {
                         size: fontSize,
                         color: color,
                         align: textAlign,
+                        verticalAlign: vAlign,
                         opacity: opacity
                     }
-                });
+                };
+                if (attrs.pdfGroupId) textEl.group_id = attrs.pdfGroupId;
+                if (attrs.pdfLocked) textEl.locked = true;
+                if (attrs.pdfHidden) textEl.hidden = true;
+                templateJson.elements.push(textEl);
                 
                 // Legacy HTML for preview
                 const escapedText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -5871,126 +6259,132 @@ table tr:last-child td {
                 redoQuoteEditor();
                 return;
             }
-        }
-        
-        // Delete selected element with Delete or Backspace (only if not editing text)
-        if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElement && !isEditingText) {
-            e.preventDefault();
-            selectedElement.destroy();
-            layer.find('Transformer').forEach(t => t.destroy());
-            selectedElement = null;
-            layer.draw();
-            document.getElementById('properties-content').innerHTML = '<p class="text-sm text-gray-500 italic">Select an element to edit its properties</p>';
-            pushQuoteEditorHistory();
-        }
-        
-        // Copy with Ctrl+C
-        if (e.ctrlKey && e.key === 'c' && selectedElement) {
-            e.preventDefault();
-            window.copiedElement = selectedElement.toJSON();
-        }
-        
-        // Paste with Ctrl+V
-        if (e.ctrlKey && e.key === 'v' && window.copiedElement) {
-            e.preventDefault();
-            const json = window.copiedElement;
-            const node = Konva.Node.create(json);
-            node.x(node.x() + 20);
-            node.y(node.y() + 20);
-            layer.add(node);
-            setupSelection(node);
-            layer.draw();
-            pushQuoteEditorHistory();
-        }
-        
-        // Duplicate with Ctrl+D
-        if (e.ctrlKey && e.key === 'd' && selectedElement) {
-            e.preventDefault();
-            const json = selectedElement.toJSON();
-            const node = Konva.Node.create(json);
-            node.x(node.x() + 20);
-            node.y(node.y() + 20);
-            layer.add(node);
-            setupSelection(node);
-            layer.draw();
-            pushQuoteEditorHistory();
-        }
-        
-        // Arrow keys to move element (only if not editing text)
-        if (selectedElement && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !isEditingText) {
-            e.preventDefault();
-            const step = e.shiftKey ? 10 : 1;
-            
-            switch(e.key) {
-                case 'ArrowUp':
-                    selectedElement.y(selectedElement.y() - step);
-                    break;
-                case 'ArrowDown':
-                    selectedElement.y(selectedElement.y() + step);
-                    break;
-                case 'ArrowLeft':
-                    selectedElement.x(selectedElement.x() - step);
-                    break;
-                case 'ArrowRight':
-                    selectedElement.x(selectedElement.x() + step);
-                    break;
+            if (kq === 'g') {
+                e.preventDefault();
+                if (e.shiftKey) pdfUngroupSelection();
+                else pdfGroupSelection();
+                return;
             }
-            
+        }
+        
+        if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodes.length && !isEditingText) {
+            e.preventDefault();
+            selectedNodes.forEach(function (n) { n.destroy(); });
+            layer.find('Transformer').forEach(function (t) { t.destroy(); });
+            selectedNodes = [];
+            syncSelectedFromNodes();
             layer.draw();
-            
-            // Update properties panel if visible
+            document.getElementById('properties-content').innerHTML = '<p class="text-sm text-gray-500 italic">{{ _("Select an element to edit its properties") }}</p>';
+            refreshLayersPanel();
+            pushQuoteEditorHistory();
+        }
+        
+        if (e.ctrlKey && e.key === 'c' && selectedNodes.length) {
+            e.preventDefault();
+            window.copiedElements = selectedNodes.map(function (n) { return n.toJSON(); });
+        }
+        
+        if (e.ctrlKey && e.key === 'v' && window.copiedElements && window.copiedElements.length) {
+            e.preventDefault();
+            const created = [];
+            window.copiedElements.forEach(function (json) {
+                const node = Konva.Node.create(json);
+                node.x(node.x() + 20);
+                node.y(node.y() + 20);
+                layer.add(node);
+                setupSelection(node);
+                created.push(node);
+            });
+            layer.draw();
+            applySelection(created);
+            pushQuoteEditorHistory();
+        }
+        
+        if (e.ctrlKey && e.key === 'd' && selectedNodes.length) {
+            e.preventDefault();
+            const created = [];
+            selectedNodes.forEach(function (src) {
+                const json = src.toJSON();
+                const node = Konva.Node.create(json);
+                node.x(node.x() + 20);
+                node.y(node.y() + 20);
+                layer.add(node);
+                setupSelection(node);
+                created.push(node);
+            });
+            layer.draw();
+            applySelection(created);
+            pushQuoteEditorHistory();
+        }
+        
+        if (selectedNodes.length && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !isEditingText) {
+            e.preventDefault();
+            let step = e.shiftKey ? 10 : 1;
+            if (snapToGrid) step = e.shiftKey ? gridSize * 5 : gridSize;
+            const dx = (e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0);
+            const dy = (e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0);
+            selectedNodes.forEach(function (n) {
+                n.x(n.x() + dx);
+                n.y(n.y() + dy);
+            });
+            layer.draw();
             const propX = document.getElementById('prop-x');
             const propY = document.getElementById('prop-y');
-            if (propX) propX.value = Math.round(selectedElement.x());
-            if (propY) propY.value = Math.round(selectedElement.y());
+            if (selectedNodes.length === 1) {
+                if (propX) propX.value = Math.round(selectedNodes[0].x());
+                if (propY) propY.value = Math.round(selectedNodes[0].y());
+            }
             scheduleQuoteEditorHistoryPush();
         }
     });
     
-    // Click on background to deselect
-    background.on('click', function() {
-        layer.find('Transformer').forEach(t => t.destroy());
-        selectedElement = null;
-        layer.draw();
-        document.getElementById('properties-content').innerHTML = '<p class="text-sm text-gray-500 italic">Select an element to edit its properties</p>';
+    background.on('click', function () {
+        applySelection([]);
     });
     
-    // Alignment tools
-    window.alignElements = function(direction) {
-        if (!selectedElement) return;
-        
-        const stageWidth = stage.width();
-        const stageHeight = stage.height();
-        const box = selectedElement.getClientRect();
-        
-        switch(direction) {
-            case 'left':
-                selectedElement.x(0);
-                break;
-            case 'center-h':
-                selectedElement.x((stageWidth - box.width) / 2);
-                break;
-            case 'right':
-                selectedElement.x(stageWidth - box.width);
-                break;
-            case 'top':
-                selectedElement.y(0);
-                break;
-            case 'center-v':
-                selectedElement.y((stageHeight - box.height) / 2);
-                break;
-            case 'bottom':
-                selectedElement.y(stageHeight - box.height);
-                break;
-        }
-        
+    window.alignElements = function (direction) {
+        if (!selectedNodes.length) return;
+        const sw = stage.width();
+        const sh = stage.height();
+        const H = window.__PDF_EDITOR_HELPERS__;
+        const selUnion = H && H.unionClientRect ? H.unionClientRect(selectedNodes) : null;
+        const multi = selectedNodes.length >= 2 && selUnion && selUnion.width >= 0;
+        selectedNodes.forEach(function (node) {
+            const r = node.getClientRect({ relativeTo: layer });
+            if (multi) {
+                if (direction === 'left') node.x(node.x() + (selUnion.x - r.x));
+                else if (direction === 'right') node.x(node.x() + (selUnion.right - r.x - r.width));
+                else if (direction === 'center-h') node.x(node.x() + (selUnion.x + selUnion.width / 2 - r.x - r.width / 2));
+                else if (direction === 'top') node.y(node.y() + (selUnion.y - r.y));
+                else if (direction === 'bottom') node.y(node.y() + (selUnion.bottom - r.y - r.height));
+                else if (direction === 'center-v') node.y(node.y() + (selUnion.y + selUnion.height / 2 - r.y - r.height / 2));
+            } else {
+                if (direction === 'left') node.x(0);
+                else if (direction === 'right') node.x(sw - r.width);
+                else if (direction === 'center-h') node.x((sw - r.width) / 2);
+                else if (direction === 'top') node.y(0);
+                else if (direction === 'bottom') node.y(sh - r.height);
+                else if (direction === 'center-v') node.y((sh - r.height) / 2);
+            }
+        });
         layer.draw();
-        
-        // Update properties panel
+        scheduleQuoteEditorHistoryPush();
         const propX = document.getElementById('prop-x');
         const propY = document.getElementById('prop-y');
-        if (propX) propX.value = Math.round(selectedElement.x());
-        if (propY) propY.value = Math.round(selectedElement.y());
+        if (selectedNodes.length === 1) {
+            if (propX) propX.value = Math.round(selectedNodes[0].x());
+            if (propY) propY.value = Math.round(selectedNodes[0].y());
+        }
+    };
+    
+    window.distributeElements = function (axis) {
+        if (!window.__PDF_EDITOR_HELPERS__) return;
+        if (axis === 'h' && window.__PDF_EDITOR_HELPERS__.distributeHorizontal) {
+            window.__PDF_EDITOR_HELPERS__.distributeHorizontal(selectedNodes);
+        } else if (axis === 'v' && window.__PDF_EDITOR_HELPERS__.distributeVertical) {
+            window.__PDF_EDITOR_HELPERS__.distributeVertical(selectedNodes);
+        }
+        layer.draw();
         scheduleQuoteEditorHistoryPush();
     };
     
@@ -6055,6 +6449,12 @@ table tr:last-child td {
             </button>
             <button type="button" onclick="alignElements('bottom')" title="{{ _('Align Bottom') }}">
                 <i class="fas fa-arrow-down"></i>
+            </button>
+            <button type="button" onclick="distributeElements('h')" title="{{ _('Distribute horizontally') }}">
+                <i class="fas fa-arrows-alt-h"></i>
+            </button>
+            <button type="button" onclick="distributeElements('v')" title="{{ _('Distribute vertically') }}">
+                <i class="fas fa-arrows-alt-v"></i>
             </button>
         `;
         canvasToolbar.insertAdjacentHTML('beforeend', alignmentButtons);

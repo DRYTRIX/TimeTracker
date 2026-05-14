@@ -10,11 +10,7 @@ from .client_attachment import ClientAttachment
 from .client_note import ClientNote
 from .client_notification import ClientNotification, ClientNotificationPreferences, NotificationType
 from .client_portal_customization import ClientPortalCustomization
-from .client_portal_dashboard_preference import (
-    ClientPortalDashboardPreference,
-    DEFAULT_WIDGET_ORDER,
-    VALID_WIDGET_IDS,
-)
+from .client_portal_dashboard_preference import DEFAULT_WIDGET_ORDER, VALID_WIDGET_IDS, ClientPortalDashboardPreference
 from .client_prepaid_consumption import ClientPrepaidConsumption
 from .client_time_approval import ClientApprovalPolicy, ClientApprovalStatus, ClientTimeApproval
 from .comment import Comment
@@ -90,9 +86,9 @@ from .time_off import CompanyHoliday, LeaveType, TimeOffRequest, TimeOffRequestS
 from .timesheet_period import TimesheetPeriod, TimesheetPeriodStatus
 from .timesheet_policy import TimesheetPolicy
 from .user import User
-from .user_smart_notification_dismissal import UserSmartNotificationDismissal
 from .user_client import UserClient
 from .user_favorite_project import UserFavoriteProject
+from .user_smart_notification_dismissal import UserSmartNotificationDismissal
 from .warehouse import Warehouse
 from .warehouse_stock import WarehouseStock
 from .webhook import Webhook, WebhookDelivery

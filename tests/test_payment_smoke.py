@@ -338,7 +338,6 @@ class TestPaymentSmokeTests:
             db.session.delete(payment2)
             db.session.commit()
 
-    @pytest.mark.skip(reason="SQLAlchemy compile error - needs investigation")
     def test_invoice_shows_payment_history(self, client, app, setup_payment_test_data):
         """Test that invoice view shows payment history"""
         with client:

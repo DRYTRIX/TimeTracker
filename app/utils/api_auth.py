@@ -69,7 +69,7 @@ def authenticate_token(token_string, record_usage: bool = True):
 
     # Check IP whitelist if configured
     if api_token.ip_whitelist:
-        client_ip = request.remote_addr
+        client_ip = request.remote_addr or ""
         allowed_ips = [ip.strip() for ip in api_token.ip_whitelist.split(",") if ip.strip()]
 
         # Simple IP matching (can be enhanced with CIDR support)

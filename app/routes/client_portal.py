@@ -24,17 +24,16 @@ from flask_babel import gettext as _
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.utils.backup import is_database_restore_in_progress
-
 from app import db
 from app.models import (
+    DEFAULT_WIDGET_ORDER,
+    VALID_WIDGET_IDS,
     Activity,
     Client,
     ClientAttachment,
     ClientPortalDashboardPreference,
     Comment,
     Contact,
-    DEFAULT_WIDGET_ORDER,
     Invoice,
     Issue,
     Project,
@@ -42,12 +41,12 @@ from app.models import (
     Quote,
     TimeEntry,
     User,
-    VALID_WIDGET_IDS,
 )
 from app.models.client_time_approval import ClientTimeApproval
 from app.services.client_approval_service import ClientApprovalService
 from app.services.client_notification_service import ClientNotificationService
 from app.services.payment_gateway_service import PaymentGatewayService
+from app.utils.backup import is_database_restore_in_progress
 from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
 
@@ -530,7 +529,7 @@ def dashboard_preferences_post():
     except (TypeError, ValueError):
         uid = None
 
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     widget_ids = data.get("widget_ids")
     widget_order = data.get("widget_order")
 
@@ -1421,6 +1420,7 @@ def _reports_csv_response(client, report_data, date_range_days):
     """Build CSV download from report_data (same access as reports())."""
     import csv
     import io
+
     from flask import Response
 
     output = io.StringIO()

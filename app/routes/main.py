@@ -437,7 +437,6 @@ def track_support_impression():
 def request_soft_support_prompt():
     """Authorize a single long-session soft prompt (session rules enforced server-side)."""
     from app.models import DonationInteraction, Settings
-
     from app.services.support_prompt_service import SupportPromptService
 
     data = request.get_json() or {}

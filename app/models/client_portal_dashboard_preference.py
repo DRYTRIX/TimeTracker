@@ -7,7 +7,6 @@ from datetime import datetime
 
 from app import db
 
-
 # Widget keys for the client portal dashboard (default layout order)
 DEFAULT_WIDGET_ORDER = [
     "stats",
@@ -42,11 +41,11 @@ class ClientPortalDashboardPreference(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
-    __table_args__ = (
-        db.UniqueConstraint("client_id", "user_id", name="uq_client_portal_dashboard_pref_client_user"),
-    )
+    __table_args__ = (db.UniqueConstraint("client_id", "user_id", name="uq_client_portal_dashboard_pref_client_user"),)
 
-    client = db.relationship("Client", backref=db.backref("dashboard_preferences", lazy="dynamic", cascade="all, delete-orphan"))
+    client = db.relationship(
+        "Client", backref=db.backref("dashboard_preferences", lazy="dynamic", cascade="all, delete-orphan")
+    )
     user = db.relationship("User", backref=db.backref("client_portal_dashboard_preference", uselist=False))
 
     def __repr__(self):

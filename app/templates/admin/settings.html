@@ -514,6 +514,9 @@
             <!-- AI Helper Settings -->
             <div id="section-ai" class="border-b border-border-light dark:border-border-dark pb-6">
                 <h2 class="text-lg font-semibold mb-4">{{ _('AI Helper') }}</h2>
+                <p class="text-sm text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 mb-4">
+                    {{ _('New installs keep the AI helper off by default (no bundled LLM). To use in-cluster Ollama, run Docker Compose with the optional profile and set AI_ENABLED=true in .env (see README). To use only a hosted model, set Availability below to Enabled and configure an openai_compatible provider.') }}
+                </p>
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
                     {{ _('Configure the shared server-side AI helper for the web app, desktop app, and API clients. Hosted provider keys stay on the server.') }}
                 </p>

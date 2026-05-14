@@ -47,7 +47,13 @@ jobs:
         continue-on-error: true
       
       - name: Run Safety (dependency vulnerability check)
-        run: safety check --json
+        run: |
+          mkdir -p "${{ github.workspace }}/.test_installation_config"
+          REPORT="${{ github.workspace }}/.test_installation_config/safety-report.json"
+          python -m safety check --save-json "${REPORT}" >/dev/null || true
+          if [ -f "${REPORT}" ]; then
+            python "${{ github.workspace }}/scripts/ci/sanitize_safety_report.py" "${REPORT}" "${{ github.workspace }}"
+          fi
         continue-on-error: true
 
   test:
@@ -130,7 +136,13 @@ jobs:
         continue-on-error: true
       
       - name: Run Safety dependency check
-        run: safety check --json
+        run: |
+          mkdir -p "${{ github.workspace }}/.test_installation_config"
+          REPORT="${{ github.workspace }}/.test_installation_config/safety-report.json"
+          python -m safety check --save-json "${REPORT}" >/dev/null || true
+          if [ -f "${REPORT}" ]; then
+            python "${{ github.workspace }}/scripts/ci/sanitize_safety_report.py" "${REPORT}" "${{ github.workspace }}"
+          fi
         continue-on-error: true
       
       - name: Run Semgrep security scan

@@ -27,7 +27,7 @@ class IntegrationService:
     """
 
     # Registry of available connectors
-    _connector_registry = {}
+    _connector_registry: dict = {}
 
     @classmethod
     def register_connector(cls, provider: str, connector_class):

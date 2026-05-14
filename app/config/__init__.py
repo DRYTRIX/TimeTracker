@@ -29,6 +29,8 @@ except ImportError:
     config_py_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.py")
     if os.path.exists(config_py_path):
         spec = importlib.util.spec_from_file_location("flask_config_module", config_py_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Could not load module spec for {config_py_path}")
         flask_config = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(flask_config)
         Config = flask_config.Config
@@ -37,7 +39,7 @@ except ImportError:
         TestingConfig = flask_config.TestingConfig
     else:
         # Fallback - create minimal config
-        class Config:
+        class Config:  # type: ignore[no-redef]
             pass
 
         ProductionConfig = Config

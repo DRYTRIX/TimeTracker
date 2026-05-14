@@ -5,7 +5,8 @@ from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db
-from app.utils.secret_crypto import decrypt_if_needed, encrypt_if_possible, is_configured as secrets_encryption_configured
+from app.utils.secret_crypto import decrypt_if_needed, encrypt_if_possible
+from app.utils.secret_crypto import is_configured as secrets_encryption_configured
 
 
 class User(UserMixin, db.Model):

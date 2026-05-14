@@ -7,11 +7,13 @@ instead of hardcoding Euro symbols.
 """
 
 import pytest
+import re
 from datetime import datetime, date, timedelta
 from decimal import Decimal
+from types import SimpleNamespace
 from app import db, create_app
 from app.models import User, Project, Settings, Client, Payment, Invoice, Expense
-from factories import ClientFactory, ProjectFactory, InvoiceFactory, ExpenseFactory
+from factories import ClientFactory, ProjectFactory, InvoiceFactory
 from flask_login import login_user
 from sqlalchemy import text
 from sqlalchemy.pool import StaticPool
@@ -175,7 +177,8 @@ def sample_client(app):
     """Create a sample client."""
     with app.app_context():
         client = ClientFactory(name="Test Client", email="test@example.com")
-        return client
+        db.session.commit()
+        return SimpleNamespace(id=client.id, name=client.name)
 
 
 @pytest.fixture
@@ -186,7 +189,8 @@ def sample_project(app, sample_client):
         project = ProjectFactory(
             name="Test Project", client_id=sample_client.id, status="active", hourly_rate=Decimal("100.00")
         )
-        return project
+        db.session.commit()
+        return SimpleNamespace(id=project.id, name=project.name, client_id=project.client_id)
 
 
 @pytest.fixture
@@ -234,17 +238,20 @@ def sample_payment(app, sample_invoice):
 
 @pytest.fixture
 def sample_expense(app, admin_user, sample_project):
-    """Create a sample expense."""
-    expense = ExpenseFactory(
-        user_id=admin_user.id,
-        title="Test Expense",
-        category="travel",
-        amount=Decimal("250.00"),
-        expense_date=date.today(),
+    """Create a sample expense (direct model avoids ExpenseFactory SubFactory overriding user/project)."""
+    expense = Expense(
+        admin_user.id,
+        "Test Expense",
+        "travel",
+        Decimal("250.00"),
+        date.today(),
         project_id=sample_project.id,
+        client_id=sample_project.client_id,
         currency_code="USD",
         status="approved",
     )
+    db.session.add(expense)
+    db.session.commit()
     return expense
 
 
@@ -351,7 +358,6 @@ def test_currency_injected_in_template_context(app, usd_settings):
 
 
 # Smoke tests for finance pages
-@pytest.mark.skip(reason="Session management issue with isolated app fixture - authentication not persisting")
 @pytest.mark.smoke
 @pytest.mark.routes
 def test_reports_page_displays_usd(test_client_with_auth, admin_user, usd_settings, sample_payment):
@@ -374,7 +380,6 @@ def test_reports_page_displays_usd(test_client_with_auth, admin_user, usd_settin
         assert "1000.00" in data or "1,000.00" in data
 
 
-@pytest.mark.skip(reason="Session management issue with isolated app fixture - authentication not persisting")
 @pytest.mark.smoke
 @pytest.mark.routes
 def test_payments_page_displays_usd(test_client_with_auth, admin_user, usd_settings, sample_payment):
@@ -392,7 +397,6 @@ def test_payments_page_displays_usd(test_client_with_auth, admin_user, usd_setti
     assert "1000.00" in data or "1,000.00" in data
 
 
-@pytest.mark.skip(reason="Session management issue with isolated app fixture - authentication not persisting")
 @pytest.mark.smoke
 @pytest.mark.routes
 def test_expenses_list_page_displays_usd(test_client_with_auth, admin_user, usd_settings, sample_expense):
@@ -406,11 +410,11 @@ def test_expenses_list_page_displays_usd(test_client_with_auth, admin_user, usd_
     # Check that currency info is present
     assert "$" in data or "USD" in data or "currency" in data.lower()
 
-    # Should display expense amounts
-    assert "250.00" in data
+    # Amount appears via format_currency (e.g. "$ 250.00"); allow common locale variants.
+    assert "Test Expense" in data
+    assert re.search(r"250[.,]\s*0*0", data), "Expected expense amount ~250 in page HTML"
 
 
-@pytest.mark.skip(reason="Session management issue with isolated app fixture - authentication not persisting")
 @pytest.mark.smoke
 @pytest.mark.routes
 def test_expenses_dashboard_displays_usd(test_client_with_auth, admin_user, usd_settings, sample_expense):
@@ -424,8 +428,8 @@ def test_expenses_dashboard_displays_usd(test_client_with_auth, admin_user, usd_
     # Check that currency info is present
     assert "$" in data or "USD" in data or "currency" in data.lower()
 
-    # Should display expense amounts
-    assert "250.00" in data
+    assert "Test Expense" in data
+    assert re.search(r"250[.,]\s*0*0", data), "Expected expense amount ~250 on dashboard"
 
 
 # Model tests
@@ -449,19 +453,26 @@ def test_settings_currency_can_be_changed(app):
     """Test that currency setting can be changed."""
     with app.app_context():
         settings = Settings.get_settings()
+        # get_settings() may return a transient (in-memory) instance in some
+        # edge cases (e.g. during flush). Ensure we have a persistent row.
+        if settings not in db.session or getattr(settings, "id", None) is None:
+            db.session.add(settings)
+            db.session.commit()
+
         original_currency = settings.currency
 
         # Change to USD
         settings.currency = "USD"
         db.session.commit()
 
-        # Verify change
-        db.session.expire(settings)
-        db.session.refresh(settings)
-        assert settings.currency == "USD"
+        # Re-query to verify (more robust than refresh, which would fail on
+        # transient instances).
+        fresh = Settings.query.first()
+        assert fresh is not None
+        assert fresh.currency == "USD"
 
         # Change back
-        settings.currency = original_currency
+        fresh.currency = original_currency
         db.session.commit()
 
 

@@ -305,7 +305,11 @@ class ApiTokenService:
             return {"allowed": False, "remaining": 0, "error": "token_not_found"}
 
         if not has_request_context():
-            return {"allowed": True, "remaining": max_requests_per_hour, "reset_at": datetime.utcnow() + timedelta(hours=1)}
+            return {
+                "allowed": True,
+                "remaining": max_requests_per_hour,
+                "reset_at": datetime.utcnow() + timedelta(hours=1),
+            }
 
         allowed, info = consume_api_token_rate_limit(token_id)
         return {

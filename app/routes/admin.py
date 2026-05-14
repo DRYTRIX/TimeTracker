@@ -26,7 +26,6 @@ from werkzeug.utils import secure_filename
 import app as app_module
 from app import db, limiter
 from app.config.analytics_defaults import get_analytics_config
-from app.utils.safe_template_render import render_sandboxed_string
 from app.models import (
     DonationInteraction,
     Invoice,
@@ -39,13 +38,14 @@ from app.models import (
     User,
     UserClient,
 )
+from app.utils.auth_method import auth_includes_ldap, auth_includes_oidc, normalize_auth_method
 from app.utils.backup import create_backup, get_backup_root_dir, restore_backup
 from app.utils.db import safe_commit
 from app.utils.error_handling import safe_file_remove, safe_log
 from app.utils.installation import get_installation_config
 from app.utils.invoice_numbering import sanitize_invoice_pattern, sanitize_invoice_prefix, validate_invoice_pattern
-from app.utils.auth_method import auth_includes_ldap, auth_includes_oidc, normalize_auth_method
 from app.utils.permissions import admin_or_permission_required
+from app.utils.safe_template_render import render_sandboxed_string
 from app.utils.telemetry import get_telemetry_fingerprint, is_telemetry_enabled
 from app.utils.timezone import get_available_timezones
 
@@ -1101,7 +1101,9 @@ def telemetry_dashboard():
     }
 
     # Get OTEL OTLP status
-    grafana_endpoint = analytics_config.get("otel_exporter_otlp_endpoint") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+    grafana_endpoint = analytics_config.get("otel_exporter_otlp_endpoint") or os.getenv(
+        "OTEL_EXPORTER_OTLP_ENDPOINT", ""
+    )
     grafana_token = analytics_config.get("otel_exporter_otlp_token") or os.getenv("OTEL_EXPORTER_OTLP_TOKEN", "")
     grafana_data = {
         "enabled": bool(grafana_endpoint) and bool(grafana_token),
@@ -2689,7 +2691,12 @@ def pdf_layout_preview():
             )
             template_json_parsed = None
 
-    if template_json_parsed is None and saved_template and saved_template.template_json and saved_template.template_json.strip():
+    if (
+        template_json_parsed is None
+        and saved_template
+        and saved_template.template_json
+        and saved_template.template_json.strip()
+    ):
         try:
             current_app.logger.info(
                 f"[PDF_PREVIEW] Loading saved template JSON from database (fallback) - PageSize: '{page_size}', TemplateID: {saved_template.id}, JSON length: {len(saved_template.template_json)}"

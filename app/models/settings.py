@@ -5,15 +5,35 @@ from datetime import datetime
 from app import db
 from app.config import Config
 from app.utils.invoice_numbering import DEFAULT_INVOICE_PATTERN
-from app.utils.secret_crypto import decrypt_if_needed, encrypt_if_possible, is_configured as secrets_encryption_configured
+from app.utils.secret_crypto import decrypt_if_needed, encrypt_if_possible
+from app.utils.secret_crypto import is_configured as secrets_encryption_configured
 
 # Re-entrancy guard: avoid add+commit when get_settings is called from inside a flush/commit
 _creating_settings = threading.local()
 
 
+def _session_proxy_to_session(session):
+    """Resolve Flask-SQLAlchemy scoped_session to the real ORM Session.
+
+    Private flags like ``_flushing`` live on the underlying Session; ``scoped_session``
+    does not delegate them, so flush detection must use the unwrapped instance.
+    """
+    if session is None:
+        return None
+    if callable(session):
+        try:
+            return session()
+        except Exception:
+            return session
+    return session
+
+
 def _session_in_flush(session):
     """Return True if the session is currently in a flush (to avoid nested add+commit)."""
     try:
+        session = _session_proxy_to_session(session)
+        if session is None:
+            return False
         # SQLAlchemy sets _flushing for the outer flush() call.
         if getattr(session, "_flushing", False):
             return True
@@ -441,7 +461,9 @@ class Settings(db.Model):
 
         elif provider == "google_calendar":
             client_id = getattr(self, "google_calendar_client_id", "") or os.getenv("GOOGLE_CLIENT_ID", "")
-            client_secret_raw = getattr(self, "google_calendar_client_secret", "") or os.getenv("GOOGLE_CLIENT_SECRET", "")
+            client_secret_raw = getattr(self, "google_calendar_client_secret", "") or os.getenv(
+                "GOOGLE_CLIENT_SECRET", ""
+            )
             client_secret = decrypt_if_needed(client_secret_raw) if include_secrets else ""
             return {"client_id": client_id, "client_secret": client_secret}
 
@@ -486,7 +508,9 @@ class Settings(db.Model):
 
         elif provider == "quickbooks":
             client_id = getattr(self, "quickbooks_client_id", "") or os.getenv("QUICKBOOKS_CLIENT_ID", "")
-            client_secret_raw = getattr(self, "quickbooks_client_secret", "") or os.getenv("QUICKBOOKS_CLIENT_SECRET", "")
+            client_secret_raw = getattr(self, "quickbooks_client_secret", "") or os.getenv(
+                "QUICKBOOKS_CLIENT_SECRET", ""
+            )
             client_secret = decrypt_if_needed(client_secret_raw) if include_secrets else ""
             return {"client_id": client_id, "client_secret": client_secret}
 

@@ -7,8 +7,6 @@ from typing import Optional, Tuple
 
 from dateutil.relativedelta import relativedelta
 
-from app.utils.timezone import from_app_timezone, now_in_app_timezone, to_app_timezone
-
 
 def parse_date(date_str: str, format: Optional[str] = None) -> Optional[date]:
     """
@@ -245,11 +243,11 @@ def format_duration(seconds: float, format: str = "hours") -> str:
         return " ".join(parts)
 
     elif format == "short":
-        hours = seconds / 3600
-        if hours < 1:
-            minutes = seconds / 60
-            return f"{int(minutes)}m"
-        return f"{hours:.1f}h"
+        hours_short = seconds / 3600
+        if hours_short < 1:
+            minutes_short = seconds / 60
+            return f"{int(minutes_short)}m"
+        return f"{hours_short:.1f}h"
 
     else:
         return f"{seconds}s"

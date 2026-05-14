@@ -159,7 +159,7 @@ class SlackConnector(BaseConnector):
             channels_response = requests.get(
                 "https://slack.com/api/conversations.list",
                 headers={"Authorization": f"Bearer {token}"},
-                params={"types": "public_channel,private_channel", "exclude_archived": True},
+                params={"types": "public_channel,private_channel", "exclude_archived": "true"},
             )
 
             if channels_response.status_code == 200:

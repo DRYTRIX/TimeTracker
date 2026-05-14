@@ -1,12 +1,12 @@
 """Utility for migrating users from legacy role field to new role system"""
 
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from app import db
 from app.models import Role, User
 
 
-def migrate_user_roles(dry_run: bool = False) -> Dict[str, any]:
+def migrate_user_roles(dry_run: bool = False) -> Dict[str, Any]:
     """
     Migrate users from legacy role field to new role system.
 
@@ -16,7 +16,7 @@ def migrate_user_roles(dry_run: bool = False) -> Dict[str, any]:
     Returns:
         Dictionary with migration statistics
     """
-    stats = {
+    stats: Dict[str, Any] = {
         "total_users": 0,
         "users_with_roles": 0,
         "users_needing_migration": 0,
@@ -97,6 +97,7 @@ def migrate_single_user(user_id: int, role_name: Optional[str] = None) -> bool:
         return True
 
     # Determine target role
+    target_role_name: Optional[str]
     if role_name:
         target_role_name = role_name
     elif user.role:

@@ -280,6 +280,13 @@ class TimeTrackingService:
             if err:
                 return err
 
+        if start_time is None or end_time is None:
+            return {
+                "success": False,
+                "message": "start_time and end_time are required",
+                "error": "missing_time_range",
+            }
+
         # Validate time range
         if self._is_locked_period(user_id, start_time, end_time):
             return {

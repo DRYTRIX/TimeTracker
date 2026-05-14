@@ -116,10 +116,12 @@ def api_activity_feed():
             query = query.filter(Activity.created_at >= start_dt)
         except ValueError:
             return (
-                jsonify({
-                    "error": "Invalid parameter",
-                    "message": "Invalid start_date or end_date format; use ISO 8601 (e.g. 2024-01-15 or 2024-01-15T00:00:00Z).",
-                }),
+                jsonify(
+                    {
+                        "error": "Invalid parameter",
+                        "message": "Invalid start_date or end_date format; use ISO 8601 (e.g. 2024-01-15 or 2024-01-15T00:00:00Z).",
+                    }
+                ),
                 400,
             )
 
@@ -129,10 +131,12 @@ def api_activity_feed():
             query = query.filter(Activity.created_at <= end_dt)
         except ValueError:
             return (
-                jsonify({
-                    "error": "Invalid parameter",
-                    "message": "Invalid start_date or end_date format; use ISO 8601 (e.g. 2024-01-15 or 2024-01-15T00:00:00Z).",
-                }),
+                jsonify(
+                    {
+                        "error": "Invalid parameter",
+                        "message": "Invalid start_date or end_date format; use ISO 8601 (e.g. 2024-01-15 or 2024-01-15T00:00:00Z).",
+                    }
+                ),
                 400,
             )
 

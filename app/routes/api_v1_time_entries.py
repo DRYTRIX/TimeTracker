@@ -104,9 +104,7 @@ def import_time_entries_csv():
     else:
         csv_text = request.get_data(as_text=True) or ""
 
-    result, status = import_time_entries_from_csv_text(
-        csv_text, user_id=g.api_user.id, is_admin=g.api_user.is_admin
-    )
+    result, status = import_time_entries_from_csv_text(csv_text, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
     return jsonify(result), status
 
 
@@ -131,9 +129,7 @@ def bulk_time_entries():
             ids.append(int(eid))
         except (TypeError, ValueError):
             return validation_error_response(errors={"entry_ids": ["All entry ids must be integers"]})
-    result = apply_bulk_time_entry_actions(
-        ids, action, value, user_id=g.api_user.id, is_admin=g.api_user.is_admin
-    )
+    result = apply_bulk_time_entry_actions(ids, action, value, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
     if not result.get("success"):
         code = result.get("http_status", 400)
         return error_response(result.get("error", "Bulk operation failed"), status_code=code)
@@ -145,7 +141,6 @@ def bulk_time_entries():
 def create_time_entry():
     """Create a new time entry."""
     from app.services import TimeTrackingService
-
     from app.utils.api_idempotency import (
         SCOPE_POST_TIME_ENTRY,
         lookup_idempotent_response,

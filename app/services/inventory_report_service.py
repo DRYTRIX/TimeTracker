@@ -3,7 +3,6 @@ Service for inventory reports and analytics.
 """
 
 from collections import defaultdict
-
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
@@ -233,9 +232,11 @@ class InventoryReportService:
         movements = query.all()
 
         # Aggregate by item
-        item_turnover = {}
+        item_turnover: Dict[int, Dict[str, Any]] = {}
         for movement in movements:
             item_id = movement.stock_item_id
+            if item_id is None:
+                continue
             if item_id not in item_turnover:
                 item = StockItem.query.get(item_id)
                 if not item:

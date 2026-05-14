@@ -4,7 +4,9 @@ OpenTelemetry traces and OTLP metrics for TimeTracker.
 Initialization is gated on OTLP credentials (same sources as manual log export).
 Feature flags: ENABLE_TRACING, ENABLE_METRICS (default true when unset).
 
-Tests: set OTEL_ENABLE_IN_TESTS=1 for in-memory tracing without network export.
+Tests: Flask ``TESTING`` apps do not start network OTLP exporters (avoids background
+export threads and shutdown noise). Set ``OTEL_ENABLE_IN_TESTS=1`` for in-memory
+tracing/metrics without export.
 """
 
 from __future__ import annotations
@@ -37,6 +39,9 @@ _webhook_failure: Any = None
 
 # Test-only span exporter (set when OTEL_ENABLE_IN_TESTS=1)
 _test_span_exporter: Any = None
+
+# Register atexit shutdown once; scoped_session / pytest can create many app lifetimes.
+_otel_atexit_registered = False
 
 
 def _env_bool(name: str, default: bool = True) -> bool:
@@ -286,6 +291,23 @@ def _active_timers_callback(options: Any) -> Any:
 
 
 def _shutdown_providers() -> None:
+    # OTLP exporters log on failure; during interpreter shutdown stderr may already be closed.
+    _otel_loggers = (
+        "opentelemetry.sdk.trace",
+        "opentelemetry.sdk.metrics",
+        "opentelemetry.exporter.otlp.proto.http.trace_exporter",
+        "opentelemetry.exporter.otlp.proto.http.metric_exporter",
+    )
+    import logging as _logging
+
+    _saved = []
+    for name in _otel_loggers:
+        lg = _logging.getLogger(name)
+        _saved.append((lg, lg.level, lg.propagate, list(lg.handlers)))
+        lg.handlers.clear()
+        lg.addHandler(_logging.NullHandler())
+        lg.setLevel(_logging.CRITICAL + 1)
+        lg.propagate = False
     try:
         from opentelemetry import metrics as metrics_api
         from opentelemetry import trace as trace_api
@@ -294,12 +316,28 @@ def _shutdown_providers() -> None:
 
         tp = trace_api.get_tracer_provider()
         if isinstance(tp, TracerProvider):
-            tp.shutdown()
+            try:
+                tp.shutdown()
+            except Exception:
+                pass
         mp = metrics_api.get_meter_provider()
         if isinstance(mp, MeterProvider):
-            mp.shutdown()
+            try:
+                mp.shutdown()
+            except Exception:
+                pass
     except Exception:
         pass
+    finally:
+        for lg, level, prop, handlers in _saved:
+            try:
+                lg.handlers.clear()
+                for h in handlers:
+                    lg.addHandler(h)
+                lg.setLevel(level)
+                lg.propagate = prop
+            except Exception:
+                pass
 
 
 def get_test_span_exporter() -> Any:
@@ -326,8 +364,11 @@ def reset_for_testing() -> None:
             SQLAlchemyInstrumentor().uninstrument()
     except Exception:
         pass
-    # Do not call _shutdown_providers() here: pytest teardown + atexit would double-shutdown
-    # MeterProvider and spam SDK warnings. Process exit still runs atexit-registered shutdown.
+    # Stop metric export threads before the next test app; idempotent _shutdown_providers is safe.
+    try:
+        _shutdown_providers()
+    except Exception:
+        pass
     _initialized = False
     _tracing_enabled = False
     _metrics_enabled = False
@@ -371,18 +412,18 @@ def init_opentelemetry(app: Any) -> bool:
 
     testing = bool(app.config.get("TESTING"))
     testing_memory = testing and _env_bool("OTEL_ENABLE_IN_TESTS", False)
+    # Default pytest/Flask TESTING: never start OTLP network exporters (background threads,
+    # 429 noise, logging to closed streams on shutdown). Use OTEL_ENABLE_IN_TESTS=1 for in-memory.
+    if testing and not testing_memory:
+        _initialized = True
+        return False
 
     conn = resolve_otlp_connection()
     if not conn and not testing_memory:
         _initialized = True
         return False
 
-    if (
-        conn
-        and not testing_memory
-        and not enable_trace_flag
-        and not enable_metrics_flag
-    ):
+    if conn and not testing_memory and not enable_trace_flag and not enable_metrics_flag:
         _initialized = True
         return False
 
@@ -432,9 +473,7 @@ def init_opentelemetry(app: Any) -> bool:
             _metrics_enabled = True
         else:
             _discard_reader = InMemoryMetricReader()
-            metrics_api.set_meter_provider(
-                MeterProvider(resource=resource, metric_readers=[_discard_reader])
-            )
+            metrics_api.set_meter_provider(MeterProvider(resource=resource, metric_readers=[_discard_reader]))
             _metrics_enabled = False
     else:
         from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
@@ -457,7 +496,10 @@ def init_opentelemetry(app: Any) -> bool:
         if enable_metrics_flag:
             interval_ms = int(os.getenv("OTEL_METRICS_EXPORT_INTERVAL_MS", "60000"))
             metric_exp = OTLPMetricExporter(endpoint=metrics_endpoint, headers=headers)
-            reader = PeriodicExportingMetricReader(metric_exp, export_interval_millis=interval_ms)
+            # Both ``InMemoryMetricReader`` (used in the dev branch above) and
+            # ``PeriodicExportingMetricReader`` are valid ``MetricReader``s; mypy
+            # narrowed ``reader`` to the first one in the if/else.
+            reader = PeriodicExportingMetricReader(metric_exp, export_interval_millis=interval_ms)  # type: ignore[assignment]
             mp = MeterProvider(resource=resource, metric_readers=[reader])
             metrics_api.set_meter_provider(mp)
             _metrics_enabled = True
@@ -465,9 +507,7 @@ def init_opentelemetry(app: Any) -> bool:
             from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 
             _discard_reader2 = InMemoryMetricReader()
-            metrics_api.set_meter_provider(
-                MeterProvider(resource=resource, metric_readers=[_discard_reader2])
-            )
+            metrics_api.set_meter_provider(MeterProvider(resource=resource, metric_readers=[_discard_reader2]))
             _metrics_enabled = False
 
     if _metrics_enabled:
@@ -548,7 +588,10 @@ def init_opentelemetry(app: Any) -> bool:
         except Exception as e:
             logger.warning("SQLAlchemy OpenTelemetry instrumentation skipped: %s", e)
 
-    atexit.register(_shutdown_providers)
+    global _otel_atexit_registered
+    if not _otel_atexit_registered:
+        atexit.register(_shutdown_providers)
+        _otel_atexit_registered = True
     _initialized = True
     logger.info(
         "OpenTelemetry initialized tracing=%s metrics=%s",

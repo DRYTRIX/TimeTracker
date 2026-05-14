@@ -160,6 +160,7 @@ class AuditLog(db.Model):
                 db.session.expunge(audit_log)
             except Exception as expunge_err:
                 import logging
+
                 logging.getLogger(__name__).debug("Audit log expunge failed: %s", expunge_err)
             # Don't let audit logging break the main flow
             # Log at warning level so it's visible if there's a real issue

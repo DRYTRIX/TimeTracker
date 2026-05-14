@@ -71,7 +71,9 @@ def _get_buyer_party(invoice: Any) -> CIIParty:
         scheme_id = (client.get_custom_field("peppol_scheme_id", "") or "").strip() or None
         country = (client.get_custom_field("peppol_country", "") or "").strip() or None
         if not country:
-            country = (client.get_custom_field("country", "") or client.get_custom_field("country_code", "") or "").strip() or None
+            country = (
+                client.get_custom_field("country", "") or client.get_custom_field("country_code", "") or ""
+            ).strip() or None
         name = (getattr(client, "name", None) or getattr(invoice, "client_name", "") or "Customer").strip()
         tax_id = (client.get_custom_field("vat_id", "") or client.get_custom_field("tax_id", "") or "").strip() or None
         address_line = (
@@ -187,11 +189,13 @@ def embed_zugferd_xml_in_pdf(pdf_bytes: bytes, invoice: Any, settings: Any) -> T
         try:
             from pikepdf import Name
 
-            relationship = Name("/Data")
+            relationship: Any = Name("/Data")
         except ImportError:
             relationship = "/Data"
         try:
-            filespec = AttachedFileSpec(
+            # ``relationship`` is accepted by newer pikepdf versions; the
+            # TypeError fallback below covers older releases.
+            filespec = AttachedFileSpec(  # type: ignore[call-arg]
                 pdf,
                 cii_bytes,
                 filename=FACTURX_EMBEDDED_FILENAME,
@@ -203,7 +207,7 @@ def embed_zugferd_xml_in_pdf(pdf_bytes: bytes, invoice: Any, settings: Any) -> T
                 tmp.write(cii_bytes)
                 tmp_path = tmp.name
             try:
-                filespec = AttachedFileSpec.from_filepath(pdf, tmp_path, relationship="/Data")
+                filespec = AttachedFileSpec.from_filepath(pdf, tmp_path, relationship="/Data")  # type: ignore[call-arg]
             finally:
                 try:
                     os.unlink(tmp_path)

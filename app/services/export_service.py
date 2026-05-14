@@ -4,7 +4,7 @@ Service for data export operations.
 
 import csv
 from datetime import date, datetime
-from io import BytesIO
+from io import BytesIO, StringIO
 from typing import Any, Dict, List, Optional
 
 from app.models import Expense, Invoice, Project, TimeEntry
@@ -45,9 +45,9 @@ class ExportService:
         else:
             entries = []
 
-        # Create CSV
-        output = BytesIO()
-        writer = csv.writer(output)
+        # Create CSV in a text buffer then return bytes for binary download.
+        text_buffer = StringIO()
+        writer = csv.writer(text_buffer)
 
         # Write header
         writer.writerow(
@@ -85,7 +85,7 @@ class ExportService:
                 ]
             )
 
-        output.seek(0)
+        output = BytesIO(text_buffer.getvalue().encode("utf-8"))
         return output
 
     def export_projects_csv(self, status: Optional[str] = None, client_id: Optional[int] = None) -> BytesIO:
@@ -105,9 +105,9 @@ class ExportService:
                 else self.project_repo.get_by_client(client_id, status=status, include_relations=True)
             )
 
-        # Create CSV
-        output = BytesIO()
-        writer = csv.writer(output)
+        # Create CSV in a text buffer then return bytes for binary download.
+        text_buffer = StringIO()
+        writer = csv.writer(text_buffer)
 
         # Write header
         writer.writerow(
@@ -135,7 +135,7 @@ class ExportService:
                 ]
             )
 
-        output.seek(0)
+        output = BytesIO(text_buffer.getvalue().encode("utf-8"))
         return output
 
     def export_invoices_csv(self, status: Optional[str] = None, client_id: Optional[int] = None) -> BytesIO:
@@ -153,9 +153,9 @@ class ExportService:
         else:
             invoices = self.invoice_repo.get_all()
 
-        # Create CSV
-        output = BytesIO()
-        writer = csv.writer(output)
+        # Create CSV in a text buffer then return bytes for binary download.
+        text_buffer = StringIO()
+        writer = csv.writer(text_buffer)
 
         # Write header
         writer.writerow(
@@ -193,5 +193,5 @@ class ExportService:
                 ]
             )
 
-        output.seek(0)
+        output = BytesIO(text_buffer.getvalue().encode("utf-8"))
         return output

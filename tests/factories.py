@@ -91,7 +91,7 @@ class TimeEntryFactory(_SessionFactory):
     user_id = factory.SelfAttribute("user_fk.id")
     project_id = factory.SelfAttribute("project_fk.id")
     start_time = factory.LazyFunction(lambda: _dt.datetime.now() - _dt.timedelta(hours=2))
-    end_time = factory.LazyFunction(lambda: _dt.datetime.now())
+    end_time = factory.LazyAttribute(lambda o: o.start_time + _dt.timedelta(hours=2))
     notes = factory.Faker("sentence")
     tags = "test,automation"
     source = "manual"

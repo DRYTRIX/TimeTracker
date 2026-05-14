@@ -5,7 +5,12 @@ from flask import current_app
 
 from app import db
 from app.integrations.peppol import PeppolParty, build_peppol_ubl_invoice_xml, peppol_enabled
-from app.integrations.peppol_transport import GenericTransport, NativePeppolTransport, PeppolTransportError
+from app.integrations.peppol_transport import (
+    GenericTransport,
+    NativePeppolTransport,
+    PeppolTransportError,
+    PeppolTransportProtocol,
+)
 from app.models import InvoicePeppolTransmission, Settings
 from app.utils.db import safe_commit
 
@@ -121,6 +126,7 @@ class PeppolService:
                 .strip()
                 .lower()
             )
+            transport: PeppolTransportProtocol
             if transport_mode == "native":
                 sml_url = (getattr(settings, "peppol_sml_url", "") or os.getenv("PEPPOL_SML_URL") or "").strip() or None
                 cert_path = (

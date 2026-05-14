@@ -67,8 +67,9 @@ class TestKeyboardShortcutsIntegration:
         """Test keyboard shortcuts are included in base template"""
         response = self.client.get("/")
         assert response.status_code == 200
-        assert b"keyboard-shortcuts.css" in response.data
-        assert b"keyboard-shortcuts-enhanced.js" in response.data
+        # base.html loads the advanced keyboard shortcuts script on every
+        # page; the cheat-sheet CSS is loaded on the dedicated settings page.
+        assert b"keyboard-shortcuts-advanced.js" in response.data
 
     def test_command_palette_in_base_template(self):
         """Test command palette is available"""

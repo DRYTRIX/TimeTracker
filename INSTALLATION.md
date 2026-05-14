@@ -44,9 +44,28 @@ Install Docker for your platform: [Docker Installation Guide](https://docs.docke
    docker compose up -d
    ```
 
+   This starts the app, PostgreSQL, and HTTPS reverse proxy **without** the optional bundled Ollama LLM (smaller footprint). See **With AI helper (optional)** below to add Ollama.
+
 5. Open **https://localhost** in your browser. The first run may show a self-signed certificate warning; proceed to continue.
 
 The **first user who logs in** is created as an admin (or use `ADMIN_USERNAMES` in `.env` to predefine admin usernames).
+
+## With AI helper (optional)
+
+To run the **bundled Ollama** service and enable the in-app AI helper:
+
+1. In `.env`, set `AI_ENABLED=true` and ensure `AI_BASE_URL=http://ollama:11434` (and `AI_MODEL` as desired; default `llama3.1` is large on first pull).
+2. Start Compose **with the `ai` profile**:
+
+   ```bash
+   docker compose --profile ai up -d
+   ```
+
+For a **hosted** OpenAI-compatible API only (no Ollama containers), set `AI_ENABLED=true`, `AI_PROVIDER=openai_compatible`, `AI_BASE_URL`, and `AI_API_KEY` in `.env`, then use plain `docker compose up -d`.
+
+Details: [README.md](README.md) (AI Helper section) and [docs/admin/configuration/DOCKER_COMPOSE_SETUP.md](docs/admin/configuration/DOCKER_COMPOSE_SETUP.md).
+
+To **turn off or remove** the AI helper (including bundled Ollama and API tokens), see [UNINSTALL.md](UNINSTALL.md#disabling-or-removing-the-ai-helper).
 
 ## First Login and Minimal Config
 
@@ -89,5 +108,6 @@ Detailed steps and options:
 | Database connection errors | [Database Connection Troubleshooting](docker/TROUBLESHOOTING_DB_CONNECTION.md) |
 | CSRF or session errors | [CSRF Troubleshooting](docs/admin/security/CSRF_TROUBLESHOOTING.md) |
 | Port already in use | Change ports in your `docker-compose` file or stop the conflicting service |
+| Remove / uninstall | [UNINSTALL.md](UNINSTALL.md) |
 
 For more help, see the [Documentation Index](docs/README.md) and [Support](README.md#-support).

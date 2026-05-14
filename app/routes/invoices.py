@@ -187,11 +187,7 @@ def create_invoice():
             flash(_("Could not create invoice due to a database error. Please check server logs."), "error")
             return render_template("invoices/create.html")
 
-        from app.telemetry.otel_setup import (
-            business_span,
-            record_invoice_created,
-            record_invoice_duration_seconds,
-        )
+        from app.telemetry.otel_setup import business_span, record_invoice_created, record_invoice_duration_seconds
 
         with business_span(
             "invoice.create",
@@ -327,19 +323,11 @@ def view_invoice(invoice_id):
                     _("Invoice has no linked client; buyer PEPPOL identifiers cannot be checked.")
                 )
     except (AttributeError, KeyError, TypeError) as e:
-        current_app.logger.warning(
-            "PEPPOL compliance check failed (configuration or data): %s", e, exc_info=True
-        )
-        peppol_compliance_warnings.append(
-            _("Could not verify PEPPOL compliance; check configuration.")
-        )
+        current_app.logger.warning("PEPPOL compliance check failed (configuration or data): %s", e, exc_info=True)
+        peppol_compliance_warnings.append(_("Could not verify PEPPOL compliance; check configuration."))
     except Exception as e:
-        current_app.logger.warning(
-            "PEPPOL compliance check failed: %s", e, exc_info=True
-        )
-        peppol_compliance_warnings.append(
-            _("Could not verify PEPPOL compliance; check configuration.")
-        )
+        current_app.logger.warning("PEPPOL compliance check failed: %s", e, exc_info=True)
+        peppol_compliance_warnings.append(_("Could not verify PEPPOL compliance; check configuration."))
 
     # Get approval information
     from app.services.invoice_approval_service import InvoiceApprovalService
@@ -674,9 +662,8 @@ def update_invoice_status(invoice_id):
     reduce_on_sent = os.getenv("INVENTORY_REDUCE_ON_INVOICE_SENT", "true").lower() == "true"
     reduce_on_paid = os.getenv("INVENTORY_REDUCE_ON_INVOICE_PAID", "false").lower() == "true"
 
-    should_reduce_stock = (
-        (new_status == "sent" and reduce_on_sent and previous_status != "sent")
-        or (new_status == "paid" and reduce_on_paid and previous_status != "paid")
+    should_reduce_stock = (new_status == "sent" and reduce_on_sent and previous_status != "sent") or (
+        new_status == "paid" and reduce_on_paid and previous_status != "paid"
     )
     if should_reduce_stock:
         for item in invoice.items:
@@ -1271,7 +1258,9 @@ def export_invoice_pdf(invoice_id):
             from app.telemetry.otel_setup import business_span, record_invoice_duration_seconds
 
             _pdf_t0 = time.monotonic()
-            with business_span("invoice.generate_pdf", user_id=current_user.id, page_size=page_size, generator="fallback"):
+            with business_span(
+                "invoice.generate_pdf", user_id=current_user.id, page_size=page_size, generator="fallback"
+            ):
                 pdf_bytes = pdf_generator.generate_pdf()
                 trace.get_current_span().set_attribute("pdf_size_bytes", len(pdf_bytes))
             record_invoice_duration_seconds(time.monotonic() - _pdf_t0, "pdf")

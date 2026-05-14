@@ -4,11 +4,20 @@ Provides decoupled event-driven architecture.
 """
 
 from functools import wraps
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Union
 
 from flask import current_app
 
 from app.constants import WebhookEvent
+
+EventType = Union[str, WebhookEvent]
+
+
+def _coerce_event_type(event_type: EventType) -> str:
+    """Normalize an event type passed as ``str`` or ``WebhookEvent`` to ``str``."""
+    if isinstance(event_type, WebhookEvent):
+        return event_type.value
+    return event_type
 
 
 class EventBus:
@@ -66,15 +75,15 @@ def get_event_bus() -> EventBus:
     return _event_bus
 
 
-def emit_event(event_type: str, data: Dict[str, Any]) -> None:
+def emit_event(event_type: EventType, data: Dict[str, Any]) -> None:
     """
     Emit an event using the global event bus.
 
     Args:
-        event_type: Event type
+        event_type: Event type (``str`` or ``WebhookEvent``)
         data: Event data
     """
-    _event_bus.emit(event_type, data)
+    _event_bus.emit(_coerce_event_type(event_type), data)
 
 
 def subscribe_to_event(event_type: str):

@@ -1,3 +1,6 @@
+# Default stack: app + Postgres + nginx (no local LLM). To bundle Ollama and enable the AI helper:
+#   docker compose --profile ai up -d
+# Set AI_ENABLED=true in .env when using --profile ai (or use a hosted openai_compatible provider only).
 services:
   # Certificate generator - runs once to create self-signed certs with SANs
   certgen:
@@ -89,8 +92,8 @@ services:
       - OTEL_METRICS_EXPORT_INTERVAL_MS=${OTEL_METRICS_EXPORT_INTERVAL_MS:-60000}
       - ENABLE_TELEMETRY=${ENABLE_TELEMETRY:-false}
       - TELE_SALT=${TELE_SALT:-8f4a7b2e9c1d6f3a5e8b4c7d2a9f6e3b1c8d5a7f2e9b4c6d3a8f5e1b7c4d9a2f}
-      # AI helper (Ollama in-cluster by default; override AI_PROVIDER for hosted providers)
-      - AI_ENABLED=${AI_ENABLED:-true}
+      # AI helper (off by default; use Compose profile "ai" for bundled Ollama or set AI_ENABLED=true for external API)
+      - AI_ENABLED=${AI_ENABLED:-false}
       - AI_PROVIDER=${AI_PROVIDER:-ollama}
       - AI_BASE_URL=${AI_BASE_URL:-http://ollama:11434}
       - AI_MODEL=${AI_MODEL:-llama3.1}
@@ -107,8 +110,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      ollama-init:
-        condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "-s", "-o", "/dev/null", "http://localhost:8080/_health"]
@@ -117,10 +118,12 @@ services:
       retries: 3
       start_period: 40s
 
-  # Ollama - local LLM runtime for the TimeTracker AI helper
+  # Ollama - local LLM runtime for the TimeTracker AI helper (opt-in: docker compose --profile ai up -d)
   # The app talks to it via the OpenAI-compatible endpoint at /v1/chat/completions.
   # First boot pulls the model defined by AI_MODEL (default llama3.1, ~4.7 GB).
   ollama:
+    profiles:
+      - ai
     image: ollama/ollama:latest
     container_name: timetracker-ollama
     environment:
@@ -141,6 +144,8 @@ services:
 
   # One-shot model puller; runs to completion on each `up` (no-op if model already cached).
   ollama-init:
+    profiles:
+      - ai
     image: ollama/ollama:latest
     container_name: timetracker-ollama-init
     depends_on:

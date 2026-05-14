@@ -135,7 +135,9 @@ class StockMovement(db.Model):
             if not stock:
                 try:
                     with db.session.begin_nested():
-                        stock = WarehouseStock(warehouse_id=warehouse_id, stock_item_id=stock_item_id, quantity_on_hand=0)
+                        stock = WarehouseStock(
+                            warehouse_id=warehouse_id, stock_item_id=stock_item_id, quantity_on_hand=0
+                        )
                         db.session.add(stock)
                         db.session.flush()
                 except IntegrityError:

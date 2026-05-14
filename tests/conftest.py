@@ -14,9 +14,52 @@ if "INSTALLATION_CONFIG_DIR" not in os.environ:
 
 from datetime import datetime, timedelta
 from decimal import Decimal
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 from sqlalchemy.pool import NullPool
 
 from app import create_app, db
+
+
+# Enable SQLite foreign key enforcement (including ON DELETE CASCADE).
+# SQLite has foreign keys disabled by default per-connection, which breaks
+# any test relying on ondelete="CASCADE" at the DB level.
+@event.listens_for(Engine, "connect")
+def _enable_sqlite_foreign_keys(dbapi_connection, connection_record):  # pragma: no cover - infra hook
+    try:
+        # Only act on sqlite connections. The DBAPI connection class name
+        # check avoids importing sqlite3 at module import time on non-sqlite envs.
+        if dbapi_connection.__class__.__module__.startswith("sqlite3"):
+            cursor = dbapi_connection.cursor()
+            try:
+                cursor.execute("PRAGMA foreign_keys=ON")
+            finally:
+                cursor.close()
+    except Exception:
+        # Never let this hook break a connection.
+        pass
+
+
+# Auto-disable FK enforcement immediately before DROP TABLE statements run.
+# The schema has cyclic foreign-key references between tables (e.g. deals,
+# leads, projects, quotes), so SQLAlchemy can't order DROPs cleanly and any
+# drop_all() call would otherwise fail with "FOREIGN KEY constraint failed".
+@event.listens_for(Engine, "before_cursor_execute")
+def _disable_fk_for_drop(  # pragma: no cover - infra hook
+    conn, cursor, statement, parameters, context, executemany
+):
+    try:
+        if not statement:
+            return
+        # Cheap prefix check; matches "DROP TABLE ..." (case-insensitive)
+        stripped = statement.lstrip()
+        if stripped[:10].upper().startswith("DROP TABLE"):
+            # Detect SQLite via the dialect to keep this no-op for other engines.
+            if conn.dialect.name == "sqlite":
+                cursor.execute("PRAGMA foreign_keys=OFF")
+    except Exception:
+        # Never let this hook break statement execution.
+        pass
 
 # Import all models to ensure their tables are created by db.create_all()
 from app.models import (
@@ -284,6 +327,14 @@ def app(app_config):
                     except Exception as e:
                         # Ignore errors - table might already exist or have dependency issues
                         pass
+
+        # Several route tests submit admin/user forms that validate against the
+        # role table. Keep a minimal role baseline available without requiring
+        # the full permission seeding command in every isolated test database.
+        for role_name in ("admin", "user", "manager", "subcontractor"):
+            if Role.query.filter_by(name=role_name).first() is None:
+                db.session.add(Role(name=role_name, description=f"Test {role_name} role", is_system_role=True))
+        db.session.commit()
 
         # Create default settings
         settings = Settings()

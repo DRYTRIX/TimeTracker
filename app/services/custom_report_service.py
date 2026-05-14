@@ -133,7 +133,7 @@ class CustomReportService:
         if not groupings:
             return {"ungrouped": entries}
 
-        grouped = {}
+        grouped: dict = {}
         for entry in entries:
             key_parts = []
             for group_by in groupings:

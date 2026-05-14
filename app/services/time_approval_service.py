@@ -40,7 +40,7 @@ class TimeApprovalService:
 
         # Create approval request(s) - multi-level support
         approvals = []
-        parent_approval = None
+        parent_approval: Optional[TimeEntryApproval] = None
 
         for level, approver_id in enumerate(approver_ids, start=1):
             approval = TimeEntryApproval(
@@ -48,7 +48,7 @@ class TimeApprovalService:
                 requested_by=requested_by,
                 status=ApprovalStatus.PENDING,
                 request_comment=comment,
-                parent_approval_id=parent_approval.id if parent_approval else None,
+                parent_approval_id=parent_approval.id if parent_approval is not None else None,
                 approval_level=level,
             )
             db.session.add(approval)

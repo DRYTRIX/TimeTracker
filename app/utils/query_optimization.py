@@ -3,7 +3,7 @@ Database query optimization utilities.
 Helps identify and fix N+1 query problems.
 """
 
-from typing import List, Optional, Type
+from typing import Any, Callable, Dict, List, Optional, Type
 
 from sqlalchemy import inspect
 from sqlalchemy.orm import Query, joinedload, selectinload, subqueryload
@@ -24,7 +24,11 @@ def eager_load_relations(query: Query, model_class: Type, relations: List[str], 
     Returns:
         Query with eager loading options
     """
-    loader_map = {"joined": joinedload, "selectin": selectinload, "subquery": subqueryload}
+    loader_map: Dict[str, Callable[..., Any]] = {
+        "joined": joinedload,
+        "selectin": selectinload,
+        "subquery": subqueryload,
+    }
 
     loader_func = loader_map.get(strategy, joinedload)
 

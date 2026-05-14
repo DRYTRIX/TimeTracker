@@ -101,7 +101,7 @@ class BackupService:
         Returns:
             List of backup information dicts
         """
-        backups = []
+        backups: list = []
 
         if not os.path.exists(self.backup_dir):
             return backups

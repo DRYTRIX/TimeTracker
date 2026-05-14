@@ -115,7 +115,7 @@ class LinearConnector(BaseConnector):
         try:
             for _ in range(20):
                 data = self._graphql(q, {"after": after})
-                conn = (data.get("issues") or {})
+                conn = data.get("issues") or {}
                 nodes = conn.get("nodes") or []
                 for n in nodes:
                     tk = (n.get("team") or {}).get("key") or ""

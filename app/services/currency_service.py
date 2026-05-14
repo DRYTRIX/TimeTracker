@@ -4,8 +4,8 @@ Currency conversion service with automatic rate fetching
 
 import logging
 from datetime import date, datetime
-from decimal import Decimal as D
-from typing import Decimal, Dict, Optional
+from decimal import Decimal
+from typing import Dict, Optional
 
 import requests
 
@@ -48,14 +48,14 @@ class CurrencyService:
         rate = ExchangeRate.query.filter_by(base_code=base_currency, quote_code=quote_currency, date=rate_date).first()
 
         if rate:
-            return D(str(rate.rate))
+            return Decimal(str(rate.rate))
 
         # Try reverse rate
         rate = ExchangeRate.query.filter_by(base_code=quote_currency, quote_code=base_currency, date=rate_date).first()
 
         if rate:
             # Calculate inverse rate
-            return D("1") / D(str(rate.rate))
+            return Decimal("1") / Decimal(str(rate.rate))
 
         # Fetch from API
         fetched_rate = CurrencyService.fetch_exchange_rate(base_currency, quote_currency, rate_date)
@@ -81,7 +81,7 @@ class CurrencyService:
             if response.status_code == 200:
                 data = response.json()
                 if data.get("success") and quote_currency in data.get("rates", {}):
-                    rate = D(str(data["rates"][quote_currency]))
+                    rate = Decimal(str(data["rates"][quote_currency]))
                     return rate
 
             # Try fallback API
@@ -90,7 +90,7 @@ class CurrencyService:
             if response.status_code == 200:
                 data = response.json()
                 if quote_currency in data.get("rates", {}):
-                    rate = D(str(data["rates"][quote_currency]))
+                    rate = Decimal(str(data["rates"][quote_currency]))
                     # Store for historical date if needed
                     CurrencyService.store_exchange_rate(base_currency, quote_currency, rate_date, rate)
                     return rate

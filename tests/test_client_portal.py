@@ -16,6 +16,21 @@ from app.models import User, Client, Project, Invoice, InvoiceItem, TimeEntry, Q
 from app import db
 
 
+@pytest.fixture(autouse=True)
+def disable_audit_logging_for_client_portal_tests(monkeypatch):
+    monkeypatch.setattr("app.utils.audit.check_audit_table_exists", lambda force_check=False: False)
+
+
+def set_client_portal_access(user, client_id=None, enabled=True):
+    User.query.filter_by(id=user.id).update(
+        {"client_portal_enabled": enabled, "client_id": client_id if enabled else None},
+        synchronize_session=False,
+    )
+    db.session.commit()
+    db.session.expire_all()
+    return User.query.get(user.id)
+
+
 def safe_commit_with_retry(max_retries=3):
     """Safely commit with retry logic for database locks
     
@@ -397,20 +412,7 @@ class TestClientPortalRoutes:
     def test_view_invoice_belongs_to_client(self, app, client, user, test_client):
         """Test viewing invoice requires it belongs to user's client"""
         with app.app_context():
-            # Use no_autoflush to prevent audit logging from interfering
-            with db.session.no_autoflush:
-                user.client_portal_enabled = True
-                user.client_id = test_client.id
-                db.session.merge(user)
-                db.session.flush()
-
-            # Commit outside no_autoflush block
-            # Use safe_commit_with_retry to handle database locks from audit logging
-            safe_commit_with_retry()
-
-            # Query for user fresh in current session to avoid session attachment issues
-            # This handles PendingRollbackError if session was rolled back due to audit log lock
-            user = safe_get_user(user.id)
+            user = set_client_portal_access(user, test_client.id)
 
             # Create another client
             other_client = Client(name="Other Client")
@@ -447,13 +449,7 @@ class TestClientPortalRoutes:
     ):
         """Portal user cannot view invoice belonging to another client; returns 404 and flash."""
         with app.app_context():
-            with db.session.no_autoflush:
-                user.client_portal_enabled = True
-                user.client_id = test_client.id
-                db.session.merge(user)
-                db.session.flush()
-            safe_commit_with_retry()
-            user = safe_get_user(user.id)
+            user = set_client_portal_access(user, test_client.id)
 
             other_client = Client(name="Other Client")
             db.session.add(other_client)
@@ -489,13 +485,7 @@ class TestClientPortalRoutes:
     ):
         """Portal user cannot view quote belonging to another client; returns 404 and flash."""
         with app.app_context():
-            with db.session.no_autoflush:
-                user.client_portal_enabled = True
-                user.client_id = test_client.id
-                db.session.merge(user)
-                db.session.flush()
-            safe_commit_with_retry()
-            user = safe_get_user(user.id)
+            user = set_client_portal_access(user, test_client.id)
 
             other_client = Client(name="Other Quote Client")
             db.session.add(other_client)
@@ -586,21 +576,7 @@ class TestAdminClientPortalManagement:
     def test_admin_can_disable_client_portal(self, app, admin_authenticated_client, user, test_client):
         """Test admin can disable client portal for user"""
         with app.app_context():
-            # Enable portal first - use no_autoflush to prevent audit logging from interfering
-            with db.session.no_autoflush:
-                user.client_portal_enabled = True
-                user.client_id = test_client.id
-                # Use merge to handle objects from different sessions
-                merged_user = db.session.merge(user)
-                db.session.flush()
-
-            # Commit outside no_autoflush block
-            # Use safe_commit_with_retry to handle database locks from audit logging
-            safe_commit_with_retry()
-
-            # Query for user fresh in current session to avoid session attachment issues
-            # This handles PendingRollbackError if session was rolled back due to audit log lock
-            user = safe_get_user(user.id)
+            user = set_client_portal_access(user, test_client.id)
 
             # Get the edit form page first to get CSRF token
             get_response = admin_authenticated_client.get(f"/admin/users/{user.id}/edit", follow_redirects=True)
@@ -688,10 +664,7 @@ class TestClientPortalDashboardPreferences:
     def test_dashboard_preferences_get_default(self, app, client, user, test_client):
         """GET preferences returns default layout when none saved"""
         with app.app_context():
-            user.client_portal_enabled = True
-            user.client_id = test_client.id
-            db.session.commit()
-            user = safe_get_user(user.id)
+            user = set_client_portal_access(user, test_client.id)
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(user.id)
             response = client.get("/client-portal/dashboard/preferences")
@@ -704,10 +677,7 @@ class TestClientPortalDashboardPreferences:
     def test_dashboard_preferences_post_and_get(self, app, client, user, test_client):
         """POST saves preferences; GET returns saved layout"""
         with app.app_context():
-            user.client_portal_enabled = True
-            user.client_id = test_client.id
-            db.session.commit()
-            user = safe_get_user(user.id)
+            user = set_client_portal_access(user, test_client.id)
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(user.id)
             post_resp = client.post(
@@ -724,10 +694,7 @@ class TestClientPortalDashboardPreferences:
     def test_dashboard_preferences_reject_invalid_widget_id(self, app, client, user, test_client):
         """POST with invalid widget_ids returns 400"""
         with app.app_context():
-            user.client_portal_enabled = True
-            user.client_id = test_client.id
-            db.session.commit()
-            user = safe_get_user(user.id)
+            user = set_client_portal_access(user, test_client.id)
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(user.id)
             response = client.post(
@@ -745,38 +712,32 @@ class TestClientPortalDashboardPreferences:
     def test_dashboard_preferences_post_non_json_returns_400(self, app, client, user, test_client):
         """POST with non-JSON body returns 400 (widget_ids missing or invalid)."""
         with app.app_context():
-            user.client_portal_enabled = True
-            user.client_id = test_client.id
-            db.session.commit()
-            user = safe_get_user(user.id)
+            user = set_client_portal_access(user, test_client.id)
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(user.id)
-        response = client.post(
-            "/client-portal/dashboard/preferences",
-            data="not json",
-            headers={"Content-Type": "text/plain"},
-        )
-        assert response.status_code == 400
+            response = client.post(
+                "/client-portal/dashboard/preferences",
+                data="not json",
+                headers={"Content-Type": "text/plain"},
+            )
+            assert response.status_code == 400
 
     def test_dashboard_preferences_post_widget_ids_not_list_returns_400(
         self, app, client, user, test_client
     ):
         """POST with widget_ids not a list (e.g. string) returns 400."""
         with app.app_context():
-            user.client_portal_enabled = True
-            user.client_id = test_client.id
-            db.session.commit()
-            user = safe_get_user(user.id)
+            user = set_client_portal_access(user, test_client.id)
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(user.id)
-        response = client.post(
-            "/client-portal/dashboard/preferences",
-            json={"widget_ids": "stats", "widget_order": ["stats"]},
-            headers={"Content-Type": "application/json"},
-        )
-        assert response.status_code == 400
-        data = response.get_json()
-        assert data is not None and "error" in data
+            response = client.post(
+                "/client-portal/dashboard/preferences",
+                json={"widget_ids": "stats", "widget_order": ["stats"]},
+                headers={"Content-Type": "application/json"},
+            )
+            assert response.status_code == 400
+            data = response.get_json()
+            assert data is not None and "error" in data
 
 
 # ============================================================================
@@ -799,10 +760,7 @@ class TestClientPortalReportsVisibility:
             other_project = Project(name="Other Project", client_id=other_client.id, status="active")
             db.session.add(other_project)
             db.session.commit()
-            user.client_portal_enabled = True
-            user.client_id = test_client.id
-            db.session.commit()
-            user = safe_get_user(user.id)
+            user = set_client_portal_access(user, test_client.id)
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(user.id)
             response = client.get("/client-portal/reports")
@@ -814,10 +772,7 @@ class TestClientPortalReportsVisibility:
     def test_reports_date_range_days_param(self, app, client, user, test_client):
         """Reports with ?days=7 returns 200 and page reflects date range."""
         with app.app_context():
-            user.client_portal_enabled = True
-            user.client_id = test_client.id
-            db.session.commit()
-            user = safe_get_user(user.id)
+            user = set_client_portal_access(user, test_client.id)
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(user.id)
             response = client.get("/client-portal/reports?days=7")
@@ -828,10 +783,7 @@ class TestClientPortalReportsVisibility:
     def test_reports_csv_export(self, app, client, user, test_client):
         """Reports with ?format=csv returns CSV attachment with expected columns."""
         with app.app_context():
-            user.client_portal_enabled = True
-            user.client_id = test_client.id
-            db.session.commit()
-            user = safe_get_user(user.id)
+            user = set_client_portal_access(user, test_client.id)
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(user.id)
             response = client.get("/client-portal/reports?format=csv")
@@ -866,10 +818,7 @@ class TestClientPortalActivityFeed:
     def test_activity_feed_returns_feed_items(self, app, client, user, test_client):
         """Activity feed returns 200 and feed_items for authenticated client"""
         with app.app_context():
-            user.client_portal_enabled = True
-            user.client_id = test_client.id
-            db.session.commit()
-            user = safe_get_user(user.id)
+            user = set_client_portal_access(user, test_client.id)
             with client.session_transaction() as sess:
                 sess["_user_id"] = str(user.id)
             response = client.get("/client-portal/activity")
@@ -917,9 +866,12 @@ def test_get_client_id_from_session_client_portal_id(app):
 def test_get_client_id_from_session_user_portal(app, user, test_client):
     """_get_client_id_from_session returns client_id when session has _user_id with portal access"""
     with app.app_context():
-        user.client_portal_enabled = True
-        user.client_id = test_client.id
+        User.query.filter_by(id=user.id).update(
+            {"client_portal_enabled": True, "client_id": test_client.id},
+            synchronize_session=False,
+        )
         db.session.commit()
+        db.session.expire_all()
         from app.routes.api import _get_client_id_from_session
         with app.test_request_context():
             from flask import session

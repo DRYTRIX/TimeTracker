@@ -185,6 +185,28 @@ TimeTracker Team
         return False
 
 
+def send_template_email(to, subject, template, **context):
+    """Render a Jinja template with ``context`` and email it.
+
+    Wraps :func:`send_email` for callers that want template-based
+    notifications (e.g. ``send_template_email(to=user.email,
+    subject=..., template="email/foo.html", foo=bar)``).
+
+    Args:
+        to: Recipient email address (str) or iterable of addresses.
+        subject: Email subject line.
+        template: Jinja template path relative to the Flask app's template folder.
+        **context: Variables passed to ``render_template``.
+    """
+    try:
+        html = render_template(template, **context)
+    except Exception as exc:
+        current_app.logger.error("Failed to render email template %s: %s", template, exc, exc_info=True)
+        return
+    recipients = [to] if isinstance(to, str) else list(to)
+    send_email(subject=subject, recipients=recipients, text_body=html, html_body=html)
+
+
 def send_email(subject, recipients, text_body, html_body=None, sender=None, attachments=None):
     """Send an email
 

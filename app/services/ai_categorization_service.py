@@ -20,7 +20,7 @@ class AICategorizationService:
     """Service for automatic project/task categorization"""
 
     # Category patterns (can be extended with ML models)
-    CATEGORY_PATTERNS = {
+    CATEGORY_PATTERNS: Dict[str, Dict[str, List[str]]] = {
         "development": {
             "keywords": [
                 "code",
@@ -79,7 +79,7 @@ class AICategorizationService:
             categories.extend(task_categories)
 
         # Get most likely category
-        category_scores = {}
+        category_scores: dict = {}
         for cat, score in categories:
             category_scores[cat] = category_scores.get(cat, 0) + score
 
@@ -106,7 +106,7 @@ class AICategorizationService:
         )
 
         best_match = None
-        best_score = 0
+        best_score: float = 0.0
 
         for project in recent_projects:
             score = self._calculate_match_score(description_lower, project)
@@ -132,7 +132,7 @@ class AICategorizationService:
         tasks = Task.query.filter_by(project_id=project_id).all()
 
         best_match = None
-        best_score = 0
+        best_score: float = 0.0
 
         for task in tasks:
             score = self._calculate_match_score(description_lower, task)
@@ -210,8 +210,8 @@ class AICategorizationService:
         # Get user's time entries
         entries = TimeEntry.query.filter_by(user_id=user_id).limit(1000).all()
 
-        category_distribution = {}
-        project_category_map = {}
+        category_distribution: dict = {}
+        project_category_map: dict = {}
 
         for entry in entries:
             # Categorize entry

@@ -40,6 +40,10 @@ $env:ADMIN_USERNAMES = "admin,manager"
 # 4. Start TimeTracker
 docker-compose up -d
 
+# (Optional) Bundled AI helper with Ollama — large first-time model download:
+# Set AI_ENABLED=true and AI_BASE_URL=http://ollama:11434 in .env, then:
+# docker compose --profile ai up -d
+
 # 5. Access the application
 # Open your browser to: https://localhost
 # (Self‑signed certificate; your browser will show a warning the first time.)
@@ -52,9 +56,11 @@ docker-compose up -d
 # Note: Login with the username you set in ADMIN_USERNAMES (default: admin) to get admin access
 ```
 
-**That's it!** TimeTracker is now running with PostgreSQL.
+**That's it!** TimeTracker is now running with PostgreSQL (default install does **not** start bundled Ollama; see comments above for the optional `--profile ai` stack).
 
 > Important: The default `docker-compose.yml` expects `SECRET_KEY` to be set. You can also edit the file and replace `SECRET_KEY=your-secret-key-here` with a securely generated value. Never use weak or guessable keys.
+
+> To **remove** containers and data, see [UNINSTALL.md](../UNINSTALL.md). To **disable or remove only the AI helper** (Ollama, env, API tokens), see [UNINSTALL.md — AI helper](../UNINSTALL.md#disabling-or-removing-the-ai-helper).
 
 ### Option 2: Quick Test (SQLite)
 

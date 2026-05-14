@@ -6,8 +6,18 @@ import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.routes]
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from app.utils.cache import get_cache
+
+
+# The dashboard route caches two values per user: aggregated stats and
+# the time-by-project chart data. Keep these keys in sync with
+# ``app/routes/main.py``.
+def _dashboard_cache_keys(user_id):
+    return (
+        f"dashboard:stats:{user_id}",
+        f"dashboard:chart:{user_id}",
+    )
 
 
 class TestDashboardCaching:
@@ -15,8 +25,6 @@ class TestDashboardCaching:
 
     def test_dashboard_uses_cache(self, authenticated_client, app, user, project):
         """Test that dashboard data is cached"""
-        from app.utils.cache import get_cache
-
         cache = get_cache()
         cache.clear()  # Clear cache before test
 
@@ -25,46 +33,45 @@ class TestDashboardCaching:
             response1 = authenticated_client.get("/dashboard")
             assert response1.status_code == 200
 
-            # Check cache was set
-            cache_key = f"dashboard:{user.id}"
-            cached_data = cache.get(cache_key)
-            assert cached_data is not None
-            assert "active_projects" in cached_data
-            assert "today_hours" in cached_data
+            stats_key, chart_key = _dashboard_cache_keys(user.id)
+            cached_stats = cache.get(stats_key)
+            cached_chart = cache.get(chart_key)
+            assert cached_stats is not None
+            assert cached_chart is not None
+            # Stats payload exposes nested aggregations including today_hours.
+            assert "time_tracking" in cached_stats
+            assert "today_hours" in cached_stats["time_tracking"]
 
     def test_dashboard_cache_ttl(self, authenticated_client, app, user):
-        """Test that dashboard cache has appropriate TTL"""
-        from app.utils.cache import get_cache
-        import time
-
+        """Test that dashboard cache entries are created"""
         cache = get_cache()
         cache.clear()
 
         with patch("app.routes.main.track_page_view"):
             authenticated_client.get("/dashboard")
 
-            cache_key = f"dashboard:{user.id}"
-            # Cache should exist
-            assert cache.exists(cache_key) is True
+            stats_key, chart_key = _dashboard_cache_keys(user.id)
+            assert cache.exists(stats_key) is True
+            assert cache.exists(chart_key) is True
 
     def test_dashboard_cache_invalidation(self, authenticated_client, app, user):
         """Test that dashboard cache can be invalidated"""
-        from app.utils.cache import get_cache
-
         cache = get_cache()
         cache.clear()
 
         with patch("app.routes.main.track_page_view"):
-            # First request
             authenticated_client.get("/dashboard")
 
-            cache_key = f"dashboard:{user.id}"
-            assert cache.exists(cache_key) is True
+            stats_key, chart_key = _dashboard_cache_keys(user.id)
+            assert cache.exists(stats_key) is True
 
             # Invalidate cache
-            cache.delete(cache_key)
-            assert cache.exists(cache_key) is False
+            cache.delete(stats_key)
+            cache.delete(chart_key)
+            assert cache.exists(stats_key) is False
+            assert cache.exists(chart_key) is False
 
             # Next request should repopulate cache
             authenticated_client.get("/dashboard")
-            assert cache.exists(cache_key) is True
+            assert cache.exists(stats_key) is True
+            assert cache.exists(chart_key) is True

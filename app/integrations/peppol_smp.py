@@ -97,7 +97,8 @@ def get_smp_url(participant_id: str, scheme_id: str, sml_base_url: Optional[str]
     if not refs:
         raise PeppolSMPError(f"No ServiceMetadataReference in SML response for {scheme_id}:{participant_id}")
 
-    href = refs[0].get("href") or (refs[0].find("href") is not None and refs[0].find("href").text)
+    _href_child = refs[0].find("href")
+    href = refs[0].get("href") or (_href_child.text if _href_child is not None else None)
     if not href:
         for child in refs[0]:
             if "href" in child.tag.lower() or child.tag.endswith("}href"):

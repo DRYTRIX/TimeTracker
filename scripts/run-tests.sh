@@ -39,7 +39,7 @@ case "$1" in
         ;;
     security)
         echo -e "${GREEN}Running security tests...${NC}"
-        python -m pytest -m security -v
+        bash scripts/ci/security-pytest.sh
         ;;
     database)
         echo -e "${GREEN}Running database tests...${NC}"
