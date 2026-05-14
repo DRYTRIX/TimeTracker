@@ -17,6 +17,7 @@ from app.models import (
     StockLot,
     User,
     Project,
+    Client,
 )
 
 
@@ -53,6 +54,15 @@ def test_stock_item(db_session, test_user):
     db_session.add(item)
     db_session.commit()
     return item
+
+
+@pytest.fixture
+def test_client_model(db_session):
+    """Create a test client (needed for projects with FK enforcement)."""
+    client = Client(name="Test Client", description="Test client for inventory tests")
+    db_session.add(client)
+    db_session.commit()
+    return client
 
 
 class TestWarehouse:
@@ -528,9 +538,9 @@ class TestStockReservation:
 class TestProjectStockAllocation:
     """Test ProjectStockAllocation model"""
 
-    def test_create_allocation(self, db_session, test_user, test_stock_item, test_warehouse):
+    def test_create_allocation(self, db_session, test_user, test_stock_item, test_warehouse, test_client_model):
         """Test creating a project stock allocation"""
-        project = Project(name="Test Project", client_id=1, billable=True)  # Assuming client exists
+        project = Project(name="Test Project", client_id=test_client_model.id, billable=True)
         db_session.add(project)
         db_session.commit()
 
@@ -549,9 +559,9 @@ class TestProjectStockAllocation:
         assert allocation.quantity_used == Decimal("0.00")
         assert allocation.quantity_remaining == Decimal("50.00")
 
-    def test_record_usage(self, db_session, test_user, test_stock_item, test_warehouse):
+    def test_record_usage(self, db_session, test_user, test_stock_item, test_warehouse, test_client_model):
         """Test recording usage of allocated stock"""
-        project = Project(name="Test Project", client_id=1, billable=True)
+        project = Project(name="Test Project", client_id=test_client_model.id, billable=True)
         db_session.add(project)
         db_session.commit()
 
@@ -571,9 +581,11 @@ class TestProjectStockAllocation:
         assert allocation.quantity_used == Decimal("15.00")
         assert allocation.quantity_remaining == Decimal("35.00")
 
-    def test_record_usage_exceeds_allocation(self, db_session, test_user, test_stock_item, test_warehouse):
+    def test_record_usage_exceeds_allocation(
+        self, db_session, test_user, test_stock_item, test_warehouse, test_client_model
+    ):
         """Test that using more than allocated raises error"""
-        project = Project(name="Test Project", client_id=1, billable=True)
+        project = Project(name="Test Project", client_id=test_client_model.id, billable=True)
         db_session.add(project)
         db_session.commit()
 

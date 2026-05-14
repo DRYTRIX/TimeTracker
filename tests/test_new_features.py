@@ -1,18 +1,21 @@
 import pytest
 from app import db
-from app.models import Project, User, SavedFilter, Task
+from app.models import Project, User, SavedFilter, Task, Client
 
 
 @pytest.mark.smoke
 @pytest.mark.api
 def test_burndown_endpoint_available(client, app):
     """Test that burndown endpoint is available."""
-    # Minimal entities
+    # Minimal entities (create client first so FK enforcement is satisfied).
     u = User(username="admin")
     u.role = "admin"
     u.is_active = True
     db.session.add(u)
-    p = Project(name="X", client_id=1, billable=False)
+    c = Client(name="X Client")
+    db.session.add(c)
+    db.session.flush()
+    p = Project(name="X", client_id=c.id, billable=False)
     db.session.add(p)
     db.session.commit()
     # Just ensure route exists; not full auth flow here
@@ -24,8 +27,12 @@ def test_burndown_endpoint_available(client, app):
 @pytest.mark.models
 def test_saved_filter_model_roundtrip(app):
     """Test that SavedFilter can be created and serialized."""
-    # Ensure SavedFilter can be created and serialized
-    sf = SavedFilter(user_id=1, name="My Filter", scope="time", payload={"project_id": 1, "tag": "deep"})
+    # Create a user so SavedFilter's user_id FK is satisfied.
+    u = User(username="sf_user", role="user")
+    u.is_active = True
+    db.session.add(u)
+    db.session.flush()
+    sf = SavedFilter(user_id=u.id, name="My Filter", scope="time", payload={"project_id": 1, "tag": "deep"})
     db.session.add(sf)
     db.session.commit()
     as_dict = sf.to_dict()
