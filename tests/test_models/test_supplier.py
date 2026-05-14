@@ -89,8 +89,10 @@ class TestSupplier:
         db_session.add(supplier_item)
         db_session.commit()
 
-        assert len(test_supplier.stock_items) == 1
-        assert test_supplier.stock_items[0].stock_item_id == test_stock_item.id
+        assert test_supplier.supplier_items.count() == 1
+        first_item = test_supplier.supplier_items.first()
+        assert first_item is not None
+        assert first_item.stock_item_id == test_stock_item.id
 
     def test_supplier_deactivation(self, db_session, test_supplier):
         """Test supplier deactivation (soft delete)"""
