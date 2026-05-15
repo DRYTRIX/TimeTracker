@@ -22,7 +22,14 @@ pytestmark = [pytest.mark.unit, pytest.mark.models]
 @pytest.fixture
 def app():
     """Create and configure a test application instance."""
-    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:", "WTF_CSRF_ENABLED": False})
+    app = create_app(
+        {
+            "TESTING": True,
+            "SECRET_KEY": "test-secret-key",
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "WTF_CSRF_ENABLED": False,
+        }
+    )
 
     with app.app_context():
         db.create_all()
