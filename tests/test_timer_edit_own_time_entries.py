@@ -5,10 +5,18 @@ from datetime import datetime
 import pytest
 
 from app import db
-from app.models import Permission, Role, TimeEntry
+from app.models import Permission, Role, TimeEntry, User
 
 
-def _ensure_edit_own_permission(user):
+def _ensure_edit_own_permission(user_id):
+    """Grant the edit_own_time_entries permission to the user with the given id.
+
+    The user id is passed instead of the ORM instance so that every object
+    touched here (user, role, permission) is loaded inside the currently
+    active session. This avoids cross-session "object is not attached"
+    errors when the calling test enters a new app_context after the user
+    fixture has already committed and detached the user instance.
+    """
     perm = Permission.query.filter_by(name="edit_own_time_entries").first()
     if not perm:
         perm = Permission(
@@ -24,18 +32,20 @@ def _ensure_edit_own_permission(user):
         db.session.add(role)
         db.session.flush()
     role.add_permission(perm)
+    user = User.query.get(user_id)
     if role not in user.roles:
         user.add_role(role)
     db.session.commit()
-    db.session.refresh(user)
 
 
 @pytest.mark.integration
 @pytest.mark.routes
-def test_edit_timer_page_shows_schedule_fields_with_edit_own_permission(app, authenticated_client, user, project):
+def test_edit_timer_page_shows_schedule_fields_with_edit_own_permission(
+    app, authenticated_client, user, project
+):
     """GET /timer/edit shows date/time inputs when user has edit_own_time_entries."""
     with app.app_context():
-        _ensure_edit_own_permission(user)
+        _ensure_edit_own_permission(user.id)
         start = datetime(2020, 6, 1, 9, 0, 0)
         end = datetime(2020, 6, 1, 11, 0, 0)
         entry = TimeEntry(
@@ -58,10 +68,12 @@ def test_edit_timer_page_shows_schedule_fields_with_edit_own_permission(app, aut
 
 @pytest.mark.integration
 @pytest.mark.routes
-def test_edit_timer_post_updates_times_with_edit_own_permission(app, authenticated_client, user, project):
+def test_edit_timer_post_updates_times_with_edit_own_permission(
+    app, authenticated_client, user, project
+):
     """POST /timer/edit applies new start/end when user has edit_own_time_entries."""
     with app.app_context():
-        _ensure_edit_own_permission(user)
+        _ensure_edit_own_permission(user.id)
         start = datetime(2020, 6, 1, 9, 0, 0)
         end = datetime(2020, 6, 1, 11, 0, 0)
         entry = TimeEntry(
@@ -104,10 +116,12 @@ def test_edit_timer_post_updates_times_with_edit_own_permission(app, authenticat
 
 @pytest.mark.integration
 @pytest.mark.routes
-def test_api_entry_put_updates_times_with_edit_own_permission(app, authenticated_client, user, project):
+def test_api_entry_put_updates_times_with_edit_own_permission(
+    app, authenticated_client, user, project
+):
     """PUT /api/entry/<id> accepts start/end for own entry with edit_own_time_entries."""
     with app.app_context():
-        _ensure_edit_own_permission(user)
+        _ensure_edit_own_permission(user.id)
         start = datetime(2020, 6, 2, 9, 0, 0)
         end = datetime(2020, 6, 2, 10, 0, 0)
         entry = TimeEntry(
