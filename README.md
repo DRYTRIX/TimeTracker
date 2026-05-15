@@ -722,6 +722,14 @@ The AI helper is exposed as:
 - Session web UI JSON: `POST /api/ai/chat` (same-origin, login required)
 - REST API v1: `POST /api/v1/ai/chat` (API token required, scopes `read:ai`/`write:ai`)
 
+**Time entry suggestions** (when `AI_ENABLED=true`):
+
+- `GET /api/ai/suggest` — deterministic suggestions from recent patterns and active tasks; optional `?q=` filters by notes/project name; `?rich=true` merges LLM suggestions when configured. AI failures return deterministic results only.
+- **Start Timer** modal: horizontal suggestion chips above the project field (refresh for LLM-enhanced suggestions).
+- **Log Time** form: “✦ Autofill” popover and ghost-text autocomplete on the notes field (`app/static/js/ai_autocomplete.js`).
+
+All suggestion UI is hidden when AI is disabled (`ai_enabled` in template context).
+
 ### Bundled Ollama service (Docker Compose, opt-in)
 
 The root `docker-compose.yml` defines a CPU-only **`ollama`** service and a one-shot **`ollama-init`** sidecar that pulls `AI_MODEL` (default `llama3.1`, ~4.7 GB) into the `ollama_data` volume. These services use the Compose **`ai`** profile so they **do not start by default**.

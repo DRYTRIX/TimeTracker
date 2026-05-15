@@ -31,6 +31,17 @@ These **`/api/*`** routes have v1 successors. They remain for the web UI but may
 - `GET /api/projects`, `GET /api/projects/<id>/tasks`, `GET /api/tasks` → `/api/v1/projects`, `/api/v1/tasks`
 - `GET /api/activities` → `GET /api/v1/activities` (v1 is a simpler list; legacy adds filters/pagination)
 
+### Session AI routes (web UI; partial v1 migration)
+
+| Session route | Notes | v1 successor (planned) |
+|---------------|--------|-------------------------|
+| `GET /api/ai/context-preview` | Compact context for AI helper | `GET /api/v1/ai/context-preview` |
+| `POST /api/ai/chat` | AI helper chat | `POST /api/v1/ai/chat` |
+| `POST /api/ai/actions/confirm` | Confirm proposed AI actions | `POST /api/v1/ai/actions/confirm` |
+| `GET /api/ai/suggest` | Time entry suggestions (`?q=`, `?rich=true`) | `GET /api/v1/ai/suggest` (deprecation header points here) |
+
+`GET /api/ai/suggest` always returns deterministic suggestions from `AISuggestionService`; optional `rich=true` adds LLM suggestions when the helper is enabled. Failures in the LLM path do not fail the request.
+
 ### Internal / UI-only (no v1 equivalent yet)
 
 Examples: `GET /api/notifications`, dashboard stats (`/api/dashboard/*`, `/api/stats*`, `/api/reports/week-comparison`), editor uploads, smart notifications dismiss, many calendar helpers. Treat as **internal** to the web app unless documented otherwise.

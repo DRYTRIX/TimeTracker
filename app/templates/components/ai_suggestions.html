@@ -1,0 +1,233 @@
+{# AI-powered time entry suggestion chips. Listens for 'timer-modal-opened' to (re)fetch.
+   Emits 'ai-suggestion-selected' (CustomEvent) when a chip is clicked. Hides itself when AI is
+   disabled, the fetch fails, or there are no suggestions. #}
+{% if ai_enabled %}
+<div id="ai-suggestions-panel"
+     class="hidden mb-4 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-3"
+     data-endpoint="{{ url_for('api.ai_suggest') }}"
+     data-cache-ttl="60"
+     data-empty-text="{{ _('No suggestions yet — track some time first')|e }}"
+     data-loading-text="{{ _('Loading suggestions…')|e }}"
+     aria-live="polite">
+    <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2 text-sm font-medium text-text-light dark:text-text-dark">
+            <span aria-hidden="true" class="text-primary">✦</span>
+            <span>{{ _('Suggested for you') }}</span>
+        </div>
+        <button type="button"
+                data-ai-suggestions-refresh
+                title="{{ _('Refresh suggestions') }}"
+                aria-label="{{ _('Refresh suggestions') }}"
+                class="inline-flex items-center justify-center w-7 h-7 rounded-md text-text-muted-light dark:text-text-muted-dark hover:text-primary hover:bg-background-light dark:hover:bg-background-dark transition">
+            <i class="fas fa-arrows-rotate text-xs" data-ai-suggestions-refresh-icon></i>
+        </button>
+    </div>
+
+    <div data-ai-suggestions-loading class="hidden flex gap-2 overflow-x-auto pb-1">
+        <div class="animate-pulse h-9 w-40 rounded-full bg-gray-200 dark:bg-gray-700 shrink-0"></div>
+        <div class="animate-pulse h-9 w-48 rounded-full bg-gray-200 dark:bg-gray-700 shrink-0"></div>
+        <div class="animate-pulse h-9 w-36 rounded-full bg-gray-200 dark:bg-gray-700 shrink-0"></div>
+    </div>
+
+    <p data-ai-suggestions-empty class="hidden text-xs text-text-muted-light dark:text-text-muted-dark py-1">
+        {{ _('No suggestions yet — track some time first') }}
+    </p>
+
+    <div data-ai-suggestions-list class="hidden flex gap-2 overflow-x-auto pb-1 -mx-1 px-1"></div>
+</div>
+
+<script>
+(function() {
+    const panel = document.getElementById('ai-suggestions-panel');
+    if (!panel || panel.__aiSuggestionsBound) return;
+    panel.__aiSuggestionsBound = true;
+
+    const endpoint = panel.dataset.endpoint || '/api/ai/suggest';
+    const cacheTtlSeconds = parseInt(panel.dataset.cacheTtl || '60', 10);
+    const cacheKey = 'ai_suggestions_cache';
+    const refreshBtn = panel.querySelector('[data-ai-suggestions-refresh]');
+    const refreshIcon = panel.querySelector('[data-ai-suggestions-refresh-icon]');
+    const loadingEl = panel.querySelector('[data-ai-suggestions-loading]');
+    const listEl = panel.querySelector('[data-ai-suggestions-list]');
+    const emptyEl = panel.querySelector('[data-ai-suggestions-empty]');
+
+    function setBusy(isBusy) {
+        if (loadingEl) loadingEl.classList.toggle('hidden', !isBusy);
+        if (loadingEl) loadingEl.classList.toggle('flex', isBusy);
+        if (isBusy) {
+            if (listEl) listEl.classList.add('hidden');
+            if (emptyEl) emptyEl.classList.add('hidden');
+        }
+        if (refreshBtn) refreshBtn.disabled = !!isBusy;
+        if (refreshIcon) refreshIcon.classList.toggle('fa-spin', !!isBusy);
+    }
+
+    function truncate(value, max) {
+        const s = (value == null ? '' : String(value));
+        if (s.length <= max) return s;
+        return s.slice(0, Math.max(0, max - 1)) + '…';
+    }
+
+    function readCache() {
+        try {
+            const raw = sessionStorage.getItem(cacheKey);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return null;
+            const ageMs = Date.now() - (parsed.fetchedAt || 0);
+            if (ageMs > cacheTtlSeconds * 1000) return null;
+            if (!Array.isArray(parsed.suggestions)) return null;
+            return parsed.suggestions;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function writeCache(suggestions) {
+        try {
+            sessionStorage.setItem(cacheKey, JSON.stringify({
+                fetchedAt: Date.now(),
+                suggestions: suggestions
+            }));
+        } catch (_) {}
+    }
+
+    function clearCache() {
+        try { sessionStorage.removeItem(cacheKey); } catch (_) {}
+    }
+
+    function confidenceClass(level) {
+        switch ((level || '').toLowerCase()) {
+            case 'high': return 'bg-emerald-500';
+            case 'medium': return 'bg-amber-500';
+            default: return 'bg-gray-400';
+        }
+    }
+
+    function buildChip(suggestion) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = [
+            'group inline-flex items-center gap-2 shrink-0',
+            'px-3 py-2 rounded-full',
+            'border border-border-light dark:border-border-dark',
+            'bg-background-light dark:bg-background-dark',
+            'hover:border-primary/60 hover:bg-primary/5 dark:hover:bg-primary/10',
+            'text-sm text-text-light dark:text-text-dark',
+            'transition focus:outline-none focus:ring-2 focus:ring-primary/40'
+        ].join(' ');
+        btn.title = (suggestion.project_name || '') +
+            (suggestion.task_name ? ' · ' + suggestion.task_name : '');
+
+        const dot = document.createElement('span');
+        dot.className = 'w-2 h-2 rounded-full ' + confidenceClass(suggestion.confidence);
+        dot.setAttribute('aria-hidden', 'true');
+        btn.appendChild(dot);
+
+        const project = document.createElement('span');
+        project.className = 'font-semibold';
+        project.textContent = truncate(suggestion.project_name || '—', 20);
+        btn.appendChild(project);
+
+        if (suggestion.task_name) {
+            const task = document.createElement('span');
+            task.className = 'text-text-muted-light dark:text-text-muted-dark';
+            task.textContent = '· ' + truncate(suggestion.task_name, 18);
+            btn.appendChild(task);
+        }
+
+        if ((suggestion.source || '').toLowerCase() === 'ai') {
+            const sparkle = document.createElement('span');
+            sparkle.className = 'text-primary text-xs';
+            sparkle.setAttribute('aria-hidden', 'true');
+            sparkle.textContent = '✦';
+            btn.appendChild(sparkle);
+        }
+
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            panel.dispatchEvent(new CustomEvent('ai-suggestion-selected', {
+                bubbles: true,
+                detail: suggestion
+            }));
+            document.dispatchEvent(new CustomEvent('ai-suggestion-selected', {
+                detail: suggestion
+            }));
+        });
+
+        return btn;
+    }
+
+    function render(suggestions) {
+        if (!Array.isArray(suggestions) || suggestions.length === 0) {
+            panel.classList.add('hidden');
+            if (listEl) {
+                listEl.innerHTML = '';
+                listEl.classList.add('hidden');
+                listEl.classList.remove('flex');
+            }
+            return;
+        }
+        panel.classList.remove('hidden');
+        if (loadingEl) {
+            loadingEl.classList.add('hidden');
+            loadingEl.classList.remove('flex');
+        }
+        if (emptyEl) emptyEl.classList.add('hidden');
+        if (listEl) {
+            listEl.innerHTML = '';
+            suggestions.forEach(function(s) { listEl.appendChild(buildChip(s)); });
+            listEl.classList.remove('hidden');
+            listEl.classList.add('flex');
+        }
+    }
+
+    async function fetchSuggestions(options) {
+        const useCache = !(options && options.force);
+        const rich = !!(options && options.rich);
+        if (useCache && !rich) {
+            const cached = readCache();
+            if (cached) { render(cached); return; }
+        }
+        setBusy(true);
+        try {
+            const url = endpoint + (rich ? (endpoint.indexOf('?') >= 0 ? '&rich=true' : '?rich=true') : '');
+            const resp = await fetch(url, {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+                cache: 'no-store'
+            });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+            const suggestions = (data && Array.isArray(data.suggestions)) ? data.suggestions : [];
+            if (!rich) writeCache(suggestions);
+            render(suggestions);
+        } catch (err) {
+            if (typeof console !== 'undefined' && console.warn) {
+                console.warn('[AI Suggestions] fetch failed:', err);
+            }
+            panel.classList.add('hidden');
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            clearCache();
+            fetchSuggestions({ force: true, rich: true });
+        });
+    }
+
+    document.addEventListener('timer-modal-opened', function() {
+        fetchSuggestions({});
+    });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() { fetchSuggestions({}); });
+    } else {
+        fetchSuggestions({});
+    }
+})();
+</script>
+{% endif %}

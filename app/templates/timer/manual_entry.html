@@ -53,9 +53,35 @@
         <div class="space-y-8">
             {# Section: Project & task #}
             <section class="pb-6 border-b border-border-light dark:border-border-dark">
-                <h2 class="form-section-title">
-                    <i class="fas fa-folder text-primary"></i>{{ _('Project & task') }}
-                </h2>
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                    <h2 class="form-section-title">
+                        <i class="fas fa-folder text-primary"></i>{{ _('Project & task') }}
+                    </h2>
+                    {% if ai_enabled %}
+                    <div id="aiAutofillContainer" class="relative hidden mb-2">
+                        <button type="button" id="aiAutofillBtn"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-primary/40 text-primary bg-primary/5 hover:bg-primary/10 dark:hover:bg-primary/15 transition focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                aria-haspopup="menu"
+                                aria-expanded="false"
+                                aria-controls="aiAutofillPopover">
+                            <span aria-hidden="true">✦</span>{{ _('Autofill') }}
+                        </button>
+                        <div id="aiAutofillPopover"
+                             class="hidden absolute z-30 right-0 mt-2 w-80 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-lg p-2"
+                             role="menu"
+                             aria-hidden="true">
+                            <div data-ai-autofill-loading class="hidden flex-col gap-2 px-1 py-2">
+                                <div class="h-12 rounded-lg bg-gray-100 dark:bg-gray-700 animate-pulse"></div>
+                                <div class="h-12 rounded-lg bg-gray-100 dark:bg-gray-700 animate-pulse"></div>
+                            </div>
+                            <p data-ai-autofill-empty class="hidden px-3 py-3 text-xs text-text-muted-light dark:text-text-muted-dark">
+                                {{ _('No suggestions available') }}
+                            </p>
+                            <div data-ai-autofill-list class="space-y-1"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
                 <div class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
@@ -139,7 +165,7 @@
                     <div class="md:col-span-2">
                         <label for="notes" class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">{% if getattr(settings, 'time_entry_require_description', false) %}{{ _('Notes') }} *{% else %}{{ _('Notes') }}{% endif %}</label>
                         <div class="markdown-editor-wrapper">
-                            <textarea name="notes" id="notes" class="hidden">{{ prefill_notes or '' }}</textarea>
+                            <textarea name="notes" id="notes" class="hidden" data-ai-autocomplete="notes">{{ prefill_notes or '' }}</textarea>
                             <div id="notes_editor"></div>
                         </div>
                     </div>
@@ -1105,4 +1131,208 @@ document.addEventListener('DOMContentLoaded', function() {
     document.head.appendChild(scriptEl);
 });
 </script>
+
+{% if ai_enabled %}
+<script>
+(function() {
+    const container = document.getElementById('aiAutofillContainer');
+    const button = document.getElementById('aiAutofillBtn');
+    const popover = document.getElementById('aiAutofillPopover');
+    if (!container || !button || !popover) return;
+
+    const listEl = popover.querySelector('[data-ai-autofill-list]');
+    const emptyEl = popover.querySelector('[data-ai-autofill-empty]');
+    const loadingEl = popover.querySelector('[data-ai-autofill-loading]');
+    const projectSelect = document.getElementById('project_id');
+    const taskSelect = document.getElementById('task_id');
+    const notesInput = document.getElementById('notes');
+    const tagsInput = document.getElementById('tags');
+    const billableInput = document.getElementById('billable');
+
+    let cachedSuggestions = null;
+    let everFetched = false;
+
+    function setLoading(busy) {
+        if (loadingEl) {
+            loadingEl.classList.toggle('hidden', !busy);
+            loadingEl.classList.toggle('flex', busy);
+        }
+        if (busy) {
+            if (emptyEl) emptyEl.classList.add('hidden');
+            if (listEl) listEl.innerHTML = '';
+        }
+    }
+
+    function openPopover() {
+        popover.classList.remove('hidden');
+        popover.setAttribute('aria-hidden', 'false');
+        button.setAttribute('aria-expanded', 'true');
+    }
+
+    function closePopover() {
+        popover.classList.add('hidden');
+        popover.setAttribute('aria-hidden', 'true');
+        button.setAttribute('aria-expanded', 'false');
+    }
+
+    function isOpen() {
+        return !popover.classList.contains('hidden');
+    }
+
+    function truncate(value, max) {
+        const s = (value == null ? '' : String(value));
+        if (s.length <= max) return s;
+        return s.slice(0, Math.max(0, max - 1)) + '…';
+    }
+
+    function setNotesValue(value) {
+        if (notesInput) notesInput.value = value || '';
+        if (window.mdEditor && typeof window.mdEditor.setMarkdown === 'function') {
+            try { window.mdEditor.setMarkdown(value || ''); } catch (_) {}
+        }
+    }
+
+    function trySetTaskWhenAvailable(taskId, attemptsRemaining) {
+        if (!taskSelect || !taskId) return;
+        const target = String(taskId);
+        const found = Array.from(taskSelect.options).some(function(o) { return o.value === target; });
+        if (found) {
+            taskSelect.value = target;
+            try { taskSelect.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+            return;
+        }
+        if (attemptsRemaining > 0) {
+            setTimeout(function() { trySetTaskWhenAvailable(taskId, attemptsRemaining - 1); }, 100);
+        }
+    }
+
+    function applySuggestion(s) {
+        if (!s) return;
+        if (projectSelect && s.project_id) {
+            projectSelect.value = String(s.project_id);
+            try { projectSelect.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+            if (s.task_id) {
+                taskSelect && taskSelect.setAttribute('data-selected-task-id', String(s.task_id));
+                trySetTaskWhenAvailable(s.task_id, 15);
+            }
+        }
+        if (s.notes) setNotesValue(s.notes);
+        if (tagsInput && s.tags != null) tagsInput.value = s.tags;
+        if (billableInput && typeof s.billable === 'boolean') billableInput.checked = !!s.billable;
+        closePopover();
+    }
+
+    function buildRow(s) {
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className = [
+            'w-full text-left px-3 py-2 rounded-lg',
+            'hover:bg-background-light dark:hover:bg-background-dark',
+            'focus:outline-none focus:bg-background-light dark:focus:bg-background-dark',
+            'transition'
+        ].join(' ');
+        row.setAttribute('role', 'menuitem');
+
+        const title = document.createElement('div');
+        title.className = 'flex items-center gap-2 text-sm font-medium text-text-light dark:text-text-dark';
+        const projectSpan = document.createElement('span');
+        projectSpan.textContent = truncate(s.project_name || '—', 28);
+        title.appendChild(projectSpan);
+        if (s.task_name) {
+            const sep = document.createElement('span');
+            sep.className = 'text-text-muted-light dark:text-text-muted-dark';
+            sep.textContent = '· ' + truncate(s.task_name, 22);
+            title.appendChild(sep);
+        }
+        row.appendChild(title);
+
+        if (s.notes) {
+            const notesPreview = document.createElement('div');
+            notesPreview.className = 'mt-1 text-xs text-text-muted-light dark:text-text-muted-dark line-clamp-2';
+            notesPreview.textContent = truncate(s.notes, 120);
+            row.appendChild(notesPreview);
+        }
+
+        row.addEventListener('click', function(e) {
+            e.preventDefault();
+            applySuggestion(s);
+        });
+        return row;
+    }
+
+    function renderSuggestions(suggestions) {
+        if (!listEl) return;
+        listEl.innerHTML = '';
+        if (!Array.isArray(suggestions) || suggestions.length === 0) {
+            if (emptyEl) emptyEl.classList.remove('hidden');
+            return;
+        }
+        if (emptyEl) emptyEl.classList.add('hidden');
+        suggestions.slice(0, 3).forEach(function(s) {
+            listEl.appendChild(buildRow(s));
+        });
+    }
+
+    async function loadSuggestions() {
+        setLoading(true);
+        try {
+            const resp = await fetch('{{ url_for("api.ai_suggest") }}', {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+                cache: 'no-store'
+            });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+            cachedSuggestions = (data && Array.isArray(data.suggestions)) ? data.suggestions : [];
+        } catch (_) {
+            cachedSuggestions = [];
+        } finally {
+            everFetched = true;
+            setLoading(false);
+            // hide the entire button if we never got any suggestions
+            if (!cachedSuggestions || cachedSuggestions.length === 0) {
+                container.classList.add('hidden');
+            } else {
+                container.classList.remove('hidden');
+            }
+            renderSuggestions(cachedSuggestions || []);
+        }
+    }
+
+    button.addEventListener('click', async function(e) {
+        e.preventDefault();
+        if (isOpen()) { closePopover(); return; }
+        if (!everFetched) {
+            openPopover();
+            await loadSuggestions();
+            if (!cachedSuggestions || cachedSuggestions.length === 0) {
+                closePopover();
+                return;
+            }
+        } else {
+            renderSuggestions(cachedSuggestions || []);
+            openPopover();
+        }
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!isOpen()) return;
+        if (container.contains(e.target)) return;
+        closePopover();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && isOpen()) {
+            closePopover();
+            try { button.focus(); } catch (_) {}
+        }
+    });
+
+    // Probe once on load: hide the button entirely if there are no suggestions.
+    loadSuggestions().then(function() {
+        // popover stays closed; container visibility is set inside loadSuggestions
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}

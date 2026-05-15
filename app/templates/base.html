@@ -542,6 +542,12 @@
                         </a>
                     </li>
                     <li class="mt-1">
+                        <a href="{{ url_for('main.productivity_dashboard') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg border-l-4 {% if ep == 'main.productivity_dashboard' %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" title="{{ _('My productivity') }}">
+                            <i class="fas fa-chart-line w-6 text-center"></i>
+                            <span class="ml-3 sidebar-label">{{ _('My productivity') }}</span>
+                        </a>
+                    </li>
+                    <li class="mt-1">
                         <a href="{{ url_for('timer.manual_entry') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg border-l-4 {% if ep.startswith('timer.') and ep != 'timer.time_entries_overview' %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" title="{{ _('Timer') }}">
                             <i class="fas fa-stopwatch w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Timer') }}</span>
@@ -2564,6 +2570,9 @@ function trackBannerImpression(source) {
             navigator.serviceWorker.register('{{ url_for("main.service_worker") }}', { updateViaCache: 'none' }).catch(function () {});
         }
     </script>
+    {% if ai_enabled %}
+    <script src="{{ url_for('static', filename='js/ai_autocomplete.js') }}?v={{ app_version }}" defer></script>
+    {% endif %}
 </body>
 </html>
 

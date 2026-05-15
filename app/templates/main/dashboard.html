@@ -709,6 +709,7 @@
             </div>
             <form method="POST" action="{{ url_for('timer.start_timer') }}" id="startTimerForm" class="p-4">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% include 'components/ai_suggestions.html' %}
                 <div class="space-y-4">
                     {% if templates %}
                     <div class="pb-3 border-b border-border-light dark:border-border-dark">
@@ -883,6 +884,7 @@
                         loadTasksForProject(projectSelect.value);
                     }
                 } catch (_) {}
+                try { document.dispatchEvent(new CustomEvent('timer-modal-opened')); } catch (_) {}
             }
         }
         document.querySelectorAll('.js-open-start-timer').forEach(function(openBtn) {
@@ -1644,6 +1646,58 @@
     }
 });
 </script>
+
+{% if ai_enabled %}
+<script>
+// Wire AI suggestion chips inside the Start Timer modal: clicking a chip pre-fills the form.
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('startTimerModal');
+    if (!modal) return;
+
+    function applyAISuggestion(s) {
+        if (!s) return;
+        const projectSelect = document.getElementById('startTimerProject');
+        const taskSelect = document.getElementById('startTimerTask');
+        const clientSelect = document.getElementById('startTimerClient');
+        const notesInput = document.getElementById('startTimerNotes');
+        const tagsInput = document.getElementById('startTimerTags');
+
+        if (projectSelect && s.project_id) {
+            projectSelect.value = String(s.project_id);
+            if (clientSelect) clientSelect.value = '';
+            try { projectSelect.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+        }
+
+        if (s.task_id && taskSelect) {
+            const target = String(s.task_id);
+            let attempts = 15;
+            (function trySetTask() {
+                const found = Array.from(taskSelect.options).some(function(o) { return o.value === target; });
+                if (found) {
+                    taskSelect.value = target;
+                    return;
+                }
+                if (attempts-- > 0) setTimeout(trySetTask, 100);
+            })();
+        }
+
+        if (s.notes != null) {
+            if (notesInput) notesInput.value = s.notes || '';
+            if (window.dashboardNotesEditor && typeof window.dashboardNotesEditor.setMarkdown === 'function') {
+                try { window.dashboardNotesEditor.setMarkdown(s.notes || ''); } catch (_) {}
+            }
+        }
+
+        if (tagsInput && s.tags != null) tagsInput.value = s.tags;
+    }
+
+    document.addEventListener('ai-suggestion-selected', function(e) {
+        if (!modal || modal.classList.contains('hidden')) return;
+        applyAISuggestion(e && e.detail);
+    });
+});
+</script>
+{% endif %}
 
 <!-- Toast UI Editor -->
 <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>

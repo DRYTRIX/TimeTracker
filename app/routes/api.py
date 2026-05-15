@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import uuid
 from datetime import datetime, time, timedelta
 
@@ -24,6 +25,7 @@ from app.models import (
     User,
 )
 from app.models.time_entry import local_now
+from app.services.ai_suggestion_service import AISuggestionService
 from app.services.global_search_service import run_global_search
 from app.services.llm_service import AIServiceError, LLMService
 from app.services.time_tracking_service import TimeTrackingService
@@ -98,6 +100,159 @@ def ai_confirm_action():
         return jsonify(result)
     except AIServiceError as exc:
         return _ai_error_response(exc)
+
+
+def _ai_confidence_label(value):
+    """Map a numeric confidence (0..1) to a coarse label used by the suggestion UI."""
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        return "low"
+    if score >= 0.7:
+        return "high"
+    if score >= 0.4:
+        return "medium"
+    return "low"
+
+
+def _ai_safe_int(value):
+    try:
+        return int(value) if value not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _ai_parse_suggestion_array(content):
+    """Best-effort extraction of a JSON array from an LLM reply that may include prose."""
+    if not isinstance(content, str) or not content.strip():
+        return []
+    fenced = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", content, re.DOTALL)
+    candidate = fenced.group(1) if fenced else None
+    if candidate is None:
+        match = re.search(r"\[.*\]", content, re.DOTALL)
+        candidate = match.group(0) if match else None
+    if candidate is None:
+        return []
+    try:
+        data = json.loads(candidate)
+    except (ValueError, TypeError):
+        return []
+    if not isinstance(data, list):
+        return []
+    return [item for item in data if isinstance(item, dict)]
+
+
+@api_bp.route("/api/ai/suggest")
+@login_required
+@deprecated_session_api("/api/v1/ai/suggest")
+def ai_suggest():
+    """Return AI-powered time entry suggestions (deterministic, optionally LLM-enhanced)."""
+    q = (request.args.get("q") or "").strip()
+    rich = (request.args.get("rich") or "").strip().lower() in {"1", "true", "yes", "on"}
+
+    suggestions = []
+
+    try:
+        deterministic = AISuggestionService().get_time_entry_suggestions(current_user.id, limit=5)
+    except Exception as exc:  # noqa: BLE001 - never let suggestion errors 500 the request
+        current_app.logger.warning("AI deterministic suggestions failed: %s", exc)
+        deterministic = []
+
+    pairs = {(s.get("project_id"), s.get("task_id")) for s in deterministic if s.get("project_id")}
+    last_entry_by_pair = {}
+    for project_id, task_id in pairs:
+        query = TimeEntry.query.filter(
+            TimeEntry.user_id == current_user.id,
+            TimeEntry.project_id == project_id,
+            TimeEntry.end_time.isnot(None),
+        )
+        if task_id is None:
+            query = query.filter(TimeEntry.task_id.is_(None))
+        else:
+            query = query.filter(TimeEntry.task_id == task_id)
+        entry = query.order_by(TimeEntry.start_time.desc()).first()
+        if entry is not None:
+            last_entry_by_pair[(project_id, task_id)] = entry
+
+    for item in deterministic:
+        pid = item.get("project_id")
+        tid = item.get("task_id")
+        last = last_entry_by_pair.get((pid, tid))
+        suggestions.append(
+            {
+                "project_id": pid,
+                "project_name": item.get("project_name"),
+                "task_id": tid,
+                "task_name": item.get("task_name"),
+                "notes": (last.notes if last and last.notes else "") or "",
+                "tags": (last.tags if last and last.tags else "") or "",
+                "billable": bool(last.billable) if last is not None else True,
+                "confidence": _ai_confidence_label(item.get("confidence")),
+                "source": "deterministic",
+            }
+        )
+
+    if rich:
+        try:
+            llm = LLMService()
+            if llm.is_enabled():
+                prompt = (
+                    "Based on the user's recent time entries and assigned tasks, suggest the top 3 most likely "
+                    "next time entries. For each, return project_id, task_id (if any), notes, tags, billable. "
+                    "Return ONLY a JSON array, no prose."
+                )
+                result = llm.chat(current_user, prompt)
+                ai_items = _ai_parse_suggestion_array(result.get("reply") or "")
+                for item in ai_items:
+                    pid = _ai_safe_int(item.get("project_id"))
+                    if pid is None or not user_can_access_project(current_user, pid):
+                        continue
+                    project = Project.query.get(pid)
+                    if project is None:
+                        continue
+                    tid = _ai_safe_int(item.get("task_id"))
+                    task = Task.query.get(tid) if tid else None
+                    if task is not None and task.project_id != pid:
+                        task = None
+                        tid = None
+                    suggestions.append(
+                        {
+                            "project_id": pid,
+                            "project_name": project.name,
+                            "task_id": tid,
+                            "task_name": task.name if task else None,
+                            "notes": (str(item.get("notes") or ""))[:1000],
+                            "tags": (str(item.get("tags") or ""))[:500],
+                            "billable": bool(item.get("billable", True)),
+                            "confidence": "medium",
+                            "source": "ai",
+                        }
+                    )
+        except AIServiceError as exc:
+            current_app.logger.info("AI rich suggestions unavailable: %s", exc.message)
+        except Exception as exc:  # noqa: BLE001 - never fail the request because of AI errors
+            current_app.logger.warning("AI rich suggestions failed: %s", exc)
+
+    seen = set()
+    unique = []
+    for item in suggestions:
+        key = (item.get("project_id"), item.get("task_id"))
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(item)
+
+    if q:
+        ql = q.lower()
+
+        def _matches(item):
+            project_name = (item.get("project_name") or "").lower()
+            notes = (item.get("notes") or "").lower()
+            return ql in project_name or ql in notes
+
+        unique = [item for item in unique if _matches(item)]
+
+    return jsonify({"ok": True, "suggestions": unique[:5]})
 
 
 def _effective_user_for_version_api():
