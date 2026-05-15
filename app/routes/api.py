@@ -791,6 +791,115 @@ def project_burndown(project_id):
     )
 
 
+# Module-level forecast cache: {project_id: (cached_at_epoch, payload_dict, kind)}
+# kind is "deterministic" or "ai" so cached AI payloads aren't served for plain requests.
+_FORECAST_CACHE: dict = {}
+_FORECAST_CACHE_TTL_SEC = 600  # 10 minutes
+
+
+def _forecast_cache_get(project_id: int, kind: str):
+    try:
+        entry = _FORECAST_CACHE.get(int(project_id))
+    except (TypeError, ValueError):
+        return None
+    if not entry:
+        return None
+    cached_at, payload, cached_kind = entry
+    if cached_kind != kind:
+        return None
+    if (datetime.utcnow().timestamp() - cached_at) > _FORECAST_CACHE_TTL_SEC:
+        _FORECAST_CACHE.pop(int(project_id), None)
+        return None
+    return payload
+
+
+def _forecast_cache_set(project_id: int, kind: str, payload: dict) -> None:
+    try:
+        _FORECAST_CACHE[int(project_id)] = (datetime.utcnow().timestamp(), payload, kind)
+    except (TypeError, ValueError):
+        return
+
+
+def _forecast_cache_bust(project_id: int) -> None:
+    try:
+        _FORECAST_CACHE.pop(int(project_id), None)
+    except (TypeError, ValueError):
+        return
+
+
+def _forecast_truthy_param(value) -> bool:
+    if value is None:
+        return False
+    return str(value).strip().lower() in ("1", "true", "yes", "on")
+
+
+@api_bp.route("/api/projects/<int:project_id>/forecast")
+@login_required
+def project_forecast(project_id):
+    """Return deterministic (and optionally AI-narrated) forecast for a project.
+
+    Query params:
+        ai (bool, default false): include LLM-generated narrative/risks/recommendations.
+        refresh (bool, default false): bust the in-memory cache for this project.
+    """
+    try:
+        if not user_can_access_project(current_user, project_id):
+            return jsonify({"ok": False, "error": "Access denied"}), 403
+
+        include_ai = _forecast_truthy_param(request.args.get("ai"))
+        refresh = _forecast_truthy_param(request.args.get("refresh"))
+
+        if refresh:
+            _forecast_cache_bust(project_id)
+
+        cache_kind = "ai" if include_ai else "deterministic"
+        if not refresh:
+            cached = _forecast_cache_get(project_id, cache_kind)
+            if cached is not None:
+                return jsonify(cached)
+
+        from app.services.forecast_service import ForecastService
+
+        try:
+            ai_enabled = LLMService().is_enabled()
+        except Exception:
+            ai_enabled = False
+
+        if include_ai:
+            ai_result = ForecastService.get_ai_forecast(project_id, current_user)
+            forecast_dict = ai_result.get("deterministic") or ForecastService.get_deterministic_forecast(
+                project_id, current_user
+            )
+            payload = {
+                "ok": True,
+                "project_id": int(project_id),
+                "ai_enabled": bool(ai_enabled),
+                "forecast": forecast_dict,
+                "ai": {
+                    "ok": bool(ai_result.get("ok")),
+                    "narrative": ai_result.get("narrative"),
+                    "risks": ai_result.get("risks") or [],
+                    "recommendations": ai_result.get("recommendations") or [],
+                    "error": ai_result.get("error"),
+                    "error_code": ai_result.get("error_code"),
+                },
+            }
+        else:
+            forecast_dict = ForecastService.get_deterministic_forecast(project_id, current_user)
+            payload = {
+                "ok": True,
+                "project_id": int(project_id),
+                "ai_enabled": bool(ai_enabled),
+                "forecast": forecast_dict,
+            }
+
+        _forecast_cache_set(project_id, cache_kind, payload)
+        return jsonify(payload)
+    except Exception as exc:
+        current_app.logger.exception("project_forecast failed for project %s", project_id)
+        return jsonify({"ok": False, "error": str(exc) or "internal_error"}), 500
+
+
 @api_bp.route("/api/focus-sessions/start", methods=["POST"])
 @login_required
 def start_focus_session():

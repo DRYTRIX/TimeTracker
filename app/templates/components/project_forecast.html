@@ -1,0 +1,672 @@
+{# Project AI Forecast component
+   Required Jinja vars:
+     project (Project): the project to forecast for
+   Uses globals injected by context_processors: currency, ai_enabled
+   Renders a self-contained card. Fetches data via JS from
+   GET /api/projects/<id>/forecast (deterministic) and ?ai=true (AI insights).
+#}
+<div id="projectForecast-{{ project.id }}"
+     class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm animated-card mt-6"
+     data-project-id="{{ project.id }}"
+     data-currency-symbol="{{ (currency or 'EUR')|currency_symbol }}"
+     data-ai-enabled="{{ '1' if ai_enabled else '0' }}">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between gap-2 mb-4 flex-wrap">
+        <div class="flex items-center gap-2 min-w-0">
+            <h2 class="text-lg font-semibold flex items-center">
+                <i class="fas fa-chart-line mr-2 text-primary"></i>
+                {{ _('Project forecast') }}
+            </h2>
+            <span class="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide rounded bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">{{ _('beta') }}</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <button type="button"
+                    data-forecast-ai-btn
+                    class="hidden inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white transition shadow-sm">
+                <i class="fas fa-wand-magic-sparkles"></i>
+                <span>{{ _('AI insights') }}</span>
+            </button>
+            <button type="button"
+                    data-forecast-refresh-btn
+                    title="{{ _('Refresh forecast') }}"
+                    aria-label="{{ _('Refresh forecast') }}"
+                    class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-border-light dark:border-border-dark bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                <i class="fas fa-rotate"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading skeleton -->
+    <div data-forecast-skeleton>
+        <div class="animate-pulse space-y-4">
+            <div class="h-3 w-1/3 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div class="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="h-20 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                <div class="h-20 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                <div class="h-20 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                <div class="h-20 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+            </div>
+            <div class="h-[120px] bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+        </div>
+    </div>
+
+    <!-- Error state -->
+    <div data-forecast-error class="hidden p-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm flex items-center justify-between gap-3">
+        <span><i class="fas fa-triangle-exclamation mr-2"></i><span data-forecast-error-text>{{ _('Could not load forecast.') }}</span></span>
+        <button type="button" data-forecast-retry-btn class="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700 transition">{{ _('Retry') }}</button>
+    </div>
+
+    <!-- Content (hidden until data is loaded) -->
+    <div data-forecast-content class="hidden space-y-6">
+
+        <!-- Section 1: Health indicator bar + pills -->
+        <div>
+            <div class="flex justify-between text-xs text-text-muted-light dark:text-text-muted-dark mb-1.5">
+                <span>{{ _('Hours progress') }}</span>
+                <span><span data-forecast-logged-hours>0</span> / <span data-forecast-budget-hours>—</span> h</span>
+            </div>
+            <div class="w-full h-3 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex" data-forecast-health-bar>
+                <div class="h-full bg-emerald-500 transition-all" style="width: 0%" data-forecast-bar-logged
+                     title="{{ _('Logged hours') }}"></div>
+                <div class="h-full bg-amber-400 transition-all" style="width: 0%" data-forecast-bar-projected
+                     title="{{ _('Projected remaining') }}"></div>
+                <div class="h-full bg-red-500 transition-all" style="width: 0%" data-forecast-bar-over
+                     title="{{ _('Over budget') }}"></div>
+            </div>
+
+            <div class="mt-3 flex flex-wrap gap-2">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                      data-forecast-pill-budget>
+                    <i class="fas fa-wallet mr-1.5"></i><span data-forecast-budget-text>—</span>
+                </span>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                      data-forecast-pill-eta>
+                    <i class="fas fa-flag-checkered mr-1.5"></i><span data-forecast-eta-text>—</span>
+                </span>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+                      data-forecast-pill-deadline>
+                    <i class="fas fa-circle-info mr-1.5"></i><span data-forecast-deadline-text>{{ _('No data') }}</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Section 2: Metrics grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <!-- Velocity -->
+            <div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-border-light dark:border-border-dark">
+                <div class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Velocity') }}</div>
+                <div class="text-2xl font-bold" data-forecast-velocity>0h/day</div>
+                <div class="text-xs mt-1 flex items-center gap-1" data-forecast-burn-trend>
+                    <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Burn rate') }}</span>
+                    <span data-forecast-burn-trend-text></span>
+                </div>
+            </div>
+
+            <!-- Projected completion -->
+            <div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-border-light dark:border-border-dark">
+                <div class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Projected completion') }}</div>
+                <div class="text-2xl font-bold" data-forecast-projection>—</div>
+                <div class="text-xs mt-1 text-text-muted-light dark:text-text-muted-dark" data-forecast-projection-sub></div>
+            </div>
+
+            <!-- Budget remaining -->
+            <div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-border-light dark:border-border-dark">
+                <div class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Budget remaining') }}</div>
+                <div class="text-2xl font-bold" data-forecast-remaining>—</div>
+                <div class="text-xs mt-1" data-forecast-remaining-sub></div>
+            </div>
+
+            <!-- Tasks -->
+            <div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-border-light dark:border-border-dark">
+                <div class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Tasks') }}</div>
+                <div class="text-2xl font-bold" data-forecast-tasks>0/0</div>
+                <div class="text-xs mt-1" data-forecast-tasks-sub></div>
+            </div>
+        </div>
+
+        <!-- Section 3: Burn chart -->
+        <div>
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-semibold text-text-muted-light dark:text-text-muted-dark">{{ _('Daily hours (last 14 days)') }}</h3>
+                <span class="text-xs text-text-muted-light dark:text-text-muted-dark" data-forecast-chart-empty>—</span>
+            </div>
+            <div class="relative" style="height: 120px;">
+                <canvas data-forecast-chart></canvas>
+            </div>
+        </div>
+
+        <!-- Section 4: AI insights panel -->
+        <div data-forecast-ai-panel class="hidden border-t border-border-light dark:border-border-dark pt-5">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-semibold flex items-center gap-2">
+                    <i class="fas fa-wand-magic-sparkles text-purple-500"></i>
+                    {{ _('AI insights') }}
+                </h3>
+                <span class="text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">{{ _('beta') }}</span>
+            </div>
+
+            <!-- AI loading -->
+            <div data-forecast-ai-loading class="flex items-center gap-2 text-sm text-text-muted-light dark:text-text-muted-dark">
+                <span class="inline-block w-4 h-4 border-2 border-current border-r-transparent rounded-full animate-spin"></span>
+                <span>{{ _('Generating AI insights…') }}</span>
+            </div>
+
+            <!-- AI error -->
+            <div data-forecast-ai-error class="hidden p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 text-sm">
+                <i class="fas fa-circle-info mr-1.5"></i><span data-forecast-ai-error-text></span>
+            </div>
+
+            <!-- AI content -->
+            <div data-forecast-ai-content class="hidden space-y-4">
+                <blockquote class="border-l-4 border-indigo-500 pl-3 py-1 italic text-sm text-text-light dark:text-text-dark bg-indigo-50/40 dark:bg-indigo-900/10 rounded-r">
+                    <span data-forecast-ai-narrative></span>
+                </blockquote>
+
+                <div data-forecast-ai-risks-wrap>
+                    <h4 class="text-xs uppercase font-semibold text-text-muted-light dark:text-text-muted-dark mb-1.5">{{ _('Risks') }}</h4>
+                    <ul class="space-y-1.5 text-sm" data-forecast-ai-risks></ul>
+                </div>
+
+                <div data-forecast-ai-recs-wrap>
+                    <h4 class="text-xs uppercase font-semibold text-text-muted-light dark:text-text-muted-dark mb-1.5">{{ _('Recommendations') }}</h4>
+                    <ul class="space-y-1.5 text-sm" data-forecast-ai-recs></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var root = document.getElementById('projectForecast-{{ project.id }}');
+    if (!root) return;
+
+    var projectId = root.dataset.projectId;
+    var currencySymbol = root.dataset.currencySymbol || '$';
+    var aiEnabledInitial = root.dataset.aiEnabled === '1';
+
+    var state = {
+        chart: null,
+        deterministic: null,
+        ai: null,
+        aiPanelOpen: false,
+    };
+
+    var endpoint = '/api/projects/' + projectId + '/forecast';
+
+    // ---------- helpers ----------
+    function $(selector) { return root.querySelector(selector); }
+    function $all(selector) { return root.querySelectorAll(selector); }
+
+    function show(el) { if (el) el.classList.remove('hidden'); }
+    function hide(el) { if (el) el.classList.add('hidden'); }
+
+    function fmtHours(h) {
+        if (h === null || h === undefined || isNaN(h)) return '—';
+        return (Math.round(h * 10) / 10).toFixed(1);
+    }
+    function fmtMoney(v) {
+        if (v === null || v === undefined || isNaN(v)) return '—';
+        try {
+            return currencySymbol + Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 });
+        } catch (e) {
+            return currencySymbol + Math.round(Number(v) || 0);
+        }
+    }
+    function fmtDateLong(iso) {
+        if (!iso) return '—';
+        try {
+            var d = new Date(iso + (iso.length === 10 ? 'T00:00:00' : ''));
+            if (isNaN(d.getTime())) return iso;
+            return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch (e) { return iso; }
+    }
+    function fmtDateShort(iso) {
+        if (!iso) return '';
+        try {
+            var d = new Date(iso + (iso.length === 10 ? 'T00:00:00' : ''));
+            if (isNaN(d.getTime())) return iso;
+            return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        } catch (e) { return iso; }
+    }
+    function escapeHtml(s) {
+        if (s === null || s === undefined) return '';
+        return String(s).replace(/[&<>"']/g, function (c) {
+            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+        });
+    }
+
+    // ---------- render ----------
+    function renderHealthBar(f) {
+        var totalLogged = Number(f.total_logged_hours) || 0;
+        var budgetHours = Number(f.budget_hours) || 0;
+        var velocity = Number(f.velocity_hours_per_day) || 0;
+        var hoursRemaining = Number(f.hours_remaining) || 0;
+
+        var hasBudget = budgetHours > 0;
+        var overHours = hasBudget ? Math.max(0, totalLogged - budgetHours) : 0;
+        var loggedWithinBudget = hasBudget ? Math.min(totalLogged, budgetHours) : totalLogged;
+        var projectedRemaining = hasBudget ? Math.max(0, budgetHours - totalLogged) : 0;
+
+        var totalWidth = Math.max(budgetHours, totalLogged * 1.2, 1);
+        var loggedPct = (loggedWithinBudget / totalWidth) * 100;
+        var projectedPct = (projectedRemaining / totalWidth) * 100;
+        var overPct = (overHours / totalWidth) * 100;
+
+        var loggedEl = $('[data-forecast-bar-logged]');
+        var projectedEl = $('[data-forecast-bar-projected]');
+        var overEl = $('[data-forecast-bar-over]');
+        if (loggedEl) {
+            loggedEl.style.width = loggedPct + '%';
+            loggedEl.setAttribute('title', '{{ _("Logged") }}: ' + fmtHours(loggedWithinBudget) + 'h');
+        }
+        if (projectedEl) {
+            projectedEl.style.width = projectedPct + '%';
+            projectedEl.setAttribute('title', '{{ _("Projected remaining") }}: ' + fmtHours(projectedRemaining) + 'h');
+        }
+        if (overEl) {
+            overEl.style.width = overPct + '%';
+            overEl.setAttribute('title', '{{ _("Over budget") }}: ' + fmtHours(overHours) + 'h');
+        }
+
+        $('[data-forecast-logged-hours]').textContent = fmtHours(totalLogged);
+        $('[data-forecast-budget-hours]').textContent = hasBudget ? fmtHours(budgetHours) : '—';
+
+        // Pills
+        var budgetPillText = $('[data-forecast-budget-text]');
+        if (hasBudget) {
+            budgetPillText.textContent = (f.budget_used_percent || 0) + '% {{ _("budget used") }}';
+        } else {
+            budgetPillText.textContent = '{{ _("No budget set") }}';
+        }
+
+        var etaText = $('[data-forecast-eta-text]');
+        if (f.days_to_completion === 0) {
+            etaText.textContent = '{{ _("Complete") }}';
+        } else if (typeof f.days_to_completion === 'number') {
+            etaText.textContent = f.days_to_completion + ' {{ _("days to completion") }}';
+        } else {
+            etaText.textContent = '{{ _("Insufficient data") }}';
+        }
+
+        var deadlinePill = $('[data-forecast-pill-deadline]');
+        var deadlineText = $('[data-forecast-deadline-text]');
+        deadlinePill.className = 'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium';
+        switch (f.deadline_risk) {
+            case 'on_track':
+                deadlinePill.className += ' bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
+                deadlineText.textContent = '{{ _("On track") }}';
+                break;
+            case 'at_risk':
+                deadlinePill.className += ' bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
+                deadlineText.textContent = '{{ _("At risk") }}';
+                break;
+            case 'overdue':
+                deadlinePill.className += ' bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300';
+                deadlineText.textContent = '{{ _("Overdue") }}';
+                break;
+            default:
+                deadlinePill.className += ' bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
+                deadlineText.textContent = '{{ _("No data") }}';
+        }
+    }
+
+    function renderMetrics(f) {
+        $('[data-forecast-velocity]').textContent = fmtHours(f.avg_hours_per_calendar_day) + 'h/day';
+
+        var trendEl = $('[data-forecast-burn-trend-text]');
+        var trendMap = {
+            increasing: { label: '{{ _("increasing") }}', cls: 'text-emerald-600 dark:text-emerald-400', arrow: '↑' },
+            decreasing: { label: '{{ _("decreasing") }}', cls: 'text-red-600 dark:text-red-400', arrow: '↓' },
+            stable: { label: '{{ _("stable") }}', cls: 'text-gray-600 dark:text-gray-300', arrow: '→' },
+        };
+        var t = trendMap[f.burn_rate_trend] || trendMap.stable;
+        trendEl.className = t.cls + ' font-medium';
+        trendEl.textContent = t.label + ' ' + t.arrow;
+
+        var projection = $('[data-forecast-projection]');
+        var projectionSub = $('[data-forecast-projection-sub]');
+        if (f.projected_completion_date) {
+            projection.textContent = fmtDateLong(f.projected_completion_date);
+            if (typeof f.days_to_completion === 'number') {
+                if (f.project_deadline && typeof f.days_until_deadline === 'number') {
+                    var delta = f.days_to_completion - f.days_until_deadline;
+                    if (delta <= 0) {
+                        projectionSub.textContent = Math.abs(delta) + ' {{ _("days before deadline") }}';
+                    } else {
+                        projectionSub.textContent = delta + ' {{ _("days past deadline") }}';
+                    }
+                } else {
+                    projectionSub.textContent = f.days_to_completion + ' {{ _("days from today") }}';
+                }
+            } else {
+                projectionSub.textContent = '';
+            }
+        } else {
+            projection.textContent = '{{ _("Insufficient data") }}';
+            projectionSub.textContent = (f.total_logged_hours > 0)
+                ? '{{ _("No estimated hours set") }}'
+                : '{{ _("No time logged yet") }}';
+        }
+
+        var remaining = $('[data-forecast-remaining]');
+        var remainingSub = $('[data-forecast-remaining-sub]');
+        var hasBudget = (f.budget_hours > 0) || (f.budget_amount > 0);
+        if (!hasBudget) {
+            remaining.textContent = '{{ _("No budget set") }}';
+            remaining.classList.remove('text-amber-600', 'dark:text-amber-400', 'text-red-600', 'dark:text-red-400');
+            remaining.classList.add('text-text-muted-light', 'dark:text-text-muted-dark');
+            remainingSub.textContent = '';
+        } else {
+            var parts = [];
+            if (f.budget_hours > 0) parts.push(fmtHours(f.hours_remaining) + 'h');
+            if (f.budget_amount > 0) parts.push(fmtMoney(f.budget_amount_remaining));
+            remaining.textContent = parts.join(' / ');
+            remaining.classList.remove('text-text-muted-light', 'dark:text-text-muted-dark');
+            if (f.at_risk) {
+                remaining.classList.remove('text-emerald-600', 'dark:text-emerald-400');
+                remaining.classList.add('text-amber-600', 'dark:text-amber-400');
+                remainingSub.className = 'text-xs mt-1 text-amber-700 dark:text-amber-300 font-medium';
+                remainingSub.textContent = '{{ _("Approaching budget limit") }}';
+            } else {
+                remaining.classList.remove('text-amber-600', 'dark:text-amber-400');
+                remaining.classList.add('text-emerald-600', 'dark:text-emerald-400');
+                remainingSub.className = 'text-xs mt-1 text-text-muted-light dark:text-text-muted-dark';
+                remainingSub.textContent = (f.budget_used_percent || 0) + '% {{ _("used") }}';
+            }
+        }
+
+        $('[data-forecast-tasks]').textContent = (f.completed_tasks || 0) + '/' + (f.total_tasks || 0) + ' {{ _("done") }}';
+        var tasksSub = $('[data-forecast-tasks-sub]');
+        if ((f.overdue_tasks || 0) > 0) {
+            tasksSub.className = 'text-xs mt-1 text-red-600 dark:text-red-400 font-medium';
+            tasksSub.textContent = f.overdue_tasks + ' {{ _("overdue") }}';
+        } else {
+            tasksSub.className = 'text-xs mt-1 text-text-muted-light dark:text-text-muted-dark';
+            tasksSub.textContent = (f.task_completion_percent || 0) + '% {{ _("complete") }}';
+        }
+    }
+
+    function renderChart(f) {
+        var canvas = $('[data-forecast-chart]');
+        var emptyLabel = $('[data-forecast-chart-empty]');
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        var daily = Array.isArray(f.daily_hours) ? f.daily_hours : [];
+        var hasAnyHours = daily.some(function (d) { return Number(d.hours) > 0; });
+        emptyLabel.textContent = hasAnyHours ? '' : '{{ _("No entries in the last 14 days") }}';
+
+        var labels = daily.map(function (d) { return fmtDateShort(d.date); });
+        var values = daily.map(function (d) { return Number(d.hours) || 0; });
+        var refValue = Number(f.avg_hours_per_calendar_day) || 0;
+        var refLine = daily.map(function () { return refValue; });
+
+        if (state.chart) {
+            try { state.chart.destroy(); } catch (e) { /* ignore */ }
+            state.chart = null;
+        }
+
+        var ctx = canvas.getContext('2d');
+        state.chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '{{ _("Hours") }}',
+                        data: values,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2,
+                        pointHoverRadius: 4,
+                        pointBackgroundColor: '#3b82f6',
+                    },
+                    {
+                        label: '{{ _("Avg/day") }}',
+                        data: refLine,
+                        borderColor: 'rgba(107, 114, 128, 0.7)',
+                        borderDash: [4, 4],
+                        borderWidth: 1.5,
+                        fill: false,
+                        tension: 0,
+                        pointRadius: 0,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: function (items) {
+                                if (!items.length) return '';
+                                var idx = items[0].dataIndex;
+                                var iso = daily[idx] ? daily[idx].date : '';
+                                return fmtDateLong(iso);
+                            },
+                            label: function (item) {
+                                if (item.datasetIndex === 1) {
+                                    return '{{ _("Avg") }}: ' + fmtHours(item.parsed.y) + 'h';
+                                }
+                                return fmtHours(item.parsed.y) + 'h';
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        display: false,
+                        grid: { display: false },
+                    },
+                    y: {
+                        display: false,
+                        grid: { color: 'rgba(156, 163, 175, 0.18)' },
+                        beginAtZero: true,
+                    },
+                },
+                interaction: { mode: 'index', intersect: false },
+            },
+        });
+    }
+
+    function renderEmptyState(f) {
+        if (!f.has_data) {
+            var emptyLabel = $('[data-forecast-chart-empty]');
+            if (emptyLabel) emptyLabel.textContent = '{{ _("No time entries yet") }}';
+        }
+    }
+
+    function renderAll(payload) {
+        if (!payload || !payload.forecast) return;
+        var f = payload.forecast;
+        state.deterministic = f;
+
+        renderHealthBar(f);
+        renderMetrics(f);
+        renderChart(f);
+        renderEmptyState(f);
+
+        // Show AI button if backend reports AI enabled (override template hint).
+        var aiBtn = $('[data-forecast-ai-btn]');
+        if (aiBtn) {
+            var enabled = (typeof payload.ai_enabled === 'boolean')
+                ? payload.ai_enabled
+                : aiEnabledInitial;
+            if (enabled) show(aiBtn); else hide(aiBtn);
+        }
+    }
+
+    function renderAi(aiPayload) {
+        var loading = $('[data-forecast-ai-loading]');
+        var errBox = $('[data-forecast-ai-error]');
+        var errText = $('[data-forecast-ai-error-text]');
+        var content = $('[data-forecast-ai-content]');
+
+        hide(loading);
+
+        if (!aiPayload || !aiPayload.ok) {
+            hide(content);
+            var code = aiPayload && aiPayload.error_code;
+            if (code === 'ai_disabled') {
+                errText.textContent = '{{ _("AI insights require the AI helper to be configured in Settings.") }}';
+            } else {
+                errText.textContent = '{{ _("Could not load AI insights. Try again later.") }}';
+            }
+            show(errBox);
+            return;
+        }
+
+        hide(errBox);
+        var narrativeEl = $('[data-forecast-ai-narrative]');
+        narrativeEl.textContent = aiPayload.narrative || '';
+
+        var risksWrap = $('[data-forecast-ai-risks-wrap]');
+        var risksList = $('[data-forecast-ai-risks]');
+        risksList.innerHTML = '';
+        if (Array.isArray(aiPayload.risks) && aiPayload.risks.length) {
+            aiPayload.risks.slice(0, 3).forEach(function (r) {
+                var li = document.createElement('li');
+                li.className = 'flex items-start gap-2';
+                li.innerHTML = '<i class="fas fa-triangle-exclamation text-red-500 mt-0.5"></i><span></span>';
+                li.querySelector('span').textContent = String(r);
+                risksList.appendChild(li);
+            });
+            show(risksWrap);
+        } else {
+            hide(risksWrap);
+        }
+
+        var recsWrap = $('[data-forecast-ai-recs-wrap]');
+        var recsList = $('[data-forecast-ai-recs]');
+        recsList.innerHTML = '';
+        if (Array.isArray(aiPayload.recommendations) && aiPayload.recommendations.length) {
+            aiPayload.recommendations.slice(0, 3).forEach(function (rc) {
+                var li = document.createElement('li');
+                li.className = 'flex items-start gap-2';
+                li.innerHTML = '<i class="fas fa-circle-check text-emerald-500 mt-0.5"></i><span></span>';
+                li.querySelector('span').textContent = String(rc);
+                recsList.appendChild(li);
+            });
+            show(recsWrap);
+        } else {
+            hide(recsWrap);
+        }
+
+        show(content);
+    }
+
+    // ---------- fetch ----------
+    function fetchForecast(refresh) {
+        var skeleton = $('[data-forecast-skeleton]');
+        var errBox = $('[data-forecast-error]');
+        var content = $('[data-forecast-content]');
+
+        hide(errBox);
+        show(skeleton);
+        hide(content);
+
+        var url = endpoint + (refresh ? '?refresh=true' : '');
+        return fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            .then(function (resp) {
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                return resp.json();
+            })
+            .then(function (data) {
+                if (!data || data.ok === false) throw new Error((data && data.error) || 'Forecast error');
+                renderAll(data);
+                hide(skeleton);
+                show(content);
+                return data;
+            })
+            .catch(function (err) {
+                hide(skeleton);
+                hide(content);
+                var msg = (err && err.message) || '{{ _("Could not load forecast.") }}';
+                $('[data-forecast-error-text]').textContent = msg;
+                show(errBox);
+                throw err;
+            });
+    }
+
+    function fetchAi(refresh) {
+        var loading = $('[data-forecast-ai-loading]');
+        var errBox = $('[data-forecast-ai-error]');
+        var content = $('[data-forecast-ai-content]');
+        hide(errBox);
+        hide(content);
+        show(loading);
+
+        var url = endpoint + '?ai=true' + (refresh ? '&refresh=true' : '');
+        return fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            .then(function (resp) {
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                return resp.json();
+            })
+            .then(function (data) {
+                if (data && data.forecast) {
+                    renderAll(data);
+                }
+                state.ai = data && data.ai;
+                renderAi(state.ai);
+                return data;
+            })
+            .catch(function () {
+                renderAi({ ok: false, error_code: 'ai_error' });
+            });
+    }
+
+    // ---------- events ----------
+    var aiBtn = $('[data-forecast-ai-btn]');
+    if (aiBtn) {
+        aiBtn.addEventListener('click', function () {
+            var panel = $('[data-forecast-ai-panel]');
+            show(panel);
+            hide(aiBtn);
+            state.aiPanelOpen = true;
+            if (state.ai && state.ai.ok) {
+                renderAi(state.ai);
+            } else {
+                fetchAi(false);
+            }
+        });
+    }
+
+    var refreshBtn = $('[data-forecast-refresh-btn]');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function () {
+            refreshBtn.classList.add('opacity-60', 'pointer-events-none');
+            refreshBtn.querySelector('i').classList.add('animate-spin');
+            state.ai = null;
+            fetchForecast(true)
+                .then(function () {
+                    if (state.aiPanelOpen) {
+                        return fetchAi(true);
+                    }
+                })
+                .finally(function () {
+                    refreshBtn.classList.remove('opacity-60', 'pointer-events-none');
+                    refreshBtn.querySelector('i').classList.remove('animate-spin');
+                });
+        });
+    }
+
+    var retryBtn = $('[data-forecast-retry-btn]');
+    if (retryBtn) {
+        retryBtn.addEventListener('click', function () { fetchForecast(false); });
+    }
+
+    // ---------- init ----------
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { fetchForecast(false); });
+    } else {
+        fetchForecast(false);
+    }
+})();
+</script>

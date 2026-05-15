@@ -490,6 +490,11 @@
         </div>
     </div>
 </div>
+
+{% if project.status == 'active' and (project.estimated_hours or project.budget_amount) %}
+{% include 'components/project_forecast.html' %}
+{% endif %}
+
 {% if current_user.is_admin or has_permission('delete_projects') %}
 {{ confirm_dialog(
     'confirmDeleteProject-' ~ project.id,
