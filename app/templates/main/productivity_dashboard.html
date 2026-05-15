@@ -1,0 +1,821 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('My productivity') }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set productivity_breadcrumbs = [{'text': _('Dashboard'), 'url': url_for('main.dashboard')}, {'text': _('My productivity')}] %}
+{{ page_header('fas fa-chart-line', _('My productivity'), _('Your personal time tracking patterns, focus, and streaks.'), breadcrumbs=productivity_breadcrumbs) }}
+
+<div id="productivityRoot"
+     class="space-y-6"
+     data-period="{{ period_days }}"
+     data-standard-hours="{{ standard_hours_per_day }}"
+     data-stats-url="{{ url_for('api.productivity_stats') }}">
+
+    <div class="flex items-center justify-end gap-2">
+        <span id="productivityRefreshStatus" class="text-xs text-text-muted-light dark:text-text-muted-dark" aria-live="polite"></span>
+        <button type="button" id="productivityRefreshBtn"
+                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+            <i class="fas fa-arrows-rotate" aria-hidden="true"></i>
+            <span>{{ _('Refresh') }}</span>
+        </button>
+    </div>
+
+    {# ---------- Row 1 — Summary cards ---------- #}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {# Today's hours #}
+        <div class="bg-card-light dark:bg-card-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wide">{{ _("Today's hours") }}</h3>
+                <i class="fas fa-clock text-blue-500" aria-hidden="true"></i>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="relative w-16 h-16 shrink-0">
+                    <svg viewBox="0 0 36 36" class="w-16 h-16 -rotate-90">
+                        <circle cx="18" cy="18" r="15.9155" fill="none"
+                                class="stroke-gray-200 dark:stroke-gray-700" stroke-width="3"></circle>
+                        <circle id="productivityTodayArc" cx="18" cy="18" r="15.9155" fill="none"
+                                class="stroke-blue-500"
+                                stroke-width="3"
+                                stroke-linecap="round"
+                                stroke-dasharray="100"
+                                stroke-dashoffset="100"></circle>
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-3xl font-bold text-text-light dark:text-text-dark" id="productivityTodayHours">{{ '%.1f'|format(summary.today_hours or 0) }}</p>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('today') }}</p>
+                </div>
+            </div>
+            <div id="productivityActiveTimerBadge" class="mt-3 inline-flex items-center gap-2 text-xs font-medium text-blue-600 dark:text-blue-400 {% if not summary.active_timer %}hidden{% endif %}">
+                <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                <span>{{ _('Timer running') }}</span>
+            </div>
+        </div>
+
+        {# This week #}
+        <div class="bg-card-light dark:bg-card-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wide">{{ _('This week') }}</h3>
+                <i class="fas fa-calendar-week text-emerald-500" aria-hidden="true"></i>
+            </div>
+            <p class="text-3xl font-bold text-text-light dark:text-text-dark">
+                <span id="productivityWeekHours">{{ '%.1f'|format(summary.week_hours or 0) }}</span>
+                <span class="text-base font-medium text-text-muted-light dark:text-text-muted-dark"> / <span id="productivityWeekGoal">{{ '%.0f'|format(summary.week_goal_hours or 0) }}</span> h</span>
+            </p>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('this week') }}</p>
+            <div class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden flex">
+                <div id="productivityWeekBillableBar" class="h-full bg-emerald-500" style="width: 0%;"></div>
+                <div id="productivityWeekRemainderBar" class="h-full bg-emerald-300 dark:bg-emerald-700" style="width: 0%;"></div>
+            </div>
+            <p class="mt-2 text-xs text-text-muted-light dark:text-text-muted-dark">
+                <span id="productivityBillablePct">{{ summary.billable_percent_week or 0 }}</span>% {{ _('billable') }}
+            </p>
+        </div>
+
+        {# Streak #}
+        <div class="bg-card-light dark:bg-card-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wide">{{ _('Streak') }}</h3>
+                <i id="productivityStreakIcon" class="fas {% if streak.current_streak >= 7 %}fa-fire text-orange-500{% else %}fa-calendar-check text-amber-500{% endif %}" aria-hidden="true"></i>
+            </div>
+            <p class="text-3xl font-bold text-text-light dark:text-text-dark"><span id="productivityCurrentStreak">{{ streak.current_streak or 0 }}</span></p>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('day streak') }}</p>
+            <p class="mt-3 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Best') }}: <span id="productivityLongestStreak">{{ streak.longest_streak or 0 }}</span> {{ _('days') }}</p>
+        </div>
+
+        {# Avg session #}
+        <div class="bg-card-light dark:bg-card-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wide">{{ _('Avg session') }}</h3>
+                <i class="fas fa-stopwatch text-purple-500" aria-hidden="true"></i>
+            </div>
+            <p class="text-3xl font-bold text-text-light dark:text-text-dark" id="productivityAvgSession">—</p>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('per session (last 30 days)') }}</p>
+            <p class="mt-3 text-xs text-text-muted-light dark:text-text-muted-dark">
+                {{ _('Most productive') }}: <span id="productivityMostProductiveDay">{{ focus.most_productive_day or '—' }}</span>
+            </p>
+        </div>
+    </div>
+
+    {# ---------- Row 2 — Daily hours bar chart ---------- #}
+    <div class="bg-card-light dark:bg-card-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+            <div>
+                <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Daily hours') }}</h2>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Last 14 days, with daily goal reference') }}</p>
+            </div>
+        </div>
+        <div style="height: 220px;">
+            <canvas id="productivityDailyChart" aria-label="{{ _('Daily hours chart') }}"></canvas>
+        </div>
+        <p id="productivityDailyEmpty" class="hidden text-center text-sm text-text-muted-light dark:text-text-muted-dark mt-3">{{ _('No time tracked in the last 14 days.') }}</p>
+    </div>
+
+    {# ---------- Row 3 — projects + focus ---------- #}
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {# Project breakdown doughnut (60%) #}
+        <div class="lg:col-span-3 bg-card-light dark:bg-card-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Project breakdown') }}</h2>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Top projects (last 30 days)') }}</p>
+                </div>
+            </div>
+            <div class="relative" style="height: 240px;">
+                <canvas id="productivityProjectChart" aria-label="{{ _('Project breakdown chart') }}"></canvas>
+                <div id="productivityProjectCenter" class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+                    <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Total') }}</span>
+                    <span class="text-2xl font-bold text-text-light dark:text-text-dark" id="productivityProjectTotal">0h</span>
+                </div>
+            </div>
+            <ul id="productivityProjectLegend" class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm"></ul>
+            <p id="productivityProjectEmpty" class="hidden text-center text-sm text-text-muted-light dark:text-text-muted-dark mt-4">{{ _('No entries in the last 30 days') }}</p>
+        </div>
+
+        {# Focus stats (40%) #}
+        <div class="lg:col-span-2 bg-card-light dark:bg-card-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+            <div class="mb-4">
+                <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Focus') }}</h2>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('How and when you work best (last 30 days)') }}</p>
+            </div>
+
+            <dl class="space-y-3 text-sm">
+                <div>
+                    <dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Most productive hour') }}</dt>
+                    <dd class="font-semibold text-text-light dark:text-text-dark" id="productivityPeakHour">—</dd>
+                    <div class="mt-2" style="height: 60px;">
+                        <canvas id="productivityHourSparkline" aria-hidden="true"></canvas>
+                    </div>
+                </div>
+                <div class="flex justify-between border-t border-border-light dark:border-border-dark pt-3">
+                    <dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Most productive day') }}</dt>
+                    <dd class="font-semibold text-text-light dark:text-text-dark" id="productivityFocusDay">{{ focus.most_productive_day or '—' }}</dd>
+                </div>
+                <div class="flex justify-between border-t border-border-light dark:border-border-dark pt-3">
+                    <dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Longest session') }}</dt>
+                    <dd class="font-semibold text-text-light dark:text-text-dark" id="productivityLongestSession">—</dd>
+                </div>
+                <div class="flex justify-between border-t border-border-light dark:border-border-dark pt-3">
+                    <dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Entries per active day') }}</dt>
+                    <dd class="font-semibold text-text-light dark:text-text-dark" id="productivityEntriesPerDay">—</dd>
+                </div>
+                <div class="flex justify-between border-t border-border-light dark:border-border-dark pt-3">
+                    <dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Tracked days this month') }}</dt>
+                    <dd class="font-semibold text-text-light dark:text-text-dark"><span id="productivityTrackedDaysMonth">{{ streak.tracked_days_this_month or 0 }}</span> / <span id="productivityTotalDaysMonth">{{ streak.total_days_this_month or 1 }}</span></dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+
+    {# ---------- Row 4 — Activity heatmap ---------- #}
+    <div class="bg-card-light dark:bg-card-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Activity heatmap') }}</h2>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Last 12 weeks of tracked time') }}</p>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <div id="productivityHeatmap" class="inline-block min-w-full"></div>
+        </div>
+
+        <div class="mt-3 flex items-center justify-end gap-2 text-xs text-text-muted-light dark:text-text-muted-dark">
+            <span>{{ _('Less') }}</span>
+            <span class="w-3 h-3 rounded-sm bg-gray-100 dark:bg-gray-800"></span>
+            <span class="w-3 h-3 rounded-sm bg-blue-200 dark:bg-blue-900"></span>
+            <span class="w-3 h-3 rounded-sm bg-blue-400 dark:bg-blue-700"></span>
+            <span class="w-3 h-3 rounded-sm bg-blue-600 dark:bg-blue-500"></span>
+            <span class="w-3 h-3 rounded-sm bg-blue-800 dark:bg-blue-300"></span>
+            <span>{{ _('More') }}</span>
+        </div>
+    </div>
+
+    {# ---------- Row 5 — Insights ---------- #}
+    <div class="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/40 p-5 rounded-xl shadow-sm">
+        <div class="flex items-start gap-3">
+            <div class="shrink-0 w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                <i class="fas fa-lightbulb text-amber-500" aria-hidden="true"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h2 class="text-lg font-semibold text-text-light dark:text-text-dark mb-2">{{ _('Insights') }}</h2>
+                <ul id="productivityInsights" class="space-y-1.5 text-sm text-text-light dark:text-text-dark">
+                    {% if insights %}
+                        {% for line in insights %}
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-circle text-[6px] mt-2 text-amber-500" aria-hidden="true"></i>
+                            <span>{{ line }}</span>
+                        </li>
+                        {% endfor %}
+                    {% else %}
+                        <li class="text-text-muted-light dark:text-text-muted-dark">{{ _('Start tracking time to unlock personal insights.') }}</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Server-rendered initial dataset for charts #}
+<script id="productivityInitialData" type="application/json">
+{{ {
+    'summary': summary,
+    'daily_breakdown': daily_breakdown,
+    'streak': streak,
+    'focus': focus,
+    'projects': projects,
+    'heatmap': heatmap,
+    'insights': insights,
+    'period': period_days
+} | tojson }}
+</script>
+
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+(function () {
+    'use strict';
+
+    var root = document.getElementById('productivityRoot');
+    if (!root) { return; }
+
+    var STATS_URL = root.getAttribute('data-stats-url');
+    var STANDARD_HOURS = parseFloat(root.getAttribute('data-standard-hours') || '8') || 8;
+    var DEFAULT_PERIOD = parseInt(root.getAttribute('data-period') || '30', 10) || 30;
+
+    var initialDataEl = document.getElementById('productivityInitialData');
+    var state = {
+        data: null,
+        dailyChart: null,
+        projectChart: null,
+        sparkChart: null,
+        refreshTimer: null,
+        period: DEFAULT_PERIOD,
+    };
+
+    try {
+        state.data = initialDataEl ? JSON.parse(initialDataEl.textContent || '{}') : {};
+    } catch (e) {
+        state.data = {};
+    }
+
+    function isDark() { return document.documentElement.classList.contains('dark'); }
+    function gridColor() { return isDark() ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'; }
+    function tickColor() { return isDark() ? '#cbd5e1' : '#475569'; }
+
+    function fmtHours(h) {
+        h = Number(h) || 0;
+        if (h >= 100) { return Math.round(h) + 'h'; }
+        if (h >= 10) { return h.toFixed(1) + 'h'; }
+        return h.toFixed(2).replace(/\.?0+$/, '') + 'h';
+    }
+
+    function fmtMinutes(mins) {
+        mins = Math.max(0, Math.round(Number(mins) || 0));
+        if (mins < 60) { return mins + 'm'; }
+        var h = Math.floor(mins / 60);
+        var m = mins % 60;
+        return m === 0 ? h + 'h' : (h + 'h ' + m + 'm');
+    }
+
+    function fmtDateLabel(iso) {
+        try {
+            var d = new Date(iso + 'T00:00:00');
+            return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' });
+        } catch (e) {
+            return iso;
+        }
+    }
+
+    function fmtFullDate(iso) {
+        try {
+            var d = new Date(iso + 'T00:00:00');
+            return d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+        } catch (e) {
+            return iso;
+        }
+    }
+
+    // --------------- Chart 1: Daily bars ---------------
+    function renderDailyChart() {
+        var days = (state.data && state.data.daily_breakdown) || [];
+        var ctxEl = document.getElementById('productivityDailyChart');
+        var emptyEl = document.getElementById('productivityDailyEmpty');
+        if (!ctxEl) { return; }
+
+        var labels = days.map(function (d) { return fmtDateLabel(d.date); });
+        var hours = days.map(function (d) { return Number(d.hours) || 0; });
+        var billable = days.map(function (d) { return Number(d.billable_hours) || 0; });
+        var counts = days.map(function (d) { return Number(d.entry_count) || 0; });
+        var goal = days.map(function (d) { return Number(d.goal_hours) || STANDARD_HOURS; });
+        var dates = days.map(function (d) { return d.date; });
+
+        var hasData = hours.some(function (h) { return h > 0; });
+        if (emptyEl) { emptyEl.classList.toggle('hidden', hasData); }
+
+        if (state.dailyChart) {
+            state.dailyChart.data.labels = labels;
+            state.dailyChart.data.datasets[0].data = hours;
+            state.dailyChart.data.datasets[1].data = goal;
+            state.dailyChart._tooltipMeta = { dates: dates, billable: billable, counts: counts };
+            state.dailyChart.update();
+            return;
+        }
+
+        var ctx = ctxEl.getContext('2d');
+        state.dailyChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        type: 'bar',
+                        label: 'Hours',
+                        data: hours,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6,
+                        borderSkipped: false,
+                    },
+                    {
+                        type: 'line',
+                        label: 'Goal',
+                        data: goal,
+                        borderColor: '#ef4444',
+                        borderDash: [6, 4],
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: function (items) {
+                                if (!items.length) { return ''; }
+                                var meta = state.dailyChart && state.dailyChart._tooltipMeta;
+                                var iso = meta ? meta.dates[items[0].dataIndex] : '';
+                                return iso ? fmtFullDate(iso) : items[0].label;
+                            },
+                            label: function (item) {
+                                var meta = state.dailyChart && state.dailyChart._tooltipMeta;
+                                if (item.datasetIndex === 1) {
+                                    return 'Goal: ' + fmtHours(item.parsed.y);
+                                }
+                                var idx = item.dataIndex;
+                                var bill = meta ? meta.billable[idx] : 0;
+                                var count = meta ? meta.counts[idx] : 0;
+                                return fmtHours(item.parsed.y) +
+                                    ' (' + fmtHours(bill) + ' billable, ' +
+                                    count + ' entries)';
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        grid: { color: gridColor() },
+                        ticks: { color: tickColor() },
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: gridColor() },
+                        ticks: { color: tickColor() },
+                    },
+                },
+            },
+        });
+        state.dailyChart._tooltipMeta = { dates: dates, billable: billable, counts: counts };
+    }
+
+    // --------------- Chart 2: Project doughnut ---------------
+    function renderProjectChart() {
+        var projects = (state.data && state.data.projects) || [];
+        var ctxEl = document.getElementById('productivityProjectChart');
+        var legendEl = document.getElementById('productivityProjectLegend');
+        var emptyEl = document.getElementById('productivityProjectEmpty');
+        var totalEl = document.getElementById('productivityProjectTotal');
+        var centerEl = document.getElementById('productivityProjectCenter');
+        if (!ctxEl) { return; }
+
+        var hasData = projects.length > 0;
+        if (emptyEl) { emptyEl.classList.toggle('hidden', hasData); }
+        if (legendEl) { legendEl.innerHTML = ''; }
+        if (centerEl) { centerEl.classList.toggle('hidden', !hasData); }
+
+        var totalHours = projects.reduce(function (acc, p) { return acc + (Number(p.hours) || 0); }, 0);
+        if (totalEl) { totalEl.textContent = fmtHours(totalHours); }
+
+        var labels = projects.map(function (p) { return p.name; });
+        var data = projects.map(function (p) { return Number(p.hours) || 0; });
+        var colors = projects.map(function (p) { return p.color; });
+
+        if (legendEl) {
+            projects.forEach(function (p) {
+                var li = document.createElement('li');
+                li.className = 'flex items-center gap-2 text-text-light dark:text-text-dark';
+                var sw = document.createElement('span');
+                sw.className = 'inline-block w-3 h-3 rounded-sm shrink-0';
+                sw.style.backgroundColor = p.color;
+                var label = document.createElement('span');
+                label.className = 'truncate flex-1 min-w-0';
+                label.textContent = p.name;
+                var hrs = document.createElement('span');
+                hrs.className = 'text-text-muted-light dark:text-text-muted-dark text-xs shrink-0';
+                hrs.textContent = fmtHours(p.hours);
+                li.appendChild(sw);
+                li.appendChild(label);
+                li.appendChild(hrs);
+                legendEl.appendChild(li);
+            });
+        }
+
+        if (state.projectChart) {
+            state.projectChart.data.labels = labels;
+            state.projectChart.data.datasets[0].data = data;
+            state.projectChart.data.datasets[0].backgroundColor = colors;
+            state.projectChart.update();
+            return;
+        }
+
+        if (!hasData) { return; }
+
+        var ctx = ctxEl.getContext('2d');
+        state.projectChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors,
+                    borderWidth: 0,
+                    hoverOffset: 6,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (item) {
+                                return item.label + ': ' + fmtHours(item.parsed);
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    // --------------- Chart 3: Hour sparkline ---------------
+    function renderSparkline() {
+        var ctxEl = document.getElementById('productivityHourSparkline');
+        if (!ctxEl) { return; }
+        var hours = (state.data && state.data.focus && state.data.focus.hour_distribution) || [];
+        if (!hours.length) {
+            hours = new Array(24).fill(0);
+        }
+
+        if (state.sparkChart) {
+            state.sparkChart.data.datasets[0].data = hours;
+            state.sparkChart.update();
+            return;
+        }
+
+        var ctx = ctxEl.getContext('2d');
+        state.sparkChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: hours.map(function (_, i) { return i; }),
+                datasets: [{
+                    data: hours,
+                    backgroundColor: '#8b5cf6',
+                    borderRadius: 2,
+                    barPercentage: 0.85,
+                    categoryPercentage: 0.95,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false },
+                },
+                scales: {
+                    x: { display: false, grid: { display: false } },
+                    y: { display: false, grid: { display: false }, beginAtZero: true },
+                },
+            },
+        });
+    }
+
+    // --------------- Heatmap ---------------
+    function renderHeatmap() {
+        var heatmap = (state.data && state.data.heatmap) || [];
+        var container = document.getElementById('productivityHeatmap');
+        if (!container) { return; }
+
+        container.innerHTML = '';
+
+        if (!heatmap.length) {
+            var empty = document.createElement('p');
+            empty.className = 'text-sm text-text-muted-light dark:text-text-muted-dark text-center py-4';
+            empty.textContent = '{{ _('No activity yet.') }}';
+            container.appendChild(empty);
+            return;
+        }
+
+        // Build columns of 7 days each. Heatmap is oldest first; first column starts on
+        // the day-of-week of the first entry, the rest are full Mon-Sun columns.
+        var cellClasses = [
+            'bg-gray-100 dark:bg-gray-800',
+            'bg-blue-200 dark:bg-blue-900',
+            'bg-blue-400 dark:bg-blue-700',
+            'bg-blue-600 dark:bg-blue-500',
+            'bg-blue-800 dark:bg-blue-300',
+        ];
+
+        // Pad the start to align Monday-first columns: Python weekday Mon=0..Sun=6.
+        var firstDate = new Date(heatmap[0].date + 'T00:00:00');
+        var firstDow = (firstDate.getDay() + 6) % 7; // shift Sun=0 → Mon=0
+        var padded = [];
+        for (var p = 0; p < firstDow; p++) {
+            padded.push(null);
+        }
+        for (var i = 0; i < heatmap.length; i++) {
+            padded.push(heatmap[i]);
+        }
+
+        var columns = [];
+        for (var c = 0; c < padded.length; c += 7) {
+            columns.push(padded.slice(c, c + 7));
+        }
+
+        // Outer wrapper with month labels above
+        var wrap = document.createElement('div');
+        wrap.className = 'flex flex-col gap-1';
+
+        // Month label row
+        var monthRow = document.createElement('div');
+        monthRow.className = 'flex gap-[3px] text-[10px] text-text-muted-light dark:text-text-muted-dark pl-7';
+        var lastMonth = -1;
+        for (var ci = 0; ci < columns.length; ci++) {
+            var col = columns[ci];
+            var firstReal = null;
+            for (var ri = 0; ri < col.length; ri++) {
+                if (col[ri]) { firstReal = col[ri]; break; }
+            }
+            var label = document.createElement('span');
+            label.className = 'inline-block';
+            label.style.width = '12px';
+            if (firstReal) {
+                var dt = new Date(firstReal.date + 'T00:00:00');
+                var m = dt.getMonth();
+                if (m !== lastMonth) {
+                    label.textContent = dt.toLocaleDateString(undefined, { month: 'short' });
+                    label.style.minWidth = '32px';
+                    label.style.width = 'auto';
+                    lastMonth = m;
+                }
+            }
+            monthRow.appendChild(label);
+        }
+        wrap.appendChild(monthRow);
+
+        // Body: day-of-week labels column + grid columns
+        var body = document.createElement('div');
+        body.className = 'flex gap-[3px]';
+
+        var dowCol = document.createElement('div');
+        dowCol.className = 'flex flex-col gap-[3px] mr-1 text-[10px] text-text-muted-light dark:text-text-muted-dark';
+        var dowLabels = ['{{ _('Mon') }}', '', '{{ _('Wed') }}', '', '{{ _('Fri') }}', '', ''];
+        for (var d = 0; d < 7; d++) {
+            var dl = document.createElement('span');
+            dl.style.height = '12px';
+            dl.style.lineHeight = '12px';
+            dl.textContent = dowLabels[d];
+            dowCol.appendChild(dl);
+        }
+        body.appendChild(dowCol);
+
+        for (var ci2 = 0; ci2 < columns.length; ci2++) {
+            var colWrap = document.createElement('div');
+            colWrap.className = 'flex flex-col gap-[3px]';
+            var col2 = columns[ci2];
+            for (var ri2 = 0; ri2 < 7; ri2++) {
+                var cell = document.createElement('span');
+                var entry = col2[ri2];
+                cell.className = 'block rounded-sm';
+                cell.style.width = '12px';
+                cell.style.height = '12px';
+                if (!entry) {
+                    cell.classList.add('opacity-30');
+                    cell.classList.add(cellClasses[0]);
+                } else {
+                    var lvl = Math.max(0, Math.min(4, entry.level || 0));
+                    cell.classList.add(cellClasses[lvl]);
+                    cell.title = entry.date + ': ' + fmtHours(entry.hours);
+                }
+                colWrap.appendChild(cell);
+            }
+            body.appendChild(colWrap);
+        }
+
+        wrap.appendChild(body);
+        container.appendChild(wrap);
+    }
+
+    // --------------- Summary cards ---------------
+    function renderSummary() {
+        var s = (state.data && state.data.summary) || {};
+        var todayHoursEl = document.getElementById('productivityTodayHours');
+        var arc = document.getElementById('productivityTodayArc');
+        var weekHoursEl = document.getElementById('productivityWeekHours');
+        var weekGoalEl = document.getElementById('productivityWeekGoal');
+        var weekBillableBar = document.getElementById('productivityWeekBillableBar');
+        var weekRemainderBar = document.getElementById('productivityWeekRemainderBar');
+        var billablePctEl = document.getElementById('productivityBillablePct');
+        var streakEl = document.getElementById('productivityCurrentStreak');
+        var longestEl = document.getElementById('productivityLongestStreak');
+        var streakIcon = document.getElementById('productivityStreakIcon');
+        var avgEl = document.getElementById('productivityAvgSession');
+        var mostDayEl = document.getElementById('productivityMostProductiveDay');
+        var activeBadge = document.getElementById('productivityActiveTimerBadge');
+
+        var todayHours = Number(s.today_hours) || 0;
+        if (todayHoursEl) { todayHoursEl.textContent = todayHours.toFixed(1); }
+
+        if (arc) {
+            var ratio = STANDARD_HOURS > 0 ? Math.min(1, todayHours / STANDARD_HOURS) : 0;
+            arc.setAttribute('stroke-dashoffset', String(100 - Math.round(ratio * 100)));
+        }
+
+        if (weekHoursEl) { weekHoursEl.textContent = (Number(s.week_hours) || 0).toFixed(1); }
+        if (weekGoalEl) { weekGoalEl.textContent = String(Math.round(Number(s.week_goal_hours) || 0)); }
+
+        var goalPct = Math.max(0, Math.min(100, Number(s.week_goal_percent) || 0));
+        var billPct = Math.max(0, Math.min(100, Number(s.billable_percent_week) || 0));
+        var billableShare = Math.round(goalPct * (billPct / 100));
+        var remainderShare = Math.max(0, goalPct - billableShare);
+        if (weekBillableBar) { weekBillableBar.style.width = billableShare + '%'; }
+        if (weekRemainderBar) { weekRemainderBar.style.width = remainderShare + '%'; }
+        if (billablePctEl) { billablePctEl.textContent = String(billPct); }
+
+        var streak = (state.data && state.data.streak) || {};
+        if (streakEl) { streakEl.textContent = String(streak.current_streak || 0); }
+        if (longestEl) { longestEl.textContent = String(streak.longest_streak || 0); }
+        if (streakIcon) {
+            streakIcon.className = 'fas ' + ((streak.current_streak || 0) >= 7
+                ? 'fa-fire text-orange-500'
+                : 'fa-calendar-check text-amber-500');
+        }
+
+        var trackedMonth = document.getElementById('productivityTrackedDaysMonth');
+        var totalMonth = document.getElementById('productivityTotalDaysMonth');
+        if (trackedMonth) { trackedMonth.textContent = String(streak.tracked_days_this_month || 0); }
+        if (totalMonth) { totalMonth.textContent = String(streak.total_days_this_month || 1); }
+
+        var focus = (state.data && state.data.focus) || {};
+        if (avgEl) { avgEl.textContent = fmtMinutes(focus.avg_session_length_minutes || 0); }
+        if (mostDayEl) { mostDayEl.textContent = focus.most_productive_day || '—'; }
+
+        var focusDayEl = document.getElementById('productivityFocusDay');
+        if (focusDayEl) { focusDayEl.textContent = focus.most_productive_day || '—'; }
+
+        var peakEl = document.getElementById('productivityPeakHour');
+        if (peakEl) {
+            if (focus.most_productive_hour === null || focus.most_productive_hour === undefined) {
+                peakEl.textContent = '—';
+            } else {
+                var h = parseInt(focus.most_productive_hour, 10) || 0;
+                var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+                peakEl.textContent = pad(h) + ':00 – ' + pad((h + 1) % 24) + ':00';
+            }
+        }
+
+        var longestSessionEl = document.getElementById('productivityLongestSession');
+        if (longestSessionEl) {
+            longestSessionEl.textContent = (Number(focus.longest_session_hours) || 0).toFixed(2) + 'h';
+        }
+        var entriesPerDayEl = document.getElementById('productivityEntriesPerDay');
+        if (entriesPerDayEl) {
+            entriesPerDayEl.textContent = (Number(focus.entries_per_day) || 0).toFixed(2);
+        }
+
+        if (activeBadge) {
+            activeBadge.classList.toggle('hidden', !s.active_timer);
+        }
+    }
+
+    function renderInsights() {
+        var ul = document.getElementById('productivityInsights');
+        if (!ul) { return; }
+        var lines = (state.data && state.data.insights) || [];
+        ul.innerHTML = '';
+        if (!lines.length) {
+            var empty = document.createElement('li');
+            empty.className = 'text-text-muted-light dark:text-text-muted-dark';
+            empty.textContent = '{{ _('Start tracking time to unlock personal insights.') }}';
+            ul.appendChild(empty);
+            return;
+        }
+        lines.forEach(function (line) {
+            var li = document.createElement('li');
+            li.className = 'flex items-start gap-2';
+            var dot = document.createElement('i');
+            dot.className = 'fas fa-circle text-[6px] mt-2 text-amber-500';
+            dot.setAttribute('aria-hidden', 'true');
+            var span = document.createElement('span');
+            span.textContent = line;
+            li.appendChild(dot);
+            li.appendChild(span);
+            ul.appendChild(li);
+        });
+    }
+
+    function renderAll() {
+        renderSummary();
+        renderInsights();
+        renderDailyChart();
+        renderProjectChart();
+        renderSparkline();
+        renderHeatmap();
+    }
+
+    function setStatus(text) {
+        var el = document.getElementById('productivityRefreshStatus');
+        if (el) { el.textContent = text || ''; }
+    }
+
+    function refresh() {
+        var btn = document.getElementById('productivityRefreshBtn');
+        if (btn) { btn.disabled = true; btn.classList.add('opacity-60'); }
+        setStatus('{{ _('Refreshing…') }}');
+        fetch(STATS_URL + '?period=' + encodeURIComponent(state.period), {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+        }).then(function (r) {
+            return r.ok ? r.json() : null;
+        }).then(function (json) {
+            if (json && json.ok) {
+                state.data = json;
+                renderAll();
+                setStatus('{{ _('Updated just now') }}');
+            } else {
+                setStatus('{{ _('Could not refresh.') }}');
+            }
+        }).catch(function () {
+            setStatus('{{ _('Could not refresh.') }}');
+        }).finally(function () {
+            if (btn) { btn.disabled = false; btn.classList.remove('opacity-60'); }
+            scheduleAutoRefresh();
+        });
+    }
+
+    function scheduleAutoRefresh() {
+        if (state.refreshTimer) {
+            clearTimeout(state.refreshTimer);
+            state.refreshTimer = null;
+        }
+        var hasActive = !!(state.data && state.data.summary && state.data.summary.active_timer);
+        var interval = hasActive ? 60 * 1000 : 5 * 60 * 1000;
+        state.refreshTimer = setTimeout(function () {
+            if (document.visibilityState === 'visible') {
+                refresh();
+            } else {
+                scheduleAutoRefresh();
+            }
+        }, interval);
+    }
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') {
+            scheduleAutoRefresh();
+        }
+    });
+
+    var refreshBtn = document.getElementById('productivityRefreshBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            refresh();
+        });
+    }
+
+    renderAll();
+    scheduleAutoRefresh();
+})();
+</script>
+{% endblock %}

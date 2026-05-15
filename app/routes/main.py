@@ -286,6 +286,40 @@ def dashboard():
     return render_template("main/dashboard.html", **template_data)
 
 
+@main_bp.route("/dashboard/productivity")
+@login_required
+def productivity_dashboard():
+    """Personal productivity dashboard: streaks, focus, project mix, heatmap."""
+    track_page_view("productivity_dashboard")
+
+    from app.services.productivity_service import ProductivityService
+
+    summary = ProductivityService.get_summary(current_user)
+    daily_breakdown = ProductivityService.get_daily_breakdown(current_user, days=14)
+    streak = ProductivityService.get_streak(current_user)
+    focus = ProductivityService.get_focus_stats(current_user, days=30)
+    projects = ProductivityService.get_project_breakdown(current_user, days=30)
+    heatmap = ProductivityService.get_weekly_heatmap(current_user, weeks=12)
+    insights = ProductivityService.get_insights(
+        current_user, summary, daily_breakdown, streak, focus, projects
+    )
+
+    standard_hours_per_day = float(getattr(current_user, "standard_hours_per_day", 8.0) or 8.0)
+
+    return render_template(
+        "main/productivity_dashboard.html",
+        summary=summary,
+        daily_breakdown=daily_breakdown,
+        streak=streak,
+        focus=focus,
+        projects=projects,
+        heatmap=heatmap,
+        insights=insights,
+        standard_hours_per_day=standard_hours_per_day,
+        period_days=30,
+    )
+
+
 @main_bp.route("/_health")
 def health_check():
     """Liveness probe: shallow checks only, no DB access"""

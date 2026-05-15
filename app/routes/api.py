@@ -827,7 +827,7 @@ def _forecast_cache_bust(project_id: int) -> None:
         return
 
 
-def _forecast_truthy_param(value) -> bool:
+def _truthy_param(value) -> bool:
     if value is None:
         return False
     return str(value).strip().lower() in ("1", "true", "yes", "on")
@@ -846,8 +846,8 @@ def project_forecast(project_id):
         if not user_can_access_project(current_user, project_id):
             return jsonify({"ok": False, "error": "Access denied"}), 403
 
-        include_ai = _forecast_truthy_param(request.args.get("ai"))
-        refresh = _forecast_truthy_param(request.args.get("refresh"))
+        include_ai = _truthy_param(request.args.get("ai"))
+        refresh = _truthy_param(request.args.get("refresh"))
 
         if refresh:
             _forecast_cache_bust(project_id)
@@ -860,6 +860,7 @@ def project_forecast(project_id):
 
         from app.services.forecast_service import ForecastService
 
+        # Cheap probe so the component can hide the AI button when disabled.
         try:
             ai_enabled = LLMService().is_enabled()
         except Exception:
@@ -2350,6 +2351,71 @@ def get_activity_stats():
             "period_days": days,
         }
     )
+
+
+@api_bp.route("/api/productivity/stats")
+@login_required
+def productivity_stats():
+    """Aggregated personal productivity stats for the current user.
+
+    Query params:
+        period (int): days for focus/project breakdowns (default 30, max 90)
+    """
+    try:
+        try:
+            period = int(request.args.get("period", 30))
+        except (TypeError, ValueError):
+            period = 30
+        period = max(1, min(period, 90))
+
+        from app.services.productivity_service import ProductivityService
+
+        cache_key = None
+        cache_obj = None
+        try:
+            from app.utils.cache import get_cache as _get_app_cache
+
+            cache_obj = _get_app_cache()
+            cache_key = f"productivity:stats:{current_user.id}:{period}"
+            cached = cache_obj.get(cache_key) if cache_obj is not None else None
+            if cached is not None:
+                return jsonify(cached)
+        except Exception:
+            cache_obj = None
+
+        summary = ProductivityService.get_summary(current_user)
+        daily_breakdown = ProductivityService.get_daily_breakdown(current_user, days=14)
+        streak = ProductivityService.get_streak(current_user)
+        focus = ProductivityService.get_focus_stats(current_user, days=period)
+        projects = ProductivityService.get_project_breakdown(current_user, days=period)
+        heatmap = ProductivityService.get_weekly_heatmap(current_user, weeks=12)
+        insights = ProductivityService.get_insights(
+            current_user, summary, daily_breakdown, streak, focus, projects
+        )
+
+        payload = {
+            "ok": True,
+            "period": period,
+            "summary": summary,
+            "daily_breakdown": daily_breakdown,
+            "streak": streak,
+            "focus": focus,
+            "projects": projects,
+            "heatmap": heatmap,
+            "insights": insights,
+        }
+
+        # Don't cache when an active timer is running so the UI stays fresh.
+        if cache_obj is not None and cache_key and not (summary or {}).get("active_timer"):
+            try:
+                cache_obj.set(cache_key, payload, ttl=300)
+            except Exception:
+                pass
+
+        return jsonify(payload)
+    except Exception as exc:
+        current_app.logger.exception("productivity_stats failed")
+        return jsonify({"ok": False, "error": str(exc) or "internal_error"}), 500
 
 
 # WebSocket event handlers
