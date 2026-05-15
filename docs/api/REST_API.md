@@ -910,6 +910,35 @@ GET /api/v1/users/me
 
 Returns information about the authenticated user.
 
+### Personal integration connectors
+
+Endpoints for the per-user **GitHub**, **Google Calendar**, and **Slack**
+connectors (see [docs/integrations/README.md](../integrations/README.md)).
+All `config`/`status`/`test`/`sync` routes are session-authenticated
+(`@login_required`); the two webhook receivers are unauthenticated but
+verify a provider signature on every request.
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| `POST` | `/api/integrations/github/webhook`     | HMAC-SHA256 (`X-Hub-Signature-256`) | Receives GitHub `issues` / `ping` events. |
+| `POST` | `/api/integrations/github/sync`        | session, admin | One-shot pull of open issues. |
+| `POST` | `/api/integrations/github/config`      | session | Save the GitHub card. |
+| `POST` | `/api/integrations/github/test`        | session | Verify the personal access token. |
+| `GET`  | `/api/integrations/github/status`      | session | Current config snapshot (no secrets). |
+| `GET`  | `/integrations/google/connect`         | session | Start the Google OAuth dance. |
+| `GET`  | `/integrations/google/callback`        | session | OAuth callback — stores tokens. |
+| `POST` | `/integrations/google/disconnect`      | session | Revokes the token and clears config. |
+| `POST` | `/api/integrations/google/sync`        | session | Runs `import`/`export`/`both`. |
+| `GET`  | `/api/integrations/google/status`      | session | Linked email, calendar id, last sync. |
+| `POST` | `/api/integrations/slack/events`       | HMAC-SHA256 (`X-Slack-Signature`) | Slack URL verification + `/tt` slash commands. |
+| `POST` | `/api/integrations/slack/config`       | session | Save the Slack card. |
+| `POST` | `/api/integrations/slack/test`         | session | Sends a test message to the channel. |
+| `GET`  | `/api/integrations/slack/status`       | session | Current config snapshot (no secrets). |
+
+These endpoints sit under the regular Flask cookie session (not the
+`Bearer` token flow used by `/api/v1/...`) because they back the
+integrations settings UI, which is browser-based.
+
 ## Interactive API Documentation
 
 For interactive API documentation and testing, visit:

@@ -514,6 +514,13 @@ def api_start_timer():
         },
     )
 
+    try:
+        from app.integrations.slack_connector import SlackConnector
+
+        SlackConnector.notify_for_user(current_user, new_timer, event="start")
+    except Exception as e:
+        current_app.logger.debug("Slack notify failed: %s", e)
+
     return jsonify(
         {
             "success": True,
@@ -545,6 +552,13 @@ def api_stop_timer():
         "timer_stopped",
         {"user_id": current_user.id, "timer_id": entry.id, "duration": entry.duration_formatted},
     )
+
+    try:
+        from app.integrations.slack_connector import SlackConnector
+
+        SlackConnector.notify_for_user(current_user, entry, event="stop")
+    except Exception as e:
+        current_app.logger.debug("Slack notify failed: %s", e)
 
     return jsonify({"success": True, "duration": entry.duration_formatted, "duration_hours": entry.duration_hours})
 

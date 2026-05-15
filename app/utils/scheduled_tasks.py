@@ -643,6 +643,52 @@ def register_scheduled_tasks(scheduler, app=None):
         )
         logger.info("Registered base telemetry heartbeat task")
 
+        # --- New opt-in connectors (GitHub PAT, Google Calendar OAuth, Slack bot) ---
+        # Sync Google Calendar for all active users every 30 minutes.
+        def sync_google_calendar_for_all_users_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for Google Calendar connector sync")
+                    return
+            with app_instance.app_context():
+                sync_google_calendar_for_all_users()
+
+        scheduler.add_job(
+            func=sync_google_calendar_for_all_users_with_app,
+            trigger="interval",
+            minutes=30,
+            id="sync_google_calendar_connector",
+            name="Sync Google Calendar (new connector) for all active users",
+            replace_existing=True,
+        )
+        logger.info("Registered Google Calendar connector sync task")
+
+        # Slack daily summary dispatcher — runs every 30 minutes, checks each
+        # active Slack integration whose daily_summary_time matches the window.
+        def post_slack_daily_summaries_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for Slack daily summaries")
+                    return
+            with app_instance.app_context():
+                post_slack_daily_summaries()
+
+        scheduler.add_job(
+            func=post_slack_daily_summaries_with_app,
+            trigger="interval",
+            minutes=30,
+            id="post_slack_daily_summaries",
+            name="Post Slack daily summaries for active Slack integrations",
+            replace_existing=True,
+        )
+        logger.info("Registered Slack daily summary task")
+
         try:
             from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 
@@ -1087,3 +1133,106 @@ def sync_integrations():
     except Exception as e:
         logger.error(f"Error in integration sync task: {e}", exc_info=True)
         return {"synced": 0, "total": 0, "errors": [str(e)]}
+
+
+# ---------------------------------------------------------------------------
+# New opt-in connectors (GitHubConnector, GoogleCalendarConnector,
+# SlackConnector). These functions run inside an app context provided by the
+# scheduler wrappers above.
+# ---------------------------------------------------------------------------
+def sync_google_calendar_for_all_users():
+    """Sync every active Google Calendar integration created with the new
+    :class:`app.integrations.google_calendar_connector.GoogleCalendarConnector`.
+
+    Each user is wrapped in try/except so one failing account does not block
+    the rest. Never raises.
+    """
+    try:
+        from app.integrations.google_calendar_connector import GoogleCalendarConnector
+    except Exception as exc:
+        logger.debug("GoogleCalendarConnector not importable; skipping job: %s", exc)
+        return {"ok": False, "synced": 0, "errors": [str(exc)]}
+
+    synced = 0
+    errors = []
+    for connector in GoogleCalendarConnector.for_any_active():
+        integration = connector.integration
+        try:
+            result = connector.sync()
+            if result.get("ok"):
+                synced += 1
+            else:
+                err = result.get("error") or "; ".join(result.get("errors", []) or [])
+                errors.append(f"integration {integration.id}: {err}")
+                logger.warning("Google Calendar sync skipped for integration %s: %s", integration.id, err)
+        except Exception as exc:
+            errors.append(f"integration {integration.id}: {exc}")
+            logger.warning("Google Calendar sync failed for integration %s: %s", integration.id, exc)
+    logger.info("Google Calendar connector sync: %d ok, %d errors", synced, len(errors))
+    return {"ok": True, "synced": synced, "errors": errors}
+
+
+def post_slack_daily_summaries():
+    """Post Slack daily summary messages for users whose configured time matches
+    the current 30-minute window.
+
+    Runs every 30 minutes; ``daily_summary_time`` is treated as the start of
+    the window so e.g. "18:00" matches 18:00..18:29 inclusive.
+    """
+    try:
+        from app.integrations.slack_connector import SlackConnector
+    except Exception as exc:
+        logger.debug("SlackConnector not importable; skipping job: %s", exc)
+        return {"ok": False, "posted": 0}
+
+    try:
+        from app.models import User
+    except Exception:
+        return {"ok": False, "posted": 0}
+
+    from datetime import datetime
+
+    posted = 0
+    for connector in SlackConnector.for_any_active():
+        cfg = dict(connector.integration.config or {})
+        if not cfg.get("daily_summary"):
+            continue
+        target = (cfg.get("daily_summary_time") or "18:00").strip()
+        try:
+            hh, mm = target.split(":")
+            target_hour = int(hh)
+            target_minute = int(mm)
+        except (ValueError, AttributeError):
+            target_hour, target_minute = 18, 0
+
+        # User-local time would be ideal but we don't always have a TZ. Use
+        # the user's preferred timezone if available, else the app timezone.
+        try:
+            user = User.query.get(connector.integration.user_id) if connector.integration.user_id else None
+            if user is not None:
+                from app.utils.timezone import now_in_user_timezone
+
+                local_now = now_in_user_timezone(user)
+            else:
+                from app.utils.timezone import get_timezone_obj
+
+                tz = get_timezone_obj()
+                local_now = datetime.now(tz)
+        except Exception:
+            local_now = datetime.now()
+
+        # Match if we're inside the 30-minute window that starts at target.
+        slot = (local_now.hour - target_hour) * 60 + (local_now.minute - target_minute)
+        if slot < 0 or slot >= 30:
+            continue
+        try:
+            connector.post_daily_summary(user)
+            posted += 1
+        except Exception as exc:
+            logger.warning(
+                "Slack daily summary failed for integration %s: %s",
+                connector.integration.id,
+                exc,
+            )
+    logger.info("Slack daily summary dispatcher: posted=%d", posted)
+    return {"ok": True, "posted": posted}

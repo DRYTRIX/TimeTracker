@@ -217,6 +217,7 @@ def _register_optional_blueprints(app, logger=None):
         ("app.routes.payment_gateways", "payment_gateways_bp"),
         ("app.routes.scheduled_reports", "scheduled_reports_bp"),
         ("app.routes.integrations", "integrations_bp"),
+        ("app.routes.integrations_webhooks", "integrations_webhooks_bp"),
         ("app.routes.push_notifications", "push_bp"),
         ("app.routes.gantt", "gantt_bp"),
         ("app.routes.workflows", "workflows_bp"),

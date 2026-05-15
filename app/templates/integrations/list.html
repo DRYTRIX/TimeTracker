@@ -172,4 +172,7 @@
     </div>
     {% endfor %}
 </div>
+
+{# Opt-in per-user connectors: GitHub PAT, Google Calendar OAuth, Slack bot. #}
+{% include 'integrations/_connector_cards.html' %}
 {% endblock %}

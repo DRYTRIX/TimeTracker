@@ -168,6 +168,12 @@ class User(UserMixin, db.Model):
     # Support UX: count of report generations (exports + custom report views) for stats in support modal
     support_stats_reports_generated = db.Column(db.Integer, default=0, nullable=False)
 
+    # GitHub login for the GitHubConnector integration (links a TimeTracker
+    # user to a GitHub account so webhook events such as "issue assigned"
+    # can act on the right account). Optional, not unique – a single GitHub
+    # login can map to multiple TimeTracker users in shared installations.
+    github_username = db.Column(db.String(100), nullable=True)
+
     # Custom theme preferences (see app/services/theme_service.py).
     # theme_name picks one of the built-in themes; the remaining four
     # columns let users override individual aspects independently.

@@ -31,6 +31,10 @@ class Task(db.Model):
     tags = db.Column(db.String(500), nullable=True)
     # Integration metadata (e.g. GitHub issue id); see app.utils.integration_sync_context
     custom_fields = db.Column(db.JSON, nullable=True)
+    # Canonical external reference for tasks created from third-party
+    # integrations (e.g. "github_issue_42"). Indexed so connectors can
+    # cheaply de-duplicate when syncing.
+    external_ref = db.Column(db.String(200), nullable=True, index=True)
 
     # Relationships
     # project relationship is defined via backref in Project model
