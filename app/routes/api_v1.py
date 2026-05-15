@@ -924,7 +924,7 @@ def update_kanban_column(col_id):
     """
     from sqlalchemy.orm import joinedload
 
-    col = KanbanColumn.query.options(joinedload(KanbanColumn.project)).filter_by(id=col_id).first_or_404()
+    col = KanbanColumn.query.filter_by(id=col_id).first_or_404()
 
     data = request.get_json() or {}
     for field in ("key", "label", "icon", "color", "position", "is_active", "is_complete_state"):
@@ -944,7 +944,7 @@ def delete_kanban_column(col_id):
     """
     from sqlalchemy.orm import joinedload
 
-    col = KanbanColumn.query.options(joinedload(KanbanColumn.project)).filter_by(id=col_id).first_or_404()
+    col = KanbanColumn.query.filter_by(id=col_id).first_or_404()
 
     if col.is_system:
         return jsonify({"error": "Cannot delete system column"}), 400
@@ -987,7 +987,7 @@ def list_saved_filters():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
-    query = SavedFilter.query.options(joinedload(SavedFilter.user))
+    query = SavedFilter.query
     query = query.filter(SavedFilter.user_id == g.api_user.id)
     query = query.order_by(SavedFilter.created_at.desc())
 
@@ -1016,7 +1016,7 @@ def get_saved_filter(filter_id):
     """
     from sqlalchemy.orm import joinedload
 
-    sf = SavedFilter.query.options(joinedload(SavedFilter.user)).filter_by(id=filter_id).first_or_404()
+    sf = SavedFilter.query.filter_by(id=filter_id).first_or_404()
 
     if sf.user_id != g.api_user.id and not (sf.is_shared or g.api_user.is_admin):
         return forbidden_response("Access denied")
@@ -1059,7 +1059,7 @@ def update_saved_filter(filter_id):
     """
     from sqlalchemy.orm import joinedload
 
-    sf = SavedFilter.query.options(joinedload(SavedFilter.user)).filter_by(id=filter_id).first_or_404()
+    sf = SavedFilter.query.filter_by(id=filter_id).first_or_404()
 
     if sf.user_id != g.api_user.id and not g.api_user.is_admin:
         return forbidden_response("Access denied")
@@ -1082,7 +1082,7 @@ def delete_saved_filter(filter_id):
     """
     from sqlalchemy.orm import joinedload
 
-    sf = SavedFilter.query.options(joinedload(SavedFilter.user)).filter_by(id=filter_id).first_or_404()
+    sf = SavedFilter.query.filter_by(id=filter_id).first_or_404()
 
     if sf.user_id != g.api_user.id and not g.api_user.is_admin:
         return forbidden_response("Access denied")
@@ -1645,7 +1645,7 @@ def list_client_notes(client_id):
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
-    query = ClientNote.query.options(joinedload(ClientNote.client), joinedload(ClientNote.created_by_user))
+    query = ClientNote.query.options(joinedload(ClientNote.client), joinedload(ClientNote.author))
     query = query.filter(ClientNote.client_id == client_id)
     query = query.order_by(ClientNote.is_important.desc(), ClientNote.created_at.desc())
 
@@ -1692,7 +1692,7 @@ def get_client_note(note_id):
     from sqlalchemy.orm import joinedload
 
     note = (
-        ClientNote.query.options(joinedload(ClientNote.client), joinedload(ClientNote.created_by_user))
+        ClientNote.query.options(joinedload(ClientNote.client), joinedload(ClientNote.author))
         .filter_by(id=note_id)
         .first_or_404()
     )
@@ -1709,7 +1709,7 @@ def update_client_note(note_id):
     from sqlalchemy.orm import joinedload
 
     note = (
-        ClientNote.query.options(joinedload(ClientNote.client), joinedload(ClientNote.created_by_user))
+        ClientNote.query.options(joinedload(ClientNote.client), joinedload(ClientNote.author))
         .filter_by(id=note_id)
         .first_or_404()
     )
@@ -1736,7 +1736,7 @@ def delete_client_note(note_id):
     from sqlalchemy.orm import joinedload
 
     note = (
-        ClientNote.query.options(joinedload(ClientNote.client), joinedload(ClientNote.created_by_user))
+        ClientNote.query.options(joinedload(ClientNote.client), joinedload(ClientNote.author))
         .filter_by(id=note_id)
         .first_or_404()
     )
