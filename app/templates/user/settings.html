@@ -263,6 +263,11 @@
             </div>
         </details>
 
+        {# Custom theme picker. Self-contained: persists via /api/user/theme
+           rather than the surrounding form, so the rest of this form keeps
+           working unchanged. #}
+        {% include 'components/theme_picker.html' %}
+
         <!-- Time Rounding Preferences -->
         <details class="bg-card-light dark:bg-card-dark rounded-lg shadow-md group" open>
             <summary class="flex items-center justify-between p-6 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">

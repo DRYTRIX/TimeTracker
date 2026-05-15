@@ -930,7 +930,6 @@ This starts:
 ## 🛣️ Roadmap
 
 ### Planned Features
-- 🎨 **Custom Themes** — Personalize your interface with custom color schemes
 - 📊 **Advanced Analytics** — More charts, insights, and reporting options
 - 🔌 **API Extensions** — Additional RESTful API endpoints for integrations
 - 🔔 **Push Notifications** — Real-time browser notifications
@@ -972,6 +971,7 @@ This starts:
 - ✅ **Saved Filters** — Save frequently used report filters for quick access
 
 #### ✨ User Experience
+- ✅ **Custom Themes** — Per-user theme picker with 8 built-in themes plus accent colour, sidebar style, text size and corner radius overrides ([Guide](docs/features/CUSTOM_THEMES.md))
 - ✅ **Modern UX & Layout** — Complete UI/UX overhaul with 16 major improvements
 - ✅ **Enterprise-Grade Tables** — Sortable, filterable, inline-editable tables with bulk actions
 - ✅ **Enhanced Search** — Instant search with autocomplete and categorized results

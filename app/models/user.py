@@ -168,6 +168,15 @@ class User(UserMixin, db.Model):
     # Support UX: count of report generations (exports + custom report views) for stats in support modal
     support_stats_reports_generated = db.Column(db.Integer, default=0, nullable=False)
 
+    # Custom theme preferences (see app/services/theme_service.py).
+    # theme_name picks one of the built-in themes; the remaining four
+    # columns let users override individual aspects independently.
+    theme_name = db.Column(db.String(50), nullable=True, default="default")
+    theme_accent_color = db.Column(db.String(7), nullable=True, default=None)
+    theme_sidebar_style = db.Column(db.String(20), nullable=True, default="default")
+    theme_font_size = db.Column(db.String(10), nullable=True, default="base")
+    theme_border_radius = db.Column(db.String(10), nullable=True, default="default")
+
     # Relationships
     time_entries = db.relationship("TimeEntry", backref="user", lazy="dynamic", cascade="all, delete-orphan")
     project_costs = db.relationship("ProjectCost", backref="user", lazy="dynamic", cascade="all, delete-orphan")

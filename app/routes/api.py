@@ -2418,6 +2418,65 @@ def productivity_stats():
         return jsonify({"ok": False, "error": str(exc) or "internal_error"}), 500
 
 
+# ---------------------------------------------------------------- user theme
+#
+# Per-user custom theme endpoints. The actual logic (validation, CSS
+# generation, persistence) lives in :class:`app.services.theme_service.ThemeService`
+# so the routes stay thin and the theme picker component can also be
+# rendered server-side without going through the API.
+
+
+@api_bp.route("/api/user/theme", methods=["GET"])
+@login_required
+def get_user_theme():
+    """Return the user's current theme + the list of available themes."""
+    from app.services.theme_service import ThemeService
+
+    service = ThemeService()
+    current = {
+        "theme_name": getattr(current_user, "theme_name", None) or "default",
+        "accent_color": getattr(current_user, "theme_accent_color", None),
+        "sidebar_style": getattr(current_user, "theme_sidebar_style", None) or "default",
+        "font_size": getattr(current_user, "theme_font_size", None) or "base",
+        "border_radius": getattr(current_user, "theme_border_radius", None) or "default",
+    }
+    return jsonify(
+        {
+            "ok": True,
+            "current": current,
+            "themes": service.get_all_themes(),
+            "accent_presets": service.get_accent_presets(),
+            "css": service.get_theme_css_vars(current_user),
+        }
+    )
+
+
+@api_bp.route("/api/user/theme", methods=["POST"])
+@login_required
+def save_user_theme():
+    """Persist the user's theme preferences and return the new CSS block.
+
+    The returned ``css`` field is the regenerated ``<style id="tt-theme-vars">``
+    block so the picker can swap it into the page for an instant live
+    preview without a full reload.
+    """
+    from app.services.theme_service import ThemeService
+
+    data = request.get_json(silent=True) or {}
+    service = ThemeService()
+    result = service.save_user_theme(
+        current_user,
+        theme_name=data.get("theme_name"),
+        accent_color=data.get("accent_color"),
+        sidebar_style=data.get("sidebar_style"),
+        font_size=data.get("font_size"),
+        border_radius=data.get("border_radius"),
+    )
+    if not result.get("ok"):
+        return jsonify(result), 400
+    return jsonify({"ok": True, "css": service.get_theme_css_vars(current_user)})
+
+
 # WebSocket event handlers
 @socketio.on("connect")
 def handle_connect():
