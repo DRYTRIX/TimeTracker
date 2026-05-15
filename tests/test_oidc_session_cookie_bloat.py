@@ -53,10 +53,23 @@ def test_oidc_callback_does_not_store_id_token_in_cookie_session(app, client):
             stored.pop(key, None)
 
     with app.app_context():
+        from app import db
+        from app.models import User
+
         app.config["AUTH_METHOD"] = "oidc"
         app.config["PERMANENT_SESSION_LIFETIME"] = app.config.get("PERMANENT_SESSION_LIFETIME")
 
-        with patch("app.routes.auth.oauth") as mock_oauth, patch("app.routes.auth.get_cache", return_value=DummyCache()):
+        # Pre-create the user the OIDC callback will match. Without this the
+        # callback redirects to /login with "self-registration disabled"
+        # before reaching the token-storage code this test is exercising.
+        user = User(username="oidc_bloat_test", email="oidc_bloat_test@example.com")
+        user.is_active = True
+        db.session.add(user)
+        db.session.commit()
+
+        with patch("app.routes.auth.oauth") as mock_oauth, patch(
+            "app.routes.auth.get_cache", return_value=DummyCache()
+        ):
             mock_oauth.create_client.return_value = DummyOidcClient()
 
             # Act: hit callback
