@@ -6,7 +6,7 @@ Sub-blueprint for /api/v1/time-entries and /api/v1/timer/*.
 from flask import Blueprint, g, jsonify, request
 from marshmallow import ValidationError
 
-from app.routes.api_v1_common import _parse_date_range, paginate_query, parse_datetime
+from app.routes.api_v1_common import _parse_date_range, paginate_query
 from app.schemas.time_entry_schema import TimeEntryCreateSchema, TimeEntryUpdateSchema
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import (
@@ -16,7 +16,9 @@ from app.utils.api_responses import (
     validation_error_response,
 )
 
-api_v1_time_entries_bp = Blueprint("api_v1_time_entries", __name__, url_prefix="/api/v1")
+api_v1_time_entries_bp = Blueprint(
+    "api_v1_time_entries", __name__, url_prefix="/api/v1"
+)
 
 
 @api_v1_time_entries_bp.route("/time-entries", methods=["GET"])
@@ -50,7 +52,9 @@ def list_time_entries():
     per_page = request.args.get("per_page", 50, type=int)
 
     query = TimeEntry.query.options(
-        joinedload(TimeEntry.project), joinedload(TimeEntry.user), joinedload(TimeEntry.task)
+        joinedload(TimeEntry.project),
+        joinedload(TimeEntry.user),
+        joinedload(TimeEntry.task),
     )
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
@@ -67,7 +71,12 @@ def list_time_entries():
 
     query = query.order_by(TimeEntry.start_time.desc())
     result = paginate_query(query, page, per_page)
-    return jsonify({"time_entries": [e.to_dict() for e in result["items"]], "pagination": result["pagination"]})
+    return jsonify(
+        {
+            "time_entries": [e.to_dict() for e in result["items"]],
+            "pagination": result["pagination"],
+        }
+    )
 
 
 @api_v1_time_entries_bp.route("/time-entries/<int:entry_id>", methods=["GET"])
@@ -79,7 +88,11 @@ def get_time_entry(entry_id):
     from app.models import TimeEntry
 
     entry = (
-        TimeEntry.query.options(joinedload(TimeEntry.project), joinedload(TimeEntry.user), joinedload(TimeEntry.task))
+        TimeEntry.query.options(
+            joinedload(TimeEntry.project),
+            joinedload(TimeEntry.user),
+            joinedload(TimeEntry.task),
+        )
         .filter_by(id=entry_id)
         .first_or_404()
     )
@@ -92,7 +105,9 @@ def get_time_entry(entry_id):
 @require_api_token("write:time_entries")
 def import_time_entries_csv():
     """Import time entries from CSV (header row required)."""
-    from app.services.time_entry_csv_import_service import import_time_entries_from_csv_text
+    from app.services.time_entry_csv_import_service import (
+        import_time_entries_from_csv_text,
+    )
 
     csv_text = ""
     if request.files and request.files.get("file"):
@@ -104,7 +119,9 @@ def import_time_entries_csv():
     else:
         csv_text = request.get_data(as_text=True) or ""
 
-    result, status = import_time_entries_from_csv_text(csv_text, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
+    result, status = import_time_entries_from_csv_text(
+        csv_text, user_id=g.api_user.id, is_admin=g.api_user.is_admin
+    )
     return jsonify(result), status
 
 
@@ -128,11 +145,17 @@ def bulk_time_entries():
         try:
             ids.append(int(eid))
         except (TypeError, ValueError):
-            return validation_error_response(errors={"entry_ids": ["All entry ids must be integers"]})
-    result = apply_bulk_time_entry_actions(ids, action, value, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
+            return validation_error_response(
+                errors={"entry_ids": ["All entry ids must be integers"]}
+            )
+    result = apply_bulk_time_entry_actions(
+        ids, action, value, user_id=g.api_user.id, is_admin=g.api_user.is_admin
+    )
     if not result.get("success"):
         code = result.get("http_status", 400)
-        return error_response(result.get("error", "Bulk operation failed"), status_code=code)
+        return error_response(
+            result.get("error", "Bulk operation failed"), status_code=code
+        )
     return jsonify({"success": True, "affected": result.get("affected", 0)})
 
 
@@ -151,7 +174,9 @@ def create_time_entry():
 
     idem_key = normalize_idempotency_key(request.headers.get("Idempotency-Key"))
     if idem_key:
-        existing = lookup_idempotent_response(g.api_token.id, SCOPE_POST_TIME_ENTRY, idem_key)
+        existing = lookup_idempotent_response(
+            g.api_token.id, SCOPE_POST_TIME_ENTRY, idem_key
+        )
         if existing:
             status_code, body_json = existing
             return replay_response(status_code, body_json)
@@ -193,9 +218,15 @@ def create_time_entry():
         from app.models import Activity
         from app.utils.audit import get_request_info
 
-        entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
+        entity_name = (
+            entry.project.name
+            if entry.project
+            else (entry.client.name if entry.client else "Unknown")
+        )
         task_name = entry.task.name if entry.task else None
-        duration_formatted = entry.duration_formatted if hasattr(entry, "duration_formatted") else "0:00"
+        duration_formatted = (
+            entry.duration_formatted if hasattr(entry, "duration_formatted") else "0:00"
+        )
         ip_address, user_agent, _ = get_request_info()
         Activity.log(
             user_id=g.api_user.id,
@@ -211,13 +242,18 @@ def create_time_entry():
                 "client_name": entry.client.name if entry.client else None,
                 "task_name": task_name,
                 "duration_formatted": duration_formatted,
-                "duration_hours": entry.duration_hours if hasattr(entry, "duration_hours") else None,
+                "duration_hours": entry.duration_hours
+                if hasattr(entry, "duration_hours")
+                else None,
             },
             ip_address=ip_address,
             user_agent=user_agent,
         )
 
-    payload = {"message": "Time entry created successfully", "time_entry": result["entry"].to_dict()}
+    payload = {
+        "message": "Time entry created successfully",
+        "time_entry": result["entry"].to_dict(),
+    }
     resp = jsonify(payload)
     resp.status_code = 201
     if idem_key:
@@ -226,10 +262,14 @@ def create_time_entry():
         from app import db
 
         try:
-            store_idempotent_response(g.api_token.id, SCOPE_POST_TIME_ENTRY, idem_key, 201, payload)
+            store_idempotent_response(
+                g.api_token.id, SCOPE_POST_TIME_ENTRY, idem_key, 201, payload
+            )
         except IntegrityError:
             db.session.rollback()
-            existing = lookup_idempotent_response(g.api_token.id, SCOPE_POST_TIME_ENTRY, idem_key)
+            existing = lookup_idempotent_response(
+                g.api_token.id, SCOPE_POST_TIME_ENTRY, idem_key
+            )
             if existing:
                 status_code, body_json = existing
                 return replay_response(status_code, body_json)
@@ -286,7 +326,11 @@ def update_time_entry(entry_id):
         from app.models import Activity
         from app.utils.audit import get_request_info
 
-        entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
+        entity_name = (
+            entry.project.name
+            if entry.project
+            else (entry.client.name if entry.client else "Unknown")
+        )
         task_name = entry.task.name if entry.task else None
         ip_address, user_agent, _ = get_request_info()
         Activity.log(
@@ -295,7 +339,8 @@ def update_time_entry(entry_id):
             entity_type="time_entry",
             entity_id=entry.id,
             entity_name=f"{entity_name}" + (f" - {task_name}" if task_name else ""),
-            description=f"Updated time entry for {entity_name}" + (f" - {task_name}" if task_name else ""),
+            description=f"Updated time entry for {entity_name}"
+            + (f" - {task_name}" if task_name else ""),
             extra_data={
                 "project_name": entry.project.name if entry.project else None,
                 "client_name": entry.client.name if entry.client else None,
@@ -305,7 +350,12 @@ def update_time_entry(entry_id):
             user_agent=user_agent,
         )
 
-    return jsonify({"message": "Time entry updated successfully", "time_entry": result["entry"].to_dict()})
+    return jsonify(
+        {
+            "message": "Time entry updated successfully",
+            "time_entry": result["entry"].to_dict(),
+        }
+    )
 
 
 @api_v1_time_entries_bp.route("/time-entries/<int:entry_id>", methods=["DELETE"])
@@ -314,7 +364,8 @@ def delete_time_entry(entry_id):
     """Delete a time entry."""
     from app.services import TimeTrackingService
 
-    data = request.get_json() or {}
+    # Optional body — tolerate DELETE with no Content-Type set
+    data = request.get_json(silent=True) or {}
     reason = data.get("reason")
     time_tracking_service = TimeTrackingService()
     result = time_tracking_service.delete_entry(
@@ -379,7 +430,9 @@ def start_timer():
             result.get("message", "Could not start timer"),
             status_code=400,
         )
-    return jsonify({"message": "Timer started successfully", "timer": result["timer"].to_dict()}), 201
+    return jsonify(
+        {"message": "Timer started successfully", "timer": result["timer"].to_dict()}
+    ), 201
 
 
 @api_v1_time_entries_bp.route("/timer/pause", methods=["POST"])
@@ -413,7 +466,9 @@ def resume_timer():
             error_code=result.get("error", "resume_failed"),
             status_code=400,
         )
-    return jsonify({"message": "Timer resumed", "time_entry": result["entry"].to_dict()})
+    return jsonify(
+        {"message": "Timer resumed", "time_entry": result["entry"].to_dict()}
+    )
 
 
 @api_v1_time_entries_bp.route("/timer/stop", methods=["POST"])
@@ -430,11 +485,18 @@ def stop_timer():
             status_code=400,
         )
     time_tracking_service = TimeTrackingService()
-    result = time_tracking_service.stop_timer(user_id=g.api_user.id, entry_id=active_timer.id)
+    result = time_tracking_service.stop_timer(
+        user_id=g.api_user.id, entry_id=active_timer.id
+    )
     if not result.get("success"):
         return error_response(
             result.get("message", "Could not stop timer"),
             error_code=result.get("error", "stop_failed"),
             status_code=400,
         )
-    return jsonify({"message": "Timer stopped successfully", "time_entry": result["entry"].to_dict()})
+    return jsonify(
+        {
+            "message": "Timer stopped successfully",
+            "time_entry": result["entry"].to_dict(),
+        }
+    )
