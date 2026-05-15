@@ -59,6 +59,10 @@ The Project Dashboard provides a comprehensive, visual overview of project perfo
 - **Project Name & Code**: Clear project identification
 - **Period Filter**: Dropdown to select time period
 
+### Project forecast (project detail page)
+
+For **active** projects with estimated hours and/or a budget amount, the project detail page includes a **Project forecast** panel (see [Budget Alerts & Forecasting](../BUDGET_ALERTS_AND_FORECASTING.md#project-forecast-panel-project-detail-page)). It shows velocity, budget burn, projected completion, a 14-day hours chart, and optional AI insights via `GET /api/projects/<id>/forecast`.
+
 ### Metrics Cards (4 Cards)
 1. **Total Hours Card**
    - Large number display of total hours

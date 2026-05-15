@@ -1,0 +1,516 @@
+{# Theme picker component.
+
+   Drop-in include for the user settings / profile page. Self-contained:
+   pulls its data from /api/user/theme on load, applies live preview by
+   POSTing to the same endpoint and swapping the <style id="tt-theme-vars">
+   block, and shows success/error toasts via window.toastManager.
+
+   Usage:
+     {% include 'components/theme_picker.html' %}
+
+   Requires an authenticated user (the endpoints behind it are
+   @login_required).
+#}
+<details id="theme-picker-card" class="bg-card-light dark:bg-card-dark rounded-lg shadow-md group" open>
+    <summary class="flex items-center justify-between p-6 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+            <i class="fas fa-palette mr-2"></i>{{ _('Custom theme') }}
+        </h2>
+        <i class="fas fa-chevron-down text-gray-400 transition-transform group-open:rotate-180"></i>
+    </summary>
+    <div class="px-6 pb-6">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            {{ _('Personalise TimeTracker with a built-in theme, or fine-tune the accent colour, sidebar, text size and corners.') }}
+        </p>
+
+        {# Section 1 — Theme selector #}
+        <div class="mb-6">
+            <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ _('Theme') }}</h3>
+            <div id="tt-theme-swatches"
+                 class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3"
+                 aria-label="{{ _('Available themes') }}">
+                <div class="col-span-full text-xs text-gray-400">{{ _('Loading themes…') }}</div>
+            </div>
+        </div>
+
+        {# Section 2 — Customise (collapsible) #}
+        <details id="tt-theme-customise" class="border-t border-border-light dark:border-border-dark pt-4">
+            <summary class="flex items-center gap-2 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden text-sm font-medium text-gray-700 dark:text-gray-300">
+                <i class="fas fa-chevron-right transition-transform" data-tt-rot></i>
+                {{ _('Customise') }}
+            </summary>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                {# Accent colour #}
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">{{ _('Accent colour') }}</label>
+                    <div id="tt-accent-presets" class="flex flex-wrap items-center gap-2 mb-2" role="radiogroup" aria-label="{{ _('Accent colour presets') }}"></div>
+                    <div class="flex items-center gap-2">
+                        <input type="color" id="tt-accent-input" class="h-8 w-12 rounded border border-gray-300 dark:border-gray-600 cursor-pointer bg-transparent p-0" value="#3b82f6" aria-label="{{ _('Custom accent colour') }}">
+                        <input type="text" id="tt-accent-hex" maxlength="7" placeholder="#3b82f6"
+                               class="w-28 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm dark:bg-gray-700 dark:text-white font-mono">
+                        <button type="button" id="tt-accent-clear" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Use theme default') }}</button>
+                    </div>
+                </div>
+
+                {# Sidebar style #}
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">{{ _('Sidebar') }}</label>
+                    <div class="inline-flex rounded-md shadow-sm" role="group" data-tt-pill-group="sidebar_style">
+                        <button type="button" data-value="default" class="tt-pill px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-l-md bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">{{ _('Default') }}</button>
+                        <button type="button" data-value="compact" class="tt-pill px-3 py-1.5 text-sm border-t border-b border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">{{ _('Compact') }}</button>
+                        <button type="button" data-value="minimal" class="tt-pill px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-r-md bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">{{ _('Minimal') }}</button>
+                    </div>
+                </div>
+
+                {# Font size #}
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">{{ _('Text size') }}</label>
+                    <div class="inline-flex rounded-md shadow-sm" role="group" data-tt-pill-group="font_size">
+                        <button type="button" data-value="sm" class="tt-pill px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-l-md bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">{{ _('Small') }}</button>
+                        <button type="button" data-value="base" class="tt-pill px-3 py-1.5 text-sm border-t border-b border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">{{ _('Normal') }}</button>
+                        <button type="button" data-value="lg" class="tt-pill px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-r-md bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">{{ _('Large') }}</button>
+                    </div>
+                </div>
+
+                {# Corner radius #}
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">{{ _('Corners') }}</label>
+                    <div class="inline-flex rounded-md shadow-sm" role="group" data-tt-pill-group="border_radius">
+                        <button type="button" data-value="none" class="tt-pill px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-l-md bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">{{ _('Sharp') }}</button>
+                        <button type="button" data-value="default" class="tt-pill px-3 py-1.5 text-sm border-t border-b border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">{{ _('Rounded') }}</button>
+                        <button type="button" data-value="full" class="tt-pill px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-r-md bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">{{ _('Pill') }}</button>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        {# Section 3 — Action row #}
+        <div class="mt-6 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between border-t border-border-light dark:border-border-dark pt-4">
+            <p id="tt-theme-status" class="text-xs text-gray-500 dark:text-gray-400">
+                {{ _('Changes preview instantly. Click Save to keep them.') }}
+            </p>
+            <div class="flex items-center gap-2">
+                <button type="button" id="tt-theme-reset"
+                        class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <i class="fas fa-rotate-left mr-1"></i>{{ _('Reset to default') }}
+                </button>
+                <button type="button" id="tt-theme-save"
+                        class="px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition disabled:opacity-50">
+                    <i class="fas fa-check mr-1"></i>{{ _('Save theme') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</details>
+
+<style id="tt-theme-picker-styles">
+    /* Swatch styles — self-contained so the picker doesn't depend on any
+       global CSS that may change. */
+    .tt-swatch {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        width: 80px;
+        height: 64px;
+        cursor: pointer;
+        overflow: hidden;
+        border-radius: 0.5rem;
+        border: 2px solid transparent;
+        transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+        background: #f3f4f6;
+    }
+    .tt-swatch:hover { transform: scale(1.05); }
+    .tt-swatch.is-selected {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+    .tt-swatch__strips {
+        display: flex;
+        flex: 1 1 75%;
+        min-height: 0;
+    }
+    .tt-swatch__strip { flex: 1 1 0; }
+    .tt-swatch__label {
+        font-size: 11px;
+        text-align: center;
+        padding: 2px 4px;
+        flex: 0 0 auto;
+        height: 25%;
+        line-height: 16px;
+        background: rgba(255, 255, 255, 0.85);
+        color: #111827;
+        font-weight: 500;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+    .dark .tt-swatch__label { background: rgba(17, 24, 39, 0.85); color: #f3f4f6; }
+    .tt-swatch__check {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 18px;
+        height: 18px;
+        border-radius: 9999px;
+        background: #3b82f6;
+        color: #fff;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+    }
+    .tt-swatch.is-selected .tt-swatch__check { display: flex; }
+    .tt-accent-preset {
+        width: 28px; height: 28px; border-radius: 9999px;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: transform 0.1s ease, border-color 0.1s ease;
+    }
+    .tt-accent-preset:hover { transform: scale(1.1); }
+    .tt-accent-preset.is-selected { border-color: #111827; }
+    .dark .tt-accent-preset.is-selected { border-color: #f3f4f6; }
+    .tt-pill.is-selected {
+        background-color: #3b82f6 !important;
+        color: #fff !important;
+        border-color: #3b82f6 !important;
+        z-index: 1;
+    }
+    #tt-theme-customise[open] [data-tt-rot] { transform: rotate(90deg); }
+</style>
+
+<script>
+(function () {
+    'use strict';
+
+    const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+    const ENDPOINT = '/api/user/theme';
+    const root = document.getElementById('theme-picker-card');
+    if (!root) return;
+
+    function csrfToken() {
+        const m = document.querySelector('meta[name="csrf-token"]');
+        return m ? m.getAttribute('content') : '';
+    }
+
+    function toast(type, message) {
+        try {
+            if (window.toastManager && typeof window.toastManager[type] === 'function') {
+                window.toastManager[type](message);
+                return;
+            }
+            if (window.toastManager && typeof window.toastManager.show === 'function') {
+                window.toastManager.show({ message: message, type: type, duration: 3000 });
+                return;
+            }
+        } catch (_) { /* noop */ }
+        // eslint-disable-next-line no-console
+        console.info('[theme]', type, message);
+    }
+
+    function applyCss(css) {
+        // Replace the <style id="tt-theme-vars"> block injected by the
+        // server with the freshly-rendered one returned by the API. If
+        // the block is missing (e.g. the user is currently on default),
+        // create it lazily.
+        let node = document.getElementById('tt-theme-vars');
+        if (!css || !css.trim()) {
+            if (node && node.parentNode) node.parentNode.removeChild(node);
+            return;
+        }
+        // ``css`` is a complete <style id="tt-theme-vars">...</style>
+        // string. Parse out the inner CSS so we can keep the same node
+        // and avoid blowing away any inline modifications by other
+        // scripts.
+        const tmp = document.createElement('div');
+        tmp.innerHTML = css;
+        const fresh = tmp.querySelector('#tt-theme-vars');
+        if (!fresh) return;
+        if (!node) {
+            // Append to <head> so it overrides upstream CSS.
+            document.head.appendChild(fresh);
+        } else {
+            node.textContent = fresh.textContent;
+        }
+    }
+
+    // ----- State
+    const state = {
+        themes: [],
+        accent_presets: [],
+        pending: {
+            theme_name: 'default',
+            accent_color: null,
+            sidebar_style: 'default',
+            font_size: 'base',
+            border_radius: 'default',
+        },
+    };
+
+    const swatchesEl = document.getElementById('tt-theme-swatches');
+    const presetsEl = document.getElementById('tt-accent-presets');
+    const accentInput = document.getElementById('tt-accent-input');
+    const accentHex = document.getElementById('tt-accent-hex');
+    const accentClear = document.getElementById('tt-accent-clear');
+    const resetBtn = document.getElementById('tt-theme-reset');
+    const saveBtn = document.getElementById('tt-theme-save');
+    const statusEl = document.getElementById('tt-theme-status');
+
+    // ----- Renderers
+    function renderSwatches() {
+        if (!swatchesEl) return;
+        swatchesEl.innerHTML = '';
+        state.themes.forEach(function (theme) {
+            const sw = document.createElement('button');
+            sw.type = 'button';
+            sw.className = 'tt-swatch';
+            sw.dataset.name = theme.name;
+            sw.setAttribute('aria-label', theme.label);
+            sw.title = theme.description || theme.label;
+
+            const strips = document.createElement('div');
+            strips.className = 'tt-swatch__strips';
+            (theme.preview_colors || []).slice(0, 3).forEach(function (hex) {
+                const strip = document.createElement('div');
+                strip.className = 'tt-swatch__strip';
+                strip.style.background = hex;
+                strips.appendChild(strip);
+            });
+            // Pad with theme accent if fewer than 3 preview colours.
+            while (strips.childElementCount < 3) {
+                const strip = document.createElement('div');
+                strip.className = 'tt-swatch__strip';
+                strip.style.background = theme.accent || '#3b82f6';
+                strips.appendChild(strip);
+            }
+            sw.appendChild(strips);
+
+            const label = document.createElement('div');
+            label.className = 'tt-swatch__label';
+            label.textContent = theme.label;
+            sw.appendChild(label);
+
+            const check = document.createElement('div');
+            check.className = 'tt-swatch__check';
+            check.innerHTML = '<i class="fas fa-check"></i>';
+            sw.appendChild(check);
+
+            sw.addEventListener('click', function () {
+                state.pending.theme_name = theme.name;
+                refreshSelectionUI();
+                applyPreview();
+            });
+            swatchesEl.appendChild(sw);
+        });
+        refreshSelectionUI();
+    }
+
+    function renderPresets() {
+        if (!presetsEl) return;
+        presetsEl.innerHTML = '';
+        state.accent_presets.forEach(function (hex) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'tt-accent-preset';
+            btn.style.background = hex;
+            btn.dataset.value = hex.toLowerCase();
+            btn.title = hex;
+            btn.setAttribute('aria-label', hex);
+            btn.addEventListener('click', function () {
+                state.pending.accent_color = hex.toLowerCase();
+                syncAccentInputs();
+                refreshSelectionUI();
+                applyPreview();
+            });
+            presetsEl.appendChild(btn);
+        });
+    }
+
+    function refreshSelectionUI() {
+        // Theme swatches
+        if (swatchesEl) {
+            swatchesEl.querySelectorAll('.tt-swatch').forEach(function (sw) {
+                sw.classList.toggle('is-selected', sw.dataset.name === state.pending.theme_name);
+            });
+        }
+        // Accent presets
+        if (presetsEl) {
+            const target = (state.pending.accent_color || '').toLowerCase();
+            presetsEl.querySelectorAll('.tt-accent-preset').forEach(function (btn) {
+                btn.classList.toggle('is-selected', btn.dataset.value === target);
+            });
+        }
+        // Pill groups
+        document.querySelectorAll('[data-tt-pill-group]').forEach(function (group) {
+            const key = group.getAttribute('data-tt-pill-group');
+            const value = state.pending[key];
+            group.querySelectorAll('.tt-pill').forEach(function (pill) {
+                pill.classList.toggle('is-selected', pill.dataset.value === value);
+            });
+        });
+    }
+
+    function syncAccentInputs() {
+        const v = state.pending.accent_color;
+        if (v && HEX_RE.test(v)) {
+            try { accentInput.value = v; } catch (_) { /* noop */ }
+            accentHex.value = v;
+        } else {
+            // Fallback to current theme accent for the colour picker UI.
+            const theme = state.themes.find(function (t) { return t.name === state.pending.theme_name; });
+            try { accentInput.value = (theme && theme.accent) || '#3b82f6'; } catch (_) { /* noop */ }
+            accentHex.value = '';
+        }
+    }
+
+    // ----- Pill group binding
+    document.querySelectorAll('[data-tt-pill-group]').forEach(function (group) {
+        const key = group.getAttribute('data-tt-pill-group');
+        group.querySelectorAll('.tt-pill').forEach(function (pill) {
+            pill.addEventListener('click', function () {
+                state.pending[key] = pill.dataset.value;
+                refreshSelectionUI();
+                applyPreview();
+            });
+        });
+    });
+
+    // ----- Accent inputs
+    let accentDebounce = null;
+    if (accentInput) {
+        accentInput.addEventListener('input', function () {
+            clearTimeout(accentDebounce);
+            const v = (accentInput.value || '').toLowerCase();
+            accentDebounce = setTimeout(function () {
+                if (HEX_RE.test(v)) {
+                    state.pending.accent_color = v;
+                    accentHex.value = v;
+                    refreshSelectionUI();
+                    applyPreview();
+                }
+            }, 300);
+        });
+    }
+    if (accentHex) {
+        accentHex.addEventListener('input', function () {
+            clearTimeout(accentDebounce);
+            const v = (accentHex.value || '').trim().toLowerCase();
+            accentDebounce = setTimeout(function () {
+                if (HEX_RE.test(v)) {
+                    state.pending.accent_color = v;
+                    try { accentInput.value = v; } catch (_) { /* noop */ }
+                    refreshSelectionUI();
+                    applyPreview();
+                }
+            }, 300);
+        });
+    }
+    if (accentClear) {
+        accentClear.addEventListener('click', function () {
+            state.pending.accent_color = null;
+            syncAccentInputs();
+            refreshSelectionUI();
+            applyPreview();
+        });
+    }
+
+    // ----- Reset / Save
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function () {
+            state.pending = {
+                theme_name: 'default',
+                accent_color: null,
+                sidebar_style: 'default',
+                font_size: 'base',
+                border_radius: 'default',
+            };
+            syncAccentInputs();
+            refreshSelectionUI();
+            // Persist the reset immediately so a refresh reflects the
+            // cleared state.
+            postTheme(true).then(function (res) {
+                if (res && res.ok) {
+                    toast('success', '{{ _("Reset to default") }}');
+                }
+            });
+        });
+    }
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function () {
+            saveBtn.disabled = true;
+            postTheme(true).then(function (res) {
+                saveBtn.disabled = false;
+                if (res && res.ok) {
+                    toast('success', '{{ _("Theme saved") }}');
+                } else {
+                    toast('error', (res && res.error) ? res.error : '{{ _("Could not save theme") }}');
+                }
+            });
+        });
+    }
+
+    // ----- Preview / API
+    let previewDebounce = null;
+    function applyPreview() {
+        clearTimeout(previewDebounce);
+        previewDebounce = setTimeout(function () { postTheme(false); }, 150);
+    }
+
+    function postTheme(persist) {
+        const body = JSON.stringify(state.pending);
+        return fetch(ENDPOINT, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: body,
+        })
+            .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+            .then(function (res) {
+                if (res.ok && res.body && res.body.ok) {
+                    applyCss(res.body.css || '');
+                    return { ok: true };
+                }
+                if (persist) {
+                    return { ok: false, error: (res.body && res.body.error) || 'unknown_error' };
+                }
+                return { ok: false };
+            })
+            .catch(function () { return { ok: false, error: 'network' }; });
+    }
+
+    // ----- Initial load
+    function load() {
+        fetch(ENDPOINT, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data || !data.ok) return;
+                state.themes = data.themes || [];
+                state.accent_presets = data.accent_presets || [];
+                if (data.current) {
+                    state.pending.theme_name = data.current.theme_name || 'default';
+                    state.pending.accent_color = data.current.accent_color || null;
+                    state.pending.sidebar_style = data.current.sidebar_style || 'default';
+                    state.pending.font_size = data.current.font_size || 'base';
+                    state.pending.border_radius = data.current.border_radius || 'default';
+                }
+                renderSwatches();
+                renderPresets();
+                syncAccentInputs();
+                refreshSelectionUI();
+            })
+            .catch(function () {
+                if (statusEl) statusEl.textContent = '{{ _("Could not load themes.") }}';
+            });
+    }
+
+    load();
+})();
+</script>

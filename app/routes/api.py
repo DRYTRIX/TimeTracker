@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import uuid
 from datetime import datetime, time, timedelta
 
@@ -24,6 +25,7 @@ from app.models import (
     User,
 )
 from app.models.time_entry import local_now
+from app.services.ai_suggestion_service import AISuggestionService
 from app.services.global_search_service import run_global_search
 from app.services.llm_service import AIServiceError, LLMService
 from app.services.time_tracking_service import TimeTrackingService
@@ -98,6 +100,159 @@ def ai_confirm_action():
         return jsonify(result)
     except AIServiceError as exc:
         return _ai_error_response(exc)
+
+
+def _ai_confidence_label(value):
+    """Map a numeric confidence (0..1) to a coarse label used by the suggestion UI."""
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        return "low"
+    if score >= 0.7:
+        return "high"
+    if score >= 0.4:
+        return "medium"
+    return "low"
+
+
+def _ai_safe_int(value):
+    try:
+        return int(value) if value not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _ai_parse_suggestion_array(content):
+    """Best-effort extraction of a JSON array from an LLM reply that may include prose."""
+    if not isinstance(content, str) or not content.strip():
+        return []
+    fenced = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", content, re.DOTALL)
+    candidate = fenced.group(1) if fenced else None
+    if candidate is None:
+        match = re.search(r"\[.*\]", content, re.DOTALL)
+        candidate = match.group(0) if match else None
+    if candidate is None:
+        return []
+    try:
+        data = json.loads(candidate)
+    except (ValueError, TypeError):
+        return []
+    if not isinstance(data, list):
+        return []
+    return [item for item in data if isinstance(item, dict)]
+
+
+@api_bp.route("/api/ai/suggest")
+@login_required
+@deprecated_session_api("/api/v1/ai/suggest")
+def ai_suggest():
+    """Return AI-powered time entry suggestions (deterministic, optionally LLM-enhanced)."""
+    q = (request.args.get("q") or "").strip()
+    rich = (request.args.get("rich") or "").strip().lower() in {"1", "true", "yes", "on"}
+
+    suggestions = []
+
+    try:
+        deterministic = AISuggestionService().get_time_entry_suggestions(current_user.id, limit=5)
+    except Exception as exc:  # noqa: BLE001 - never let suggestion errors 500 the request
+        current_app.logger.warning("AI deterministic suggestions failed: %s", exc)
+        deterministic = []
+
+    pairs = {(s.get("project_id"), s.get("task_id")) for s in deterministic if s.get("project_id")}
+    last_entry_by_pair = {}
+    for project_id, task_id in pairs:
+        query = TimeEntry.query.filter(
+            TimeEntry.user_id == current_user.id,
+            TimeEntry.project_id == project_id,
+            TimeEntry.end_time.isnot(None),
+        )
+        if task_id is None:
+            query = query.filter(TimeEntry.task_id.is_(None))
+        else:
+            query = query.filter(TimeEntry.task_id == task_id)
+        entry = query.order_by(TimeEntry.start_time.desc()).first()
+        if entry is not None:
+            last_entry_by_pair[(project_id, task_id)] = entry
+
+    for item in deterministic:
+        pid = item.get("project_id")
+        tid = item.get("task_id")
+        last = last_entry_by_pair.get((pid, tid))
+        suggestions.append(
+            {
+                "project_id": pid,
+                "project_name": item.get("project_name"),
+                "task_id": tid,
+                "task_name": item.get("task_name"),
+                "notes": (last.notes if last and last.notes else "") or "",
+                "tags": (last.tags if last and last.tags else "") or "",
+                "billable": bool(last.billable) if last is not None else True,
+                "confidence": _ai_confidence_label(item.get("confidence")),
+                "source": "deterministic",
+            }
+        )
+
+    if rich:
+        try:
+            llm = LLMService()
+            if llm.is_enabled():
+                prompt = (
+                    "Based on the user's recent time entries and assigned tasks, suggest the top 3 most likely "
+                    "next time entries. For each, return project_id, task_id (if any), notes, tags, billable. "
+                    "Return ONLY a JSON array, no prose."
+                )
+                result = llm.chat(current_user, prompt)
+                ai_items = _ai_parse_suggestion_array(result.get("reply") or "")
+                for item in ai_items:
+                    pid = _ai_safe_int(item.get("project_id"))
+                    if pid is None or not user_can_access_project(current_user, pid):
+                        continue
+                    project = Project.query.get(pid)
+                    if project is None:
+                        continue
+                    tid = _ai_safe_int(item.get("task_id"))
+                    task = Task.query.get(tid) if tid else None
+                    if task is not None and task.project_id != pid:
+                        task = None
+                        tid = None
+                    suggestions.append(
+                        {
+                            "project_id": pid,
+                            "project_name": project.name,
+                            "task_id": tid,
+                            "task_name": task.name if task else None,
+                            "notes": (str(item.get("notes") or ""))[:1000],
+                            "tags": (str(item.get("tags") or ""))[:500],
+                            "billable": bool(item.get("billable", True)),
+                            "confidence": "medium",
+                            "source": "ai",
+                        }
+                    )
+        except AIServiceError as exc:
+            current_app.logger.info("AI rich suggestions unavailable: %s", exc.message)
+        except Exception as exc:  # noqa: BLE001 - never fail the request because of AI errors
+            current_app.logger.warning("AI rich suggestions failed: %s", exc)
+
+    seen = set()
+    unique = []
+    for item in suggestions:
+        key = (item.get("project_id"), item.get("task_id"))
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(item)
+
+    if q:
+        ql = q.lower()
+
+        def _matches(item):
+            project_name = (item.get("project_name") or "").lower()
+            notes = (item.get("notes") or "").lower()
+            return ql in project_name or ql in notes
+
+        unique = [item for item in unique if _matches(item)]
+
+    return jsonify({"ok": True, "suggestions": unique[:5]})
 
 
 def _effective_user_for_version_api():
@@ -359,6 +514,13 @@ def api_start_timer():
         },
     )
 
+    try:
+        from app.integrations.slack_connector import SlackConnector
+
+        SlackConnector.notify_for_user(current_user, new_timer, event="start")
+    except Exception as e:
+        current_app.logger.debug("Slack notify failed: %s", e)
+
     return jsonify(
         {
             "success": True,
@@ -390,6 +552,13 @@ def api_stop_timer():
         "timer_stopped",
         {"user_id": current_user.id, "timer_id": entry.id, "duration": entry.duration_formatted},
     )
+
+    try:
+        from app.integrations.slack_connector import SlackConnector
+
+        SlackConnector.notify_for_user(current_user, entry, event="stop")
+    except Exception as e:
+        current_app.logger.debug("Slack notify failed: %s", e)
 
     return jsonify({"success": True, "duration": entry.duration_formatted, "duration_hours": entry.duration_hours})
 
@@ -634,6 +803,116 @@ def project_burndown(project_id):
             "estimated_hours": estimated,
         }
     )
+
+
+# Module-level forecast cache: {project_id: (cached_at_epoch, payload_dict, kind)}
+# kind is "deterministic" or "ai" so cached AI payloads aren't served for plain requests.
+_FORECAST_CACHE: dict = {}
+_FORECAST_CACHE_TTL_SEC = 600  # 10 minutes
+
+
+def _forecast_cache_get(project_id: int, kind: str):
+    try:
+        entry = _FORECAST_CACHE.get(int(project_id))
+    except (TypeError, ValueError):
+        return None
+    if not entry:
+        return None
+    cached_at, payload, cached_kind = entry
+    if cached_kind != kind:
+        return None
+    if (datetime.utcnow().timestamp() - cached_at) > _FORECAST_CACHE_TTL_SEC:
+        _FORECAST_CACHE.pop(int(project_id), None)
+        return None
+    return payload
+
+
+def _forecast_cache_set(project_id: int, kind: str, payload: dict) -> None:
+    try:
+        _FORECAST_CACHE[int(project_id)] = (datetime.utcnow().timestamp(), payload, kind)
+    except (TypeError, ValueError):
+        return
+
+
+def _forecast_cache_bust(project_id: int) -> None:
+    try:
+        _FORECAST_CACHE.pop(int(project_id), None)
+    except (TypeError, ValueError):
+        return
+
+
+def _truthy_param(value) -> bool:
+    if value is None:
+        return False
+    return str(value).strip().lower() in ("1", "true", "yes", "on")
+
+
+@api_bp.route("/api/projects/<int:project_id>/forecast")
+@login_required
+def project_forecast(project_id):
+    """Return deterministic (and optionally AI-narrated) forecast for a project.
+
+    Query params:
+        ai (bool, default false): include LLM-generated narrative/risks/recommendations.
+        refresh (bool, default false): bust the in-memory cache for this project.
+    """
+    try:
+        if not user_can_access_project(current_user, project_id):
+            return jsonify({"ok": False, "error": "Access denied"}), 403
+
+        include_ai = _truthy_param(request.args.get("ai"))
+        refresh = _truthy_param(request.args.get("refresh"))
+
+        if refresh:
+            _forecast_cache_bust(project_id)
+
+        cache_kind = "ai" if include_ai else "deterministic"
+        if not refresh:
+            cached = _forecast_cache_get(project_id, cache_kind)
+            if cached is not None:
+                return jsonify(cached)
+
+        from app.services.forecast_service import ForecastService
+
+        # Cheap probe so the component can hide the AI button when disabled.
+        try:
+            ai_enabled = LLMService().is_enabled()
+        except Exception:
+            ai_enabled = False
+
+        if include_ai:
+            ai_result = ForecastService.get_ai_forecast(project_id, current_user)
+            forecast_dict = ai_result.get("deterministic") or ForecastService.get_deterministic_forecast(
+                project_id, current_user
+            )
+            payload = {
+                "ok": True,
+                "project_id": int(project_id),
+                "ai_enabled": bool(ai_enabled),
+                "forecast": forecast_dict,
+                "ai": {
+                    "ok": bool(ai_result.get("ok")),
+                    "narrative": ai_result.get("narrative"),
+                    "risks": ai_result.get("risks") or [],
+                    "recommendations": ai_result.get("recommendations") or [],
+                    "error": ai_result.get("error"),
+                    "error_code": ai_result.get("error_code"),
+                },
+            }
+        else:
+            forecast_dict = ForecastService.get_deterministic_forecast(project_id, current_user)
+            payload = {
+                "ok": True,
+                "project_id": int(project_id),
+                "ai_enabled": bool(ai_enabled),
+                "forecast": forecast_dict,
+            }
+
+        _forecast_cache_set(project_id, cache_kind, payload)
+        return jsonify(payload)
+    except Exception as exc:
+        current_app.logger.exception("project_forecast failed for project %s", project_id)
+        return jsonify({"ok": False, "error": str(exc) or "internal_error"}), 500
 
 
 @api_bp.route("/api/focus-sessions/start", methods=["POST"])
@@ -2086,6 +2365,130 @@ def get_activity_stats():
             "period_days": days,
         }
     )
+
+
+@api_bp.route("/api/productivity/stats")
+@login_required
+def productivity_stats():
+    """Aggregated personal productivity stats for the current user.
+
+    Query params:
+        period (int): days for focus/project breakdowns (default 30, max 90)
+    """
+    try:
+        try:
+            period = int(request.args.get("period", 30))
+        except (TypeError, ValueError):
+            period = 30
+        period = max(1, min(period, 90))
+
+        from app.services.productivity_service import ProductivityService
+
+        cache_key = None
+        cache_obj = None
+        try:
+            from app.utils.cache import get_cache as _get_app_cache
+
+            cache_obj = _get_app_cache()
+            cache_key = f"productivity:stats:{current_user.id}:{period}"
+            cached = cache_obj.get(cache_key) if cache_obj is not None else None
+            if cached is not None:
+                return jsonify(cached)
+        except Exception:
+            cache_obj = None
+
+        summary = ProductivityService.get_summary(current_user)
+        daily_breakdown = ProductivityService.get_daily_breakdown(current_user, days=14)
+        streak = ProductivityService.get_streak(current_user)
+        focus = ProductivityService.get_focus_stats(current_user, days=period)
+        projects = ProductivityService.get_project_breakdown(current_user, days=period)
+        heatmap = ProductivityService.get_weekly_heatmap(current_user, weeks=12)
+        insights = ProductivityService.get_insights(
+            current_user, summary, daily_breakdown, streak, focus, projects
+        )
+
+        payload = {
+            "ok": True,
+            "period": period,
+            "summary": summary,
+            "daily_breakdown": daily_breakdown,
+            "streak": streak,
+            "focus": focus,
+            "projects": projects,
+            "heatmap": heatmap,
+            "insights": insights,
+        }
+
+        # Don't cache when an active timer is running so the UI stays fresh.
+        if cache_obj is not None and cache_key and not (summary or {}).get("active_timer"):
+            try:
+                cache_obj.set(cache_key, payload, ttl=300)
+            except Exception:
+                pass
+
+        return jsonify(payload)
+    except Exception as exc:
+        current_app.logger.exception("productivity_stats failed")
+        return jsonify({"ok": False, "error": str(exc) or "internal_error"}), 500
+
+
+# ---------------------------------------------------------------- user theme
+#
+# Per-user custom theme endpoints. The actual logic (validation, CSS
+# generation, persistence) lives in :class:`app.services.theme_service.ThemeService`
+# so the routes stay thin and the theme picker component can also be
+# rendered server-side without going through the API.
+
+
+@api_bp.route("/api/user/theme", methods=["GET"])
+@login_required
+def get_user_theme():
+    """Return the user's current theme + the list of available themes."""
+    from app.services.theme_service import ThemeService
+
+    service = ThemeService()
+    current = {
+        "theme_name": getattr(current_user, "theme_name", None) or "default",
+        "accent_color": getattr(current_user, "theme_accent_color", None),
+        "sidebar_style": getattr(current_user, "theme_sidebar_style", None) or "default",
+        "font_size": getattr(current_user, "theme_font_size", None) or "base",
+        "border_radius": getattr(current_user, "theme_border_radius", None) or "default",
+    }
+    return jsonify(
+        {
+            "ok": True,
+            "current": current,
+            "themes": service.get_all_themes(),
+            "accent_presets": service.get_accent_presets(),
+            "css": service.get_theme_css_vars(current_user),
+        }
+    )
+
+
+@api_bp.route("/api/user/theme", methods=["POST"])
+@login_required
+def save_user_theme():
+    """Persist the user's theme preferences and return the new CSS block.
+
+    The returned ``css`` field is the regenerated ``<style id="tt-theme-vars">``
+    block so the picker can swap it into the page for an instant live
+    preview without a full reload.
+    """
+    from app.services.theme_service import ThemeService
+
+    data = request.get_json(silent=True) or {}
+    service = ThemeService()
+    result = service.save_user_theme(
+        current_user,
+        theme_name=data.get("theme_name"),
+        accent_color=data.get("accent_color"),
+        sidebar_style=data.get("sidebar_style"),
+        font_size=data.get("font_size"),
+        border_radius=data.get("border_radius"),
+    )
+    if not result.get("ok"):
+        return jsonify(result), 400
+    return jsonify({"ok": True, "css": service.get_theme_css_vars(current_user)})
 
 
 # WebSocket event handlers

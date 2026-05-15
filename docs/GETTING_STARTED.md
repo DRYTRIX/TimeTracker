@@ -322,6 +322,8 @@ Time entries feed into Projects and Invoices; use **Reports** to see time and bi
 
 **Analyze your time and productivity:**
 
+For a personal view of streaks, focus patterns, and project mix, open **My productivity** in the sidebar (`/dashboard/productivity`). See [features/PRODUCTIVITY_DASHBOARD.md](features/PRODUCTIVITY_DASHBOARD.md).
+
 1. Go to **Reports**
 
 2. **Choose report type**:

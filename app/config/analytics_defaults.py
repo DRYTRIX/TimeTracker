@@ -29,6 +29,9 @@ SENTRY_TRACES_RATE_DEFAULT = "0.1"
 # All builds have analytics configured, but telemetry is OPT-IN
 TELE_ENABLED_DEFAULT = "false"  # Disabled by default for privacy
 
+# Dockerfile default ARG APP_VERSION=dev-0; treat as unset so setup.py is used in generic images.
+_DOCKER_DEFAULT_APP_VERSION_PLACEHOLDER = "dev-0"
+
 
 def get_version_from_setup():
     """
@@ -39,6 +42,8 @@ def get_version_from_setup():
     All other code should reference this function, not define versions themselves.
 
     Override at runtime with TIMETRACKER_VERSION or APP_VERSION (e.g. CI/containers).
+    The Docker build default ``dev-0`` is ignored so the version from setup.py is shown
+    when no real override is set.
 
     This function tries multiple paths to find setup.py to work correctly
     in both production and development modes.
@@ -49,9 +54,13 @@ def get_version_from_setup():
     import os
     import re
 
-    env_version = (os.environ.get("TIMETRACKER_VERSION") or os.environ.get("APP_VERSION") or "").strip()
-    if env_version:
-        return env_version
+    tt = (os.environ.get("TIMETRACKER_VERSION") or "").strip()
+    app_v = (os.environ.get("APP_VERSION") or "").strip()
+    ph = _DOCKER_DEFAULT_APP_VERSION_PLACEHOLDER
+    if tt and tt != ph:
+        return tt
+    if app_v and app_v != ph:
+        return app_v
 
     # Try multiple possible paths to setup.py
     possible_paths = []

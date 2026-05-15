@@ -89,9 +89,15 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 > **📋 For complete release history, see [CHANGELOG.md](CHANGELOG.md)**
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
-- 📱 **Native Mobile & Desktop Apps** — Flutter mobile app (iOS/Android) and Electron desktop app with time tracking, offline support, and API integration ([Build Guide](scripts/README-BUILD.md), [Docs](docs/mobile-desktop-apps/README.md))
-- 📋 **Project Analysis & Documentation** — Comprehensive project analysis and documentation updates
-- 🔧 **Version Consistency** — Fixed version inconsistencies across documentation files
+
+### ✨ Highlights of v5.6.0
+
+- 🔌 **Personal integration connectors** — Per-user, opt-in **GitHub**, **Google Calendar**, and **Slack** connectors with signature-verified webhooks, OAuth, scheduled syncs, and a `/tt` Slack slash command ([GitHub](docs/integrations/GITHUB_CONNECTOR.md) · [Google Calendar](docs/integrations/GOOGLE_CALENDAR.md) · [Slack](docs/integrations/SLACK.md))
+- 🎨 **Custom themes** — Per-user theme picker with 8 built-in themes plus independent accent, sidebar, text-size, and corner-radius overrides ([docs](docs/features/CUSTOM_THEMES.md))
+- 📊 **Personal productivity dashboard** — New **My productivity** page with streaks, 14-day hours chart, project doughnut, focus stats, and a 12-week activity heatmap ([docs](docs/features/PRODUCTIVITY_DASHBOARD.md))
+- 🤖 **AI time entry suggestions** — Deterministic (and optional LLM-rich) project/task/notes suggestions in the Start Timer modal and manual entry **Autofill**
+- 🔮 **Project forecast panel** — `ForecastService` and a self-contained forecast card on active projects with estimated hours or budget ([docs](docs/BUDGET_ALERTS_AND_FORECASTING.md))
+- ⏰ **Smart reminders: break & end-of-day** — Optional Pomodoro-style break nudges, end-of-day wrap-up toasts, and browser push for eligible users ([docs](docs/features/SMART_NOTIFICATIONS.md))
 
 See [CHANGELOG.md](CHANGELOG.md) for all release notes and version history.
 
@@ -722,6 +728,14 @@ The AI helper is exposed as:
 - Session web UI JSON: `POST /api/ai/chat` (same-origin, login required)
 - REST API v1: `POST /api/v1/ai/chat` (API token required, scopes `read:ai`/`write:ai`)
 
+**Time entry suggestions** (when `AI_ENABLED=true`):
+
+- `GET /api/ai/suggest` — deterministic suggestions from recent patterns and active tasks; optional `?q=` filters by notes/project name; `?rich=true` merges LLM suggestions when configured. AI failures return deterministic results only.
+- **Start Timer** modal: horizontal suggestion chips above the project field (refresh for LLM-enhanced suggestions).
+- **Log Time** form: “✦ Autofill” popover and ghost-text autocomplete on the notes field (`app/static/js/ai_autocomplete.js`).
+
+All suggestion UI is hidden when AI is disabled (`ai_enabled` in template context).
+
 ### Bundled Ollama service (Docker Compose, opt-in)
 
 The root `docker-compose.yml` defines a CPU-only **`ollama`** service and a one-shot **`ollama-init`** sidecar that pulls `AI_MODEL` (default `llama3.1`, ~4.7 GB) into the `ollama_data` volume. These services use the Compose **`ai`** profile so they **do not start by default**.
@@ -922,7 +936,6 @@ This starts:
 ## 🛣️ Roadmap
 
 ### Planned Features
-- 🎨 **Custom Themes** — Personalize your interface with custom color schemes
 - 📊 **Advanced Analytics** — More charts, insights, and reporting options
 - 🔌 **API Extensions** — Additional RESTful API endpoints for integrations
 - 🔔 **Push Notifications** — Real-time browser notifications
@@ -964,6 +977,7 @@ This starts:
 - ✅ **Saved Filters** — Save frequently used report filters for quick access
 
 #### ✨ User Experience
+- ✅ **Custom Themes** — Per-user theme picker with 8 built-in themes plus accent colour, sidebar style, text size and corner radius overrides ([Guide](docs/features/CUSTOM_THEMES.md))
 - ✅ **Modern UX & Layout** — Complete UI/UX overhaul with 16 major improvements
 - ✅ **Enterprise-Grade Tables** — Sortable, filterable, inline-editable tables with bulk actions
 - ✅ **Enhanced Search** — Instant search with autocomplete and categorized results

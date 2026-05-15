@@ -54,6 +54,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='data-tables-enhanced.css') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
     <link id="flatpickr-dark-theme" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/dark.css" media="none">
+    {# Per-user custom theme (see app/services/theme_service.py).
+       Renders an empty string for the default theme so existing users
+       see no visual change until they opt in via the theme picker. #}
+    {{ theme_css | safe }}
     <style>
         /* RTL Support */
         html[dir="rtl"] {
@@ -539,6 +543,12 @@
                         <a href="{{ url_for('main.dashboard') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg border-l-4 {% if ep == 'main.dashboard' %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" title="{{ _('Dashboard') }}">
                             <i class="fas fa-tachometer-alt w-6 text-center"></i>
                             <span class="ml-3 sidebar-label">{{ _('Dashboard') }}</span>
+                        </a>
+                    </li>
+                    <li class="mt-1">
+                        <a href="{{ url_for('main.productivity_dashboard') }}" class="sidebar-nav-item flex items-center p-2 rounded-lg border-l-4 {% if ep == 'main.productivity_dashboard' %}border-primary bg-primary/5 dark:bg-primary/10 text-primary font-semibold{% else %}border-transparent text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" title="{{ _('My productivity') }}">
+                            <i class="fas fa-chart-line w-6 text-center"></i>
+                            <span class="ml-3 sidebar-label">{{ _('My productivity') }}</span>
                         </a>
                     </li>
                     <li class="mt-1">
@@ -2564,6 +2574,9 @@ function trackBannerImpression(source) {
             navigator.serviceWorker.register('{{ url_for("main.service_worker") }}', { updateViaCache: 'none' }).catch(function () {});
         }
     </script>
+    {% if ai_enabled %}
+    <script src="{{ url_for('static', filename='js/ai_autocomplete.js') }}?v={{ app_version }}" defer></script>
+    {% endif %}
 </body>
 </html>
 

@@ -3,10 +3,19 @@ const defaultTheme = require('tailwindcss/defaultTheme');
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
-  safelist: ['pb-safe'],
+  safelist: [
+    'pb-safe',
+    // Reminder toast classes built dynamically by app/static/idle.js
+    // (file is not in tailwind content scan; safelist guarantees they ship)
+    { pattern: /^bg-(blue|purple|green|amber)-(100|200|300|600|700|800|900)$/, variants: ['hover', 'dark', 'dark:hover'] },
+    { pattern: /^bg-(blue|purple|green|amber)-900\/30$/, variants: ['dark'] },
+    { pattern: /^text-(blue|purple|green|amber)-(100|300|700|900)$/, variants: ['dark'] },
+    { pattern: /^border-(blue|purple|green|amber)-(300|700)$/, variants: ['dark'] },
+  ],
   content: [
     './app/templates/**/*.html',
     './app/static/src/**/*.js',
+    './app/static/idle.js',
   ],
   theme: {
     extend: {

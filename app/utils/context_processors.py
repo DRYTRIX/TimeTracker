@@ -295,6 +295,26 @@ def register_context_processors(app):
         }
 
     @app.context_processor
+    def inject_theme():
+        """Inject the per-user theme CSS into every template.
+
+        Returns ``{"theme_css": ""}`` for anonymous users, unmigrated
+        databases, or users on the default theme with no overrides — so
+        existing users see zero visual change until they opt in via the
+        theme picker.
+        """
+        try:
+            if current_user and getattr(current_user, "is_authenticated", False):
+                from app.services.theme_service import ThemeService
+
+                return {"theme_css": ThemeService().get_theme_css_vars(current_user)}
+        except Exception:
+            # Theme injection must never break rendering. Fall through
+            # to the empty default below.
+            pass
+        return {"theme_css": ""}
+
+    @app.context_processor
     def inject_keyboard_shortcuts_config():
         """Inject keyboard shortcut config for logged-in users (for keyboard-shortcuts-advanced.js)."""
         try:

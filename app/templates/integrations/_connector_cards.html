@@ -1,0 +1,575 @@
+{# Cards for the new opt-in connectors (GitHub PAT, Google Calendar OAuth, Slack bot).
+   Rendered by integrations/list.html below the existing provider grid. All forms
+   POST JSON to /api/integrations/{provider}/config and refresh status via
+   /api/integrations/{provider}/status. Tailwind + vanilla JS only. #}
+{% set _projects_for_connectors = projects_for_connectors|default(None) %}
+{% set _base_url = request.url_root.rstrip('/') %}
+
+<div class="mt-4">
+    <h2 class="text-xl font-semibold text-text-light dark:text-text-dark mb-3">
+        {{ _('Personal connectors') }}
+    </h2>
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+        {{ _('Opt-in, per-user integrations. Tokens stay on this account and can be revoked at any time.') }}
+    </p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+    {# ============================= GitHub ============================= #}
+    <div id="connector-card-github"
+         class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm hover:shadow-lg transition-shadow overflow-hidden"
+         data-status-url="{{ url_for('integrations_webhooks.github_status') }}"
+         data-config-url="{{ url_for('integrations_webhooks.github_save_config') }}"
+         data-sync-url="{{ url_for('integrations_webhooks.github_sync') }}"
+         data-test-url="{{ url_for('integrations_webhooks.github_test') }}"
+         data-webhook-url="{{ _base_url }}{{ url_for('integrations_webhooks.github_webhook') }}">
+        <div class="p-6">
+            <div class="flex items-start justify-between mb-4 gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <i class="fab fa-github text-primary text-xl"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('GitHub') }}</h3>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark line-clamp-2">
+                            {{ _('Create tasks from issues, auto-start a timer when assigned.') }}
+                        </p>
+                    </div>
+                </div>
+                <span data-role="badge"
+                      class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 font-medium">
+                    <i class="fas fa-circle mr-1"></i>{{ _('Not Connected') }}
+                </span>
+            </div>
+
+            <form data-role="form" class="space-y-3" autocomplete="off">
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Personal access token') }}
+                    </label>
+                    <input type="password" name="github_token"
+                           class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2"
+                           placeholder="ghp_..." autocomplete="new-password">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                            {{ _('Owner') }}
+                        </label>
+                        <input type="text" name="repo_owner"
+                               class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2"
+                               placeholder="octocat">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                            {{ _('Repository') }}
+                        </label>
+                        <input type="text" name="repo_name"
+                               class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2"
+                               placeholder="Hello-World">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Default project') }}
+                    </label>
+                    <select name="default_project_id"
+                            class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2">
+                        <option value="">{{ _('— select project —') }}</option>
+                        {% if _projects_for_connectors %}
+                            {% for p in _projects_for_connectors %}
+                                <option value="{{ p.id }}">{{ p.name }}</option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+                <label class="flex items-center gap-2 text-sm text-text-light dark:text-text-dark">
+                    <input type="checkbox" name="auto_start_timer" class="rounded">
+                    {{ _('Auto-start timer on issue assignment') }}
+                </label>
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Label filter (optional)') }}
+                    </label>
+                    <input type="text" name="label_filter"
+                           class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2"
+                           placeholder="bug">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Webhook secret') }}
+                    </label>
+                    <div class="flex gap-2">
+                        <input type="text" name="webhook_secret" data-role="webhook-secret" readonly
+                               class="w-full rounded-lg border border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-900 text-sm px-3 py-2 font-mono">
+                        <button type="button" data-role="copy" data-copy-from="webhook_secret"
+                                class="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
+                            {{ _('Copy') }}
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Webhook URL') }}
+                    </label>
+                    <div class="flex gap-2">
+                        <input type="text" data-role="webhook-url" readonly
+                               value="{{ _base_url }}{{ url_for('integrations_webhooks.github_webhook') }}"
+                               class="w-full rounded-lg border border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-900 text-sm px-3 py-2 font-mono">
+                        <button type="button" data-role="copy" data-copy-from="data-role:webhook-url"
+                                class="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
+                            {{ _('Copy') }}
+                        </button>
+                    </div>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                        {{ _('Add this URL to your GitHub repo Settings → Webhooks.') }}
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-2 pt-2">
+                    <button type="submit" class="px-3 py-2 text-sm rounded-lg bg-primary text-white hover:bg-primary/90">
+                        {{ _('Save') }}
+                    </button>
+                    <button type="button" data-role="test" class="px-3 py-2 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
+                        {{ _('Test connection') }}
+                    </button>
+                    <button type="button" data-role="sync" class="px-3 py-2 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
+                        {{ _('Sync now') }}
+                    </button>
+                </div>
+                <p data-role="message" class="text-xs text-text-muted-light dark:text-text-muted-dark min-h-[1em]"></p>
+            </form>
+        </div>
+    </div>
+
+    {# ========================== Google Calendar ========================== #}
+    <div id="connector-card-google"
+         class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm hover:shadow-lg transition-shadow overflow-hidden"
+         data-status-url="{{ url_for('integrations_webhooks.google_status') }}"
+         data-config-url="{{ url_for('integrations_webhooks.google_save_config') }}"
+         data-sync-url="{{ url_for('integrations_webhooks.google_sync') }}"
+         data-connect-url="{{ url_for('integrations_webhooks.google_connect') }}"
+         data-disconnect-url="{{ url_for('integrations_webhooks.google_disconnect') }}">
+        <div class="p-6">
+            <div class="flex items-start justify-between mb-4 gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-calendar-alt text-primary text-xl"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Google Calendar') }}</h3>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark line-clamp-2">
+                            {{ _('Import events as time entries and (optionally) push entries back.') }}
+                        </p>
+                    </div>
+                </div>
+                <span data-role="badge"
+                      class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 font-medium">
+                    <i class="fas fa-circle mr-1"></i>{{ _('Not Connected') }}
+                </span>
+            </div>
+
+            <div data-role="not-connected" class="space-y-3">
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Connect your Google account to start syncing calendar events.') }}
+                </p>
+                <a href="{{ url_for('integrations_webhooks.google_connect') }}"
+                   class="inline-flex items-center px-3 py-2 text-sm rounded-lg bg-primary text-white hover:bg-primary/90">
+                    <i class="fab fa-google mr-2"></i>{{ _('Connect Google Calendar') }}
+                </a>
+            </div>
+
+            <form data-role="form" class="space-y-3 hidden">
+                <p class="text-sm text-text-light dark:text-text-dark">
+                    {{ _('Connected as') }} <span data-role="email" class="font-medium">—</span>
+                </p>
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Sync direction') }}
+                    </label>
+                    <select name="sync_direction"
+                            class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2">
+                        <option value="import">{{ _('Import (Calendar → TimeTracker)') }}</option>
+                        <option value="export">{{ _('Export (TimeTracker → Calendar)') }}</option>
+                        <option value="both">{{ _('Both directions') }}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Default project') }}
+                    </label>
+                    <select name="default_project_id"
+                            class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2">
+                        <option value="">{{ _('— select project —') }}</option>
+                        {% if _projects_for_connectors %}
+                            {% for p in _projects_for_connectors %}
+                                <option value="{{ p.id }}">{{ p.name }}</option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Sync days back (1–30)') }}
+                    </label>
+                    <input type="number" name="sync_days_back" min="1" max="30" value="7"
+                           class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Calendar ID') }}
+                    </label>
+                    <input type="text" name="calendar_id" value="primary"
+                           class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2">
+                </div>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Last synced:') }} <span data-role="last-sync">—</span>
+                </p>
+                <div class="flex flex-wrap gap-2 pt-2">
+                    <button type="submit" class="px-3 py-2 text-sm rounded-lg bg-primary text-white hover:bg-primary/90">
+                        {{ _('Save') }}
+                    </button>
+                    <button type="button" data-role="sync" class="px-3 py-2 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
+                        {{ _('Sync now') }}
+                    </button>
+                    <form method="post" action="{{ url_for('integrations_webhooks.google_disconnect') }}" class="inline" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="px-3 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700">
+                            {{ _('Disconnect') }}
+                        </button>
+                    </form>
+                </div>
+                <p data-role="message" class="text-xs text-text-muted-light dark:text-text-muted-dark min-h-[1em]"></p>
+            </form>
+        </div>
+    </div>
+
+    {# =============================== Slack =============================== #}
+    <div id="connector-card-slack"
+         class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm hover:shadow-lg transition-shadow overflow-hidden"
+         data-status-url="{{ url_for('integrations_webhooks.slack_status') }}"
+         data-config-url="{{ url_for('integrations_webhooks.slack_save_config') }}"
+         data-test-url="{{ url_for('integrations_webhooks.slack_test') }}"
+         data-events-url="{{ _base_url }}{{ url_for('integrations_webhooks.slack_events') }}">
+        <div class="p-6">
+            <div class="flex items-start justify-between mb-4 gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <i class="fab fa-slack text-primary text-xl"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Slack') }}</h3>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark line-clamp-2">
+                            {{ _('Notify a channel on timer events and run /tt slash commands.') }}
+                        </p>
+                    </div>
+                </div>
+                <span data-role="badge"
+                      class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 font-medium">
+                    <i class="fas fa-circle mr-1"></i>{{ _('Not Connected') }}
+                </span>
+            </div>
+
+            <form data-role="form" class="space-y-3" autocomplete="off">
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Bot token (xoxb-…)') }}
+                    </label>
+                    <input type="password" name="bot_token"
+                           class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2"
+                           placeholder="xoxb-..." autocomplete="new-password">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Signing secret') }}
+                    </label>
+                    <input type="password" name="signing_secret"
+                           class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2"
+                           autocomplete="new-password">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Channel ID (e.g. #general or C1234567890)') }}
+                    </label>
+                    <input type="text" name="channel_id"
+                           class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2"
+                           placeholder="#general">
+                </div>
+                <div class="grid grid-cols-1 gap-1">
+                    <label class="flex items-center gap-2 text-sm text-text-light dark:text-text-dark">
+                        <input type="checkbox" name="notify_on_start" class="rounded">
+                        {{ _('Notify on timer start') }}
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-text-light dark:text-text-dark">
+                        <input type="checkbox" name="notify_on_stop" class="rounded">
+                        {{ _('Notify on timer stop') }}
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-text-light dark:text-text-dark">
+                        <input type="checkbox" name="daily_summary" class="rounded" data-role="daily-toggle">
+                        {{ _('Send daily summary') }}
+                    </label>
+                </div>
+                <div data-role="summary-time-row" class="hidden">
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Daily summary time') }}
+                    </label>
+                    <input type="time" name="daily_summary_time" value="18:00"
+                           class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Slack user ID for slash commands (optional)') }}
+                    </label>
+                    <input type="text" name="linked_slack_user_id"
+                           class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2"
+                           placeholder="U1234567890">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Slash command URL') }}
+                    </label>
+                    <div class="flex gap-2">
+                        <input type="text" data-role="events-url" readonly
+                               value="{{ _base_url }}{{ url_for('integrations_webhooks.slack_events') }}"
+                               class="w-full rounded-lg border border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-900 text-sm px-3 py-2 font-mono">
+                        <button type="button" data-role="copy" data-copy-from="data-role:events-url"
+                                class="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
+                            {{ _('Copy') }}
+                        </button>
+                    </div>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                        {{ _('Add a slash command in your Slack app pointing to this URL.') }}
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-2 pt-2">
+                    <button type="submit" class="px-3 py-2 text-sm rounded-lg bg-primary text-white hover:bg-primary/90">
+                        {{ _('Save') }}
+                    </button>
+                    <button type="button" data-role="test" class="px-3 py-2 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
+                        {{ _('Send test message') }}
+                    </button>
+                </div>
+                <p data-role="message" class="text-xs text-text-muted-light dark:text-text-muted-dark min-h-[1em]"></p>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    function csrfToken() {
+        try {
+            var match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
+            return match ? decodeURIComponent(match[1]) : "";
+        } catch (_) { return ""; }
+    }
+
+    function setConnectedBadge(card, connected) {
+        var badge = card.querySelector('[data-role="badge"]');
+        if (!badge) return;
+        badge.innerHTML = connected
+            ? '<i class="fas fa-check-circle mr-1"></i>{{ _("Connected") }}'
+            : '<i class="fas fa-circle mr-1"></i>{{ _("Not Connected") }}';
+        badge.className = connected
+            ? "px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 font-medium"
+            : "px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 font-medium";
+    }
+
+    function flash(card, msg, isError) {
+        var el = card.querySelector('[data-role="message"]');
+        if (!el) return;
+        el.textContent = msg || "";
+        el.classList.toggle("text-red-500", !!isError);
+        if (msg) {
+            setTimeout(function () { if (el.textContent === msg) el.textContent = ""; }, 4000);
+        }
+    }
+
+    function postJSON(url, body) {
+        return fetch(url, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken(),
+            },
+            body: JSON.stringify(body || {}),
+        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); });
+    }
+
+    function getJSON(url) {
+        return fetch(url, {
+            method: "GET",
+            credentials: "same-origin",
+            headers: { "Accept": "application/json" },
+        }).then(function (r) { return r.json(); });
+    }
+
+    function formToObject(form) {
+        var obj = {};
+        form.querySelectorAll("input, select, textarea").forEach(function (el) {
+            if (!el.name) return;
+            if (el.type === "checkbox") { obj[el.name] = el.checked; }
+            else { obj[el.name] = el.value; }
+        });
+        return obj;
+    }
+
+    function copyHandler(card) {
+        card.querySelectorAll('[data-role="copy"]').forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var key = btn.getAttribute("data-copy-from");
+                var input;
+                if (key && key.indexOf("data-role:") === 0) {
+                    input = card.querySelector('[data-role="' + key.slice("data-role:".length) + '"]');
+                } else {
+                    input = card.querySelector('[name="' + key + '"]');
+                }
+                if (!input) return;
+                try {
+                    navigator.clipboard.writeText(input.value).then(function () {
+                        flash(card, "{{ _('Copied to clipboard.') }}", false);
+                    });
+                } catch (_) {
+                    input.select();
+                    document.execCommand("copy");
+                    flash(card, "{{ _('Copied to clipboard.') }}", false);
+                }
+            });
+        });
+    }
+
+    // ---------------- GitHub ----------------
+    var gh = document.getElementById("connector-card-github");
+    if (gh) {
+        copyHandler(gh);
+        var ghForm = gh.querySelector('[data-role="form"]');
+        function ghLoad() {
+            getJSON(gh.dataset.statusUrl).then(function (s) {
+                if (!s.ok) return;
+                setConnectedBadge(gh, !!s.connected);
+                if (s.repo_owner) ghForm.elements["repo_owner"].value = s.repo_owner;
+                if (s.repo_name) ghForm.elements["repo_name"].value = s.repo_name;
+                if (s.default_project_id != null) ghForm.elements["default_project_id"].value = s.default_project_id;
+                ghForm.elements["auto_start_timer"].checked = !!s.auto_start_timer;
+                if (s.label_filter) ghForm.elements["label_filter"].value = s.label_filter;
+                if (s.has_webhook_secret) {
+                    var ws = ghForm.elements["webhook_secret"];
+                    if (ws) ws.value = "{{ _('(stored — leave empty to keep)') }}";
+                }
+            }).catch(function () {});
+        }
+        ghForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+            var data = formToObject(ghForm);
+            if (data.webhook_secret && data.webhook_secret.indexOf("(stored") === 0) delete data.webhook_secret;
+            postJSON(gh.dataset.configUrl, data).then(function (r) {
+                flash(gh, r.body.ok ? "{{ _('Saved.') }}" : (r.body.error || "{{ _('Save failed.') }}"), !r.body.ok);
+                if (r.body.ok) ghLoad();
+            });
+        });
+        gh.querySelector('[data-role="test"]').addEventListener("click", function () {
+            postJSON(gh.dataset.testUrl, {}).then(function (r) {
+                flash(gh, r.body.message || (r.body.success ? "OK" : "{{ _('Failed.') }}"), !r.body.success);
+            });
+        });
+        gh.querySelector('[data-role="sync"]').addEventListener("click", function () {
+            postJSON(gh.dataset.syncUrl, {}).then(function (r) {
+                if (r.body.ok) flash(gh, "{{ _('Synced') }} " + (r.body.synced || 0), false);
+                else flash(gh, r.body.error || "{{ _('Sync failed.') }}", true);
+            });
+        });
+        ghLoad();
+    }
+
+    // ---------------- Google Calendar ----------------
+    var gc = document.getElementById("connector-card-google");
+    if (gc) {
+        copyHandler(gc);
+        var gcForm = gc.querySelector('[data-role="form"]');
+        var gcNot = gc.querySelector('[data-role="not-connected"]');
+        function gcLoad() {
+            getJSON(gc.dataset.statusUrl).then(function (s) {
+                setConnectedBadge(gc, !!s.connected);
+                if (s.connected) {
+                    gcNot.classList.add("hidden");
+                    gcForm.classList.remove("hidden");
+                    var emailEl = gc.querySelector('[data-role="email"]');
+                    if (emailEl) emailEl.textContent = s.email || "—";
+                    if (s.calendar_id) gcForm.elements["calendar_id"].value = s.calendar_id;
+                    if (s.sync_direction) gcForm.elements["sync_direction"].value = s.sync_direction;
+                    if (s.default_project_id != null) gcForm.elements["default_project_id"].value = s.default_project_id;
+                    if (s.sync_days_back) gcForm.elements["sync_days_back"].value = s.sync_days_back;
+                    var lastEl = gc.querySelector('[data-role="last-sync"]');
+                    if (lastEl) lastEl.textContent = s.last_sync_at || "—";
+                } else {
+                    gcNot.classList.remove("hidden");
+                    gcForm.classList.add("hidden");
+                }
+            }).catch(function () {});
+        }
+        gcForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+            postJSON(gc.dataset.configUrl, formToObject(gcForm)).then(function (r) {
+                flash(gc, r.body.ok ? "{{ _('Saved.') }}" : (r.body.error || "{{ _('Save failed.') }}"), !r.body.ok);
+                if (r.body.ok) gcLoad();
+            });
+        });
+        gc.querySelector('[data-role="sync"]').addEventListener("click", function () {
+            postJSON(gc.dataset.syncUrl, {}).then(function (r) {
+                if (r.body.ok) {
+                    flash(gc, "{{ _('Imported') }} " + (r.body.imported || 0) + " / {{ _('exported') }} " + (r.body.exported || 0), false);
+                    gcLoad();
+                } else {
+                    flash(gc, r.body.error || "{{ _('Sync failed.') }}", true);
+                }
+            });
+        });
+        gcLoad();
+    }
+
+    // ---------------- Slack ----------------
+    var sl = document.getElementById("connector-card-slack");
+    if (sl) {
+        copyHandler(sl);
+        var slForm = sl.querySelector('[data-role="form"]');
+        var slDailyToggle = sl.querySelector('[data-role="daily-toggle"]');
+        var slTimeRow = sl.querySelector('[data-role="summary-time-row"]');
+        function slSyncTimeRow() {
+            if (slDailyToggle.checked) slTimeRow.classList.remove("hidden");
+            else slTimeRow.classList.add("hidden");
+        }
+        slDailyToggle.addEventListener("change", slSyncTimeRow);
+        function slLoad() {
+            getJSON(sl.dataset.statusUrl).then(function (s) {
+                setConnectedBadge(sl, !!s.connected);
+                if (s.channel_id) slForm.elements["channel_id"].value = s.channel_id;
+                slForm.elements["notify_on_start"].checked = !!s.notify_on_start;
+                slForm.elements["notify_on_stop"].checked = !!s.notify_on_stop;
+                slForm.elements["daily_summary"].checked = !!s.daily_summary;
+                if (s.daily_summary_time) slForm.elements["daily_summary_time"].value = s.daily_summary_time;
+                if (s.linked_slack_user_id) slForm.elements["linked_slack_user_id"].value = s.linked_slack_user_id;
+                slSyncTimeRow();
+            }).catch(function () {});
+        }
+        slForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+            var data = formToObject(slForm);
+            if (!data.bot_token) delete data.bot_token;
+            if (!data.signing_secret) delete data.signing_secret;
+            postJSON(sl.dataset.configUrl, data).then(function (r) {
+                flash(sl, r.body.ok ? "{{ _('Saved.') }}" : (r.body.error || "{{ _('Save failed.') }}"), !r.body.ok);
+                if (r.body.ok) slLoad();
+            });
+        });
+        sl.querySelector('[data-role="test"]').addEventListener("click", function () {
+            postJSON(sl.dataset.testUrl, {}).then(function (r) {
+                flash(sl, r.body.ok ? "{{ _('Test message sent.') }}" : (r.body.error || "{{ _('Test failed.') }}"), !r.body.ok);
+            });
+        });
+        slLoad();
+    }
+})();
+</script>

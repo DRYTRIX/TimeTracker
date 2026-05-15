@@ -48,6 +48,25 @@ def list_integrations():
 
     from flask import current_app
 
+    # Project options for the new opt-in connector cards (GitHub PAT,
+    # Google Calendar, Slack). Scope by user permissions to avoid leaking
+    # project names to subcontractors / scoped users.
+    try:
+        from app.models import Project
+
+        allowed_ids = current_user.get_allowed_project_ids()
+        query = Project.query.filter(Project.status == "active")
+        if allowed_ids is not None:
+            if not allowed_ids:
+                projects_for_connectors = []
+            else:
+                projects_for_connectors = query.filter(Project.id.in_(allowed_ids)).order_by(Project.name.asc()).all()
+        else:
+            projects_for_connectors = query.order_by(Project.name.asc()).all()
+    except Exception as exc:
+        logger.debug("Could not load projects for connector cards: %s", exc)
+        projects_for_connectors = []
+
     return render_template(
         "integrations/list.html",
         integrations=integrations,
@@ -55,6 +74,7 @@ def list_integrations():
         current_user=current_user,
         config=current_app.config,
         has_setup_wizard=has_setup_wizard,
+        projects_for_connectors=projects_for_connectors,
     )
 
 

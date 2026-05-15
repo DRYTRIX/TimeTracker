@@ -24,6 +24,14 @@ class TestVersionReading:
         version_pattern = r"^\d+\.\d+\.\d+.*$"
         assert re.match(version_pattern, version), f"Version '{version}' doesn't match expected pattern"
 
+    def test_get_version_ignores_docker_placeholder_app_version(self, monkeypatch):
+        """Dockerfile defaults APP_VERSION=dev-0; that must not hide setup.py semver."""
+        monkeypatch.setenv("APP_VERSION", "dev-0")
+        monkeypatch.delenv("TIMETRACKER_VERSION", raising=False)
+        version = _get_version_from_setup()
+        version_pattern = r"^\d+\.\d+\.\d+.*$"
+        assert re.match(version_pattern, version), f"Version '{version}' doesn't match expected pattern"
+
     def test_version_in_analytics_config(self):
         """Test that version is included in analytics config"""
         config = get_analytics_config()

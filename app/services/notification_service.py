@@ -16,6 +16,8 @@ from app.utils.db import safe_commit
 KIND_NO_TRACKING = "no_tracking_today"
 KIND_LONG_TIMER = "timer_running_long"
 KIND_DAILY_SUMMARY = "daily_summary"
+KIND_BREAK_REMINDER = "break_reminder"
+KIND_END_OF_DAY = "end_of_day_reminder"
 
 _HHMM_RE = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
 
@@ -116,14 +118,60 @@ def _in_hour_slot(user_local_now: datetime, target_hour: int, slot_minutes: int)
     return user_local_now.hour == target_hour and user_local_now.minute < slot_minutes
 
 
+def _bucket_marker_exists(user_id: int, kind: str, bucket_key: str) -> bool:
+    """True if a UserSmartNotificationDismissal row already records this bucket (i.e. already fired)."""
+    return (
+        UserSmartNotificationDismissal.query.filter_by(user_id=user_id, kind=kind, local_date=bucket_key)
+        .with_entities(UserSmartNotificationDismissal.id)
+        .first()
+        is not None
+    )
+
+
+def _record_bucket_marker(user_id: int, kind: str, bucket_key: str) -> bool:
+    """Insert a marker row so this bucket only fires once. Returns True on success.
+
+    Idempotent: if the row already exists (race), returns False so the caller does not
+    emit a duplicate notification on this request.
+    """
+    try:
+        db.session.add(
+            UserSmartNotificationDismissal(
+                user_id=user_id,
+                local_date=bucket_key,
+                kind=kind,
+                dismissed_at=datetime.utcnow(),
+            )
+        )
+        return bool(safe_commit())
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return False
+
+
 class NotificationService:
     """Builds smart notification payloads for the authenticated user."""
 
-    _PRIORITY = {KIND_LONG_TIMER: 0, KIND_NO_TRACKING: 1, KIND_DAILY_SUMMARY: 2}
+    _PRIORITY = {
+        KIND_LONG_TIMER: 0,
+        KIND_BREAK_REMINDER: 1,
+        KIND_NO_TRACKING: 1,
+        KIND_DAILY_SUMMARY: 2,
+        KIND_END_OF_DAY: 3,
+    }
 
     @classmethod
     def dismiss(cls, user, kind: str, local_date: str) -> bool:
-        if kind not in (KIND_NO_TRACKING, KIND_LONG_TIMER, KIND_DAILY_SUMMARY):
+        if kind not in (
+            KIND_NO_TRACKING,
+            KIND_LONG_TIMER,
+            KIND_DAILY_SUMMARY,
+            KIND_BREAK_REMINDER,
+            KIND_END_OF_DAY,
+        ):
             return False
         if not local_date or len(local_date) != 10:
             return False
@@ -154,6 +202,7 @@ class NotificationService:
 
         default_nudge = (cfg.get("SMART_NOTIFY_NO_TRACKING_AFTER") or "16:00").strip()
         default_summary = (cfg.get("SMART_NOTIFY_SUMMARY_AT") or "18:00").strip()
+        default_end_of_day = (cfg.get("SMART_NOTIFY_END_OF_DAY_AT") or "17:00").strip()
 
         meta_base = {
             "max_per_day": max_per,
@@ -171,6 +220,7 @@ class NotificationService:
                     "enabled": False,
                     "no_tracking_after": (getattr(user, "smart_notify_no_tracking_after", None) or default_nudge),
                     "summary_at": (getattr(user, "smart_notify_summary_at", None) or default_summary),
+                    "end_of_day_at": (getattr(user, "smart_notify_end_of_day_time", None) or default_end_of_day),
                     "browser_push": bool(getattr(user, "smart_notify_browser", False)),
                 },
             }
@@ -184,10 +234,13 @@ class NotificationService:
 
         nudge_t = parse_hhmm(getattr(user, "smart_notify_no_tracking_after", None)) or parse_hhmm(default_nudge)
         summary_t = parse_hhmm(getattr(user, "smart_notify_summary_at", None)) or parse_hhmm(default_summary)
+        end_of_day_t = parse_hhmm(getattr(user, "smart_notify_end_of_day_time", None)) or parse_hhmm(default_end_of_day)
         if not nudge_t:
             nudge_t = (16, 0)
         if not summary_t:
             summary_t = (18, 0)
+        if not end_of_day_t:
+            end_of_day_t = (17, 0)
 
         meta = {
             **meta_base,
@@ -195,6 +248,7 @@ class NotificationService:
             "enabled": True,
             "no_tracking_after": f"{nudge_t[0]:02d}:{nudge_t[1]:02d}",
             "summary_at": f"{summary_t[0]:02d}:{summary_t[1]:02d}",
+            "end_of_day_at": f"{end_of_day_t[0]:02d}:{end_of_day_t[1]:02d}",
             "browser_push": bool(getattr(user, "smart_notify_browser", False)),
         }
 
@@ -253,6 +307,58 @@ class NotificationService:
                         "message": f"Today you logged {hours_today:.1f}h in completed entries.",
                         "type": "success",
                         "priority": "normal",
+                    }
+                )
+
+        # Break reminder: nudge once per interval bucket while a timer is running
+        if (
+            getattr(user, "smart_notify_break_reminder", False)
+            and KIND_BREAK_REMINDER not in dismissed
+            and active_timer is not None
+            and active_timer.start_time is not None
+        ):
+            try:
+                raw_interval = int(getattr(user, "smart_notify_break_interval_minutes", 60) or 60)
+            except (TypeError, ValueError):
+                raw_interval = 60
+            interval_minutes = max(15, min(240, raw_interval))
+            start_u = _entry_start_as_utc_aware(active_timer.start_time)
+            if start_u:
+                elapsed_minutes = (now_utc - start_u).total_seconds() / 60.0
+                if elapsed_minutes >= interval_minutes:
+                    bucket = int(elapsed_minutes // interval_minutes)
+                    bucket_key = f"break_{active_timer.id}_{bucket}"
+                    if not _bucket_marker_exists(user.id, KIND_BREAK_REMINDER, bucket_key):
+                        if _record_bucket_marker(user.id, KIND_BREAK_REMINDER, bucket_key):
+                            elapsed_h = int(elapsed_minutes // 60)
+                            elapsed_m = int(elapsed_minutes - elapsed_h * 60)
+                            candidates.append(
+                                {
+                                    "kind": KIND_BREAK_REMINDER,
+                                    "title": "Time for a break",
+                                    "message": (
+                                        f"You've been tracking for {elapsed_h}h {elapsed_m}m. "
+                                        f"Consider taking a short break."
+                                    ),
+                                    "type": "info",
+                                    "priority": "normal",
+                                    "action": {"label": "Pause timer", "url": "/timer/pause"},
+                                }
+                            )
+
+        # End-of-day reminder (time slot)
+        if getattr(user, "smart_notify_end_of_day", False) and KIND_END_OF_DAY not in dismissed:
+            if _in_hour_slot(user_local_now, end_of_day_t[0], slot_minutes):
+                candidates.append(
+                    {
+                        "kind": KIND_END_OF_DAY,
+                        "title": "End of day",
+                        "message": (
+                            f"It's nearly end of day. You've logged {hours_today:.1f}h today."
+                        ),
+                        "type": "info",
+                        "priority": "normal",
+                        "action": {"label": "View today's entries", "url": "/time-entries"},
                     }
                 )
 

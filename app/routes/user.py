@@ -72,9 +72,12 @@ def settings():
             current_user.smart_notify_long_timer = "smart_notify_long_timer" in request.form
             current_user.smart_notify_daily_summary = "smart_notify_daily_summary" in request.form
             current_user.smart_notify_browser = "smart_notify_browser" in request.form
+            current_user.smart_notify_break_reminder = "smart_notify_break_reminder" in request.form
+            current_user.smart_notify_end_of_day = "smart_notify_end_of_day" in request.form
             for form_key, attr in (
                 ("smart_notify_no_tracking_after", "smart_notify_no_tracking_after"),
                 ("smart_notify_summary_at", "smart_notify_summary_at"),
+                ("smart_notify_end_of_day_time", "smart_notify_end_of_day_time"),
             ):
                 raw = (request.form.get(form_key) or "").strip()
                 if raw and len(raw) <= 5:
@@ -84,6 +87,13 @@ def settings():
                         setattr(current_user, attr, None)
                 else:
                     setattr(current_user, attr, None)
+            try:
+                raw_interval = (request.form.get("smart_notify_break_interval_minutes") or "").strip()
+                if raw_interval:
+                    parsed_interval = int(raw_interval)
+                    current_user.smart_notify_break_interval_minutes = max(15, min(240, parsed_interval))
+            except (TypeError, ValueError):
+                pass
 
             # Profile information
             full_name = request.form.get("full_name", "").strip()

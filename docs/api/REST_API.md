@@ -333,6 +333,60 @@ Returns a **partial calendar week** (Monday 00:00 local time through **now**) co
 
 The main dashboard renders this as a grouped bar chart (Chart.js) with a short summary line; data is loaded by `app/static/dashboard-enhancements.js` on dashboard refresh.
 
+#### Personal productivity stats
+
+```
+GET /api/productivity/stats
+```
+
+Returns streaks, focus metrics, daily breakdown, project mix, activity heatmap, and insight strings for the **current user** only. Powers the **My productivity** page (`/dashboard/productivity`). See [docs/features/PRODUCTIVITY_DASHBOARD.md](../features/PRODUCTIVITY_DASHBOARD.md).
+
+**Query parameters:**
+
+- `period` (optional, int) — days for focus and project breakdown (default **30**, max **90**). Daily breakdown and heatmap use fixed windows (14 and 84 days).
+
+**Caching:** up to **5 minutes** per user and `period` via `app.utils.cache.get_cache()` when available. Skipped when the user has an **active timer** so today/week stats stay current.
+
+**Response (200):** `{ "ok": true, "period": 30, "summary": {...}, "daily_breakdown": [...], "streak": {...}, "focus": {...}, "projects": [...], "heatmap": [...], "insights": [...] }`
+
+**Errors:** `{ "ok": false, "error": "..." }` with HTTP **500** on server failure.
+
+#### Project forecast (web JSON)
+
+```
+GET /api/projects/<project_id>/forecast
+```
+
+Deterministic velocity, budget, timeline, and task metrics for a project the user can access. Optional AI narrative when the AI helper is enabled.
+
+**Query parameters:**
+
+- `ai` — when truthy (`1`, `true`, `yes`, `on`), include LLM-generated narrative, risks, and recommendations (requires AI helper enabled).
+- `refresh` — when truthy, bypass the in-process cache for this project.
+
+**Caching:** in-memory per process, **10 minutes** per project and mode (`deterministic` vs `ai`), unless `refresh=true`.
+
+**Response (200):** `{ "ok": true, "forecast": {...}, "ai": {...} }` when `ai=true` (`ai` may report `ok: false` with `error_code` while still returning `forecast`).
+
+See [docs/BUDGET_ALERTS_AND_FORECASTING.md](../BUDGET_ALERTS_AND_FORECASTING.md).
+
+#### AI time entry suggestions (web JSON)
+
+```
+GET /api/ai/suggest
+```
+
+Returns up to five suggested time entries (recent project/task pairs with last notes/tags). Deterministic suggestions always; when `rich=1` and the AI helper is enabled, may merge LLM suggestions.
+
+**Query parameters:**
+
+- `q` (optional) — filter by project name or notes substring.
+- `rich` (optional) — request LLM-enhanced suggestions when AI is enabled.
+
+**Response (200):** `{ "ok": true, "suggestions": [{ "project_id", "project_name", "task_id", "task_name", "notes", "tags", "billable", "confidence", "source" }] }`
+
+Used by the Start Timer modal and manual entry **Autofill** when `ai_enabled` is true in the template context.
+
 ### Search
 
 #### Global Search
@@ -855,6 +909,35 @@ GET /api/v1/users/me
 **Required Scope:** `read:users`
 
 Returns information about the authenticated user.
+
+### Personal integration connectors
+
+Endpoints for the per-user **GitHub**, **Google Calendar**, and **Slack**
+connectors (see [docs/integrations/README.md](../integrations/README.md)).
+All `config`/`status`/`test`/`sync` routes are session-authenticated
+(`@login_required`); the two webhook receivers are unauthenticated but
+verify a provider signature on every request.
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| `POST` | `/api/integrations/github/webhook`     | HMAC-SHA256 (`X-Hub-Signature-256`) | Receives GitHub `issues` / `ping` events. |
+| `POST` | `/api/integrations/github/sync`        | session, admin | One-shot pull of open issues. |
+| `POST` | `/api/integrations/github/config`      | session | Save the GitHub card. |
+| `POST` | `/api/integrations/github/test`        | session | Verify the personal access token. |
+| `GET`  | `/api/integrations/github/status`      | session | Current config snapshot (no secrets). |
+| `GET`  | `/integrations/google/connect`         | session | Start the Google OAuth dance. |
+| `GET`  | `/integrations/google/callback`        | session | OAuth callback — stores tokens. |
+| `POST` | `/integrations/google/disconnect`      | session | Revokes the token and clears config. |
+| `POST` | `/api/integrations/google/sync`        | session | Runs `import`/`export`/`both`. |
+| `GET`  | `/api/integrations/google/status`      | session | Linked email, calendar id, last sync. |
+| `POST` | `/api/integrations/slack/events`       | HMAC-SHA256 (`X-Slack-Signature`) | Slack URL verification + `/tt` slash commands. |
+| `POST` | `/api/integrations/slack/config`       | session | Save the Slack card. |
+| `POST` | `/api/integrations/slack/test`         | session | Sends a test message to the channel. |
+| `GET`  | `/api/integrations/slack/status`       | session | Current config snapshot (no secrets). |
+
+These endpoints sit under the regular Flask cookie session (not the
+`Bearer` token flow used by `/api/v1/...`) because they back the
+integrations settings UI, which is browser-based.
 
 ## Interactive API Documentation
 
