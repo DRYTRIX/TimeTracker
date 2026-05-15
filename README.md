@@ -89,9 +89,15 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 > **📋 For complete release history, see [CHANGELOG.md](CHANGELOG.md)**
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
-- 📱 **Native Mobile & Desktop Apps** — Flutter mobile app (iOS/Android) and Electron desktop app with time tracking, offline support, and API integration ([Build Guide](scripts/README-BUILD.md), [Docs](docs/mobile-desktop-apps/README.md))
-- 📋 **Project Analysis & Documentation** — Comprehensive project analysis and documentation updates
-- 🔧 **Version Consistency** — Fixed version inconsistencies across documentation files
+
+### ✨ Highlights of v5.6.0
+
+- 🔌 **Personal integration connectors** — Per-user, opt-in **GitHub**, **Google Calendar**, and **Slack** connectors with signature-verified webhooks, OAuth, scheduled syncs, and a `/tt` Slack slash command ([GitHub](docs/integrations/GITHUB_CONNECTOR.md) · [Google Calendar](docs/integrations/GOOGLE_CALENDAR.md) · [Slack](docs/integrations/SLACK.md))
+- 🎨 **Custom themes** — Per-user theme picker with 8 built-in themes plus independent accent, sidebar, text-size, and corner-radius overrides ([docs](docs/features/CUSTOM_THEMES.md))
+- 📊 **Personal productivity dashboard** — New **My productivity** page with streaks, 14-day hours chart, project doughnut, focus stats, and a 12-week activity heatmap ([docs](docs/features/PRODUCTIVITY_DASHBOARD.md))
+- 🤖 **AI time entry suggestions** — Deterministic (and optional LLM-rich) project/task/notes suggestions in the Start Timer modal and manual entry **Autofill**
+- 🔮 **Project forecast panel** — `ForecastService` and a self-contained forecast card on active projects with estimated hours or budget ([docs](docs/BUDGET_ALERTS_AND_FORECASTING.md))
+- ⏰ **Smart reminders: break & end-of-day** — Optional Pomodoro-style break nudges, end-of-day wrap-up toasts, and browser push for eligible users ([docs](docs/features/SMART_NOTIFICATIONS.md))
 
 See [CHANGELOG.md](CHANGELOG.md) for all release notes and version history.
 
