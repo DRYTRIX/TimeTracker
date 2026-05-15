@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Smart reminders: break, end-of-day, and idle toasts** — Extends smart in-app notifications with optional **break reminder** (Pomodoro-style nudge every N minutes while a timer runs, 15–240 min) and **end-of-day wrap-up** (hours logged today in a configurable hour window). New kinds `break_reminder` and `end_of_day_reminder` in `NotificationService`; user prefs under **Settings → Notifications**; migration `154_add_smart_notify_break_and_eod`. [`app/static/idle.js`](app/static/idle.js) shows blue/purple/green toasts for no-tracking, break, and end-of-day (alongside existing idle stop-timer prompt). APScheduler job `smart_reminder_push` (every 15 min) sends browser push for eligible users when VAPID and push subscriptions are available. Env default `SMART_NOTIFY_END_OF_DAY_AT` (`17:00`). See [docs/features/SMART_NOTIFICATIONS.md](docs/features/SMART_NOTIFICATIONS.md).
+
 ## [5.5.7] - 2026-05-14
 
 ### Fixed

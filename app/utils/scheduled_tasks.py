@@ -591,6 +591,31 @@ def register_scheduled_tasks(scheduler, app=None):
         )
         logger.info("Registered remind-to-log task")
 
+        # Smart reminder browser push notifications – every 15 minutes
+        def send_smart_reminder_push_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for smart reminder push")
+                    return
+            with app_instance.app_context():
+                try:
+                    send_smart_reminder_push_notifications()
+                except Exception as e:
+                    logger.warning("Smart reminder push job failed: %s", e)
+
+        scheduler.add_job(
+            func=send_smart_reminder_push_with_app,
+            trigger="interval",
+            minutes=15,
+            id="smart_reminder_push",
+            name="Send smart reminder browser push notifications",
+            replace_existing=True,
+        )
+        logger.info("Registered smart reminder push task")
+
         # Base telemetry heartbeat (daily) – always-on minimal install footprint
         def send_base_telemetry_heartbeat_with_app():
             app_instance = app
@@ -639,6 +664,133 @@ def register_scheduled_tasks(scheduler, app=None):
 
     except Exception as e:
         logger.error(f"Error registering scheduled tasks: {e}")
+
+
+def send_smart_reminder_push_notifications():
+    """Send browser push notifications for actionable smart reminders.
+
+    For every active user that has smart notifications enabled AND has opted into
+    one of the new reminder kinds, ask :class:`NotificationService` what they would
+    see right now and push any actionable ``info``/``warning`` entries to their
+    registered push subscriptions. Degrades silently if the push_notifications
+    blueprint is absent or pywebpush is not installed.
+    """
+    with current_app.app_context():
+        try:
+            from app.routes import push_notifications as _push_bp_mod  # noqa: F401
+        except Exception:
+            logger.debug("push_notifications blueprint not available; skipping smart reminder push job")
+            return 0
+
+        try:
+            from app.models import PushSubscription
+        except Exception:
+            logger.debug("PushSubscription model not available; skipping smart reminder push job")
+            return 0
+
+        try:
+            from app.services.notification_service import NotificationService
+        except Exception:
+            logger.debug("NotificationService not available; skipping smart reminder push job")
+            return 0
+
+        try:
+            users = User.query.filter(
+                User.is_active == True,
+                User.smart_notifications_enabled == True,
+                db.or_(
+                    User.smart_notify_break_reminder == True,
+                    User.smart_notify_end_of_day == True,
+                    User.smart_notify_no_tracking == True,
+                ),
+            ).all()
+        except Exception as e:
+            logger.warning("Could not query users for smart reminder push: %s", e)
+            return 0
+
+        if not users:
+            return 0
+
+        sent = 0
+        for user in users:
+            try:
+                payload = NotificationService.build_for_user(user)
+                notifications = (payload or {}).get("notifications") or []
+                if not notifications:
+                    continue
+                subscriptions = PushSubscription.get_user_subscriptions(user.id)
+                if not subscriptions:
+                    logger.debug("User %s has no push subscriptions; skipping", user.username)
+                    continue
+                for note in notifications:
+                    ntype = (note.get("type") or "").lower()
+                    if ntype not in ("warning", "info"):
+                        continue
+                    _delivered = _deliver_push_to_subscriptions(user, subscriptions, note)
+                    if _delivered:
+                        sent += _delivered
+                logger.debug("Smart reminder push processed for %s", user.username)
+            except Exception as e:
+                logger.warning("Smart reminder push failed for user %s: %s", getattr(user, "username", user.id), e)
+        return sent
+
+
+def _deliver_push_to_subscriptions(user, subscriptions, note) -> int:
+    """Send a single notification to all of the user's push subscriptions.
+
+    Uses pywebpush when available and VAPID keys are configured; otherwise logs at
+    debug and reports zero deliveries so the scheduler job can keep going.
+    """
+    try:
+        from pywebpush import WebPushException, webpush  # type: ignore
+    except Exception:
+        logger.debug("pywebpush not installed; smart reminder push skipped for %s", user.username)
+        return 0
+
+    cfg = current_app.config
+    vapid_private = (cfg.get("VAPID_PRIVATE_KEY") or "").strip()
+    vapid_public = (cfg.get("VAPID_PUBLIC_KEY") or "").strip()
+    vapid_claims_email = (cfg.get("VAPID_CONTACT_EMAIL") or cfg.get("MAIL_DEFAULT_SENDER") or "").strip()
+    if not vapid_private or not vapid_public:
+        logger.debug("VAPID keys not configured; smart reminder push skipped for %s", user.username)
+        return 0
+
+    import json as _json
+
+    body = {
+        "kind": note.get("kind"),
+        "title": note.get("title") or "TimeTracker",
+        "message": note.get("message") or "",
+        "type": note.get("type") or "info",
+        "action": note.get("action") or None,
+    }
+    delivered = 0
+    for sub in subscriptions:
+        try:
+            webpush(
+                subscription_info={"endpoint": sub.endpoint, "keys": sub.keys or {}},
+                data=_json.dumps(body),
+                vapid_private_key=vapid_private,
+                vapid_claims={"sub": f"mailto:{vapid_claims_email}" if vapid_claims_email else "mailto:noreply@example.invalid"},
+            )
+            try:
+                sub.update_last_used()
+            except Exception:
+                pass
+            delivered += 1
+        except WebPushException as e:
+            status = getattr(getattr(e, "response", None), "status_code", None)
+            if status in (404, 410):
+                try:
+                    db.session.delete(sub)
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+            else:
+                logger.warning("Web push failed for %s (endpoint=%s): %s", user.username, sub.endpoint[:60], e)
+        except Exception as e:
+            logger.warning("Web push failed for %s (endpoint=%s): %s", user.username, sub.endpoint[:60], e)
+    return delivered
 
 
 def process_remind_to_log():

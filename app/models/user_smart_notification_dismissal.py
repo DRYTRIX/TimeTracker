@@ -11,6 +11,6 @@ class UserSmartNotificationDismissal(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    local_date = db.Column(db.String(10), nullable=False)  # YYYY-MM-DD in user's timezone
+    local_date = db.Column(db.String(64), nullable=False)  # YYYY-MM-DD in user's timezone, or bucket key
     kind = db.Column(db.String(32), nullable=False)
     dismissed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

@@ -62,6 +62,10 @@ class User(UserMixin, db.Model):
     smart_notify_browser = db.Column(db.Boolean, default=False, nullable=False)
     smart_notify_no_tracking_after = db.Column(db.String(5), nullable=True)  # HH:MM override; null = use app config
     smart_notify_summary_at = db.Column(db.String(5), nullable=True)  # HH:MM override; null = use app config
+    smart_notify_break_reminder = db.Column(db.Boolean, default=False, nullable=False)
+    smart_notify_break_interval_minutes = db.Column(db.Integer, default=60, nullable=False)
+    smart_notify_end_of_day = db.Column(db.Boolean, default=False, nullable=False)
+    smart_notify_end_of_day_time = db.Column(db.String(5), nullable=True)  # HH:MM; null = use app config
     timezone = db.Column(db.String(50), nullable=True)  # User-specific timezone override
     date_format = db.Column(db.String(20), default=None, nullable=True)  # None = use system default
     time_format = db.Column(db.String(10), default=None, nullable=True)  # None = use system default
