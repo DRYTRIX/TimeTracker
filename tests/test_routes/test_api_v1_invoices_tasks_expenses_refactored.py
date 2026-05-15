@@ -52,13 +52,13 @@ class TestAPIInvoicesRefactored:
         assert "invoice" in data
         assert data["invoice"]["id"] == invoice.id
 
-    def test_create_invoice_uses_service_layer(self, app, client_with_token, project, client):
+    def test_create_invoice_uses_service_layer(self, app, client_with_token, project, test_client):
         """Test that create_invoice route uses service layer"""
         response = client_with_token.post(
             "/api/v1/invoices",
             json={
                 "project_id": project.id,
-                "client_id": client.id,
+                "client_id": test_client.id,
                 "client_name": client.name,
                 "due_date": (date.today() + timedelta(days=30)).isoformat(),
                 "notes": "Test invoice",

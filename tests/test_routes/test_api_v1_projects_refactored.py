@@ -51,11 +51,11 @@ class TestAPIProjectsRefactored:
         assert "project" in data
         assert data["project"]["id"] == project.id
 
-    def test_create_project_uses_service_layer(self, app, client_with_token, client):
+    def test_create_project_uses_service_layer(self, app, client_with_token, test_client):
         """Test that create_project route uses service layer"""
         response = client_with_token.post(
             "/api/v1/projects",
-            json={"name": "API Test Project", "client_id": client.id, "billable": True},
+            json={"name": "API Test Project", "client_id": test_client.id, "billable": True},
             content_type="application/json",
         )
 
@@ -103,9 +103,9 @@ class TestAPIProjectsRefactored:
         db.session.refresh(project)
         assert project.status == "archived"
 
-    def test_list_projects_with_filters(self, app, client_with_token, project, client):
+    def test_list_projects_with_filters(self, app, client_with_token, project, test_client):
         """Test list_projects with status and client filters"""
-        response = client_with_token.get(f"/api/v1/projects?status=active&client_id={client.id}")
+        response = client_with_token.get(f"/api/v1/projects?status=active&client_id={test_client.id}")
 
         assert response.status_code == 200
         data = response.get_json()
@@ -113,4 +113,4 @@ class TestAPIProjectsRefactored:
         # All returned projects should match filters
         for p in data["projects"]:
             assert p["status"] == "active"
-            assert p["client_id"] == client.id
+            assert p["client_id"] == test_client.id
