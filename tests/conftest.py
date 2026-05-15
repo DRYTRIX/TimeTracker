@@ -802,6 +802,133 @@ def invoice_with_items(app, invoice):
 
 
 @pytest.fixture
+def mileage(app, user, project):
+    """Create a mileage entry tied to user + project."""
+    from datetime import date
+    from decimal import Decimal
+
+    from app.models import Mileage
+
+    entry = Mileage(
+        user_id=user.id,
+        trip_date=date.today(),
+        purpose="Client visit",
+        start_location="Office",
+        end_location="Client Site",
+        distance_km=Decimal("25.00"),
+        rate_per_km=Decimal("0.50"),
+        project_id=project.id,
+    )
+    entry.calculated_amount = entry.distance_km * entry.rate_per_km
+    db.session.add(entry)
+    db.session.commit()
+    db.session.refresh(entry)
+    return entry
+
+
+@pytest.fixture
+def expense(app, user, project):
+    """Create an expense tied to user + project."""
+    from datetime import date
+    from decimal import Decimal
+
+    from app.models import Expense
+
+    item = Expense(
+        user_id=user.id,
+        title="Test expense",
+        category="travel",
+        amount=Decimal("42.50"),
+        expense_date=date.today(),
+        project_id=project.id,
+    )
+    db.session.add(item)
+    db.session.commit()
+    db.session.refresh(item)
+    return item
+
+
+@pytest.fixture
+def payment(app, invoice):
+    """Create a payment recorded against the test invoice."""
+    from datetime import date
+    from decimal import Decimal
+
+    from app.models import Payment
+
+    p = Payment(
+        invoice_id=invoice.id,
+        amount=Decimal("100.00"),
+        payment_date=date.today(),
+        method="bank_transfer",
+        status="completed",
+    )
+    db.session.add(p)
+    db.session.commit()
+    db.session.refresh(p)
+    return p
+
+
+@pytest.fixture
+def credit_note(app, invoice, user):
+    """Create a credit note against the test invoice."""
+    from decimal import Decimal
+
+    from app.models import CreditNote
+
+    cn = CreditNote(
+        invoice_id=invoice.id,
+        credit_number=f"CN-{invoice.id}-1",
+        amount=Decimal("25.00"),
+        reason="Test credit note",
+        created_by=user.id,
+    )
+    db.session.add(cn)
+    db.session.commit()
+    db.session.refresh(cn)
+    return cn
+
+
+@pytest.fixture
+def recurring_invoice(app, project, test_client):
+    """Create a recurring invoice template tied to project + client."""
+    from datetime import date, timedelta
+
+    from app.models import RecurringInvoice
+
+    ri = RecurringInvoice(
+        name="Monthly retainer",
+        project_id=project.id,
+        client_id=test_client.id,
+        client_name=test_client.name,
+        frequency="monthly",
+        interval=1,
+        next_run_date=date.today() + timedelta(days=30),
+    )
+    db.session.add(ri)
+    db.session.commit()
+    db.session.refresh(ri)
+    return ri
+
+
+@pytest.fixture
+def quote(app, test_client, user):
+    """Create a quote tied to the test client."""
+    from app.models import Quote
+
+    q = Quote(
+        quote_number=f"Q-{test_client.id}-1",
+        client_id=test_client.id,
+        title="Test quote",
+        created_by=user.id,
+    )
+    db.session.add(q)
+    db.session.commit()
+    db.session.refresh(q)
+    return q
+
+
+@pytest.fixture
 def authenticated_client(client, user):
     """Create an authenticated test client."""
     # Use the actual login endpoint to properly authenticate

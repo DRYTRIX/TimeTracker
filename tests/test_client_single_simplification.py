@@ -13,7 +13,9 @@ from flask import url_for
 
 @pytest.mark.integration
 @pytest.mark.routes
-def test_manual_entry_shows_single_client_prefilled(authenticated_client, app, user, test_client):
+def test_manual_entry_shows_single_client_prefilled(
+    authenticated_client, app, user, test_client
+):
     """When only one client exists, manual entry form shows pre-filled grayed-out client."""
     with app.app_context():
         # Ensure exactly one active client (test_client from fixture)
@@ -35,15 +37,17 @@ def test_manual_entry_shows_single_client_prefilled(authenticated_client, app, u
 
 @pytest.mark.integration
 @pytest.mark.routes
-def test_manual_entry_shows_select_when_multiple_clients(authenticated_client, app, user, test_client):
+def test_manual_entry_shows_select_when_multiple_clients(
+    authenticated_client, app, user, test_client
+):
     """When multiple clients exist, manual entry form shows normal client select."""
     with app.app_context():
         # Add a second client
         second = Client(
             name="Second Client",
             email="second@example.com",
-            status="active",
         )
+        second.status = "active"
         db.session.add(second)
         db.session.commit()
 
@@ -55,6 +59,6 @@ def test_manual_entry_shows_select_when_multiple_clients(authenticated_client, a
         html = response.get_data(as_text=True)
 
         # Should have normal select, not single-client hidden + disabled
-        assert '<select' in html
+        assert "<select" in html
         assert 'id="client_id"' in html or 'name="client_id"' in html
         assert "Select a client" in html or "client" in html.lower()

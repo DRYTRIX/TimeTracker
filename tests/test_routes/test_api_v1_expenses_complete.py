@@ -8,7 +8,7 @@ pytestmark = [pytest.mark.api, pytest.mark.integration]
 
 from datetime import date
 from decimal import Decimal
-from app.models import Expense, Project, ApiToken
+from app.models import Expense, ApiToken, User
 
 
 class TestAPIExpensesComplete:
@@ -18,7 +18,9 @@ class TestAPIExpensesComplete:
     def api_token(self, app, user):
         """Create an API token for testing"""
         token, plain_token = ApiToken.create_token(
-            user_id=user.id, name="Test API Token", scopes="read:expenses,write:expenses"
+            user_id=user.id,
+            name="Test API Token",
+            scopes="read:expenses,write:expenses",
         )
         from app import db
 
@@ -34,7 +36,9 @@ class TestAPIExpensesComplete:
         test_client.environ_base["HTTP_AUTHORIZATION"] = f"Bearer {plain_token}"
         return test_client
 
-    def test_list_expenses_with_filters(self, app, client_with_token, user, project, expense):
+    def test_list_expenses_with_filters(
+        self, app, client_with_token, user, project, expense
+    ):
         """Test list_expenses with various filters"""
         # Filter by project
         response = client_with_token.get(f"/api/v1/expenses?project_id={project.id}")
@@ -78,7 +82,7 @@ class TestAPIExpensesComplete:
         data = response.get_json()
         assert "expense" in data
         assert data["expense"]["title"] == "Complete Test Expense"
-        assert data["expense"]["amount"] == "250.75"
+        assert data["expense"]["amount"] == 250.75
 
     def test_update_expense_uses_service_layer(self, app, client_with_token, expense):
         """Test that update_expense uses service layer"""
@@ -109,7 +113,7 @@ class TestAPIExpensesComplete:
 
     def test_expense_permissions(self, app, user, project):
         """Test expense access permissions"""
-        from app.models import Expense, ApiToken
+        from app.models import ApiToken
         from app import db
 
         # Create expense for another user
@@ -127,7 +131,9 @@ class TestAPIExpensesComplete:
 
             # Create token for first user
             token, plain_token = ApiToken.create_token(
-                user_id=user.id, name="Test Token", scopes="read:expenses,write:expenses"
+                user_id=user.id,
+                name="Test Token",
+                scopes="read:expenses,write:expenses",
             )
             db.session.add(token)
             db.session.commit()

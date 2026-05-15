@@ -72,7 +72,7 @@ class TestAPIMileageRefactored:
         assert response.status_code == 201
         data = response.get_json()
         assert "mileage" in data
-        assert data["mileage"]["distance_km"] == "50.5"
+        assert data["mileage"]["distance_km"] == 50.5
 
     def test_update_mileage(self, app, client_with_token, mileage):
         """Test update_mileage route"""

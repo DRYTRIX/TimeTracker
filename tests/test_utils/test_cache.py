@@ -125,33 +125,35 @@ class TestRedisCache:
 class TestCacheIntegration:
     """Integration tests for cache utilities"""
 
-    @patch("app.utils.cache.current_app")
-    def test_get_cache_with_redis_enabled(self, mock_app):
-        """Test get_cache when Redis is enabled"""
-        mock_config = {"REDIS_ENABLED": True, "REDIS_URL": "redis://localhost:6379/0", "REDIS_DEFAULT_TTL": 3600}
-        mock_app.config = mock_config
+    def test_get_cache_with_redis_enabled(self, app):
+        """Test get_cache when Redis is enabled (RedisCache is mocked)."""
+        import app.utils.cache as cache_module
 
-        with patch("app.utils.cache.RedisCache") as mock_redis_cache:
-            mock_instance = MagicMock()
-            mock_instance._connected = True
-            mock_redis_cache.return_value = mock_instance
+        cache_module._cache = None
+        with app.app_context():
+            app.config["REDIS_ENABLED"] = True
+            app.config["REDIS_URL"] = "redis://localhost:6379/0"
+            app.config["REDIS_DEFAULT_TTL"] = 3600
+
+            with patch("app.utils.cache.RedisCache") as mock_redis_cache:
+                mock_instance = MagicMock()
+                mock_instance._connected = True
+                mock_redis_cache.return_value = mock_instance
+
+                cache = get_cache()
+                assert cache is not None
+
+    def test_get_cache_fallback_to_memory(self, app):
+        """Test get_cache falls back to in-memory when Redis is disabled."""
+        import app.utils.cache as cache_module
+
+        cache_module._cache = None
+        with app.app_context():
+            app.config["REDIS_ENABLED"] = False
+            app.config["REDIS_DEFAULT_TTL"] = 3600
 
             cache = get_cache()
-            assert cache is not None
-
-    @patch("app.utils.cache.current_app")
-    def test_get_cache_fallback_to_memory(self, mock_app):
-        """Test get_cache falls back to in-memory when Redis unavailable"""
-        mock_config = {"REDIS_ENABLED": False, "REDIS_DEFAULT_TTL": 3600}
-        mock_app.config = mock_config
-
-        # Reset global cache
-        import app.utils.cache
-
-        app.utils.cache._cache = None
-
-        cache = get_cache()
-        assert isinstance(cache, InMemoryCache)
+            assert isinstance(cache, InMemoryCache)
 
     def test_cache_decorator(self):
         """Test the @cached decorator"""
