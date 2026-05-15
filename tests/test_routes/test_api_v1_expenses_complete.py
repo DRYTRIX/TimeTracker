@@ -82,7 +82,7 @@ class TestAPIExpensesComplete:
         data = response.get_json()
         assert "expense" in data
         assert data["expense"]["title"] == "Complete Test Expense"
-        assert data["expense"]["amount"] == "250.75"
+        assert data["expense"]["amount"] == 250.75
 
     def test_update_expense_uses_service_layer(self, app, client_with_token, expense):
         """Test that update_expense uses service layer"""

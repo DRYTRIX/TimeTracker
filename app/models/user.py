@@ -419,14 +419,18 @@ class User(UserMixin, db.Model):
     # Permission and role helpers
     def has_permission(self, permission_name):
         """Check if user has a specific permission through any of their roles"""
+        # Legacy admin bypass: a user with role="admin" and no explicit
+        # roles assigned should have all permissions for backward
+        # compatibility. Check this BEFORE _auto_assign_role_from_legacy
+        # — that helper appends a Role row to self.roles as a side effect,
+        # and an empty seeded "admin" role would otherwise mask the
+        # bypass and leave the user with no effective permissions.
+        if self.role == "admin" and not self.roles:
+            return True
+
         # Auto-assign role from legacy role field if user has no roles assigned
         if not self.roles and self.role:
             self._auto_assign_role_from_legacy()
-
-        # Super admin users have all permissions
-        if self.role == "admin" and not self.roles:
-            # Legacy admin users without roles have all permissions
-            return True
 
         # Check if any of the user's roles have this permission
         for role in self.roles:

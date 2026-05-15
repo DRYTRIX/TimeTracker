@@ -256,9 +256,12 @@ def test_admin_role_user(app):
         user = User(username="testuser", role="user")
         db.session.add(user)
 
-        # Create admin role
-        admin_role = Role(name="admin")
-        db.session.add(admin_role)
+        # The conftest fixture seeds an "admin" role; re-use it if present
+        # so this test doesn't trip the unique constraint on roles.name.
+        admin_role = Role.query.filter_by(name="admin").first()
+        if admin_role is None:
+            admin_role = Role(name="admin")
+            db.session.add(admin_role)
         db.session.commit()
 
         # User is not admin initially
