@@ -24,7 +24,7 @@ msgstr "Administratorzugriff erforderlich"
 
 #: app/routes/admin.py:825
 msgid "User creation is disabled in demo mode."
-msgstr ""
+msgstr "Die Benutzererstellung ist im Demo-Modus deaktiviert."
 
 #: app/routes/admin.py:833 app/routes/admin.py:905 app/routes/kiosk.py:118
 msgid "Username is required"
@@ -36,7 +36,7 @@ msgstr "Benutzer existiert bereits"
 
 #: app/routes/admin.py:849 app/routes/admin.py:943
 msgid "Default 'user' role not found. Please run 'flask seed_permissions_cmd' first."
-msgstr ""
+msgstr "Standard 'user' Rolle wurde nicht gefunden. Bitte führen Sie 'flask seed_permissions_cmd' aus."
 
 #: app/routes/admin.py:873
 msgid "Could not create user due to a database error. Please check server logs."
@@ -73,7 +73,7 @@ msgstr "Der Benutzer konnte aufgrund eines Datenbankfehlers nicht aktualisiert w
 #: app/routes/admin.py:1033
 #, python-format
 msgid "Password reset successfully for user \"%(username)s\""
-msgstr ""
+msgstr "Passwort für Benutzer \"%(username)s\" erfolgreich zurückgesetzt."
 
 #: app/routes/admin.py:1035
 #, python-format
@@ -103,7 +103,7 @@ msgstr "Telemetrie wurde aktiviert. Vielen Dank, dass Sie uns dabei geholfen hab
 
 #: app/routes/admin.py:1152
 msgid "Detailed analytics has been disabled. Anonymous base telemetry remains active."
-msgstr ""
+msgstr "Detaillierte Analysen wurden deaktiviert. Anonyme Metriken bleiben aktiv."
 
 #: app/routes/admin.py:1196
 msgid "Invalid locked client selection."
@@ -116,15 +116,15 @@ msgstr ""
 #: app/routes/admin.py:1241
 #, python-format
 msgid "Cannot disable '%(module)s' because the following modules depend on it: %(dependents)s"
-msgstr ""
+msgstr "Modul '%(module)s' kann nicht deaktiviert werden, da es von folgenden Modulen verwendet wird: %(dependents)s"
 
 #: app/routes/admin.py:1264
 msgid "Could not update module visibility due to a database error. Please check server logs."
-msgstr ""
+msgstr "Modulsichtbarkeit konnte aufgrund eines Datenbankfehlers nicht aktualisiert werden. Bitte überprüfen Sie die Server logs."
 
 #: app/routes/admin.py:1274
 msgid "Module visibility updated successfully"
-msgstr ""
+msgstr "Modulsichtbarkeit erfolgreich aktualisiert"
 
 #: app/routes/admin.py:1331 app/routes/setup.py:42
 #, python-format
@@ -134,7 +134,7 @@ msgstr "Ungültige Zeitzone: %(timezone)s"
 #: app/routes/admin.py:1378
 #, python-format
 msgid "Invalid invoice number pattern: %(reason)s"
-msgstr ""
+msgstr "Nicht gültiges Muster für die Rechnungsnummer: %(reason)s"
 
 #: app/routes/admin.py:1543
 msgid "Could not update settings due to a database error. Please check server logs."
@@ -148,7 +148,7 @@ msgstr "Einstellungen erfolgreich aktualisiert"
 #: app/routes/user.py:261 app/routes/user.py:288 app/routes/user.py:301
 #: app/templates/admin/settings.html:766
 msgid "Invalid code."
-msgstr ""
+msgstr "Ungültiger Code."
 
 #: app/routes/admin.py:1649 app/routes/user.py:202 app/routes/user.py:306
 msgid "Error saving settings"
@@ -200,7 +200,7 @@ msgstr ""
 
 #: app/routes/admin.py:2372 app/routes/admin.py:2483
 msgid "No file uploaded"
-msgstr ""
+msgstr "Keine Datei hochgeladen"
 
 #: app/routes/admin.py:2377 app/routes/admin.py:2488 app/routes/clients.py:1269
 #: app/routes/comments.py:291 app/routes/expenses.py:1270
@@ -216,11 +216,11 @@ msgstr ""
 
 #: app/routes/admin.py:2413 app/routes/admin.py:2524
 msgid "Could not import template due to a database error."
-msgstr ""
+msgstr "Vorlage konnte aufgrund eines Datenbankfehlers nicht importiert werden."
 
 #: app/routes/admin.py:2415 app/routes/admin.py:2526
 msgid "Template imported successfully"
-msgstr ""
+msgstr "Vorlage erfolgreich importiert"
 
 #: app/routes/admin.py:2420 app/routes/admin.py:2531
 #, python-format
@@ -234,7 +234,7 @@ msgstr ""
 
 #: app/routes/admin.py:2704
 msgid "Invoice not found"
-msgstr ""
+msgstr "Rechnung nicht gefunden"
 
 #: app/routes/admin.py:3342 app/routes/quotes.py:495
 msgid "Quote not found"
@@ -475,7 +475,7 @@ msgstr "E-Mail-Vorlage „%(name)s“ erfolgreich gelöscht"
 
 #: app/routes/api.py:1325
 msgid "Task name and project are required"
-msgstr ""
+msgstr "Aufgabenname und Projekt sind erforderlich"
 
 #: app/routes/api.py:1335 app/routes/tasks.py:438
 msgid "Selected project does not exist or is inactive"
@@ -492,7 +492,7 @@ msgstr "Nachricht"
 #: app/routes/api.py:1394
 #, python-format
 msgid "Task \"%(name)s\" created successfully"
-msgstr ""
+msgstr "Aufgabe \"%(name)s\" erfolgreich erstellt"
 
 #: app/routes/audit_logs.py:27
 msgid "Audit logs table does not exist. Please run: flask db upgrade"
@@ -500,11 +500,11 @@ msgstr "Die Audit-Logs-Tabelle ist nicht vorhanden. Bitte führen Sie Folgendes 
 
 #: app/routes/auth.py:147 app/templates/auth/change_password.html:8
 msgid "You must change your password before continuing."
-msgstr ""
+msgstr "Sie müssen Ihr Passwort ändern, um fortzufahren."
 
 #: app/routes/auth.py:155
 msgid "Administrator accounts must enable two-factor authentication."
-msgstr ""
+msgstr "Administratorkonten müssen 2-Faktor-Authentifizierung aktivieren."
 
 #: app/routes/auth.py:162 app/routes/auth.py:1505
 #, python-format
@@ -513,20 +513,19 @@ msgstr "Willkommen zurück, %(username)s!"
 
 #: app/routes/auth.py:178
 msgid "Password reset is not available for this authentication method."
-msgstr ""
+msgstr "Für diese Authentifizierungsmethode können Sie Ihr Passwort nicht zurücksetzen."
 
 #: app/routes/auth.py:182 app/routes/auth.py:240
 msgid "Demo mode: password reset is disabled."
-msgstr ""
+msgstr "Demo Modus: Passwort zurücksetzen ist deaktiviert."
 
 #: app/routes/auth.py:189
 msgid "If an account matches what you entered and email is configured, you'll receive a reset link shortly."
 msgstr ""
 
 #: app/routes/auth.py:213
-#, fuzzy
 msgid "Reset your TimeTracker password"
-msgstr "Legen Sie Ihr Passwort fest"
+msgstr "Setzen Sie Ihr TimeTracker Passwort zurück"
 
 #: app/routes/auth.py:214
 #, python-format
@@ -551,34 +550,33 @@ msgstr "Das Kundenportal ist für diesen Kunden nicht aktiviert."
 
 #: app/routes/auth.py:270
 msgid "Your password has been updated. You can now sign in."
-msgstr ""
+msgstr "Ihr Passwort wurde aktualisiert. Sie können sich nun einloggen."
 
 #: app/routes/auth.py:274
-#, fuzzy
 msgid "Could not reset password due to a database error."
 msgstr "Aufgrund eines Datenbankfehlers konnte das Passwort nicht festgelegt werden."
 
 #: app/routes/auth.py:336
 msgid "Invalid username format"
-msgstr ""
+msgstr "Ungültiges Format für Benutzernamen"
 
 #: app/routes/auth.py:349
 msgid "Only the demo account can be used. Please use the credentials shown below."
-msgstr ""
+msgstr "Nur das Demo-Konto kann verwendet werden. Bitte nutzen Sie die Anmeldedaten die unten angezeigt werden."
 
 #: app/routes/auth.py:357 app/routes/auth.py:465 app/routes/auth.py:483
 #: app/routes/kiosk.py:132
 msgid "Password is required"
-msgstr ""
+msgstr "Passwort ist erforderlich"
 
 #: app/routes/auth.py:363 app/routes/auth.py:439 app/routes/auth.py:471
 #: app/routes/auth.py:496 app/routes/kiosk.py:123 app/routes/kiosk.py:136
 msgid "Invalid username or password"
-msgstr ""
+msgstr "Ungültiger Benutzername oder Passwort"
 
 #: app/routes/auth.py:391
 msgid "Password is required to create an account."
-msgstr ""
+msgstr "Passwort ist erforderlich, um ein Konto zu erstellen."
 
 #: app/routes/auth.py:425
 msgid "Could not create your account due to a database error. Please try again later."
@@ -6398,12 +6396,12 @@ msgstr "Backups"
 
 #: app/templates/base.html:1161
 msgid "Telemetry"
-msgstr ""
+msgstr "Datenerfassung"
 
 #: app/templates/base.html:1178 app/templates/main/about.html:3
 #: app/templates/main/about.html:8 app/templates/main/about.html:12
 msgid "About"
-msgstr "Um"
+msgstr "Über"
 
 #: app/templates/base.html:1184 app/templates/base.html:1255
 #: app/templates/clients/create.html:117 app/templates/main/help.html:3
