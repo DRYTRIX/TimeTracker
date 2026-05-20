@@ -5009,7 +5009,8 @@ async function initializePDFEditor() {
         errorMessage: '',
         currentRequest: null,
         isFullscreen: false,
-        fitMode: 'auto' // 'auto', 'width', 'height', 'actual'
+        fitMode: 'auto', // 'auto', 'width', 'height', 'actual'
+        pdfPreviewUrl: null
     };
     
     // DOM Elements - with safety checks
@@ -5372,6 +5373,10 @@ async function initializePDFEditor() {
         previewModal.style.display = 'none';
         document.body.style.overflow = '';
         previewModal.setAttribute('aria-hidden', 'true');
+        if (previewState.pdfPreviewUrl) {
+            URL.revokeObjectURL(previewState.pdfPreviewUrl);
+            previewState.pdfPreviewUrl = null;
+        }
         
         // Cancel any ongoing requests
         if (previewState.currentRequest && typeof previewState.currentRequest.abort === 'function') {
@@ -5521,17 +5526,28 @@ async function initializePDFEditor() {
                 throw new Error(`HTTP error! status: ${response ? response.status : 'unknown'}`);
             }
             
-            const previewHtml = await response.text();
-            
             // Check if request was cancelled
             if (controller && controller.signal && controller.signal.aborted) {
                 return;
             }
-            
-            const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
-            doc.open();
-            doc.write(previewHtml);
-            doc.close();
+
+            const contentType = (response.headers.get('Content-Type') || '').toLowerCase();
+            const isPdfPreview = contentType.includes('application/pdf');
+
+            if (isPdfPreview) {
+                const pdfBlob = await response.blob();
+                if (previewState.pdfPreviewUrl) {
+                    URL.revokeObjectURL(previewState.pdfPreviewUrl);
+                }
+                previewState.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
+                previewFrame.src = previewState.pdfPreviewUrl;
+            } else {
+                const previewHtml = await response.text();
+                const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+                doc.open();
+                doc.write(previewHtml);
+                doc.close();
+            }
             
             // Wait for iframe to load
             previewFrame.onload = () => {
@@ -6129,6 +6145,14 @@ async function initializePDFEditor() {
                     const itemsAttrs = itemsEl ? itemsEl.attrs : {};
                     const lineAttrs = lineEl ? lineEl.attrs : {};
                     const headerText = headerEl ? (headerAttrs.text || '') : '';
+                    // Issue #622: Use group bounding box so moved/scaled tables match export coordinates
+                    let tableX = x;
+                    let tableY = y;
+                    const itemsTableBox = child.getClientRect ? child.getClientRect() : null;
+                    if (itemsTableBox && itemsTableBox.width > 0 && itemsTableBox.height > 0) {
+                        tableX = Math.round(itemsTableBox.x);
+                        tableY = Math.round(itemsTableBox.y);
+                    }
                     
                     // Parse header text (format: "Description | Qty | Price | Total" or German equivalent)
                     // Default to English if header text is empty or doesn't contain |
@@ -6140,7 +6164,11 @@ async function initializePDFEditor() {
                             headerParts.push(['Description', 'Qty', 'Unit Price', 'Total'][headerParts.length]);
                         }
                     }
-                    const tableWidthPx = Math.max(50, Math.round(headerAttrs.width || itemsAttrs.width || 515));
+                    const tableWidthPx = Math.max(50, Math.round(
+                        (itemsTableBox && itemsTableBox.width > 0)
+                            ? itemsTableBox.width
+                            : (headerAttrs.width || itemsAttrs.width || 515)
+                    ));
                     const itemsFracs = [250 / 540, 70 / 540, 110 / 540, 110 / 540];
                     const totalPtItems = pxToPt(tableWidthPx);
                     let colPtsItems = itemsFracs.map(f => f * totalPtItems);
@@ -6166,8 +6194,8 @@ async function initializePDFEditor() {
                     {% endraw %}
                     templateJson.elements.push({
                         type: 'table',
-                        x: pxToPt(x),
-                        y: pxToPt(y),
+                        x: pxToPt(tableX),
+                        y: pxToPt(tableY),
                         width: totalPtItems,
                         opacity: opacity,
                         columns: [
@@ -6190,7 +6218,7 @@ async function initializePDFEditor() {
                     
                     // Legacy HTML for preview
                     bodyContent += `  <!-- Items Table Start -->\n`;
-                    bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity};width:${tableWidthPx}px;">\n`;
+                    bodyContent += `  <div style="position:absolute;left:${tableX}px;top:${tableY}px;opacity:${opacity};width:${tableWidthPx}px;">\n`;
                     bodyContent += `    <table style="width:100%;border-collapse:collapse;font-size:11px;background:white;">\n`;
                     bodyContent += `      <thead>\n`;
                     bodyContent += `        <tr style="background-color:#f8f9fa;border-bottom:${lineStrokeW}px solid ${lineStrokeHex};">\n`;
@@ -6249,7 +6277,18 @@ async function initializePDFEditor() {
                     const defExpRowBg = '#fffbf0';
                     const defExpRowText = '#856404';
                     const defExpBorder = '#856404';
-                    const tableWidthPxExp = Math.max(50, Math.round(headerAttrs.width || itemsAttrs.width || 515));
+                    let expTableX = x;
+                    let expTableY = y;
+                    const expTableBox = child.getClientRect ? child.getClientRect() : null;
+                    if (expTableBox && expTableBox.width > 0 && expTableBox.height > 0) {
+                        expTableX = Math.round(expTableBox.x);
+                        expTableY = Math.round(expTableBox.y);
+                    }
+                    const tableWidthPxExp = Math.max(50, Math.round(
+                        (expTableBox && expTableBox.width > 0)
+                            ? expTableBox.width
+                            : (headerAttrs.width || itemsAttrs.width || 515)
+                    ));
                     const expFracs = [200 / 515, 100 / 515, 105 / 515, 110 / 515];
                     const totalPtExp = pxToPt(tableWidthPxExp);
                     let colPtsExp = expFracs.map(f => f * totalPtExp);
@@ -6275,8 +6314,8 @@ async function initializePDFEditor() {
                     {% endraw %}
                     templateJson.elements.push({
                         type: 'table',
-                        x: pxToPt(x),
-                        y: pxToPt(y),
+                        x: pxToPt(expTableX),
+                        y: pxToPt(expTableY),
                         width: totalPtExp,
                         opacity: opacity,
                         columns: [
@@ -6299,7 +6338,7 @@ async function initializePDFEditor() {
                     
                     // Legacy HTML for preview
                     bodyContent += `  <!-- Expenses Table Start -->\n`;
-                    bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity};width:${tableWidthPxExp}px;">\n`;
+                    bodyContent += `  <div style="position:absolute;left:${expTableX}px;top:${expTableY}px;opacity:${opacity};width:${tableWidthPxExp}px;">\n`;
                     bodyContent += `    <table style="width:100%;border-collapse:collapse;font-size:11px;background:${defExpRowBg};">\n`;
                     bodyContent += `      <thead>\n`;
                     bodyContent += `        <tr style="background-color:${defExpHeaderBg};border-bottom:${expLineStrokeW}px solid ${expLineStrokeHex};">\n`;
