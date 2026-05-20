@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.2] - 2026-05-20
+
 ### Fixed
 
 - **Invoice PDF designer Items Table alignment (#622, follow-up)** — Fixed the regression where exported tables were still misaligned after the color fix: text and images use page-absolute coordinates on the PDF canvas, but tables were laid out in the margin-adjusted flow area (`left_offset = x − margin`), so a table at `x=40` appeared at the content edge (~57pt) while the preview showed 40pt. Items/expenses tables are now drawn on the canvas at template `(x, y)` via `wrap`/`drawOn`, with width capped to the remaining page width. The template editor serializes table groups with `getClientRect()` so moved/scaled tables match saved JSON. **Generate Preview** for invoice and quote PDFs now returns the same ReportLab PDF bytes as export (HTML preview remains fallback). Header/row colors and column alignment continue to use per-cell `ParagraphStyle`; `hAlign = LEFT` is retained (`app/utils/pdf_generator_reportlab.py`, `app/routes/admin.py`, `app/templates/admin/pdf_layout.html`, `app/templates/admin/quote_pdf_layout.html`).
@@ -14,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Tests
 
 - **Invoice PDF template Items Table** — `tests/test_invoice_pdf_template_table.py` covers colors, alignment, `rowBackground`, canvas story collection, page-bound width capping, and PDF generation when table `x` is below the left margin.
+
+### Documentation
+
+- **Version** — Documented release **5.6.2** to match `setup.py` (single source of truth for the application version).
 
 ## [5.6.1] - 2026-05-20
 
