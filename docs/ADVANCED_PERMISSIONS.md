@@ -67,7 +67,7 @@ The following system roles are created by default:
 - Standard time tracking capabilities
 - Can create and edit own time entries
 - Can create and manage own tasks
-- View-only access to projects and clients
+- View-only access to **own** projects and clients (`view_own_projects`, `view_own_clients`)
 - Can view own reports and invoices
 
 #### Viewer
@@ -96,12 +96,14 @@ Permissions are organized into the following categories:
 - `delete_all_time_entries`
 
 #### Projects
-- `view_projects`
+- `view_own_projects` / `view_all_projects` (legacy `view_projects` = view all)
 - `create_projects`
-- `edit_projects`
-- `delete_projects`
+- `edit_own_projects` / `edit_all_projects` (legacy `edit_projects` = edit all)
+- `delete_own_projects` / `delete_all_projects` (legacy `delete_projects` = delete all)
 - `archive_projects`
 - `manage_project_costs`
+
+Projects and clients track `created_by` for workspace isolation. Rows with `created_by` NULL are legacy/shared and visible only to users with view-all (or admin).
 
 #### Tasks
 - `view_own_tasks`
@@ -114,10 +116,10 @@ Permissions are organized into the following categories:
 - `assign_tasks`
 
 #### Clients
-- `view_clients`
+- `view_own_clients` / `view_all_clients` (legacy `view_clients` = view all)
 - `create_clients`
-- `edit_clients`
-- `delete_clients`
+- `edit_own_clients` / `edit_all_clients` (legacy `edit_clients` = edit all)
+- `delete_own_clients` / `delete_all_clients` (legacy `delete_clients` = delete all)
 - `manage_client_notes`
 
 #### Invoices

@@ -4,6 +4,7 @@ from flask_login import current_user, login_required
 
 from app import db, socketio
 from app.models import KanbanColumn, Task
+from app.utils.scope_filter import get_active_projects_for_user
 from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
 from app.utils.permissions import admin_or_permission_required
@@ -38,6 +39,9 @@ def board():
 
     # Build query with filters
     query = Task.query
+    has_view_all_tasks = current_user.is_admin or current_user.has_permission("view_all_tasks")
+    if not has_view_all_tasks:
+        query = query.filter(db.or_(Task.assigned_to == current_user.id, Task.created_by == current_user.id))
     if project_ids:
         query = query.filter(Task.project_id.in_(project_ids))
     if user_ids:
@@ -64,9 +68,9 @@ def board():
         columns = []
 
     # Provide projects for filter dropdown
-    from app.models import Project, User
+    from app.models import User
 
-    projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    projects = get_active_projects_for_user(current_user, status="active")
     # Provide users for filter dropdown (active users only)
     users = User.query.filter_by(is_active=True).order_by(User.full_name, User.username).all()
 

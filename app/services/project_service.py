@@ -114,6 +114,7 @@ class ProjectService:
             budget_threshold_percent=budget_threshold_percent or 80,
             billing_ref=billing_ref,
             status=ProjectStatus.ACTIVE.value,
+            created_by=created_by,
         )
 
         db.session.add(project)
@@ -227,7 +228,7 @@ class ProjectService:
         user_id: Optional[int] = None,
         page: int = 1,
         per_page: int = 20,
-        scope_client_ids: Optional[List[int]] = None,
+        scope_project_ids: Optional[List[int]] = None,
     ) -> Dict[str, Any]:
         """
         List projects with filtering and pagination.
@@ -274,12 +275,12 @@ class ProjectService:
         if client_id:
             query = query.filter(Client.id == client_id)
 
-        # Subcontractor scope: restrict to assigned clients
-        if scope_client_ids is not None:
-            if not scope_client_ids:
+        # Scope: restrict to allowed project IDs (subcontractor, own workspace, portal)
+        if scope_project_ids is not None:
+            if not scope_project_ids:
                 query = query.filter(Project.id.in_([]))  # no access
             else:
-                query = query.filter(Project.client_id.in_(scope_client_ids))
+                query = query.filter(Project.id.in_(scope_project_ids))
 
         # Filter by client custom fields
         if client_custom_field:

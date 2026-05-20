@@ -30,6 +30,7 @@ class Project(db.Model):
     # Archiving metadata
     archived_at = db.Column(db.DateTime, nullable=True, index=True)
     archived_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     archived_reason = db.Column(db.Text, nullable=True)
     # Gantt chart bar color (hex e.g. #3b82f6)
     color = db.Column(db.String(7), nullable=True)
@@ -62,8 +63,7 @@ class Project(db.Model):
         If client name is provided and client_id is not, the corresponding Client
         record will be found or created on the fly and client_id will be set.
 
-        Note: created_by parameter is accepted for test compatibility but not used,
-        as the Project model doesn't track creator information.
+        created_by sets the project owner for per-user workspace scope (nullable for legacy rows).
         """
         from .client import Client  # local import to avoid circular dependencies
 
@@ -97,6 +97,7 @@ class Project(db.Model):
                     resolved_client_id = new_client.id
 
         self.client_id = resolved_client_id
+        self.created_by = created_by
 
     def __repr__(self):
         return f'<Project {self.name} ({self.client_obj.name if self.client_obj else "Unknown Client"})>'

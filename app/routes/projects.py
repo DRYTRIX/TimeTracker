@@ -101,10 +101,9 @@ def list_projects():
 
     project_service = ProjectService()
 
-    # Subcontractor scope: restrict to assigned clients
-    from app.utils.scope_filter import apply_client_scope_to_model, get_allowed_client_ids
+    from app.utils.scope_filter import apply_client_scope_to_model, get_allowed_project_ids
 
-    scope_client_ids = get_allowed_client_ids(current_user)
+    scope_project_ids = get_allowed_project_ids(current_user)
 
     # Use service layer to get projects (prevents N+1 queries)
     result = project_service.list_projects(
@@ -117,7 +116,7 @@ def list_projects():
         user_id=current_user.id if favorites_only else None,
         page=page,
         per_page=20,
-        scope_client_ids=scope_client_ids,
+        scope_project_ids=scope_project_ids,
     )
 
     # Get user's favorite project IDs for quick lookup in template
@@ -299,8 +298,9 @@ def export_projects():
 def create_project():
     """Create a new project"""
     from app.utils.client_lock import get_locked_client_id
+    from app.utils.scope_filter import get_active_clients_for_user
 
-    clients = Client.get_active_clients()
+    clients = get_active_clients_for_user(current_user)
     only_one_client = len(clients) == 1
     single_client = clients[0] if only_one_client else None
 
@@ -901,16 +901,19 @@ def project_time_entries_overview(project_id):
 
 @projects_bp.route("/projects/<int:project_id>/edit", methods=["GET", "POST"])
 @login_required
-@admin_or_permission_required("edit_projects")
+@admin_or_permission_required("edit_projects", "edit_all_projects", "edit_own_projects")
 def edit_project(project_id):
     """Edit project details"""
     from flask import abort
 
     from app.utils.client_lock import get_locked_client_id
+    from app.utils.permissions import user_can_edit_project
     from app.utils.scope_filter import apply_client_scope_to_model, user_can_access_project
 
     project = Project.query.get_or_404(project_id)
     if not user_can_access_project(current_user, project_id):
+        abort(403)
+    if not user_can_edit_project(current_user, project):
         abort(403)
 
     clients_query = Client.query.filter_by(status="active").order_by(Client.name)
@@ -1185,10 +1188,17 @@ def unarchive_project(project_id):
 @login_required
 def deactivate_project(project_id):
     """Mark a project as inactive"""
+    from flask import abort
+
     project = Project.query.get_or_404(project_id)
 
     # Check permissions
-    if not current_user.is_admin and not current_user.has_permission("edit_projects"):
+    from app.utils.permissions import user_can_edit_project
+    from app.utils.scope_filter import user_can_access_project
+
+    if not user_can_access_project(current_user, project_id):
+        abort(403)
+    if not user_can_edit_project(current_user, project):
         flash(_("You do not have permission to deactivate projects"), "error")
         return redirect(url_for("projects.view_project", project_id=project_id))
 
@@ -1211,7 +1221,13 @@ def activate_project(project_id):
     project = Project.query.get_or_404(project_id)
 
     # Check permissions
-    if not current_user.is_admin and not current_user.has_permission("edit_projects"):
+    from flask import abort
+    from app.utils.permissions import user_can_edit_project
+    from app.utils.scope_filter import user_can_access_project
+
+    if not user_can_access_project(current_user, project_id):
+        abort(403)
+    if not user_can_edit_project(current_user, project):
         flash(_("You do not have permission to activate projects"), "error")
         return redirect(url_for("projects.view_project", project_id=project_id))
 
@@ -1229,10 +1245,19 @@ def activate_project(project_id):
 
 @projects_bp.route("/projects/<int:project_id>/delete", methods=["POST"])
 @login_required
-@admin_or_permission_required("delete_projects")
+@admin_or_permission_required("delete_projects", "delete_all_projects", "delete_own_projects")
 def delete_project(project_id):
     """Delete a project (only if no time entries exist)"""
+    from flask import abort
+
+    from app.utils.permissions import user_can_delete_project
+    from app.utils.scope_filter import user_can_access_project
+
     project = Project.query.get_or_404(project_id)
+    if not user_can_access_project(current_user, project_id):
+        abort(403)
+    if not user_can_delete_project(current_user, project):
+        abort(403)
 
     # Check if project has time entries
     if project.time_entries.count() > 0:
@@ -1268,7 +1293,9 @@ def delete_project(project_id):
 def bulk_delete_projects():
     """Delete multiple projects at once"""
     # Check permissions
-    if not current_user.is_admin and not current_user.has_permission("delete_projects"):
+    from app.utils.permissions import user_can_delete_project, user_has_any_project_delete_permission
+
+    if not user_has_any_project_delete_permission(current_user):
         flash(_("You do not have permission to delete projects"), "error")
         return redirect(url_for("projects.list_projects"))
 
@@ -1288,6 +1315,11 @@ def bulk_delete_projects():
             project = _project_service.get_by_id(project_id)
 
             if not project:
+                continue
+
+            if not user_can_delete_project(current_user, project):
+                skipped_count += 1
+                errors.append(f"'{project.name}': Permission denied")
                 continue
 
             # Check for time entries
@@ -1338,7 +1370,9 @@ def bulk_delete_projects():
 def bulk_status_change():
     """Change status for multiple projects at once"""
     # Check permissions
-    if not current_user.is_admin and not current_user.has_permission("edit_projects"):
+    from app.utils.permissions import user_can_edit_project, user_has_any_project_edit_permission
+
+    if not user_has_any_project_edit_permission(current_user):
         flash(_("You do not have permission to change project status"), "error")
         return redirect(url_for("projects.list_projects"))
 
@@ -1363,6 +1397,10 @@ def bulk_status_change():
             project = _project_service.get_by_id(project_id)
 
             if not project:
+                continue
+
+            if not user_can_edit_project(current_user, project):
+                errors.append(f"'{project.name}': Permission denied")
                 continue
 
             # Update status based on type
@@ -2000,7 +2038,7 @@ def api_project_goods(project_id):
 # Project attachment routes
 @projects_bp.route("/projects/<int:project_id>/attachments/upload", methods=["POST"])
 @login_required
-@admin_or_permission_required("edit_projects")
+@admin_or_permission_required("edit_projects", "edit_all_projects", "edit_own_projects")
 def upload_project_attachment(project_id):
     """Upload an attachment to a project"""
     import os
@@ -2142,7 +2180,7 @@ def download_project_attachment(attachment_id):
 
 @projects_bp.route("/projects/attachments/<int:attachment_id>/delete", methods=["POST"])
 @login_required
-@admin_or_permission_required("edit_projects")
+@admin_or_permission_required("edit_projects", "edit_all_projects", "edit_own_projects")
 def delete_project_attachment(attachment_id):
     """Delete a project attachment"""
     import os

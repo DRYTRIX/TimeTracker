@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Invoice PDF designer Items Table styling (#622, follow-up)** — Re-fixed the export-vs-preview mismatch reported by a client after 5.5.7. ReportLab `Table` flowables default to `hAlign="CENTER"`, which was silently centering the items/expenses tables between page margins regardless of the user-defined `x` position — making the exported table extend further left and right than the surrounding text elements shown in the designer preview. Tables are now explicitly left-aligned (`table.hAlign = "LEFT"`, propagated to the `KeepTogether` wrapper too), so they sit exactly where the designer places them. Header and row text colors, fonts, sizes, and column alignment are now applied via each cell's `ParagraphStyle` (Paragraphs ignore the surrounding `TableStyle` `TEXTCOLOR`/`FONTNAME`/`ALIGN`/`FONTSIZE` commands, so those previously had no visible effect on the rendered PDF). Removed a hardcoded `ROWBACKGROUNDS` alternating `#ffffff`/`#f9fafb` band that was overriding the user-selected `rowBackground`; alternating rows are now opt-in via a new `altRowBackground` / `alternateRowBackground` style key (`app/utils/pdf_generator_reportlab.py`).
+
+### Tests
+
+- **Invoice PDF template Items Table** — New `tests/test_invoice_pdf_template_table.py` covering the `_render_table` / `_get_table_style` contract: tables are left-aligned, header/row text colors and column alignment propagate to Paragraph styles, user `rowBackground` is not overridden by hardcoded alternating bands, opt-in `altRowBackground` produces a `ROWBACKGROUNDS` command, and header background plus border color/width come from the template style.
+
+## [5.6.1] - 2026-05-20
+
+### Fixed
+
+- **Docker / PDF build** — Bumped `pydyf` to 0.12.1 for compatibility with WeasyPrint 68 in container builds.
+- **Security** — Upgraded `PyJWT` to 2.12.1 (RFC 7515 `crit` validation, CVE-2026-32597) and `markdown` to 3.8.1 (DoS fixes).
+
+### Changed
+
+- **Docker build context** — Added `.dockerignore` to exclude local `.venv` and shrink image build context.
+
+### Documentation
+
+- **Version** — Documented release **5.6.1** to match `setup.py` (single source of truth for the application version).
+
 ## [5.6.0] - 2026-05-15
 
 ### Added

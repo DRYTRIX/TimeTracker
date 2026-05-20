@@ -71,18 +71,17 @@ def test_get_accessible_project_and_client_ids_for_user_via_time_entries(db_sess
 # ---------------------------------------------------------------------------
 
 
-def test_get_allowed_client_ids_unrestricted_user(app, user):
-    """Non-scope-restricted user gets None (full access) from get_allowed_client_ids when passed explicitly."""
+def test_get_allowed_client_ids_unrestricted_user(app, admin_user):
+    """Admin gets None (full access) from get_allowed_client_ids."""
     with app.app_context():
-        # user fixture has no subcontractor role
-        result = get_allowed_client_ids(user=user)
+        result = get_allowed_client_ids(user=admin_user)
         assert result is None
 
 
-def test_get_allowed_project_ids_unrestricted_user(app, user):
-    """Non-scope-restricted user gets None (full access) from get_allowed_project_ids when passed explicitly."""
+def test_get_allowed_project_ids_unrestricted_user(app, admin_user):
+    """Admin gets None (full access) from get_allowed_project_ids."""
     with app.app_context():
-        result = get_allowed_project_ids(user=user)
+        result = get_allowed_project_ids(user=admin_user)
         assert result is None
 
 
@@ -168,9 +167,9 @@ def test_user_can_access_client_admin(admin_user, test_client):
     assert user_can_access_client(admin_user, test_client.id) is True
 
 
-def test_user_can_access_client_unrestricted(user, test_client):
-    """Non-scope-restricted user can access any client."""
-    assert user_can_access_client(user, test_client.id) is True
+def test_user_can_access_client_unrestricted(admin_user, test_client):
+    """Admin can access any client (full access)."""
+    assert user_can_access_client(admin_user, test_client.id) is True
 
 
 def test_user_can_access_client_scope_restricted_allowed(scope_restricted_user, test_client):
@@ -240,12 +239,12 @@ def test_user_can_access_project_client_portal_denied(app, client_portal_scoped_
 # ---------------------------------------------------------------------------
 
 
-def test_apply_client_scope_to_model_unrestricted(app, user):
-    """Unrestricted user: no filter applied (None)."""
+def test_apply_client_scope_to_model_unrestricted(app, admin_user):
+    """Admin: no filter applied (None)."""
     with app.app_context():
         from app.models import Client as ClientModel
 
-        scope = apply_client_scope_to_model(ClientModel, user=user)
+        scope = apply_client_scope_to_model(ClientModel, user=admin_user)
         assert scope is None
 
 
@@ -262,12 +261,12 @@ def test_apply_client_scope_to_model_scope_restricted(app, scope_restricted_user
         assert test_client.id in ids
 
 
-def test_apply_project_scope_to_model_unrestricted(app, user):
-    """Unrestricted user: no filter applied (None)."""
+def test_apply_project_scope_to_model_unrestricted(app, admin_user):
+    """Admin: no filter applied (None)."""
     with app.app_context():
         from app.models import Project as ProjectModel
 
-        scope = apply_project_scope_to_model(ProjectModel, user=user)
+        scope = apply_project_scope_to_model(ProjectModel, user=admin_user)
         assert scope is None
 
 
@@ -284,13 +283,13 @@ def test_apply_project_scope_to_model_scope_restricted(app, scope_restricted_use
         assert project.id in ids
 
 
-def test_apply_project_scope_query_unrestricted(app, user):
-    """apply_project_scope leaves query unchanged for unrestricted users."""
+def test_apply_project_scope_query_unrestricted(app, admin_user):
+    """apply_project_scope leaves query unchanged for admin users."""
     with app.app_context():
         from app.models import Project as ProjectModel
 
         base = ProjectModel.query
-        scoped = apply_project_scope(ProjectModel, base, user=user)
+        scoped = apply_project_scope(ProjectModel, base, user=admin_user)
         assert scoped is base
 
 
@@ -403,3 +402,107 @@ def test_api_projects_list_filtered_by_client_portal(app, client_portal_scoped_u
     project_ids = [p["id"] for p in data["projects"]]
     assert allowed_project_id in project_ids
     assert other_project_id not in project_ids
+
+
+# ---------------------------------------------------------------------------
+# Own-scope (issue #641): created_by workspace isolation
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def own_scope_user(app):
+    """User with view_own_clients / view_own_projects only (standard user role after #641)."""
+    from app.models import Role
+    from app.utils.permissions_seed import seed_permissions, seed_roles
+
+    with app.app_context():
+        seed_permissions()
+        seed_roles(silent=True)
+        role = Role.query.filter_by(name="user").first()
+        user = User.query.filter_by(username="own_scope_user").first()
+        if not user:
+            user = User(username="own_scope_user", email="ownscope@example.com", role="user")
+            user.is_active = True
+            user.set_password("password123")
+            db.session.add(user)
+        if role and role not in user.roles:
+            user.roles.append(role)
+        db.session.commit()
+        db.session.refresh(user)
+        return user
+
+
+@pytest.mark.integration
+def test_own_scope_client_ids(app, own_scope_user, db_session):
+    """User with view_own_clients sees only clients they created; legacy NULL rows are hidden."""
+    with app.app_context():
+        other_user = User(username="other_scope_client", email="otherc@example.com", role="user")
+        other_user.is_active = True
+        db_session.add(other_user)
+        db_session.flush()
+
+        mine = Client(name="Mine Corp", created_by=own_scope_user.id)
+        other = Client(name="Other Corp", created_by=other_user.id)
+        legacy = Client(name="Legacy Corp", created_by=None)
+        db_session.add_all([mine, other, legacy])
+        db_session.commit()
+
+        allowed = get_allowed_client_ids(user=own_scope_user)
+        assert allowed is not None
+        assert mine.id in allowed
+        assert other.id not in allowed
+        assert legacy.id not in allowed
+
+
+@pytest.mark.integration
+def test_own_scope_project_ids(app, own_scope_user, db_session, test_client):
+    """User with view_own_projects sees only projects they created."""
+    with app.app_context():
+        mine = Project(
+            name="My Project",
+            client_id=test_client.id,
+            status="active",
+            created_by=own_scope_user.id,
+        )
+        other_user = User(username="other_scope_proj", email="otherp@example.com", role="user")
+        db_session.add(other_user)
+        db_session.flush()
+        other = Project(
+            name="Other Project",
+            client_id=test_client.id,
+            status="active",
+            created_by=other_user.id,
+        )
+        db_session.add_all([mine, other])
+        db_session.commit()
+
+        allowed = get_allowed_project_ids(user=own_scope_user)
+        assert allowed is not None
+        assert mine.id in allowed
+        assert other.id not in allowed
+
+
+@pytest.mark.integration
+def test_legacy_client_visible_to_view_all_role(app, db_session):
+    """Legacy client (created_by NULL) is visible to users with view_all_clients."""
+    from app.models import Role
+    from app.utils.permissions_seed import seed_permissions, seed_roles
+
+    with app.app_context():
+        seed_permissions()
+        seed_roles(silent=True)
+        manager_role = Role.query.filter_by(name="manager").first()
+        mgr = User.query.filter_by(username="mgr_scope_test").first()
+        if not mgr:
+            mgr = User(username="mgr_scope_test", email="mgr@example.com", role="manager")
+            mgr.is_active = True
+            mgr.set_password("password123")
+            db.session.add(mgr)
+        if manager_role and manager_role not in mgr.roles:
+            mgr.roles.append(manager_role)
+        legacy = Client(name="Legacy Visible", created_by=None)
+        db_session.add(legacy)
+        db.session.commit()
+
+        allowed = get_allowed_client_ids(user=mgr)
+        assert allowed is None

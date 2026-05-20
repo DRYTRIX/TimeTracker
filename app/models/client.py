@@ -27,6 +27,7 @@ class Client(db.Model):
     status = db.Column(db.String(20), default="active", nullable=False)  # 'active' or 'inactive'
     prepaid_hours_monthly = db.Column(db.Numeric(7, 2), nullable=True)
     prepaid_reset_day = db.Column(db.Integer, nullable=False, default=1)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -60,6 +61,7 @@ class Client(db.Model):
         prepaid_hours_monthly=None,
         prepaid_reset_day=1,
         custom_fields=None,
+        created_by=None,
     ):
         """Create a Client.
 
@@ -82,6 +84,7 @@ class Client(db.Model):
         except (TypeError, ValueError):
             self.prepaid_reset_day = 1
         self.custom_fields = custom_fields
+        self.created_by = created_by
 
     def __repr__(self):
         return f"<Client {self.name}>"

@@ -725,9 +725,55 @@ class ReportLabTemplateRenderer:
             raw = [w * scale2 for w in raw]
         return raw
 
+    def _build_cell_paragraph_style(
+        self,
+        *,
+        font_name: str,
+        font_size: float,
+        text_color_hex: str,
+        align: str,
+        leading: Optional[float] = None,
+    ) -> ParagraphStyle:
+        """Build a ParagraphStyle for a table cell honoring font, size, color and alignment.
+
+        Paragraph objects ignore the surrounding TableStyle FONTNAME/FONTSIZE/TEXTCOLOR/ALIGN
+        commands, so we must set those properties directly on the ParagraphStyle for them to
+        actually appear in the rendered PDF (Issue #622).
+        """
+        try:
+            color_obj = colors.HexColor(text_color_hex)
+        except (ValueError, AttributeError):
+            color_obj = colors.HexColor("#000000")
+        return ParagraphStyle(
+            name=f"_TableCell_{id(self)}_{align}_{font_name}_{int(font_size)}",
+            fontName=font_name,
+            fontSize=font_size,
+            leading=leading if leading is not None else font_size * 1.2,
+            textColor=color_obj,
+            alignment=self._get_alignment(align),
+            spaceAfter=0,
+            spaceBefore=0,
+        )
+
     def _render_table(self, element: Dict[str, Any]) -> Table:
         """Render a table element"""
         columns = element.get("columns", [])
+        style_config = element.get("style", {}) or {}
+
+        # Resolve text colors/fonts/sizes once so they can be applied directly to Paragraphs
+        # (Issue #622: TableStyle TEXTCOLOR/FONTNAME/ALIGN do not affect Paragraph rendering)
+        header_text_color_hex = _normalize_color(style_config.get("headerTextColor", "#000000")) or "#000000"
+        row_text_color_hex = _normalize_color(style_config.get("rowTextColor", "#000000")) or "#000000"
+        header_font = style_config.get("headerFont") or "Helvetica-Bold"
+        row_font = style_config.get("rowFont") or "Helvetica"
+        try:
+            header_font_size = float(style_config.get("headerFontSize", 12))
+        except (TypeError, ValueError):
+            header_font_size = 12.0
+        try:
+            row_font_size = float(style_config.get("rowFontSize", 10))
+        except (TypeError, ValueError):
+            row_font_size = 10.0
 
         # Build header row - process template variables in headers
         headers = []
@@ -736,9 +782,13 @@ class ReportLabTemplateRenderer:
             header_text = self._process_template_variables(header_text)
             # Convert newlines to <br/> tags for Paragraph
             header_text = header_text.replace("\r\n", "<br/>").replace("\r", "<br/>").replace("\n", "<br/>")
-            # Use Paragraph for headers to handle line breaks
-            header_style = self._get_style({"style": {}}, "NormalText")
-            headers.append(Paragraph(header_text, header_style))
+            header_para_style = self._build_cell_paragraph_style(
+                font_name=header_font,
+                font_size=header_font_size,
+                text_color_hex=header_text_color_hex,
+                align=col.get("align", "left"),
+            )
+            headers.append(Paragraph(header_text, header_para_style))
         table_data = [headers]
 
         # Get data source
@@ -781,15 +831,25 @@ class ReportLabTemplateRenderer:
                         cell_text = str(value) if value is not None else ""
                         # Convert newlines to <br/> tags for Paragraph
                         cell_text = cell_text.replace("\r\n", "<br/>").replace("\r", "<br/>").replace("\n", "<br/>")
-                        # Use Paragraph for cells to handle line breaks
-                        cell_style = self._get_style({"style": {}}, "NormalText")
-                        row.append(Paragraph(cell_text, cell_style))
+                        cell_para_style = self._build_cell_paragraph_style(
+                            font_name=row_font,
+                            font_size=row_font_size,
+                            text_color_hex=row_text_color_hex,
+                            align=col.get("align", "left"),
+                        )
+                        row.append(Paragraph(cell_text, cell_para_style))
                     table_data.append(row)
             else:
                 # No data - add empty row message
                 num_cols = len(columns)
-                empty_row = [Paragraph("No data", self._get_style({"style": {}}, "NormalText"))]
-                empty_row.extend([Paragraph("", self._get_style({"style": {}}, "NormalText"))] * (num_cols - 1))
+                empty_style = self._build_cell_paragraph_style(
+                    font_name=row_font,
+                    font_size=row_font_size,
+                    text_color_hex=row_text_color_hex,
+                    align="left",
+                )
+                empty_row = [Paragraph("No data", empty_style)]
+                empty_row.extend([Paragraph("", empty_style)] * (num_cols - 1))
                 table_data.append(empty_row)
 
         # Column widths in points (scaled to element.width when set)
@@ -798,22 +858,40 @@ class ReportLabTemplateRenderer:
         # Create table with proper column widths
         table = Table(table_data, colWidths=col_widths, repeatRows=1)
 
+        # Issue #622: Default ReportLab Table alignment is CENTER, which causes the table
+        # to be horizontally centered within the content area regardless of the user-set x.
+        # Force LEFT alignment so the table sits exactly where the editor preview shows it
+        # (either at margin_left, or - when wrapped in an outer spacer table in _build_story -
+        # offset to the user-defined x position).
+        table.hAlign = "LEFT"
+
         # Apply table style
         table_style = self._get_table_style(element, columns)
         table.setStyle(table_style)
 
         # Wrap table in KeepTogether to prevent breaking across pages
-        return KeepTogether(table)
+        wrapper = KeepTogether(table)
+        # Propagate hAlign to wrapper too so outer flow respects it (Issue #622)
+        try:
+            wrapper.hAlign = "LEFT"
+        except (AttributeError, TypeError):
+            pass
+        return wrapper
 
     def _get_table_style(self, element: Dict[str, Any], columns: List[Dict[str, Any]]) -> TableStyle:
-        """Get table style from element configuration"""
-        style_config = element.get("style", {})
+        """Get table style from element configuration.
+
+        Note (Issue #622): TableStyle FONTNAME/FONTSIZE/TEXTCOLOR/ALIGN commands have no effect
+        when cells contain Paragraph flowables — Paragraphs render with their own embedded style.
+        Those text-related attributes are therefore applied directly on each cell's
+        ParagraphStyle in `_render_table`; here we only handle structural styling
+        (background colors, borders, padding, vertical alignment).
+        """
+        style_config = element.get("style", {}) or {}
 
         # Get default colors from style config or use defaults
-        header_bg = colors.HexColor(style_config.get("headerBackground", "#f8f9fa"))
-        header_text_color = colors.HexColor(style_config.get("headerTextColor", "#000000"))
-        row_bg = colors.HexColor(style_config.get("rowBackground", "#ffffff"))
-        row_text_color = colors.HexColor(style_config.get("rowTextColor", "#000000"))
+        header_bg = colors.HexColor(_normalize_color(style_config.get("headerBackground", "#f8f9fa")) or "#f8f9fa")
+        row_bg = colors.HexColor(_normalize_color(style_config.get("rowBackground", "#ffffff")) or "#ffffff")
 
         try:
             grid_w = float(style_config.get("borderWidth", 0.5))
@@ -825,32 +903,36 @@ class ReportLabTemplateRenderer:
         grid_color = colors.HexColor(grid_color_hex)
 
         commands = [
-            # Header row styling
+            # Header row styling (backgrounds + padding; text style handled by Paragraph)
             ("BACKGROUND", (0, 0), (-1, 0), header_bg),
-            ("TEXTCOLOR", (0, 0), (-1, 0), header_text_color),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, 0), 12),
             ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
             ("TOPPADDING", (0, 0), (-1, 0), 12),
-            # Data rows styling
+            ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
+            # Data rows styling - use the user-defined rowBackground for ALL rows
+            # (Issue #622: previously a hardcoded ROWBACKGROUNDS command for alternating
+            # white/grey rows overrode the user's chosen rowBackground color)
             ("BACKGROUND", (0, 1), (-1, -1), row_bg),
-            ("TEXTCOLOR", (0, 1), (-1, -1), row_text_color),
-            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-            ("FONTSIZE", (0, 1), (-1, -1), 10),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#ffffff"), colors.HexColor("#f9fafb")]),
+            ("VALIGN", (0, 1), (-1, -1), "TOP"),
             # Grid and borders
             ("GRID", (0, 0), (-1, -1), grid_w, grid_color),
         ]
 
-        # Apply column alignments (both header and data rows)
-        for idx, col in enumerate(columns):
-            align = col.get("align", "left").lower()
-            if align == "right":
-                commands.append(("ALIGN", (idx, 0), (idx, -1), "RIGHT"))  # Header + data
-            elif align == "center":
-                commands.append(("ALIGN", (idx, 0), (idx, -1), "CENTER"))  # Header + data
-            else:  # left
-                commands.append(("ALIGN", (idx, 0), (idx, -1), "LEFT"))  # Header + data
+        # Optional alternating row background — only when explicitly provided by the user.
+        # Falls back to user's rowBackground for the second band so a single-color table
+        # (the common case) is not affected.
+        alt_row_bg_raw = style_config.get("altRowBackground") or style_config.get("alternateRowBackground")
+        if alt_row_bg_raw:
+            alt_hex = _normalize_color(alt_row_bg_raw)
+            if alt_hex:
+                base_hex = _normalize_color(style_config.get("rowBackground", "#ffffff")) or "#ffffff"
+                commands.append(
+                    (
+                        "ROWBACKGROUNDS",
+                        (0, 1),
+                        (-1, -1),
+                        [colors.HexColor(base_hex), colors.HexColor(alt_hex)],
+                    )
+                )
 
         return TableStyle(commands)
 
