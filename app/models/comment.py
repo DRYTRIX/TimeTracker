@@ -151,7 +151,9 @@ class Comment(db.Model):
             raise PermissionError("User does not have permission to edit this comment")
 
         self.content = new_content.strip()
-        self.updated_at = now_in_app_timezone()
+        # updated_at is set by the column onupdate on commit. Do not call
+        # now_in_app_timezone() here: Settings lookup can rollback the session
+        # and discard pending edits when the settings row is missing (e.g. tests).
         db.session.commit()
 
     def delete_comment(self, user):
@@ -162,7 +164,6 @@ class Comment(db.Model):
         # If the comment has replies, we'll mark it as deleted but keep the structure
         if self.replies:
             self.content = "[Comment deleted]"
-            self.updated_at = now_in_app_timezone()
         else:
             # If no replies, we can safely delete it
             db.session.delete(self)

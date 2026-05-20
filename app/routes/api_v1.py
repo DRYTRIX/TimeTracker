@@ -1588,7 +1588,7 @@ def update_comment(comment_id):
     from sqlalchemy.orm import joinedload
 
     cmt = (
-        Comment.query.options(joinedload(Comment.user), joinedload(Comment.project), joinedload(Comment.task))
+        Comment.query.options(joinedload(Comment.author), joinedload(Comment.project), joinedload(Comment.task))
         .filter_by(id=comment_id)
         .first_or_404()
     )
@@ -1618,7 +1618,7 @@ def delete_comment(comment_id):
     from sqlalchemy.orm import joinedload
 
     cmt = (
-        Comment.query.options(joinedload(Comment.user), joinedload(Comment.project), joinedload(Comment.task))
+        Comment.query.options(joinedload(Comment.author), joinedload(Comment.project), joinedload(Comment.task))
         .filter_by(id=comment_id)
         .first_or_404()
     )
