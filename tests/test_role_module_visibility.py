@@ -41,11 +41,13 @@ def test_module_registry_allows_module_if_any_role_allows(app, user):
 
 @pytest.mark.integration
 def test_module_enabled_decorator_blocks_hidden_module_route(app, user):
-    """A hidden module should return 403 for an authenticated user (route decorator)."""
+    """A hidden module should return 403 when every assigned role hides it."""
     r = Role(name="hide_analytics_role", hidden_module_ids=["analytics"])
     db.session.add(r)
     db.session.commit()
 
+    # ModuleRegistry disables a module only when ALL roles hide it.
+    user.roles.clear()
     user.add_role(r)
     db.session.commit()
 

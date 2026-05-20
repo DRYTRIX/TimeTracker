@@ -56,11 +56,13 @@ def _auth(t):
 
 
 def test_tax_currency_flow(client, admin_token):
-    # create currency
-    r = client.post(
-        "/api/v1/currencies", headers=_auth(admin_token), json={"code": "USD", "name": "US Dollar", "symbol": "$"}
-    )
-    assert r.status_code == 201
+    # create currencies (both legs required for exchange-rate FK)
+    for payload in (
+        {"code": "USD", "name": "US Dollar", "symbol": "$"},
+        {"code": "EUR", "name": "Euro", "symbol": "€"},
+    ):
+        r = client.post("/api/v1/currencies", headers=_auth(admin_token), json=payload)
+        assert r.status_code == 201
 
     # list currencies
     r = client.get("/api/v1/currencies", headers=_auth(admin_token))

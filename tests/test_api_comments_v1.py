@@ -6,7 +6,7 @@ import os
 pytestmark = [pytest.mark.api, pytest.mark.integration]
 
 from app import create_app, db
-from app.models import User, Project, Task, ApiToken
+from app.models import User, Client, Project, Task, ApiToken
 
 
 @pytest.fixture
@@ -51,7 +51,10 @@ def api_token(app, user):
 
 @pytest.fixture
 def project(app):
-    p = Project(name="Comments Project", status="active")
+    c = Client(name="Comments Client", email="comments@example.com")
+    db.session.add(c)
+    db.session.commit()
+    p = Project(name="Comments Project", client_id=c.id, status="active")
     db.session.add(p)
     db.session.commit()
     return p
