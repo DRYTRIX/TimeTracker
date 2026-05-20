@@ -1304,35 +1304,29 @@ class InvoicePDFGenerator:
         rows = []
 
         # Subtotal
-        rows.append(
-            f"""
+        rows.append(f"""
         <tr>
             <td colspan="3" class="num">Subtotal:</td>
             <td class="num">{self._format_currency(self.invoice.subtotal)}</td>
         </tr>
-        """
-        )
+        """)
 
         # Tax if applicable
         if self.invoice.tax_rate > 0:
-            rows.append(
-                f"""
+            rows.append(f"""
             <tr>
                 <td colspan="3" class="num">Tax ({self.invoice.tax_rate:.2f}%):</td>
                 <td class="num">{self._format_currency(self.invoice.tax_amount)}</td>
             </tr>
-            """
-            )
+            """)
 
         # Total
-        rows.append(
-            f"""
+        rows.append(f"""
         <tr>
             <td colspan="3" class="num">Total Amount:</td>
             <td class="num">{self._format_currency(self.invoice.total_amount)}</td>
         </tr>
-        """
-        )
+        """)
 
         return "".join(rows)
 
@@ -1341,24 +1335,20 @@ class InvoicePDFGenerator:
         html_parts = []
 
         if self.invoice.notes:
-            html_parts.append(
-                f"""
+            html_parts.append(f"""
             <div class="notes-section">
                 <h4>{_('Notes:')}</h4>
                 <p>{self.invoice.notes}</p>
             </div>
-            """
-            )
+            """)
 
         if self.invoice.terms:
-            html_parts.append(
-                f"""
+            html_parts.append(f"""
             <div class="terms-section">
                 <h4>{_('Terms:')}</h4>
                 <p>{self.invoice.terms}</p>
             </div>
-            """
-            )
+            """)
 
         if html_parts:
             return f'<div class="additional-info">{"".join(html_parts)}</div>'
@@ -1607,9 +1597,7 @@ class InvoicePDFGenerator:
         .nl2br {{
             white-space: pre-line;
         }}
-        """.format(
-            page_size=page_size
-        )
+        """.format(page_size=page_size)
 
 
 def get_overflow_prevention_css():
@@ -2337,6 +2325,4 @@ class QuotePDFGenerator:
             margin: 0;
             padding: 0;
         }}
-        """.format(
-            page_size=page_size
-        )
+        """.format(page_size=page_size)

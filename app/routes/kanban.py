@@ -4,10 +4,10 @@ from flask_login import current_user, login_required
 
 from app import db, socketio
 from app.models import KanbanColumn, Task
-from app.utils.scope_filter import get_active_projects_for_user
 from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
 from app.utils.permissions import admin_or_permission_required
+from app.utils.scope_filter import get_active_projects_for_user
 
 kanban_bp = Blueprint("kanban", __name__)
 

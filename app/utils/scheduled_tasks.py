@@ -817,7 +817,9 @@ def _deliver_push_to_subscriptions(user, subscriptions, note) -> int:
                 subscription_info={"endpoint": sub.endpoint, "keys": sub.keys or {}},
                 data=_json.dumps(body),
                 vapid_private_key=vapid_private,
-                vapid_claims={"sub": f"mailto:{vapid_claims_email}" if vapid_claims_email else "mailto:noreply@example.invalid"},
+                vapid_claims={
+                    "sub": f"mailto:{vapid_claims_email}" if vapid_claims_email else "mailto:noreply@example.invalid"
+                },
             )
             try:
                 sub.update_last_used()

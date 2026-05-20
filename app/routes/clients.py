@@ -941,7 +941,6 @@ def bulk_delete_clients():
     """Delete multiple clients at once"""
     from app.models.client_notification import ClientNotification, ClientNotificationPreferences
     from app.models.invoice import Invoice
-
     from app.utils.permissions import user_can_delete_client, user_has_any_client_delete_permission
 
     if not user_has_any_client_delete_permission(current_user):

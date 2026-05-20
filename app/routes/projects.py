@@ -1222,6 +1222,7 @@ def activate_project(project_id):
 
     # Check permissions
     from flask import abort
+
     from app.utils.permissions import user_can_edit_project
     from app.utils.scope_filter import user_can_access_project
 

@@ -16,11 +16,7 @@ from sqlalchemy import func
 
 from app import db
 from app.models import Project, TimeEntry
-from app.utils.timezone import (
-    get_timezone_for_user,
-    get_timezone_obj,
-    now_in_user_timezone,
-)
+from app.utils.timezone import get_timezone_for_user, get_timezone_obj, now_in_user_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -213,9 +209,7 @@ class ProductivityService:
                 week_goal_hours = 40.0
 
             week_goal_percent = int(min(100, max(0, round(week_hours / week_goal_hours * 100))))
-            billable_percent_week = (
-                int(round(week_billable_sec / week_total_sec * 100)) if week_total_sec > 0 else 0
-            )
+            billable_percent_week = int(round(week_billable_sec / week_total_sec * 100)) if week_total_sec > 0 else 0
 
             top_project_week = cls._top_project_for_period(uid, week_start_dt, week_end_dt)
 
@@ -479,15 +473,11 @@ class ProductivityService:
             else:
                 avg_minutes = 0.0
 
-            entries_per_day = (
-                round(len(rows) / len(tracked_days), 2) if tracked_days else 0.0
-            )
+            entries_per_day = round(len(rows) / len(tracked_days), 2) if tracked_days else 0.0
 
             most_productive_hour: Optional[int] = None
             if hour_seconds:
-                most_productive_hour = int(
-                    max(hour_seconds.items(), key=lambda kv: kv[1])[0]
-                )
+                most_productive_hour = int(max(hour_seconds.items(), key=lambda kv: kv[1])[0])
 
             most_productive_day: Optional[str] = None
             if dow_seconds:
@@ -496,9 +486,7 @@ class ProductivityService:
                     most_productive_day = _DOW_NAMES[best_dow]
 
             # Build a 24-bar sparkline of hours per hour of day for the period.
-            hour_distribution = [
-                round(hour_seconds.get(h, 0) / 3600.0, 2) for h in range(24)
-            ]
+            hour_distribution = [round(hour_seconds.get(h, 0) / 3600.0, 2) for h in range(24)]
 
             return {
                 "avg_session_length_minutes": round(avg_minutes, 1),
@@ -578,9 +566,7 @@ class ProductivityService:
                 )
             return out
         except Exception:
-            logger.exception(
-                "ProductivityService.get_project_breakdown failed for user %s", uid
-            )
+            logger.exception("ProductivityService.get_project_breakdown failed for user %s", uid)
             return []
 
     # -------------------------------------------------------- weekly heatmap
@@ -642,9 +628,7 @@ class ProductivityService:
                 cur += timedelta(days=1)
             return out
         except Exception:
-            logger.exception(
-                "ProductivityService.get_weekly_heatmap failed for user %s", uid
-            )
+            logger.exception("ProductivityService.get_weekly_heatmap failed for user %s", uid)
             return []
 
     # ---------------------------------------------------------------- insights
@@ -668,9 +652,7 @@ class ProductivityService:
                 # daily_breakdown is oldest first; last 7 entries are this week (Mon..today),
                 # the 7 entries before that are "last week" for comparison.
                 if len(daily_breakdown) >= 14:
-                    last_week_hours = sum(
-                        float(d.get("hours") or 0) for d in daily_breakdown[-14:-7]
-                    )
+                    last_week_hours = sum(float(d.get("hours") or 0) for d in daily_breakdown[-14:-7])
                 else:
                     last_week_hours = 0.0
                 if last_week_hours > 0 and this_week_hours != last_week_hours:
@@ -678,9 +660,7 @@ class ProductivityService:
                     pct = abs(int(round(diff / last_week_hours * 100)))
                     if pct >= 1:
                         direction = "more" if diff > 0 else "less"
-                        insights.append(
-                            f"You logged {pct}% {direction} this week than last week"
-                        )
+                        insights.append(f"You logged {pct}% {direction} this week than last week")
             except Exception:
                 pass
 
@@ -688,9 +668,7 @@ class ProductivityService:
             try:
                 cur_streak = int(streak.get("current_streak") or 0)
                 if cur_streak >= 3:
-                    insights.append(
-                        f"You've tracked time {cur_streak} days in a row — keep it up!"
-                    )
+                    insights.append(f"You've tracked time {cur_streak} days in a row — keep it up!")
             except Exception:
                 pass
 
@@ -700,9 +678,7 @@ class ProductivityService:
                 if hour is not None and 0 <= int(hour) <= 23:
                     h = int(hour)
                     next_h = (h + 1) % 24
-                    insights.append(
-                        f"Your most productive time is {h:02d}:00–{next_h:02d}:00"
-                    )
+                    insights.append(f"Your most productive time is {h:02d}:00–{next_h:02d}:00")
             except Exception:
                 pass
 
@@ -715,8 +691,7 @@ class ProductivityService:
                         pct = int(round(float(top["hours"]) / total * 100))
                         if pct > 0:
                             insights.append(
-                                f"{top.get('name', 'Top project')} accounted for "
-                                f"{pct}% of your tracked time"
+                                f"{top.get('name', 'Top project')} accounted for " f"{pct}% of your tracked time"
                             )
             except Exception:
                 pass
@@ -725,9 +700,7 @@ class ProductivityService:
             try:
                 billable = int(summary.get("billable_percent_week") or 0)
                 if billable > 0:
-                    insights.append(
-                        f"Your billable rate this week is {billable}%"
-                    )
+                    insights.append(f"Your billable rate this week is {billable}%")
             except Exception:
                 pass
         except Exception:

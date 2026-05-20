@@ -295,13 +295,9 @@ class ThemeService:
 
         theme_name = self._normalise_theme_name(_safe_attr(user, "theme_name", "default"))
         accent_override = _safe_attr(user, "theme_accent_color", None)
-        sidebar_style = self._validate_sidebar_style(
-            _safe_attr(user, "theme_sidebar_style", "default")
-        )
+        sidebar_style = self._validate_sidebar_style(_safe_attr(user, "theme_sidebar_style", "default"))
         font_size = self._validate_font_size(_safe_attr(user, "theme_font_size", "base"))
-        border_radius = self._validate_border_radius(
-            _safe_attr(user, "theme_border_radius", "default")
-        )
+        border_radius = self._validate_border_radius(_safe_attr(user, "theme_border_radius", "default"))
 
         theme = BUILT_IN_THEMES.get(theme_name) or BUILT_IN_THEMES["default"]
 
@@ -338,8 +334,7 @@ class ThemeService:
             # Defence in depth: only emit values that look like a hex
             # colour or a simple keyword/number, never anything else.
             if isinstance(var_value, str) and (
-                _HEX_COLOR_RE.match(var_value)
-                or re.match(r"^[a-zA-Z0-9_#\-.,()% ]+$", var_value)
+                _HEX_COLOR_RE.match(var_value) or re.match(r"^[a-zA-Z0-9_#\-.,()% ]+$", var_value)
             ):
                 css_vars[var_name] = var_value
 
@@ -387,13 +382,10 @@ class ThemeService:
         # Theme-aware rules. These deliberately use ``!important`` so
         # they win against the existing utility classes baked into the
         # markup (which we never touch).
-        has_sidebar_vars = any(
-            k.startswith("--sidebar-") or k == "--nav-accent" for k in css_vars
-        )
+        has_sidebar_vars = any(k.startswith("--sidebar-") or k == "--nav-accent" for k in css_vars)
         if has_sidebar_vars and "--sidebar-bg" in css_vars:
             lines.append(
-                "#sidebar { background-color: var(--sidebar-bg) !important; "
-                "color: var(--sidebar-text) !important; }"
+                "#sidebar { background-color: var(--sidebar-bg) !important; " "color: var(--sidebar-text) !important; }"
             )
             lines.append(
                 "#sidebar .sidebar-label, "
@@ -411,8 +403,7 @@ class ThemeService:
             )
             if sidebar_style == "minimal":
                 lines.append(
-                    "#sidebar:hover, #sidebar:focus-within "
-                    "{ width: var(--sidebar-hover-width, 220px) !important; }"
+                    "#sidebar:hover, #sidebar:focus-within " "{ width: var(--sidebar-hover-width, 220px) !important; }"
                 )
             if sidebar_style == "compact":
                 lines.append(
@@ -424,10 +415,7 @@ class ThemeService:
         # Hover / active nav rules (always emitted when any sidebar var
         # is present so the picker preview is immediately visible).
         if has_sidebar_vars:
-            lines.append(
-                ".sidebar-nav-item:hover { "
-                "background-color: var(--sidebar-hover) !important; }"
-            )
+            lines.append(".sidebar-nav-item:hover { " "background-color: var(--sidebar-hover) !important; }")
             lines.append(
                 ".sidebar-nav-item.active, "
                 "#sidebar .sidebar-nav-item.active { "
@@ -485,9 +473,7 @@ class ThemeService:
             if normalised_theme not in BUILT_IN_THEMES:
                 return {"ok": False, "error": "invalid_theme_name"}
         else:
-            normalised_theme = self._normalise_theme_name(
-                _safe_attr(user, "theme_name", "default")
-            )
+            normalised_theme = self._normalise_theme_name(_safe_attr(user, "theme_name", "default"))
 
         # ----- accent_color (nullable)
         if accent_color in (None, "", "null"):
@@ -503,9 +489,7 @@ class ThemeService:
 
         # ----- sidebar_style
         if sidebar_style is None:
-            sidebar_to_save = self._validate_sidebar_style(
-                _safe_attr(user, "theme_sidebar_style", "default")
-            )
+            sidebar_to_save = self._validate_sidebar_style(_safe_attr(user, "theme_sidebar_style", "default"))
         elif sidebar_style in ALLOWED_SIDEBAR_STYLES:
             sidebar_to_save = sidebar_style
         else:
@@ -513,9 +497,7 @@ class ThemeService:
 
         # ----- font_size
         if font_size is None:
-            font_to_save = self._validate_font_size(
-                _safe_attr(user, "theme_font_size", "base")
-            )
+            font_to_save = self._validate_font_size(_safe_attr(user, "theme_font_size", "base"))
         elif font_size in ALLOWED_FONT_SIZES:
             font_to_save = font_size
         else:
@@ -523,9 +505,7 @@ class ThemeService:
 
         # ----- border_radius
         if border_radius is None:
-            radius_to_save = self._validate_border_radius(
-                _safe_attr(user, "theme_border_radius", "default")
-            )
+            radius_to_save = self._validate_border_radius(_safe_attr(user, "theme_border_radius", "default"))
         elif border_radius in ALLOWED_BORDER_RADII:
             radius_to_save = border_radius
         else:

@@ -353,9 +353,7 @@ class NotificationService:
                     {
                         "kind": KIND_END_OF_DAY,
                         "title": "End of day",
-                        "message": (
-                            f"It's nearly end of day. You've logged {hours_today:.1f}h today."
-                        ),
+                        "message": (f"It's nearly end of day. You've logged {hours_today:.1f}h today."),
                         "type": "info",
                         "priority": "normal",
                         "action": {"label": "View today's entries", "url": "/time-entries"},
