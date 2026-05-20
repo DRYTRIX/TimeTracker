@@ -51,16 +51,16 @@ def apply_client_scope_to_model(Client, user=None):
 
 
 def apply_project_scope_to_model(Project, user=None):
-    """Return filter expression for Project query (Project.client_id.in_(...) or Project.id.in_(...))."""
+    """Return filter expression for Project query (Project.id.in_(...) or None for no filter)."""
     u = user or (current_user if current_user.is_authenticated else None)
     if not u or u.is_admin:
         return None
-    allowed_clients = u.get_allowed_client_ids()
-    if allowed_clients is None:
+    allowed_projects = u.get_allowed_project_ids()
+    if allowed_projects is None:
         return None
-    if not allowed_clients:
+    if not allowed_projects:
         return Project.id.in_([])  # never match
-    return Project.client_id.in_(allowed_clients)
+    return Project.id.in_(allowed_projects)
 
 
 def user_can_access_client(user, client_id):
@@ -85,6 +85,28 @@ def user_can_access_project(user, project_id):
     if allowed is None:
         return True
     return project_id in allowed
+
+
+def get_active_clients_for_user(user, *, status="active"):
+    """Return clients visible to user (respects scope)."""
+    from app.models import Client
+
+    query = Client.query.filter_by(status=status).order_by(Client.name)
+    scope = apply_client_scope_to_model(Client, user)
+    if scope is not None:
+        query = query.filter(scope)
+    return query.all()
+
+
+def get_active_projects_for_user(user, *, status="active"):
+    """Return projects visible to user (respects scope)."""
+    from app.models import Project
+
+    query = Project.query.filter_by(status=status).order_by(Project.name)
+    scope = apply_project_scope_to_model(Project, user)
+    if scope is not None:
+        query = query.filter(scope)
+    return query.all()
 
 
 def get_accessible_project_and_client_ids_for_user(user_id: int) -> Tuple[Set[int], Set[int]]:

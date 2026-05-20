@@ -66,6 +66,7 @@ class ClientService:
             address=address,
             default_hourly_rate=default_hourly_rate,
             custom_fields=custom_fields,
+            created_by=created_by,
         )
 
         if not safe_commit("create_client", {"name": name, "created_by": created_by}):

@@ -23,13 +23,13 @@ api_v1_projects_bp = Blueprint("api_v1_projects", __name__, url_prefix="/api/v1"
 def list_projects():
     """List all projects."""
     from app.services import ProjectService
-    from app.utils.scope_filter import get_allowed_client_ids
+    from app.utils.scope_filter import get_allowed_project_ids
 
     status = request.args.get("status", "active")
     client_id = request.args.get("client_id", type=int)
     page = request.args.get("page", 1, type=int)
     per_page = min(request.args.get("per_page", 50, type=int), 100)
-    scope_client_ids = get_allowed_client_ids(g.api_user)
+    scope_project_ids = get_allowed_project_ids(g.api_user)
 
     project_service = ProjectService()
     result = project_service.list_projects(
@@ -37,7 +37,7 @@ def list_projects():
         client_id=client_id,
         page=page,
         per_page=per_page,
-        scope_client_ids=scope_client_ids,
+        scope_project_ids=scope_project_ids,
     )
     pag = result["pagination"]
     pagination_dict = {

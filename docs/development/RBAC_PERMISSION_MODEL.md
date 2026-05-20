@@ -30,7 +30,7 @@ These blueprints protect routes with `@admin_or_permission_required("permission_
 
 ### 2. All authenticated users (with optional scope)
 
-These blueprints use only `@login_required`. Any logged-in user can access the routes. **Scope-restricted users** (e.g. users with the **Subcontractor** role) see only data for their assigned clients and projects: list and detail routes for clients, projects, time entries, reports, invoices, and API v1 apply scope filters and return 403 for direct access to out-of-scope resources. See [SUBCONTRACTOR_ROLE.md](../SUBCONTRACTOR_ROLE.md).
+These blueprints use only `@login_required`. Any logged-in user can access the routes. **Scope-restricted users** (e.g. users with the **Subcontractor** role) see only data for their assigned clients and projects. Users with **own-scope** permissions (`view_own_projects`, `view_own_clients`, `view_own_tasks`) see only entities they created (`created_by`); legacy rows with `created_by` NULL are visible only to view-all/admin. List and detail routes for clients, projects, time entries, reports, invoices, Kanban, and API v1 apply scope filters and return 403 for direct access to out-of-scope resources. See [SUBCONTRACTOR_ROLE.md](../SUBCONTRACTOR_ROLE.md).
 
 **Examples:** deals, leads, invoices (main routes), timer, reports, calendar, expenses (main routes), main dashboard, time_approvals, contacts, tasks, client_notes, budget_alerts, payments, recurring_invoices, etc.
 

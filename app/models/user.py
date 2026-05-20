@@ -193,7 +193,12 @@ class User(UserMixin, db.Model):
         backref=db.backref("favorited_by", lazy="dynamic"),
     )
     roles = db.relationship("Role", secondary="user_roles", lazy="joined", backref=db.backref("users", lazy="dynamic"))
-    client = db.relationship("Client", backref="portal_users", lazy="joined")
+    client = db.relationship(
+        "Client",
+        foreign_keys=[client_id],
+        backref="portal_users",
+        lazy="joined",
+    )
     assigned_clients = db.relationship(
         "Client",
         secondary="user_clients",
@@ -535,28 +540,62 @@ class User(UserMixin, db.Model):
 
     def get_allowed_client_ids(self):
         """Return list of client IDs this user may access, or None for full access."""
+        from app.utils.permissions import user_has_view_all_clients, user_has_view_own_clients_only
+
         if self.is_admin:
             return None
         if self.is_client_portal_user:
             return [self.client_id] if self.client_id else []
-        if not self.is_scope_restricted:
+        if self.is_scope_restricted:
+            ids = [c.id for c in self.assigned_clients.all()]
+            return ids if ids else []
+        if user_has_view_all_clients(self):
             return None
-        ids = [c.id for c in self.assigned_clients.all()]
-        return ids if ids else []
+        if user_has_view_own_clients_only(self):
+            from .client import Client
+
+            rows = db.session.query(Client.id).filter(Client.created_by == self.id).all()
+            return [r[0] for r in rows]
+        if self.has_any_permission("view_own_clients", "view_clients", "view_all_clients"):
+            return []
+        return []
 
     def get_allowed_project_ids(self):
         """Return list of project IDs this user may access, or None for full access."""
+        from app.utils.permissions import user_has_view_all_projects, user_has_view_own_projects_only
+
         if self.is_admin:
             return None
         from .project import Project
 
-        client_ids = self.get_allowed_client_ids()
-        if client_ids is None:
-            return None
-        if not client_ids:
+        if self.is_client_portal_user or self.is_scope_restricted:
+            client_ids = (
+                [self.client_id]
+                if self.is_client_portal_user
+                else [c.id for c in self.assigned_clients.all()]
+            )
+            if not client_ids:
+                return []
+            rows = db.session.query(Project.id).filter(Project.client_id.in_(client_ids)).all()
+            return [r[0] for r in rows]
+
+        if user_has_view_all_projects(self):
+            client_ids = self.get_allowed_client_ids()
+            if client_ids is None:
+                return None
+            if not client_ids:
+                return []
+            rows = db.session.query(Project.id).filter(Project.client_id.in_(client_ids)).all()
+            return [r[0] for r in rows]
+
+        if user_has_view_own_projects_only(self):
+            rows = db.session.query(Project.id).filter(Project.created_by == self.id).all()
+            return [r[0] for r in rows]
+
+        if self.has_any_permission("view_own_projects", "view_projects", "view_all_projects"):
             return []
-        rows = db.session.query(Project.id).filter(Project.client_id.in_(client_ids)).all()
-        return [r[0] for r in rows]
+
+        return []
 
     # Client portal helpers
     def get_client_portal_data(self):
