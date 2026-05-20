@@ -1,6 +1,7 @@
 """Tests for PDF layout customization functionality."""
 
 import json
+from unittest.mock import MagicMock, patch
 
 import pytest
 from datetime import date, timedelta
@@ -168,10 +169,18 @@ def test_pdf_layout_get_defaults(admin_authenticated_client):
     assert "css" in data
 
 
+def _assert_pdf_preview_response(response):
+    assert response.status_code == 200
+    assert response.data.startswith(b"%PDF")
+    assert len(response.data) > 100
+    mimetype = (response.mimetype or response.content_type or "").lower()
+    assert "pdf" in mimetype
+
+
 @pytest.mark.smoke
 @pytest.mark.admin
 def test_pdf_layout_preview(admin_authenticated_client, sample_invoice):
-    """Test PDF layout preview functionality."""
+    """Preview returns ReportLab PDF when saved/default template_json exists (issue #622)."""
     # Preview requires a saved template; save a minimal one first
     admin_authenticated_client.post(
         "/admin/pdf-layout",
@@ -192,9 +201,7 @@ def test_pdf_layout_preview(admin_authenticated_client, sample_invoice):
         },
     )
 
-    assert response.status_code == 200
-    # Should return HTML content (invoice number or heading)
-    assert b"Test Invoice" in response.data or b"INV-2024-001" in response.data
+    _assert_pdf_preview_response(response)
 
 
 @pytest.mark.smoke
@@ -249,20 +256,35 @@ def test_pdf_layout_preview_prefers_form_template_json_over_database(
         t.template_json = json.dumps(db_template)
         db.session.commit()
 
-    response = admin_authenticated_client.post(
-        "/admin/pdf-layout/preview",
-        data={
-            "html": "<div></div>",
-            "css": "",
-            "template_json": json.dumps(form_template),
-            "page_size": "A4",
-            "invoice_id": sample_invoice.id,
-        },
-    )
-    assert response.status_code == 200
-    body = response.get_data(as_text=True)
-    assert "FORM_PREVIEW_MARKER_XYZ" in body
-    assert "DB_PREVIEW_MARKER_XYZ" not in body
+    templates_used = []
+
+    def _renderer_factory(template_json, context, page_size):
+        templates_used.append(template_json)
+        marker = template_json["elements"][0]["text"]
+        mock = MagicMock()
+        mock.render_to_bytes.return_value = b"%PDF-1.4\n" + marker.encode() + (b" " * 100)
+        return mock
+
+    with patch(
+        "app.utils.pdf_generator_reportlab.ReportLabTemplateRenderer",
+        side_effect=_renderer_factory,
+    ):
+        response = admin_authenticated_client.post(
+            "/admin/pdf-layout/preview",
+            data={
+                "html": "<div></div>",
+                "css": "",
+                "template_json": json.dumps(form_template),
+                "page_size": "A4",
+                "invoice_id": sample_invoice.id,
+            },
+        )
+
+    _assert_pdf_preview_response(response)
+    assert len(templates_used) == 1
+    assert templates_used[0]["elements"][0]["text"] == "FORM_PREVIEW_MARKER_XYZ"
+    assert b"FORM_PREVIEW_MARKER_XYZ" in response.data
+    assert b"DB_PREVIEW_MARKER_XYZ" not in response.data
 
 
 @pytest.mark.smoke
