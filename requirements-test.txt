@@ -2,7 +2,7 @@
 # This file should be used in addition to requirements.txt for testing environments
 
 # Core testing frameworks
-pytest==7.4.3
+pytest==9.0.3
 pytest-flask==1.3.0
 pytest-cov==4.1.0
 pytest-xdist==3.5.0  # Parallel test execution
@@ -11,7 +11,7 @@ pytest-mock==3.12.0  # Mocking support
 pytest-env==1.1.3  # Environment variable management for tests
 
 # Code quality and linting
-black==24.8.0
+black==26.3.1
 flake8==6.1.0
 isort==5.13.2
 pylint==3.0.3
