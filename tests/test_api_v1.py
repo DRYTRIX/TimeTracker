@@ -37,6 +37,17 @@ def app():
 
     with app.app_context():
         db.create_all()
+        from app.models import Role
+        from app.utils.permissions_seed import migrate_legacy_users, seed_permissions, seed_roles
+
+        for role_name in ("admin", "user", "manager", "subcontractor"):
+            if Role.query.filter_by(name=role_name).first() is None:
+                db.session.add(Role(name=role_name, description=f"Test {role_name} role", is_system_role=True))
+        db.session.commit()
+        seed_permissions()
+        seed_roles(silent=True)
+        migrate_legacy_users()
+
         settings = Settings()
         db.session.add(settings)
         db.session.commit()
@@ -66,10 +77,16 @@ def client(app):
 @pytest.fixture
 def test_user(app):
     """Create a test user and return its ID"""
-    user = User(username="testuser", email="test@example.com")
+    from app.models import Role
+
+    user = User(username="testuser", email="test@example.com", role="user")
     user.set_password("password")
     user.is_active = True
     db.session.add(user)
+    db.session.flush()
+    user_role = Role.query.filter_by(name="user").first()
+    if user_role:
+        user.roles.append(user_role)
     db.session.commit()
     # Re-query to avoid relying on possibly expired instance state
     uid = db.session.query(User.id).filter_by(username="testuser").scalar()
@@ -111,6 +128,7 @@ def test_project(app, test_user, test_client_model):
         hourly_rate=75.0,
         status="active",
         client_id=test_client_model.id,
+        created_by=int(test_user),
     )
     db.session.add(project)
     db.session.commit()
@@ -118,9 +136,14 @@ def test_project(app, test_user, test_client_model):
 
 
 @pytest.fixture
-def test_client_model(app):
+def test_client_model(app, test_user):
     """Create a test client"""
-    client_model = Client(name="Test Client", email="client@example.com", company="Test Company")
+    client_model = Client(
+        name="Test Client",
+        email="client@example.com",
+        company="Test Company",
+        created_by=int(test_user),
+    )
     db.session.add(client_model)
     db.session.commit()
     return client_model
@@ -506,6 +529,7 @@ class TestPagination:
                 name=f"Paginate Project {i}",
                 status="active",
                 client_id=test_client_model.id,
+                created_by=test_project.created_by,
             )
             db.session.add(project)
         db.session.commit()

@@ -76,7 +76,12 @@ def run_global_search(
                 or_(Task.name.ilike(search_pattern), Task.description.ilike(search_pattern)),
             )
             tasks_query = apply_project_scope(Project, tasks_query, user)
-            if not user.is_admin and not user.has_permission("view_all_tasks"):
+            if (
+                not user.is_admin
+                and not user.has_permission("view_all_tasks")
+                and not getattr(user, "is_scope_restricted", False)
+                and not getattr(user, "is_client_portal_user", False)
+            ):
                 tasks_query = tasks_query.filter(db.or_(Task.assigned_to == user.id, Task.created_by == user.id))
             tasks = tasks_query.limit(limit).all()
 
