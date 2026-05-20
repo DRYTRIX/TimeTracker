@@ -7,7 +7,7 @@ Flask-SocketIO==5.3.6
 
 # OAuth / OIDC
 Authlib==1.6.12
-PyJWT==2.8.0
+PyJWT==2.12.1
 
 # LDAP (directory authentication)
 ldap3==2.9.1
@@ -41,7 +41,7 @@ openpyxl==3.1.2
 
 # PDF Generation
 WeasyPrint==68.0
-pydyf==0.10.0
+pydyf==0.12.1
 Pillow==12.2.0
 reportlab==4.0.7
 pikepdf>=8.0.0
@@ -55,7 +55,7 @@ Babel==2.14.0
 
 # Security
 cryptography==46.0.7
-markdown==3.6
+markdown==3.8.1
 bleach==6.1.0
 pyotp==2.9.0
 

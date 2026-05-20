@@ -1,0 +1,45 @@
+# Virtual environments and local Python artifacts
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Node (frontend stage installs from package*.json only)
+node_modules/
+
+# Git and IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+.cursor/
+
+# Runtime data and secrets (mounted or env at run time)
+data/
+logs/
+backups/
+*.db
+*.sqlite
+*.sqlite3
+.env
+.env.*
+
+# Docs and dev tooling (not needed in the app image)
+docs/
+.github/
+mobile/
+tests/
+*.md
+!README.md
+
+# OS junk
+.DS_Store
+Thumbs.db
