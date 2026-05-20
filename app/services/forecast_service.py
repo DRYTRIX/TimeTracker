@@ -60,18 +60,12 @@ class ForecastService:
             "velocity_hours_per_day": 0.0,
             # Budget
             "budget_hours": _safe_float(getattr(project, "estimated_hours", 0)) if project else 0.0,
-            "budget_amount": (
-                _safe_float(getattr(project, "budget_amount", 0)) if project else 0.0
-            ),
-            "hourly_rate": (
-                _safe_float(getattr(project, "hourly_rate", 0)) if project else 0.0
-            ),
+            "budget_amount": (_safe_float(getattr(project, "budget_amount", 0)) if project else 0.0),
+            "hourly_rate": (_safe_float(getattr(project, "hourly_rate", 0)) if project else 0.0),
             "hours_remaining": _safe_float(getattr(project, "estimated_hours", 0)) if project else 0.0,
             "budget_used_percent": 0,
             "budget_amount_used": 0.0,
-            "budget_amount_remaining": (
-                _safe_float(getattr(project, "budget_amount", 0)) if project else 0.0
-            ),
+            "budget_amount_remaining": (_safe_float(getattr(project, "budget_amount", 0)) if project else 0.0),
             "at_risk": False,
             # Timeline
             "days_to_completion": None,
@@ -154,9 +148,7 @@ class ForecastService:
 
         total_logged_hours = round(total_seconds / 3600.0, 2)
         days_with_entries = len(by_day_seconds)
-        avg_hours_per_active_day = (
-            round(total_logged_hours / days_with_entries, 2) if days_with_entries > 0 else 0.0
-        )
+        avg_hours_per_active_day = round(total_logged_hours / days_with_entries, 2) if days_with_entries > 0 else 0.0
 
         first_entry_date = first_dt.date() if first_dt else None
         last_entry_date = last_dt.date() if last_dt else None
@@ -169,9 +161,7 @@ class ForecastService:
             elapsed_calendar_days = 0
 
         avg_hours_per_calendar_day = (
-            round(total_logged_hours / elapsed_calendar_days, 2)
-            if elapsed_calendar_days > 0
-            else 0.0
+            round(total_logged_hours / elapsed_calendar_days, 2) if elapsed_calendar_days > 0 else 0.0
         )
 
         # Velocity: avg_hours_per_calendar_day primary; if short history (< 7d),
@@ -180,9 +170,7 @@ class ForecastService:
         velocity_hours_per_day = avg_hours_per_calendar_day
         if elapsed_calendar_days < 7 and total_logged_hours > 0:
             recent_window_start = today - timedelta(days=6)
-            recent_seconds = sum(
-                sec for d, sec in by_day_seconds.items() if d >= recent_window_start
-            )
+            recent_seconds = sum(sec for d, sec in by_day_seconds.items() if d >= recent_window_start)
             recent_hours = recent_seconds / 3600.0
             recent_velocity = round(recent_hours / 7.0, 2)
             velocity_hours_per_day = max(velocity_hours_per_day, recent_velocity)
@@ -208,9 +196,7 @@ class ForecastService:
                 hourly_rate = 0.0
 
         hours_remaining = max(0.0, budget_hours - total_logged_hours)
-        budget_used_percent = (
-            _clamp_percent((total_logged_hours / budget_hours) * 100) if budget_hours > 0 else 0
-        )
+        budget_used_percent = _clamp_percent((total_logged_hours / budget_hours) * 100) if budget_hours > 0 else 0
         budget_amount_used = round(total_logged_hours * hourly_rate, 2)
         budget_amount_remaining = max(0.0, budget_amount - budget_amount_used)
         at_risk = budget_used_percent >= 80 if budget_hours > 0 else False
@@ -252,9 +238,7 @@ class ForecastService:
         if project_deadline is not None:
             days_until_deadline = (project_deadline - today).days
 
-        deadline_risk = cls._compute_deadline_risk(
-            velocity_hours_per_day, projected_completion_date, project_deadline
-        )
+        deadline_risk = cls._compute_deadline_risk(velocity_hours_per_day, projected_completion_date, project_deadline)
 
         forecast["days_to_completion"] = days_to_completion
         forecast["projected_completion_date"] = (
@@ -266,11 +250,7 @@ class ForecastService:
 
         # ------------------------------------------------------------ tasks
         try:
-            task_rows = (
-                db.session.query(Task.status, Task.due_date)
-                .filter(Task.project_id == project.id)
-                .all()
-            )
+            task_rows = db.session.query(Task.status, Task.due_date).filter(Task.project_id == project.id).all()
         except Exception:
             logger.exception("ForecastService: task query failed for project %s", project_id)
             task_rows = []
@@ -279,13 +259,9 @@ class ForecastService:
         completed_tasks = sum(1 for status, _due in task_rows if status == "done")
         open_tasks = sum(1 for status, _due in task_rows if status not in ("done", "cancelled"))
         overdue_tasks = sum(
-            1
-            for status, due in task_rows
-            if due is not None and due < today and status not in ("done", "cancelled")
+            1 for status, due in task_rows if due is not None and due < today and status not in ("done", "cancelled")
         )
-        task_completion_percent = (
-            _clamp_percent((completed_tasks / total_tasks) * 100) if total_tasks > 0 else 0
-        )
+        task_completion_percent = _clamp_percent((completed_tasks / total_tasks) * 100) if total_tasks > 0 else 0
 
         forecast["total_tasks"] = int(total_tasks)
         forecast["completed_tasks"] = int(completed_tasks)
@@ -298,9 +274,7 @@ class ForecastService:
         prior_7_start = today - timedelta(days=13)
         prior_7_end = today - timedelta(days=7)
         recent_seconds = sum(sec for d, sec in by_day_seconds.items() if d >= last_7_start)
-        prior_seconds = sum(
-            sec for d, sec in by_day_seconds.items() if prior_7_start <= d <= prior_7_end
-        )
+        prior_seconds = sum(sec for d, sec in by_day_seconds.items() if prior_7_start <= d <= prior_7_end)
         recent_hours_7d = round(recent_seconds / 3600.0, 2)
         prior_hours_7d = round(prior_seconds / 3600.0, 2)
 
@@ -336,9 +310,7 @@ class ForecastService:
         return forecast
 
     @staticmethod
-    def _compute_deadline_risk(
-        velocity: float, projected_completion: Optional[date], deadline: Optional[date]
-    ) -> str:
+    def _compute_deadline_risk(velocity: float, projected_completion: Optional[date], deadline: Optional[date]) -> str:
         """Map (velocity, projected completion, deadline) to a coarse risk label."""
         if velocity is None or velocity <= 0 or projected_completion is None:
             return "no_data"
@@ -401,13 +373,9 @@ class ForecastService:
                 "name": project.name,
                 "status": project.status,
                 "estimated_hours": project.estimated_hours,
-                "budget_amount": (
-                    float(project.budget_amount) if project.budget_amount is not None else None
-                ),
+                "budget_amount": (float(project.budget_amount) if project.budget_amount is not None else None),
                 "deadline": (
-                    getattr(project, "deadline", None).isoformat()
-                    if getattr(project, "deadline", None)
-                    else None
+                    getattr(project, "deadline", None).isoformat() if getattr(project, "deadline", None) else None
                 ),
             },
             "forecast": deterministic,
@@ -422,12 +390,11 @@ class ForecastService:
             "3. Up to 3 actionable recommendations (as a JSON array of short strings)\n\n"
             "Respond ONLY with valid JSON in this exact shape:\n"
             "{\n"
-            "  \"narrative\": \"...\",\n"
-            "  \"risks\": [\"...\", \"...\"],\n"
-            "  \"recommendations\": [\"...\", \"...\"]\n"
+            '  "narrative": "...",\n'
+            '  "risks": ["...", "..."],\n'
+            '  "recommendations": ["...", "..."]\n'
             "}\n\n"
-            "Project data:\n"
-            + json.dumps(context, default=str, ensure_ascii=False)
+            "Project data:\n" + json.dumps(context, default=str, ensure_ascii=False)
         )
 
         try:
@@ -436,8 +403,7 @@ class ForecastService:
                     {
                         "role": "system",
                         "content": (
-                            "You are a project forecasting assistant. "
-                            "Respond only with the requested JSON."
+                            "You are a project forecasting assistant. " "Respond only with the requested JSON."
                         ),
                     },
                     {"role": "user", "content": prompt},
@@ -487,9 +453,7 @@ class ForecastService:
             "ok": True,
             "narrative": str(narrative).strip() if narrative else "",
             "risks": [str(r).strip() for r in risks if isinstance(r, (str, int, float))][:3],
-            "recommendations": [
-                str(r).strip() for r in recommendations if isinstance(r, (str, int, float))
-            ][:3],
+            "recommendations": [str(r).strip() for r in recommendations if isinstance(r, (str, int, float))][:3],
             "deterministic": deterministic,
         }
 

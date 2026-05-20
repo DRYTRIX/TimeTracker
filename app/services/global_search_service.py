@@ -77,9 +77,7 @@ def run_global_search(
             )
             tasks_query = apply_project_scope(Project, tasks_query, user)
             if not user.is_admin and not user.has_permission("view_all_tasks"):
-                tasks_query = tasks_query.filter(
-                    db.or_(Task.assigned_to == user.id, Task.created_by == user.id)
-                )
+                tasks_query = tasks_query.filter(db.or_(Task.assigned_to == user.id, Task.created_by == user.id))
             tasks = tasks_query.limit(limit).all()
 
             for task in tasks:

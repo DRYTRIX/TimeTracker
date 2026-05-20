@@ -385,7 +385,9 @@ class GoogleCalendarConnector(BaseConnector):
             cfg["last_sync_at"] = datetime.now(timezone.utc).isoformat()
             self.integration.config = cfg
             self.integration.last_sync_at = datetime.utcnow()
-            self.integration.last_sync_status = "success" if result.get("ok") and not result.get("errors") else "partial"
+            self.integration.last_sync_status = (
+                "success" if result.get("ok") and not result.get("errors") else "partial"
+            )
             from app.utils.db import safe_commit
 
             safe_commit("google_connector_sync_status", {"integration_id": self.integration.id})

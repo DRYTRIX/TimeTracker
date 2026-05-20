@@ -16,9 +16,7 @@ from app.utils.api_responses import (
     validation_error_response,
 )
 
-api_v1_time_entries_bp = Blueprint(
-    "api_v1_time_entries", __name__, url_prefix="/api/v1"
-)
+api_v1_time_entries_bp = Blueprint("api_v1_time_entries", __name__, url_prefix="/api/v1")
 
 
 @api_v1_time_entries_bp.route("/time-entries", methods=["GET"])
@@ -105,9 +103,7 @@ def get_time_entry(entry_id):
 @require_api_token("write:time_entries")
 def import_time_entries_csv():
     """Import time entries from CSV (header row required)."""
-    from app.services.time_entry_csv_import_service import (
-        import_time_entries_from_csv_text,
-    )
+    from app.services.time_entry_csv_import_service import import_time_entries_from_csv_text
 
     csv_text = ""
     if request.files and request.files.get("file"):
@@ -119,9 +115,7 @@ def import_time_entries_csv():
     else:
         csv_text = request.get_data(as_text=True) or ""
 
-    result, status = import_time_entries_from_csv_text(
-        csv_text, user_id=g.api_user.id, is_admin=g.api_user.is_admin
-    )
+    result, status = import_time_entries_from_csv_text(csv_text, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
     return jsonify(result), status
 
 
@@ -145,17 +139,11 @@ def bulk_time_entries():
         try:
             ids.append(int(eid))
         except (TypeError, ValueError):
-            return validation_error_response(
-                errors={"entry_ids": ["All entry ids must be integers"]}
-            )
-    result = apply_bulk_time_entry_actions(
-        ids, action, value, user_id=g.api_user.id, is_admin=g.api_user.is_admin
-    )
+            return validation_error_response(errors={"entry_ids": ["All entry ids must be integers"]})
+    result = apply_bulk_time_entry_actions(ids, action, value, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
     if not result.get("success"):
         code = result.get("http_status", 400)
-        return error_response(
-            result.get("error", "Bulk operation failed"), status_code=code
-        )
+        return error_response(result.get("error", "Bulk operation failed"), status_code=code)
     return jsonify({"success": True, "affected": result.get("affected", 0)})
 
 
@@ -174,9 +162,7 @@ def create_time_entry():
 
     idem_key = normalize_idempotency_key(request.headers.get("Idempotency-Key"))
     if idem_key:
-        existing = lookup_idempotent_response(
-            g.api_token.id, SCOPE_POST_TIME_ENTRY, idem_key
-        )
+        existing = lookup_idempotent_response(g.api_token.id, SCOPE_POST_TIME_ENTRY, idem_key)
         if existing:
             status_code, body_json = existing
             return replay_response(status_code, body_json)
@@ -218,15 +204,9 @@ def create_time_entry():
         from app.models import Activity
         from app.utils.audit import get_request_info
 
-        entity_name = (
-            entry.project.name
-            if entry.project
-            else (entry.client.name if entry.client else "Unknown")
-        )
+        entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
         task_name = entry.task.name if entry.task else None
-        duration_formatted = (
-            entry.duration_formatted if hasattr(entry, "duration_formatted") else "0:00"
-        )
+        duration_formatted = entry.duration_formatted if hasattr(entry, "duration_formatted") else "0:00"
         ip_address, user_agent, _ = get_request_info()
         Activity.log(
             user_id=g.api_user.id,
@@ -242,9 +222,7 @@ def create_time_entry():
                 "client_name": entry.client.name if entry.client else None,
                 "task_name": task_name,
                 "duration_formatted": duration_formatted,
-                "duration_hours": entry.duration_hours
-                if hasattr(entry, "duration_hours")
-                else None,
+                "duration_hours": entry.duration_hours if hasattr(entry, "duration_hours") else None,
             },
             ip_address=ip_address,
             user_agent=user_agent,
@@ -262,14 +240,10 @@ def create_time_entry():
         from app import db
 
         try:
-            store_idempotent_response(
-                g.api_token.id, SCOPE_POST_TIME_ENTRY, idem_key, 201, payload
-            )
+            store_idempotent_response(g.api_token.id, SCOPE_POST_TIME_ENTRY, idem_key, 201, payload)
         except IntegrityError:
             db.session.rollback()
-            existing = lookup_idempotent_response(
-                g.api_token.id, SCOPE_POST_TIME_ENTRY, idem_key
-            )
+            existing = lookup_idempotent_response(g.api_token.id, SCOPE_POST_TIME_ENTRY, idem_key)
             if existing:
                 status_code, body_json = existing
                 return replay_response(status_code, body_json)
@@ -326,11 +300,7 @@ def update_time_entry(entry_id):
         from app.models import Activity
         from app.utils.audit import get_request_info
 
-        entity_name = (
-            entry.project.name
-            if entry.project
-            else (entry.client.name if entry.client else "Unknown")
-        )
+        entity_name = entry.project.name if entry.project else (entry.client.name if entry.client else "Unknown")
         task_name = entry.task.name if entry.task else None
         ip_address, user_agent, _ = get_request_info()
         Activity.log(
@@ -339,8 +309,7 @@ def update_time_entry(entry_id):
             entity_type="time_entry",
             entity_id=entry.id,
             entity_name=f"{entity_name}" + (f" - {task_name}" if task_name else ""),
-            description=f"Updated time entry for {entity_name}"
-            + (f" - {task_name}" if task_name else ""),
+            description=f"Updated time entry for {entity_name}" + (f" - {task_name}" if task_name else ""),
             extra_data={
                 "project_name": entry.project.name if entry.project else None,
                 "client_name": entry.client.name if entry.client else None,
@@ -430,9 +399,7 @@ def start_timer():
             result.get("message", "Could not start timer"),
             status_code=400,
         )
-    return jsonify(
-        {"message": "Timer started successfully", "timer": result["timer"].to_dict()}
-    ), 201
+    return jsonify({"message": "Timer started successfully", "timer": result["timer"].to_dict()}), 201
 
 
 @api_v1_time_entries_bp.route("/timer/pause", methods=["POST"])
@@ -466,9 +433,7 @@ def resume_timer():
             error_code=result.get("error", "resume_failed"),
             status_code=400,
         )
-    return jsonify(
-        {"message": "Timer resumed", "time_entry": result["entry"].to_dict()}
-    )
+    return jsonify({"message": "Timer resumed", "time_entry": result["entry"].to_dict()})
 
 
 @api_v1_time_entries_bp.route("/timer/stop", methods=["POST"])
@@ -485,9 +450,7 @@ def stop_timer():
             status_code=400,
         )
     time_tracking_service = TimeTrackingService()
-    result = time_tracking_service.stop_timer(
-        user_id=g.api_user.id, entry_id=active_timer.id
-    )
+    result = time_tracking_service.stop_timer(user_id=g.api_user.id, entry_id=active_timer.id)
     if not result.get("success"):
         return error_response(
             result.get("message", "Could not stop timer"),

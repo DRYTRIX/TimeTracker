@@ -569,11 +569,7 @@ class User(UserMixin, db.Model):
         from .project import Project
 
         if self.is_client_portal_user or self.is_scope_restricted:
-            client_ids = (
-                [self.client_id]
-                if self.is_client_portal_user
-                else [c.id for c in self.assigned_clients.all()]
-            )
+            client_ids = [self.client_id] if self.is_client_portal_user else [c.id for c in self.assigned_clients.all()]
             if not client_ids:
                 return []
             rows = db.session.query(Project.id).filter(Project.client_id.in_(client_ids)).all()
