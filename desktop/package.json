@@ -1,6 +1,6 @@
 {
   "name": "timetracker-desktop",
-  "version": "4.20.9",
+  "version": "5.6.2",
   "description": "TimeTracker desktop app for Windows, Linux, and macOS",
   "main": "src/main/main.js",
   "scripts": {
@@ -40,7 +40,7 @@
     "vite": "^7.3.0"
   },
   "dependencies": {
-    "axios": "^1.6.2",
+    "axios": "^1.15.2",
     "dexie": "^3.2.4",
     "electron-store": "^8.1.0",
     "react": "^19.2.5",

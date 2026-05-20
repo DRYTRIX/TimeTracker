@@ -8,6 +8,7 @@ from flask import current_app
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
+from app import db
 from app.models import Client, Project, Task, TimeEntry, User
 from app.utils.scope_filter import apply_client_scope, apply_project_scope
 
@@ -75,6 +76,10 @@ def run_global_search(
                 or_(Task.name.ilike(search_pattern), Task.description.ilike(search_pattern)),
             )
             tasks_query = apply_project_scope(Project, tasks_query, user)
+            if not user.is_admin and not user.has_permission("view_all_tasks"):
+                tasks_query = tasks_query.filter(
+                    db.or_(Task.assigned_to == user.id, Task.created_by == user.id)
+                )
             tasks = tasks_query.limit(limit).all()
 
             for task in tasks:

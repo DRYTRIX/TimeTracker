@@ -4434,7 +4434,8 @@ async function initializePDFEditor() {
         errorMessage: '',
         currentRequest: null,
         isFullscreen: false,
-        fitMode: 'auto' // 'auto', 'width', 'height', 'actual'
+        fitMode: 'auto', // 'auto', 'width', 'height', 'actual'
+        pdfPreviewUrl: null
     };
     
     // DOM Elements - with safety checks
@@ -4812,6 +4813,10 @@ async function initializePDFEditor() {
         previewModal.style.display = 'none';
         document.body.style.overflow = '';
         previewModal.setAttribute('aria-hidden', 'true');
+        if (previewState.pdfPreviewUrl) {
+            URL.revokeObjectURL(previewState.pdfPreviewUrl);
+            previewState.pdfPreviewUrl = null;
+        }
         
         // Cancel any ongoing requests
         if (previewState.currentRequest && typeof previewState.currentRequest.abort === 'function') {
@@ -4950,17 +4955,27 @@ async function initializePDFEditor() {
                 throw new Error(`HTTP error! status: ${response ? response.status : 'unknown'}`);
             }
             
-            const previewHtml = await response.text();
-            
-            // Check if request was cancelled
             if (controller && controller.signal && controller.signal.aborted) {
                 return;
             }
-            
-            const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
-            doc.open();
-            doc.write(previewHtml);
-            doc.close();
+
+            const contentType = (response.headers.get('Content-Type') || '').toLowerCase();
+            const isPdfPreview = contentType.includes('application/pdf');
+
+            if (isPdfPreview) {
+                const pdfBlob = await response.blob();
+                if (previewState.pdfPreviewUrl) {
+                    URL.revokeObjectURL(previewState.pdfPreviewUrl);
+                }
+                previewState.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
+                previewFrame.src = previewState.pdfPreviewUrl;
+            } else {
+                const previewHtml = await response.text();
+                const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+                doc.open();
+                doc.write(previewHtml);
+                doc.close();
+            }
             
             // Wait for iframe to load
             previewFrame.onload = () => {
@@ -5544,7 +5559,21 @@ async function initializePDFEditor() {
                     // Extract actual header text from the table group's first Text child
                     const children = child.getChildren ? child.getChildren() : (child.children || []);
                     const textElements = children.filter(c => c.className === 'Text');
-                    const headerText = textElements[0] ? (textElements[0].attrs.text || '') : '';
+                    const lineElements = children.filter(c => c.className === 'Line');
+                    const headerEl = textElements[0];
+                    const itemsEl = textElements[1];
+                    const lineEl = lineElements[0];
+                    const headerAttrs = headerEl ? headerEl.attrs : {};
+                    const itemsAttrs = itemsEl ? itemsEl.attrs : {};
+                    const lineAttrs = lineEl ? lineEl.attrs : {};
+                    const headerText = headerEl ? (headerAttrs.text || '') : '';
+                    let quoteTableX = x;
+                    let quoteTableY = y;
+                    const quoteTableBox = child.getClientRect ? child.getClientRect() : null;
+                    if (quoteTableBox && quoteTableBox.width > 0 && quoteTableBox.height > 0) {
+                        quoteTableX = Math.round(quoteTableBox.x);
+                        quoteTableY = Math.round(quoteTableBox.y);
+                    }
                     
                     // Parse header text
                     let headerParts = ['Description', 'Qty', 'Unit Price', 'Total'];
@@ -5553,6 +5582,18 @@ async function initializePDFEditor() {
                         while (headerParts.length < 4) {
                             headerParts.push(['Description', 'Qty', 'Unit Price', 'Total'][headerParts.length]);
                         }
+                    }
+                    const quoteTableWidthPx = Math.max(50, Math.round(
+                        (quoteTableBox && quoteTableBox.width > 0)
+                            ? quoteTableBox.width
+                            : (headerAttrs.width || itemsAttrs.width || 515)
+                    ));
+                    const quoteFracs = [250 / 540, 70 / 540, 110 / 540, 110 / 540];
+                    const totalPtQuote = pxToPt(quoteTableWidthPx);
+                    let colPtsQuote = quoteFracs.map(f => f * totalPtQuote);
+                    const sumCQ = colPtsQuote.reduce((a, b) => a + b, 0);
+                    if (sumCQ > 0) {
+                        colPtsQuote = colPtsQuote.map(p => (p * totalPtQuote) / sumCQ);
                     }
                     
                     // Add to ReportLab template JSON - quote items table
@@ -5567,15 +5608,15 @@ async function initializePDFEditor() {
                     {% endraw %}
                     templateJson.elements.push({
                         type: 'table',
-                        x: pxToPt(x),
-                        y: pxToPt(y),
-                        width: pxToPt(515),
+                        x: pxToPt(quoteTableX),
+                        y: pxToPt(quoteTableY),
+                        width: totalPtQuote,
                         opacity: opacity,
                         columns: [
-                            {width: 250, header: headerParts[0] || 'Description', field: 'description', align: 'left'},
-                            {width: 70, header: headerParts[1] || 'Qty', field: 'quantity', align: 'center'},
-                            {width: 110, header: headerParts[2] || 'Unit Price', field: 'unit_price', align: 'right'},
-                            {width: 110, header: headerParts[3] || 'Total', field: 'total_amount', align: 'right'}
+                            {width: colPtsQuote[0], header: headerParts[0] || 'Description', field: 'description', align: 'left'},
+                            {width: colPtsQuote[1], header: headerParts[1] || 'Qty', field: 'quantity', align: 'center'},
+                            {width: colPtsQuote[2], header: headerParts[2] || 'Unit Price', field: 'unit_price', align: 'right'},
+                            {width: colPtsQuote[3], header: headerParts[3] || 'Total', field: 'total_amount', align: 'right'}
                         ],
                         data: itemsData,
                         row_template: itemsRowTemplate
@@ -5583,7 +5624,7 @@ async function initializePDFEditor() {
                     
                     // Legacy HTML for preview
                     bodyContent += `  <!-- Items Table Start -->\n`;
-                    bodyContent += `  <div style="position:absolute;left:${x}px;top:${y}px;opacity:${opacity};width:515px;">\n`;
+                    bodyContent += `  <div style="position:absolute;left:${quoteTableX}px;top:${quoteTableY}px;opacity:${opacity};width:${quoteTableWidthPx}px;">\n`;
                     bodyContent += `    <table style="width:100%;border-collapse:collapse;font-size:11px;background:white;">\n`;
                     bodyContent += `      <thead>\n`;
                     bodyContent += `        <tr style="background-color:#f8f9fa;border-bottom:2px solid #333;">\n`;

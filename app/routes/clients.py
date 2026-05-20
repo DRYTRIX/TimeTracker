@@ -375,6 +375,7 @@ def create_client():
             default_hourly_rate=default_hourly_rate,
             prepaid_hours_monthly=prepaid_hours_monthly,
             prepaid_reset_day=prepaid_reset_day,
+            created_by=current_user.id,
         )
         if custom_fields:
             client.custom_fields = custom_fields
@@ -439,8 +440,14 @@ def view_client(client_id):
             return jsonify({"error": "forbidden", "message": _("You do not have access to this client.")}), 403
         abort(403)
 
-    # Get projects for this client
-    projects = Project.query.filter_by(client_id=client.id).order_by(Project.name).all()
+    # Get projects for this client (respect project scope)
+    from app.utils.scope_filter import apply_project_scope_to_model
+
+    projects_query = Project.query.filter_by(client_id=client.id).order_by(Project.name)
+    project_scope = apply_project_scope_to_model(Project, current_user)
+    if project_scope is not None:
+        projects_query = projects_query.filter(project_scope)
+    projects = projects_query.all()
 
     # Get contacts for this client (if CRM tables exist)
     contacts = []
@@ -580,8 +587,9 @@ def edit_client(client_id):
             return jsonify({"error": "forbidden", "message": _("You do not have access to this client.")}), 403
         abort(403)
 
-    # Check permissions
-    if not current_user.is_admin and not current_user.has_permission("edit_clients"):
+    from app.utils.permissions import user_can_edit_client
+
+    if not user_can_edit_client(current_user, client):
         flash(_("You do not have permission to edit clients"), "error")
         return redirect(url_for("clients.view_client", client_id=client_id))
 
@@ -738,7 +746,9 @@ def send_portal_password_email(client_id):
     client = Client.query.get_or_404(client_id)
 
     # Check permissions
-    if not current_user.is_admin and not current_user.has_permission("edit_clients"):
+    from app.utils.permissions import user_can_edit_client
+
+    if not user_can_edit_client(current_user, client):
         flash(_("You do not have permission to send portal emails"), "error")
         return redirect(url_for("clients.view_client", client_id=client_id))
 
@@ -811,7 +821,9 @@ def archive_client(client_id):
     client = Client.query.get_or_404(client_id)
 
     # Check permissions
-    if not current_user.is_admin and not current_user.has_permission("edit_clients"):
+    from app.utils.permissions import user_can_edit_client
+
+    if not user_can_edit_client(current_user, client):
         flash(_("You do not have permission to archive clients"), "error")
         return redirect(url_for("clients.view_client", client_id=client_id))
 
@@ -840,7 +852,9 @@ def activate_client(client_id):
     client = Client.query.get_or_404(client_id)
 
     # Check permissions
-    if not current_user.is_admin and not current_user.has_permission("edit_clients"):
+    from app.utils.permissions import user_can_edit_client
+
+    if not user_can_edit_client(current_user, client):
         flash(_("You do not have permission to activate clients"), "error")
         return redirect(url_for("clients.view_client", client_id=client_id))
 
@@ -870,7 +884,9 @@ def delete_client(client_id):
     client = Client.query.get_or_404(client_id)
 
     # Check permissions
-    if not current_user.is_admin and not current_user.has_permission("delete_clients"):
+    from app.utils.permissions import user_can_delete_client
+
+    if not user_can_delete_client(current_user, client):
         flash(_("You do not have permission to delete clients"), "error")
         return redirect(url_for("clients.view_client", client_id=client_id))
 
@@ -926,8 +942,9 @@ def bulk_delete_clients():
     from app.models.client_notification import ClientNotification, ClientNotificationPreferences
     from app.models.invoice import Invoice
 
-    # Check permissions
-    if not current_user.is_admin and not current_user.has_permission("delete_clients"):
+    from app.utils.permissions import user_can_delete_client, user_has_any_client_delete_permission
+
+    if not user_has_any_client_delete_permission(current_user):
         flash(_("You do not have permission to delete clients"), "error")
         return redirect(url_for("clients.list_clients"))
 
@@ -947,6 +964,11 @@ def bulk_delete_clients():
             client = Client.query.get(client_id)
 
             if not client:
+                continue
+
+            if not user_can_delete_client(current_user, client):
+                skipped_count += 1
+                errors.append(f"'{client.name}': Permission denied")
                 continue
 
             # Check for projects
@@ -1013,8 +1035,9 @@ def bulk_delete_clients():
 @login_required
 def bulk_status_change():
     """Change status for multiple clients at once"""
-    # Check permissions
-    if not current_user.is_admin and not current_user.has_permission("edit_clients"):
+    from app.utils.permissions import user_can_edit_client, user_has_any_client_edit_permission
+
+    if not user_has_any_client_edit_permission(current_user):
         flash(_("You do not have permission to change client status"), "error")
         return redirect(url_for("clients.list_clients"))
 
@@ -1038,6 +1061,10 @@ def bulk_status_change():
             client = Client.query.get(client_id)
 
             if not client:
+                continue
+
+            if not user_can_edit_client(current_user, client):
+                errors.append(f"'{client.name}': Permission denied")
                 continue
 
             # Update status
@@ -1241,7 +1268,7 @@ def api_clients():
 # Client attachment routes
 @clients_bp.route("/clients/<int:client_id>/attachments/upload", methods=["POST"])
 @login_required
-@admin_or_permission_required("edit_clients")
+@admin_or_permission_required("edit_clients", "edit_all_clients", "edit_own_clients")
 def upload_client_attachment(client_id):
     """Upload an attachment to a client"""
     import os
@@ -1383,7 +1410,7 @@ def download_client_attachment(attachment_id):
 
 @clients_bp.route("/clients/attachments/<int:attachment_id>/delete", methods=["POST"])
 @login_required
-@admin_or_permission_required("edit_clients")
+@admin_or_permission_required("edit_clients", "edit_all_clients", "edit_own_clients")
 def delete_client_attachment(attachment_id):
     """Delete a client attachment"""
     import os

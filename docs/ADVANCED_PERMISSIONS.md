@@ -4,6 +4,12 @@
 
 TimeTracker now includes a comprehensive, role-based permission system that allows administrators to control access to various features and functionality at a granular level. This system replaces the simple "admin" vs "user" model with a flexible role-based access control (RBAC) system.
 
+### Independent companies (multi-tenant)
+
+RBAC applies **within one organization**. A single TimeTracker instance has one company profile (Settings → Company), one mail sender, and one shared data namespace. Roles can hide clients, projects, or tasks from specific users, but they cannot split company branding, invoice identity, or email configuration across separate companies.
+
+If you need **fully independent companies** — each with its own company data, invoices, and email sender — run **one TimeTracker instance per company**. See [Running Multiple TimeTracker Instances](MULTI_INSTANCE_SETUP.md).
+
 ## Key Concepts
 
 ### Permissions
@@ -67,7 +73,7 @@ The following system roles are created by default:
 - Standard time tracking capabilities
 - Can create and edit own time entries
 - Can create and manage own tasks
-- View-only access to projects and clients
+- View-only access to **own** projects and clients (`view_own_projects`, `view_own_clients`)
 - Can view own reports and invoices
 
 #### Viewer
@@ -96,12 +102,14 @@ Permissions are organized into the following categories:
 - `delete_all_time_entries`
 
 #### Projects
-- `view_projects`
+- `view_own_projects` / `view_all_projects` (legacy `view_projects` = view all)
 - `create_projects`
-- `edit_projects`
-- `delete_projects`
+- `edit_own_projects` / `edit_all_projects` (legacy `edit_projects` = edit all)
+- `delete_own_projects` / `delete_all_projects` (legacy `delete_projects` = delete all)
 - `archive_projects`
 - `manage_project_costs`
+
+Projects and clients track `created_by` for workspace isolation. Rows with `created_by` NULL are legacy/shared and visible only to users with view-all (or admin).
 
 #### Tasks
 - `view_own_tasks`
@@ -114,10 +122,10 @@ Permissions are organized into the following categories:
 - `assign_tasks`
 
 #### Clients
-- `view_clients`
+- `view_own_clients` / `view_all_clients` (legacy `view_clients` = view all)
 - `create_clients`
-- `edit_clients`
-- `delete_clients`
+- `edit_own_clients` / `edit_all_clients` (legacy `edit_clients` = edit all)
+- `delete_own_clients` / `delete_all_clients` (legacy `delete_clients` = delete all)
 - `manage_client_notes`
 
 #### Invoices

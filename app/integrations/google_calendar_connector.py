@@ -15,9 +15,12 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import requests
+
+if TYPE_CHECKING:
+    from app.models import Integration
 
 from app.integrations.base import BaseConnector
 from app.utils.secret_crypto import decrypt_if_needed, encrypt_if_possible
@@ -607,7 +610,7 @@ class GoogleCalendarConnector(BaseConnector):
         return [cls(integration=row, credentials=None) for row in rows]
 
     @classmethod
-    def get_or_create_for_user(cls, user) -> Optional["Integration"]:  # type: ignore[override]
+    def get_or_create_for_user(cls, user) -> Optional[Integration]:  # type: ignore[override]
         """Return the (possibly fresh) Integration row for ``user`` — used by OAuth callback."""
         from app import db
         from app.models import Integration

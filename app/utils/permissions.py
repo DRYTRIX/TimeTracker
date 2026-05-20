@@ -79,6 +79,116 @@ def admin_or_permission_required(*permissions):
     return decorator
 
 
+def user_has_view_all_projects(user):
+    """True if user may view all projects (including legacy NULL owners)."""
+    if not user or not getattr(user, "is_authenticated", True):
+        return False
+    if user.is_admin:
+        return True
+    return user.has_any_permission("view_all_projects", "view_projects")
+
+
+def user_has_view_all_clients(user):
+    """True if user may view all clients (including legacy NULL owners)."""
+    if not user or not getattr(user, "is_authenticated", True):
+        return False
+    if user.is_admin:
+        return True
+    return user.has_any_permission("view_all_clients", "view_clients")
+
+
+def user_has_view_own_projects_only(user):
+    if not user or user.is_admin:
+        return False
+    return user.has_permission("view_own_projects") and not user_has_view_all_projects(user)
+
+
+def user_has_view_own_clients_only(user):
+    if not user or user.is_admin:
+        return False
+    return user.has_permission("view_own_clients") and not user_has_view_all_clients(user)
+
+
+def user_can_edit_project(user, project):
+    if not user or not project:
+        return False
+    if user.is_admin:
+        return True
+    if user.has_any_permission("edit_all_projects", "edit_projects"):
+        return True
+    if user.has_permission("edit_own_projects") and project.created_by == user.id:
+        return True
+    return False
+
+
+def user_can_delete_project(user, project):
+    if not user or not project:
+        return False
+    if user.is_admin:
+        return True
+    if user.has_any_permission("delete_all_projects", "delete_projects"):
+        return True
+    if user.has_permission("delete_own_projects") and project.created_by == user.id:
+        return True
+    return False
+
+
+def user_can_edit_client(user, client):
+    if not user or not client:
+        return False
+    if user.is_admin:
+        return True
+    if user.has_any_permission("edit_all_clients", "edit_clients"):
+        return True
+    if user.has_permission("edit_own_clients") and client.created_by == user.id:
+        return True
+    return False
+
+
+def user_can_delete_client(user, client):
+    if not user or not client:
+        return False
+    if user.is_admin:
+        return True
+    if user.has_any_permission("delete_all_clients", "delete_clients"):
+        return True
+    if user.has_permission("delete_own_clients") and client.created_by == user.id:
+        return True
+    return False
+
+
+def user_has_any_project_edit_permission(user):
+    if not user:
+        return False
+    if user.is_admin:
+        return True
+    return user.has_any_permission("edit_projects", "edit_all_projects", "edit_own_projects")
+
+
+def user_has_any_project_delete_permission(user):
+    if not user:
+        return False
+    if user.is_admin:
+        return True
+    return user.has_any_permission("delete_projects", "delete_all_projects", "delete_own_projects")
+
+
+def user_has_any_client_edit_permission(user):
+    if not user:
+        return False
+    if user.is_admin:
+        return True
+    return user.has_any_permission("edit_clients", "edit_all_clients", "edit_own_clients")
+
+
+def user_has_any_client_delete_permission(user):
+    if not user:
+        return False
+    if user.is_admin:
+        return True
+    return user.has_any_permission("delete_clients", "delete_all_clients", "delete_own_clients")
+
+
 def check_permission(user, permission_name):
     """
     Check if a user has a specific permission.

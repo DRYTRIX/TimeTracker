@@ -24,10 +24,16 @@ DEFAULT_PERMISSIONS = [
         "category": "time_entries",
     },
     # Project Permissions
-    {"name": "view_projects", "description": "View projects", "category": "projects"},
+    {"name": "view_projects", "description": "View all projects (legacy alias)", "category": "projects"},
+    {"name": "view_own_projects", "description": "View own projects", "category": "projects"},
+    {"name": "view_all_projects", "description": "View all projects", "category": "projects"},
     {"name": "create_projects", "description": "Create new projects", "category": "projects"},
-    {"name": "edit_projects", "description": "Edit project details", "category": "projects"},
-    {"name": "delete_projects", "description": "Delete projects", "category": "projects"},
+    {"name": "edit_projects", "description": "Edit all projects (legacy alias)", "category": "projects"},
+    {"name": "edit_own_projects", "description": "Edit own projects", "category": "projects"},
+    {"name": "edit_all_projects", "description": "Edit all projects", "category": "projects"},
+    {"name": "delete_projects", "description": "Delete all projects (legacy alias)", "category": "projects"},
+    {"name": "delete_own_projects", "description": "Delete own projects", "category": "projects"},
+    {"name": "delete_all_projects", "description": "Delete all projects", "category": "projects"},
     {"name": "archive_projects", "description": "Archive/unarchive projects", "category": "projects"},
     {"name": "manage_project_costs", "description": "Manage project costs and budgets", "category": "projects"},
     # Task Permissions
@@ -40,10 +46,16 @@ DEFAULT_PERMISSIONS = [
     {"name": "delete_all_tasks", "description": "Delete all tasks", "category": "tasks"},
     {"name": "assign_tasks", "description": "Assign tasks to users", "category": "tasks"},
     # Client Permissions
-    {"name": "view_clients", "description": "View clients", "category": "clients"},
+    {"name": "view_clients", "description": "View all clients (legacy alias)", "category": "clients"},
+    {"name": "view_own_clients", "description": "View own clients", "category": "clients"},
+    {"name": "view_all_clients", "description": "View all clients", "category": "clients"},
     {"name": "create_clients", "description": "Create new clients", "category": "clients"},
-    {"name": "edit_clients", "description": "Edit client details", "category": "clients"},
-    {"name": "delete_clients", "description": "Delete clients", "category": "clients"},
+    {"name": "edit_clients", "description": "Edit all clients (legacy alias)", "category": "clients"},
+    {"name": "edit_own_clients", "description": "Edit own clients", "category": "clients"},
+    {"name": "edit_all_clients", "description": "Edit all clients", "category": "clients"},
+    {"name": "delete_clients", "description": "Delete all clients (legacy alias)", "category": "clients"},
+    {"name": "delete_own_clients", "description": "Delete own clients", "category": "clients"},
+    {"name": "delete_all_clients", "description": "Delete all clients", "category": "clients"},
     {"name": "manage_client_notes", "description": "Manage client notes", "category": "clients"},
     # Issue Permissions
     {"name": "view_all_issues", "description": "View all issues from all clients", "category": "issues"},
@@ -132,9 +144,12 @@ DEFAULT_ROLES = {
             "delete_all_time_entries",
             # Projects
             "view_projects",
+            "view_all_projects",
             "create_projects",
             "edit_projects",
+            "edit_all_projects",
             "delete_projects",
+            "delete_all_projects",
             "archive_projects",
             "manage_project_costs",
             # Tasks
@@ -145,9 +160,12 @@ DEFAULT_ROLES = {
             "assign_tasks",
             # Clients
             "view_clients",
+            "view_all_clients",
             "create_clients",
             "edit_clients",
+            "edit_all_clients",
             "delete_clients",
+            "delete_all_clients",
             "manage_client_notes",
             # Invoices
             "view_all_invoices",
@@ -202,9 +220,12 @@ DEFAULT_ROLES = {
             "delete_own_time_entries",
             # Projects
             "view_projects",
+            "view_all_projects",
             "create_projects",
             "edit_projects",
+            "edit_all_projects",
             "delete_projects",
+            "delete_all_projects",
             "manage_project_costs",
             # Tasks
             "view_all_tasks",
@@ -213,8 +234,11 @@ DEFAULT_ROLES = {
             "assign_tasks",
             # Clients
             "view_clients",
+            "view_all_clients",
             "create_clients",
             "edit_clients",
+            "edit_all_clients",
+            "delete_all_clients",
             "manage_client_notes",
             # Invoices
             "view_all_invoices",
@@ -266,14 +290,14 @@ DEFAULT_ROLES = {
             "edit_own_time_entries",
             "delete_own_time_entries",
             # Projects
-            "view_projects",
+            "view_own_projects",
             # Tasks
             "view_own_tasks",
             "create_tasks",
             "edit_own_tasks",
             "delete_own_tasks",
             # Clients
-            "view_clients",
+            "view_own_clients",
             # Invoices
             "view_own_invoices",
             # Reports
@@ -289,9 +313,9 @@ DEFAULT_ROLES = {
         "is_system_role": True,
         "permissions": [
             "view_own_time_entries",
-            "view_projects",
+            "view_own_projects",
             "view_own_tasks",
-            "view_clients",
+            "view_own_clients",
             "view_own_invoices",
             "view_own_reports",
             # Inventory
@@ -307,12 +331,12 @@ DEFAULT_ROLES = {
             "create_time_entries",
             "edit_own_time_entries",
             "delete_own_time_entries",
-            "view_projects",
+            "view_own_projects",
             "view_own_tasks",
             "create_tasks",
             "edit_own_tasks",
             "delete_own_tasks",
-            "view_clients",
+            "view_own_clients",
             "view_own_invoices",
             "view_own_reports",
             "export_reports",

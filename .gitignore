@@ -142,9 +142,6 @@ backups/
 *.sqlite
 *.sqlite3
 
-# Docker
-.dockerignore
-
 # IDE
 .vscode/
 .idea/

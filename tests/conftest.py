@@ -328,13 +328,15 @@ def app(app_config):
                         # Ignore errors - table might already exist or have dependency issues
                         pass
 
-        # Several route tests submit admin/user forms that validate against the
-        # role table. Keep a minimal role baseline available without requiring
-        # the full permission seeding command in every isolated test database.
+        # Role baseline + permission links (login auto-migrates legacy users to roles).
         for role_name in ("admin", "user", "manager", "subcontractor"):
             if Role.query.filter_by(name=role_name).first() is None:
                 db.session.add(Role(name=role_name, description=f"Test {role_name} role", is_system_role=True))
         db.session.commit()
+        from app.utils.permissions_seed import seed_permissions, seed_roles
+
+        seed_permissions()
+        seed_roles(silent=True)
 
         # Create default settings
         settings = Settings()
@@ -559,8 +561,8 @@ def multiple_clients(app, user):
 
 
 @pytest.fixture
-def project(app, test_client):
-    """Create a test project."""
+def project(app, test_client, user):
+    """Create a test project owned by the test user (for project scope / timer access)."""
     # Resolve client_id robustly to avoid issues with expired/detached instances
     try:
         cid = getattr(test_client, "id", None)
@@ -585,6 +587,7 @@ def project(app, test_client):
         description="Test project description",
         billable=True,
         hourly_rate=Decimal("75.00"),
+        created_by=user.id,
     )
     project.status = "active"  # Set after creation
     db.session.add(project)
