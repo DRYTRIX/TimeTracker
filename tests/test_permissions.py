@@ -283,9 +283,11 @@ def test_super_admin_role_user(app):
         user = User(username="testuser", role="user")
         db.session.add(user)
 
-        # Create super_admin role
-        super_admin_role = Role(name="super_admin")
-        db.session.add(super_admin_role)
+        # Conftest seeds roles; re-use super_admin if present (unique on roles.name).
+        super_admin_role = Role.query.filter_by(name="super_admin").first()
+        if super_admin_role is None:
+            super_admin_role = Role(name="super_admin")
+            db.session.add(super_admin_role)
         db.session.commit()
 
         # Assign super_admin role

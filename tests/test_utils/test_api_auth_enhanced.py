@@ -17,6 +17,30 @@ from app.utils.api_auth import (
 from app import db
 
 
+@pytest.fixture
+def sample_user(app):
+    """Create a sample user for testing"""
+    user = User(username="testuser")
+    user.is_active = True
+    db.session.add(user)
+    db.session.commit()
+    return user
+
+
+@pytest.fixture
+def sample_token(app, sample_user):
+    """Create a sample API token"""
+    token, plain_token = ApiToken.create_token(
+        user_id=sample_user.id,
+        name="Test Token",
+        scopes="read:projects",
+        expires_days=30,
+    )
+    db.session.add(token)
+    db.session.commit()
+    return token, plain_token
+
+
 class TestExtractToken:
     """Tests for token extraction from requests"""
 
@@ -63,28 +87,6 @@ class TestExtractToken:
 
 class TestAuthenticateToken:
     """Tests for token authentication with enhanced security"""
-
-    @pytest.fixture
-    def sample_user(self, app):
-        """Create a sample user for testing"""
-        user = User(username="testuser")
-        user.is_active = True
-        db.session.add(user)
-        db.session.commit()
-        return user
-
-    @pytest.fixture
-    def sample_token(self, app, sample_user):
-        """Create a sample API token"""
-        token, plain_token = ApiToken.create_token(
-            user_id=sample_user.id,
-            name="Test Token",
-            scopes="read:projects",
-            expires_days=30,
-        )
-        db.session.add(token)
-        db.session.commit()
-        return token, plain_token
 
     def test_authenticate_valid_token(self, app, sample_user, sample_token):
         """Test authentication with valid token"""
