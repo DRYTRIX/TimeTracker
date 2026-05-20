@@ -1035,10 +1035,9 @@ def bulk_delete_clients():
 @login_required
 def bulk_status_change():
     """Change status for multiple clients at once"""
-    # Check permissions
-    from app.utils.permissions import user_can_edit_client
+    from app.utils.permissions import user_can_edit_client, user_has_any_client_edit_permission
 
-    if not user_can_edit_client(current_user, client):
+    if not user_has_any_client_edit_permission(current_user):
         flash(_("You do not have permission to change client status"), "error")
         return redirect(url_for("clients.list_clients"))
 
@@ -1062,6 +1061,10 @@ def bulk_status_change():
             client = Client.query.get(client_id)
 
             if not client:
+                continue
+
+            if not user_can_edit_client(current_user, client):
+                errors.append(f"'{client.name}': Permission denied")
                 continue
 
             # Update status
