@@ -90,7 +90,11 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
-### ✨ Highlights of v5.6.0
+### ✨ Highlights of v5.6.1
+
+**Patch (5.6.1):** Dependency and Docker build fixes — `pydyf` for WeasyPrint 68, `PyJWT` 2.12.1 and `markdown` 3.8.1 security updates, `.dockerignore` for leaner image builds. See [CHANGELOG.md](CHANGELOG.md#561---2026-05-20).
+
+**Release (5.6.0):**
 
 - 🔌 **Personal integration connectors** — Per-user, opt-in **GitHub**, **Google Calendar**, and **Slack** connectors with signature-verified webhooks, OAuth, scheduled syncs, and a `/tt` Slack slash command ([GitHub](docs/integrations/GITHUB_CONNECTOR.md) · [Google Calendar](docs/integrations/GOOGLE_CALENDAR.md) · [Slack](docs/integrations/SLACK.md))
 - 🎨 **Custom themes** — Per-user theme picker with 8 built-in themes plus independent accent, sidebar, text-size, and corner-radius overrides ([docs](docs/features/CUSTOM_THEMES.md))

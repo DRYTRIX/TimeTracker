@@ -15,6 +15,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Invoice PDF template Items Table** — New `tests/test_invoice_pdf_template_table.py` covering the `_render_table` / `_get_table_style` contract: tables are left-aligned, header/row text colors and column alignment propagate to Paragraph styles, user `rowBackground` is not overridden by hardcoded alternating bands, opt-in `altRowBackground` produces a `ROWBACKGROUNDS` command, and header background plus border color/width come from the template style.
 
+## [5.6.1] - 2026-05-20
+
+### Fixed
+
+- **Docker / PDF build** — Bumped `pydyf` to 0.12.1 for compatibility with WeasyPrint 68 in container builds.
+- **Security** — Upgraded `PyJWT` to 2.12.1 (RFC 7515 `crit` validation, CVE-2026-32597) and `markdown` to 3.8.1 (DoS fixes).
+
+### Changed
+
+- **Docker build context** — Added `.dockerignore` to exclude local `.venv` and shrink image build context.
+
+### Documentation
+
+- **Version** — Documented release **5.6.1** to match `setup.py` (single source of truth for the application version).
+
 ## [5.6.0] - 2026-05-15
 
 ### Added
