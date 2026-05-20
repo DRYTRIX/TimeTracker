@@ -4,6 +4,12 @@
 
 TimeTracker now includes a comprehensive, role-based permission system that allows administrators to control access to various features and functionality at a granular level. This system replaces the simple "admin" vs "user" model with a flexible role-based access control (RBAC) system.
 
+### Independent companies (multi-tenant)
+
+RBAC applies **within one organization**. A single TimeTracker instance has one company profile (Settings → Company), one mail sender, and one shared data namespace. Roles can hide clients, projects, or tasks from specific users, but they cannot split company branding, invoice identity, or email configuration across separate companies.
+
+If you need **fully independent companies** — each with its own company data, invoices, and email sender — run **one TimeTracker instance per company**. See [Running Multiple TimeTracker Instances](MULTI_INSTANCE_SETUP.md).
+
 ## Key Concepts
 
 ### Permissions

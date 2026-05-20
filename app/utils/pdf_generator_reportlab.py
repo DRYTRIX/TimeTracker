@@ -29,7 +29,6 @@ from reportlab.pdfgen import canvas
 from reportlab.platypus import (
     Flowable,
     Image,
-    KeepTogether,
     PageBreak,
     Paragraph,
     SimpleDocTemplate,
@@ -332,6 +331,7 @@ class ReportLabTemplateRenderer:
 
         # Store elements for drawing in page callbacks (absolute positioning)
         self.absolute_elements = []
+        self.table_elements: List[Dict[str, Any]] = []
         story = []
 
         elements = self.template.get("elements", [])
@@ -360,55 +360,8 @@ class ReportLabTemplateRenderer:
                 height = element.get("height", 20)
                 story.append(Spacer(1, height * pt))
             elif element_type == ElementType.TABLE:
-                # Tables are rendered as flowables (they flow naturally)
-                # Add spacer to position table vertically based on y coordinate
-                table_y = element.get("y", 0)
-                page_config = self.template.get("page", {})
-                margins = page_config.get("margin", {"top": 20, "right": 20, "bottom": 20, "left": 20})
-                margin_top = margins.get("top", 20) * mm
-                margin_left = margins.get("left", 20) * mm
-                if table_y > 0:
-                    # Tables are flowables, so they start from the top margin
-                    # The y position in the template is from top of page (0,0 = top-left)
-                    # We need to position the table relative to the top margin
-                    # table_y is absolute from top of page, so we need to account for the margin
-                    # The spacer should position the table at the correct y position
-                    spacer_height = max(0, table_y - margin_top)
-                    if spacer_height > 0:
-                        story.append(Spacer(1, spacer_height))
-
-                table_flowable = self._render_table(element)
-                if table_flowable:
-                    col_widths = self._scaled_table_col_widths(element)
-                    total_table_w = sum(col_widths) if col_widths else 0.0
-                    table_x = element.get("x") or 0
-                    try:
-                        table_x_f = float(table_x)
-                    except (TypeError, ValueError):
-                        table_x_f = 0.0
-                    try:
-                        margin_left_f = float(margin_left)
-                    except (TypeError, ValueError):
-                        margin_left_f = 0.0
-                    left_offset = max(0.0, table_x_f - margin_left_f)
-                    if left_offset > 0.01 and total_table_w > 0.01:
-                        spacer_para = Paragraph("", self._get_style({"style": {}}, "NormalText"))
-                        outer = Table([[spacer_para, table_flowable]], colWidths=[left_offset, total_table_w])
-                        outer.setStyle(
-                            TableStyle(
-                                [
-                                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                                    ("TOPPADDING", (0, 0), (-1, -1), 0),
-                                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-                                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                                ]
-                            )
-                        )
-                        outer.hAlign = "LEFT"
-                        story.append(outer)
-                    else:
-                        story.append(table_flowable)
+                # Issue #622: Tables use page-absolute (x, y) like text — drawn on canvas in _on_page
+                self.table_elements.append(element)
             else:
                 # For absolute positioning, store element data to draw in page callback
                 element_data = {"element": element, "renderer": self}
@@ -416,9 +369,15 @@ class ReportLabTemplateRenderer:
                 self.absolute_elements.append(element_data)
                 story.append(positioned)
 
+        if not story:
+            # SimpleDocTemplate requires at least one flowable to invoke page callbacks
+            story.append(Spacer(1, 1))
+
         try:
             current_app.logger.info(
-                f"[PDF_EXPORT] ReportLab story built - PageSize: '{self.page_size}', Flowables: {len(story)}, Absolute elements: {len(self.absolute_elements)}, Element types: {element_types}"
+                f"[PDF_EXPORT] ReportLab story built - PageSize: '{self.page_size}', Flowables: {len(story)}, "
+                f"Absolute elements: {len(self.absolute_elements)}, Tables: {len(self.table_elements)}, "
+                f"Element types: {element_types}"
             )
         except Exception:
             pass
@@ -690,7 +649,33 @@ class ReportLabTemplateRenderer:
             total_amount=amt,
         )
 
-    def _scaled_table_col_widths(self, element: Dict[str, Any]) -> List[float]:
+    def _page_margins_pt(self) -> Dict[str, float]:
+        """Page margins from template JSON in points (values in template are mm)."""
+        margins = self.template.get("page", {}).get("margin", {"top": 20, "right": 20, "bottom": 20, "left": 20})
+        return {
+            "top": float(margins.get("top", 20)) * mm,
+            "right": float(margins.get("right", 20)) * mm,
+            "bottom": float(margins.get("bottom", 20)) * mm,
+            "left": float(margins.get("left", 20)) * mm,
+        }
+
+    def _table_max_width(self, element: Dict[str, Any], page_width: float) -> float:
+        """Maximum table width in points: element.width capped to remaining page width at x."""
+        margins = self._page_margins_pt()
+        try:
+            x = float(element.get("x", 0) or 0)
+        except (TypeError, ValueError):
+            x = 0.0
+        remaining = page_width - x - margins["right"]
+        try:
+            tw = float(element.get("width") or 0)
+        except (TypeError, ValueError):
+            tw = 0.0
+        if tw <= 0:
+            tw = remaining
+        return max(10.0, min(tw, remaining))
+
+    def _scaled_table_col_widths(self, element: Dict[str, Any], max_width: Optional[float] = None) -> List[float]:
         """Column widths in points, scaled so their sum matches element.width when set."""
         columns = element.get("columns") or []
         if not columns:
@@ -714,6 +699,11 @@ class ReportLabTemplateRenderer:
                     target_f = twf
             except (TypeError, ValueError):
                 target_f = None
+        if max_width is not None and max_width > 0:
+            if target_f is None:
+                target_f = max_width
+            else:
+                target_f = min(target_f, max_width)
         if target_f is not None and abs(s - target_f) > 0.01:
             scale = target_f / s
             raw = [w * scale for w in raw]
@@ -755,13 +745,25 @@ class ReportLabTemplateRenderer:
             spaceBefore=0,
         )
 
-    def _render_table(self, element: Dict[str, Any]) -> Table:
-        """Render a table element"""
+    def _build_table_from_data(
+        self,
+        element: Dict[str, Any],
+        columns: List[Dict[str, Any]],
+        table_data: List[List[Any]],
+        max_width: Optional[float] = None,
+    ) -> Table:
+        """Create a styled ReportLab Table from pre-built cell data."""
+        col_widths = self._scaled_table_col_widths(element, max_width=max_width)
+        table = Table(table_data, colWidths=col_widths, repeatRows=1)
+        table.hAlign = "LEFT"
+        table.setStyle(self._get_table_style(element, columns))
+        return table
+
+    def _build_table(self, element: Dict[str, Any], max_width: Optional[float] = None) -> Table:
+        """Build a ReportLab Table flowable for canvas drawing or tests."""
         columns = element.get("columns", [])
         style_config = element.get("style", {}) or {}
 
-        # Resolve text colors/fonts/sizes once so they can be applied directly to Paragraphs
-        # (Issue #622: TableStyle TEXTCOLOR/FONTNAME/ALIGN do not affect Paragraph rendering)
         header_text_color_hex = _normalize_color(style_config.get("headerTextColor", "#000000")) or "#000000"
         row_text_color_hex = _normalize_color(style_config.get("rowTextColor", "#000000")) or "#000000"
         header_font = style_config.get("headerFont") or "Helvetica-Bold"
@@ -775,12 +777,10 @@ class ReportLabTemplateRenderer:
         except (TypeError, ValueError):
             row_font_size = 10.0
 
-        # Build header row - process template variables in headers
         headers = []
         for col in columns:
             header_text = col.get("header", "")
             header_text = self._process_template_variables(header_text)
-            # Convert newlines to <br/> tags for Paragraph
             header_text = header_text.replace("\r\n", "<br/>").replace("\r", "<br/>").replace("\n", "<br/>")
             header_para_style = self._build_cell_paragraph_style(
                 font_name=header_font,
@@ -791,12 +791,9 @@ class ReportLabTemplateRenderer:
             headers.append(Paragraph(header_text, header_para_style))
         table_data = [headers]
 
-        # Get data source
         data_source = element.get("data", "")
         if data_source:
-            # Process template variable to get actual data
             data = self._resolve_data_source(data_source)
-            # When this table is the invoice items table, include extra_goods and expenses so they appear in the PDF
             var_name = data_source.replace("{{", "").replace("}}", "").strip()
             if var_name == "invoice.items":
                 invoice = self.context.get("invoice")
@@ -826,10 +823,8 @@ class ReportLabTemplateRenderer:
                     row = []
                     for col in columns:
                         field = col.get("field", "")
-                        # Process row template with item context
                         value = self._process_row_template(field, row_template.get(field, ""), item)
                         cell_text = str(value) if value is not None else ""
-                        # Convert newlines to <br/> tags for Paragraph
                         cell_text = cell_text.replace("\r\n", "<br/>").replace("\r", "<br/>").replace("\n", "<br/>")
                         cell_para_style = self._build_cell_paragraph_style(
                             font_name=row_font,
@@ -840,7 +835,6 @@ class ReportLabTemplateRenderer:
                         row.append(Paragraph(cell_text, cell_para_style))
                     table_data.append(row)
             else:
-                # No data - add empty row message
                 num_cols = len(columns)
                 empty_style = self._build_cell_paragraph_style(
                     font_name=row_font,
@@ -852,31 +846,11 @@ class ReportLabTemplateRenderer:
                 empty_row.extend([Paragraph("", empty_style)] * (num_cols - 1))
                 table_data.append(empty_row)
 
-        # Column widths in points (scaled to element.width when set)
-        col_widths = self._scaled_table_col_widths(element)
+        return self._build_table_from_data(element, columns, table_data, max_width=max_width)
 
-        # Create table with proper column widths
-        table = Table(table_data, colWidths=col_widths, repeatRows=1)
-
-        # Issue #622: Default ReportLab Table alignment is CENTER, which causes the table
-        # to be horizontally centered within the content area regardless of the user-set x.
-        # Force LEFT alignment so the table sits exactly where the editor preview shows it
-        # (either at margin_left, or - when wrapped in an outer spacer table in _build_story -
-        # offset to the user-defined x position).
-        table.hAlign = "LEFT"
-
-        # Apply table style
-        table_style = self._get_table_style(element, columns)
-        table.setStyle(table_style)
-
-        # Wrap table in KeepTogether to prevent breaking across pages
-        wrapper = KeepTogether(table)
-        # Propagate hAlign to wrapper too so outer flow respects it (Issue #622)
-        try:
-            wrapper.hAlign = "LEFT"
-        except (AttributeError, TypeError):
-            pass
-        return wrapper
+    def _render_table(self, element: Dict[str, Any], max_width: Optional[float] = None) -> Table:
+        """Render a table element (returns bare Table for tests and canvas drawing)."""
+        return self._build_table(element, max_width=max_width)
 
     def _get_table_style(self, element: Dict[str, Any], columns: List[Dict[str, Any]]) -> TableStyle:
         """Get table style from element configuration.
@@ -1044,16 +1018,50 @@ class ReportLabTemplateRenderer:
                 print(f"Error processing row template: {e}")
             return str(getattr(item, field, ""))
 
+    def _draw_table_on_canvas(
+        self,
+        canv: canvas.Canvas,
+        element: Dict[str, Any],
+        page_width: float,
+        page_height: float,
+    ) -> None:
+        """Draw a table at template (x, y) using page coordinates (top-left origin for y)."""
+        try:
+            x = float(element.get("x", 0) or 0)
+            y = float(element.get("y", 0) or 0)
+        except (TypeError, ValueError):
+            return
+
+        if x < 0 or y < 0 or x >= page_width or y >= page_height:
+            return
+
+        margins = self._page_margins_pt()
+        max_w = self._table_max_width(element, page_width)
+        avail_height = max(1.0, page_height - y - margins["bottom"])
+
+        element_sized = dict(element)
+        element_sized["width"] = max_w
+        table = self._build_table(element_sized, max_width=max_w)
+
+        try:
+            parts = table.split(max_w, avail_height)
+        except Exception:
+            parts = [table]
+
+        draw_y_top = page_height - y
+        for part in parts:
+            _w, h = part.wrap(max_w, avail_height)
+            if h <= 0:
+                continue
+            part.drawOn(canv, x, draw_y_top - h)
+            draw_y_top -= h
+            avail_height = max(1.0, draw_y_top - margins["bottom"])
+
     def _on_page(self, canv: canvas.Canvas, doc: SimpleDocTemplate):
         """Handle page rendering - draw absolutely positioned elements and page number"""
         # Get page dimensions
         page_width = getattr(self, "page_width", doc.pagesize[0])
         page_height = getattr(self, "page_height", doc.pagesize[1])
-
-        # Get margins
-        margins = self.template.get("page", {}).get("margin", {"top": 20, "right": 20, "bottom": 20, "left": 20})
-        margin_top = margins.get("top", 20) * mm
-        margin_left = margins.get("left", 20) * mm
 
         for element_data in getattr(self, "absolute_elements", []):
             element = element_data["element"]
@@ -1122,12 +1130,23 @@ class ReportLabTemplateRenderer:
                     self._draw_circle_on_canvas(canv, element_copy, actual_x, actual_y, page_height)
                 elif element_type == ElementType.LINE:
                     self._draw_line_on_canvas(canv, element_copy, actual_x, actual_y, page_height)
-                # Tables are handled as flowables, not drawn on canvas
             except Exception as e:
                 if current_app:
                     current_app.logger.error(f"Error drawing element {element_type} on canvas: {e}")
                 else:
                     print(f"Error drawing element {element_type} on canvas: {e}")
+
+        # Tables: page-absolute (x, y) — same coordinate model as text (Issue #622)
+        for element in getattr(self, "table_elements", []):
+            if element.get("hidden"):
+                continue
+            try:
+                self._draw_table_on_canvas(canv, element, page_width, page_height)
+            except Exception as e:
+                if current_app:
+                    current_app.logger.error(f"Error drawing table on canvas: {e}")
+                else:
+                    print(f"Error drawing table on canvas: {e}")
 
         # Add page number (within page boundaries)
         page_num = canv.getPageNumber()

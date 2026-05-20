@@ -90,7 +90,9 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
-### ✨ Highlights of v5.6.1
+### ✨ Highlights of v5.6.2
+
+**Patch (5.6.2):** Invoice PDF designer — items/expenses tables export at template page coordinates (fixes misalignment vs preview), **Generate Preview** uses the same ReportLab bytes as export, and table JSON uses `getClientRect()` after move/scale. See [CHANGELOG.md](CHANGELOG.md#562---2026-05-20).
 
 **Patch (5.6.1):** Dependency and Docker build fixes — `pydyf` for WeasyPrint 68, `PyJWT` 2.12.1 and `markdown` 3.8.1 security updates, `.dockerignore` for leaner image builds. See [CHANGELOG.md](CHANGELOG.md#561---2026-05-20).
 
@@ -643,6 +645,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory. See 
 **Productivity:**
 - **[Command Palette](docs/COMMAND_PALETTE_USAGE.md)** — Keyboard shortcuts
 - **[Role-Based Permissions](docs/ADVANCED_PERMISSIONS.md)** — Access control
+- **[Multiple instances (independent companies)](docs/MULTI_INSTANCE_SETUP.md)** — One deployment per company
 
 **Integrations & Apps:**
 - **[Mobile & Desktop Apps](docs/mobile-desktop-apps/README.md)** — Flutter mobile and Electron desktop apps

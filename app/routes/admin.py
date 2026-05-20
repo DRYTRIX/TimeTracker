@@ -2902,7 +2902,60 @@ def pdf_layout_preview():
     # Use the wrapper instead of the original invoice
     invoice = invoice_wrapper
 
-    # CRITICAL: Always use template_json for preview - convert to HTML/CSS with actual invoice data
+    # Issue #622: Prefer ReportLab PDF preview (same renderer as invoice export) for WYSIWYG
+    if template_json_parsed:
+        try:
+            from io import BytesIO
+
+            from app.utils.pdf_generator_reportlab import ReportLabTemplateRenderer
+            from app.utils.pdf_template_schema import validate_template_json
+            from app.utils.template_filters import get_logo_base64
+
+            def _preview_format_date(value, format="medium"):
+                try:
+                    return value.strftime("%d.%m.%Y") if value else ""
+                except Exception:
+                    return str(value) if value else ""
+
+            def _preview_format_money(value):
+                try:
+                    return f"{float(value):,.2f} {settings_obj.currency}"
+                except Exception:
+                    return f"{value} {settings_obj.currency}"
+
+            preview_context = {
+                "invoice": invoice,
+                "settings": settings_obj,
+                "get_logo_base64": get_logo_base64,
+                "format_date": _preview_format_date,
+                "format_money": _preview_format_money,
+            }
+            is_valid, validation_error = validate_template_json(template_json_parsed)
+            if is_valid:
+                renderer = ReportLabTemplateRenderer(template_json_parsed, preview_context, page_size)
+                pdf_bytes = renderer.render_to_bytes()
+                current_app.logger.info(
+                    f"[PDF_PREVIEW] ReportLab PDF preview - PageSize: '{page_size}', "
+                    f"PDFSize: {len(pdf_bytes)} bytes, InvoiceID: {invoice_id}, User: {current_user.username}"
+                )
+                return send_file(
+                    BytesIO(pdf_bytes),
+                    mimetype="application/pdf",
+                    as_attachment=False,
+                    download_name="invoice-preview.pdf",
+                )
+            current_app.logger.warning(
+                f"[PDF_PREVIEW] Template JSON invalid for ReportLab preview, falling back to HTML - "
+                f"PageSize: '{page_size}', Error: {validation_error}"
+            )
+        except Exception as e:
+            current_app.logger.warning(
+                f"[PDF_PREVIEW] ReportLab preview failed, falling back to HTML - PageSize: '{page_size}', "
+                f"Error: {str(e)}, User: {current_user.username}",
+                exc_info=True,
+            )
+
+    # Fallback: convert template_json to HTML/CSS for preview
     if template_json_parsed:
         try:
             # Convert JSON template to HTML/CSS with actual invoice data for better table rendering
@@ -3491,10 +3544,62 @@ def quote_pdf_layout_preview():
     # Use the wrapper instead of the original quote
     quote = quote_wrapper
 
-    # If we have template_json, convert it to HTML/CSS for preview with actual quote data
+    # Issue #622: Prefer ReportLab PDF preview (same renderer as quote export)
     if template_json_parsed:
         try:
-            # Convert JSON template to HTML/CSS with actual quote data for better table rendering
+            from io import BytesIO
+
+            from app.utils.pdf_generator_reportlab import ReportLabTemplateRenderer
+            from app.utils.pdf_template_schema import validate_template_json
+            from app.utils.template_filters import get_logo_base64
+
+            def _quote_preview_format_date(value, format="medium"):
+                try:
+                    return value.strftime("%d.%m.%Y") if value else ""
+                except Exception:
+                    return str(value) if value else ""
+
+            def _quote_preview_format_money(value):
+                try:
+                    return f"{float(value):,.2f} {settings_obj.currency}"
+                except Exception:
+                    return f"{value} {settings_obj.currency}"
+
+            quote_preview_context = {
+                "quote": quote,
+                "settings": settings_obj,
+                "get_logo_base64": get_logo_base64,
+                "format_date": _quote_preview_format_date,
+                "format_money": _quote_preview_format_money,
+            }
+            is_valid, validation_error = validate_template_json(template_json_parsed)
+            if is_valid:
+                renderer = ReportLabTemplateRenderer(template_json_parsed, quote_preview_context, page_size)
+                pdf_bytes = renderer.render_to_bytes()
+                current_app.logger.info(
+                    f"[PDF_PREVIEW] ReportLab quote PDF preview - PageSize: '{page_size}', "
+                    f"PDFSize: {len(pdf_bytes)} bytes, User: {current_user.username}"
+                )
+                return send_file(
+                    BytesIO(pdf_bytes),
+                    mimetype="application/pdf",
+                    as_attachment=False,
+                    download_name="quote-preview.pdf",
+                )
+            current_app.logger.warning(
+                f"[PDF_PREVIEW] Quote template JSON invalid for ReportLab preview, falling back to HTML - "
+                f"PageSize: '{page_size}', Error: {validation_error}"
+            )
+        except Exception as e:
+            current_app.logger.warning(
+                f"[PDF_PREVIEW] Quote ReportLab preview failed, falling back to HTML - PageSize: '{page_size}', "
+                f"Error: {str(e)}, User: {current_user.username}",
+                exc_info=True,
+            )
+
+    # Fallback: convert template_json to HTML/CSS for preview with actual quote data
+    if template_json_parsed:
+        try:
             html, css = _convert_json_template_to_html_css(
                 template_json_parsed, page_size, invoice=None, quote=quote, settings=settings_obj
             )

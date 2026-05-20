@@ -77,31 +77,26 @@ def test_kanban_board_aria_and_dnd(authenticated_client, app):
 
 @pytest.mark.smoke
 @pytest.mark.routes
-def test_kanban_card_shows_project_code_and_no_status_dropdown(authenticated_client, app):
+def test_kanban_card_shows_project_code_and_no_status_dropdown(admin_authenticated_client, admin_user, app):
     with app.app_context():
         # Initialize kanban columns first
         from app.models import KanbanColumn
 
         KanbanColumn.initialize_default_columns()
 
-        admin = User(username="admin_user", role="admin")
-        admin.set_password("password123")
         project = Project(name="Very Long Project Name", client="CL", code="VLPN")
-        db.session.add_all([admin, project])
+        db.session.add(project)
         db.session.commit()
 
-        task = Task(project_id=project.id, name="Test Card", created_by=admin.id)
+        task = Task(project_id=project.id, name="Test Card", created_by=admin_user.id)
         db.session.add(task)
         db.session.commit()
 
-        # Login as admin using the login endpoint
-        authenticated_client.post("/login", data={"username": admin.username, "password": "password123"}, follow_redirects=True)
-
-        resp = authenticated_client.get("/kanban")
-        assert resp.status_code == 200
-        html = resp.get_data(as_text=True)
-        # Project code badge present
-        assert 'data-testid="kanban-project-code"' in html
-        assert "VLPN" in html
-        # No inline status select in kanban cards
-        assert 'class="kanban-status' not in html
+    resp = admin_authenticated_client.get("/kanban")
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+    # Project code badge present
+    assert 'data-testid="kanban-project-code"' in html
+    assert "VLPN" in html
+    # No inline status select in kanban cards
+    assert 'class="kanban-status' not in html

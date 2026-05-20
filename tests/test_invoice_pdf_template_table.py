@@ -14,9 +14,10 @@ from typing import Any, Dict
 import pytest
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
-from reportlab.platypus import KeepTogether, Paragraph, Table
+from reportlab.platypus import Paragraph, Table
 
 from app.utils.pdf_generator_reportlab import ReportLabTemplateRenderer
+from app.utils.pdf_template_schema import get_page_dimensions_points
 
 
 def _items_table_element(
@@ -78,13 +79,9 @@ def _renderer(element: Dict[str, Any]) -> ReportLabTemplateRenderer:
 
 
 def _table_in(flowable):
-    """Extract the underlying Table out of the wrapper returned by `_render_table`."""
+    """Return the Table flowable from `_render_table`."""
     if isinstance(flowable, Table):
         return flowable
-    if isinstance(flowable, KeepTogether):
-        for inner in getattr(flowable, "_content", []) or []:
-            if isinstance(inner, Table):
-                return inner
     raise AssertionError(f"Expected Table flowable, got {type(flowable).__name__}")
 
 
@@ -99,9 +96,6 @@ def test_table_is_left_aligned_to_prevent_centering(app):
 
         table = _table_in(flowable)
         assert table.hAlign == "LEFT"
-        # The wrapper should also expose LEFT alignment so the outer flow respects it.
-        if isinstance(flowable, KeepTogether):
-            assert getattr(flowable, "hAlign", "LEFT") == "LEFT"
 
 
 @pytest.mark.unit
@@ -269,4 +263,54 @@ def test_render_full_pdf_contains_user_table_colors(app):
         # by re-rendering with no compression by inspecting reconstructed object stream is
         # complex. Instead just assert PDF is well-formed and non-empty — the unit tests
         # above cover the explicit propagation contract.
+        assert len(pdf_bytes) > 500
+
+
+@pytest.mark.unit
+def test_table_max_width_caps_to_page_bounds(app):
+    """Issue #622: Table width must not exceed space from x to right margin."""
+    with app.app_context():
+        elem = _items_table_element(x=40, width=515)
+        renderer = _renderer(elem)
+        page_w = get_page_dimensions_points("A4")["width"]
+        max_w = renderer._table_max_width(elem, page_w)
+        margins = renderer._page_margins_pt()
+        expected_cap = page_w - 40 - margins["right"]
+        assert max_w <= expected_cap + 0.01
+        assert max_w <= 515 + 0.01
+
+
+@pytest.mark.unit
+def test_build_story_collects_tables_for_canvas_draw(app):
+    """Issue #622: Tables are deferred to _on_page canvas drawing, not flowables."""
+    with app.app_context():
+        elem = _items_table_element(x=40, y=350)
+        renderer = ReportLabTemplateRenderer(_minimal_template(elem), _ctx_with_items(), "A4")
+        story = renderer._build_story()
+        assert len(renderer.table_elements) == 1
+        assert renderer.table_elements[0]["x"] == 40
+        # Story should not contain table flowables (only optional minimal spacer)
+        assert all(not isinstance(f, Table) for f in story)
+
+
+@pytest.mark.unit
+def test_table_at_x_below_margin_renders_valid_pdf(app):
+    """Regression: default designer x=40 (< ~57pt margin) must still produce a valid PDF."""
+    with app.app_context():
+        text_el = {
+            "type": "text",
+            "x": 40,
+            "y": 100,
+            "text": "Label",
+            "width": 200,
+            "style": {"font": "Helvetica", "size": 10, "color": "#000000", "align": "left"},
+        }
+        table_el = _items_table_element(x=40, y=200, width=400)
+        template = {
+            "page": {"size": "A4", "margin": {"top": 20, "right": 20, "bottom": 20, "left": 20}},
+            "elements": [text_el, table_el],
+        }
+        renderer = ReportLabTemplateRenderer(template, _ctx_with_items(), "A4")
+        pdf_bytes = renderer.render_to_bytes()
+        assert pdf_bytes.startswith(b"%PDF")
         assert len(pdf_bytes) > 500
