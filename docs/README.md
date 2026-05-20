@@ -78,6 +78,7 @@ docs/
 - **[Time Rounding](TIME_ROUNDING_PREFERENCES.md)** — Configurable time rounding
 - **[Role-Based Permissions](ADVANCED_PERMISSIONS.md)** — Granular access control
 - **[Subcontractor role and assigned clients](SUBCONTRACTOR_ROLE.md)** — Restrict users to specific clients and projects
+- **[Multiple instances (independent companies)](MULTI_INSTANCE_SETUP.md)** — One deployment per company when RBAC is not enough
 
 See [features/](features/) for additional feature documentation.
 
@@ -195,8 +196,9 @@ See [REST API Documentation](api/REST_API.md) for complete examples and endpoint
 1. **[Installation Guide](../INSTALLATION.md)** — Step-by-step installation (root)
 2. **[Getting Started Guide](GETTING_STARTED.md)** — Complete beginner tutorial
 3. **[Docker Compose Setup](admin/configuration/DOCKER_COMPOSE_SETUP.md)** — Recommended deployment method
-4. **[Requirements](REQUIREMENTS.md)** — System requirements
-5. **[Uninstall / remove data](../UNINSTALL.md)** — Tear down containers, volumes, and optional AI (Ollama)
+4. **[Multiple instances (independent companies)](MULTI_INSTANCE_SETUP.md)** — Separate stack per company
+5. **[Requirements](REQUIREMENTS.md)** — System requirements
+6. **[Uninstall / remove data](../UNINSTALL.md)** — Tear down containers, volumes, and optional AI (Ollama)
 
 ### Database & Migrations
 - **[Database Migrations](../migrations/README.md)** — Database schema management with Flask-Migrate

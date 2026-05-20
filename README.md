@@ -643,6 +643,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory. See 
 **Productivity:**
 - **[Command Palette](docs/COMMAND_PALETTE_USAGE.md)** — Keyboard shortcuts
 - **[Role-Based Permissions](docs/ADVANCED_PERMISSIONS.md)** — Access control
+- **[Multiple instances (independent companies)](docs/MULTI_INSTANCE_SETUP.md)** — One deployment per company
 
 **Integrations & Apps:**
 - **[Mobile & Desktop Apps](docs/mobile-desktop-apps/README.md)** — Flutter mobile and Electron desktop apps
