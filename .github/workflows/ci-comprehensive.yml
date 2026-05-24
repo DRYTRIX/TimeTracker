@@ -98,6 +98,8 @@ jobs:
       - name: Run unit tests - ${{ matrix.test-group }}
         env:
           PYTHONPATH: ${{ github.workspace }}
+          FLASK_ENV: testing
+          SECRET_KEY: test-secret-key-for-ci
         run: |
           if [ "${{ matrix.test-group }}" == "api" ]; then
             pytest -m "api and integration" -v -n auto --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing

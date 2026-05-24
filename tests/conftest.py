@@ -337,6 +337,9 @@ def app(app_config):
 
         seed_permissions()
         seed_roles(silent=True)
+        from app.utils.permissions_seed import migrate_legacy_users
+
+        migrate_legacy_users()
 
         # Create default settings
         settings = Settings()
@@ -391,6 +394,13 @@ def db_session(app):
 # ============================================================================
 
 
+def _assign_role_to_user(user, role_name: str) -> None:
+    """Attach a seeded system role to a user (idempotent)."""
+    role = Role.query.filter_by(name=role_name).first()
+    if role and role not in user.roles:
+        user.roles.append(role)
+
+
 @pytest.fixture
 def user(app):
     """Create a regular test user."""
@@ -405,6 +415,9 @@ def user(app):
             if not existing.check_password("password123"):
                 existing.set_password("password123")
                 db.session.commit()
+            if not existing.roles:
+                _assign_role_to_user(existing, "user")
+                db.session.commit()
             db.session.refresh(existing)
             return existing
     except Exception:
@@ -416,6 +429,8 @@ def user(app):
         user.is_active = True  # Set after creation
         user.set_password("password123")  # Set password for login endpoint
         db.session.add(user)
+        db.session.flush()
+        _assign_role_to_user(user, "user")
         db.session.commit()
 
         # Refresh to ensure all relationships are loaded and object stays in session
@@ -431,6 +446,8 @@ def user(app):
         user.is_active = True  # Set after creation
         user.set_password("password123")  # Set password for login endpoint
         db.session.add(user)
+        db.session.flush()
+        _assign_role_to_user(user, "user")
         db.session.commit()
 
         db.session.refresh(user)
@@ -523,6 +540,7 @@ def test_client(app, user):
         phone="+1 (555) 123-4567",
         address="123 Test Street, Test City, TC 12345",
         default_hourly_rate=Decimal("85.00"),
+        created_by=user.id,
     )
     client_model.status = "active"  # Set after creation
     db.session.add(client_model)
@@ -893,7 +911,7 @@ def credit_note(app, invoice, user):
 
 
 @pytest.fixture
-def recurring_invoice(app, project, test_client):
+def recurring_invoice(app, project, test_client, user):
     """Create a recurring invoice template tied to project + client."""
     from datetime import date, timedelta
 
@@ -907,6 +925,7 @@ def recurring_invoice(app, project, test_client):
         frequency="monthly",
         interval=1,
         next_run_date=date.today() + timedelta(days=30),
+        created_by=user.id,
     )
     db.session.add(ri)
     db.session.commit()

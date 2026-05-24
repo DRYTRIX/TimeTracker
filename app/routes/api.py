@@ -2403,9 +2403,7 @@ def productivity_stats():
         focus = ProductivityService.get_focus_stats(current_user, days=period)
         projects = ProductivityService.get_project_breakdown(current_user, days=period)
         heatmap = ProductivityService.get_weekly_heatmap(current_user, weeks=12)
-        insights = ProductivityService.get_insights(
-            current_user, summary, daily_breakdown, streak, focus, projects
-        )
+        insights = ProductivityService.get_insights(current_user, summary, daily_breakdown, streak, focus, projects)
 
         payload = {
             "ok": True,

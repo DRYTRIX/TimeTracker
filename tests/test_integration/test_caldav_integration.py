@@ -28,9 +28,16 @@ from app.integrations.caldav_calendar import (
 
 @pytest.fixture
 def test_user(db_session):
-    """Create a test user"""
+    """Reuse conftest testuser when present (authenticated_client logs in as testuser)."""
+    existing = User.query.filter_by(username="testuser").first()
+    if existing:
+        if not existing.check_password("password123"):
+            existing.set_password("password123")
+            db_session.commit()
+        return existing
+
     user = User(username="testuser", email="test@example.com", role="admin")
-    user.set_password("testpass")
+    user.set_password("password123")
     db_session.add(user)
     db_session.commit()
     return user

@@ -37,7 +37,7 @@ from typing import Any, Dict, Optional
 from flask import Blueprint, current_app, flash, jsonify, redirect, request, session, url_for
 from flask_login import current_user, login_required
 
-from app import db, csrf
+from app import csrf, db
 from app.integrations.github_connector import PROVIDER_KEY as GH_PROVIDER
 from app.integrations.github_connector import GitHubConnector
 from app.integrations.google_calendar_connector import PROVIDER_KEY as GCAL_PROVIDER

@@ -1588,7 +1588,7 @@ def update_comment(comment_id):
     from sqlalchemy.orm import joinedload
 
     cmt = (
-        Comment.query.options(joinedload(Comment.user), joinedload(Comment.project), joinedload(Comment.task))
+        Comment.query.options(joinedload(Comment.author), joinedload(Comment.project), joinedload(Comment.task))
         .filter_by(id=comment_id)
         .first_or_404()
     )
@@ -1618,7 +1618,7 @@ def delete_comment(comment_id):
     from sqlalchemy.orm import joinedload
 
     cmt = (
-        Comment.query.options(joinedload(Comment.user), joinedload(Comment.project), joinedload(Comment.task))
+        Comment.query.options(joinedload(Comment.author), joinedload(Comment.project), joinedload(Comment.task))
         .filter_by(id=comment_id)
         .first_or_404()
     )
@@ -2110,9 +2110,13 @@ def create_exchange_rate():
     d = _parse_date(data["date"])
     if not d:
         return jsonify({"error": "Invalid date"}), 400
+    base_code = data["base_code"].upper()
+    quote_code = data["quote_code"].upper()
+    if not Currency.query.get(base_code) or not Currency.query.get(quote_code):
+        return jsonify({"error": "Base and quote currencies must exist before creating an exchange rate"}), 400
     er = ExchangeRate(
-        base_code=data["base_code"].upper(),
-        quote_code=data["quote_code"].upper(),
+        base_code=base_code,
+        quote_code=quote_code,
         rate=rate_val,
         date=d,
         source=data.get("source"),

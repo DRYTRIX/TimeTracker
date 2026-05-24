@@ -55,7 +55,7 @@ def get_task(task_id):
     from app.models import Task
 
     task = (
-        Task.query.options(joinedload(Task.project), joinedload(Task.assignee), joinedload(Task.created_by_user))
+        Task.query.options(joinedload(Task.project), joinedload(Task.assigned_user), joinedload(Task.creator))
         .filter_by(id=task_id)
         .first_or_404()
     )

@@ -1,0 +1,14 @@
+# Safety policy for `safety check` (Safety CLI 2.x format).
+# Required by safety>=3.7, which loads .safety-policy.yml by default.
+# See: https://docs.pyup.io/docs/safety-20-policy-file
+project:
+  id: ''
+organization:
+  id: ''
+  name: ''
+security:
+  ignore-unpinned-requirements: false
+  ignore-cvss-severity-below: 0
+  ignore-cvss-unknown-severity: false
+  ignore-vulnerabilities: {}
+  continue-on-vulnerability-error: false

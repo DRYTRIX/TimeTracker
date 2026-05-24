@@ -300,9 +300,7 @@ def productivity_dashboard():
     focus = ProductivityService.get_focus_stats(current_user, days=30)
     projects = ProductivityService.get_project_breakdown(current_user, days=30)
     heatmap = ProductivityService.get_weekly_heatmap(current_user, weeks=12)
-    insights = ProductivityService.get_insights(
-        current_user, summary, daily_breakdown, streak, focus, projects
-    )
+    insights = ProductivityService.get_insights(current_user, summary, daily_breakdown, streak, focus, projects)
 
     standard_hours_per_day = float(getattr(current_user, "standard_hours_per_day", 8.0) or 8.0)
 

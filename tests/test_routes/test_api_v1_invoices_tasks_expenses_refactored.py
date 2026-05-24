@@ -59,7 +59,7 @@ class TestAPIInvoicesRefactored:
             json={
                 "project_id": project.id,
                 "client_id": test_client.id,
-                "client_name": client.name,
+                "client_name": test_client.name,
                 "due_date": (date.today() + timedelta(days=30)).isoformat(),
                 "notes": "Test invoice",
             },

@@ -176,9 +176,10 @@ def create_app(config=None):
     if config:
         app.config.update(config)
 
-    # Production safety: refuse to start with default SECRET_KEY
+    # Production safety: refuse to start with default SECRET_KEY (skip under TESTING)
     if (
-        app.config.get("FLASK_ENV") == "production"
+        not app.config.get("TESTING")
+        and app.config.get("FLASK_ENV") == "production"
         and app.config.get("SECRET_KEY") == "dev-secret-key-change-in-production"
     ):
         raise ValueError(

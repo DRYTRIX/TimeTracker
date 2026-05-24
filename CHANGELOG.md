@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.3] - 2026-05-24
+
+### Fixed
+
+- **Comment API update/delete** — v1 `PATCH`/`DELETE /comments/<id>` no longer return 500: handlers eager-load `Comment.author` (not the non-existent `user` relationship). Comment edits now persist reliably — `edit_content()` no longer calls `now_in_app_timezone()` before commit, which could roll back the session when no `Settings` row exists and discard content changes while `updated_at` still advanced (`app/models/comment.py`, `app/routes/api_v1.py`).
+
+### Added
+
+- **German translations** — Updated `translations/de/LC_MESSAGES/messages.po` with community translation improvements.
+
+### Documentation
+
+- **Version** — Documented release **5.6.3** to match `setup.py` (single source of truth for the application version).
+
 ## [5.6.2] - 2026-05-20
 
 ### Fixed

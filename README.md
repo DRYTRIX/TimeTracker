@@ -90,7 +90,9 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
-### ✨ Highlights of v5.6.2
+### ✨ Highlights of v5.6.3
+
+**Patch (5.6.3):** Comment API — v1 update/delete endpoints fixed (no more 500 on PATCH/DELETE), and comment edits persist correctly when settings are not yet seeded. Updated German translations. See [CHANGELOG.md](CHANGELOG.md#563---2026-05-24).
 
 **Patch (5.6.2):** Invoice PDF designer — items/expenses tables export at template page coordinates (fixes misalignment vs preview), **Generate Preview** uses the same ReportLab bytes as export, and table JSON uses `getClientRect()` after move/scale. See [CHANGELOG.md](CHANGELOG.md#562---2026-05-20).
 

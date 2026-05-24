@@ -183,11 +183,7 @@ class SlackConnector(BaseConnector):
         if abs(time.time() - ts_int) > SLACK_REQUEST_MAX_AGE:
             return False
         base = f"{SLACK_SIGNATURE_VERSION}:{timestamp}:".encode("utf-8") + raw_body
-        expected = (
-            SLACK_SIGNATURE_VERSION
-            + "="
-            + hmac.new(secret.encode("utf-8"), base, hashlib.sha256).hexdigest()
-        )
+        expected = SLACK_SIGNATURE_VERSION + "=" + hmac.new(secret.encode("utf-8"), base, hashlib.sha256).hexdigest()
         return hmac.compare_digest(expected, signature)
 
     # ------------------------------------------------------------------
@@ -282,8 +278,7 @@ class SlackConnector(BaseConnector):
             return self._ephemeral("No active timer.")
         project_name = active.project.name if getattr(active, "project", None) else "—"
         return self._ephemeral(
-            f":hourglass_flowing_sand: Active timer on *{project_name}* "
-            f"(running {active.duration_formatted})."
+            f":hourglass_flowing_sand: Active timer on *{project_name}* " f"(running {active.duration_formatted})."
         )
 
     def _cmd_today(self, owner) -> Dict[str, Any]:
@@ -295,9 +290,7 @@ class SlackConnector(BaseConnector):
             return self._ephemeral(f"Could not fetch today's summary: {exc}")
         hours = summary.get("hours", 0)
         projects = summary.get("projects", 0)
-        return self._ephemeral(
-            f":bar_chart: Today: *{hours}h* across *{projects}* project(s)."
-        )
+        return self._ephemeral(f":bar_chart: Today: *{hours}h* across *{projects}* project(s).")
 
     @staticmethod
     def _ephemeral(text: str) -> Dict[str, Any]:
