@@ -94,6 +94,8 @@ def cleanup_test_files(app):
                 try:
                     os.remove(os.path.join(upload_folder, filename))
                 except OSError:
+                    # Best-effort cleanup in teardown: ignore files that were removed
+                    # concurrently or are temporarily inaccessible.
                     pass
 
 
