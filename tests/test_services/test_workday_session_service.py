@@ -1,6 +1,6 @@
 """Tests for WorkdaySessionService and working time limits."""
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 
