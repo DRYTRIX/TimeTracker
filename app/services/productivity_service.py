@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import func
 
 from app import db
-from app.models import Project, TimeEntry
+from app.models import Project, TimeEntry, WorkdaySession
 from app.utils.timezone import get_timezone_for_user, get_timezone_obj, now_in_user_timezone
 
 logger = logging.getLogger(__name__)
@@ -133,6 +133,8 @@ class ProductivityService:
         empty: Dict[str, Any] = {
             "today_hours": 0.0,
             "week_hours": 0.0,
+            "workday_today_hours": 0.0,
+            "workday_week_hours": 0.0,
             "week_goal_hours": 40.0,
             "week_goal_percent": 0,
             "active_timer": None,
@@ -218,9 +220,14 @@ class ProductivityService:
             except Exception:
                 active = None
 
+            workday_today_hours = WorkdaySession.get_total_hours_for_period(uid, today, today)
+            workday_week_hours = WorkdaySession.get_total_hours_for_period(uid, week_start, today)
+
             return {
                 "today_hours": today_hours,
                 "week_hours": week_hours,
+                "workday_today_hours": workday_today_hours,
+                "workday_week_hours": workday_week_hours,
                 "week_goal_hours": round(week_goal_hours, 2),
                 "week_goal_percent": week_goal_percent,
                 "active_timer": _format_active_timer(active),

@@ -137,6 +137,30 @@
                         <input type="number" name="default_daily_working_hours" id="default_daily_working_hours" value="{{ getattr(settings, 'default_daily_working_hours', 8.0) }}" min="0.5" max="24" step="0.5" class="form-input w-32 mt-1">
                         <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Used as the standard hours per day for overtime calculation when new users are created. Existing users keep their own setting.') }}</p>
                     </div>
+                    <div class="pt-4 border-t border-border-light dark:border-border-dark mt-4">
+                        <h3 class="text-sm font-semibold mb-3">{{ _('Working time limits') }}</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center">
+                                <input type="checkbox" name="hour_limits_enabled" id="hour_limits_enabled" {% if getattr(settings, 'hour_limits_enabled', True) %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600">
+                                <label for="hour_limits_enabled" class="ml-2 text-sm">{{ _('Enable daily and weekly working time limits') }}</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="hour_limit_email_enabled" id="hour_limit_email_enabled" {% if getattr(settings, 'hour_limit_email_enabled', True) %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600">
+                                <label for="hour_limit_email_enabled" class="ml-2 text-sm">{{ _('Send email when limits are exceeded') }}</label>
+                            </div>
+                            <div class="flex flex-wrap gap-4">
+                                <div>
+                                    <label for="daily_hour_limit" class="form-label">{{ _('Daily limit (hours)') }}</label>
+                                    <input type="number" name="daily_hour_limit" id="daily_hour_limit" value="{{ getattr(settings, 'daily_hour_limit', 10.0) }}" min="1" max="24" step="0.5" class="form-input w-32 mt-1">
+                                </div>
+                                <div>
+                                    <label for="weekly_hour_limit" class="form-label">{{ _('Weekly limit (hours)') }}</label>
+                                    <input type="number" name="weekly_hour_limit" id="weekly_hour_limit" value="{{ getattr(settings, 'weekly_hour_limit', 48.0) }}" min="1" max="168" step="0.5" class="form-input w-32 mt-1">
+                                </div>
+                            </div>
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Limits use workday session hours when available. Employees receive an email and can submit a justification (soft enforcement).') }}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 

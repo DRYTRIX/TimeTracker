@@ -93,6 +93,8 @@ from .warehouse import Warehouse
 from .warehouse_stock import WarehouseStock
 from .webhook import Webhook, WebhookDelivery
 from .weekly_time_goal import WeeklyTimeGoal
+from .workday_session import WorkdaySession
+from .working_time_violation import WorkingTimeViolation
 from .workflow import WorkflowExecution, WorkflowRule
 
 __all__ = [
@@ -128,6 +130,8 @@ __all__ = [
     "UserClient",
     "ClientNote",
     "WeeklyTimeGoal",
+    "WorkdaySession",
+    "WorkingTimeViolation",
     "Expense",
     "Permission",
     "Role",

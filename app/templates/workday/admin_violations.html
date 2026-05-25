@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{{ page_header('fas fa-user-clock', _('Working time limit reviews'), _('Review employee justifications for exceeded limits.')) }}
+
+<div class="mb-4 flex gap-2">
+    <a href="{{ url_for('workday.admin_working_time_list', status='submitted') }}" class="btn btn-sm {% if status_filter == 'submitted' %}btn-primary{% else %}btn-secondary{% endif %}">{{ _('Submitted') }}</a>
+    <a href="{{ url_for('workday.admin_working_time_list', status='pending') }}" class="btn btn-sm {% if status_filter == 'pending' %}btn-primary{% else %}btn-secondary{% endif %}">{{ _('Pending') }}</a>
+    <a href="{{ url_for('workday.admin_working_time_list', status='acknowledged') }}" class="btn btn-sm {% if status_filter == 'acknowledged' %}btn-primary{% else %}btn-secondary{% endif %}">{{ _('Acknowledged') }}</a>
+    <a href="{{ url_for('workday.admin_working_time_list', status='all') }}" class="btn btn-sm {% if status_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">{{ _('All') }}</a>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
+    <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+                <th class="px-4 py-2 text-left">{{ _('User') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Period') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Over') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Status') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Justification') }}</th>
+                <th class="px-4 py-2"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-border-light dark:divide-border-dark">
+            {% for v in violations %}
+            {% set u = users.get(v.user_id) %}
+            <tr>
+                <td class="px-4 py-3">{{ u.display_name if u else v.user_id }}</td>
+                <td class="px-4 py-3">{{ v.period_type }} {{ v.period_start }}{% if v.period_end != v.period_start %} – {{ v.period_end }}{% endif %}</td>
+                <td class="px-4 py-3">+{{ "%.1f"|format(v.hours_over) }}h</td>
+                <td class="px-4 py-3">{{ v.status }}</td>
+                <td class="px-4 py-3 max-w-xs truncate" title="{{ v.justification or '' }}">{{ v.justification or '—' }}</td>
+                <td class="px-4 py-3">
+                    {% if v.status == 'submitted' %}
+                    <form method="POST" action="{{ url_for('workday.admin_acknowledge_violation', violation_id=v.id) }}" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-secondary btn-sm">{{ _('Acknowledge') }}</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="px-4 py-6 text-center text-text-muted-light dark:text-text-muted-dark">{{ _('No records.') }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

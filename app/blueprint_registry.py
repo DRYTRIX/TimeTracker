@@ -52,6 +52,10 @@ def register_all_blueprints(app, logger=None):
     from app.routes.api import api_bp
     from app.routes.api_docs import api_docs_bp, swaggerui_blueprint
     from app.routes.api_v1 import api_v1_bp
+    # importlib avoids shadowing the Flask `app` parameter (plain `import app.routes...` binds local `app`)
+    from importlib import import_module
+
+    import_module("app.routes.api_v1_workday")
     from app.routes.api_v1_ai import api_v1_ai_bp
     from app.routes.api_v1_clients import api_v1_clients_bp
     from app.routes.api_v1_contacts import api_v1_contacts_bp
@@ -104,6 +108,7 @@ def register_all_blueprints(app, logger=None):
     from app.routes.user import user_bp
     from app.routes.webhooks import webhooks_bp
     from app.routes.weekly_goals import weekly_goals_bp
+    from app.routes.workday import workday_bp
 
     try:
         from app.routes.audit_logs import audit_logs_bp
@@ -150,6 +155,7 @@ def register_all_blueprints(app, logger=None):
     app.register_blueprint(main_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(timer_bp)
+    app.register_blueprint(workday_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(api_bp)

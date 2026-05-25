@@ -28,6 +28,77 @@
 {% set dashboard_breadcrumbs = [{'text': _('Dashboard')}] %}
 {{ page_header('fas fa-tachometer-alt', _('Dashboard'), _("Here's a quick overview of your work."), breadcrumbs=dashboard_breadcrumbs) }}
 
+{% if pending_violations %}
+<div class="mb-6 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4" role="alert">
+    <p class="font-semibold text-amber-900 dark:text-amber-100 mb-1">
+        <i class="fas fa-exclamation-triangle mr-2"></i>{{ _('Working time limit exceeded') }}
+    </p>
+    <p class="text-sm text-amber-800 dark:text-amber-200 mb-2">{{ _('Please submit a justification for the time you worked beyond the allowed limit.') }}</p>
+    <a href="{{ url_for('workday.violations_list') }}" class="btn btn-primary btn-sm">{{ _('Review and justify') }}</a>
+</div>
+{% endif %}
+
+<!-- Workday clock-in/out (separate from project timer) -->
+<div class="{% if active_workday_session %}bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-800{% else %}bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark{% endif %} p-6 rounded-xl shadow-sm dashboard-widget animated-card mb-6" {% if active_workday_session %}data-workday-start="{{ active_workday_session.start_time.isoformat() }}"{% endif %}>
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4 min-w-0">
+        <div class="flex items-center gap-3 min-w-0">
+            <div class="{% if active_workday_session %}bg-emerald-500/10 dark:bg-emerald-400/10{% else %}bg-gray-100 dark:bg-gray-800{% endif %} p-3 rounded-lg shrink-0">
+                <i class="fas fa-briefcase {% if active_workday_session %}text-emerald-600 dark:text-emerald-400 animate-pulse{% else %}text-gray-600 dark:text-gray-400{% endif %} text-xl"></i>
+            </div>
+            <div>
+                <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Workday') }}</h2>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Track when you are at work — separate from project time') }}</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            {% if active_workday_session %}
+            <form method="POST" action="{{ url_for('workday.end_workday') }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger" aria-label="{{ _('End Workday') }}">
+                    <i class="fas fa-stop mr-2"></i>{{ _('End Workday') }}
+                </button>
+            </form>
+            {% else %}
+            <form method="POST" action="{{ url_for('workday.start_workday') }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-primary" aria-label="{{ _('Start Workday') }}">
+                    <i class="fas fa-play mr-2"></i>{{ _('Start Workday') }}
+                </button>
+            </form>
+            {% endif %}
+            <a href="{{ url_for('workday.workday_history') }}" class="btn btn-secondary btn-sm">{{ _('History') }}</a>
+        </div>
+    </div>
+    {% if active_workday_session %}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                <span class="w-2 h-2 bg-emerald-600 rounded-full mr-2 animate-pulse"></span>{{ _('At work') }}
+            </span>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
+                {{ _('Started at') }} {{ active_workday_session.start_time|user_time }}
+            </p>
+            <p class="text-sm font-semibold mt-1">
+                {{ _('Elapsed') }}: <span id="dashboard-workday-elapsed">{{ active_workday_session.duration_formatted }}</span>
+            </p>
+        </div>
+    </div>
+    {% else %}
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark text-center py-2">{{ _('Press Start Workday when you begin your working day.') }}</p>
+    {% endif %}
+    <div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-border-light dark:border-border-dark">
+        <div class="text-center">
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark uppercase tracking-wide">{{ _('At work today') }}</p>
+            <p class="text-xl font-bold text-emerald-700 dark:text-emerald-300" id="workdayTodayHoursValue">{{ "%.2f"|format(workday_today_hours) }}h</p>
+        </div>
+        <div class="text-center">
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark uppercase tracking-wide">{{ _('On projects today') }}</p>
+            <p class="text-xl font-bold text-blue-700 dark:text-blue-300">{{ "%.2f"|format(today_hours) }}h</p>
+        </div>
+    </div>
+    <p class="text-xs text-center text-text-muted-light dark:text-text-muted-dark mt-2">{{ _('These totals are shown separately and are not added together.') }}</p>
+</div>
+
 <!-- Hero: Timer first (primary action) -->
 <div class="{% if active_timer %}bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800{% else %}bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark{% endif %} p-6 rounded-xl shadow-sm dashboard-widget animated-card mb-6" {% if active_timer %}data-timer-start="{{ active_timer.start_time.isoformat() }}" data-today-hours="{{ today_hours }}" data-week-hours="{{ week_hours }}" data-month-hours="{{ month_hours }}"{% endif %}>
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4 min-w-0">
@@ -158,7 +229,7 @@
     <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800 p-6 rounded-xl shadow-sm dashboard-widget" id="todayHours">
         <div class="flex items-center justify-between mb-4">
             <div>
-                <p class="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">{{ _('Today\'s Hours') }}</p>
+                <p class="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">{{ _('Project hours today') }}</p>
                 <div class="flex items-baseline gap-2">
                     <span class="text-2xl lg:text-3xl font-bold text-blue-900 dark:text-blue-100 stat-value" id="todayHoursValue">{{ "%.2f"|format(today_hours) }}</span>
                     <span class="text-sm text-blue-600/70 dark:text-blue-400/70">hours</span>
@@ -183,7 +254,7 @@
     <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border border-green-200 dark:border-green-800 p-6 rounded-xl shadow-sm dashboard-widget" id="weekHours">
         <div class="flex items-center justify-between mb-4">
             <div>
-                <p class="text-sm font-medium text-green-600 dark:text-green-400 mb-1">{{ _('Week\'s Hours') }}</p>
+                <p class="text-sm font-medium text-green-600 dark:text-green-400 mb-1">{{ _('Project hours this week') }}</p>
                 <div class="flex items-baseline gap-2">
                     <span class="text-2xl lg:text-3xl font-bold text-green-900 dark:text-green-100 stat-value" id="weekHoursValue">{{ "%.2f"|format(week_hours) }}</span>
                     <span class="text-sm text-green-600/70 dark:text-green-400/70">hours</span>
@@ -856,6 +927,31 @@
             }
             tick();
             setInterval(tick, 1000);
+        })();
+
+        // Live workday elapsed (separate from project timer — does not add to project hours)
+        (function initLiveWorkday() {
+            var workdayWidget = document.querySelector('[data-workday-start]');
+            if (!workdayWidget) return;
+            var startIso = workdayWidget.getAttribute('data-workday-start');
+            if (!startIso) return;
+            var startTime = new Date(startIso).getTime();
+            var baseWorkdayHours = parseFloat({{ workday_today_hours|tojson }}) || 0;
+            function formatWorkdayElapsed(seconds) {
+                var h = Math.floor(seconds / 3600);
+                var m = Math.floor((seconds % 3600) / 60);
+                if (h > 0) return h + 'h ' + m + 'm';
+                return m + 'm ' + (seconds % 60) + 's';
+            }
+            function tickWorkday() {
+                var elapsedSec = Math.floor((Date.now() - startTime) / 1000);
+                var el = document.getElementById('dashboard-workday-elapsed');
+                if (el) el.textContent = formatWorkdayElapsed(elapsedSec);
+                var wh = document.getElementById('workdayTodayHoursValue');
+                if (wh) wh.textContent = (baseWorkdayHours + elapsedSec / 3600).toFixed(2) + 'h';
+            }
+            tickWorkday();
+            setInterval(tickWorkday, 1000);
         })();
 
         try {

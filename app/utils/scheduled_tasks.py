@@ -616,6 +616,27 @@ def register_scheduled_tasks(scheduler, app=None):
         )
         logger.info("Registered smart reminder push task")
 
+        def check_working_time_limits_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for working time limits check")
+                    return
+            with app_instance.app_context():
+                check_working_time_limits()
+
+        scheduler.add_job(
+            func=check_working_time_limits_with_app,
+            trigger="interval",
+            minutes=15,
+            id="check_working_time_limits",
+            name="Check working time limits and auto-close stale workdays",
+            replace_existing=True,
+        )
+        logger.info("Registered working time limits check task")
+
         # Base telemetry heartbeat (daily) – always-on minimal install footprint
         def send_base_telemetry_heartbeat_with_app():
             app_instance = app
@@ -909,6 +930,50 @@ def process_remind_to_log():
         return sent
     except Exception as e:
         logger.error("Error in process_remind_to_log: %s", e)
+        return 0
+
+
+def check_working_time_limits():
+    """Auto-close stale workday sessions and detect daily/weekly hour limit violations."""
+    from app.models import Settings, User
+    from app.services.workday_session_service import WorkdaySessionService
+    from app.services.working_time_limit_service import WorkingTimeLimitService
+    from app.utils.email import send_working_time_limit_exceeded_email
+
+    try:
+        settings = Settings.get_settings()
+        if not getattr(settings, "hour_limits_enabled", True):
+            WorkdaySessionService().auto_close_stale_sessions()
+            return 0
+
+        closed = WorkdaySessionService().auto_close_stale_sessions()
+        if closed:
+            logger.info("Auto-closed %d stale workday session(s)", closed)
+
+        limit_service = WorkingTimeLimitService()
+        emails_sent = 0
+        users = User.query.filter_by(is_active=True).all()
+        for user in users:
+            if not user.email or not user.email_notifications:
+                continue
+            new_violations = limit_service.check_user_limits(user)
+            if not getattr(settings, "hour_limit_email_enabled", True):
+                continue
+            for violation in new_violations:
+                try:
+                    send_working_time_limit_exceeded_email(user, violation)
+                    violation.notified_at = datetime.utcnow()
+                    db.session.commit()
+                    emails_sent += 1
+                except Exception as e:
+                    logger.error("Failed to send limit email to %s: %s", user.username, e)
+                    db.session.rollback()
+
+        if emails_sent:
+            logger.info("Sent %d working time limit notification(s)", emails_sent)
+        return emails_sent
+    except Exception as e:
+        logger.error("Error in check_working_time_limits: %s", e)
         return 0
 
 

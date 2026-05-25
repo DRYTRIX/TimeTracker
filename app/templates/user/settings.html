@@ -407,6 +407,26 @@
                     </p>
                 </div>
             </div>
+            <div class="pt-4 border-t border-gray-200 dark:border-gray-700 mt-6">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">{{ _('Working time limits (optional overrides)') }}</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">{{ _('Leave blank to use system defaults from Admin settings.') }}</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="daily_hour_limit_override" class="form-label">{{ _('Daily limit (hours)') }}</label>
+                        <input type="number" id="daily_hour_limit_override" name="daily_hour_limit_override"
+                               value="{{ user.daily_hour_limit_override if user.daily_hour_limit_override is not none else '' }}"
+                               min="1" max="24" step="0.5" placeholder="{{ _('System default') }}"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    </div>
+                    <div>
+                        <label for="weekly_hour_limit_override" class="form-label">{{ _('Weekly limit (hours)') }}</label>
+                        <input type="number" id="weekly_hour_limit_override" name="weekly_hour_limit_override"
+                               value="{{ user.weekly_hour_limit_override if user.weekly_hour_limit_override is not none else '' }}"
+                               min="1" max="168" step="0.5" placeholder="{{ _('System default') }}"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    </div>
+                </div>
+            </div>
             <div class="flex items-center bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md mt-4" id="overtime-how-weekly" style="display: {% if getattr(user, 'overtime_calculation_mode', 'daily') == 'weekly' %}block{% else %}none{% endif %};">
                 <div>
                     <p class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">

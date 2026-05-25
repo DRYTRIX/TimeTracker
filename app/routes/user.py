@@ -195,6 +195,30 @@ def settings():
                     # Allow clearing to use derived default (daily * 5)
                     current_user.standard_hours_per_week = None
 
+            # Working time limit overrides (empty = use global settings)
+            if hasattr(current_user, "daily_hour_limit_override"):
+                daily_override = request.form.get("daily_hour_limit_override", "").strip()
+                if daily_override:
+                    val = float(daily_override)
+                    if 1 <= val <= 24:
+                        current_user.daily_hour_limit_override = val
+                    else:
+                        flash(_("Daily hour limit must be between 1 and 24"), "error")
+                        return redirect(url_for("user.settings"))
+                else:
+                    current_user.daily_hour_limit_override = None
+            if hasattr(current_user, "weekly_hour_limit_override"):
+                weekly_override = request.form.get("weekly_hour_limit_override", "").strip()
+                if weekly_override:
+                    val = float(weekly_override)
+                    if 1 <= val <= 168:
+                        current_user.weekly_hour_limit_override = val
+                    else:
+                        flash(_("Weekly hour limit must be between 1 and 168"), "error")
+                        return redirect(url_for("user.settings"))
+                else:
+                    current_user.weekly_hour_limit_override = None
+
             # Save changes
             if safe_commit(db.session):
                 # Log activity

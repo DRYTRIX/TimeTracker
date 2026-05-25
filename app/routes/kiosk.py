@@ -532,6 +532,50 @@ def kiosk_stop_timer():
         return jsonify({"error": f"Error stopping timer: {str(e)}"}), 500
 
 
+@kiosk_bp.route("/api/kiosk/start-workday", methods=["POST"])
+@login_required
+@module_enabled("kiosk")
+def kiosk_start_workday():
+    """Start workday session from kiosk interface."""
+    from app.services.workday_session_service import WorkdaySessionService
+
+    data = request.get_json() or {}
+    notes = (data.get("notes") or "").strip() or None
+    result = WorkdaySessionService().start_workday(current_user.id, notes=notes, source="kiosk")
+    if not result["success"]:
+        return jsonify({"error": result.get("message", _("Could not start workday"))}), 400
+    session = result["session"]
+    return jsonify({"success": True, "session_id": session.id, "message": _("Workday started")})
+
+
+@kiosk_bp.route("/api/kiosk/end-workday", methods=["POST"])
+@login_required
+@module_enabled("kiosk")
+def kiosk_end_workday():
+    """End workday session from kiosk interface."""
+    from app.services.workday_session_service import WorkdaySessionService
+
+    data = request.get_json() or {}
+    notes = (data.get("notes") or "").strip() or None
+    result = WorkdaySessionService().end_workday(current_user.id, notes=notes)
+    if not result["success"]:
+        return jsonify({"error": result.get("message", _("Could not end workday"))}), 400
+    return jsonify({"success": True, "message": _("Workday ended")})
+
+
+@kiosk_bp.route("/api/kiosk/workday-status", methods=["GET"])
+@login_required
+@module_enabled("kiosk")
+def kiosk_workday_status():
+    """Get current workday session status."""
+    from app.services.workday_session_service import WorkdaySessionService
+
+    session = WorkdaySessionService().get_active_session(current_user.id)
+    if not session:
+        return jsonify({"active": False, "session": None})
+    return jsonify({"active": True, "session": session.to_dict()})
+
+
 @kiosk_bp.route("/api/kiosk/timer-status", methods=["GET"])
 @login_required
 @module_enabled("kiosk")

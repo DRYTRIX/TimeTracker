@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{{ page_header('fas fa-exclamation-triangle', _('Working time limits'), _('Review and submit justifications for exceeded limits.')) }}
+
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl p-6">
+    {% if violations %}
+    <ul class="divide-y divide-border-light dark:divide-border-dark">
+        {% for v in violations %}
+        <li class="py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+                <p class="font-medium">{{ _('%(type)s limit', type=v.period_type|capitalize) }} — {{ v.period_start }}{% if v.period_end != v.period_start %} – {{ v.period_end }}{% endif %}</p>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Limit') }}: {{ "%.1f"|format(v.limit_hours) }}h · {{ _('Actual') }}: {{ "%.1f"|format(v.actual_hours) }}h · +{{ "%.1f"|format(v.hours_over) }}h
+                </p>
+                <span class="inline-flex mt-1 px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">{{ v.status }}</span>
+            </div>
+            {% if v.status == 'pending' %}
+            <a href="{{ url_for('workday.violation_justify', violation_id=v.id) }}" class="btn btn-primary btn-sm">{{ _('Submit justification') }}</a>
+            {% elif v.justification %}
+            <p class="text-sm max-w-md">{{ v.justification }}</p>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No pending working time limit items.') }}</p>
+    {% endif %}
+</div>
+{% endblock %}
