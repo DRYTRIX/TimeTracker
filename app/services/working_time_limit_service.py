@@ -2,7 +2,7 @@
 Service for daily/weekly working time limit detection and violations.
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Any, Dict, Optional, Tuple
 
 from app import db
