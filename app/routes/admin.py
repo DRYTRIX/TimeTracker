@@ -1511,8 +1511,9 @@ def settings():
             enforcement = (request.form.get("hour_limit_enforcement") or "soft_email").strip()
             if enforcement in ("soft_email", "blocking"):
                 settings_obj.hour_limit_enforcement = enforcement
-        except (AttributeError, ValueError, TypeError):
-            pass
+        except (AttributeError, ValueError, TypeError) as exc:
+            # Keep settings save tolerant to missing columns/invalid form values; log for troubleshooting.
+            safe_log(f"Skipping working time limits update due to invalid or unavailable fields: {exc}")
 
         # Update AI helper settings (server-side provider config; secrets are not exposed to clients)
         try:
