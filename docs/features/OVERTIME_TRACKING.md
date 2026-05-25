@@ -137,6 +137,8 @@ pytest tests/test_overtime*.py --cov=app.utils.overtime --cov-report=html
 
 ## Support
 
+**See also:** [Workday sessions and working time limits](WORKDAY_SESSIONS.md) — clock-in/out without a project and configurable daily/weekly caps (separate from overtime reporting).
+
 For questions or issues:
 1. Review the [full documentation](../../OVERTIME_FEATURE_DOCUMENTATION.md)
 2. Check test cases for examples

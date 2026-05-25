@@ -1498,6 +1498,22 @@ def settings():
         except (AttributeError, ValueError, TypeError):
             pass
 
+        # Working time limits
+        try:
+            settings_obj.hour_limits_enabled = request.form.get("hour_limits_enabled") == "on"
+            settings_obj.hour_limit_email_enabled = request.form.get("hour_limit_email_enabled") == "on"
+            daily_lim = request.form.get("daily_hour_limit", type=float)
+            weekly_lim = request.form.get("weekly_hour_limit", type=float)
+            if daily_lim is not None and 1 <= daily_lim <= 24:
+                settings_obj.daily_hour_limit = daily_lim
+            if weekly_lim is not None and 1 <= weekly_lim <= 168:
+                settings_obj.weekly_hour_limit = weekly_lim
+            enforcement = (request.form.get("hour_limit_enforcement") or "soft_email").strip()
+            if enforcement in ("soft_email", "blocking"):
+                settings_obj.hour_limit_enforcement = enforcement
+        except (AttributeError, ValueError, TypeError):
+            pass
+
         # Update AI helper settings (server-side provider config; secrets are not exposed to clients)
         try:
             ai_enabled_mode = (request.form.get("ai_enabled_mode") or "env").strip().lower()

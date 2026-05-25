@@ -15,6 +15,29 @@
     actions_html=None
 ) }}
 
+<div class="mb-6 p-4 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div>
+        <h3 class="font-semibold text-text-light dark:text-text-dark">{{ _('Workday') }}</h3>
+        <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Clock in/out for your working day (separate from project time)') }}</p>
+        {% if active_workday_session %}
+        <p class="text-sm mt-1 text-emerald-700 dark:text-emerald-300">{{ _('At work since') }} {{ active_workday_session.start_time|user_time }} — {{ active_workday_session.duration_formatted }}</p>
+        {% endif %}
+    </div>
+    <div class="flex gap-2">
+        {% if active_workday_session %}
+        <form method="POST" action="{{ url_for('workday.end_workday') }}" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-stop mr-1"></i>{{ _('End Workday') }}</button>
+        </form>
+        {% else %}
+        <form method="POST" action="{{ url_for('workday.start_workday') }}" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-play mr-1"></i>{{ _('Start Workday') }}</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Main Timer Section -->
     <div class="lg:col-span-2 space-y-6">

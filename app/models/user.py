@@ -88,6 +88,10 @@ class User(UserMixin, db.Model):
     )  # 'daily' | 'weekly': overtime by daily cap vs weekly cap
     standard_hours_per_week = db.Column(db.Float, nullable=True)  # Used when overtime_calculation_mode is 'weekly'
 
+    # Per-user overrides for working time limits (null = use global Settings)
+    daily_hour_limit_override = db.Column(db.Float, nullable=True)
+    weekly_hour_limit_override = db.Column(db.Float, nullable=True)
+
     # Client portal settings
     client_portal_enabled = db.Column(db.Boolean, default=False, nullable=False)  # Enable/disable client portal access
     client_id = db.Column(
@@ -276,6 +280,13 @@ class User(UserMixin, db.Model):
         from .time_entry import TimeEntry
 
         return TimeEntry.query.filter_by(user_id=self.id, end_time=None).first()
+
+    @property
+    def active_workday_session(self):
+        """Get the user's currently active workday session"""
+        from .workday_session import WorkdaySession
+
+        return WorkdaySession.get_active_for_user(self.id)
 
     @property
     def total_hours(self):

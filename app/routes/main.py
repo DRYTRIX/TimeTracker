@@ -97,6 +97,15 @@ def dashboard():
     today_hours = stats["time_tracking"]["today_hours"]
     week_hours = stats["time_tracking"]["week_hours"]
     month_hours = stats["time_tracking"]["month_hours"]
+    workday_today_hours = stats.get("workday_hours", {}).get("today", 0.0)
+    workday_week_hours = stats.get("workday_hours", {}).get("week", 0.0)
+    workday_month_hours = stats.get("workday_hours", {}).get("month", 0.0)
+
+    from app.services.workday_session_service import WorkdaySessionService
+    from app.services.working_time_limit_service import WorkingTimeLimitService
+
+    active_workday_session = WorkdaySessionService().get_active_session(current_user.id)
+    pending_violations = WorkingTimeLimitService().get_pending_violations_for_user(current_user.id)
 
     # Overtime for dashboard cards (today and week)
     today_dt = datetime.utcnow().date()
@@ -250,6 +259,11 @@ def dashboard():
     # Prepare template data
     template_data = {
         "active_timer": active_timer,
+        "active_workday_session": active_workday_session,
+        "workday_today_hours": workday_today_hours,
+        "workday_week_hours": workday_week_hours,
+        "workday_month_hours": workday_month_hours,
+        "pending_violations": pending_violations,
         "recent_entries": recent_entries,
         "active_projects": active_projects,
         "active_clients": active_clients,

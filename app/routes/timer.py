@@ -1922,9 +1922,14 @@ def timer_page():
         .all()
     )
 
+    from app.services.workday_session_service import WorkdaySessionService
+
+    active_workday_session = WorkdaySessionService().get_active_session(current_user.id)
+
     return render_template(
         "timer/timer_page.html",
         active_timer=active_timer,
+        active_workday_session=active_workday_session,
         projects=active_projects,
         clients=active_clients,
         only_one_client=only_one_client,

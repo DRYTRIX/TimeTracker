@@ -385,6 +385,48 @@ TimeTracker - Time Tracking & Project Management
     send_email(subject, user.email, text_body, html_body)
 
 
+def send_working_time_limit_exceeded_email(user, violation):
+    """Notify user that they exceeded a daily or weekly working time limit."""
+    if not user.email or not user.email_notifications:
+        return
+
+    from app.models.working_time_violation import WorkingTimeViolation
+
+    period_label = "daily" if violation.period_type == WorkingTimeViolation.PERIOD_DAILY else "weekly"
+    subject = f"Working time limit exceeded ({period_label})"
+    justify_url = url_for("workday.violation_justify", violation_id=violation.id, _external=True)
+
+    text_body = f"""Hello {user.display_name},
+
+You have exceeded your {period_label} working time limit.
+
+Period: {violation.period_start} to {violation.period_end}
+Limit: {violation.limit_hours:.1f} hours
+Actual: {violation.actual_hours:.1f} hours
+Over by: {violation.hours_over:.1f} hours
+
+Please provide a brief justification in TimeTracker:
+{justify_url}
+
+---
+TimeTracker
+"""
+
+    template_name = (
+        "working_time_daily_exceeded"
+        if violation.period_type == WorkingTimeViolation.PERIOD_DAILY
+        else "working_time_weekly_exceeded"
+    )
+    html_body = render_template(
+        f"email/{template_name}.html",
+        user=user,
+        violation=violation,
+        justify_url=justify_url,
+    )
+
+    send_email(subject, user.email, text_body, html_body)
+
+
 def send_remind_to_log_email(user):
     """Send a one-line reminder to log time (e.g. end-of-day reminder).
 

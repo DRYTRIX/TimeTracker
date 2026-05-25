@@ -692,6 +692,41 @@ POST /api/v1/timer/stop
 
 Stops the active timer for the authenticated user.
 
+### Workday sessions (clock-in / clock-out)
+
+Workday sessions track **time at work** without a project or client. They are separate from project timers; dashboard and reports show both totals side by side (never summed).
+
+#### Get workday status
+```
+GET /api/v1/workday/status
+```
+
+**Required Scope:** `read:time_entries`
+
+#### Start workday
+```
+POST /api/v1/workday/start
+```
+
+**Required Scope:** `write:time_entries`
+
+**Request Body (optional):**
+```json
+{
+  "notes": "Optional note",
+  "source": "mobile"
+}
+```
+
+#### End workday
+```
+POST /api/v1/workday/end
+```
+
+**Required Scope:** `write:time_entries`
+
+Kiosk equivalents: `POST /api/kiosk/start-workday`, `POST /api/kiosk/end-workday`, `GET /api/kiosk/workday-status`.
+
 ### Tasks
 
 #### List Tasks

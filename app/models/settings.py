@@ -159,6 +159,13 @@ class Settings(db.Model):
     # Overtime / time tracking: default daily working hours for new users (e.g. 8.0)
     default_daily_working_hours = db.Column(db.Float, default=8.0, nullable=False)
 
+    # Working time limits (soft enforcement with email + justification)
+    hour_limits_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    daily_hour_limit = db.Column(db.Float, default=10.0, nullable=False)
+    weekly_hour_limit = db.Column(db.Float, default=48.0, nullable=False)
+    hour_limit_enforcement = db.Column(db.String(20), default="soft_email", nullable=False)
+    hour_limit_email_enabled = db.Column(db.Boolean, default=True, nullable=False)
+
     # Default break rules for time entries (e.g. Germany: >6h = 30 min, >9h = 45 min). User can override per entry.
     break_after_hours_1 = db.Column(db.Float, nullable=True)  # e.g. 6
     break_minutes_1 = db.Column(db.Integer, nullable=True)  # e.g. 30

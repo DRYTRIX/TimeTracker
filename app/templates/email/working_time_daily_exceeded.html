@@ -1,0 +1,11 @@
+<p>Hello {{ user.display_name }},</p>
+<p>You have exceeded your <strong>daily</strong> working time limit.</p>
+<ul>
+    <li><strong>Date:</strong> {{ violation.period_start }}</li>
+    <li><strong>Limit:</strong> {{ "%.1f"|format(violation.limit_hours) }} hours</li>
+    <li><strong>Actual:</strong> {{ "%.1f"|format(violation.actual_hours) }} hours</li>
+    <li><strong>Over by:</strong> {{ "%.1f"|format(violation.hours_over) }} hours</li>
+</ul>
+<p>Please provide a brief justification in TimeTracker:</p>
+<p><a href="{{ justify_url }}">Submit justification</a></p>
+<p style="color:#64748b;font-size:0.875rem;">— TimeTracker</p>

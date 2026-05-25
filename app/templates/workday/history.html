@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{{ page_header('fas fa-history', _('Workday history'), _('Your clock-in and clock-out sessions.')) }}
+
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
+    <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+                <th class="px-4 py-2 text-left">{{ _('Start') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('End') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Duration') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Source') }}</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-border-light dark:divide-border-dark">
+            {% for s in sessions %}
+            <tr>
+                <td class="px-4 py-3">{{ s.start_time|user_datetime }}</td>
+                <td class="px-4 py-3">{% if s.end_time %}{{ s.end_time|user_datetime }}{% if s.auto_closed %} <span class="text-xs text-amber-600">({{ _('auto-closed') }})</span>{% endif %}{% else %}<span class="text-green-600">{{ _('Active') }}</span>{% endif %}</td>
+                <td class="px-4 py-3">{{ s.duration_formatted }}</td>
+                <td class="px-4 py-3">{{ s.source }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="px-4 py-6 text-center">{{ _('No workday sessions yet.') }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% if pagination.pages > 1 %}
+<div class="mt-4 flex justify-center gap-2">
+    {% if pagination.has_prev %}
+    <a href="{{ url_for('workday.workday_history', page=pagination.prev_num) }}" class="btn btn-secondary btn-sm">{{ _('Previous') }}</a>
+    {% endif %}
+    {% if pagination.has_next %}
+    <a href="{{ url_for('workday.workday_history', page=pagination.next_num) }}" class="btn btn-secondary btn-sm">{{ _('Next') }}</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

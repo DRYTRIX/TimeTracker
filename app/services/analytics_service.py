@@ -10,7 +10,7 @@ from sqlalchemy import and_, case, func
 from sqlalchemy.orm import joinedload
 
 from app import db
-from app.models import Project, TimeEntry
+from app.models import Project, TimeEntry, WorkdaySession
 from app.repositories import ExpenseRepository, InvoiceRepository, ProjectRepository, TimeEntryRepository
 
 
@@ -49,6 +49,20 @@ class AnalyticsService:
             user_id=user_id, start_date=month_start, end_date=datetime.now()
         )
 
+        # Workday hours (separate axis — never summed with project hours)
+        workday_today = 0.0
+        workday_week = 0.0
+        workday_month = 0.0
+        if user_id:
+            today_date = today.date()
+            workday_today = WorkdaySession.get_total_hours_for_period(user_id, today_date, today_date)
+            workday_week = WorkdaySession.get_total_hours_for_period(
+                user_id, week_start.date(), datetime.now().date()
+            )
+            workday_month = WorkdaySession.get_total_hours_for_period(
+                user_id, month_start.date(), datetime.now().date()
+            )
+
         # Active projects
         active_projects = self.project_repo.get_active_projects(user_id=user_id)
 
@@ -63,6 +77,11 @@ class AnalyticsService:
                 "today_hours": round(today_seconds / 3600, 2),
                 "week_hours": round(week_seconds / 3600, 2),
                 "month_hours": round(month_seconds / 3600, 2),
+            },
+            "workday_hours": {
+                "today": workday_today,
+                "week": workday_week,
+                "month": workday_month,
             },
             "projects": {"active_count": len(active_projects)},
             "invoices": {

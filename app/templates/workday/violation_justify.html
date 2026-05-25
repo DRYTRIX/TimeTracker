@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{{ page_header('fas fa-pen', _('Submit justification'), _('Explain why you worked beyond the allowed limit.')) }}
+
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl p-6 max-w-xl">
+    <dl class="text-sm mb-4 space-y-1">
+        <div><dt class="inline font-medium">{{ _('Period') }}:</dt> {{ violation.period_start }}{% if violation.period_end != violation.period_start %} – {{ violation.period_end }}{% endif %} ({{ violation.period_type }})</div>
+        <div><dt class="inline font-medium">{{ _('Limit') }}:</dt> {{ "%.1f"|format(violation.limit_hours) }}h</div>
+        <div><dt class="inline font-medium">{{ _('Actual') }}:</dt> {{ "%.1f"|format(violation.actual_hours) }}h (+{{ "%.1f"|format(violation.hours_over) }}h)</div>
+    </dl>
+    <form method="POST" action="{{ url_for('workday.violation_justify', violation_id=violation.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="justification" class="form-label">{{ _('Your reason') }}</label>
+        <textarea id="justification" name="justification" rows="5" required minlength="10" class="form-input w-full mt-1" placeholder="{{ _('Please describe why you worked longer than the allowed limit...') }}">{{ violation.justification or '' }}</textarea>
+        <div class="mt-4 flex gap-2">
+            <button type="submit" class="btn btn-primary">{{ _('Submit') }}</button>
+            <a href="{{ url_for('workday.violations_list') }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
