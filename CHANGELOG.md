@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.7.0] - 2026-05-25
+
 ### Added
 
 - **Workday sessions** — Employees can **Start Workday** / **End Workday** on the dashboard and timer page without a project or client. Hours at work are tracked separately from project time entries so totals are never double-counted (`WorkdaySession`, `WorkdaySessionService`, migration `158`).
@@ -18,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[Workday sessions and working time limits](docs/features/WORKDAY_SESSIONS.md)** — User and admin guide.
 - **[REST API](docs/api/REST_API.md)** — Workday session endpoints.
 - **Client reply template** — `docs/CLIENT_EMAIL_WORKDAY_FEATURES.md`.
+- **Version** — Documented release **5.7.0** to match `setup.py` (single source of truth for the application version).
 
 ## [5.6.3] - 2026-05-24
 

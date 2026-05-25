@@ -90,6 +90,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.7.0
+
+**Minor (5.7.0):** **Workday sessions** — clock in/out without a project; workday hours and project hours shown separately on the dashboard. **Working time limits** — configurable daily/weekly caps with email alerts and employee justification workflow. REST API and kiosk endpoints included. Run migration `158` after upgrade. See [CHANGELOG.md](CHANGELOG.md#570---2026-05-25) and [docs/features/WORKDAY_SESSIONS.md](docs/features/WORKDAY_SESSIONS.md).
+
 ### ✨ Highlights of v5.6.3
 
 **Patch (5.6.3):** Comment API — v1 update/delete endpoints fixed (no more 500 on PATCH/DELETE), and comment edits persist correctly when settings are not yet seeded. Updated German translations. See [CHANGELOG.md](CHANGELOG.md#563---2026-05-24).
