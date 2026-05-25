@@ -6,7 +6,7 @@ from datetime import date, datetime
 from typing import Any, Dict, Optional, Tuple
 
 from app import db
-from app.models import Settings, TimeEntry, User, WorkingTimeViolation
+from app.models import Settings, User, WorkingTimeViolation
 from app.models.time_entry import local_now
 from app.services.workday_session_service import WorkdaySessionService
 from app.utils.db import safe_commit
