@@ -1427,6 +1427,27 @@ def settings():
         settings_obj.invoice_terms = request.form.get("invoice_terms", "Payment is due within 30 days of invoice date.")
         settings_obj.invoice_notes = request.form.get("invoice_notes", "Thank you for your business!")
 
+        # Update quote defaults
+        quote_prefix_form = sanitize_invoice_prefix(request.form.get("quote_prefix", ""))
+        quote_number_pattern_form = sanitize_invoice_pattern(request.form.get("quote_number_pattern", ""))
+        quote_start_number_form = request.form.get("quote_start_number", 1)
+        is_valid_quote_pattern, quote_pattern_error = validate_invoice_pattern(quote_number_pattern_form)
+        if not is_valid_quote_pattern:
+            flash(_("Invalid quote number pattern: %(reason)s", reason=quote_pattern_error), "error")
+            system_instance_id = Settings.get_system_instance_id()
+            return render_template(
+                "admin/settings.html",
+                settings=settings_obj,
+                timezones=timezones,
+                kiosk_settings=kiosk_settings,
+                peppol_env_enabled=peppol_env_enabled,
+                ai_config=ai_config,
+                system_instance_id=system_instance_id,
+            )
+        settings_obj.quote_prefix = quote_prefix_form
+        settings_obj.quote_number_pattern = quote_number_pattern_form
+        settings_obj.quote_start_number = int(quote_start_number_form)
+
         # Update Peppol e-invoicing settings (if columns exist)
         try:
             mode = (request.form.get("peppol_enabled_mode") or "env").strip().lower()

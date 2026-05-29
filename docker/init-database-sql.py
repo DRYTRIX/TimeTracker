@@ -161,6 +161,11 @@ def create_tables_sql(engine):
         invoice_start_number INTEGER DEFAULT 1000 NOT NULL,
         invoice_terms TEXT DEFAULT 'Payment is due within 30 days of invoice date.' NOT NULL,
         invoice_notes TEXT DEFAULT 'Thank you for your business!' NOT NULL,
+
+        -- Quote defaults
+        quote_prefix VARCHAR(50) DEFAULT 'QUO' NOT NULL,
+        quote_number_pattern VARCHAR(120) DEFAULT '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}' NOT NULL,
+        quote_start_number INTEGER DEFAULT 1 NOT NULL,
         
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL

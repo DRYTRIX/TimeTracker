@@ -34,6 +34,7 @@
         <a href="#section-time-entry" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Time Entry</a>
         <a href="#section-branding" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Branding</a>
         <a href="#section-invoices" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Invoices</a>
+        <a href="#section-quotes" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Quotes</a>
         <a href="#section-peppol" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Peppol</a>
         <a href="#section-backup" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Backup</a>
         <a href="#section-ldap" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">LDAP</a>
@@ -288,6 +289,28 @@
                     <div class="md:col-span-2">
                         <label for="invoice_notes" class="form-label">Default Invoice Notes</label>
                         <textarea name="invoice_notes" id="invoice_notes" rows="3" class="form-input">{{ settings.invoice_notes }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quote Defaults -->
+            <div id="section-quotes" class="border-b border-border-light dark:border-border-dark pb-6">
+                <h2 class="text-lg font-semibold mb-4">{{ _('Quote Defaults') }}</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="quote_prefix" class="form-label">{{ _('Quote Prefix') }}</label>
+                        <input type="text" name="quote_prefix" id="quote_prefix" value="{{ settings.quote_prefix }}" class="form-input">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="quote_number_pattern" class="form-label">{{ _('Quote Number Pattern') }}</label>
+                        <input type="text" name="quote_number_pattern" id="quote_number_pattern" value="{{ settings.quote_number_pattern or '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}' }}" class="form-input" placeholder="e.g. OFF-{YYYY}-{SEQ}">
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('Available tokens:') }} <code>{SEQ}</code>, <code>{YYYY}</code>, <code>{YY}</code>, <code>{MM}</code>, <code>{DD}</code>, <code>{PREFIX}</code>. {{ _('Leave blank to generate sequence-only numbers.') }}
+                        </p>
+                    </div>
+                    <div>
+                        <label for="quote_start_number" class="form-label">{{ _('Quote Start Number') }}</label>
+                        <input type="number" name="quote_start_number" id="quote_start_number" value="{{ settings.quote_start_number }}" class="form-input">
                     </div>
                 </div>
             </div>

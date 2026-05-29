@@ -2,6 +2,7 @@ import re
 from datetime import datetime
 
 DEFAULT_INVOICE_PATTERN = "{PREFIX}-{YYYY}{MM}{DD}-{SEQ}"
+DEFAULT_QUOTE_PATTERN = "{PREFIX}-{YYYY}{MM}{DD}-{SEQ}"
 _ALLOWED_TOKENS = {"SEQ", "YYYY", "YY", "MM", "DD", "PREFIX"}
 
 
@@ -39,12 +40,22 @@ def validate_invoice_pattern(pattern_value):
     return True, ""
 
 
-def resolve_invoice_pattern(settings):
-    """Resolve the effective pattern from settings with compatibility fallback."""
-    raw_pattern = sanitize_invoice_pattern(getattr(settings, "invoice_number_pattern", ""))
-    if raw_pattern:
-        return raw_pattern
+def resolve_pattern(raw_pattern):
+    """Resolve the effective pattern with compatibility fallback."""
+    pattern = sanitize_invoice_pattern(raw_pattern)
+    if pattern:
+        return pattern
     return "{SEQ}"
+
+
+def resolve_invoice_pattern(settings):
+    """Resolve the effective invoice pattern from settings with compatibility fallback."""
+    return resolve_pattern(getattr(settings, "invoice_number_pattern", ""))
+
+
+def resolve_quote_pattern(settings):
+    """Resolve the effective quote pattern from settings with compatibility fallback."""
+    return resolve_pattern(getattr(settings, "quote_number_pattern", ""))
 
 
 def _normalize_start_number(start_number):
@@ -76,17 +87,20 @@ def _extract_seq_width(pattern):
     return max(3, len(re.findall(r"\{SEQ\}", pattern)))
 
 
-def generate_next_invoice_number(invoice_model, invoice_query=None, settings=None, now=None):
-    """Generate next invoice number for the current pattern and settings."""
-    if settings is None:
-        from app.models import Settings
-
-        settings = Settings.get_settings()
-
+def generate_next_document_number(
+    document_model,
+    number_field,
+    prefix,
+    pattern,
+    start_number,
+    document_query=None,
+    now=None,
+):
+    """Generate next document number for the given pattern and settings values."""
     now = now or datetime.utcnow()
-    prefix = sanitize_invoice_prefix(getattr(settings, "invoice_prefix", ""))
-    start_number = _normalize_start_number(getattr(settings, "invoice_start_number", 1))
-    pattern = resolve_invoice_pattern(settings)
+    prefix = sanitize_invoice_prefix(prefix)
+    start_number = _normalize_start_number(start_number)
+    pattern = resolve_pattern(pattern)
 
     token_values = _build_token_values(now, prefix)
     materialized = _materialize_pattern_without_seq(pattern, token_values)
@@ -102,16 +116,15 @@ def generate_next_invoice_number(invoice_model, invoice_query=None, settings=Non
     first_seq_idx = materialized.index(seq_placeholder)
     prefix_probe = materialized[:first_seq_idx]
 
-    # Use a lightweight pre-filter when possible.
-    query = invoice_query or invoice_model.query
+    query = document_query or document_model.query
     if prefix_probe:
-        query = query.filter(invoice_model.invoice_number.startswith(prefix_probe))
+        query = query.filter(number_field.startswith(prefix_probe))
 
     max_seq = None
-    for (invoice_number,) in query.with_entities(invoice_model.invoice_number).all():
-        if not invoice_number:
+    for (document_number,) in query.with_entities(number_field).all():
+        if not document_number:
             continue
-        match = seq_regex.match(invoice_number)
+        match = seq_regex.match(document_number)
         if not match:
             continue
         try:
@@ -126,3 +139,53 @@ def generate_next_invoice_number(invoice_model, invoice_query=None, settings=Non
         next_seq = max(max_seq + 1, start_number)
 
     return materialized.replace(seq_placeholder, f"{next_seq:0{seq_width}d}", 1)
+
+
+def generate_next_invoice_number(invoice_model, invoice_query=None, settings=None, now=None):
+    """Generate next invoice number for the current pattern and settings."""
+    if settings is None:
+        from app.models import Settings
+
+        settings = Settings.get_settings()
+
+    now = now or datetime.utcnow()
+    prefix = sanitize_invoice_prefix(getattr(settings, "invoice_prefix", ""))
+    start_number = _normalize_start_number(getattr(settings, "invoice_start_number", 1))
+    pattern = resolve_invoice_pattern(settings)
+
+    return generate_next_document_number(
+        invoice_model,
+        invoice_model.invoice_number,
+        prefix,
+        pattern,
+        start_number,
+        document_query=invoice_query,
+        now=now,
+    )
+
+
+def generate_next_quote_number(quote_model, quote_query=None, settings=None, now=None):
+    """Generate next quote number for the current pattern and settings."""
+    if settings is None:
+        from app.models import Settings
+
+        settings = Settings.get_settings()
+
+    if now is None:
+        from app.utils.timezone import now_in_app_timezone
+
+        now = now_in_app_timezone().replace(tzinfo=None)
+
+    prefix = sanitize_invoice_prefix(getattr(settings, "quote_prefix", ""))
+    start_number = _normalize_start_number(getattr(settings, "quote_start_number", 1))
+    pattern = resolve_quote_pattern(settings)
+
+    return generate_next_document_number(
+        quote_model,
+        quote_model.quote_number,
+        prefix,
+        pattern,
+        start_number,
+        document_query=quote_query,
+        now=now,
+    )
