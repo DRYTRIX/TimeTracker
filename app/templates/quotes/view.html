@@ -450,7 +450,7 @@
       <div class="p-4 space-y-4">
         <div>
           <label for="email_recipient" class="block text-sm font-medium mb-1">{{ _('Recipient Email') }}</label>
-          <input type="email" id="email_recipient" name="recipient" required 
+          <input type="email" id="email_recipient" name="recipient_email" required 
                  value="{{ quote.client.email if quote.client and quote.client.email else '' }}"
                  class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">
         </div>
@@ -462,7 +462,7 @@
         </div>
         <div>
           <label for="email_message" class="block text-sm font-medium mb-1">{{ _('Custom Message (Optional)') }}</label>
-          <textarea id="email_message" name="message" rows="4" 
+          <textarea id="email_message" name="custom_message" rows="4" 
                     class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark"
                     placeholder="{{ _('Add a custom message to the email...') }}"></textarea>
         </div>
