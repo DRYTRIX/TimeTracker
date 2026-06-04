@@ -271,9 +271,20 @@ def create_app(config=None):
 
     from app.utils import audit
 
+    # These listeners attach to GLOBAL session classes, so they persist for the
+    # lifetime of the process — NOT per app. create_app() can be called many times
+    # in one process (e.g. every test builds a fresh app), so registering
+    # unconditionally stacks a duplicate listener pair on each call. After a few
+    # hundred apps every flush fires hundreds of identical audit callbacks,
+    # turning routine queries into 100%-CPU hangs. Guard every registration with
+    # event.contains so each (target, identifier, fn) is attached exactly once.
+    def _listen_once(target, identifier, fn):
+        if not event.contains(target, identifier, fn):
+            event.listen(target, identifier, fn)
+
     # Register with generic SQLAlchemy Session (catches all Session instances)
-    event.listen(Session, "before_flush", audit.receive_before_flush)
-    event.listen(Session, "after_flush", audit.receive_after_flush)
+    _listen_once(Session, "before_flush", audit.receive_before_flush)
+    _listen_once(Session, "after_flush", audit.receive_after_flush)
 
     # Also register with Flask-SQLAlchemy's sessionmaker if available
     # Flask-SQLAlchemy creates sessions from a sessionmaker, so we register with that
@@ -285,8 +296,8 @@ def create_app(config=None):
                 # Register with the session class that the sessionmaker creates
                 session_class = sessionmaker.class_
                 if session_class:
-                    event.listen(session_class, "before_flush", audit.receive_before_flush)
-                    event.listen(session_class, "after_flush", audit.receive_after_flush)
+                    _listen_once(session_class, "before_flush", audit.receive_before_flush)
+                    _listen_once(session_class, "after_flush", audit.receive_after_flush)
                     logger.info(
                         f"Registered audit logging with Flask-SQLAlchemy session class: {session_class.__name__}"
                     )
@@ -297,8 +308,8 @@ def create_app(config=None):
     try:
         from flask_sqlalchemy import SignallingSession
 
-        event.listen(SignallingSession, "before_flush", audit.receive_before_flush)
-        event.listen(SignallingSession, "after_flush", audit.receive_after_flush)
+        _listen_once(SignallingSession, "before_flush", audit.receive_before_flush)
+        _listen_once(SignallingSession, "after_flush", audit.receive_after_flush)
         logger.info("Registered audit logging with Flask-SQLAlchemy SignallingSession")
     except (ImportError, AttributeError):
         pass
