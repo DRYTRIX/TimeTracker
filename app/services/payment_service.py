@@ -174,23 +174,29 @@ class PaymentService:
         if not payment:
             return {"success": False, "message": "Payment not found", "error": "not_found"}
 
+        invoice = payment.invoice
         invoice_id = payment.invoice_id
 
         # Delete payment
         db.session.delete(payment)
+        # Flush so the just-deleted payment is excluded from the recomputed
+        # total below; otherwise get_total_for_invoice still counts it and the
+        # status never changes.
+        db.session.flush()
 
-        # Update invoice payment status
-        if payment.invoice:
+        # Update invoice payment status from the remaining payments
+        if invoice:
             total_payments = self.payment_repo.get_total_for_invoice(invoice_id)
-            payment.invoice.amount_paid = total_payments
+            invoice.amount_paid = total_payments
 
-            # Update payment status
-            if payment.invoice.amount_paid >= payment.invoice.total_amount:
-                payment.invoice.payment_status = "fully_paid"
-            elif payment.invoice.amount_paid > 0:
-                payment.invoice.payment_status = "partially_paid"
+            # No remaining payment means unpaid regardless of the invoice total
+            # (a 0 total must not read as "fully_paid" when nothing was paid).
+            if invoice.amount_paid <= 0:
+                invoice.payment_status = "unpaid"
+            elif invoice.amount_paid >= invoice.total_amount:
+                invoice.payment_status = "fully_paid"
             else:
-                payment.invoice.payment_status = "unpaid"
+                invoice.payment_status = "partially_paid"
 
         if not safe_commit("delete_payment", {"payment_id": payment_id, "user_id": user_id}):
             return {
