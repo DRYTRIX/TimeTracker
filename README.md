@@ -90,6 +90,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.8.0
+
+**Minor (5.8.0):** **Configurable quote numbering** — prefix, pattern, and start number in admin settings (migration **159**). **Quote email** fix — send from the web form without “recipient required” errors. **Invoice/payment fixes** — correct totals when creating invoices from time entries and when deleting payments. **Audit listener** fix — prevents duplicate flush callbacks in long test runs. See [CHANGELOG.md](CHANGELOG.md#580---2026-06-07).
+
 ### ✨ Highlights of v5.7.0
 
 **Minor (5.7.0):** **Workday sessions** — clock in/out without a project; workday hours and project hours shown separately on the dashboard. **Working time limits** — configurable daily/weekly caps with email alerts and employee justification workflow. REST API and kiosk endpoints included. Run migration `158` after upgrade. See [CHANGELOG.md](CHANGELOG.md#570---2026-05-25) and [docs/features/WORKDAY_SESSIONS.md](docs/features/WORKDAY_SESSIONS.md).
