@@ -304,6 +304,12 @@ class TestKeyboardShortcutsPerformance:
         """Test keyboard shortcuts settings page loads within acceptable time"""
         import time
 
+        # Warm up first: the initial request to a route pays one-time costs
+        # (lazy imports, Jinja template compilation) that don't reflect
+        # steady-state load time and make a hard wall-clock threshold flaky on
+        # shared CI runners. Measure a subsequent request instead.
+        self.client.get("/settings/keyboard-shortcuts")
+
         start = time.time()
         response = self.client.get("/settings/keyboard-shortcuts")
         duration = time.time() - start
