@@ -85,6 +85,11 @@ class InvoiceService:
             created_by=created_by,
         )
 
+        # Flush so the invoice receives its primary key before we build the
+        # invoice items below — InvoiceItem.invoice_id is NOT NULL, and the
+        # repository's create() only adds to the session without flushing.
+        db.session.flush()
+
         # Create invoice items from time entries
         # Group entries by task for better organization
         grouped_entries: Dict[str, Dict[str, Any]] = {}
@@ -127,6 +132,14 @@ class InvoiceService:
                 time_entry_ids=time_entry_ids_csv,
             )
             db.session.add(item)
+
+        # Derive subtotal/tax/total from the persisted line items. Invoice.__init__
+        # ignores subtotal/tax_amount/total_amount kwargs, so the values passed to
+        # invoice_repo.create() above never stick; recompute from the items (whose
+        # total_amount auto-computes from quantity * unit_price) as the source of
+        # truth. Flush first so invoice.items reflects the rows just added.
+        db.session.flush()
+        invoice.calculate_totals()
 
         if not safe_commit("create_invoice", {"project_id": project_id, "created_by": created_by}):
             return {
