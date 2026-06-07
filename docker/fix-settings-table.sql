@@ -56,6 +56,19 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'invoice_notes') THEN
         ALTER TABLE settings ADD COLUMN invoice_notes TEXT DEFAULT 'Thank you for your business!' NOT NULL;
     END IF;
+
+    -- Quote default columns
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'quote_prefix') THEN
+        ALTER TABLE settings ADD COLUMN quote_prefix VARCHAR(50) DEFAULT 'QUO' NOT NULL;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'quote_number_pattern') THEN
+        ALTER TABLE settings ADD COLUMN quote_number_pattern VARCHAR(120) DEFAULT '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}' NOT NULL;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'quote_start_number') THEN
+        ALTER TABLE settings ADD COLUMN quote_start_number INTEGER DEFAULT 1 NOT NULL;
+    END IF;
 END $$;
 
 -- Step 3: Update existing settings with default values
@@ -72,7 +85,10 @@ UPDATE settings SET
     invoice_number_pattern = COALESCE(invoice_number_pattern, '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}'),
     invoice_start_number = COALESCE(invoice_start_number, 1000),
     invoice_terms = COALESCE(invoice_terms, 'Payment is due within 30 days of invoice date.'),
-    invoice_notes = COALESCE(invoice_notes, 'Thank you for your business!')
+    invoice_notes = COALESCE(invoice_notes, 'Thank you for your business!'),
+    quote_prefix = COALESCE(quote_prefix, 'QUO'),
+    quote_number_pattern = COALESCE(quote_number_pattern, '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}'),
+    quote_start_number = COALESCE(quote_start_number, 1)
 WHERE id = (SELECT id FROM settings LIMIT 1);
 
 -- Step 4: Verify the fix

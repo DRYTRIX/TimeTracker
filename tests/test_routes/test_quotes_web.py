@@ -1,5 +1,7 @@
 """Web UI tests for quotes (regression: issue #583 create -> view 500)."""
 
+from unittest.mock import patch
+
 from flask import url_for
 
 from app import db
@@ -90,3 +92,41 @@ def test_edit_quote_by_user_with_edit_quotes_redirect_then_view_returns_200(app,
     view_resp = client.get(location, follow_redirects=False)
     assert view_resp.status_code == 200, view_resp.data[:500]
     assert b"Updated by editor" in view_resp.data
+
+
+def test_send_quote_email_accepts_form_recipient_email(admin_authenticated_client, quote, app):
+    """Regression #652: form POST must read recipient_email (not discard for non-JSON)."""
+    with app.app_context():
+        send_url = url_for("quotes.send_quote_email", quote_id=quote.id)
+
+    with patch("app.utils.email.send_quote_email") as mock_send:
+        mock_send.return_value = (True, None, "sent")
+
+        resp = admin_authenticated_client.post(
+            send_url,
+            data={"recipient_email": "typed@example.com"},
+            follow_redirects=False,
+        )
+
+    assert resp.status_code in (302, 303), resp.data[:500]
+    mock_send.assert_called_once()
+    assert mock_send.call_args.kwargs["recipient_email"] == "typed@example.com"
+
+
+def test_send_quote_email_missing_recipient_redirects_for_form_post(
+    admin_authenticated_client, quote, test_client, app
+):
+    """Regression #652: plain form POST should flash+redirect, not raw JSON error."""
+    with app.app_context():
+        test_client.email = None
+        db.session.commit()
+        send_url = url_for("quotes.send_quote_email", quote_id=quote.id)
+
+    resp = admin_authenticated_client.post(
+        send_url,
+        data={},
+        follow_redirects=False,
+    )
+
+    assert resp.status_code in (302, 303), resp.data[:500]
+    assert f"/quotes/{quote.id}" in (resp.headers.get("Location") or "")

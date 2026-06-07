@@ -386,26 +386,9 @@ class Quote(db.Model):
     @classmethod
     def generate_quote_number(cls):
         """Generate a unique quote number"""
-        # Format: QUO-YYYYMMDD-XXX
-        today = local_now()
-        date_prefix = today.strftime("%Y%m%d")
+        from app.utils.invoice_numbering import generate_next_quote_number
 
-        # Find the next available number for today
-        existing = (
-            cls.query.filter(cls.quote_number.like(f"QUO-{date_prefix}-%")).order_by(cls.quote_number.desc()).first()
-        )
-
-        if existing:
-            # Extract the number part and increment
-            try:
-                last_num = int(existing.quote_number.split("-")[-1])
-                next_num = last_num + 1
-            except (ValueError, IndexError):
-                next_num = 1
-        else:
-            next_num = 1
-
-        return f"QUO-{date_prefix}-{next_num:03d}"
+        return generate_next_quote_number(cls, now=local_now())
 
 
 class QuoteItem(db.Model):

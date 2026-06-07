@@ -4,7 +4,7 @@ from datetime import datetime
 
 from app import db
 from app.config import Config
-from app.utils.invoice_numbering import DEFAULT_INVOICE_PATTERN
+from app.utils.invoice_numbering import DEFAULT_INVOICE_PATTERN, DEFAULT_QUOTE_PATTERN
 from app.utils.secret_crypto import decrypt_if_needed, encrypt_if_possible
 from app.utils.secret_crypto import is_configured as secrets_encryption_configured
 
@@ -94,6 +94,11 @@ class Settings(db.Model):
     invoice_start_number = db.Column(db.Integer, default=1000, nullable=False)
     invoice_terms = db.Column(db.Text, default="Payment is due within 30 days of invoice date.", nullable=False)
     invoice_notes = db.Column(db.Text, default="Thank you for your business!", nullable=False)
+
+    # Quote defaults
+    quote_prefix = db.Column(db.String(50), default="QUO", nullable=False)
+    quote_number_pattern = db.Column(db.String(120), default=DEFAULT_QUOTE_PATTERN, nullable=False)
+    quote_start_number = db.Column(db.Integer, default=1, nullable=False)
 
     # Peppol e-invoicing (optional; can be configured via WebUI or env)
     # peppol_enabled: None => use env var PEPPOL_ENABLED; True/False overrides env.
@@ -265,6 +270,11 @@ class Settings(db.Model):
         self.invoice_start_number = kwargs.get("invoice_start_number", 1000)
         self.invoice_terms = kwargs.get("invoice_terms", "Payment is due within 30 days of invoice date.")
         self.invoice_notes = kwargs.get("invoice_notes", "Thank you for your business!")
+
+        # Set quote defaults
+        self.quote_prefix = kwargs.get("quote_prefix", "QUO")
+        self.quote_number_pattern = kwargs.get("quote_number_pattern", DEFAULT_QUOTE_PATTERN)
+        self.quote_start_number = kwargs.get("quote_start_number", 1)
 
         # Peppol defaults (None means "use env var")
         self.peppol_enabled = kwargs.get("peppol_enabled", None)
@@ -560,6 +570,9 @@ class Settings(db.Model):
             "invoice_start_number": self.invoice_start_number,
             "invoice_terms": self.invoice_terms,
             "invoice_notes": self.invoice_notes,
+            "quote_prefix": self.quote_prefix,
+            "quote_number_pattern": self.quote_number_pattern,
+            "quote_start_number": self.quote_start_number,
             "peppol_enabled": self.peppol_enabled,
             "peppol_sender_endpoint_id": getattr(self, "peppol_sender_endpoint_id", "") or "",
             "peppol_sender_scheme_id": getattr(self, "peppol_sender_scheme_id", "") or "",

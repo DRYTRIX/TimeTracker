@@ -1408,29 +1408,24 @@ def send_invoice_email_route(invoice_id):
     if not current_user.is_admin and invoice.created_by != current_user.id:
         return jsonify({"error": "Permission denied"}), 403
 
-    # Get recipient email from request
+    # Get recipient email from request (form POST or JSON API)
+    data = request.get_json(silent=True) or {}
     recipient_email = (
-        request.form.get("recipient_email", "").strip() or request.json.get("recipient_email", "").strip()
-        if request.is_json
-        else ""
-    )
-
+        request.form.get("recipient_email") or data.get("recipient_email") or ""
+    ).strip()
     if not recipient_email:
-        # Try to use invoice client email
-        recipient_email = invoice.client_email
+        recipient_email = (invoice.client_email or "").strip()
 
     if not recipient_email:
         return jsonify({"error": "Recipient email address is required"}), 400
 
     # Get custom message if provided
-    custom_message = request.form.get("custom_message", "").strip() or (
-        request.json.get("custom_message", "").strip() if request.is_json else ""
-    )
+    custom_message = (
+        request.form.get("custom_message") or data.get("custom_message") or ""
+    ).strip()
 
     # Get email template ID if provided
-    email_template_id = request.form.get("email_template_id", type=int) or (
-        request.json.get("email_template_id") if request.is_json else None
-    )
+    email_template_id = request.form.get("email_template_id", type=int) or data.get("email_template_id")
 
     try:
         from app.utils.email import send_invoice_email

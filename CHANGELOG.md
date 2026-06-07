@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.8.0] - 2026-06-07
+
+### Added
+
+- **Configurable quote numbering** — Admin settings now mirror invoice numbering: prefix, number pattern, and start number. Quotes use the shared document numbering engine instead of a hardcoded `QUO-YYYYMMDD-NNN` format (migration **159**).
+
+### Fixed
+
+- **Quote email** — Sending a quote by email no longer fails with “recipient required” when submitted from the web form; empty recipient falls back to the client email, and validation errors redirect with a flash instead of raw JSON (#652).
+- **Invoice from time entries** — Creating an invoice from time entries no longer fails with a missing `invoice_id` on line items, and totals are recomputed from persisted line items instead of staying at zero.
+- **Payment delete** — Deleting a payment now correctly updates invoice payment status (flush delete before recomputing totals; unpaid invoices no longer read as fully paid).
+- **Audit listeners** — SQLAlchemy flush listeners register once per process, preventing duplicate audit callbacks and CPU hangs when many Flask apps are created in one process (e.g. parallel pytest).
+
+### Changed
+
+- **Invoice send email** — Form POST handling aligned with quote send-email (consistent form/JSON read path).
+
+### Documentation
+
+- **Client reply template** — Refreshed `docs/CLIENT_EMAIL_WORKDAY_FEATURES.md` for workday sessions and working time limits rollout.
+- **Version** — Documented release **5.8.0** to match `setup.py` (single source of truth for the application version).
+
 ## [5.7.0] - 2026-05-25
 
 ### Added
