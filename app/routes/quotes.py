@@ -1744,7 +1744,7 @@ def send_quote_email(quote_id):
     try:
         from app.utils.email import send_quote_email
 
-        success, result, message = send_quote_email(
+        success, message = send_quote_email(
             quote=quote,
             recipient_email=recipient_email,
             sender_user=current_user,
