@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.8.1] - 2026-06-10
+
+### Fixed
+
+- **Quote email** — Sending a quote by email no longer shows a false error after delivery; the send route now matches the util’s `(success, message)` return tuple instead of unpacking three values (#652).
+
+### Documentation
+
+- **Version** — Documented release **5.8.1** to match `setup.py` (single source of truth for the application version).
+
 ## [5.8.0] - 2026-06-07
 
 ### Added
