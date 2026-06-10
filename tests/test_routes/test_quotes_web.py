@@ -1,6 +1,6 @@
 """Web UI tests for quotes (regression: issue #583 create -> view 500)."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from flask import url_for
 
@@ -100,7 +100,7 @@ def test_send_quote_email_accepts_form_recipient_email(admin_authenticated_clien
         send_url = url_for("quotes.send_quote_email", quote_id=quote.id)
 
     with patch("app.utils.email.send_quote_email") as mock_send:
-        mock_send.return_value = (True, None, "sent")
+        mock_send.return_value = (True, "Email sent successfully")
 
         resp = admin_authenticated_client.post(
             send_url,
@@ -130,3 +130,30 @@ def test_send_quote_email_missing_recipient_redirects_for_form_post(
 
     assert resp.status_code in (302, 303), resp.data[:500]
     assert f"/quotes/{quote.id}" in (resp.headers.get("Location") or "")
+
+
+def test_send_quote_email_success_with_real_util_return_shape(
+    admin_authenticated_client, quote, app
+):
+    """Regression #652: route must handle send_quote_email's 2-tuple return."""
+    with app.app_context():
+        send_url = url_for("quotes.send_quote_email", quote_id=quote.id)
+        app.config["MAIL_DEFAULT_SENDER"] = "noreply@test.com"
+
+    with patch("app.utils.pdf_generator.QuotePDFGenerator") as mock_pdf_gen, patch(
+        "app.mail.send"
+    ) as mock_mail_send:
+        mock_instance = MagicMock()
+        mock_instance.generate_pdf.return_value = b"fake_pdf_bytes"
+        mock_pdf_gen.return_value = mock_instance
+
+        resp = admin_authenticated_client.post(
+            send_url,
+            data={"recipient_email": "client@example.com"},
+            follow_redirects=True,
+        )
+
+    assert resp.status_code == 200, resp.data[:500]
+    mock_mail_send.assert_called_once()
+    assert b"client@example.com" in resp.data
+    assert b"not enough values to unpack" not in resp.data

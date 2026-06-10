@@ -90,6 +90,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.8.1
+
+**Patch (5.8.1):** **Quote email** — sending a quote no longer flashes a false error after the email is delivered; fixes the follow-up regression to #652. See [CHANGELOG.md](CHANGELOG.md#581---2026-06-10).
+
 ### ✨ Highlights of v5.8.0
 
 **Minor (5.8.0):** **Configurable quote numbering** — prefix, pattern, and start number in admin settings (migration **159**). **Quote email** fix — send from the web form without “recipient required” errors. **Invoice/payment fixes** — correct totals when creating invoices from time entries and when deleting payments. **Audit listener** fix — prevents duplicate flush callbacks in long test runs. See [CHANGELOG.md](CHANGELOG.md#580---2026-06-07).
