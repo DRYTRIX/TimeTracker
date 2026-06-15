@@ -3,8 +3,20 @@
 {% block content %}
 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
     <div>
-        <h1 class="text-2xl font-bold">{{ _('Generate from Time, Costs & Goods') }}</h1>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Select unbilled time entries, project costs, and extra goods to add to this invoice') }}</p>
+        <h1 class="text-2xl font-bold">
+            {% if focus == 'expenses' %}
+            {{ _('Add Expenses to Invoice') }}
+            {% else %}
+            {{ _('Generate from Time, Costs & Goods') }}
+            {% endif %}
+        </h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">
+            {% if focus == 'expenses' %}
+            {{ _('Select billable expenses to link to this invoice. They will appear in the Expenses section, not as invoice items.') }}
+            {% else %}
+            {{ _('Select unbilled time entries, project costs, and extra goods to add to this invoice') }}
+            {% endif %}
+        </p>
     </div>
     <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary shrink-0">{{ _('Back to Edit') }}</a>
 </div>
@@ -14,6 +26,16 @@
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <form method="POST" id="generateFromTimeForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                {% if focus == 'expenses' %}
+                <div class="mb-4">
+                    <button type="button" id="toggle-time-costs" class="text-sm text-primary hover:underline">
+                        <i class="fas fa-chevron-down mr-1" id="toggle-time-costs-icon"></i>
+                        <span id="toggle-time-costs-label">{{ _('Show time entries and project costs') }}</span>
+                    </button>
+                </div>
+                <div id="time-costs-sections" class="hidden mb-6 space-y-6">
+                {% endif %}
 
                 <div class="mb-6">
                     <h2 class="text-lg font-semibold mb-3">{{ _('Unbilled Time Entries') }}</h2>
@@ -87,8 +109,15 @@
                     {% endif %}
                 </div>
 
-                <div class="mb-6">
-                    <h2 class="text-lg font-semibold mb-3">{{ _('Uninvoiced Billable Expenses') }}</h2>
+                {% if focus == 'expenses' %}
+                </div>
+                {% endif %}
+
+                <div id="expenses-section" class="mb-6{% if focus == 'expenses' %} rounded-xl border-2 border-amber-400 dark:border-amber-500 bg-amber-50/50 dark:bg-amber-950/20 p-4 ring-2 ring-amber-200/50 dark:ring-amber-800/50{% endif %}">
+                    <h2 class="text-lg font-semibold mb-3 flex items-center">
+                        {% if focus == 'expenses' %}<i class="fas fa-receipt mr-2 text-amber-600"></i>{% endif %}
+                        {{ _('Uninvoiced Billable Expenses') }}
+                    </h2>
                     {% if expenses %}
                     <div class="space-y-2">
                         {% for expense in expenses %}
@@ -187,6 +216,33 @@
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('generateFromTimeForm');
     if (!form) return;
+
+    {% if focus == 'expenses' %}
+    const expensesSection = document.getElementById('expenses-section');
+    if (expensesSection) {
+        expensesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    const toggleBtn = document.getElementById('toggle-time-costs');
+    const timeCostsSections = document.getElementById('time-costs-sections');
+    const toggleIcon = document.getElementById('toggle-time-costs-icon');
+    const toggleLabel = document.getElementById('toggle-time-costs-label');
+    if (toggleBtn && timeCostsSections) {
+        toggleBtn.addEventListener('click', function() {
+            const isHidden = timeCostsSections.classList.contains('hidden');
+            timeCostsSections.classList.toggle('hidden', !isHidden);
+            if (toggleIcon) {
+                toggleIcon.classList.toggle('fa-chevron-down', !isHidden);
+                toggleIcon.classList.toggle('fa-chevron-up', isHidden);
+            }
+            if (toggleLabel) {
+                toggleLabel.textContent = isHidden
+                    ? '{{ _('Hide time entries and project costs') }}'
+                    : '{{ _('Show time entries and project costs') }}';
+            }
+        });
+    }
+    {% endif %}
+
     form.addEventListener('submit', function(e) {
         const anyChecked = form.querySelector('input[name="time_entries[]"]:checked, input[name="project_costs[]"]:checked, input[name="expenses[]"]:checked, input[name="extra_goods[]"]:checked');
         if (!anyChecked) {
