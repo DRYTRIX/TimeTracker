@@ -201,6 +201,7 @@ desktop/*.pvk
 
 # Environment backups
 .env.backup
+.env.local-test
 
 # Node.js / Frontend build
 node_modules/
