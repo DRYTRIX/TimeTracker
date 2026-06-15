@@ -90,6 +90,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.8.2
+
+**Patch (5.8.2):** **Invoice expenses** — billable expenses from the Expenses module link to the invoice Expenses section (not invoice items), stay separate with their descriptions, and are no longer wiped when adding expenses to an existing invoice. See [CHANGELOG.md](CHANGELOG.md#582---2026-06-15).
+
 ### ✨ Highlights of v5.8.1
 
 **Patch (5.8.1):** **Quote email** — sending a quote no longer flashes a false error after the email is delivered; fixes the follow-up regression to #652. See [CHANGELOG.md](CHANGELOG.md#581---2026-06-10).
