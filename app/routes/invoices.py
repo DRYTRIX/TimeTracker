@@ -451,20 +451,24 @@ def edit_invoice(invoice_id):
                     flash(f"Invalid quantity or price for item {i+1}", "error")
                     continue
 
-        # Update expenses
-        expense_ids = request.form.getlist("expense_id[]")
+        # Update expenses (only when the expenses section was submitted)
+        if request.form.get("expenses_sync"):
+            expense_ids = request.form.getlist("expense_id[]")
 
-        # Unlink expenses not in the list
-        for expense in invoice.expenses.all():
-            if str(expense.id) not in expense_ids:
-                expense.unmark_as_invoiced()
+            # Unlink expenses removed from this invoice
+            for expense in invoice.expenses.all():
+                if expense.invoice_id == invoice.id and str(expense.id) not in expense_ids:
+                    expense.unmark_as_invoiced()
 
-        # Link expenses in the list
-        if expense_ids:
+            # Link new expenses from the list
             for expense_id in expense_ids:
                 try:
                     expense = Expense.query.get(int(expense_id))
-                    if expense and not expense.invoiced:
+                    if not expense:
+                        continue
+                    if expense.invoice_id == invoice.id:
+                        continue
+                    if not expense.invoiced:
                         expense.mark_as_invoiced(invoice.id)
                 except (ValueError, AttributeError):
                     continue
@@ -893,8 +897,9 @@ def generate_from_time(invoice_id):
             flash(_("No time entries, costs, expenses, or extra goods selected"), "error")
             return redirect(url_for("invoices.generate_from_time", invoice_id=invoice.id))
 
-        # Clear existing items
-        invoice.items.delete()
+        # Only regenerate invoice items when time entries or project costs are selected
+        if selected_entries or selected_costs:
+            invoice.items.delete()
 
         total_prepaid_allocated = Decimal("0")
         prepaid_allocator = None
@@ -997,6 +1002,8 @@ def generate_from_time(invoice_id):
             flash(_("Could not generate items due to a database error. Please check server logs."), "error")
             return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
 
+        db.session.refresh(invoice)
+
         # If invoice is already sent (not draft), mark time entries as paid
         if invoice.status != "draft":
             from app.services import InvoiceService
@@ -1006,7 +1013,20 @@ def generate_from_time(invoice_id):
             if marked_count > 0:
                 safe_commit("mark_time_entries_paid_from_invoice", {"invoice_id": invoice.id})
 
-        flash(_("Invoice items generated successfully from time entries and costs"), "success")
+        added_parts = []
+        if selected_entries or selected_costs:
+            added_parts.append(_("time entries and costs"))
+        if selected_expenses:
+            added_parts.append(_("expenses"))
+        if selected_goods:
+            added_parts.append(_("extra goods"))
+        if added_parts:
+            flash(
+                _("Successfully added %(parts)s to the invoice.", parts=", ".join(added_parts)),
+                "success",
+            )
+        else:
+            flash(_("Invoice updated successfully"), "success")
         if total_prepaid_allocated and total_prepaid_allocated > 0:
             flash(
                 _(
@@ -1022,6 +1042,7 @@ def generate_from_time(invoice_id):
     from app.services import InvoiceService
 
     data = InvoiceService().get_unbilled_data_for_invoice(invoice)
+    focus = request.args.get("focus", "").strip()
     return render_template(
         "invoices/generate_from_time.html",
         invoice=invoice,
@@ -1038,6 +1059,7 @@ def generate_from_time(invoice_id):
         prepaid_summary=data["prepaid_summary"],
         prepaid_plan_hours=data["prepaid_plan_hours"],
         prepaid_reset_day=data.get("prepaid_reset_day"),
+        focus=focus,
     )
 
 

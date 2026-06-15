@@ -166,7 +166,8 @@
                     </div>
                     
                     <div id="invoice-expenses" class="space-y-2">
-                        {% for expense in invoice.expenses %}
+                        <input type="hidden" name="expenses_sync" value="1">
+                        {% for expense in invoice.expenses.all() %}
                         <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/50 invoice-expense-row min-w-0 hover:shadow-sm transition">
                             <input type="hidden" name="expense_id[]" value="{{ expense.id }}">
                             <div class="md:col-span-3 min-w-0 flex flex-col">
@@ -654,7 +655,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add expense button - redirect to generate from time page which includes expenses
     const addExpenseBtn = document.getElementById('add-expense');
     addExpenseBtn && addExpenseBtn.addEventListener('click', function() {
-        window.location.href = '{{ url_for("invoices.generate_from_time", invoice_id=invoice.id) }}';
+        window.location.href = '{{ url_for("invoices.generate_from_time", invoice_id=invoice.id, focus="expenses") }}';
     });
 
     // Remove expense handler (unlink from invoice)

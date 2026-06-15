@@ -404,6 +404,87 @@ def test_generate_from_time_page_renders_lists(app, client, user, project):
 
 
 @pytest.mark.routes
+def test_generate_from_time_links_expenses_without_creating_items(app, client, user, project):
+    """Expenses selected on generate-from-time should link to the invoice, not become invoice items."""
+    from factories import ExpenseFactory
+
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user.id)
+        sess["_fresh"] = True
+
+    cl = ClientFactory(name="Expense Link Client", email="exp-link@test.com")
+    db.session.commit()
+
+    inv = InvoiceFactory(
+        invoice_number="INV-TEST-EXP-LINK-001",
+        project_id=project.id,
+        client_name=cl.name,
+        client_id=cl.id,
+        due_date=date.today() + timedelta(days=7),
+        created_by=user.id,
+        status="draft",
+    )
+    db.session.commit()
+
+    existing_item = InvoiceItemFactory(
+        invoice_id=inv.id,
+        description="Existing line item",
+        quantity=Decimal("2.00"),
+        unit_price=Decimal("50.00"),
+    )
+    db.session.commit()
+
+    expense1 = ExpenseFactory(
+        user_id=user.id,
+        project_id=project.id,
+        title="Travel Expense 1",
+        description="Taxi to client site",
+        category="travel",
+        amount=Decimal("100.00"),
+        expense_date=date.today(),
+        billable=True,
+        status="approved",
+    )
+    expense2 = ExpenseFactory(
+        user_id=user.id,
+        project_id=project.id,
+        title="Meals Expense",
+        description="Client lunch meeting",
+        category="meals",
+        amount=Decimal("50.00"),
+        expense_date=date.today(),
+        billable=True,
+        status="approved",
+    )
+    db.session.commit()
+
+    resp = client.post(
+        f"/invoices/{inv.id}/generate-from-time",
+        data={"expenses[]": [str(expense1.id), str(expense2.id)]},
+    )
+    assert resp.status_code == 302
+
+    inv = Invoice.query.get(inv.id)
+    linked = inv.expenses.all()
+    assert len(linked) == 2
+    assert {e.id for e in linked} == {expense1.id, expense2.id}
+
+    items = list(inv.items)
+    assert len(items) == 1
+    assert items[0].description == "Existing line item"
+    assert all(item.description not in {"Travel Expense 1", "Meals Expense"} for item in items)
+
+    edit_resp = client.get(f"/invoices/{inv.id}/edit")
+    assert edit_resp.status_code == 200
+    edit_html = edit_resp.get_data(as_text=True)
+    assert "Travel Expense 1" in edit_html
+    assert "Meals Expense" in edit_html
+    assert "Taxi to client site" in edit_html
+    assert "Client lunch meeting" in edit_html
+    assert 'id="invoice-expenses"' in edit_html
+
+
+@pytest.mark.routes
 def test_generate_from_time_applies_prepaid_hours(app, client, user):
     """Ensure prepaid hours are consumed before billing when generating invoice items."""
     from app import db

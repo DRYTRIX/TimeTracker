@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.8.2] - 2026-06-15
+
+### Fixed
+
+- **Invoice expenses** — Expense records from the Expenses module now link to the invoice Expenses section instead of being misrouted into invoice items or lost on save. Generate-from-time no longer wipes existing line items when only expenses are selected; the Add Expense flow focuses the expenses picker; edit-time expense sync is hardened (#662).
+
+### Documentation
+
+- **Version** — Documented release **5.8.2** to match `setup.py` (single source of truth for the application version).
+
 ## [5.8.1] - 2026-06-10
 
 ### Fixed
