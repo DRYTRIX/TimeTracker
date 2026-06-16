@@ -135,7 +135,7 @@ See [CHANGELOG.md](CHANGELOG.md) for all release notes and version history.
 - **Invoice Status Tracking** — Monitor draft, sent, paid, and overdue invoices
 - **Recurring Invoices** — Automate regular billing cycles
 - **Email Integration** — Send invoices directly to clients from the platform
-- **Peppol & ZugFerd e-Invoicing (EN 16931)** — Send invoices via Peppol (generic HTTP AP or native SML/SMP + AS4); embed EN 16931 XML in invoice PDFs (ZugFerd/Factur-X); optional PDF/A-3 normalization and veraPDF validation ([setup guide](docs/admin/configuration/PEPPOL_EINVOICING.md))
+- **Peppol & ZugFerd e-Invoicing (EN 16931)** — Send invoices via Peppol (recommended self-hosted flow uses the included **Peppol Bridge** + setup wizard); embed EN 16931 XML in invoice PDFs (ZugFerd/Factur-X); optional PDF/A-3 normalization and veraPDF validation ([setup guide](docs/admin/configuration/PEPPOL_EINVOICING.md) · [bridge](docs/admin/configuration/PEPPOL_BRIDGE.md))
 
 #### 📋 **Advanced Task Management**
 - **Full Task System** — Create, assign, and track tasks with priorities and due dates

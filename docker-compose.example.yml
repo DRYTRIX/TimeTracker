@@ -64,6 +64,28 @@ services:
       retries: 3
       start_period: 40s
 
+  # Optional: Peppol Bridge (adapter) for self-hosted Peppol e-invoicing.
+  # TimeTracker points PEPPOL_ACCESS_POINT_URL to http://peppol-bridge:8088/send
+  # and uses PEPPOL_ACCESS_POINT_TOKEN to authenticate to the bridge.
+  peppol-bridge:
+    build:
+      context: .
+      dockerfile: peppol_bridge/Dockerfile
+    container_name: timetracker-peppol-bridge
+    environment:
+      - PEPPOL_BRIDGE_AUTH_TOKEN=${PEPPOL_BRIDGE_AUTH_TOKEN:?Set PEPPOL_BRIDGE_AUTH_TOKEN}
+      - PEPPOL_BRIDGE_TIMEOUT_S=30
+      # Provider preset: e-invoice.be (recommended for low-volume)
+      - PEPPOL_BRIDGE_PROVIDER=einvoice
+      - EINVOICE_BASE_URL=${EINVOICE_BASE_URL:-https://api.e-invoice.be}
+      - EINVOICE_API_KEY=${EINVOICE_API_KEY:?Set EINVOICE_API_KEY}
+      # Alternative provider: Peppyrus (free)
+      # - PEPPOL_BRIDGE_PROVIDER=peppyrus
+      # - PEPPYRUS_BASE_URL=${PEPPYRUS_BASE_URL:-https://api.peppyrus.be/v1}
+      # - PEPPYRUS_API_KEY=${PEPPYRUS_API_KEY:?Set PEPPYRUS_API_KEY}
+    ports: []
+    restart: unless-stopped
+
   db:
     image: postgres:16-alpine
     container_name: timetracker-db

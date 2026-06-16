@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Admin', 'url': url_for('admin.admin_dashboard')},
+    {'text': 'System Settings', 'url': url_for('admin.settings')},
+    {'text': 'Peppol Setup Wizard'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-paper-plane',
+    title_text='Peppol Setup Wizard',
+    subtitle_text='Configure a self-hosted Peppol Bridge and test end-to-end sending',
+    breadcrumbs=breadcrumbs,
+    actions_html=None
+) }}
+
+<div class="space-y-6">
+  <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    <h2 class="text-lg font-semibold mb-2">1) Deploy the Peppol Bridge</h2>
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+      TimeTracker sends UBL XML to a local bridge. The bridge forwards it to your Access Point provider (e.g. Peppyrus or e-invoice.be).
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="form-label" for="wizardProviderPreset">Provider preset (bridge)</label>
+        <select id="wizardProviderPreset" class="form-input">
+          <option value="einvoice">e-invoice.be</option>
+          <option value="peppyrus">Peppyrus</option>
+          <option value="generic_custom">generic_custom (forward URL)</option>
+        </select>
+        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+          This selection affects the suggested bridge environment variables below.
+        </p>
+      </div>
+
+      <div>
+        <label class="form-label" for="wizardBridgeAuthToken">Bridge auth token (recommended)</label>
+        <input id="wizardBridgeAuthToken" type="password" class="form-input" placeholder="Set a token to protect /send and /test">
+        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+          This token is used by TimeTracker as <code>PEPPOL_ACCESS_POINT_TOKEN</code>.
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="form-label">Suggested docker-compose service (bridge)</label>
+      <textarea id="wizardBridgeComposeSnippet" class="form-input font-mono text-xs h-44" readonly></textarea>
+      <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+        Paste this into your compose file. Then set the provider API key in your <code>.env</code>.
+      </p>
+    </div>
+  </div>
+
+  <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    <h2 class="text-lg font-semibold mb-2">2) Connect TimeTracker to the Bridge</h2>
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+      These settings enable the existing Generic Peppol transport and point it at the bridge.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="form-label" for="wizardBridgeBaseUrl">Bridge base URL (from TimeTracker container)</label>
+        <input id="wizardBridgeBaseUrl" type="text" class="form-input" value="http://peppol-bridge:8088" />
+        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+          If your bridge runs as a compose service named <code>peppol-bridge</code>, this works out of the box.
+        </p>
+      </div>
+
+      <div>
+        <label class="form-label" for="wizardProviderLabel">Provider label (stored for audit)</label>
+        <input id="wizardProviderLabel" type="text" class="form-input" value="{{ settings.peppol_provider or 'generic' }}">
+      </div>
+
+      <div>
+        <label class="form-label" for="wizardSenderEndpointId">Sender Endpoint ID</label>
+        <input id="wizardSenderEndpointId" type="text" class="form-input" value="{{ settings.peppol_sender_endpoint_id or '' }}" placeholder="e.g. 0208:BE0123456789">
+      </div>
+
+      <div>
+        <label class="form-label" for="wizardSenderSchemeId">Sender Scheme ID</label>
+        <input id="wizardSenderSchemeId" type="text" class="form-input" value="{{ settings.peppol_sender_scheme_id or '' }}" placeholder="e.g. 0208">
+      </div>
+
+      <div>
+        <label class="form-label" for="wizardSenderCountry">Sender Country (optional)</label>
+        <input id="wizardSenderCountry" type="text" class="form-input" value="{{ settings.peppol_sender_country or '' }}" placeholder="e.g. BE">
+      </div>
+    </div>
+
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <button type="button" id="wizardCheckBridgeBtn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition">
+        Check bridge
+      </button>
+      <button type="button" id="wizardApplyBtn" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium transition">
+        Save settings
+      </button>
+      <span id="wizardConnectResult" class="text-sm text-text-muted-light dark:text-text-muted-dark"></span>
+    </div>
+  </div>
+
+  <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    <h2 class="text-lg font-semibold mb-2">3) Send a test invoice</h2>
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+      Pick a recent invoice and attempt a real Peppol send using the current configuration.
+      The invoice must have a linked client with <code>custom_fields.peppol_endpoint_id</code> and <code>custom_fields.peppol_scheme_id</code> configured.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="form-label" for="wizardInvoiceId">Invoice</label>
+        <select id="wizardInvoiceId" class="form-input">
+          {% if invoices %}
+            {% for inv in invoices %}
+              <option value="{{ inv.id }}">{{ inv.invoice_number }} — {{ inv.client_name or (inv.client.name if inv.client else 'Client') }} ({{ inv.status }})</option>
+            {% endfor %}
+          {% else %}
+            <option value="">No invoices available</option>
+          {% endif %}
+        </select>
+      </div>
+    </div>
+
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <button type="button" id="wizardSendTestBtn" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md text-sm font-medium transition">
+        Send test via Peppol
+      </button>
+      <span id="wizardSendResult" class="text-sm text-text-muted-light dark:text-text-muted-dark"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+function buildComposeSnippet() {
+  const preset = document.getElementById('wizardProviderPreset')?.value || 'einvoice';
+  const token = (document.getElementById('wizardBridgeAuthToken')?.value || 'CHANGE_ME').trim() || 'CHANGE_ME';
+
+  let providerEnv = '';
+  if (preset === 'einvoice') {
+    providerEnv = [
+      '      - PEPPOL_BRIDGE_PROVIDER=einvoice',
+      '      - EINVOICE_BASE_URL=${EINVOICE_BASE_URL:-https://api.e-invoice.be}',
+      '      - EINVOICE_API_KEY=${EINVOICE_API_KEY:?Set EINVOICE_API_KEY}',
+    ].join('\\n');
+  } else if (preset === 'peppyrus') {
+    providerEnv = [
+      '      - PEPPOL_BRIDGE_PROVIDER=peppyrus',
+      '      - PEPPYRUS_BASE_URL=${PEPPYRUS_BASE_URL:-https://api.peppyrus.be/v1}',
+      '      - PEPPYRUS_API_KEY=${PEPPYRUS_API_KEY:?Set PEPPYRUS_API_KEY}',
+    ].join('\\n');
+  } else {
+    providerEnv = [
+      '      - PEPPOL_BRIDGE_PROVIDER=generic_custom',
+      '      - GENERIC_FORWARD_URL=${GENERIC_FORWARD_URL:?Set GENERIC_FORWARD_URL}',
+      '      - GENERIC_FORWARD_TOKEN=${GENERIC_FORWARD_TOKEN:-}',
+    ].join('\\n');
+  }
+
+  const snippet = [
+    '  peppol-bridge:',
+    '    build:',
+    '      context: .',
+    '      dockerfile: peppol_bridge/Dockerfile',
+    '    container_name: timetracker-peppol-bridge',
+    '    environment:',
+    '      - PEPPOL_BRIDGE_AUTH_TOKEN=' + token,
+    '      - PEPPOL_BRIDGE_TIMEOUT_S=30',
+    providerEnv,
+    '    ports: []',
+    '    restart: unless-stopped',
+  ].join('\\n');
+
+  const el = document.getElementById('wizardBridgeComposeSnippet');
+  if (el) el.value = snippet;
+}
+
+async function postJson(url, body) {
+  const csrfToken = document.querySelector('meta[name=\"csrf-token\"]')?.content || '';
+  const res = await fetch(url, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+    body: JSON.stringify(body || {})
+  });
+  const data = await res.json().catch(() => ({}));
+  return { res, data };
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const presetEl = document.getElementById('wizardProviderPreset');
+  const tokenEl = document.getElementById('wizardBridgeAuthToken');
+  if (presetEl) presetEl.addEventListener('change', buildComposeSnippet);
+  if (tokenEl) tokenEl.addEventListener('input', buildComposeSnippet);
+  buildComposeSnippet();
+
+  const checkBtn = document.getElementById('wizardCheckBridgeBtn');
+  const applyBtn = document.getElementById('wizardApplyBtn');
+  const sendBtn = document.getElementById('wizardSendTestBtn');
+  const connectResult = document.getElementById('wizardConnectResult');
+  const sendResult = document.getElementById('wizardSendResult');
+
+  function setResult(el, text, ok) {
+    if (!el) return;
+    el.textContent = text || '';
+    el.className = ok ? 'text-sm text-green-600 dark:text-green-400' : 'text-sm text-red-600 dark:text-red-400';
+  }
+
+  async function checkBridge() {
+    const bridgeBaseUrl = (document.getElementById('wizardBridgeBaseUrl')?.value || '').trim().replace(/\\/$/, '');
+    const token = (document.getElementById('wizardBridgeAuthToken')?.value || '').trim();
+    setResult(connectResult, 'Checking bridge...', true);
+    const { res, data } = await postJson('{{ url_for("admin.admin_peppol_setup_wizard_check_bridge") }}', {
+      bridge_base_url: bridgeBaseUrl,
+      bridge_token: token,
+    });
+    if (res.ok && data.ok) {
+      setResult(connectResult, 'Bridge OK (' + (data.health?.provider || 'unknown') + ')', true);
+    } else {
+      setResult(connectResult, data.error || 'Bridge check failed', false);
+    }
+  }
+
+  async function applySettings() {
+    const bridgeBaseUrl = (document.getElementById('wizardBridgeBaseUrl')?.value || '').trim().replace(/\\/$/, '');
+    const token = (document.getElementById('wizardBridgeAuthToken')?.value || '').trim();
+    const providerLabel = (document.getElementById('wizardProviderLabel')?.value || 'generic').trim();
+    const senderEndpointId = (document.getElementById('wizardSenderEndpointId')?.value || '').trim();
+    const senderSchemeId = (document.getElementById('wizardSenderSchemeId')?.value || '').trim();
+    const senderCountry = (document.getElementById('wizardSenderCountry')?.value || '').trim();
+
+    setResult(connectResult, 'Saving settings...', true);
+    const { res, data } = await postJson('{{ url_for("admin.admin_peppol_setup_wizard_apply") }}', {
+      bridge_base_url: bridgeBaseUrl,
+      bridge_token: token,
+      provider_label: providerLabel,
+      sender_endpoint_id: senderEndpointId,
+      sender_scheme_id: senderSchemeId,
+      sender_country: senderCountry,
+    });
+    if (res.ok && data.ok) {
+      setResult(connectResult, 'Saved. Access Point URL = ' + (data.peppol_access_point_url || ''), true);
+    } else {
+      setResult(connectResult, data.error || 'Save failed', false);
+    }
+  }
+
+  async function sendTest() {
+    const invoiceId = document.getElementById('wizardInvoiceId')?.value;
+    if (!invoiceId) {
+      setResult(sendResult, 'Select an invoice first', false);
+      return;
+    }
+    setResult(sendResult, 'Sending...', true);
+    const { res, data } = await postJson('{{ url_for("admin.admin_peppol_setup_wizard_send_test") }}', { invoice_id: invoiceId });
+    if (res.ok && data.ok) {
+      setResult(sendResult, data.message || 'Sent', true);
+    } else {
+      setResult(sendResult, data.error || 'Send failed', false);
+    }
+  }
+
+  if (checkBtn) checkBtn.addEventListener('click', checkBridge);
+  if (applyBtn) applyBtn.addEventListener('click', applySettings);
+  if (sendBtn) sendBtn.addEventListener('click', sendTest);
+});
+</script>
+{% endblock %}
+

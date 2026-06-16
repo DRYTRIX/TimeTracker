@@ -67,6 +67,19 @@ Details: [README.md](README.md) (AI Helper section) and [docs/admin/configuratio
 
 To **turn off or remove** the AI helper (including bundled Ollama and API tokens), see [UNINSTALL.md](UNINSTALL.md#disabling-or-removing-the-ai-helper).
 
+## With Peppol e-invoicing (optional, self-hosted)
+
+If you want to send invoices over the Peppol network from a self-hosted TimeTracker instance, the recommended setup is:
+
+- Run the included **Peppol Bridge** service (`peppol-bridge`) in Docker Compose
+- Use the in-app wizard to apply settings and send a test invoice:
+  - **Admin → System Settings → Peppol → Setup wizard**
+
+Docs:
+
+- [Peppol e-invoicing setup](docs/admin/configuration/PEPPOL_EINVOICING.md)
+- [Peppol Bridge (adapter)](docs/admin/configuration/PEPPOL_BRIDGE.md)
+
 ## First Login and Minimal Config
 
 - Log in with the username you configured (e.g. from `ADMIN_USERNAMES`) or the first account you create.

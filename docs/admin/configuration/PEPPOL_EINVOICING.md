@@ -29,6 +29,46 @@ TimeTracker supports two **transport modes**:
 
 Sender and recipient identifiers are validated (scheme and endpoint ID format) before send in both modes.
 
+## Recommended for self-hosted: Peppol Bridge (adapter)
+
+For self-hosted deployments, the easiest way to use **any** certified Access Point provider is to run the included `peppol-bridge` service next to TimeTracker:
+
+- TimeTracker (Generic transport) sends the UBL XML to the bridge (`PEPPOL_ACCESS_POINT_URL`).
+- The bridge forwards the document to your provider API (preset).
+
+TimeTracker includes an admin wizard to generate the compose snippet and apply settings:
+
+- **Admin → System Settings → Peppol → Setup wizard**
+
+See `[docs/admin/configuration/PEPPOL_BRIDGE.md](docs/admin/configuration/PEPPOL_BRIDGE.md)` for deployment and provider presets.
+
+### Copy/paste Docker Compose example (bridge)
+
+Add the bridge service to your compose file:
+
+```yaml
+  peppol-bridge:
+    build:
+      context: .
+      dockerfile: peppol_bridge/Dockerfile
+    container_name: timetracker-peppol-bridge
+    environment:
+      - PEPPOL_BRIDGE_AUTH_TOKEN=${PEPPOL_BRIDGE_AUTH_TOKEN:?Set PEPPOL_BRIDGE_AUTH_TOKEN}
+      - PEPPOL_BRIDGE_TIMEOUT_S=30
+      # Provider preset: e-invoice.be
+      - PEPPOL_BRIDGE_PROVIDER=einvoice
+      - EINVOICE_BASE_URL=${EINVOICE_BASE_URL:-https://api.e-invoice.be}
+      - EINVOICE_API_KEY=${EINVOICE_API_KEY:?Set EINVOICE_API_KEY}
+      # Alternative provider: Peppyrus (free)
+      # - PEPPOL_BRIDGE_PROVIDER=peppyrus
+      # - PEPPYRUS_BASE_URL=${PEPPYRUS_BASE_URL:-https://api.peppyrus.be/v1}
+      # - PEPPYRUS_API_KEY=${PEPPYRUS_API_KEY:?Set PEPPYRUS_API_KEY}
+    ports: []
+    restart: unless-stopped
+```
+
+Then open the wizard to apply TimeTracker settings (it sets `PEPPOL_ACCESS_POINT_URL` to `http://peppol-bridge:8088/send` and stores the token securely).
+
 ## Enable Peppol
 
 You can enable Peppol either:
