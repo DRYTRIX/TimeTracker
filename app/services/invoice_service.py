@@ -909,3 +909,216 @@ class InvoiceService:
             "item_count": item_count,
             "invoice": invoice,
         }
+
+    def user_can_access_invoice(self, invoice: Invoice, user_id: int, is_admin: bool) -> bool:
+        """Return True if the user may read or modify the invoice."""
+        return bool(is_admin or invoice.created_by == user_id)
+
+    def get_invoice_detail(self, invoice_id: int, user_id: int, is_admin: bool) -> Dict[str, Any]:
+        """Load invoice with line items and payments for API detail responses."""
+        from sqlalchemy.orm import joinedload
+
+        from app.models import Payment
+
+        invoice = (
+            Invoice.query.options(joinedload(Invoice.project), joinedload(Invoice.client))
+            .filter_by(id=invoice_id)
+            .first()
+        )
+        if not invoice:
+            return {"success": False, "message": "Invoice not found", "error": "not_found"}
+        if not self.user_can_access_invoice(invoice, user_id, is_admin):
+            return {"success": False, "message": "Permission denied", "error": "forbidden"}
+
+        detail = invoice.to_dict()
+        detail["items"] = [item.to_dict() for item in invoice.items.all()]
+        detail["payments"] = [
+            p.to_dict()
+            for p in invoice.payments.order_by(Payment.payment_date.desc(), Payment.created_at.desc()).all()
+        ]
+        if invoice.project:
+            detail["project_name"] = invoice.project.name
+        return {"success": True, "invoice": detail}
+
+    def set_invoice_items(
+        self,
+        invoice_id: int,
+        user_id: int,
+        items: List[Dict[str, Any]],
+        is_admin: bool = False,
+    ) -> Dict[str, Any]:
+        """Replace all line items on a draft invoice."""
+        invoice = self.invoice_repo.get_by_id(invoice_id)
+        if not invoice:
+            return {"success": False, "message": "Invoice not found", "error": "not_found"}
+        if not self.user_can_access_invoice(invoice, user_id, is_admin):
+            return {"success": False, "message": "Permission denied", "error": "forbidden"}
+        if invoice.status not in (InvoiceStatus.DRAFT.value, "draft"):
+            return {
+                "success": False,
+                "message": "Only draft invoices can have line items edited",
+                "error": "invalid_status",
+            }
+
+        invoice.items.delete()
+        for row in items:
+            description = (row.get("description") or "").strip()
+            if not description:
+                continue
+            try:
+                quantity = Decimal(str(row.get("quantity", 1)))
+                unit_price = Decimal(str(row.get("unit_price", 0)))
+            except Exception:
+                return {"success": False, "message": "Invalid quantity or unit_price", "error": "validation"}
+            item = InvoiceItem(
+                invoice_id=invoice.id,
+                description=description,
+                quantity=quantity,
+                unit_price=unit_price,
+                time_entry_ids=row.get("time_entry_ids"),
+            )
+            db.session.add(item)
+
+        invoice.calculate_totals()
+        if not safe_commit("set_invoice_items", {"invoice_id": invoice_id, "user_id": user_id}):
+            return {
+                "success": False,
+                "message": "Could not update invoice items due to a database error",
+                "error": "database_error",
+            }
+        return {"success": True, "message": "Invoice items updated", "invoice": invoice}
+
+    def add_time_entries_to_invoice(
+        self,
+        invoice_id: int,
+        user_id: int,
+        time_entry_ids: List[int],
+        is_admin: bool = False,
+        replace_existing: bool = True,
+    ) -> Dict[str, Any]:
+        """Add grouped line items from billable time entries to an existing invoice."""
+        invoice = self.invoice_repo.get_by_id(invoice_id)
+        if not invoice:
+            return {"success": False, "message": "Invoice not found", "error": "not_found"}
+        if not self.user_can_access_invoice(invoice, user_id, is_admin):
+            return {"success": False, "message": "Permission denied", "error": "forbidden"}
+        if not time_entry_ids:
+            return {"success": False, "message": "No time entries provided", "error": "no_entries"}
+
+        entries = TimeEntry.query.filter(
+            TimeEntry.id.in_(time_entry_ids),
+            TimeEntry.project_id == invoice.project_id,
+            TimeEntry.billable == True,
+        ).all()
+        if not entries:
+            return {"success": False, "message": "No billable time entries found", "error": "no_entries"}
+
+        project = self.project_repo.get_by_id(invoice.project_id)
+        if not project:
+            return {"success": False, "message": "Invalid project", "error": "invalid_project"}
+
+        if replace_existing:
+            invoice.items.delete()
+
+        grouped_entries: Dict[str, Dict[str, Any]] = {}
+        for entry in entries:
+            if not entry.duration_seconds:
+                continue
+            hours = Decimal(str(entry.duration_seconds / 3600))
+            if hours <= 0:
+                continue
+            if entry.task_id:
+                key = f"task_{entry.task_id}"
+                description = f"Task: {entry.task.name if entry.task else 'Unknown Task'}"
+            else:
+                key = f"project_{entry.project_id}"
+                description = f"Project: {project.name}"
+            if key not in grouped_entries:
+                grouped_entries[key] = {"description": description, "entries": [], "total_hours": Decimal("0")}
+            grouped_entries[key]["entries"].append(entry)
+            grouped_entries[key]["total_hours"] += hours
+
+        rate = project.hourly_rate or Decimal("0.00")
+        for group in grouped_entries.values():
+            if group["total_hours"] <= 0:
+                continue
+            item = InvoiceItem(
+                invoice_id=invoice.id,
+                description=group["description"],
+                quantity=group["total_hours"],
+                unit_price=rate,
+                time_entry_ids=",".join(str(e.id) for e in group["entries"]),
+            )
+            db.session.add(item)
+
+        invoice.calculate_totals()
+        if not safe_commit("add_time_entries_to_invoice", {"invoice_id": invoice_id, "user_id": user_id}):
+            return {
+                "success": False,
+                "message": "Could not generate items due to a database error",
+                "error": "database_error",
+            }
+        return {"success": True, "message": "Invoice items generated from time entries", "invoice": invoice}
+
+    def generate_pdf_bytes(
+        self,
+        invoice_id: int,
+        user_id: int,
+        is_admin: bool,
+        page_size: str = "A4",
+    ) -> Dict[str, Any]:
+        """Generate invoice PDF bytes for API download."""
+        import io
+
+        invoice = self.invoice_repo.get_by_id(invoice_id)
+        if not invoice:
+            return {"success": False, "message": "Invoice not found", "error": "not_found"}
+        if not self.user_can_access_invoice(invoice, user_id, is_admin):
+            return {"success": False, "message": "Permission denied", "error": "forbidden"}
+
+        valid_sizes = ["A4", "Letter", "Legal", "A3", "A5", "Tabloid"]
+        if page_size not in valid_sizes:
+            page_size = "A4"
+
+        # Eager-load dynamic relationships for PDF generator
+        _ = invoice.items.all()
+        _ = invoice.extra_goods.all() if hasattr(invoice, "extra_goods") else []
+        if hasattr(invoice, "expenses"):
+            _ = invoice.expenses.all() if hasattr(invoice.expenses, "all") else []
+
+        try:
+            from app.models import Settings
+            from app.utils.invoice_pdf_postprocess import postprocess_invoice_pdf_bytes
+            from app.utils.pdf_generator import InvoicePDFGenerator
+
+            settings = Settings.get_settings()
+            pdf_generator = InvoicePDFGenerator(invoice, settings=settings, page_size=page_size)
+            pdf_bytes = pdf_generator.generate_pdf()
+            pdf_bytes, embed_err, pdfa_err = postprocess_invoice_pdf_bytes(pdf_bytes, invoice, settings)
+            if embed_err or pdfa_err:
+                return {
+                    "success": False,
+                    "message": embed_err or pdfa_err or "PDF post-processing failed",
+                    "error": "pdf_error",
+                }
+            filename = f"{invoice.invoice_number}.pdf"
+            return {
+                "success": True,
+                "pdf_bytes": pdf_bytes,
+                "filename": filename,
+                "mimetype": "application/pdf",
+            }
+        except Exception as exc:
+            try:
+                from app.utils.pdf_generator_fallback import InvoicePDFGeneratorFallback
+
+                fallback = InvoicePDFGeneratorFallback(invoice, page_size=page_size)
+                pdf_bytes = fallback.generate_pdf()
+                return {
+                    "success": True,
+                    "pdf_bytes": pdf_bytes,
+                    "filename": f"{invoice.invoice_number}.pdf",
+                    "mimetype": "application/pdf",
+                }
+            except Exception:
+                return {"success": False, "message": str(exc), "error": "pdf_error"}
