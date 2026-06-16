@@ -348,14 +348,38 @@ class CalDAVClient:
                     continue
 
                 start = dtstart.dt
-                # Skip all-day events (date objects, not datetime)
-                if not isinstance(start, datetime):
-                    skipped_count += 1
-                    skipped_reasons["all_day"] += 1
-                    logger.debug(f"Skipping all-day event {uid} (date object, not datetime)")
+                is_all_day = type(start).__name__ == "date" and not isinstance(start, datetime)
+
+                if is_all_day:
+                    from datetime import date as date_cls
+
+                    start_date = start
+                    if dtend:
+                        end_date = dtend.dt
+                        if isinstance(end_date, datetime):
+                            end_date = end_date.date()
+                    elif duration:
+                        dur = duration.dt
+                        end_date = start_date + dur if isinstance(dur, timedelta) else start_date + timedelta(days=1)
+                    else:
+                        end_date = start_date + timedelta(days=1)
+
+                    summary = str(comp.get("SUMMARY", "")).strip()
+                    description = str(comp.get("DESCRIPTION", "")).strip()
+                    events.append(
+                        {
+                            "uid": uid,
+                            "summary": summary,
+                            "description": description,
+                            "start": start_date,
+                            "end": end_date,
+                            "all_day": True,
+                            "href": urljoin(calendar_url, href),
+                        }
+                    )
                     continue
 
-                # Ensure timezone-aware datetime (assume UTC if naive)
+                # Timed event
                 if start.tzinfo is None:
                     # If naive, assume it's in the calendar's timezone or UTC
                     # For CalDAV, naive datetimes are typically in UTC
@@ -409,6 +433,7 @@ class CalDAVClient:
                         "description": description,
                         "start": start,
                         "end": end,
+                        "all_day": False,
                         "href": urljoin(calendar_url, href),
                     }
                 )
@@ -912,30 +937,70 @@ class CalDAVCalendarConnector(BaseConnector):
                     integration_id=self.integration.id, external_uid=uid
                 ).first()
 
-                if existing_calendar_event or existing_link:
-                    logger.debug(f"Event {uid} already imported (CalendarEvent or link exists), skipping")
+                if existing_calendar_event:
+                    title = (ev.get("summary") or "").strip() or "Imported Calendar Event"
+                    if ev.get("all_day"):
+                        from datetime import time as time_cls
+
+                        start_date = ev["start"]
+                        end_exclusive = ev["end"]
+                        start_local = datetime.combine(start_date, time_cls.min)
+                        end_local = datetime.combine(end_exclusive - timedelta(days=1), time_cls.max)
+                        existing_calendar_event.all_day = True
+                    else:
+                        start_dt = ev["start"]
+                        end_dt = ev["end"]
+                        if start_dt.tzinfo is None:
+                            start_dt = start_dt.replace(tzinfo=timezone.utc)
+                        else:
+                            start_dt = start_dt.astimezone(timezone.utc)
+                        if end_dt.tzinfo is None:
+                            end_dt = end_dt.replace(tzinfo=timezone.utc)
+                        else:
+                            end_dt = end_dt.astimezone(timezone.utc)
+                        start_local = _to_local_naive(start_dt)
+                        end_local = _to_local_naive(end_dt)
+                        existing_calendar_event.all_day = False
+
+                    existing_calendar_event.title = title
+                    existing_calendar_event.start_time = start_local
+                    existing_calendar_event.end_time = end_local
                     skipped += 1
                     skipped_reasons["already_imported"] += 1
                     continue
 
-                start_dt: datetime = ev["start"]
-                end_dt: datetime = ev["end"]
+                if existing_link:
+                    skipped += 1
+                    skipped_reasons["already_imported"] += 1
+                    continue
 
-                # Ensure both are timezone-aware UTC
-                if start_dt.tzinfo is None:
-                    start_dt = start_dt.replace(tzinfo=timezone.utc)
+                if ev.get("all_day"):
+                    from datetime import time as time_cls
+
+                    start_date = ev["start"]
+                    end_exclusive = ev["end"]
+                    start_local = datetime.combine(start_date, time_cls.min)
+                    end_local = datetime.combine(end_exclusive - timedelta(days=1), time_cls.max)
+                    all_day_flag = True
                 else:
-                    start_dt = start_dt.astimezone(timezone.utc)
+                    start_dt: datetime = ev["start"]
+                    end_dt: datetime = ev["end"]
 
-                if end_dt.tzinfo is None:
-                    end_dt = end_dt.replace(tzinfo=timezone.utc)
-                else:
-                    end_dt = end_dt.astimezone(timezone.utc)
+                    if start_dt.tzinfo is None:
+                        start_dt = start_dt.replace(tzinfo=timezone.utc)
+                    else:
+                        start_dt = start_dt.astimezone(timezone.utc)
 
-                start_local = _to_local_naive(start_dt)
-                end_local = _to_local_naive(end_dt)
+                    if end_dt.tzinfo is None:
+                        end_dt = end_dt.replace(tzinfo=timezone.utc)
+                    else:
+                        end_dt = end_dt.astimezone(timezone.utc)
 
-                if end_local <= start_local:
+                    start_local = _to_local_naive(start_dt)
+                    end_local = _to_local_naive(end_dt)
+                    all_day_flag = False
+
+                if end_local <= start_local and not all_day_flag:
                     logger.warning(f"Event {uid} has invalid time range: start={start_local}, end={end_local}")
                     skipped += 1
                     skipped_reasons["invalid_time"] += 1
@@ -971,7 +1036,7 @@ class CalDAVCalendarConnector(BaseConnector):
                     start_time=start_local,
                     end_time=end_local,
                     description=description,
-                    all_day=False,  # CalDAV events we fetch are timed events (all-day events are skipped in fetch_events)
+                    all_day=all_day_flag,
                     location=None,  # Could extract from LOCATION property if needed
                     event_type="event",
                     project_id=project_id,
@@ -1322,11 +1387,8 @@ class CalDAVCalendarConnector(BaseConnector):
                 else:
                     logger.info(f"  No existing link found - will create new event")
 
-                # Skip all-day events for now (CalDAV sync currently only handles timed events)
-                if calendar_event.all_day:
-                    logger.info(
-                        f"Skipping calendar event {calendar_event.id} - all-day events not yet supported in CalDAV sync"
-                    )
+                # Skip CalDAV-imported events to avoid sync loops (detected by marker in description)
+                if calendar_event.description and "[CalDAV:" in calendar_event.description:
                     skipped_count += 1
                     continue
 
@@ -1368,6 +1430,7 @@ class CalDAVCalendarConnector(BaseConnector):
                         if calendar_event.updated_at
                         else datetime.now(timezone.utc)
                     ),
+                    all_day=calendar_event.all_day,
                 )
 
                 # Construct event URL
@@ -1465,6 +1528,7 @@ class CalDAVCalendarConnector(BaseConnector):
         end: datetime,
         created: datetime,
         updated: datetime,
+        all_day: bool = False,
     ) -> str:
         """Generate iCalendar content for an event."""
         from icalendar import Event
@@ -1473,8 +1537,14 @@ class CalDAVCalendarConnector(BaseConnector):
         event.add("uid", uid)
         event.add("summary", title)
         event.add("description", description)
-        event.add("dtstart", start)
-        event.add("dtend", end)
+        if all_day:
+            start_date = start.date() if hasattr(start, "date") else start
+            end_date = end.date() if hasattr(end, "date") else end
+            event.add("dtstart", start_date)
+            event.add("dtend", end_date + timedelta(days=1))
+        else:
+            event.add("dtstart", start)
+            event.add("dtend", end)
         event.add("dtstamp", datetime.now(timezone.utc))
         event.add("created", created)
         event.add("last-modified", updated)
