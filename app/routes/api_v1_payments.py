@@ -93,6 +93,12 @@ def create_payment():
     )
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not create payment")}), 400
+    try:
+        from app.utils.integration_sync_hooks import trigger_payment_sync
+
+        trigger_payment_sync(result.get("payment"))
+    except Exception:
+        pass
     return jsonify({"message": "Payment created successfully", "payment": result["payment"].to_dict()}), 201
 
 

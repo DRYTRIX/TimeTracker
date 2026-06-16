@@ -63,6 +63,7 @@ class Expense(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    integration_metadata = db.Column(db.JSON, nullable=True)
 
     # Relationships
     user = db.relationship("User", foreign_keys=[user_id], backref=db.backref("expenses", lazy="dynamic"))

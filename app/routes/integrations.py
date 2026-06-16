@@ -311,6 +311,21 @@ def oauth_callback(provider):
             extra_data=tokens.get("extra_data", {}),
         )
 
+        # Auto-populate company/tenant IDs from OAuth callback
+        cfg = dict(integration.config or {})
+        if provider == "quickbooks":
+            realm_id = request.args.get("realmId") or tokens.get("realm_id")
+            if realm_id:
+                cfg["realm_id"] = realm_id
+        elif provider == "xero":
+            extra = tokens.get("extra_data") or {}
+            tenant_id = extra.get("tenantId") or extra.get("tenant_id")
+            if tenant_id:
+                cfg["tenant_id"] = tenant_id
+        if cfg != (integration.config or {}):
+            integration.config = cfg
+            db.session.commit()
+
         # Test connection (use None for user_id if global)
         test_result = service.test_connection(integration.id, current_user.id if not integration.is_global else None)
         if test_result.get("success"):
@@ -1063,6 +1078,8 @@ def caldav_setup():
         default_project_id = request.form.get("default_project_id", "").strip()
         verify_ssl = request.form.get("verify_ssl") == "on"
         auto_sync = request.form.get("auto_sync") == "on"
+        sync_direction = request.form.get("sync_direction", "calendar_to_time_tracker").strip()
+        sync_interval = request.form.get("sync_interval", "60").strip()
         lookback_days_str = request.form.get("lookback_days", "90") or "90"
 
         # Validation
@@ -1141,7 +1158,18 @@ def caldav_setup():
         integration.config["calendar_url"] = calendar_url if calendar_url else None
         integration.config["calendar_name"] = calendar_name if calendar_name else None
         integration.config["verify_ssl"] = verify_ssl
-        integration.config["sync_direction"] = "calendar_to_time_tracker"  # MVP: import only
+        valid_directions = {
+            "calendar_to_time_tracker",
+            "time_tracker_to_calendar",
+            "bidirectional",
+        }
+        integration.config["sync_direction"] = (
+            sync_direction if sync_direction in valid_directions else "calendar_to_time_tracker"
+        )
+        try:
+            integration.config["sync_interval"] = max(15, int(sync_interval))
+        except ValueError:
+            integration.config["sync_interval"] = 60
         integration.config["lookback_days"] = lookback_days
         # Save default_project_id only if provided (optional)
         if default_project_id:

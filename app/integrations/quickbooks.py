@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional
 import requests
 
 from app.integrations.base import BaseConnector
+from app.integrations.sync_config import export_enabled, should_sync_expenses, should_sync_invoices, sync_window_start
+from app.utils.integration_metadata import get_integration_ref, set_integration_ref
 
 logger = logging.getLogger(__name__)
 
@@ -247,7 +249,11 @@ class QuickBooksConnector(BaseConnector):
         from app.models import Expense, Invoice
 
         try:
-            realm_id = self.integration.config.get("realm_id")
+            config = self.integration.config or {}
+            if not export_enabled(config, "quickbooks"):
+                return {"success": True, "synced_count": 0, "message": "Export disabled by sync_direction", "errors": []}
+
+            realm_id = config.get("realm_id")
             if not realm_id:
                 return {"success": False, "message": "QuickBooks company not configured"}
 
@@ -257,127 +263,77 @@ class QuickBooksConnector(BaseConnector):
 
             synced_count = 0
             errors = []
+            window_start = sync_window_start(config)
 
-            # Sync invoices (create as invoices in QuickBooks)
-            if sync_type == "full" or sync_type == "invoices":
+            if should_sync_invoices(config, sync_type):
                 try:
                     invoices = Invoice.query.filter(
                         Invoice.status.in_(["sent", "paid"]),
-                        Invoice.created_at >= datetime.utcnow() - timedelta(days=90),
+                        Invoice.created_at >= window_start,
                     ).all()
 
                     for invoice in invoices:
                         try:
-                            # Skip if already synced (has QuickBooks ID)
-                            if (
-                                hasattr(invoice, "metadata")
-                                and invoice.metadata
-                                and invoice.metadata.get("quickbooks_id")
-                            ):
+                            if get_integration_ref(invoice, "quickbooks", "invoice_id"):
                                 continue
 
-                            qb_invoice = self._create_quickbooks_invoice(invoice, access_token, realm_id)
-                            if qb_invoice:
-                                # Store QuickBooks ID in invoice metadata
-                                if not hasattr(invoice, "metadata") or not invoice.metadata:
-                                    invoice.metadata = {}
-                                invoice.metadata["quickbooks_id"] = qb_invoice.get("Id")
+                            qb_result = self._create_quickbooks_invoice(invoice, access_token, realm_id)
+                            if qb_result:
+                                qb_invoice = qb_result.get("Invoice") or qb_result
+                                ext_id = qb_invoice.get("Id")
+                                if ext_id:
+                                    set_integration_ref(invoice, "quickbooks", "invoice_id", str(ext_id))
                                 synced_count += 1
                         except ValueError as e:
-                            # Validation errors - log but continue
-                            error_msg = f"Invoice {invoice.id}: {str(e)}"
-                            errors.append(error_msg)
-                            logger.warning(error_msg)
-                        except requests.exceptions.HTTPError as e:
-                            # API errors - log with details
-                            error_msg = f"Invoice {invoice.id}: QuickBooks API error - {e.response.status_code}: {e.response.text[:200] if e.response else str(e)}"
-                            errors.append(error_msg)
-                            logger.error(error_msg, exc_info=True)
+                            errors.append(f"Invoice {invoice.id}: {str(e)}")
+                            logger.warning("QuickBooks invoice sync: %s", e)
                         except Exception as e:
-                            # Other errors
-                            error_msg = f"Invoice {invoice.id}: {str(e)}"
-                            errors.append(error_msg)
-                            logger.error(error_msg, exc_info=True)
+                            errors.append(f"Invoice {invoice.id}: {str(e)}")
+                            logger.error("QuickBooks invoice sync failed", exc_info=True)
                 except Exception as e:
-                    error_msg = f"Error fetching invoices: {str(e)}"
-                    errors.append(error_msg)
-                    logger.error(error_msg, exc_info=True)
+                    errors.append(f"Error fetching invoices: {str(e)}")
 
-            # Sync expenses (create as expenses in QuickBooks)
-            if sync_type == "full" or sync_type == "expenses":
+            if should_sync_expenses(config, sync_type):
                 try:
-                    expenses = Expense.query.filter(
-                        Expense.expense_date >= datetime.utcnow().date() - timedelta(days=90)
-                    ).all()
+                    expense_query = Expense.query.filter(Expense.expense_date >= window_start.date())
+                    if config.get("sync_approved_expenses_only", True):
+                        expense_query = expense_query.filter(Expense.status == "approved")
+                    expenses = expense_query.all()
 
                     for expense in expenses:
                         try:
-                            # Skip if already synced
-                            if (
-                                hasattr(expense, "metadata")
-                                and expense.metadata
-                                and expense.metadata.get("quickbooks_id")
-                            ):
+                            if get_integration_ref(expense, "quickbooks", "purchase_id"):
                                 continue
 
-                            qb_expense = self._create_quickbooks_expense(expense, access_token, realm_id)
-                            if qb_expense:
-                                if not hasattr(expense, "metadata") or not expense.metadata:
-                                    expense.metadata = {}
-                                expense.metadata["quickbooks_id"] = qb_expense.get("Id")
+                            qb_result = self._create_quickbooks_expense(expense, access_token, realm_id)
+                            if qb_result:
+                                qb_purchase = qb_result.get("Purchase") or qb_result
+                                ext_id = qb_purchase.get("Id")
+                                if ext_id:
+                                    set_integration_ref(expense, "quickbooks", "purchase_id", str(ext_id))
                                 synced_count += 1
                         except ValueError as e:
-                            # Validation errors
-                            error_msg = f"Expense {expense.id}: {str(e)}"
-                            errors.append(error_msg)
-                            logger.warning(error_msg)
-                        except requests.exceptions.HTTPError as e:
-                            # API errors
-                            error_msg = f"Expense {expense.id}: QuickBooks API error - {e.response.status_code}: {e.response.text[:200] if e.response else str(e)}"
-                            errors.append(error_msg)
-                            logger.error(error_msg, exc_info=True)
+                            errors.append(f"Expense {expense.id}: {str(e)}")
                         except Exception as e:
-                            # Other errors
-                            error_msg = f"Expense {expense.id}: {str(e)}"
-                            errors.append(error_msg)
-                            logger.error(error_msg, exc_info=True)
+                            errors.append(f"Expense {expense.id}: {str(e)}")
+                            logger.error("QuickBooks expense sync failed", exc_info=True)
                 except Exception as e:
-                    error_msg = f"Error fetching expenses: {str(e)}"
-                    errors.append(error_msg)
-                    logger.error(error_msg, exc_info=True)
+                    errors.append(f"Error fetching expenses: {str(e)}")
 
             try:
                 db.session.commit()
             except Exception as e:
                 db.session.rollback()
-                error_msg = f"Database error during sync: {str(e)}"
-                errors.append(error_msg)
-                logger.error(error_msg, exc_info=True)
-                return {"success": False, "message": error_msg, "synced_count": synced_count, "errors": errors}
+                return {"success": False, "message": f"Database error during sync: {str(e)}", "synced_count": synced_count, "errors": errors}
 
+            message = f"Successfully synced {synced_count} items."
             if errors:
-                return {
-                    "success": True,
-                    "synced_count": synced_count,
-                    "errors": errors,
-                    "message": f"Sync completed with {len(errors)} error(s). Synced {synced_count} items.",
-                }
+                message = f"Sync completed with {len(errors)} error(s). Synced {synced_count} items."
+            return {"success": True, "synced_count": synced_count, "errors": errors, "message": message}
 
-            return {
-                "success": True,
-                "synced_count": synced_count,
-                "errors": errors,
-                "message": f"Successfully synced {synced_count} items.",
-            }
-
-        except requests.exceptions.RequestException as e:
-            error_msg = f"Network error during QuickBooks sync: {str(e)}"
-            logger.error(error_msg, exc_info=True)
-            return {"success": False, "message": error_msg}
         except Exception as e:
-            error_msg = f"Sync failed: {str(e)}"
-            logger.error(error_msg, exc_info=True)
-            return {"success": False, "message": error_msg}
+            logger.error("QuickBooks sync failed", exc_info=True)
+            return {"success": False, "message": f"Sync failed: {str(e)}"}
 
     def _create_quickbooks_invoice(self, invoice, access_token: str, realm_id: str) -> Optional[Dict]:
         """Create invoice in QuickBooks"""
@@ -526,7 +482,9 @@ class QuickBooksConnector(BaseConnector):
             raise ValueError(error_msg)
 
         # Add invoice date and due date
-        if invoice.created_at:
+        if invoice.issue_date:
+            qb_invoice["TxnDate"] = invoice.issue_date.strftime("%Y-%m-%d")
+        elif invoice.created_at:
             qb_invoice["TxnDate"] = invoice.created_at.strftime("%Y-%m-%d")
         if invoice.due_date:
             qb_invoice["DueDate"] = invoice.due_date.strftime("%Y-%m-%d")
@@ -553,10 +511,11 @@ class QuickBooksConnector(BaseConnector):
 
         # Try to get account ID from expense category mapping or use default
         account_id = default_expense_account
-        if expense.category_id:
-            account_id = account_mapping.get(str(expense.category_id), default_expense_account)
-        elif hasattr(expense, "metadata") and expense.metadata:
-            account_id = expense.metadata.get("quickbooks_account_id", default_expense_account)
+        if expense.category:
+            account_id = account_mapping.get(str(expense.category), account_mapping.get(expense.category, default_expense_account))
+        integration_meta = getattr(expense, "integration_metadata", None) or {}
+        if not account_id and isinstance(integration_meta, dict):
+            account_id = integration_meta.get("quickbooks", {}).get("account_id", default_expense_account)
 
         # If no account ID found, try to find or use default expense account
         if not account_id:
@@ -579,15 +538,14 @@ class QuickBooksConnector(BaseConnector):
                             account_id = accounts.get("Id")
 
                 if account_id:
-                    # Auto-save mapping for future use if we found an account
-                    if expense.category_id:
+                    if expense.category:
                         if not self.integration.config:
                             self.integration.config = {}
                         if "account_mappings" not in self.integration.config:
                             self.integration.config["account_mappings"] = {}
-                        self.integration.config["account_mappings"][str(expense.category_id)] = account_id
+                        self.integration.config["account_mappings"][str(expense.category)] = account_id
                         logger.info(
-                            f"Auto-mapped expense category {expense.category_id} to QuickBooks account {account_id}"
+                            f"Auto-mapped expense category {expense.category} to QuickBooks account {account_id}"
                         )
                 else:
                     # No account found - require configuration
@@ -625,8 +583,8 @@ class QuickBooksConnector(BaseConnector):
             qb_expense["EntityRef"] = {"name": expense.vendor}
 
         # Add expense date
-        if expense.date:
-            qb_expense["TxnDate"] = expense.date.strftime("%Y-%m-%d")
+        if expense.expense_date:
+            qb_expense["TxnDate"] = expense.expense_date.strftime("%Y-%m-%d")
 
         # Add memo/description
         if expense.description:
@@ -791,4 +749,32 @@ class QuickBooksConnector(BaseConnector):
                 "sync_direction": "timetracker_to_quickbooks",
                 "sync_items": ["invoices", "expenses"],
             },
+        }
+
+    def export_approved_time_entries(
+        self, project_id: int, time_entry_ids: List[int], created_by: int
+    ) -> Dict[str, Any]:
+        """Create a draft invoice from approved billable time and push to QuickBooks."""
+        from app.services import InvoiceService
+
+        invoice_service = InvoiceService()
+        result = invoice_service.create_invoice_from_time_entries(
+            project_id=project_id,
+            time_entry_ids=time_entry_ids,
+            created_by=created_by,
+        )
+        if not result.get("success"):
+            return result
+        invoice = result["invoice"]
+        invoice.status = "sent"
+        from app import db
+        from app.utils.db import safe_commit
+
+        safe_commit("export_time_entries_qb", {"invoice_id": invoice.id})
+        sync_result = self.sync_data(sync_type="incremental")
+        return {
+            "success": True,
+            "invoice_id": invoice.id,
+            "invoice_number": invoice.invoice_number,
+            "sync": sync_result,
         }

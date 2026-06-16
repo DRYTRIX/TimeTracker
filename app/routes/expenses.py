@@ -850,6 +850,12 @@ def approve_expense(expense_id):
             flash(_("Expense approved successfully"), "success")
             log_event("expense_approved", user_id=current_user.id, expense_id=expense_id)
             track_event(current_user.id, "expense.approved", {"expense_id": expense_id})
+            try:
+                from app.utils.integration_sync_hooks import trigger_expense_sync
+
+                trigger_expense_sync(expense)
+            except Exception:
+                pass
         else:
             flash(_("Error approving expense"), "error")
 
