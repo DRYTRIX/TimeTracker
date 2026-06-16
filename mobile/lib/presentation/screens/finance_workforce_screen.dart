@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/api_provider.dart';
 import '../providers/finance_workforce_providers.dart';
+import 'invoice_detail_screen.dart';
 
 class FinanceWorkforceScreen extends ConsumerStatefulWidget {
   const FinanceWorkforceScreen({super.key});
@@ -18,6 +19,7 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
   final TextEditingController _expenseFilterController = TextEditingController();
   final TextEditingController _timeOffFilterController = TextEditingController();
   bool _canApprove = false;
+  bool _isAdmin = false;
   int? _currentUserId;
   String _invoiceFilter = '';
   String _expenseFilter = '';
@@ -72,13 +74,35 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
     final timeOffReqRes = await client.getTimeOffRequests();
     final balancesRes = await client.getTimeOffBalances();
     final meRes = await client.getUsersMe();
+    Map<String, dynamic> reportSummary = {};
+    try {
+      final monthStart = DateTime(now.year, now.month, 1);
+      reportSummary = await client.getReportSummary(
+        startDate: monthStart.toIso8601String().split('T')[0],
+        endDate: now.toIso8601String().split('T')[0],
+      );
+    } catch (_) {
+      reportSummary = {};
+    }
     final user = meRes['user'] is Map<String, dynamic> ? meRes['user'] as Map<String, dynamic> : <String, dynamic>{};
     final role = (user['role'] ?? '').toString().toLowerCase();
     final roleCanApprove = role == 'admin' || role == 'owner' || role == 'manager' || role == 'approver';
     if (mounted) {
       _canApprove = (user['is_admin'] == true) || roleCanApprove;
+      _isAdmin = user['is_admin'] == true;
       _currentUserId = (user['id'] as num?)?.toInt();
     }
+
+    List<Map<String, dynamic>> timeEntryApprovals = [];
+    List<Map<String, dynamic>> invoiceApprovals = [];
+    try {
+      final tea = await client.getTimeEntryApprovals();
+      timeEntryApprovals = List<Map<String, dynamic>>.from(tea['approvals'] ?? const []);
+    } catch (_) {}
+    try {
+      final ia = await client.getInvoiceApprovals();
+      invoiceApprovals = List<Map<String, dynamic>>.from(ia['invoice_approvals'] ?? const []);
+    } catch (_) {}
 
     final invoiceTotalPages = ((invoicesRes['pagination'] ?? const {})['pages'] as num?)?.toInt() ?? 1;
     final expenseTotalPages = ((expensesRes['pagination'] ?? const {})['pages'] as num?)?.toInt() ?? 1;
@@ -101,6 +125,9 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
       invoiceTotalPages: invoiceTotalPages,
       expensePage: ((expensesRes['pagination'] ?? const {})['page'] as num?)?.toInt() ?? _expensePage,
       expenseTotalPages: expenseTotalPages,
+      reportSummary: reportSummary,
+      timeEntryApprovals: timeEntryApprovals,
+      invoiceApprovals: invoiceApprovals,
     );
   }
 
@@ -188,6 +215,64 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to review period: $e')),
       );
+    }
+  }
+
+  Future<void> _closePeriod(int periodId) async {
+    try {
+      final client = await ref.read(apiClientProvider.future);
+      if (client == null) return;
+      await client.closeTimesheetPeriod(periodId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Timesheet period closed')),
+      );
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to close period: $e')),
+      );
+    }
+  }
+
+  Future<void> _reviewTimeEntryApproval(int approvalId, bool approve) async {
+    try {
+      final client = await ref.read(apiClientProvider.future);
+      if (client == null) return;
+      if (approve) {
+        await client.approveTimeEntryApproval(approvalId);
+      } else {
+        await client.rejectTimeEntryApproval(approvalId, reason: 'Rejected from mobile');
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(approve ? 'Time entry approved' : 'Time entry rejected')),
+      );
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action failed: $e')));
+    }
+  }
+
+  Future<void> _reviewInvoiceApproval(int approvalId, bool approve) async {
+    try {
+      final client = await ref.read(apiClientProvider.future);
+      if (client == null) return;
+      if (approve) {
+        await client.approveInvoiceApproval(approvalId);
+      } else {
+        await client.rejectInvoiceApproval(approvalId, reason: 'Rejected from mobile');
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(approve ? 'Invoice approved' : 'Invoice rejected')),
+      );
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action failed: $e')));
     }
   }
 
@@ -794,6 +879,78 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                if (data.reportSummary.isNotEmpty)
+                  _SectionCard(
+                    title: 'This month',
+                    subtitle: 'Time & revenue summary',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Hours: ${data.reportSummary['total_hours'] ?? data.reportSummary['hours'] ?? '-'}'),
+                        Text('Billable: ${data.reportSummary['billable_hours'] ?? '-'}'),
+                        Text('Revenue est.: ${data.reportSummary['estimated_revenue'] ?? data.reportSummary['revenue'] ?? '-'}'),
+                      ],
+                    ),
+                  ),
+                if (data.reportSummary.isNotEmpty) const SizedBox(height: 12),
+                if (_canApprove &&
+                    (data.timeEntryApprovals.isNotEmpty || data.invoiceApprovals.isNotEmpty))
+                  _SectionCard(
+                    title: 'Approvals inbox',
+                    subtitle: 'Pending items requiring your action',
+                    child: Column(
+                      children: [
+                        ...data.invoiceApprovals.map((approval) {
+                          final id = (approval['id'] as num?)?.toInt();
+                          final label =
+                              'Invoice ${approval['invoice_number'] ?? approval['invoice_id']} — ${approval['client_name'] ?? ''}';
+                          return ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(label),
+                            subtitle: const Text('Invoice approval'),
+                            trailing: id == null
+                                ? null
+                                : PopupMenuButton<String>(
+                                    onSelected: (v) async {
+                                      if (v == 'approve') await _reviewInvoiceApproval(id, true);
+                                      if (v == 'reject') await _reviewInvoiceApproval(id, false);
+                                    },
+                                    itemBuilder: (_) => const [
+                                      PopupMenuItem(value: 'approve', child: Text('Approve')),
+                                      PopupMenuItem(value: 'reject', child: Text('Reject')),
+                                    ],
+                                  ),
+                          );
+                        }),
+                        ...data.timeEntryApprovals.map((approval) {
+                          final id = (approval['id'] as num?)?.toInt();
+                          final entryId = approval['time_entry_id'];
+                          return ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            title: Text('Time entry #$entryId'),
+                            subtitle: Text((approval['status'] ?? 'pending').toString()),
+                            trailing: id == null
+                                ? null
+                                : PopupMenuButton<String>(
+                                    onSelected: (v) async {
+                                      if (v == 'approve') await _reviewTimeEntryApproval(id, true);
+                                      if (v == 'reject') await _reviewTimeEntryApproval(id, false);
+                                    },
+                                    itemBuilder: (_) => const [
+                                      PopupMenuItem(value: 'approve', child: Text('Approve')),
+                                      PopupMenuItem(value: 'reject', child: Text('Reject')),
+                                    ],
+                                  ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                if (_canApprove &&
+                    (data.timeEntryApprovals.isNotEmpty || data.invoiceApprovals.isNotEmpty))
+                  const SizedBox(height: 12),
                 _SectionCard(
                   title: 'Invoices',
                   subtitle: 'Latest invoices from the server',
@@ -832,6 +989,15 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
                               contentPadding: EdgeInsets.zero,
                               title: Text('Invoice $number'),
                               subtitle: Text('Status: $status'),
+                              onTap: invoiceId == null
+                                  ? null
+                                  : () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute<void>(
+                                          builder: (_) => InvoiceDetailScreen(invoiceId: invoiceId),
+                                        ),
+                                      ).then((_) => _refresh());
+                                    },
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -1086,6 +1252,7 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
                             final periodId = period['id'] as int?;
                             final canSubmit = status.toLowerCase() == 'draft' && periodId != null;
                             final canReview = _canApprove && status.toLowerCase() == 'submitted' && periodId != null;
+                            final canClose = _isAdmin && status.toLowerCase() == 'approved' && periodId != null;
                             final canDelete = periodId != null &&
                                 ['draft', 'rejected'].contains(status.toLowerCase());
                             return ListTile(
@@ -1098,7 +1265,7 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
                                       onPressed: () => _submitPeriod(periodId),
                                       child: const Text('Submit'),
                                     )
-                                  : (canReview || canDelete
+                                  : (canReview || canDelete || canClose
                                       ? PopupMenuButton<String>(
                                           onSelected: (value) async {
                                             if (value == 'approve') {
@@ -1107,6 +1274,8 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
                                               await _reviewPeriod(periodId: periodId!, approve: false);
                                             } else if (value == 'delete') {
                                               await _deletePeriod(periodId!);
+                                            } else if (value == 'close') {
+                                              await _closePeriod(periodId!);
                                             }
                                           },
                                           itemBuilder: (context) {
@@ -1114,6 +1283,9 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
                                             if (canReview) {
                                               items.add(const PopupMenuItem(value: 'approve', child: Text('Approve')));
                                               items.add(const PopupMenuItem(value: 'reject', child: Text('Reject')));
+                                            }
+                                            if (canClose) {
+                                              items.add(const PopupMenuItem(value: 'close', child: Text('Close period')));
                                             }
                                             if (canDelete) {
                                               items.add(const PopupMenuItem(value: 'delete', child: Text('Delete')));
@@ -1232,6 +1404,9 @@ class _FinanceWorkforceData {
   final int invoiceTotalPages;
   final int expensePage;
   final int expenseTotalPages;
+  final Map<String, dynamic> reportSummary;
+  final List<Map<String, dynamic>> timeEntryApprovals;
+  final List<Map<String, dynamic>> invoiceApprovals;
 
   const _FinanceWorkforceData({
     required this.invoices,
@@ -1247,6 +1422,9 @@ class _FinanceWorkforceData {
     required this.invoiceTotalPages,
     required this.expensePage,
     required this.expenseTotalPages,
+    this.reportSummary = const {},
+    this.timeEntryApprovals = const [],
+    this.invoiceApprovals = const [],
   });
 
   const _FinanceWorkforceData.empty()
@@ -1262,5 +1440,8 @@ class _FinanceWorkforceData {
         invoicePage = 1,
         invoiceTotalPages = 1,
         expensePage = 1,
-        expenseTotalPages = 1;
+        expenseTotalPages = 1,
+        reportSummary = const {},
+        timeEntryApprovals = const [],
+        invoiceApprovals = const [];
 }
