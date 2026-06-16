@@ -396,13 +396,20 @@ class WorkflowEngine:
 
     @staticmethod
     def trigger_event(event_type: str, event_data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Trigger workflow evaluation for an event"""
-        # Get all enabled rules for this trigger type, ordered by priority
-        rules = (
-            WorkflowRule.query.filter(WorkflowRule.trigger_type == event_type, WorkflowRule.enabled == True)
-            .order_by(WorkflowRule.priority.desc())
-            .all()
+        """Trigger workflow evaluation for an event.
+
+        event_data should include user_id for rule scoping. Optional keys vary by trigger
+        (task_id, invoice_id, entry_id, task, invoice, etc.) for template variables.
+        """
+        query = WorkflowRule.query.filter(
+            WorkflowRule.trigger_type == event_type,
+            WorkflowRule.enabled == True,  # noqa: E712
         )
+        user_id = event_data.get("user_id")
+        if user_id is not None:
+            query = query.filter(WorkflowRule.user_id == user_id)
+
+        rules = query.order_by(WorkflowRule.priority.desc()).all()
 
         event = {"type": event_type, "data": event_data}
         results = []

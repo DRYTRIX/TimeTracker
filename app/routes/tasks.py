@@ -728,6 +728,7 @@ def update_task_status(task_id):
         return redirect(url_for("tasks.view_task", task_id=task.id))
 
     # Update status
+    previous_status = task.status
     try:
         if new_status == "in_progress":
             # If reopening from done, bypass start_task restriction
@@ -813,6 +814,10 @@ def update_task_status(task_id):
             )
 
         flash(f"Task status updated to {task.status_display}", "success")
+
+        from app.utils.workflow_bridge import fire_task_status_workflows
+
+        fire_task_status_workflows(task, current_user.id, old_status=previous_status)
     except ValueError as e:
         flash(str(e), "error")
 
@@ -1615,6 +1620,7 @@ def api_update_status(task_id):
     if new_status not in valid_statuses:
         return jsonify({"error": "Invalid status"}), 400
 
+    previous_status = task.status
     # Update status
     try:
         if new_status == "in_progress":
@@ -1641,6 +1647,10 @@ def api_update_status(task_id):
             task.updated_at = now_in_app_timezone()
             if not safe_commit("api_update_task_status", {"task_id": task.id, "status": new_status}):
                 return jsonify({"error": "Database error while updating status"}), 500
+
+        from app.utils.workflow_bridge import fire_task_status_workflows
+
+        fire_task_status_workflows(task, current_user.id, old_status=previous_status)
 
         return jsonify({"success": True, "task": task.to_dict()})
     except ValueError as e:

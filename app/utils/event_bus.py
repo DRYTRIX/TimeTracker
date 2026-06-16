@@ -135,3 +135,27 @@ def handle_invoice_created(event_type: str, data: Dict[str, Any]) -> None:
         dispatch_webhook(event_type, data)
     except Exception as e:
         current_app.logger.error(f"Failed to dispatch webhook for {event_type}: {e}")
+
+    try:
+        from app.utils.workflow_bridge import handle_domain_event_for_workflows
+
+        handle_domain_event_for_workflows(event_type, data)
+    except Exception as e:
+        current_app.logger.error(f"Failed to trigger workflows for {event_type}: {e}")
+
+
+def _workflow_bridge_handler(event_type: str, data: Dict[str, Any]) -> None:
+    try:
+        from app.utils.workflow_bridge import handle_domain_event_for_workflows
+
+        handle_domain_event_for_workflows(event_type, data)
+    except Exception as e:
+        current_app.logger.error(f"Failed to trigger workflows for {event_type}: {e}")
+
+
+# Register workflow bridge for mapped webhook events (not time_entry.created — time_logged fires on stop/manual)
+for _evt in (
+    WebhookEvent.TASK_CREATED.value,
+    WebhookEvent.INVOICE_PAID.value,
+):
+    _event_bus.subscribe(_evt, _workflow_bridge_handler)

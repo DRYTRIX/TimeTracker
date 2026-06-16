@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "workflows/_form.html" import workflow_form %}
+
+{% block title %}{{ _('Edit Workflow') }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-3xl">
+    <div class="mb-6">
+        <a href="{{ url_for('workflows.view_workflow', workflow_id=workflow.id) }}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 mb-4 inline-block">
+            <i class="fas fa-arrow-left mr-2"></i>{{ _('Back to Workflow') }}
+        </a>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ _('Edit Workflow') }}</h1>
+    </div>
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6">
+        {{ workflow_form(workflow=workflow, trigger_types=trigger_types, action_types=action_types, form_action=url_for('workflows.edit_workflow', workflow_id=workflow.id), submit_label=_('Save Changes')) }}
+    </div>
+</div>
+{% endblock %}

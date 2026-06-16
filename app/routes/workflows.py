@@ -7,12 +7,25 @@ from flask_babel import gettext as _
 from flask_login import current_user, login_required
 
 from app import db
-from app.models.workflow import WorkflowExecution, WorkflowRule
+from app.models.workflow import WorkflowExecution, WorkflowRule, WorkflowTemplate
+from app.routes.workflow_helpers import get_action_types, get_trigger_types, parse_workflow_form_data
 from app.services.workflow_engine import WorkflowEngine
+from app.services.workflow_template_service import WorkflowTemplateService
 from app.utils.decorators import admin_required
 from app.utils.module_helpers import module_enabled
 
 workflows_bp = Blueprint("workflows", __name__)
+_template_service = WorkflowTemplateService()
+
+
+def _apply_workflow_fields(rule, fields):
+    rule.name = fields["name"]
+    rule.description = fields["description"]
+    rule.trigger_type = fields["trigger_type"]
+    rule.trigger_conditions = fields["trigger_conditions"]
+    rule.actions = fields["actions"]
+    rule.enabled = fields["enabled"]
+    rule.priority = fields["priority"]
 
 
 @workflows_bp.route("/workflows")
@@ -36,19 +49,10 @@ def create_workflow():
     """Create a new workflow rule"""
     if request.method == "POST":
         data = request.get_json() if request.is_json else request.form
+        fields, _, _ = parse_workflow_form_data(data)
 
-        rule = WorkflowRule(
-            name=data.get("name"),
-            description=data.get("description"),
-            trigger_type=data.get("trigger_type"),
-            trigger_conditions=data.get("trigger_conditions"),
-            actions=data.get("actions", []),
-            enabled=data.get("enabled", True),
-            priority=data.get("priority", 0),
-            user_id=current_user.id,
-            created_by=current_user.id,
-        )
-
+        rule = WorkflowRule(user_id=current_user.id, created_by=current_user.id)
+        _apply_workflow_fields(rule, fields)
         db.session.add(rule)
         db.session.commit()
 
@@ -58,30 +62,9 @@ def create_workflow():
         flash(_("Workflow created successfully"), "success")
         return redirect(url_for("workflows.list_workflows"))
 
-    # GET - Show form
-    trigger_types = [
-        {"value": "task_status_change", "label": _("Task Status Changes")},
-        {"value": "task_created", "label": _("Task Created")},
-        {"value": "task_completed", "label": _("Task Completed")},
-        {"value": "time_logged", "label": _("Time Logged")},
-        {"value": "deadline_approaching", "label": _("Deadline Approaching")},
-        {"value": "budget_threshold", "label": _("Budget Threshold Reached")},
-        {"value": "invoice_created", "label": _("Invoice Created")},
-        {"value": "invoice_paid", "label": _("Invoice Paid")},
-    ]
-
-    action_types = [
-        {"value": "log_time", "label": _("Log Time Entry")},
-        {"value": "send_notification", "label": _("Send Notification")},
-        {"value": "update_status", "label": _("Update Status")},
-        {"value": "assign_task", "label": _("Assign Task")},
-        {"value": "create_task", "label": _("Create Task")},
-        {"value": "update_project", "label": _("Update Project")},
-        {"value": "send_email", "label": _("Send Email")},
-        {"value": "webhook", "label": _("Trigger Webhook")},
-    ]
-
-    return render_template("workflows/create.html", trigger_types=trigger_types, action_types=action_types)
+    return render_template(
+        "workflows/create.html", trigger_types=get_trigger_types(), action_types=get_action_types()
+    )
 
 
 @workflows_bp.route("/workflows/<int:workflow_id>")
@@ -118,15 +101,8 @@ def edit_workflow(workflow_id):
 
     if request.method == "POST":
         data = request.get_json() if request.is_json else request.form
-
-        workflow.name = data.get("name", workflow.name)
-        workflow.description = data.get("description", workflow.description)
-        workflow.trigger_type = data.get("trigger_type", workflow.trigger_type)
-        workflow.trigger_conditions = data.get("trigger_conditions", workflow.trigger_conditions)
-        workflow.actions = data.get("actions", workflow.actions)
-        workflow.enabled = data.get("enabled", workflow.enabled)
-        workflow.priority = data.get("priority", workflow.priority)
-
+        fields, _, _ = parse_workflow_form_data(data)
+        _apply_workflow_fields(workflow, fields)
         db.session.commit()
 
         if request.is_json:
@@ -135,24 +111,11 @@ def edit_workflow(workflow_id):
         flash(_("Workflow updated successfully"), "success")
         return redirect(url_for("workflows.view_workflow", workflow_id=workflow_id))
 
-    trigger_types = [
-        {"value": "task_status_change", "label": _("Task Status Changes")},
-        {"value": "task_created", "label": _("Task Created")},
-        {"value": "task_completed", "label": _("Task Completed")},
-        {"value": "time_logged", "label": _("Time Logged")},
-        {"value": "deadline_approaching", "label": _("Deadline Approaching")},
-        {"value": "budget_threshold", "label": _("Budget Threshold Reached")},
-    ]
-
-    action_types = [
-        {"value": "log_time", "label": _("Log Time Entry")},
-        {"value": "send_notification", "label": _("Send Notification")},
-        {"value": "update_status", "label": _("Update Status")},
-        {"value": "assign_task", "label": _("Assign Task")},
-    ]
-
     return render_template(
-        "workflows/edit.html", workflow=workflow, trigger_types=trigger_types, action_types=action_types
+        "workflows/edit.html",
+        workflow=workflow,
+        trigger_types=get_trigger_types(),
+        action_types=get_action_types(),
     )
 
 
@@ -190,6 +153,102 @@ def toggle_workflow(workflow_id):
     db.session.commit()
 
     return jsonify({"success": True, "enabled": workflow.enabled})
+
+
+# --- Workflow template library ---
+
+
+@workflows_bp.route("/workflows/templates")
+@login_required
+@module_enabled("workflows")
+def list_workflow_templates():
+    templates = _template_service.list_available(current_user.id, current_user.is_admin)
+    return render_template("workflows/templates_list.html", templates=templates)
+
+
+@workflows_bp.route("/workflows/templates/<int:template_id>/use", methods=["POST"])
+@login_required
+@module_enabled("workflows")
+def use_workflow_template(template_id):
+    name = request.form.get("name") or None
+    rule = _template_service.clone_to_rule(template_id, current_user.id, name=name)
+    flash(_("Workflow created from template"), "success")
+    return redirect(url_for("workflows.edit_workflow", workflow_id=rule.id))
+
+
+@workflows_bp.route("/workflows/templates/create", methods=["GET", "POST"])
+@login_required
+@module_enabled("workflows")
+@admin_required
+def create_workflow_template():
+    if request.method == "POST":
+        data = request.form
+        fields, _, _ = parse_workflow_form_data(data)
+        _template_service.create_template(
+            {
+                **fields,
+                "category": data.get("category"),
+                "tags": [t.strip() for t in (data.get("tags") or "").split(",") if t.strip()],
+                "is_public": data.get("is_public") == "on",
+            },
+            current_user.id,
+        )
+        flash(_("Workflow template created"), "success")
+        return redirect(url_for("workflows.list_workflow_templates"))
+
+    return render_template(
+        "workflows/template_form.html",
+        template=None,
+        trigger_types=get_trigger_types(),
+        action_types=get_action_types(),
+        form_action=url_for("workflows.create_workflow_template"),
+        submit_label=_("Create Template"),
+    )
+
+
+@workflows_bp.route("/workflows/templates/<int:template_id>/edit", methods=["GET", "POST"])
+@login_required
+@module_enabled("workflows")
+@admin_required
+def edit_workflow_template(template_id):
+    template = WorkflowTemplate.query.get_or_404(template_id)
+    if request.method == "POST":
+        data = request.form
+        fields, _, _ = parse_workflow_form_data(data)
+        _template_service.update_template(
+            template,
+            {
+                **fields,
+                "category": data.get("category"),
+                "tags": [t.strip() for t in (data.get("tags") or "").split(",") if t.strip()],
+                "is_public": data.get("is_public") == "on",
+            },
+        )
+        flash(_("Workflow template updated"), "success")
+        return redirect(url_for("workflows.list_workflow_templates"))
+
+    return render_template(
+        "workflows/template_form.html",
+        template=template,
+        trigger_types=get_trigger_types(),
+        action_types=get_action_types(),
+        form_action=url_for("workflows.edit_workflow_template", template_id=template.id),
+        submit_label=_("Save Template"),
+    )
+
+
+@workflows_bp.route("/workflows/templates/<int:template_id>/delete", methods=["POST"])
+@login_required
+@module_enabled("workflows")
+@admin_required
+def delete_workflow_template(template_id):
+    template = WorkflowTemplate.query.get_or_404(template_id)
+    _template_service.delete_template(template)
+    flash(_("Workflow template deleted"), "success")
+    return redirect(url_for("workflows.list_workflow_templates"))
+
+
+# --- API ---
 
 
 @workflows_bp.route("/api/workflows", methods=["GET"])
@@ -291,7 +350,7 @@ def test_workflow(workflow_id):
         return jsonify({"error": "Access denied"}), 403
 
     data = request.get_json()
-    test_event = data.get("event", {"type": workflow.trigger_type, "data": {}})
+    test_event = data.get("event", {"type": workflow.trigger_type, "data": {"user_id": current_user.id}})
 
     result = WorkflowEngine.execute_rule(workflow, test_event)
 

@@ -179,6 +179,10 @@ class TimeTrackingService:
                 "error": "database_error",
             }
 
+        from app.utils.workflow_bridge import fire_time_logged_workflow
+
+        fire_time_logged_workflow(entry, user_id)
+
         return {"success": True, "message": "Timer stopped successfully", "entry": entry}
 
     def pause_timer(self, user_id: int) -> Dict[str, Any]:
@@ -363,6 +367,10 @@ class TimeTrackingService:
             has_task=bool(task_id),
         ):
             pass
+
+        from app.utils.workflow_bridge import fire_time_logged_workflow
+
+        fire_time_logged_workflow(entry, user_id)
 
         return {"success": True, "message": "Time entry created successfully", "entry": entry}
 

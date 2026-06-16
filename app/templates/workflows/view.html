@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ workflow.name }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Workflows'), 'url': url_for('workflows.list_workflows')},
+    {'text': workflow.name}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-sitemap',
+    title_text=workflow.name,
+    subtitle_text=workflow.description or '',
+    breadcrumbs=breadcrumbs,
+    actions_html='<div class="flex gap-2 flex-wrap justify-end">'
+        + '<a href="' + url_for("workflows.edit_workflow", workflow_id=workflow.id) + '" class="btn btn-secondary"><i class="fas fa-edit mr-2"></i>' + _('Edit') + '</a>'
+        + '</div>'
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6">
+        <h2 class="text-lg font-semibold mb-4">{{ _('Configuration') }}</h2>
+        <dl class="space-y-3 text-sm">
+            <div><dt class="text-gray-500 dark:text-gray-400">{{ _('Trigger') }}</dt><dd class="font-medium">{{ workflow.trigger_type }}</dd></div>
+            <div><dt class="text-gray-500 dark:text-gray-400">{{ _('Priority') }}</dt><dd>{{ workflow.priority }}</dd></div>
+            <div><dt class="text-gray-500 dark:text-gray-400">{{ _('Status') }}</dt>
+                <dd>{% if workflow.enabled %}<span class="text-green-600">{{ _('Enabled') }}</span>{% else %}<span class="text-gray-500">{{ _('Disabled') }}</span>{% endif %}</dd>
+            </div>
+            <div><dt class="text-gray-500 dark:text-gray-400">{{ _('Executions') }}</dt><dd>{{ workflow.execution_count or 0 }}</dd></div>
+            {% if workflow.last_executed_at %}
+            <div><dt class="text-gray-500 dark:text-gray-400">{{ _('Last executed') }}</dt><dd>{{ workflow.last_executed_at }}</dd></div>
+            {% endif %}
+        </dl>
+    </div>
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6">
+        <h2 class="text-lg font-semibold mb-4">{{ _('Conditions & Actions') }}</h2>
+        <h3 class="text-sm font-medium text-gray-500 mb-2">{{ _('Conditions') }}</h3>
+        <pre class="text-xs bg-gray-50 dark:bg-gray-800 p-3 rounded overflow-x-auto mb-4">{{ workflow.trigger_conditions | tojson(indent=2) if workflow.trigger_conditions else '[]' }}</pre>
+        <h3 class="text-sm font-medium text-gray-500 mb-2">{{ _('Actions') }}</h3>
+        <pre class="text-xs bg-gray-50 dark:bg-gray-800 p-3 rounded overflow-x-auto">{{ workflow.actions | tojson(indent=2) if workflow.actions else '[]' }}</pre>
+    </div>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Execution History') }}</h2>
+    {% if executions %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+            <thead>
+                <tr>
+                    <th class="px-4 py-2 text-left text-gray-500">{{ _('Time') }}</th>
+                    <th class="px-4 py-2 text-left text-gray-500">{{ _('Result') }}</th>
+                    <th class="px-4 py-2 text-left text-gray-500">{{ _('Duration') }}</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                {% for ex in executions %}
+                <tr>
+                    <td class="px-4 py-2">{{ ex.executed_at }}</td>
+                    <td class="px-4 py-2">
+                        {% if ex.success %}
+                        <span class="text-green-600">{{ _('Success') }}</span>
+                        {% else %}
+                        <span class="text-red-600">{{ ex.error_message or _('Failed') }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-2">{% if ex.execution_time_ms %}{{ ex.execution_time_ms }}ms{% else %}—{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-500 dark:text-gray-400">{{ _('No executions yet.') }}</p>
+    {% endif %}
+</div>
+{% endblock %}

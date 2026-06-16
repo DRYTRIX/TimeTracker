@@ -211,6 +211,10 @@ def create_invoice():
             },
         )
 
+        from app.utils.workflow_bridge import fire_invoice_created_workflow
+
+        fire_invoice_created_workflow(invoice, current_user.id)
+
         # Notify client about new invoice
         if invoice.client_id:
             try:
@@ -710,6 +714,11 @@ def update_invoice_status(invoice_id):
 
     if not safe_commit("update_invoice_status", {"invoice_id": invoice.id, "status": new_status}):
         return jsonify({"error": "Database error while updating status"}), 500
+
+    if new_status == "paid":
+        from app.utils.workflow_bridge import fire_invoice_paid_workflow
+
+        fire_invoice_paid_workflow(invoice, current_user.id)
 
     try:
         log_event(

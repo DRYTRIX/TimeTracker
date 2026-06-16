@@ -65,6 +65,54 @@ class WorkflowRule(db.Model):
         }
 
 
+class WorkflowTemplate(db.Model):
+    """Reusable workflow template for the automation library"""
+
+    __tablename__ = "workflow_templates"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False, index=True)
+    description = db.Column(db.Text, nullable=True)
+    category = db.Column(db.String(100), nullable=True, index=True)
+    tags = db.Column(JSON, nullable=True, default=list)
+
+    trigger_type = db.Column(db.String(50), nullable=False)
+    trigger_conditions = db.Column(JSON, nullable=True, default=list)
+    actions = db.Column(JSON, nullable=False, default=list)
+
+    is_public = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+
+    usage_count = db.Column(db.Integer, default=0, nullable=False)
+    last_used_at = db.Column(db.DateTime, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    creator = db.relationship("User", backref="workflow_templates")
+
+    def __repr__(self):
+        return f"<WorkflowTemplate {self.name}>"
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "category": self.category,
+            "tags": self.tags or [],
+            "trigger_type": self.trigger_type,
+            "trigger_conditions": self.trigger_conditions,
+            "actions": self.actions,
+            "is_public": self.is_public,
+            "created_by": self.created_by,
+            "usage_count": self.usage_count,
+            "last_used_at": self.last_used_at.isoformat() if self.last_used_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
 class WorkflowExecution(db.Model):
     """Workflow execution log"""
 
