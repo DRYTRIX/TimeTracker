@@ -187,41 +187,25 @@ class ScheduledReportService:
             logger.error(f"Error generating and sending report: {e}")
             return {"success": False, "message": f"Error generating report: {str(e)}"}
 
-    def _generate_report_data(self, saved_view: SavedReportView, config: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Generate report data based on saved view configuration.
+    def _generate_report_data(
+        self, saved_view: SavedReportView, config: Dict[str, Any], user_id: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Generate report data based on saved view configuration."""
+        from app.routes.custom_reports import generate_report_data
 
-        Returns:
-            dict with report data
-        """
-        # Extract filters from config
-        start_date = config.get("start_date")
-        end_date = config.get("end_date")
-        project_id = config.get("project_id")
-        user_id = config.get("user_id")
+        effective_user_id = user_id or saved_view.owner_id
 
-        # Convert date strings to datetime if needed
-        if isinstance(start_date, str):
-            start_date = datetime.fromisoformat(start_date)
-        if isinstance(end_date, str):
-            end_date = datetime.fromisoformat(end_date)
+        if not isinstance(config, dict):
+            config = {}
 
-        # Generate appropriate report based on scope
-        scope = saved_view.scope
+        if not config.get("data_source"):
+            report_type = config.get("report_type")
+            if report_type == "invoice":
+                config = {**config, "data_source": "invoices"}
+            else:
+                config = {**config, "data_source": "time_entries"}
 
-        if scope == "time":
-            return self.reporting_service.get_time_summary(
-                user_id=user_id, project_id=project_id, start_date=start_date, end_date=end_date
-            )
-        elif scope == "project":
-            return self.reporting_service.get_project_summary(
-                project_id=project_id, start_date=start_date, end_date=end_date
-            )
-        elif scope == "invoice":
-            # Would need invoice service
-            return {"message": "Invoice reports not yet implemented"}
-        else:
-            return {"message": "Unknown report scope"}
+        return generate_report_data(config, effective_user_id)
 
     def _calculate_next_run(self, cadence: str, cron: Optional[str], timezone: Optional[str]) -> datetime:
         """

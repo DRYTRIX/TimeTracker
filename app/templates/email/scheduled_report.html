@@ -72,6 +72,12 @@
             {% if report_data.summary.get('total_hours') %}
             <p><strong>Total Hours:</strong> {{ "%.2f"|format(report_data.summary.get('total_hours', 0)) }}</p>
             {% endif %}
+            {% if report_data.summary.get('total_amount') is not none %}
+            <p><strong>Total Amount:</strong> {{ "%.2f"|format(report_data.summary.get('total_amount', 0)) }}</p>
+            {% endif %}
+            {% if report_data.summary.get('invoice_count') is not none %}
+            <p><strong>Invoice Count:</strong> {{ report_data.summary.get('invoice_count', 0) }}</p>
+            {% endif %}
             {% if report_data.summary.get('unpaid_only') %}
             <p><strong>Unpaid Hours Only:</strong> Yes</p>
             {% endif %}
