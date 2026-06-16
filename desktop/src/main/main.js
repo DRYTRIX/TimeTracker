@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
 const { createWindow } = require('./window');
 const { createTray, destroyTray } = require('./tray');
 const Store = require('electron-store');
@@ -111,6 +111,15 @@ function attachTray(win) {
 function createMainWindow(options = {}) {
   mainWindow = createWindow(options);
   attachTray(mainWindow);
+
+  mainWindow.on('close', (event) => {
+    const minimizeToTray = store ? store.get('minimize_to_tray', true) : true;
+    if (minimizeToTray && !app.isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+    }
+  });
+
   mainWindow.on('closed', () => {
     if (mainWindow && mainWindow.isDestroyed()) {
       mainWindow = null;
@@ -119,26 +128,59 @@ function createMainWindow(options = {}) {
   return mainWindow;
 }
 
+const DEFAULT_SHORTCUTS = {
+  toggleTimer: 'CommandOrControl+Shift+T',
+  showWindow: 'CommandOrControl+Shift+Period',
+};
+
+function registerGlobalShortcuts() {
+  if (!store) return;
+  const shortcuts = { ...DEFAULT_SHORTCUTS, ...(store.get('global_shortcuts') || {}) };
+  try {
+    globalShortcut.unregisterAll();
+    globalShortcut.register(shortcuts.toggleTimer, () => {
+      sendToMainWindow('shortcut:action', 'toggle-timer');
+    });
+    globalShortcut.register(shortcuts.showWindow, () => {
+      focusMainWindow();
+    });
+  } catch (e) {
+    console.warn('TimeTracker: could not register global shortcuts:', e.message);
+  }
+}
+
+function unregisterGlobalShortcuts() {
+  try {
+    globalShortcut.unregisterAll();
+  } catch (_) {
+    /* ignore */
+  }
+}
+
 // This method will be called when Electron has finished initialization
 if (singleInstanceLock) {
 app.whenReady().then(() => {
   store = new Store();
   parseCommandLineArgs();
   createMainWindow({ showSplash: true });
+  registerGlobalShortcuts();
   
   // Listen for timer status updates from renderer (via IPC)
   ipcMain.on('timer:status-update', (event, data) => {
+    const active = Boolean(data && data.active);
     if (global.updateTrayMenu) {
-      global.updateTrayMenu(data && data.active);
+      global.updateTrayMenu(active);
     }
-    if (updateTrayTooltip && data && data.active && data.timer) {
+    if (global.updateTrayTitle) {
+      global.updateTrayTitle(active ? (data.elapsedLabel || '') : '');
+    }
+    if (updateTrayTooltip && active && data.timer) {
       const startTime = new Date(data.timer.start_time);
       const elapsed = Math.floor((new Date() - startTime) / 1000);
       const hours = Math.floor(elapsed / 3600);
       const minutes = Math.floor((elapsed % 3600) / 60);
-      const timeStr = hours > 0 
-        ? `${hours}h ${minutes}m`
-        : `${minutes}m`;
+      const seconds = elapsed % 60;
+      const timeStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m ${seconds}s`;
       updateTrayTooltip(`Timer: ${timeStr}`);
     } else if (updateTrayTooltip) {
       updateTrayTooltip('TimeTracker');
@@ -160,10 +202,15 @@ app.on('second-instance', (event, argv) => {
 });
 }
 
-// Quit when all windows are closed, except on macOS
+// Quit when all windows are closed, except on macOS (or when minimizing to tray)
+app.on('before-quit', () => {
+  app.isQuitting = true;
+  unregisterGlobalShortcuts();
+});
+
 app.on('window-all-closed', () => {
-  // On macOS, keep app running even when all windows are closed
-  if (process.platform !== 'darwin') {
+  const minimizeToTray = store ? store.get('minimize_to_tray', true) : false;
+  if (process.platform !== 'darwin' && !minimizeToTray) {
     app.quit();
   }
 });
@@ -260,6 +307,8 @@ const ALLOWED_STORE_KEYS = new Set([
   'theme_mode',
   'auto_sync',
   'sync_interval',
+  'minimize_to_tray',
+  'global_shortcuts',
 ]);
 
 function isAllowedStoreKey(key) {

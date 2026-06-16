@@ -619,3 +619,21 @@ label {
     overflow-x: auto;
   }
 }
+
+.split-panels {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 1rem;
+}
+
+.list-row.buttonish {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.list-row.buttonish.active {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}

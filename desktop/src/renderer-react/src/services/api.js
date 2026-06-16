@@ -173,8 +173,39 @@ export class ApiClient {
   updateTimeEntry(id, data) { return this.unwrap(this.client.put(`/api/v1/time-entries/${id}`, data)); }
   deleteTimeEntry(id) { return this.unwrap(this.client.delete(`/api/v1/time-entries/${id}`)); }
   getInvoices(params = {}) { return this.unwrap(this.client.get('/api/v1/invoices', { params })); }
+  getInvoice(id) { return this.unwrap(this.client.get(`/api/v1/invoices/${id}`)); }
+  createInvoice(data) { return this.unwrap(this.client.post('/api/v1/invoices', data)); }
+  updateInvoice(id, data) { return this.unwrap(this.client.patch(`/api/v1/invoices/${id}`, data)); }
+  setInvoiceItems(id, items) { return this.unwrap(this.client.put(`/api/v1/invoices/${id}/items`, { items })); }
+  generateInvoiceFromTime(id, timeEntryIds, replaceExisting = true) {
+    return this.unwrap(this.client.post(`/api/v1/invoices/${id}/generate-from-time`, { time_entry_ids: timeEntryIds, replace_existing: replaceExisting }));
+  }
+  async downloadInvoicePdf(id) {
+    const response = await this.client.get(`/api/v1/invoices/${id}/pdf`, { responseType: 'arraybuffer' });
+    return response.data;
+  }
   getExpenses(params = {}) { return this.unwrap(this.client.get('/api/v1/expenses', { params })); }
   createExpense(data) { return this.unwrap(this.client.post('/api/v1/expenses', data)); }
+  getClients(params = {}) { return this.unwrap(this.client.get('/api/v1/clients', { params })); }
+  getUsers(params = {}) { return this.unwrap(this.client.get('/api/v1/users', { params })); }
+  getReportSummary(params = {}) { return this.unwrap(this.client.get('/api/v1/reports/summary', { params })); }
+  getTimeEntryApprovals() { return this.unwrap(this.client.get('/api/v1/time-entry-approvals')); }
+  approveTimeEntryApproval(id, comment) { return this.unwrap(this.client.post(`/api/v1/time-entry-approvals/${id}/approve`, { comment })); }
+  rejectTimeEntryApproval(id, reason) { return this.unwrap(this.client.post(`/api/v1/time-entry-approvals/${id}/reject`, { reason })); }
+  getInvoiceApprovals() { return this.unwrap(this.client.get('/api/v1/invoice-approvals')); }
+  approveInvoiceApproval(id, comment) { return this.unwrap(this.client.post(`/api/v1/invoice-approvals/${id}/approve`, { comment })); }
+  rejectInvoiceApproval(id, reason) { return this.unwrap(this.client.post(`/api/v1/invoice-approvals/${id}/reject`, { reason })); }
+  requestInvoiceApproval(invoiceId, approverIds) {
+    return this.unwrap(this.client.post(`/api/v1/invoices/${invoiceId}/request-approval`, { approver_ids: approverIds }));
+  }
+  submitTimesheetPeriod(periodId) { return this.unwrap(this.client.post(`/api/v1/timesheet-periods/${periodId}/submit`)); }
+  approveTimesheetPeriod(periodId, comment) { return this.unwrap(this.client.post(`/api/v1/timesheet-periods/${periodId}/approve`, { comment })); }
+  rejectTimesheetPeriod(periodId, reason) { return this.unwrap(this.client.post(`/api/v1/timesheet-periods/${periodId}/reject`, { reason })); }
+  closeTimesheetPeriod(periodId, reason) { return this.unwrap(this.client.post(`/api/v1/timesheet-periods/${periodId}/close`, { reason })); }
+  deleteTimesheetPeriod(periodId) { return this.unwrap(this.client.delete(`/api/v1/timesheet-periods/${periodId}`)); }
+  createTimeOffRequest(data) { return this.unwrap(this.client.post('/api/v1/time-off/requests', data)); }
+  approveTimeOffRequest(id, comment) { return this.unwrap(this.client.post(`/api/v1/time-off/requests/${id}/approve`, { comment })); }
+  rejectTimeOffRequest(id, comment) { return this.unwrap(this.client.post(`/api/v1/time-off/requests/${id}/reject`, { comment })); }
   getCapacityReport(params = {}) { return this.unwrap(this.client.get('/api/v1/reports/capacity', { params })); }
   getTimesheetPeriods(params = {}) { return this.unwrap(this.client.get('/api/v1/timesheet-periods', { params })); }
   getTimeOffRequests(params = {}) { return this.unwrap(this.client.get('/api/v1/time-off/requests', { params })); }
