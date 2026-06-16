@@ -94,6 +94,52 @@ def hours_by_day():
     )
 
 
+@analytics_bp.route("/api/analytics/profitability")
+@login_required
+@module_enabled("analytics")
+def profitability_dashboard():
+    """Project profitability: revenue minus labor, expenses, and project costs."""
+    try:
+        days = int(request.args.get("days", 30))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid parameters"}), 400
+
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days)
+
+    from app.services.metrics_service import MetricsService
+
+    service = MetricsService()
+    rows = service.profitability_by_project(
+        start_date=start_date,
+        end_date=end_date,
+        user_id=current_user.id,
+        is_admin=current_user.is_admin,
+    )
+    return jsonify({"start_date": start_date.isoformat(), "end_date": end_date.isoformat(), "projects": rows})
+
+
+@analytics_bp.route("/api/analytics/org-forecast")
+@login_required
+@module_enabled("analytics")
+def org_forecast():
+    """Organization-level utilization forecast (admin)."""
+    if not current_user.is_admin:
+        return jsonify({"error": "Admin only"}), 403
+    try:
+        days = int(request.args.get("days", 90))
+        weeks = int(request.args.get("forecast_weeks", 4))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid parameters"}), 400
+
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days)
+    from app.services.metrics_service import MetricsService
+
+    data = MetricsService().org_utilization_forecast(start_date, end_date, forecast_weeks=weeks)
+    return jsonify(data)
+
+
 @analytics_bp.route("/api/analytics/hours-forecast")
 @login_required
 @module_enabled("analytics")
@@ -140,19 +186,27 @@ def hours_forecast():
     else:
         avg = sum(values[-window:]) / window
 
+    from app.services.metrics_service import MetricsService
+
+    forecast_data, lower_band, upper_band = MetricsService.linear_forecast_with_bands(values, forecast_days)
+
     labels = list(date_data.keys())
     forecast_labels = []
-    forecast_data = []
     for i in range(1, forecast_days + 1):
         d = end_date + timedelta(days=i)
         forecast_labels.append(d.strftime("%Y-%m-%d"))
-        forecast_data.append(round(avg, 2))
 
     return jsonify(
         {
             "historical": {"labels": labels, "data": list(date_data.values())},
-            "forecast": {"labels": forecast_labels, "data": forecast_data},
+            "forecast": {
+                "labels": forecast_labels,
+                "data": forecast_data,
+                "lower": lower_band,
+                "upper": upper_band,
+            },
             "avg_daily_hours": round(avg, 2),
+            "method": "linear_regression",
         }
     )
 
