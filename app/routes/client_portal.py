@@ -45,6 +45,7 @@ from app.models import (
 from app.models.client_time_approval import ClientTimeApproval
 from app.services.client_approval_service import ClientApprovalService
 from app.services.client_notification_service import ClientNotificationService
+from app.services.checkout_service import CheckoutService
 from app.services.payment_gateway_service import PaymentGatewayService
 from app.utils.backup import is_database_restore_in_progress
 from app.utils.db import safe_commit
@@ -1139,12 +1140,70 @@ def pay_invoice(invoice_id):
         flash(_("Online payment is not currently available. Please contact us for payment instructions."), "warning")
         return redirect(url_for("client_portal.view_invoice", invoice_id=invoice_id))
 
-    # Redirect to payment gateway
-    if gateway.provider == "stripe":
-        return redirect(url_for("payment_gateways.pay_invoice", invoice_id=invoice_id))
-    else:
-        flash(_("Payment gateway not yet supported."), "error")
+    return redirect(url_for("client_portal.checkout_invoice", invoice_id=invoice_id))
+
+
+@client_portal_bp.route("/client-portal/invoices/<int:invoice_id>/checkout")
+def checkout_invoice(invoice_id):
+    """Start client-portal checkout for an invoice"""
+    result = check_client_portal_access()
+    if not isinstance(result, Client):
+        return result
+    client = result
+
+    invoice = Invoice.query.get_or_404(invoice_id)
+    if invoice.client_id != client.id:
+        flash(_("Invoice not found."), "error")
+        abort(404)
+
+    if invoice.payment_status == "fully_paid":
+        flash(_("This invoice is already paid."), "info")
         return redirect(url_for("client_portal.view_invoice", invoice_id=invoice_id))
+
+    checkout = CheckoutService()
+    gateway = checkout.get_checkout_gateway()
+    if not gateway:
+        flash(_("Online payment is not currently available. Please contact us for payment instructions."), "warning")
+        return redirect(url_for("client_portal.view_invoice", invoice_id=invoice_id))
+
+    pay_result = checkout.start_checkout(
+        invoice,
+        success_endpoint="client_portal.payment_success",
+        cancel_endpoint="client_portal.view_invoice",
+    )
+    if pay_result.get("success"):
+        return redirect(pay_result["url"])
+    flash(pay_result.get("message") or _("Payment could not be started."), "error")
+    return redirect(url_for("client_portal.view_invoice", invoice_id=invoice_id))
+
+
+@client_portal_bp.route("/client-portal/payment/success")
+def payment_success():
+    """Client portal payment return URL"""
+    result = check_client_portal_access()
+    if not isinstance(result, Client):
+        return result
+
+    invoice_id = request.args.get("invoice_id", type=int)
+    if not invoice_id:
+        flash(_("Invalid payment return."), "error")
+        return redirect(url_for("client_portal.invoices"))
+
+    invoice = Invoice.query.get_or_404(invoice_id)
+    if invoice.client_id != result.id:
+        abort(404)
+
+    checkout = CheckoutService()
+    gateway = checkout.get_checkout_gateway()
+    token = request.args.get("token")
+    if gateway and gateway.provider == "paypal" and token:
+        capture_result = checkout.capture_paypal_return(gateway, token, invoice_id)
+        if not capture_result.get("success"):
+            flash(_("Payment capture failed. Please contact support."), "error")
+            return redirect(url_for("client_portal.view_invoice", invoice_id=invoice_id))
+
+    flash(_("Thank you! Your payment has been received."), "success")
+    return redirect(url_for("client_portal.view_invoice", invoice_id=invoice_id))
 
 
 # ==================== Project Comments ====================
