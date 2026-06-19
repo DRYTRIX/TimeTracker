@@ -114,9 +114,23 @@ def upgrade():
     op.create_index("ix_workflow_templates_is_public", "workflow_templates", ["is_public"])
     op.create_index("ix_workflow_templates_created_by", "workflow_templates", ["created_by"])
 
-    # Seed templates using first admin user if available
+    # Seed templates using first admin user if available (is_admin is a model property, not a column)
     conn = op.get_bind()
-    admin_row = conn.execute(sa.text("SELECT id FROM users WHERE is_admin = true ORDER BY id LIMIT 1")).fetchone()
+    admin_row = conn.execute(
+        sa.text(
+            """
+            SELECT u.id FROM users u
+            WHERE u.role = 'admin'
+               OR EXISTS (
+                   SELECT 1 FROM user_roles ur
+                   JOIN roles r ON r.id = ur.role_id
+                   WHERE ur.user_id = u.id AND r.name IN ('admin', 'super_admin')
+               )
+            ORDER BY u.id
+            LIMIT 1
+            """
+        )
+    ).fetchone()
     if not admin_row:
         admin_row = conn.execute(sa.text("SELECT id FROM users ORDER BY id LIMIT 1")).fetchone()
     if admin_row:
