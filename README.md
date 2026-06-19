@@ -90,6 +90,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.8.4
+
+**Patch (5.8.4):** **Workflow template migration** — migration 161 no longer fails on PostgreSQL when seeding starter workflow templates. See [CHANGELOG.md](CHANGELOG.md#584---2026-06-19).
+
 ### ✨ Highlights of v5.8.3
 
 **Patch (5.8.3):** **Peppol bridge** — self-hosted adapter with setup wizard. **Payments** — provider registry and unified checkout. **Workflows** — template library and event bridge. **Analytics** — profitability dashboard and utilization forecast. **Desktop/mobile** — tray minimize, shortcuts, invoice detail screen, and expanded finance APIs. See [CHANGELOG.md](CHANGELOG.md#583---2026-06-19).
