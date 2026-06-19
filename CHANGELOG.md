@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.8.4] - 2026-06-19
+
+### Fixed
+
+- **Workflow template migration** — Migration 161 no longer queries `users.is_admin` (a model property, not a database column), fixing PostgreSQL deploy failures when seeding starter workflow templates.
+
+### Documentation
+
+- **Version** — Documented release **5.8.4** to match `setup.py` (single source of truth for the application version).
+
 ## [5.8.3] - 2026-06-19
 
 ### Added
