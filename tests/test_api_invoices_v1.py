@@ -70,8 +70,62 @@ def project(app, client_model):
     return p
 
 
+@pytest.fixture
+def other_user(app):
+    u = User(username="otheruser", email="other@example.com", role="user")
+    u.is_active = True
+    db.session.add(u)
+    db.session.commit()
+    return u
+
+
+@pytest.fixture
+def other_token(app, other_user):
+    token, plain = ApiToken.create_token(
+        user_id=other_user.id, name="Other Token", scopes="read:invoices,write:invoices"
+    )
+    db.session.add(token)
+    db.session.commit()
+    return plain
+
+
+@pytest.fixture
+def admin_user(app):
+    u = User(username="adminuser", email="admin@example.com", role="admin")
+    u.is_active = True
+    db.session.add(u)
+    db.session.commit()
+    return u
+
+
+@pytest.fixture
+def admin_token(app, admin_user):
+    token, plain = ApiToken.create_token(
+        user_id=admin_user.id, name="Admin Token", scopes="read:invoices,write:invoices"
+    )
+    db.session.add(token)
+    db.session.commit()
+    return plain
+
+
 def _auth_header(token):
     return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+
+def _create_draft_invoice(client, token, project, client_model):
+    """Create a draft invoice via the API and return its id."""
+    due = (date.today() + timedelta(days=14)).isoformat()
+    payload = {
+        "project_id": project.id,
+        "client_id": client_model.id,
+        "client_name": client_model.name,
+        "client_email": client_model.email,
+        "due_date": due,
+        "currency_code": "EUR",
+    }
+    r = client.post("/api/v1/invoices", headers=_auth_header(token), json=payload)
+    assert r.status_code == 201, r.get_json()
+    return r.get_json()["invoice"]["id"]
 
 
 def test_list_invoices_empty(client, api_token):
@@ -123,3 +177,89 @@ def test_create_get_update_cancel_invoice(client, api_token, user, project, clie
     db.session.expire_all()
     inv_obj = Invoice.query.get(invoice_id)
     assert inv_obj.status == "cancelled"
+
+
+# --- Access control on invoice detail (regression guard against data leak) ---
+
+
+def test_get_invoice_forbidden_for_other_user(client, api_token, other_token, project, client_model):
+    invoice_id = _create_draft_invoice(client, api_token, project, client_model)
+    r = client.get(f"/api/v1/invoices/{invoice_id}", headers=_auth_header(other_token))
+    assert r.status_code == 403
+
+
+def test_get_invoice_allowed_for_admin(client, api_token, admin_token, project, client_model):
+    invoice_id = _create_draft_invoice(client, api_token, project, client_model)
+    r = client.get(f"/api/v1/invoices/{invoice_id}", headers=_auth_header(admin_token))
+    assert r.status_code == 200
+    assert r.get_json()["invoice"]["id"] == invoice_id
+
+
+def test_get_invoice_not_found(client, api_token):
+    r = client.get("/api/v1/invoices/999999", headers=_auth_header(api_token))
+    assert r.status_code == 404
+
+
+# --- PUT /invoices/<id>/items ---
+
+
+def test_set_invoice_items_happy_path(client, api_token, project, client_model):
+    invoice_id = _create_draft_invoice(client, api_token, project, client_model)
+    payload = {
+        "items": [
+            {"description": "Consulting", "quantity": 2, "unit_price": 100},
+            {"description": "Design", "quantity": 1, "unit_price": 50},
+        ]
+    }
+    r = client.put(f"/api/v1/invoices/{invoice_id}/items", headers=_auth_header(api_token), json=payload)
+    assert r.status_code == 200, r.get_json()
+    detail = r.get_json()["invoice"]
+    assert len(detail["items"]) == 2
+
+    # Verify totals were recalculated and persisted
+    db.session.expire_all()
+    inv = Invoice.query.get(invoice_id)
+    assert float(inv.subtotal) == 250.0
+
+
+def test_set_invoice_items_skips_blank_descriptions(client, api_token, project, client_model):
+    invoice_id = _create_draft_invoice(client, api_token, project, client_model)
+    payload = {"items": [{"description": "   ", "quantity": 1, "unit_price": 10}]}
+    r = client.put(f"/api/v1/invoices/{invoice_id}/items", headers=_auth_header(api_token), json=payload)
+    assert r.status_code == 200
+    assert r.get_json()["invoice"]["items"] == []
+
+
+def test_set_invoice_items_rejects_non_list(client, api_token, project, client_model):
+    invoice_id = _create_draft_invoice(client, api_token, project, client_model)
+    r = client.put(
+        f"/api/v1/invoices/{invoice_id}/items", headers=_auth_header(api_token), json={"items": "nope"}
+    )
+    assert r.status_code == 400
+
+
+def test_set_invoice_items_forbidden_for_other_user(client, api_token, other_token, project, client_model):
+    invoice_id = _create_draft_invoice(client, api_token, project, client_model)
+    payload = {"items": [{"description": "X", "quantity": 1, "unit_price": 1}]}
+    r = client.put(f"/api/v1/invoices/{invoice_id}/items", headers=_auth_header(other_token), json=payload)
+    assert r.status_code == 403
+
+
+def test_set_invoice_items_not_found(client, api_token):
+    payload = {"items": [{"description": "X", "quantity": 1, "unit_price": 1}]}
+    r = client.put("/api/v1/invoices/999999/items", headers=_auth_header(api_token), json=payload)
+    assert r.status_code == 404
+
+
+# --- GET /invoices/<id>/pdf (access-control branches; PDF rendering not exercised) ---
+
+
+def test_export_invoice_pdf_forbidden_for_other_user(client, api_token, other_token, project, client_model):
+    invoice_id = _create_draft_invoice(client, api_token, project, client_model)
+    r = client.get(f"/api/v1/invoices/{invoice_id}/pdf", headers=_auth_header(other_token))
+    assert r.status_code == 403
+
+
+def test_export_invoice_pdf_not_found(client, api_token):
+    r = client.get("/api/v1/invoices/999999/pdf", headers=_auth_header(api_token))
+    assert r.status_code == 404

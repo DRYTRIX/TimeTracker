@@ -16,7 +16,26 @@ on:
   workflow_dispatch:
 
 jobs:
+  test-desktop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        working-directory: desktop
+        run: npm ci
+
+      - name: Run desktop tests
+        working-directory: desktop
+        run: npm test
+
   build-windows:
+    needs: test-desktop
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -50,6 +69,7 @@ jobs:
           path: desktop/dist/*.exe
 
   build-linux:
+    needs: test-desktop
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -81,6 +101,7 @@ jobs:
             desktop/dist/*.deb
 
   build-macos:
+    needs: test-desktop
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
