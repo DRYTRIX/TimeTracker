@@ -23,6 +23,8 @@ from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
 from werkzeug.utils import secure_filename
 
+import requests
+
 import app as app_module
 from app import db, limiter
 from app.config.analytics_defaults import get_analytics_config
@@ -1658,6 +1660,133 @@ def admin_ldap_test():
     from app.services.ldap_service import LDAPService
 
     return jsonify(LDAPService.test_connection())
+
+
+@admin_bp.route("/admin/peppol/setup-wizard", methods=["GET"])
+@login_required
+@admin_or_permission_required("manage_settings")
+def admin_peppol_setup_wizard():
+    """Guided Peppol setup wizard for self-hosted deployments (bridge-based)."""
+    settings_obj = Settings.get_settings()
+
+    # Show a short list of recent invoices for test send (admin-only view).
+    invoices = (
+        Invoice.query.order_by(Invoice.id.desc()).limit(20).all()
+        if getattr(current_user, "is_admin", False)
+        else []
+    )
+
+    peppol_env_enabled = (os.getenv("PEPPOL_ENABLED", "false") or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+    return render_template(
+        "admin/peppol_setup_wizard.html",
+        settings=settings_obj,
+        peppol_env_enabled=peppol_env_enabled,
+        invoices=invoices,
+    )
+
+
+@admin_bp.route("/admin/peppol/setup-wizard/check-bridge", methods=["POST"])
+@limiter.limit("15 per minute")
+@login_required
+@admin_or_permission_required("manage_settings")
+def admin_peppol_setup_wizard_check_bridge():
+    """Check that the Peppol bridge is reachable and credentials look valid."""
+    data = request.get_json() or {}
+    bridge_base_url = (data.get("bridge_base_url") or "").strip().rstrip("/")
+    bridge_token = (data.get("bridge_token") or "").strip()
+    if not bridge_base_url:
+        return jsonify({"ok": False, "error": "Missing bridge_base_url"}), 400
+
+    headers = {"Accept": "application/json"}
+    if bridge_token:
+        headers["Authorization"] = f"Bearer {bridge_token}"
+
+    timeout_s = 5
+    try:
+        health = requests.get(f"{bridge_base_url}/health", headers=headers, timeout=timeout_s)
+        if health.status_code >= 400:
+            return jsonify({"ok": False, "error": f"Bridge /health returned HTTP {health.status_code}: {health.text}"}), 400
+        health_json = health.json()
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"Failed to reach bridge /health: {e}"}), 400
+
+    try:
+        test = requests.post(f"{bridge_base_url}/test", headers=headers, timeout=timeout_s)
+        if test.status_code >= 400:
+            return jsonify({"ok": False, "error": f"Bridge /test returned HTTP {test.status_code}: {test.text}", "health": health_json}), 400
+        test_json = test.json()
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"Failed to call bridge /test: {e}", "health": health_json}), 400
+
+    return jsonify({"ok": True, "health": health_json, "test": test_json})
+
+
+@admin_bp.route("/admin/peppol/setup-wizard/apply", methods=["POST"])
+@limiter.limit("20 per minute")
+@login_required
+@admin_or_permission_required("manage_settings")
+def admin_peppol_setup_wizard_apply():
+    """Apply Peppol settings for Generic transport to point at the bridge."""
+    data = request.get_json() or {}
+    bridge_base_url = (data.get("bridge_base_url") or "").strip().rstrip("/")
+    bridge_token = (data.get("bridge_token") or "").strip()
+    provider_label = (data.get("provider_label") or "generic").strip() or "generic"
+
+    sender_endpoint_id = (data.get("sender_endpoint_id") or "").strip()
+    sender_scheme_id = (data.get("sender_scheme_id") or "").strip()
+    sender_country = (data.get("sender_country") or "").strip()
+
+    if not bridge_base_url:
+        return jsonify({"ok": False, "error": "Missing bridge_base_url"}), 400
+    if not sender_endpoint_id or not sender_scheme_id:
+        return jsonify({"ok": False, "error": "Missing sender endpoint_id/scheme_id"}), 400
+
+    settings_obj = Settings.get_settings()
+    settings_obj.peppol_enabled = True
+    settings_obj.peppol_transport_mode = "generic"
+    settings_obj.peppol_provider = provider_label
+    settings_obj.peppol_sender_endpoint_id = sender_endpoint_id
+    settings_obj.peppol_sender_scheme_id = sender_scheme_id
+    settings_obj.peppol_sender_country = sender_country
+
+    settings_obj.peppol_access_point_url = f"{bridge_base_url}/send"
+    if bridge_token:
+        settings_obj.set_secret("peppol_access_point_token", bridge_token)
+
+    if not safe_commit("admin_peppol_setup_wizard_apply"):
+        return jsonify({"ok": False, "error": "Database error while saving settings"}), 500
+
+    return jsonify({"ok": True, "message": "Peppol settings saved", "peppol_access_point_url": settings_obj.peppol_access_point_url})
+
+
+@admin_bp.route("/admin/peppol/setup-wizard/send-test", methods=["POST"])
+@limiter.limit("10 per minute")
+@login_required
+@admin_or_permission_required("manage_settings")
+def admin_peppol_setup_wizard_send_test():
+    """Send a selected invoice via Peppol using current settings (end-to-end smoke test)."""
+    data = request.get_json() or {}
+    invoice_id = data.get("invoice_id")
+    try:
+        invoice_id_int = int(invoice_id)
+    except Exception:
+        return jsonify({"ok": False, "error": "Invalid invoice_id"}), 400
+
+    invoice = Invoice.query.get(invoice_id_int)
+    if not invoice:
+        return jsonify({"ok": False, "error": "Invoice not found"}), 404
+
+    try:
+        from app.services.peppol_service import PeppolService
+
+        svc = PeppolService()
+        success, tx, message = svc.send_invoice(invoice=invoice, triggered_by_user_id=current_user.id)
+        if success:
+            return jsonify({"ok": True, "message": message, "peppol_tx_id": tx.id if tx else None})
+        return jsonify({"ok": False, "error": message, "peppol_tx_id": tx.id if tx else None}), 400
+    except Exception as e:
+        current_app.logger.exception("Peppol wizard test send failed")
+        return jsonify({"ok": False, "error": f"Failed to send invoice via Peppol: {e}"}), 500
 
 
 @admin_bp.route("/admin/settings/verify-donate-hide-code", methods=["POST"])

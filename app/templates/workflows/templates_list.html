@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, empty_state %}
+
+{% block title %}{{ _('Workflow Templates') }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Workflows'), 'url': url_for('workflows.list_workflows')},
+    {'text': _('Templates')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-layer-group',
+    title_text=_('Workflow Templates'),
+    subtitle_text=_('Start from a preset automation rule'),
+    breadcrumbs=breadcrumbs,
+    actions_html=('<a href="' + url_for("workflows.create_workflow_template") + '" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>' + _('New Template') + '</a>') if current_user.is_admin else ''
+) }}
+
+{% if templates %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for template in templates %}
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6 flex flex-col">
+        <div class="flex-1">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ template.name }}</h3>
+            {% if template.category %}
+            <span class="inline-flex mt-2 px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ template.category }}</span>
+            {% endif %}
+            {% if template.description %}
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">{{ template.description }}</p>
+            {% endif %}
+            <p class="text-xs text-gray-500 mt-3">{{ _('Trigger:') }} {{ template.trigger_type }}</p>
+            <p class="text-xs text-gray-500">{{ _('Used') }} {{ template.usage_count or 0 }} {{ _('times') }}</p>
+        </div>
+        <div class="mt-4 flex gap-2 flex-wrap">
+            <form method="POST" action="{{ url_for('workflows.use_workflow_template', template_id=template.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-copy mr-1"></i>{{ _('Use Template') }}
+                </button>
+            </form>
+            {% if current_user.is_admin %}
+            <a href="{{ url_for('workflows.edit_workflow_template', template_id=template.id) }}" class="btn btn-secondary btn-sm">{{ _('Edit') }}</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+{{ empty_state(
+    icon_class='fas fa-layer-group',
+    title=_('No templates available'),
+    message=_('Ask an admin to add workflow templates to the library.')
+) }}
+{% endif %}
+{% endblock %}

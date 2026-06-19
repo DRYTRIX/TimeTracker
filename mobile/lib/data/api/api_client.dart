@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'dart:typed_data';
 import 'package:timetracker_mobile/utils/ssl/ssl_utils.dart';
 
 /// HTTP client for TimeTracker `/api/v1` (Bearer token after login).
@@ -261,6 +262,93 @@ class ApiClient {
     return Map<String, dynamic>.from(res.data ?? {});
   }
 
+  Future<Map<String, dynamic>> getInvoice(int invoiceId) async {
+    final res = await _dio.get<Map<String, dynamic>>('/api/v1/invoices/$invoiceId');
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> createInvoiceFromTimeEntries({
+    required int projectId,
+    required List<int> timeEntryIds,
+    String? issueDate,
+    String? dueDate,
+  }) async {
+    final body = <String, dynamic>{
+      'project_id': projectId,
+      'time_entry_ids': timeEntryIds,
+      if (issueDate != null) 'issue_date': issueDate,
+      if (dueDate != null) 'due_date': dueDate,
+    };
+    final res = await _dio.post<Map<String, dynamic>>('/api/v1/invoices/from-time-entries', data: body);
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> generateInvoiceFromTime(
+    int invoiceId, {
+    required List<int> timeEntryIds,
+    bool replaceExisting = true,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/invoices/$invoiceId/generate-from-time',
+      data: {'time_entry_ids': timeEntryIds, 'replace_existing': replaceExisting},
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> setInvoiceItems(int invoiceId, List<Map<String, dynamic>> items) async {
+    final res = await _dio.put<Map<String, dynamic>>(
+      '/api/v1/invoices/$invoiceId/items',
+      data: {'items': items},
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<List<int>> downloadInvoicePdf(int invoiceId) async {
+    final res = await _dio.get<List<int>>(
+      '/api/v1/invoices/$invoiceId/pdf',
+      options: Options(responseType: ResponseType.bytes),
+    );
+    _throwIfError(res);
+    final data = res.data;
+    if (data is List<int>) return data;
+    if (data is Uint8List) return data.toList();
+    return <int>[];
+  }
+
+  Future<Map<String, dynamic>> getPayments({int? invoiceId, int? page, int? perPage}) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/payments',
+      queryParameters: <String, dynamic>{
+        if (invoiceId != null) 'invoice_id': invoiceId,
+        if (page != null) 'page': page,
+        if (perPage != null) 'per_page': perPage,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> getReportSummary({
+    String? startDate,
+    String? endDate,
+    int? projectId,
+  }) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/reports/summary',
+      queryParameters: <String, dynamic>{
+        if (startDate != null) 'start_date': startDate,
+        if (endDate != null) 'end_date': endDate,
+        if (projectId != null) 'project_id': projectId,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
   Future<Map<String, dynamic>> getExpenses({
     int? page,
     int? perPage,
@@ -406,6 +494,84 @@ class ApiClient {
   Future<void> deleteTimeOffRequest(int requestId) async {
     final res = await _dio.delete<Map<String, dynamic>>('/api/v1/time-off/requests/$requestId');
     _throwIfError(res);
+  }
+
+  Future<Map<String, dynamic>> getTimeEntryApprovals() async {
+    final res = await _dio.get<Map<String, dynamic>>('/api/v1/time-entry-approvals');
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<void> approveTimeEntryApproval(int approvalId, {String? comment}) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/time-entry-approvals/$approvalId/approve',
+      data: {if (comment != null) 'comment': comment},
+    );
+    _throwIfError(res);
+  }
+
+  Future<void> rejectTimeEntryApproval(int approvalId, {required String reason}) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/time-entry-approvals/$approvalId/reject',
+      data: {'reason': reason},
+    );
+    _throwIfError(res);
+  }
+
+  Future<void> requestTimeEntryApproval(int entryId, {String? comment}) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/time-entries/$entryId/request-approval',
+      data: {if (comment != null) 'comment': comment},
+    );
+    _throwIfError(res);
+  }
+
+  Future<Map<String, dynamic>> getInvoiceApprovals() async {
+    final res = await _dio.get<Map<String, dynamic>>('/api/v1/invoice-approvals');
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> requestInvoiceApproval(int invoiceId, List<int> approverIds) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/invoices/$invoiceId/request-approval',
+      data: {'approver_ids': approverIds},
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<void> approveInvoiceApproval(int approvalId, {String? comment}) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/invoice-approvals/$approvalId/approve',
+      data: {if (comment != null) 'comment': comment},
+    );
+    _throwIfError(res);
+  }
+
+  Future<void> rejectInvoiceApproval(int approvalId, {required String reason}) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/invoice-approvals/$approvalId/reject',
+      data: {'reason': reason},
+    );
+    _throwIfError(res);
+  }
+
+  Future<void> closeTimesheetPeriod(int periodId, {String? reason}) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/timesheet-periods/$periodId/close',
+      data: {if (reason != null) 'reason': reason},
+    );
+    _throwIfError(res);
+  }
+
+  Future<List<Map<String, dynamic>>> getUsers({int perPage = 100}) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/users',
+      queryParameters: {'per_page': perPage},
+    );
+    _throwIfError(res);
+    return List<Map<String, dynamic>>.from(res.data?['users'] ?? const []);
   }
 
   void _throwIfError(Response<dynamic> res) {

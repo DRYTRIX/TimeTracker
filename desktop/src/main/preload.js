@@ -34,6 +34,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onTrayAction: (callback) => {
     ipcRenderer.on('tray:action', (event, action) => callback(action));
   },
+  onShortcutAction: (callback) => {
+    ipcRenderer.on('shortcut:action', (event, action) => callback(action));
+  },
   
   // Timer actions (to main process)
   timerStart: (projectId, taskId) => ipcRenderer.send('timer:start', { projectId, taskId }),

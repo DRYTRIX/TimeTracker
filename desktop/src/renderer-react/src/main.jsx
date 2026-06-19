@@ -45,7 +45,10 @@ function App() {
     entries: [],
     invoices: [],
     expenses: [],
+    clients: [],
     workforce: {},
+    invoiceApprovals: [],
+    timeEntryApprovals: [],
   });
   const [loading, setLoading] = useState({});
   const [filters, setFilters] = useState({ project: '', entrySearch: '' });
@@ -197,6 +200,31 @@ function App() {
     return () => window.clearInterval(id);
   }, [apiClient]);
 
+  const pushTimerStatusToTray = useCallback((timerPayload) => {
+    if (!window.electronAPI?.sendTimerStatus) return;
+    const active = Boolean(timerPayload?.active);
+    const timer = timerPayload?.timer;
+    let elapsedLabel = '';
+    if (active && timer?.start_time) {
+      const elapsed = Math.max(0, Math.floor((Date.now() - new Date(timer.start_time).getTime()) / 1000));
+      const m = Math.floor(elapsed / 60);
+      const s = elapsed % 60;
+      elapsedLabel = `${m}:${String(s).padStart(2, '0')}`;
+    }
+    window.electronAPI.sendTimerStatus({ active, timer, elapsedLabel });
+  }, []);
+
+  useEffect(() => {
+    if (!apiClient) return undefined;
+    pushTimerStatusToTray(data.timer);
+    const id = window.setInterval(() => {
+      if (data.timer?.active) {
+        pushTimerStatusToTray(data.timer);
+      }
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [apiClient, data.timer, pushTimerStatusToTray]);
+
   const handleServerTest = async () => {
     const normalized = ApiClient.normalizeBaseUrl(normalizeServerUrlInput(serverUrl));
     setAuthError('');
@@ -287,7 +315,7 @@ function App() {
     setUsername('');
     setPassword('');
     setAuthStep('server');
-    setData({ user: null, timer: null, projects: [], tasks: [], entries: [], invoices: [], expenses: [], workforce: {} });
+    setData({ user: null, timer: null, projects: [], tasks: [], entries: [], invoices: [], expenses: [], clients: [], workforce: {}, invoiceApprovals: [], timeEntryApprovals: [] });
     setConnection(defaultConnection);
   };
 
@@ -296,18 +324,32 @@ function App() {
     setLoading((s) => ({ ...s, [view]: true }));
     try {
       if (view === 'invoices') {
-        const response = await apiClient.getInvoices({ perPage: 25 });
-        setData((d) => ({ ...d, invoices: response.invoices || response.items || [] }));
+        const [response, clients] = await Promise.all([
+          apiClient.getInvoices({ perPage: 25 }),
+          apiClient.getClients({ perPage: 100 }).catch(() => ({ clients: [] })),
+        ]);
+        setData((d) => ({
+          ...d,
+          invoices: response.invoices || response.items || [],
+          clients: clients.clients || clients.items || [],
+        }));
       } else if (view === 'expenses') {
         const response = await apiClient.getExpenses({ perPage: 25 });
         setData((d) => ({ ...d, expenses: response.expenses || response.items || [] }));
       } else if (view === 'workforce') {
-        const [periods, capacity, requests] = await Promise.all([
-          apiClient.getTimesheetPeriods({}).catch(() => ({ periods: [] })),
+        const [periods, capacity, requests, invoiceApprovals, timeEntryApprovals] = await Promise.all([
+          apiClient.getTimesheetPeriods({}).catch(() => ({ timesheet_periods: [] })),
           apiClient.getCapacityReport({}).catch(() => ({ capacity: [] })),
-          apiClient.getTimeOffRequests({}).catch(() => ({ requests: [] })),
+          apiClient.getTimeOffRequests({}).catch(() => ({ time_off_requests: [] })),
+          apiClient.getInvoiceApprovals().catch(() => ({ invoice_approvals: [] })),
+          apiClient.getTimeEntryApprovals().catch(() => ({ approvals: [] })),
         ]);
-        setData((d) => ({ ...d, workforce: { periods, capacity, requests } }));
+        setData((d) => ({
+          ...d,
+          workforce: { periods, capacity, requests },
+          invoiceApprovals: invoiceApprovals.invoice_approvals || [],
+          timeEntryApprovals: timeEntryApprovals.approvals || [],
+        }));
       }
     } catch (error) {
       const classified = classifyAxiosError(error);
@@ -357,6 +399,36 @@ function App() {
       showToast(classified.message, 'error');
     }
   };
+
+  useEffect(() => {
+    if (!apiClient || !window.electronAPI) return undefined;
+    const handleTray = async (action) => {
+      if (action === 'start-timer') {
+        if (data.timer?.active) return;
+        if (data.projects?.length) {
+          await startTimer({ projectId: data.projects[0].id, taskId: null, notes: '' });
+        } else {
+          setStartTimerOpen(true);
+          window.electronAPI?.showWindow?.();
+        }
+      } else if (action === 'stop-timer' && data.timer?.active) {
+        await stopTimer();
+      }
+    };
+    const handleShortcut = async (action) => {
+      if (action !== 'toggle-timer') return;
+      if (data.timer?.active) await stopTimer();
+      else if (data.projects?.length) {
+        await startTimer({ projectId: data.projects[0].id, taskId: null, notes: '' });
+      } else {
+        setStartTimerOpen(true);
+        window.electronAPI?.showWindow?.();
+      }
+    };
+    window.electronAPI.onTrayAction?.(handleTray);
+    window.electronAPI.onShortcutAction?.(handleShortcut);
+    return undefined;
+  }, [apiClient, data.timer?.active, data.projects]);
 
   const createTimeEntry = async (payload) => {
     if (!apiClient) return;
@@ -458,9 +530,39 @@ function App() {
               loading={loading.core}
             />
           )}
-          {activeView === 'invoices' && <SimpleListView title="Invoices" items={data.invoices} loading={loading.invoices} />}
-          {activeView === 'expenses' && <SimpleListView title="Expenses" items={data.expenses} loading={loading.expenses} />}
-          {activeView === 'workforce' && <WorkforceView workforce={data.workforce} loading={loading.workforce} />}
+          {activeView === 'invoices' && (
+            <InvoicesView
+              invoices={data.invoices}
+              projects={data.projects}
+              clients={data.clients}
+              loading={loading.invoices}
+              apiClient={apiClient}
+              onRefresh={() => loadView('invoices')}
+              showToast={showToast}
+            />
+          )}
+          {activeView === 'expenses' && (
+            <ExpensesView
+              expenses={data.expenses}
+              projects={data.projects}
+              loading={loading.expenses}
+              apiClient={apiClient}
+              onRefresh={() => loadView('expenses')}
+              showToast={showToast}
+            />
+          )}
+          {activeView === 'workforce' && (
+            <WorkforceView
+              workforce={data.workforce}
+              user={data.user}
+              invoiceApprovals={data.invoiceApprovals}
+              timeEntryApprovals={data.timeEntryApprovals}
+              loading={loading.workforce}
+              apiClient={apiClient}
+              onRefresh={() => loadView('workforce')}
+              showToast={showToast}
+            />
+          )}
           {activeView === 'settings' && (
             <SettingsView
               serverUrl={serverUrl}
@@ -715,40 +817,245 @@ function EntriesView({ entries, filter, setFilter, onNew, loading }) {
   );
 }
 
-function SimpleListView({ title, items, loading }) {
+function InvoicesView({ invoices, projects, clients, loading, apiClient, onRefresh, showToast }) {
+  const [selectedId, setSelectedId] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const loadDetail = async (id) => {
+    setSelectedId(id);
+    try {
+      const res = await apiClient.getInvoice(id);
+      setDetail(res.invoice || null);
+    } catch (error) {
+      showToast(classifyAxiosError(error).message, 'error');
+    }
+  };
+
+  const createInvoice = async () => {
+    const project = projects[0];
+    const client = clients[0];
+    if (!project || !client) {
+      showToast('Need at least one project and client', 'error');
+      return;
+    }
+    setBusy(true);
+    try {
+      const due = new Date();
+      due.setDate(due.getDate() + 30);
+      await apiClient.createInvoice({
+        project_id: project.id,
+        client_id: client.id,
+        client_name: client.name,
+        due_date: due.toISOString().slice(0, 10),
+      });
+      showToast('Invoice created', 'success');
+      onRefresh();
+    } catch (error) {
+      showToast(classifyAxiosError(error).message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const updateStatus = async (status, amountPaid) => {
+    if (!selectedId) return;
+    setBusy(true);
+    try {
+      const payload = { status };
+      if (amountPaid != null) payload.amount_paid = amountPaid;
+      await apiClient.updateInvoice(selectedId, payload);
+      showToast('Invoice updated', 'success');
+      await loadDetail(selectedId);
+      onRefresh();
+    } catch (error) {
+      showToast(classifyAxiosError(error).message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const downloadPdf = async () => {
+    if (!selectedId || !detail) return;
+    try {
+      const buffer = await apiClient.downloadInvoicePdf(selectedId);
+      const blob = new Blob([buffer], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${detail.invoice_number || 'invoice'}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      showToast(classifyAxiosError(error).message, 'error');
+    }
+  };
+
   return (
-    <div className="view-stack">
-      <ViewHeader title={title} subtitle="A polished React view backed by the existing API." />
+    <div className="view-stack split-view">
+      <ViewHeader
+        title="Invoices"
+        subtitle="Create, review, and update invoices."
+        action={<button className="btn primary" onClick={createInvoice} disabled={busy}>New invoice</button>}
+      />
       {loading ? <SkeletonList /> : (
-        <div className="list-card">
-          {items?.length ? items.map((item, index) => (
-            <div className="list-row" key={item.id || index}>
-              <strong>{item.name || item.title || item.invoice_number || item.category || `Item ${index + 1}`}</strong>
-              <span>{item.status || item.amount || item.total || ''}</span>
-            </div>
-          )) : <EmptyState title={`No ${title.toLowerCase()} yet`} text="This section is ready for server data." />}
+        <div className="split-panels">
+          <div className="list-card">
+            {invoices?.length ? invoices.map((item) => (
+              <button type="button" className={`list-row buttonish ${selectedId === item.id ? 'active' : ''}`} key={item.id} onClick={() => loadDetail(item.id)}>
+                <strong>{item.invoice_number || `Invoice ${item.id}`}</strong>
+                <span>{item.status} · {item.total_amount}</span>
+              </button>
+            )) : <EmptyState title="No invoices yet" text="Create one to get started." />}
+          </div>
+          <Panel title={detail ? detail.invoice_number : 'Details'} action={detail && <button className="btn small" onClick={downloadPdf}>PDF</button>}>
+            {!detail ? <EmptyState title="Select an invoice" text="Choose a row to view line items." /> : (
+              <div className="form-grid">
+                <p>{detail.client_name} · {detail.status}</p>
+                <p>Total: {detail.total_amount}</p>
+                {(detail.items || []).map((item) => <div key={item.id} className="list-row"><span>{item.description}</span><span>{item.total_amount}</span></div>)}
+                <div className="button-row">
+                  {detail.status !== 'sent' && <button className="btn" onClick={() => updateStatus('sent')}>Mark sent</button>}
+                  {detail.status !== 'paid' && <button className="btn" onClick={() => updateStatus('paid', detail.total_amount)}>Mark paid</button>}
+                  <button className="btn ghost" onClick={onRefresh}>Refresh list</button>
+                </div>
+              </div>
+            )}
+          </Panel>
         </div>
       )}
     </div>
   );
 }
 
-function WorkforceView({ workforce, loading }) {
-  const periods = workforce?.periods?.periods || workforce?.periods?.items || [];
-  const requests = workforce?.requests?.requests || workforce?.requests?.items || [];
+function ExpensesView({ expenses, projects, loading, apiClient, onRefresh, showToast }) {
+  const [busy, setBusy] = useState(false);
+  const createExpense = async () => {
+    const project = projects[0];
+    if (!project) {
+      showToast('Need a project to log an expense', 'error');
+      return;
+    }
+    setBusy(true);
+    try {
+      await apiClient.createExpense({
+        project_id: project.id,
+        title: 'Desktop expense',
+        amount: 0,
+        expense_date: new Date().toISOString().slice(0, 10),
+        category: 'general',
+      });
+      showToast('Expense created', 'success');
+      onRefresh();
+    } catch (error) {
+      showToast(classifyAxiosError(error).message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <div className="view-stack">
-      <ViewHeader title="Workforce" subtitle="Timesheets, capacity, and leave at a glance." />
-      {loading ? <SkeletonGrid /> : (
-        <div className="stats-grid">
-          <StatCard label="Timesheet periods" value={periods.length} />
-          <StatCard label="Time-off requests" value={requests.length} />
-          <StatCard label="Capacity rows" value={(workforce?.capacity?.capacity || workforce?.capacity?.items || []).length} />
+      <ViewHeader title="Expenses" subtitle="Track project expenses." action={<button className="btn primary" onClick={createExpense} disabled={busy}>New expense</button>} />
+      {loading ? <SkeletonList /> : (
+        <div className="list-card">
+          {expenses?.length ? expenses.map((item) => (
+            <div className="list-row" key={item.id}>
+              <strong>{item.title || item.category || `Expense ${item.id}`}</strong>
+              <span>{item.amount} · {item.expense_date || item.status}</span>
+            </div>
+          )) : <EmptyState title="No expenses yet" text="Create one from a project." />}
         </div>
       )}
     </div>
   );
 }
+
+function WorkforceView({ workforce, user, invoiceApprovals, timeEntryApprovals, loading, apiClient, onRefresh, showToast }) {
+  const periods = workforce?.periods?.timesheet_periods || workforce?.periods?.periods || workforce?.periods?.items || [];
+  const requests = workforce?.requests?.time_off_requests || workforce?.requests?.requests || workforce?.requests?.items || [];
+  const isAdmin = user?.is_admin;
+  const canApprove = isAdmin || ['admin', 'owner', 'manager', 'approver'].includes(String(user?.role || '').toLowerCase());
+
+  const act = async (fn, success) => {
+    try {
+      await fn();
+      showToast(success, 'success');
+      onRefresh();
+    } catch (error) {
+      showToast(classifyAxiosError(error).message, 'error');
+    }
+  };
+
+  return (
+    <div className="view-stack">
+      <ViewHeader title="Workforce" subtitle="Timesheets, approvals, and leave." action={<button className="btn small" onClick={onRefresh}>Refresh</button>} />
+      {loading ? <SkeletonGrid /> : (
+        <>
+          {(invoiceApprovals.length > 0 || timeEntryApprovals.length > 0) && canApprove && (
+            <Panel title="Approvals inbox">
+              {invoiceApprovals.map((a) => (
+                <div className="list-row" key={`inv-${a.id}`}>
+                  <span>Invoice {a.invoice_number || a.invoice_id}</span>
+                  <div className="button-row">
+                    <button className="btn small" onClick={() => act(() => apiClient.approveInvoiceApproval(a.id), 'Approved')}>Approve</button>
+                    <button className="btn small danger" onClick={() => act(() => apiClient.rejectInvoiceApproval(a.id, 'Rejected'), 'Rejected')}>Reject</button>
+                  </div>
+                </div>
+              ))}
+              {timeEntryApprovals.map((a) => (
+                <div className="list-row" key={`te-${a.id}`}>
+                  <span>Time entry #{a.time_entry_id}</span>
+                  <div className="button-row">
+                    <button className="btn small" onClick={() => act(() => apiClient.approveTimeEntryApproval(a.id), 'Approved')}>Approve</button>
+                    <button className="btn small danger" onClick={() => act(() => apiClient.rejectTimeEntryApproval(a.id, 'Rejected'), 'Rejected')}>Reject</button>
+                  </div>
+                </div>
+              ))}
+            </Panel>
+          )}
+          <div className="stats-grid">
+            <StatCard label="Timesheet periods" value={periods.length} />
+            <StatCard label="Time-off requests" value={requests.length} />
+            <StatCard label="Capacity rows" value={(workforce?.capacity?.capacity || workforce?.capacity?.items || []).length} />
+          </div>
+          <Panel title="Timesheet periods">
+            {periods.map((period) => (
+              <div className="list-row" key={period.id}>
+                <span>{period.period_start} – {period.period_end} ({period.status})</span>
+                <div className="button-row">
+                  {period.status === 'draft' && <button className="btn small" onClick={() => act(() => apiClient.submitTimesheetPeriod(period.id), 'Submitted')}>Submit</button>}
+                  {canApprove && period.status === 'submitted' && (
+                    <>
+                      <button className="btn small" onClick={() => act(() => apiClient.approveTimesheetPeriod(period.id), 'Approved')}>Approve</button>
+                      <button className="btn small danger" onClick={() => act(() => apiClient.rejectTimesheetPeriod(period.id, 'Rejected'), 'Rejected')}>Reject</button>
+                    </>
+                  )}
+                  {isAdmin && period.status === 'approved' && (
+                    <button className="btn small" onClick={() => act(() => apiClient.closeTimesheetPeriod(period.id), 'Closed')}>Close</button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </Panel>
+          <Panel title="Time-off requests">
+            {requests.map((req) => (
+              <div className="list-row" key={req.id}>
+                <span>{req.leave_type_name || 'Leave'} · {req.status}</span>
+                {canApprove && req.status === 'submitted' && (
+                  <div className="button-row">
+                    <button className="btn small" onClick={() => act(() => apiClient.approveTimeOffRequest(req.id), 'Approved')}>Approve</button>
+                    <button className="btn small danger" onClick={() => act(() => apiClient.rejectTimeOffRequest(req.id), 'Rejected')}>Reject</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </Panel>
+        </>
+      )}
+    </div>
+  );
+}
+
 
 function SettingsView(props) {
   const {

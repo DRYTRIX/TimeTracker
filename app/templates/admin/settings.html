@@ -317,7 +317,12 @@
 
             <!-- Peppol e-Invoicing -->
             <div id="section-peppol" class="border-b border-border-light dark:border-border-dark pb-6">
-                <h2 class="text-lg font-semibold mb-4">Peppol e-Invoicing</h2>
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <h2 class="text-lg font-semibold">Peppol e-Invoicing</h2>
+                    <a href="{{ url_for('admin.admin_peppol_setup_wizard') }}" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition">
+                        <i class="fas fa-magic mr-2"></i>Setup wizard
+                    </a>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="md:col-span-2">
                         <label for="peppol_enabled_mode" class="form-label">Enable Peppol sending</label>

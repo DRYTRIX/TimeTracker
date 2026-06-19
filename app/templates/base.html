@@ -502,7 +502,7 @@
             </div>
             <nav class="flex-1">
                 {% set ep = request.endpoint or '' %}
-                {% set work_open = (ep.startswith('projects.') or ep.startswith('tasks.') or ep.startswith('issues.') or ep.startswith('timer.') or ep.startswith('time_approvals.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') or ep.startswith('project_templates.') or ep.startswith('gantt.') or ep.startswith('workforce.')) and ep != 'timer.manual_entry' and ep != 'timer.time_entries_overview' %}
+                {% set work_open = (ep.startswith('projects.') or ep.startswith('tasks.') or ep.startswith('issues.') or ep.startswith('timer.') or ep.startswith('time_approvals.') or ep.startswith('workflows.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') or ep.startswith('project_templates.') or ep.startswith('gantt.') or ep.startswith('workforce.')) and ep != 'timer.manual_entry' and ep != 'timer.time_entries_overview' %}
                 {% set calendar_open = ep.startswith('calendar.') %}
                 {% set finance_open = ep.startswith('reports.') or ep.startswith('invoices.') or ep.startswith('recurring_invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('mileage.') or ep.startswith('per_diem.') or ep.startswith('budget_alerts.') or ep.startswith('invoice_approvals.') or ep.startswith('payment_gateways.') or ep.startswith('scheduled_reports.') or ep.startswith('custom_reports.') %}
                 {% set crm_open = ep.startswith('clients.') or ep.startswith('quotes.') or ep.startswith('contacts.') or ep.startswith('deals.') or ep.startswith('leads.') %}
@@ -611,6 +611,7 @@
                             {% set nav_active_issues = ep.startswith('issues.') %}
                             {% set nav_active_kanban = ep.startswith('kanban.') %}
                             {% set nav_active_templates = ep.startswith('time_entry_templates.') %}
+                            {% set nav_active_workflows = ep.startswith('workflows.') %}
                             {% set nav_active_goals = ep.startswith('weekly_goals.') %}
                             {% set nav_active_project_templates = ep.startswith('project_templates.') %}
                             {% set nav_active_workforce = ep.startswith('workforce.') %}
@@ -675,6 +676,13 @@
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_templates %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('time_entry_templates.list_templates') }}">
                                     <i class="fas fa-clipboard-list w-4 mr-2"></i>{{ _('Time Entry Templates') }}
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if is_module_enabled('workflows') and current_user.ui_show_workflows %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if nav_active_workflows %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('workflows.list_workflows') }}">
+                                    <i class="fas fa-sitemap w-4 mr-2"></i>{{ _('Workflows') }}
                                 </a>
                             </li>
                             {% endif %}

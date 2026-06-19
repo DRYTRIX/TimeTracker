@@ -1,13 +1,15 @@
 # CalDAV Calendar Integration
 
-The CalDAV integration allows you to import calendar events from CalDAV-compatible servers (such as Zimbra, Nextcloud, or ownCloud) as time entries in TimeTracker.
+The CalDAV integration allows you to import calendar events from CalDAV-compatible servers (such as Zimbra, Nextcloud, or ownCloud) into TimeTracker as **calendar events** (timed and all-day).
 
 ## Features
 
 - **Calendar Discovery**: Automatically discover available calendars on your CalDAV server
-- **Event Import**: Import calendar events (VEVENT) as time entries
+- **Event Import**: Import calendar events (VEVENT), including all-day events, as `CalendarEvent` records
+- **Export / bidirectional sync**: Optional export of local calendar events and time entries to CalDAV
 - **Project Matching**: Automatically match events to projects based on event titles
-- **Idempotent Sync**: Prevents duplicate imports using event UIDs
+- **Idempotent Sync**: Prevents duplicate imports using event UIDs; updates existing imports on re-sync
+- **Auto-sync**: Configurable interval (minutes) via scheduled integration sync
 - **Flexible Configuration**: Support for both server URL (with discovery) and direct calendar URL
 
 ## Supported Servers

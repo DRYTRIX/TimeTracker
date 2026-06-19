@@ -95,7 +95,7 @@ from .webhook import Webhook, WebhookDelivery
 from .weekly_time_goal import WeeklyTimeGoal
 from .workday_session import WorkdaySession
 from .working_time_violation import WorkingTimeViolation
-from .workflow import WorkflowExecution, WorkflowRule
+from .workflow import WorkflowExecution, WorkflowRule, WorkflowTemplate
 
 __all__ = [
     "User",
@@ -189,6 +189,7 @@ __all__ = [
     "IntegrationEvent",
     "IntegrationExternalEventLink",
     "WorkflowRule",
+    "WorkflowTemplate",
     "WorkflowExecution",
     "TimeEntryApproval",
     "ApprovalPolicy",

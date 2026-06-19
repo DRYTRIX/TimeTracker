@@ -12,7 +12,7 @@
 {{ page_header(
     icon_class='fas fa-calendar',
     title_text=_('CalDAV Calendar Setup'),
-    subtitle_text=_('Connect to a CalDAV server (e.g., Zimbra) to import calendar events as time entries'),
+    subtitle_text=_('Connect to a CalDAV server (e.g., Zimbra) to import calendar events'),
     breadcrumbs=breadcrumbs
 ) }}
 
@@ -142,9 +142,7 @@
                             {% endfor %}
                         </select>
                         <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
-                            {{ _('Calendar events will be imported as time entries. If a project is selected, events will be assigned to that project.') }}
-                            {{ _('If an event title contains a project name, that project will be used instead.') }}
-                            {{ _('If no project is selected, events will be imported without a project.') }}
+                            {{ _('Calendar events are imported as calendar events in TimeTracker.') }}
                         </p>
                         {% else %}
                         <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
@@ -177,6 +175,24 @@
                     </div>
                     
                     <div>
+                        <label for="sync_direction" class="block text-sm font-medium mb-2">{{ _('Sync Direction') }}</label>
+                        <select name="sync_direction" id="sync_direction"
+                                class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark">
+                            {% set current_direction = integration.config.get('sync_direction', 'calendar_to_time_tracker') if integration.config else 'calendar_to_time_tracker' %}
+                            <option value="calendar_to_time_tracker" {% if current_direction == 'calendar_to_time_tracker' %}selected{% endif %}>{{ _('Import only (Calendar → TimeTracker)') }}</option>
+                            <option value="time_tracker_to_calendar" {% if current_direction == 'time_tracker_to_calendar' %}selected{% endif %}>{{ _('Export only (TimeTracker → Calendar)') }}</option>
+                            <option value="bidirectional" {% if current_direction == 'bidirectional' %}selected{% endif %}>{{ _('Bidirectional') }}</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="sync_interval" class="block text-sm font-medium mb-2">{{ _('Auto-sync interval (minutes)') }}</label>
+                        <input type="number" name="sync_interval" id="sync_interval" min="15" max="1440"
+                               value="{{ integration.config.get('sync_interval', 60) if integration.config else 60 }}"
+                               class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark">
+                    </div>
+
+                    <div>
                         <label class="flex items-center">
                             <input type="checkbox" 
                                    name="auto_sync" 
@@ -186,7 +202,7 @@
                             <span class="text-sm">{{ _('Enable automatic sync') }}</span>
                         </label>
                         <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark ml-6">
-                            {{ _('Automatically sync calendar events every hour. You can still trigger manual syncs.') }}
+                            {{ _('Automatically sync on the interval above. You can still trigger manual syncs.') }}
                         </p>
                     </div>
                 </div>

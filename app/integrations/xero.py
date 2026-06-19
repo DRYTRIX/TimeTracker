@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional
 import requests
 
 from app.integrations.base import BaseConnector
+from app.integrations.sync_config import export_enabled, should_sync_expenses, should_sync_invoices, sync_window_start
+from app.utils.integration_metadata import get_integration_ref, set_integration_ref
 
 logger = logging.getLogger(__name__)
 
@@ -228,10 +230,13 @@ class XeroConnector(BaseConnector):
         from app.models import Expense, Invoice
 
         try:
-            tenant_id = self.integration.config.get("tenant_id")
-            if not tenant_id:
-                if self.credentials and self.credentials.extra_data:
-                    tenant_id = self.credentials.extra_data.get("tenantId")
+            config = self.integration.config or {}
+            if not export_enabled(config, "xero"):
+                return {"success": True, "synced_count": 0, "message": "Export disabled by sync_direction", "errors": []}
+
+            tenant_id = config.get("tenant_id")
+            if not tenant_id and self.credentials and self.credentials.extra_data:
+                tenant_id = self.credentials.extra_data.get("tenantId")
 
             if not tenant_id:
                 return {"success": False, "message": "Xero tenant not configured"}
@@ -242,46 +247,50 @@ class XeroConnector(BaseConnector):
 
             synced_count = 0
             errors = []
+            window_start = sync_window_start(config)
 
-            # Sync invoices (create as invoices in Xero)
-            if sync_type == "full" or sync_type == "invoices":
+            if should_sync_invoices(config, sync_type):
                 invoices = Invoice.query.filter(
-                    Invoice.status.in_(["sent", "paid"]), Invoice.created_at >= datetime.utcnow() - timedelta(days=90)
+                    Invoice.status.in_(["sent", "paid"]), Invoice.created_at >= window_start
                 ).all()
 
                 for invoice in invoices:
                     try:
+                        if get_integration_ref(invoice, "xero", "invoice_id"):
+                            continue
                         xero_invoice = self._create_xero_invoice(invoice, access_token, tenant_id)
                         if xero_invoice:
-                            # Store Xero ID in invoice metadata
-                            if not hasattr(invoice, "metadata") or not invoice.metadata:
-                                invoice.metadata = {}
-                            invoice.metadata["xero_invoice_id"] = xero_invoice.get("Invoices", [{}])[0].get("InvoiceID")
+                            invoices_payload = xero_invoice.get("Invoices") or []
+                            if invoices_payload:
+                                ext_id = invoices_payload[0].get("InvoiceID")
+                                if ext_id:
+                                    set_integration_ref(invoice, "xero", "invoice_id", str(ext_id))
                             synced_count += 1
                     except Exception as e:
                         errors.append(f"Error syncing invoice {invoice.id}: {str(e)}")
 
-            # Sync expenses (create as expenses in Xero)
-            if sync_type == "full" or sync_type == "expenses":
-                expenses = Expense.query.filter(
-                    Expense.expense_date >= datetime.utcnow().date() - timedelta(days=90)
-                ).all()
+            if should_sync_expenses(config, sync_type):
+                expense_query = Expense.query.filter(Expense.expense_date >= window_start.date())
+                if config.get("sync_approved_expenses_only", True):
+                    expense_query = expense_query.filter(Expense.status == "approved")
+                expenses = expense_query.all()
 
                 for expense in expenses:
                     try:
+                        if get_integration_ref(expense, "xero", "expense_id"):
+                            continue
                         xero_expense = self._create_xero_expense(expense, access_token, tenant_id)
                         if xero_expense:
-                            if not hasattr(expense, "metadata") or not expense.metadata:
-                                expense.metadata = {}
-                            expense.metadata["xero_expense_id"] = xero_expense.get("ExpenseClaims", [{}])[0].get(
-                                "ExpenseClaimID"
-                            )
+                            claims = xero_expense.get("ExpenseClaims") or []
+                            if claims:
+                                ext_id = claims[0].get("ExpenseClaimID")
+                                if ext_id:
+                                    set_integration_ref(expense, "xero", "expense_id", str(ext_id))
                             synced_count += 1
                     except Exception as e:
                         errors.append(f"Error syncing expense {expense.id}: {str(e)}")
 
             db.session.commit()
-
             return {"success": True, "synced_count": synced_count, "errors": errors}
 
         except Exception as e:
@@ -307,7 +316,7 @@ class XeroConnector(BaseConnector):
         # Build Xero invoice structure
         xero_invoice = {
             "Type": "ACCREC",
-            "Date": invoice.date.strftime("%Y-%m-%d") if invoice.date else datetime.utcnow().strftime("%Y-%m-%d"),
+            "Date": invoice.issue_date.strftime("%Y-%m-%d") if invoice.issue_date else datetime.utcnow().strftime("%Y-%m-%d"),
             "DueDate": (
                 invoice.due_date.strftime("%Y-%m-%d") if invoice.due_date else datetime.utcnow().strftime("%Y-%m-%d")
             ),
@@ -352,14 +361,14 @@ class XeroConnector(BaseConnector):
 
         # Try to get account code from expense category mapping or use default
         account_code = default_expense_account
-        if expense.category_id:
-            account_code = account_mapping.get(str(expense.category_id), default_expense_account)
-        elif hasattr(expense, "metadata") and expense.metadata:
-            account_code = expense.metadata.get("xero_account_code", default_expense_account)
+        if expense.category:
+            account_code = account_mapping.get(str(expense.category), account_mapping.get(expense.category, default_expense_account))
+        integration_meta = getattr(expense, "integration_metadata", None) or {}
+        if isinstance(integration_meta, dict) and integration_meta.get("xero", {}).get("account_code"):
+            account_code = integration_meta["xero"]["account_code"]
 
-        # Build Xero expense structure
         xero_expense = {
-            "Date": expense.date.strftime("%Y-%m-%d") if expense.date else datetime.utcnow().strftime("%Y-%m-%d"),
+            "Date": expense.expense_date.strftime("%Y-%m-%d") if expense.expense_date else datetime.utcnow().strftime("%Y-%m-%d"),
             "Contact": {"Name": expense.vendor or "Unknown"},
             "LineItems": [
                 {

@@ -125,10 +125,18 @@ function createTray(mainWindow) {
     tray.setToolTip(`TimeTracker - ${text}`);
   }
 
+  function updateTrayTitle(title) {
+    if (!tray || tray.isDestroyed()) return;
+    if (typeof tray.setTitle === 'function') {
+      tray.setTitle(title || '');
+    }
+  }
+
   global.updateTrayTooltip = updateTooltip;
   global.updateTrayMenu = updateTrayMenu;
+  global.updateTrayTitle = updateTrayTitle;
 
-  return { tray, updateTrayMenu, updateTooltip };
+  return { tray, updateTrayMenu, updateTooltip, updateTrayTitle };
 }
 
 function destroyTray() {

@@ -95,6 +95,11 @@ class PaymentService:
         # Emit domain event
         emit_event("payment.created", {"payment_id": payment.id, "invoice_id": invoice_id, "amount": float(amount)})
 
+        if status == "completed" and invoice.payment_status == "fully_paid":
+            from app.utils.workflow_bridge import fire_invoice_paid_workflow
+
+            fire_invoice_paid_workflow(invoice, received_by)
+
         # Notify client about payment received
         if invoice.client_id and status == "completed":
             try:

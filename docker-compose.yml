@@ -118,6 +118,29 @@ services:
       retries: 3
       start_period: 40s
 
+  # Optional: Peppol Bridge (adapter) for self-hosted Peppol e-invoicing.
+  # Configure via Admin → System Settings → Peppol → Setup wizard.
+  peppol-bridge:
+    build:
+      context: .
+      dockerfile: peppol_bridge/Dockerfile
+    container_name: timetracker-peppol-bridge
+    environment:
+      - PEPPOL_BRIDGE_AUTH_TOKEN=${PEPPOL_BRIDGE_AUTH_TOKEN:-}
+      - PEPPOL_BRIDGE_TIMEOUT_S=30
+      # Provider preset: e-invoice.be
+      - PEPPOL_BRIDGE_PROVIDER=${PEPPOL_BRIDGE_PROVIDER:-einvoice}
+      - EINVOICE_BASE_URL=${EINVOICE_BASE_URL:-https://api.e-invoice.be}
+      - EINVOICE_API_KEY=${EINVOICE_API_KEY:-}
+      # Alternative provider: Peppyrus (free)
+      - PEPPYRUS_BASE_URL=${PEPPYRUS_BASE_URL:-https://api.peppyrus.be/v1}
+      - PEPPYRUS_API_KEY=${PEPPYRUS_API_KEY:-}
+      # generic_custom passthrough
+      - GENERIC_FORWARD_URL=${GENERIC_FORWARD_URL:-}
+      - GENERIC_FORWARD_TOKEN=${GENERIC_FORWARD_TOKEN:-}
+    ports: []
+    restart: unless-stopped
+
   # Ollama - local LLM runtime for the TimeTracker AI helper (opt-in: docker compose --profile ai up -d)
   # The app talks to it via the OpenAI-compatible endpoint at /v1/chat/completions.
   # First boot pulls the model defined by AI_MODEL (default llama3.1, ~4.7 GB).

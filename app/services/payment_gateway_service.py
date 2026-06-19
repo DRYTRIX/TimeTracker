@@ -46,7 +46,9 @@ class PaymentGatewayService:
             # For now, we'll store as JSON string
             import json
 
-            config_json = json.dumps(config)
+            from app.utils.secret_crypto import encrypt_if_possible
+
+            config_json = encrypt_if_possible(json.dumps(config))
 
             gateway = PaymentGateway(
                 name=name, provider=provider, config=config_json, is_active=True, is_test_mode=is_test_mode
@@ -200,6 +202,11 @@ class PaymentGatewayService:
                         "amount": float(transaction.amount),
                     },
                 )
+                invoice = Invoice.query.get(transaction.invoice_id)
+                if invoice and invoice.payment_status == "fully_paid":
+                    from app.utils.workflow_bridge import fire_invoice_paid_workflow
+
+                    fire_invoice_paid_workflow(invoice, invoice.created_by or 0)
             elif status == "failed":
                 emit_event(
                     WebhookEvent.PAYMENT_FAILED,
