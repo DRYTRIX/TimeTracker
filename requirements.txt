@@ -54,9 +54,9 @@ Flask-Babel==4.0.0
 Babel==2.14.0
 
 # Security
-cryptography==46.0.7
+cryptography==48.0.1
 markdown==3.8.1
-bleach==6.1.0
+bleach==6.4.0
 pyotp==2.9.0
 
 # Analytics and Monitoring
