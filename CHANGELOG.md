@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.8.3] - 2026-06-19
+
+### Added
+
+- **Peppol bridge** — Self-hosted Peppol adapter with setup wizard and provider presets; see [PEPPOL_BRIDGE.md](docs/admin/configuration/PEPPOL_BRIDGE.md).
+- **Accounting integrations** — Sync configuration and integration metadata for accounting exports.
+- **Payments** — Provider registry and unified checkout flow.
+- **Workflows** — Template library and event bridge for automation.
+- **Invoices** — Service helpers for API detail, line items, and PDF generation.
+- **Analytics** — Profitability dashboard and utilization forecast.
+- **Reports** — Invoice data source for scheduled reports.
+- **CalDAV** — All-day event handling and sync-loop prevention.
+- **Desktop app** — Minimize-to-tray, keyboard shortcuts, and richer views.
+- **Mobile app** — Invoice detail screen and expanded finance APIs.
+
+### Documentation
+
+- **Version** — Documented release **5.8.3** to match `setup.py` (single source of truth for the application version).
+
 ## [5.8.2] - 2026-06-15
 
 ### Fixed

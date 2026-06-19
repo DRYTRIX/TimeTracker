@@ -90,6 +90,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.8.3
+
+**Patch (5.8.3):** **Peppol bridge** — self-hosted adapter with setup wizard. **Payments** — provider registry and unified checkout. **Workflows** — template library and event bridge. **Analytics** — profitability dashboard and utilization forecast. **Desktop/mobile** — tray minimize, shortcuts, invoice detail screen, and expanded finance APIs. See [CHANGELOG.md](CHANGELOG.md#583---2026-06-19).
+
 ### ✨ Highlights of v5.8.2
 
 **Patch (5.8.2):** **Invoice expenses** — billable expenses from the Expenses module link to the invoice Expenses section (not invoice items), stay separate with their descriptions, and are no longer wiped when adding expenses to an existing invoice. See [CHANGELOG.md](CHANGELOG.md#582---2026-06-15).
