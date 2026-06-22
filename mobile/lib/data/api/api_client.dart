@@ -313,7 +313,7 @@ class ApiClient {
       options: Options(responseType: ResponseType.bytes),
     );
     _throwIfError(res);
-    final data = res.data;
+    final dynamic data = res.data;
     if (data is List<int>) return data;
     if (data is Uint8List) return data.toList();
     return <int>[];
