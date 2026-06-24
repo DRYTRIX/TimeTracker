@@ -394,7 +394,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
           future: _future,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const ListView(children: [SizedBox(height: 120), Center(child: CircularProgressIndicator())]);
+              return ListView(children: const [SizedBox(height: 120), Center(child: CircularProgressIndicator())]);
             }
             if (snapshot.hasError) {
               return ListView(
