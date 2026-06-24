@@ -353,6 +353,8 @@ class CalDAVClient:
                 if is_all_day:
                     from datetime import date as date_cls
 
+                    dtend = comp.get("DTEND")
+                    duration = comp.get("DURATION")
                     start_date = start
                     if dtend:
                         end_date = dtend.dt
