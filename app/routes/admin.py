@@ -1428,6 +1428,7 @@ def settings():
         settings_obj.invoice_start_number = int(invoice_start_number_form)
         settings_obj.invoice_terms = request.form.get("invoice_terms", "Payment is due within 30 days of invoice date.")
         settings_obj.invoice_notes = request.form.get("invoice_notes", "Thank you for your business!")
+        settings_obj.invoice_group_time_entries = request.form.get("invoice_group_time_entries") == "on"
 
         # Update quote defaults
         quote_prefix_form = sanitize_invoice_prefix(request.form.get("quote_prefix", ""))

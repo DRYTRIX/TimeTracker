@@ -485,6 +485,157 @@ def test_generate_from_time_links_expenses_without_creating_items(app, client, u
 
 
 @pytest.mark.routes
+def test_generate_from_time_per_entry_lines(app, client, user, project):
+    """Two entries on the same task should create separate lines when per_entry_lines is enabled."""
+    from app.models import Task
+    from factories import TimeEntryFactory
+
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user.id)
+        sess["_fresh"] = True
+
+    cl = ClientFactory(name="Per Entry Client", email="per-entry@test.com")
+    db.session.commit()
+
+    inv = InvoiceFactory(
+        invoice_number="INV-TEST-PER-ENTRY-001",
+        project_id=project.id,
+        client_name=cl.name,
+        client_id=cl.id,
+        due_date=date.today() + timedelta(days=7),
+        created_by=user.id,
+        status="draft",
+    )
+    db.session.commit()
+
+    task = Task(name="Shared Task", project_id=project.id, status="todo", created_by=user.id)
+    db.session.add(task)
+    db.session.commit()
+
+    start = datetime(2025, 6, 1, 9, 0, 0)
+    entry1 = TimeEntryFactory(
+        user_id=user.id,
+        project_id=project.id,
+        task_id=task.id,
+        start_time=start,
+        end_time=start + timedelta(hours=1),
+        notes="First detailed note",
+        billable=True,
+    )
+    entry2 = TimeEntryFactory(
+        user_id=user.id,
+        project_id=project.id,
+        task_id=task.id,
+        start_time=start + timedelta(days=1),
+        end_time=start + timedelta(days=1, hours=2),
+        notes="Second detailed note",
+        billable=True,
+    )
+    db.session.commit()
+
+    resp = client.post(
+        f"/invoices/{inv.id}/generate-from-time",
+        data={
+            "time_entries[]": [str(entry1.id), str(entry2.id)],
+            "per_entry_lines": "on",
+        },
+    )
+    assert resp.status_code == 302
+
+    inv = Invoice.query.get(inv.id)
+    items = list(inv.items)
+    assert len(items) == 2
+    descriptions = {item.description for item in items}
+    assert any("First detailed note" in d for d in descriptions)
+    assert any("Second detailed note" in d for d in descriptions)
+
+
+@pytest.mark.routes
+def test_unbilled_excludes_entries_on_current_invoice(app, client, user, project):
+    """Entries already linked to the current invoice should not appear in the picker."""
+    from app.services import InvoiceService
+    from factories import TimeEntryFactory
+
+    cl = ClientFactory(name="Current Inv Client", email="cur-inv@test.com")
+    db.session.commit()
+
+    inv = InvoiceFactory(
+        invoice_number="INV-TEST-CUR-EXCL-001",
+        project_id=project.id,
+        client_name=cl.name,
+        client_id=cl.id,
+        due_date=date.today() + timedelta(days=7),
+        created_by=user.id,
+        status="draft",
+    )
+    db.session.commit()
+
+    entry_on_invoice = TimeEntryFactory(
+        user_id=user.id,
+        project_id=project.id,
+        billable=True,
+    )
+    entry_available = TimeEntryFactory(
+        user_id=user.id,
+        project_id=project.id,
+        billable=True,
+    )
+    db.session.commit()
+
+    InvoiceItemFactory(
+        invoice_id=inv.id,
+        description="Existing hours",
+        quantity=Decimal("2.00"),
+        unit_price=Decimal("50.00"),
+        time_entry_ids=str(entry_on_invoice.id),
+    )
+    db.session.commit()
+
+    data = InvoiceService().get_unbilled_data_for_invoice(inv)
+    unbilled_ids = {e.id for e in data["time_entries"]}
+    assert entry_on_invoice.id not in unbilled_ids
+    assert entry_available.id in unbilled_ids
+    assert data["diagnostics"]["already_on_this_invoice_count"] == 1
+
+
+@pytest.mark.routes
+def test_unbilled_diagnostics_project_mismatch(app, client, user, project):
+    """Diagnostics should report unbilled hours on other client projects."""
+    from app.services import InvoiceService
+    from factories import TimeEntryFactory
+
+    cl = ClientFactory(name="Mismatch Client", email="mismatch@test.com")
+    db.session.commit()
+
+    other_project = ProjectFactory(
+        name="Other Client Project",
+        client_id=cl.id,
+        billable=True,
+        hourly_rate=Decimal("80.00"),
+    )
+    db.session.commit()
+
+    inv = InvoiceFactory(
+        invoice_number="INV-TEST-MISMATCH-001",
+        project_id=project.id,
+        client_name=cl.name,
+        client_id=cl.id,
+        due_date=date.today() + timedelta(days=7),
+        created_by=user.id,
+        status="draft",
+    )
+    db.session.commit()
+
+    TimeEntryFactory(user_id=user.id, project_id=other_project.id, billable=True)
+    db.session.commit()
+
+    data = InvoiceService().get_unbilled_data_for_invoice(inv)
+    assert data["time_entries"] == []
+    assert data["diagnostics"]["other_project_unbilled_hours"] > 0
+    assert "Other Client Project" in data["diagnostics"]["other_project_names"]
+
+
+@pytest.mark.routes
 def test_generate_from_time_applies_prepaid_hours(app, client, user):
     """Ensure prepaid hours are consumed before billing when generating invoice items."""
     from app import db

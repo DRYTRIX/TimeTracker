@@ -915,50 +915,33 @@ def generate_from_time(invoice_id):
 
         # Process time entries
         if selected_entries:
-            # Group time entries by task/project and create invoice items
+            from app.models import Settings
+            from app.utils.invoice_time_entry_items import (
+                build_invoice_items_from_entries,
+                resolve_group_time_entries_from_form,
+            )
+
             time_entries = TimeEntry.query.filter(TimeEntry.id.in_(selected_entries)).all()
 
             prepaid_allocator = PrepaidHoursAllocator(client=invoice.client, invoice=invoice)
             processed_entries = prepaid_allocator.process(time_entries)
             total_prepaid_allocated = prepaid_allocator.total_prepaid_hours_assigned
 
-            grouped_entries = {}
-            for processed in processed_entries:
-                if processed.billable_hours <= 0:
-                    continue
-
-                entry = processed.entry
-                if entry.task_id:
-                    key = f"task_{entry.task_id}"
-                    description = f"Task: {entry.task.name if entry.task else 'Unknown Task'}"
-                else:
-                    key = f"project_{entry.project_id}"
-                    description = f"Project: {entry.project.name}"
-
-                if key not in grouped_entries:
-                    grouped_entries[key] = {
-                        "description": description,
-                        "entries": [],
-                        "total_hours": Decimal("0"),
-                    }
-
-                grouped_entries[key]["entries"].append(processed)
-                grouped_entries[key]["total_hours"] += processed.billable_hours
-
-            # Create invoice items from time entries
-            for group in grouped_entries.values():
-                if group["total_hours"] <= 0:
-                    continue
-
-                hourly_rate = RateOverride.resolve_rate(invoice.project)
-
-                item = InvoiceItem(
-                    invoice_id=invoice.id,
-                    description=group["description"],
-                    quantity=group["total_hours"],
-                    unit_price=hourly_rate,
-                    time_entry_ids=",".join(str(processed.entry.id) for processed in group["entries"]),
-                )
+            settings = Settings.get_settings()
+            default_group = getattr(settings, "invoice_group_time_entries", True) if settings else True
+            group_entries = resolve_group_time_entries_from_form(
+                request.form.get("per_entry_lines") == "on",
+                default_group,
+            )
+            hourly_rate = RateOverride.resolve_rate(invoice.project)
+            items = build_invoice_items_from_entries(
+                invoice.id,
+                processed_entries,
+                hourly_rate,
+                group=group_entries,
+                project_name=invoice.project.name if invoice.project else None,
+            )
+            for item in items:
                 db.session.add(item)
 
         # Process project costs
@@ -1069,6 +1052,8 @@ def generate_from_time(invoice_id):
         prepaid_plan_hours=data["prepaid_plan_hours"],
         prepaid_reset_day=data.get("prepaid_reset_day"),
         focus=focus,
+        diagnostics=data.get("diagnostics", {}),
+        invoice_group_time_entries=data.get("invoice_group_time_entries", True),
     )
 
 

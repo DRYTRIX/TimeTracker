@@ -21,21 +21,19 @@
     <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary shrink-0">{{ _('Back to Edit') }}</a>
 </div>
 
+{% if focus == 'expenses' %}
+<div class="mb-6 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/30 p-4 text-sm text-blue-900 dark:text-blue-100">
+    <i class="fas fa-info-circle mr-2"></i>
+    {{ _('Looking for logged work hours? They are listed below under Unbilled Time Entries and appear as Invoice Items — not in the Expenses section. Expense-module records (travel, meals) are in the highlighted section.') }}
+    <a href="{{ url_for('invoices.generate_from_time', invoice_id=invoice.id) }}" class="ml-1 font-medium underline">{{ _('Open time-entry picker') }}</a>
+</div>
+{% endif %}
+
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2">
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <form method="POST" id="generateFromTimeForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                {% if focus == 'expenses' %}
-                <div class="mb-4">
-                    <button type="button" id="toggle-time-costs" class="text-sm text-primary hover:underline">
-                        <i class="fas fa-chevron-down mr-1" id="toggle-time-costs-icon"></i>
-                        <span id="toggle-time-costs-label">{{ _('Show time entries and project costs') }}</span>
-                    </button>
-                </div>
-                <div id="time-costs-sections" class="hidden mb-6 space-y-6">
-                {% endif %}
 
                 <div class="mb-6">
                     <h2 class="text-lg font-semibold mb-3">{{ _('Unbilled Time Entries') }}</h2>
@@ -86,7 +84,27 @@
                         {% endfor %}
                     </div>
                     {% else %}
-                    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No unbilled time entries found for this project.') }}</div>
+                    <div class="text-sm text-text-muted-light dark:text-text-muted-dark space-y-2">
+                        <p>{{ _('No unbilled time entries found for this project.') }}{% if invoice.project %} (<strong>{{ invoice.project.name }}</strong>){% endif %}</p>
+                        {% set diag = diagnostics or {} %}
+                        <ul class="list-disc pl-5 space-y-1">
+                            {% if diag.get('still_running_count', 0) > 0 %}
+                            <li>{{ _('%(count)s running timer(s) on this project (stop the timer first).', count=diag.still_running_count) }}</li>
+                            {% endif %}
+                            {% if diag.get('not_billable_count', 0) > 0 %}
+                            <li>{{ _('%(count)s completed entry/entries marked non-billable.', count=diag.not_billable_count) }}</li>
+                            {% endif %}
+                            {% if diag.get('already_on_this_invoice_count', 0) > 0 %}
+                            <li>{{ _('%(count)s billable entry/entries already on this invoice.', count=diag.already_on_this_invoice_count) }}</li>
+                            {% endif %}
+                            {% if diag.get('already_on_other_invoice_count', 0) > 0 %}
+                            <li>{{ _('%(count)s billable entry/entries already on another invoice for this client.', count=diag.already_on_other_invoice_count) }}</li>
+                            {% endif %}
+                            {% if diag.get('other_project_unbilled_hours', 0) > 0 %}
+                            <li>{{ _('This client has %(hours)s unbilled hours on other project(s): %(names)s. Create or edit the invoice for the correct project.', hours='%.2f'|format(diag.other_project_unbilled_hours), names=diag.other_project_names|join(', ')) }}</li>
+                            {% endif %}
+                        </ul>
+                    </div>
                     {% endif %}
                 </div>
 
@@ -108,10 +126,6 @@
                     <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No uninvoiced costs found for this project.') }}</div>
                     {% endif %}
                 </div>
-
-                {% if focus == 'expenses' %}
-                </div>
-                {% endif %}
 
                 <div id="expenses-section" class="mb-6{% if focus == 'expenses' %} rounded-xl border-2 border-amber-400 dark:border-amber-500 bg-amber-50/50 dark:bg-amber-950/20 p-4 ring-2 ring-amber-200/50 dark:ring-amber-800/50{% endif %}">
                     <h2 class="text-lg font-semibold mb-3 flex items-center">
@@ -161,6 +175,16 @@
                     {% endif %}
                 </div>
 
+                <div class="mb-6 p-4 rounded-lg border border-border-light dark:border-border-dark bg-gray-50/50 dark:bg-gray-900/30">
+                    <label class="flex items-start gap-3 cursor-pointer text-sm">
+                        <input type="checkbox" class="mt-1" name="per_entry_lines" value="on" {% if not invoice_group_time_entries %}checked{% endif %}>
+                        <span>
+                            <span class="font-medium text-text-light dark:text-text-dark">{{ _('Create one invoice line per time entry') }}</span>
+                            <span class="block text-text-muted-light dark:text-text-muted-dark mt-0.5">{{ _('Preserves individual descriptions instead of grouping by task or project.') }}</span>
+                        </span>
+                    </label>
+                </div>
+
                 <div class="mt-6 flex flex-wrap justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
                     <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
                     <button type="submit" class="btn btn-primary">{{ _('Add Selected to Invoice') }}</button>
@@ -201,10 +225,11 @@
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-3">{{ _('Tips') }}</h3>
             <ul class="list-disc pl-5 text-sm text-text-muted-light dark:text-text-muted-dark space-y-2">
+                <li>{{ _('Time entries are not expenses — they become Invoice Items (hourly work).') }}</li>
                 <li>{{ _('You can select multiple time entries, costs, expenses, and extra goods.') }}</li>
-                <li>{{ _('Time entries are grouped by task or project at item creation.') }}</li>
+                <li>{{ _('By default, time entries are grouped by task or project; enable one line per entry to keep each description.') }}</li>
                 <li>{{ _('Costs and extra goods are added as individual invoice items.') }}</li>
-                <li>{{ _('Expenses are linked to the invoice and appear in a separate section.') }}</li>
+                <li>{{ _('Expense-module records are linked to the invoice and appear in the Expenses section.') }}</li>
             </ul>
         </div>
     </div>
@@ -221,25 +246,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const expensesSection = document.getElementById('expenses-section');
     if (expensesSection) {
         expensesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    const toggleBtn = document.getElementById('toggle-time-costs');
-    const timeCostsSections = document.getElementById('time-costs-sections');
-    const toggleIcon = document.getElementById('toggle-time-costs-icon');
-    const toggleLabel = document.getElementById('toggle-time-costs-label');
-    if (toggleBtn && timeCostsSections) {
-        toggleBtn.addEventListener('click', function() {
-            const isHidden = timeCostsSections.classList.contains('hidden');
-            timeCostsSections.classList.toggle('hidden', !isHidden);
-            if (toggleIcon) {
-                toggleIcon.classList.toggle('fa-chevron-down', !isHidden);
-                toggleIcon.classList.toggle('fa-chevron-up', isHidden);
-            }
-            if (toggleLabel) {
-                toggleLabel.textContent = isHidden
-                    ? '{{ _('Hide time entries and project costs') }}'
-                    : '{{ _('Show time entries and project costs') }}';
-            }
-        });
     }
     {% endif %}
 

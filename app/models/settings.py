@@ -94,6 +94,8 @@ class Settings(db.Model):
     invoice_start_number = db.Column(db.Integer, default=1000, nullable=False)
     invoice_terms = db.Column(db.Text, default="Payment is due within 30 days of invoice date.", nullable=False)
     invoice_notes = db.Column(db.Text, default="Thank you for your business!", nullable=False)
+    # When True (default), time entries on invoices are grouped by task/project; False = one line per entry
+    invoice_group_time_entries = db.Column(db.Boolean, default=True, nullable=False)
 
     # Quote defaults
     quote_prefix = db.Column(db.String(50), default="QUO", nullable=False)
@@ -270,6 +272,7 @@ class Settings(db.Model):
         self.invoice_start_number = kwargs.get("invoice_start_number", 1000)
         self.invoice_terms = kwargs.get("invoice_terms", "Payment is due within 30 days of invoice date.")
         self.invoice_notes = kwargs.get("invoice_notes", "Thank you for your business!")
+        self.invoice_group_time_entries = kwargs.get("invoice_group_time_entries", True)
 
         # Set quote defaults
         self.quote_prefix = kwargs.get("quote_prefix", "QUO")
@@ -570,6 +573,7 @@ class Settings(db.Model):
             "invoice_start_number": self.invoice_start_number,
             "invoice_terms": self.invoice_terms,
             "invoice_notes": self.invoice_notes,
+            "invoice_group_time_entries": getattr(self, "invoice_group_time_entries", True),
             "quote_prefix": self.quote_prefix,
             "quote_number_pattern": self.quote_number_pattern,
             "quote_start_number": self.quote_start_number,

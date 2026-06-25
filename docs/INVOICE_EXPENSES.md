@@ -39,12 +39,14 @@ There are two ways to add expenses to invoices:
 #### Method 1: Generate from Time, Costs & Goods
 
 1. Open an existing invoice or create a new one
-2. Click "Generate from Time/Costs" in the Quick Actions panel
-3. In the "Uninvoiced Billable Expenses" section, select the expenses you want to add
+2. Click **Generate from Time/Costs** or **Add Time Entries** on the edit page (for logged hours), or **Add Expense** (for expense-module records)
+3. In the **Uninvoiced Billable Expenses** section, select the expenses you want to add
 4. You can also select time entries, project costs, and extra goods at the same time
-5. Click "Add Selected to Invoice"
+5. Click **Add Selected to Invoice**
 
 The selected expenses will be linked to the invoice and appear in the Expenses section.
+
+**Important:** Time entries (logged work hours) always become **Invoice Items**, not Expenses. Use **Generate from Time/Costs** for hours and **Add Expense** only for travel, meals, and other expense-module records.
 
 #### Method 2: Direct Edit
 
@@ -183,6 +185,18 @@ A: Ensure that:
 - The expenses are approved
 - The expenses are associated with the correct project
 - The expenses haven't already been invoiced
+
+**Q: I don't see billable time entries when generating from time/costs**
+
+A: Time entries are listed under **Unbilled Time Entries**, not under expenses. Ensure that:
+- The invoice project matches where time was logged
+- Entries are billable and the timer is stopped (not running)
+- Entries are not already on this or another invoice for the client
+- You opened **Generate from Time/Costs** or **Add Time Entries**, not only the expense picker
+
+**Q: Multiple time entries are merged into one line and descriptions are lost**
+
+A: On Generate from Time/Costs, enable **Create one invoice line per time entry**, or disable **Group time entries on invoices** in Admin → Settings → Invoice Defaults.
 
 **Q: The invoice total doesn't include my expense**
 
