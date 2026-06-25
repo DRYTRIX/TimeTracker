@@ -6,7 +6,7 @@ Use this as a reply to [issue #662](https://github.com/DRYTRIX/TimeTracker/issue
 
 Hi @fufiderheld — thanks for the follow-up video.
 
-The original expense-linking bug was fixed in **TimeTracker 5.8.2**. Please upgrade your Docker deployment to **5.8.4** (or at least **5.8.2**).
+The original expense-linking bug was fixed in **TimeTracker 5.8.2**. Please upgrade your Docker deployment to **5.8.5** (or at least **5.8.2**).
 
 ## Time entries vs. expenses
 

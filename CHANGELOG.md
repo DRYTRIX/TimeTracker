@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.8.5] - 2026-06-25
+
 ### Fixed
 
 - **Invoice time entries and expenses (#662)** — Clearer UX separates logged hours (Invoice Items) from expense-module records (Expenses section). Generate-from-time shows diagnostic hints when no entries are available, excludes entries already on the invoice, and aligns billed-entry detection across client invoices. Optional **one line per time entry** preserves individual descriptions; admin setting controls default grouping.
 
 - **Manual time entry task dropdown** — Fixed a JavaScript initialization error on `/timer/manual` that prevented the task list from loading when a project was selected ([#675](https://github.com/DRYTRIX/TimeTracker/issues/675)).
+
+### Documentation
+
+- **Version** — Documented release **5.8.5** to match `setup.py` (single source of truth for the application version).
 
 ## [5.8.4] - 2026-06-19
 
