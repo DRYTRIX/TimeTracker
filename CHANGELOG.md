@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Manual time entry task dropdown** — Fixed a JavaScript initialization error on `/timer/manual` that prevented the task list from loading when a project was selected ([#675](https://github.com/DRYTRIX/TimeTracker/issues/675)).
+
 ## [5.8.4] - 2026-06-19
 
 ### Fixed
