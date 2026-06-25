@@ -91,47 +91,23 @@ class InvoiceService:
         db.session.flush()
 
         # Create invoice items from time entries
-        # Group entries by task for better organization
-        grouped_entries: Dict[str, Dict[str, Any]] = {}
-        for entry in entries:
-            if entry.duration_seconds:
-                hours = Decimal(str(entry.duration_seconds / 3600))
-                if hours <= 0:
-                    continue
+        from app.models import Settings
+        from app.utils.invoice_time_entry_items import build_invoice_items_from_entries
 
-                # Group by task if available, otherwise by project
-                if entry.task_id:
-                    key = f"task_{entry.task_id}"
-                    description = f"Task: {entry.task.name if entry.task else 'Unknown Task'}"
-                else:
-                    key = f"project_{entry.project_id}"
-                    description = f"Project: {project.name}"
-
-                if key not in grouped_entries:
-                    grouped_entries[key] = {
-                        "description": description,
-                        "entries": [],
-                        "total_hours": Decimal("0"),
-                    }
-
-                grouped_entries[key]["entries"].append(entry)
-                grouped_entries[key]["total_hours"] += hours
-
-        # Create invoice items from grouped entries
-        for group in grouped_entries.values():
-            rate = project.hourly_rate or Decimal("0.00")
-
-            # Store all time entry IDs as comma-separated string
-            time_entry_ids_csv = ",".join(str(entry.id) for entry in group["entries"])
-
-            item = InvoiceItem(
-                invoice_id=invoice.id,
-                description=group["description"],
-                quantity=group["total_hours"],
-                unit_price=rate,
-                time_entry_ids=time_entry_ids_csv,
-            )
+        settings = Settings.get_settings()
+        group_entries = getattr(settings, "invoice_group_time_entries", True) if settings else True
+        rate = project.hourly_rate or Decimal("0.00")
+        items = build_invoice_items_from_entries(
+            invoice.id,
+            entries,
+            rate,
+            group=group_entries,
+            project_name=project.name,
+        )
+        for item in items:
             db.session.add(item)
+
+        grouped_entries = items  # for telemetry line_item_count
 
         # Derive subtotal/tax/total from the persisted line items. Invoice.__init__
         # ignores subtotal/tax_amount/total_amount kwargs, so the values passed to
@@ -531,32 +507,36 @@ class InvoiceService:
 
         Returns:
             dict with time_entries, grouped_time_entries, project_costs, expenses, extra_goods,
-            total_available_* totals, prepaid_summary, prepaid_plan_hours, currency.
+            total_available_* totals, prepaid_summary, prepaid_plan_hours, currency, diagnostics.
         """
-        from app.models import Expense, ExtraGood, ProjectCost, Settings
+        from app.models import Expense, ExtraGood, Project, ProjectCost, Settings
 
-        time_entries = (
-            TimeEntry.query.filter(
-                TimeEntry.project_id == invoice.project_id,
-                TimeEntry.end_time.isnot(None),
-                TimeEntry.billable == True,
-            )
-            .order_by(TimeEntry.start_time.asc())
-            .all()
+        project_id = invoice.project_id
+        client_id = invoice.client_id
+
+        billed_on_client = self._billed_time_entry_ids_for_client(client_id) if client_id else set()
+        on_this_invoice: set = set()
+        for item in invoice.items.all():
+            if not item.time_entry_ids:
+                continue
+            for part in item.time_entry_ids.split(","):
+                part = part.strip()
+                if part.isdigit():
+                    on_this_invoice.add(int(part))
+
+        all_project_entries = (
+            TimeEntry.query.filter(TimeEntry.project_id == project_id).order_by(TimeEntry.start_time.asc()).all()
         )
-        unbilled_entries = []
-        for entry in time_entries:
-            already_billed = False
-            for other_invoice in invoice.project.invoices:
-                if other_invoice.id != invoice.id:
-                    for item in other_invoice.items:
-                        if item.time_entry_ids and str(entry.id) in item.time_entry_ids.split(","):
-                            already_billed = True
-                            break
-                if already_billed:
-                    break
-            if not already_billed:
-                unbilled_entries.append(entry)
+
+        still_running = [e for e in all_project_entries if e.end_time is None]
+        not_billable = [e for e in all_project_entries if e.end_time is not None and not e.billable]
+        billable_completed = [e for e in all_project_entries if e.end_time is not None and e.billable]
+
+        already_on_this_invoice = [e for e in billable_completed if e.id in on_this_invoice]
+        already_on_other_invoice = [
+            e for e in billable_completed if e.id in billed_on_client and e.id not in on_this_invoice
+        ]
+        unbilled_entries = [e for e in billable_completed if e.id not in billed_on_client]
 
         unbilled_costs = ProjectCost.get_uninvoiced_costs(invoice.project_id)
         unbilled_expenses = Expense.get_uninvoiced_expenses(project_id=invoice.project_id)
@@ -588,10 +568,27 @@ class InvoiceService:
         total_available_expenses = sum(float(e.total_amount) for e in unbilled_expenses)
         total_available_goods = sum(float(g.total_amount) for g in project_goods)
 
+        other_project_unbilled_hours = 0.0
+        other_project_names: List[str] = []
+        if client_id and project_id:
+            other_projects = Project.query.filter(
+                Project.client_id == client_id, Project.id != project_id
+            ).all()
+            for other_project in other_projects:
+                other_entries = TimeEntry.query.filter(
+                    TimeEntry.project_id == other_project.id,
+                    TimeEntry.end_time.isnot(None),
+                    TimeEntry.billable == True,
+                ).all()
+                unbilled_other = [e for e in other_entries if e.id not in billed_on_client]
+                if unbilled_other:
+                    other_project_unbilled_hours += sum(float(e.duration_hours or 0) for e in unbilled_other)
+                    other_project_names.append(other_project.name)
+
         prepaid_summary = []
         prepaid_plan_hours = None
         if invoice.client and getattr(invoice.client, "prepaid_plan_enabled", False):
-            from app.utils.prepaid_hours_allocator import PrepaidHoursAllocator
+            from app.utils.prepaid_hours import PrepaidHoursAllocator
 
             allocator = PrepaidHoursAllocator(client=invoice.client)
             summaries = allocator.build_summary(unbilled_entries)
@@ -610,6 +607,16 @@ class InvoiceService:
 
         settings = Settings.get_settings()
         currency = settings.currency if settings else "USD"
+        invoice_group_time_entries = getattr(settings, "invoice_group_time_entries", True)
+
+        diagnostics = {
+            "still_running_count": len(still_running),
+            "not_billable_count": len(not_billable),
+            "already_on_this_invoice_count": len(already_on_this_invoice),
+            "already_on_other_invoice_count": len(already_on_other_invoice),
+            "other_project_unbilled_hours": other_project_unbilled_hours,
+            "other_project_names": other_project_names,
+        }
 
         return {
             "time_entries": unbilled_entries,
@@ -625,6 +632,8 @@ class InvoiceService:
             "prepaid_plan_hours": prepaid_plan_hours,
             "currency": currency,
             "prepaid_reset_day": invoice.client.prepaid_reset_day if invoice.client else None,
+            "diagnostics": diagnostics,
+            "invoice_group_time_entries": invoice_group_time_entries,
         }
 
     def _time_entry_hours_decimal(self, entry: TimeEntry) -> Decimal:
@@ -995,8 +1004,12 @@ class InvoiceService:
         time_entry_ids: List[int],
         is_admin: bool = False,
         replace_existing: bool = True,
+        group: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """Add grouped line items from billable time entries to an existing invoice."""
+        from app.models import Settings
+        from app.utils.invoice_time_entry_items import build_invoice_items_from_entries
+
         invoice = self.invoice_repo.get_by_id(invoice_id)
         if not invoice:
             return {"success": False, "message": "Invoice not found", "error": "not_found"}
@@ -1020,35 +1033,19 @@ class InvoiceService:
         if replace_existing:
             invoice.items.delete()
 
-        grouped_entries: Dict[str, Dict[str, Any]] = {}
-        for entry in entries:
-            if not entry.duration_seconds:
-                continue
-            hours = Decimal(str(entry.duration_seconds / 3600))
-            if hours <= 0:
-                continue
-            if entry.task_id:
-                key = f"task_{entry.task_id}"
-                description = f"Task: {entry.task.name if entry.task else 'Unknown Task'}"
-            else:
-                key = f"project_{entry.project_id}"
-                description = f"Project: {project.name}"
-            if key not in grouped_entries:
-                grouped_entries[key] = {"description": description, "entries": [], "total_hours": Decimal("0")}
-            grouped_entries[key]["entries"].append(entry)
-            grouped_entries[key]["total_hours"] += hours
-
+        settings = Settings.get_settings()
+        group_entries = (
+            group if group is not None else getattr(settings, "invoice_group_time_entries", True) if settings else True
+        )
         rate = project.hourly_rate or Decimal("0.00")
-        for group in grouped_entries.values():
-            if group["total_hours"] <= 0:
-                continue
-            item = InvoiceItem(
-                invoice_id=invoice.id,
-                description=group["description"],
-                quantity=group["total_hours"],
-                unit_price=rate,
-                time_entry_ids=",".join(str(e.id) for e in group["entries"]),
-            )
+        items = build_invoice_items_from_entries(
+            invoice.id,
+            entries,
+            rate,
+            group=group_entries,
+            project_name=project.name,
+        )
+        for item in items:
             db.session.add(item)
 
         invoice.calculate_totals()

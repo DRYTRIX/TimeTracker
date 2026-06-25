@@ -290,6 +290,15 @@
                         <label for="invoice_notes" class="form-label">Default Invoice Notes</label>
                         <textarea name="invoice_notes" id="invoice_notes" rows="3" class="form-input">{{ settings.invoice_notes }}</textarea>
                     </div>
+                    <div class="md:col-span-2">
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="checkbox" name="invoice_group_time_entries" id="invoice_group_time_entries" {% if getattr(settings, 'invoice_group_time_entries', True) %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 mt-1">
+                            <span>
+                                <span class="form-label mb-0">{{ _('Group time entries on invoices') }}</span>
+                                <span class="block text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('When enabled, multiple time entries on the same task/project become one invoice line. Disable to default to one line per entry.') }}</span>
+                            </span>
+                        </label>
+                    </div>
                 </div>
             </div>
 

@@ -220,6 +220,7 @@ document.addEventListener('DOMContentLoaded', async function(){
     const startTime = document.getElementById('start_time');
     const endTime = document.getElementById('end_time');
     const workedTime = document.getElementById('worked_time');
+    const form = document.getElementById('manualEntryForm');
     // Only auto-fill start/end if user isn't trying to do duration-only.
     const hasWorkedPrefill = !!(workedTime && String(workedTime.value || '').trim());
     if (!hasWorkedPrefill) {
@@ -533,7 +534,6 @@ document.addEventListener('DOMContentLoaded', async function(){
     
     // Form validation: ensure either project or client is selected and validate time range / duration-only
     // Use capture phase to run before other handlers
-    const form = document.getElementById('manualEntryForm');
     if (form) {
         // Store original button state to restore if needed
         const submitBtn = form.querySelector('button[type="submit"]');

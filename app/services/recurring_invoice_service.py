@@ -113,34 +113,19 @@ class RecurringInvoiceService:
         if not unbilled_entries:
             return
 
+        from app.models import Settings
         from app.models.rate_override import RateOverride
+        from app.utils.invoice_time_entry_items import build_invoice_items_from_entries
 
-        grouped_entries = {}
-        for entry in unbilled_entries:
-            if entry.task_id:
-                key = f"task_{entry.task_id}"
-                description = f"Task: {entry.task.name if entry.task else 'Unknown Task'}"
-            else:
-                key = f"project_{entry.project_id}"
-                description = f"Project: {entry.project.name}"
-
-            if key not in grouped_entries:
-                grouped_entries[key] = {
-                    "description": description,
-                    "entries": [],
-                    "total_hours": Decimal("0"),
-                }
-            grouped_entries[key]["entries"].append(entry)
-            grouped_entries[key]["total_hours"] += entry.duration_hours
-
+        settings = Settings.get_settings()
+        group_entries = getattr(settings, "invoice_group_time_entries", True) if settings else True
         hourly_rate = RateOverride.resolve_rate(recurring_invoice.project)
-        for group in grouped_entries.values():
-            if group["total_hours"] > 0:
-                item = InvoiceItem(
-                    invoice_id=invoice.id,
-                    description=group["description"],
-                    quantity=group["total_hours"],
-                    unit_price=hourly_rate,
-                    time_entry_ids=",".join(str(e.id) for e in group["entries"]),
-                )
-                db.session.add(item)
+        items = build_invoice_items_from_entries(
+            invoice.id,
+            unbilled_entries,
+            hourly_rate,
+            group=group_entries,
+            project_name=recurring_invoice.project.name if recurring_invoice.project else None,
+        )
+        for item in items:
+            db.session.add(item)
