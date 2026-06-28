@@ -22,6 +22,7 @@ from .custom_field_definition import CustomFieldDefinition
 from .custom_report import CustomReportConfig
 from .deal import Deal
 from .deal_activity import DealActivity
+from .deleted_username import DeletedUsername
 from .donation_interaction import DonationInteraction
 from .expense import Expense
 from .expense_category import ExpenseCategory
@@ -176,6 +177,7 @@ __all__ = [
     "ContactCommunication",
     "Deal",
     "DealActivity",
+    "DeletedUsername",
     "Lead",
     "LeadActivity",
     "ProjectTemplate",

@@ -78,12 +78,17 @@
                 {% endif %}
             </div>
             
-            <!-- View Details Link -->
-            <div class="mt-6 pt-4 border-t border-border-light dark:border-border-dark">
+            <!-- View Details Links -->
+            <div class="mt-6 pt-4 border-t border-border-light dark:border-border-dark space-y-2">
                 <a href="{{ url_for('client_portal.time_entries', project_id=stat.project.id) }}" 
                    class="w-full inline-flex items-center justify-center px-4 py-2 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-colors group">
                     <span>{{ _('View Time Entries') }}</span>
                     <i class="fas fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform"></i>
+                </a>
+                <a href="{{ url_for('client_portal.project_comments', project_id=stat.project.id) }}"
+                   class="w-full inline-flex items-center justify-center px-4 py-2 bg-secondary-200 hover:bg-secondary-300 dark:bg-secondary-700 dark:hover:bg-secondary-600 text-secondary-900 dark:text-secondary-100 font-medium rounded-lg transition-colors group">
+                    <span>{{ _('Comments') }}</span>
+                    <i class="fas fa-comments ml-2 group-hover:translate-x-1 transition-transform"></i>
                 </a>
             </div>
         </div>

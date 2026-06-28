@@ -13,7 +13,7 @@
 {{ page_header(
     icon_class='fas fa-check-circle',
     title_text=_('Approval Details'),
-    subtitle_text=_('Time Entry') }} #{{ approval.time_entry_id }},
+    subtitle_text=_('Time Entry') ~ ' #' ~ approval.time_entry_id,
     breadcrumbs=breadcrumbs
 ) }}
 

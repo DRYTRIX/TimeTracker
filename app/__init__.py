@@ -541,6 +541,46 @@ def create_app(config=None):
 
         return safe_query(lambda: User.query.get(user_id_int), default=None)
 
+    @app.before_request
+    def restrict_portal_only_users():
+        """Redirect portal-only users away from the main application UI."""
+        try:
+            from flask_login import current_user
+
+            if not getattr(current_user, "is_authenticated", False):
+                return
+
+            from app.models import User
+
+            user = User.query.get(current_user.id)
+            if not user or not getattr(user, "is_active", True):
+                return
+            if not getattr(user, "portal_only", False):
+                return
+            if not user.is_client_portal_user:
+                return
+
+            endpoint = request.endpoint or ""
+            if endpoint.startswith("client_portal."):
+                return
+            if endpoint in {
+                "auth.logout",
+                "auth.change_password",
+                "auth.two_factor",
+                "auth.two_factor_setup",
+                "static",
+                "setup.initial_setup",
+                "main.health_check",
+                "main.readiness_check",
+            }:
+                return
+            if request.path.startswith("/static/") or request.path.startswith("/client-portal"):
+                return
+
+            return redirect(url_for("client_portal.dashboard"))
+        except Exception:
+            pass
+
     # Check if initial setup is required (skip for certain routes)
     @app.before_request
     def check_setup_required():

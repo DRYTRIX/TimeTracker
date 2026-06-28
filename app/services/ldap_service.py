@@ -13,6 +13,7 @@ from flask import current_app
 from app import db
 from app.models import User
 from app.utils.db import safe_commit
+from app.utils.deleted_usernames import is_username_reserved
 
 logger = logging.getLogger(__name__)
 
@@ -294,6 +295,9 @@ class LDAPService:
 
         user = User.query.filter_by(email=email).first() if email else None
         if not user:
+            if is_username_reserved(username):
+                logger.warning("LDAP user create blocked: username reserved after deletion")
+                return None
             role_name = "admin" if is_admin_member else "user"
             user = User(username=username, role=role_name, email=email, full_name=full_name)
             user.auth_provider = "ldap"

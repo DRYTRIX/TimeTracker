@@ -25,12 +25,12 @@ class PeppyrusProvider(ProviderBase):
         self.timeout_s = timeout_s
 
     def _headers(self) -> Dict[str, str]:
-        return {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        return {"X-Api-Key": self.api_key, "Content-Type": "application/json"}
 
     def test_credentials(self) -> Dict[str, Any]:
         url = f"{self.base_url}/organization/info"
         try:
-            resp = requests.get(url, headers={"Authorization": f"Bearer {self.api_key}"}, timeout=self.timeout_s)
+            resp = requests.get(url, headers=self._headers(), timeout=self.timeout_s)
         except Exception as e:
             raise ProviderError(f"Failed to reach Peppyrus: {e}") from e
         if resp.status_code >= 400:

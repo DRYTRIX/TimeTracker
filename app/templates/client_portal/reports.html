@@ -16,6 +16,29 @@
     breadcrumbs=breadcrumbs
 ) }}
 
+<!-- Date range and export controls -->
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg p-4 mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex flex-wrap gap-2">
+            {% for days in [7, 30, 90, 365] %}
+            <a href="{{ url_for('client_portal.reports', days=days) }}"
+               class="px-4 py-2 rounded-lg font-medium text-sm transition-colors
+               {% if date_range_days == days %}
+               bg-primary text-white shadow-md
+               {% else %}
+               bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700
+               {% endif %}">
+                {{ (_('Last %(days)s days') % {'days': days}) }}
+            </a>
+            {% endfor %}
+        </div>
+        <a href="{{ url_for('client_portal.reports', days=date_range_days, format='csv') }}"
+           class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors shadow-md">
+            <i class="fas fa-download mr-2"></i>{{ _('Download CSV') }}
+        </a>
+    </div>
+</div>
+
 <!-- Enhanced Summary Cards -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border border-green-200 dark:border-green-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
@@ -36,7 +59,7 @@
             <div>
                 <p class="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">{{ _('Total Invoiced') }}</p>
                 <p class="text-3xl font-bold text-blue-900 dark:text-blue-100">{{ "%.2f"|format(invoice_summary.total) }}</p>
-                <p class="text-xs text-blue-600/70 dark:text-blue-400/70 mt-1">EUR</p>
+                <p class="text-xs text-blue-600/70 dark:text-blue-400/70 mt-1">{{ report_currency or 'EUR' }}</p>
             </div>
             <div class="bg-blue-500/10 dark:bg-blue-400/10 p-4 rounded-full">
                 <i class="fas fa-file-invoice text-blue-600 dark:text-blue-400 text-3xl"></i>
@@ -49,7 +72,7 @@
             <div>
                 <p class="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-1">{{ _('Paid') }}</p>
                 <p class="text-3xl font-bold text-emerald-900 dark:text-emerald-100">{{ "%.2f"|format(invoice_summary.paid) }}</p>
-                <p class="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-1">EUR</p>
+                <p class="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-1">{{ report_currency or 'EUR' }}</p>
             </div>
             <div class="bg-emerald-500/10 dark:bg-emerald-400/10 p-4 rounded-full">
                 <i class="fas fa-check-circle text-emerald-600 dark:text-emerald-400 text-3xl"></i>
@@ -62,7 +85,7 @@
             <div>
                 <p class="text-sm font-medium text-amber-600 dark:text-amber-400 mb-1">{{ _('Outstanding') }}</p>
                 <p class="text-3xl font-bold text-amber-900 dark:text-amber-100">{{ "%.2f"|format(invoice_summary.unpaid) }}</p>
-                <p class="text-xs text-amber-600/70 dark:text-amber-400/70 mt-1">EUR</p>
+                <p class="text-xs text-amber-600/70 dark:text-amber-400/70 mt-1">{{ report_currency or 'EUR' }}</p>
             </div>
             <div class="bg-amber-500/10 dark:bg-amber-400/10 p-4 rounded-full">
                 <i class="fas fa-exclamation-triangle text-amber-600 dark:text-amber-400 text-3xl"></i>
@@ -175,7 +198,7 @@
             <div class="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg">
                 <i class="fas fa-calendar-alt text-green-600 dark:text-green-400"></i>
             </div>
-            <h2 class="text-xl font-bold text-text-light dark:text-text-dark">{{ _('Time by date (last 30 days)') }}</h2>
+            <h2 class="text-xl font-bold text-text-light dark:text-text-dark">{{ (_('Time by date (last %(days)s days)') % {'days': date_range_days}) }}</h2>
         </div>
     </div>
     <div class="overflow-x-auto">

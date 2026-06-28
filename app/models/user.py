@@ -97,6 +97,7 @@ class User(UserMixin, db.Model):
     client_id = db.Column(
         db.Integer, db.ForeignKey("clients.id", ondelete="SET NULL"), nullable=True, index=True
     )  # Link user to a client for portal access
+    portal_only = db.Column(db.Boolean, default=False, nullable=False)  # Restrict user to client portal UI only
 
     # Calendar item type colors (hex e.g. #3b82f6); when null, app uses defaults
     calendar_color_events = db.Column(db.String(7), nullable=True)

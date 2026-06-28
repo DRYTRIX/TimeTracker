@@ -60,7 +60,7 @@
                 {% endif %}
             </div>
             
-            <a href="{{ url_for('client_portal.download_attachment', attachment_id=attachment.id) }}" 
+            <a href="{{ url_for('client_portal.download_attachment', attachment_id=attachment.id, type=attachment.portal_attachment_type) }}" 
                target="_blank"
                class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg transition-colors shadow-md hover:shadow-lg group">
                 <i class="fas fa-download mr-2"></i>

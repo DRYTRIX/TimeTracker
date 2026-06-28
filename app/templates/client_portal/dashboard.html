@@ -15,6 +15,22 @@
     breadcrumbs=breadcrumbs
 ) }}
 
+{% if total_projects == 0 and total_invoices == 0 and total_time_entries == 0 %}
+<div class="mb-6 rounded-xl border border-primary/20 bg-primary/5 dark:bg-primary/10 p-6">
+    <div class="flex items-start gap-4">
+        <div class="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
+            <i class="fas fa-handshake text-primary text-xl"></i>
+        </div>
+        <div>
+            <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Welcome to your client portal') }}</h3>
+            <p class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">
+                {{ _('You are signed in as %(client_name)s. Projects, invoices, and time entries will appear here once your team shares them with you.', client_name=client.name) }}
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {# Customize dashboard button #}
 <div class="mb-4 flex justify-end">
     <button type="button" id="dashboard-customize-btn" class="inline-flex items-center px-4 py-2 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors text-sm font-medium">
@@ -135,7 +151,11 @@
             saveBtn.textContent = '{{ _("Saving...") }}';
             fetch(prefsUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
                 body: JSON.stringify({ widget_ids: widgetIds, widget_order: widgetIds })
             }).then(function(r) {
                 return r.json().then(function(data) {

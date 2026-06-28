@@ -59,6 +59,10 @@
 
                     <button type="submit" class="btn btn-primary w-full mt-6">{{ _('Sign in') }}</button>
                 </form>
+                <p class="mt-6 text-sm text-center text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('If you have a TimeTracker user account with portal access,') }}
+                    <a href="{{ url_for('auth.login') }}" class="text-primary hover:underline font-medium">{{ _('log in here instead') }}</a>.
+                </p>
             </div>
         </div>
     </div>

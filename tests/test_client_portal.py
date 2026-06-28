@@ -21,9 +21,13 @@ def disable_audit_logging_for_client_portal_tests(monkeypatch):
     monkeypatch.setattr("app.utils.audit.check_audit_table_exists", lambda force_check=False: False)
 
 
-def set_client_portal_access(user, client_id=None, enabled=True):
+def set_client_portal_access(user, client_id=None, enabled=True, portal_only=False):
     User.query.filter_by(id=user.id).update(
-        {"client_portal_enabled": enabled, "client_id": client_id if enabled else None},
+        {
+            "client_portal_enabled": enabled,
+            "client_id": client_id if enabled else None,
+            "portal_only": portal_only if enabled else False,
+        },
         synchronize_session=False,
     )
     db.session.commit()
@@ -336,6 +340,7 @@ class TestClientPortalRoutes:
             html = response.get_data(as_text=True)
             assert "dashboard-customize-save" in html
             assert "aria-busy" in html or "Saving" in html
+            assert "X-CSRFToken" in html
 
     def test_client_portal_projects_route(self, app, client, user, test_client):
         """Test projects route"""
@@ -628,6 +633,98 @@ class TestAdminClientPortalManagement:
 
 
 # ============================================================================
+# Portal-only and logout (issue #677)
+# ============================================================================
+
+
+@pytest.mark.routes
+@pytest.mark.integration
+class TestPortalOnlyAccess:
+    def test_portal_only_login_redirects_to_client_portal(self, app, client, user, test_client):
+        with app.app_context():
+            user = set_client_portal_access(user, test_client.id, portal_only=True)
+            user.set_password("password123")
+            db.session.commit()
+            username = user.username
+
+        resp = client.post(
+            "/login",
+            data={"username": username, "password": "password123"},
+            follow_redirects=False,
+        )
+        assert resp.status_code in (302, 303)
+        assert "/client-portal" in resp.headers.get("Location", "")
+
+    def test_portal_only_user_blocked_from_main_app(self, app, client, user, test_client):
+        with app.app_context():
+            user = set_client_portal_access(user, test_client.id, portal_only=True)
+            user.set_password("password123")
+            db.session.commit()
+            username = user.username
+
+        client.post(
+            "/login",
+            data={"username": username, "password": "password123"},
+            follow_redirects=True,
+        )
+        resp = client.get("/dashboard", follow_redirects=False)
+        assert resp.status_code in (302, 303)
+        assert "/client-portal" in resp.headers.get("Location", "")
+
+    def test_non_portal_only_user_can_access_main_app(self, app, client, user, test_client):
+        with app.app_context():
+            user = set_client_portal_access(user, test_client.id, portal_only=False)
+            user.set_password("password123")
+            db.session.commit()
+            username = user.username
+
+        client.post(
+            "/login",
+            data={"username": username, "password": "password123"},
+            follow_redirects=True,
+        )
+        resp = client.get("/dashboard", follow_redirects=False)
+        assert resp.status_code in (200, 302, 303)
+        if resp.status_code in (302, 303):
+            assert "/client-portal" not in resp.headers.get("Location", "")
+
+
+@pytest.mark.routes
+@pytest.mark.integration
+class TestClientPortalLogout:
+    def test_portal_logout_clears_user_session(self, app, client, user, test_client):
+        with app.app_context():
+            user = set_client_portal_access(user, test_client.id)
+
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+
+        resp = client.get("/client-portal/logout", follow_redirects=False)
+        assert resp.status_code in (302, 303)
+        assert "/login" in resp.headers.get("Location", "")
+        assert "/client-portal/login" not in resp.headers.get("Location", "")
+
+        dash = client.get("/client-portal/dashboard", follow_redirects=False)
+        assert dash.status_code in (302, 303)
+        assert "/client-portal/login" in dash.headers.get("Location", "")
+
+    def test_native_client_logout_redirects_to_portal_login(self, app, client, test_client):
+        with app.app_context():
+            test_client.portal_enabled = True
+            test_client.portal_username = "portaluser"
+            test_client.set_portal_password("password123")
+            db.session.commit()
+            client_id = test_client.id
+
+        with client.session_transaction() as sess:
+            sess["client_portal_id"] = client_id
+
+        resp = client.get("/client-portal/logout", follow_redirects=False)
+        assert resp.status_code in (302, 303)
+        assert "/client-portal/login" in resp.headers.get("Location", "")
+
+
+# ============================================================================
 # Smoke Tests
 # ============================================================================
 
@@ -798,6 +895,182 @@ class TestClientPortalReportsVisibility:
         """Reports CSV export without client portal auth returns redirect/error."""
         response = client.get("/client-portal/reports?format=csv")
         assert response.status_code in (302, 403)
+
+    def test_reports_page_has_date_range_and_csv_link(self, app, client, user, test_client):
+        """Reports page exposes date range controls and CSV download link."""
+        with app.app_context():
+            user = set_client_portal_access(user, test_client.id)
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(user.id)
+            response = client.get("/client-portal/reports?days=90")
+            assert response.status_code == 200
+            html = response.get_data(as_text=True)
+            assert "format=csv" in html
+            assert "days=7" in html or "days=90" in html
+
+
+# ============================================================================
+# Discrepancy fix regression tests
+# ============================================================================
+
+
+@pytest.mark.routes
+@pytest.mark.unit
+class TestClientPortalDiscrepancyFixes:
+    """Regression tests for client portal discrepancy fixes."""
+
+    def test_native_login_clears_stale_user_session(self, app, client, user, test_client):
+        with app.app_context():
+            test_client.portal_enabled = True
+            test_client.portal_username = "portaluser"
+            test_client.set_portal_password("password123")
+            db.session.commit()
+
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+
+        resp = client.post(
+            "/client-portal/login",
+            data={"username": "portaluser", "password": "password123"},
+            follow_redirects=False,
+        )
+        assert resp.status_code in (302, 303)
+
+        with client.session_transaction() as sess:
+            assert "client_portal_id" in sess
+            assert "_user_id" not in sess
+            assert "user_id" not in sess
+
+    def test_issues_accessible_for_user_based_auth_without_native_credentials(
+        self, app, client, user, test_client
+    ):
+        with app.app_context():
+            Client.query.filter_by(id=test_client.id).update(
+                {
+                    "portal_enabled": False,
+                    "portal_username": None,
+                    "portal_password_hash": None,
+                    "portal_issues_enabled": True,
+                },
+                synchronize_session=False,
+            )
+            db.session.commit()
+            user = set_client_portal_access(user, test_client.id)
+            user_id = user.id
+
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user_id)
+
+        response = client.get("/client-portal/issues", follow_redirects=True)
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+        assert "Issues" in html or "issues" in html.lower()
+
+    def test_inactive_client_blocked_for_user_based_auth(self, app, client, user, test_client):
+        with app.app_context():
+            Client.query.filter_by(id=test_client.id).update(
+                {"status": "inactive"},
+                synchronize_session=False,
+            )
+            db.session.commit()
+            user = set_client_portal_access(user, test_client.id)
+            user_id = user.id
+
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user_id)
+
+        response = client.get("/client-portal/dashboard", follow_redirects=False)
+        # Inactive client triggers abort(403); handler redirects unauthenticated portal context to login
+        assert response.status_code in (302, 403)
+        if response.status_code == 302:
+            assert "/client-portal/login" in response.headers.get("Location", "")
+
+    def test_mark_notification_read_redirects(self, app, client, user, test_client):
+        with app.app_context():
+            from app.models.client_notification import ClientNotification
+
+            user = set_client_portal_access(user, test_client.id)
+            user_id = user.id
+            notification = ClientNotification(
+                client_id=test_client.id,
+                type="general",
+                title="Test",
+                message="Test notification",
+            )
+            db.session.add(notification)
+            db.session.commit()
+            notification_id = notification.id
+
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user_id)
+
+        response = client.post(
+            f"/client-portal/notifications/{notification_id}/read",
+            follow_redirects=False,
+        )
+        assert response.status_code in (302, 303)
+        assert "/client-portal/notifications" in response.headers.get("Location", "")
+
+    def test_download_attachment_wrong_type_denied(self, app, client, user, test_client):
+        with app.app_context():
+            from app.models import ProjectAttachment
+
+            user = set_client_portal_access(user, test_client.id)
+            user_id = user.id
+            project = Project(name="Attachment Project", client_id=test_client.id, status="active")
+            db.session.add(project)
+            db.session.flush()
+            attachment = ProjectAttachment(
+                project_id=project.id,
+                filename="proj.txt",
+                original_filename="proj.txt",
+                file_path="uploads/proj.txt",
+                file_size=10,
+                uploaded_by=user_id,
+                is_visible_to_client=True,
+            )
+            db.session.add(attachment)
+            db.session.commit()
+            attachment_id = attachment.id
+
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user_id)
+
+        response = client.get(
+            f"/client-portal/documents/{attachment_id}/download?type=client",
+            follow_redirects=False,
+        )
+        assert response.status_code in (302, 303)
+        assert "/client-portal/documents" in response.headers.get("Location", "")
+
+    def test_approval_detail_template_compiles(self, app, test_client):
+        """Regression: approval_detail page_header macro must render without Jinja syntax errors."""
+        from types import SimpleNamespace
+
+        from flask import render_template
+
+        approval = SimpleNamespace(
+            id=1,
+            time_entry_id=42,
+            status=SimpleNamespace(value="pending"),
+            time_entry=None,
+            request_comment=None,
+            requested_at=None,
+            requester=None,
+            approved_at=None,
+            rejected_at=None,
+            approval_comment=None,
+            rejection_reason=None,
+        )
+        with app.app_context():
+            with app.test_request_context():
+                html = render_template(
+                    "client_portal/approval_detail.html",
+                    client=test_client,
+                    approval=approval,
+                )
+        assert "Approval Details" in html
+        assert "#42" in html
 
 
 # ============================================================================

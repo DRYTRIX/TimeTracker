@@ -41,7 +41,7 @@
             <div>
                 <p class="text-sm font-medium text-amber-600 dark:text-amber-400 mb-1">{{ _('Outstanding') }}</p>
                 <p class="text-2xl font-bold text-amber-900 dark:text-amber-100">{{ "%.2f"|format(unpaid_invoice_amount) }}</p>
-                <p class="text-xs text-amber-600/70 dark:text-amber-400/70 mt-1">{{ invoices[0].currency_code if invoices else 'EUR' }}</p>
+                <p class="text-xs text-amber-600/70 dark:text-amber-400/70 mt-1">{{ display_currency or 'EUR' }}</p>
             </div>
             <div class="bg-amber-500/10 dark:bg-amber-400/10 p-4 rounded-full">
                 <i class="fas fa-exclamation-triangle text-amber-600 dark:text-amber-400 text-3xl"></i>
