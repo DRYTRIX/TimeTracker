@@ -269,6 +269,14 @@ Instead of deleting users, consider:
 
 2. **Archive Projects**: Archive or complete any active projects first
 
+### Deleted username blocklist
+
+When an administrator deletes a user, the username is reserved in the `deleted_usernames` table. If **Allow Self-Registration** is enabled, that username **cannot** be recreated automatically on login (local, OIDC, or LDAP provisioning). This prevents deleted accounts from reappearing when someone signs in again on `/login`.
+
+To allow the same username again, an administrator must explicitly create the user under **Admin → Users → Create User** (admin-created accounts are not blocked).
+
+If you need to revoke access without deletion, **deactivate** the user or disable **Client Portal Access** instead.
+
 ## Future Enhancements
 
 Potential improvements for this feature:
@@ -300,6 +308,15 @@ Potential improvements for this feature:
 1. Verify you're logged in as admin
 2. Check if trying to delete your own account
 3. Verify `delete_users` permission
+
+### Issue: Deleted user logs in again and account is recreated
+
+**Cause**: Self-registration was enabled; the login page created a new account for an unknown username.
+
+**Solution**:
+1. As of the deleted-username blocklist, deleted usernames are reserved automatically
+2. Disable **Allow Self-Registration** in Admin → Settings for additional protection
+3. Prefer deactivating users instead of deleting when you only need to block access
 
 ### Issue: Permission denied
 

@@ -58,6 +58,8 @@ Environment variables:
 - `PEPPYRUS_API_KEY=...`
 - `PEPPYRUS_BASE_URL=https://api.peppyrus.be/v1` (optional; test: `https://api.test.peppyrus.be/v1`)
 
+Peppyrus authenticates API requests with the `X-Api-Key` header (not `Authorization: Bearer`).
+
 ### generic_custom (passthrough)
 
 Environment variables:

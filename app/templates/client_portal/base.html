@@ -269,7 +269,7 @@
                         {% endif %}
                     </a>
                     {% if current_client.portal_issues_enabled %}
-                    <a href="{{ url_for('client_portal.issues') }}" class="client-portal-nav-item {% if current_endpoint.startswith('client_portal.issues') %}active{% endif %}">
+                    <a href="{{ url_for('client_portal.issues') }}" class="client-portal-nav-item {% if current_endpoint in ['client_portal.issues', 'client_portal.new_issue', 'client_portal.view_issue'] %}active{% endif %}">
                         <i class="fas fa-bug mr-2"></i>{{ _('Issues') }}
                     </a>
                     {% endif %}
@@ -286,6 +286,9 @@
                         </button>
                         <div class="absolute right-0 mt-2 w-48 bg-card-light dark:bg-card-dark rounded-lg shadow-lg border border-border-light dark:border-border-dark opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                             <div class="py-1">
+                                <a href="{{ url_for('client_portal.quotes') }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark {% if current_endpoint == 'client_portal.quotes' or current_endpoint == 'client_portal.view_quote' %}text-primary font-semibold{% endif %}">
+                                    <i class="fas fa-file-signature mr-2"></i>{{ _('Quotes') }}
+                                </a>
                                 <a href="{{ url_for('client_portal.documents') }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark {% if current_endpoint == 'client_portal.documents' %}text-primary font-semibold{% endif %}">
                                     <i class="fas fa-file-alt mr-2"></i>{{ _('Documents') }}
                                 </a>
@@ -354,7 +357,7 @@
                 {% endif %}
             </a>
             {% if current_client and current_client.portal_issues_enabled %}
-            <a href="{{ url_for('client_portal.issues') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg transition-all duration-200 {% if current_endpoint.startswith('client_portal.issues') %}bg-primary/15 text-primary font-semibold shadow-sm{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark hover:translate-x-1{% endif %}">
+            <a href="{{ url_for('client_portal.issues') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg transition-all duration-200 {% if current_endpoint in ['client_portal.issues', 'client_portal.new_issue', 'client_portal.view_issue'] %}bg-primary/15 text-primary font-semibold shadow-sm{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark hover:translate-x-1{% endif %}">
                 <i class="fas fa-bug w-5 mr-3"></i>{{ _('Issues') }}
             </a>
             {% endif %}
@@ -365,6 +368,9 @@
                 {% endif %}
             </a>
             <div class="border-t border-border-light dark:border-border-dark my-3"></div>
+            <a href="{{ url_for('client_portal.quotes') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition-all duration-200 hover:translate-x-1">
+                <i class="fas fa-file-signature w-5 mr-3"></i>{{ _('Quotes') }}
+            </a>
             <a href="{{ url_for('client_portal.documents') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition-all duration-200 hover:translate-x-1">
                 <i class="fas fa-file-alt w-5 mr-3"></i>{{ _('Documents') }}
             </a>

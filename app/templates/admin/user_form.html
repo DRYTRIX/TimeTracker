@@ -83,11 +83,15 @@
             <div class="border border-border-light dark:border-border-dark rounded-lg p-4 bg-bg-secondary-light dark:bg-bg-secondary-dark">
                 <h3 class="font-semibold mb-2">{{ _('Client Portal Access') }}</h3>
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">
-                    Enable client portal access for this user. When enabled, the user will only see data for their assigned client.
+                    {{ _('For external clients who should only see invoices and projects, use Clients → Edit → Portal instead (login at /client-portal/login).') }}
+                    {{ _('This section is for internal user accounts that also need portal access.') }}
+                </p>
+                <p class="text-sm text-amber-700 dark:text-amber-400 mb-3 font-medium">
+                    {{ _('Important: Enabling Client Portal alone does not restrict main app access. You must also check "Portal only" so the user cannot use the normal TimeTracker UI.') }}
                 </p>
                 <div class="space-y-3">
                     <div class="flex items-center">
-                        <input type="checkbox" name="client_portal_enabled" id="client_portal_enabled" {% if user.client_portal_enabled %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" onchange="toggleClientSelect()">
+                        <input type="checkbox" name="client_portal_enabled" id="client_portal_enabled" {% if user.client_portal_enabled %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" onchange="toggleClientPortalOptions()">
                         <label for="client_portal_enabled" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">Enable Client Portal</label>
                     </div>
                     <div id="client_select_container" style="display: {% if user.client_portal_enabled %}block{% else %}none{% endif %};">
@@ -99,6 +103,10 @@
                             {% endfor %}
                         </select>
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">Select the client this user should have access to.</p>
+                    </div>
+                    <div id="portal_only_container" class="flex items-center" style="display: {% if user.client_portal_enabled %}flex{% else %}none{% endif %};">
+                        <input type="checkbox" name="portal_only" id="portal_only" {% if user.portal_only %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <label for="portal_only" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">{{ _('Portal only (no main app access)') }}</label>
                     </div>
                 </div>
             </div>
@@ -145,15 +153,33 @@
 </div>
 
 <script>
-function toggleClientSelect() {
+function toggleClientPortalOptions() {
     const checkbox = document.getElementById('client_portal_enabled');
-    const container = document.getElementById('client_select_container');
+    const clientContainer = document.getElementById('client_select_container');
+    const portalOnlyContainer = document.getElementById('portal_only_container');
+    const portalOnlyCheckbox = document.getElementById('portal_only');
     if (checkbox.checked) {
-        container.style.display = 'block';
+        clientContainer.style.display = 'block';
+        portalOnlyContainer.style.display = 'flex';
+        if (portalOnlyCheckbox && !portalOnlyCheckbox.dataset.touched) {
+            portalOnlyCheckbox.checked = true;
+        }
     } else {
-        container.style.display = 'none';
+        clientContainer.style.display = 'none';
+        portalOnlyContainer.style.display = 'none';
+        if (portalOnlyCheckbox) {
+            portalOnlyCheckbox.checked = false;
+        }
     }
 }
+document.addEventListener('DOMContentLoaded', function() {
+    const portalOnlyCheckbox = document.getElementById('portal_only');
+    if (portalOnlyCheckbox) {
+        portalOnlyCheckbox.addEventListener('change', function() {
+            portalOnlyCheckbox.dataset.touched = '1';
+        });
+    }
+});
 function toggleAssignedClientsSection() {
     const roleSelect = document.getElementById('role');
     const section = document.getElementById('assigned_clients_section');

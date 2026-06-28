@@ -11,7 +11,7 @@ These tests cover:
 
 import pytest
 from flask import url_for
-from app.models import User, TimeEntry, Project, Client
+from app.models import User, TimeEntry, Project, Client, Role
 from datetime import datetime, timedelta
 from decimal import Decimal
 
@@ -158,6 +158,55 @@ class TestAdminUserEditing:
             with app.app_context():
                 updated_user = User.query.get(user.id)
                 assert not updated_user.is_active
+
+
+class TestAdminUserRoleAssignment:
+    """Tests for role assignment when editing users."""
+
+    def test_edit_user_replaces_all_roles_with_selected_role(self, client, admin_user, user, app):
+        with app.app_context():
+            from app import db
+            from app.utils.permissions_seed import seed_permissions, seed_roles
+
+            seed_permissions()
+            seed_roles(silent=True)
+            db.session.expire_all()
+            user = User.query.get(user.id)
+            user_role = Role.query.filter_by(name="user").first()
+            manager_role = Role.query.filter_by(name="manager").first()
+            viewer_role = Role.query.filter_by(name="viewer").first()
+            assert user_role and manager_role and viewer_role
+
+            user.roles.clear()
+            user.roles.append(user_role)
+            user.roles.append(manager_role)
+            db.session.commit()
+            db.session.expire_all()
+            user = User.query.get(user.id)
+            assert set(user.get_role_names()) == {"user", "manager"}
+            user_id = user.id
+            username = user.username
+
+        with client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(admin_user.id)
+
+            response = client.post(
+                url_for("admin.edit_user", user_id=user_id),
+                data={
+                    "username": username,
+                    "role": "viewer",
+                    "is_active": "on",
+                },
+                follow_redirects=True,
+            )
+            assert response.status_code == 200
+
+        with app.app_context():
+            updated = User.query.get(user_id)
+            assert updated.get_role_names() == ["viewer"]
+            assert updated.has_permission("create_time_entries") is False
+            assert updated.has_permission("view_own_time_entries") is True
 
 
 class TestAdminUserPasswordReset:
@@ -345,6 +394,9 @@ class TestAdminUserDeletion:
             with app.app_context():
                 deleted_user = User.query.get(user_id)
                 assert deleted_user is None
+                from app.utils.deleted_usernames import is_username_reserved
+
+                assert is_username_reserved("deleteme") is True
 
     def test_delete_user_with_time_entries_fails(self, client, admin_user, user, test_client, test_project, app):
         """Test that deleting a user with time entries fails."""

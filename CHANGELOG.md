@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.8.6] - 2026-06-28
+
+### Added
+
+- **Portal-only users** — Internal user accounts can be restricted to the client portal via a new **Portal only** option (`users.portal_only`). Such users are redirected away from the main app UI to `/client-portal` after login. The admin user form clarifies that enabling Client Portal alone does not restrict main app access. See [CLIENT_PORTAL.md](docs/CLIENT_PORTAL.md).
+- **Deleted username blocklist** — Deleting a user now reserves the username in a new `deleted_usernames` table, preventing the account from being recreated through self-registration, OIDC, or LDAP provisioning. Admin-created accounts are exempt. See [USER_DELETION.md](docs/features/USER_DELETION.md).
+
+### Fixed
+
+- **Peppol (Peppyrus)** — Authenticate API requests with the `X-Api-Key` header instead of `Authorization: Bearer`, matching the Peppyrus API. See [PEPPOL_BRIDGE.md](docs/admin/configuration/PEPPOL_BRIDGE.md).
+- **Client portal access** — Portal access is now denied when the user or the assigned client is inactive, and native client login clears stale main-app session keys to avoid session/preference conflicts.
+- **Client portal payments** — The payment-success page now confirms based on the gateway capture or invoice payment status, showing a "processing" message when payment is not yet fully settled.
+- **Client portal documents** — Attachment downloads require an explicit `type=client|project` parameter to avoid ID collisions between the client and project attachment tables.
+- **Client portal actions** — Approvals, rejections, and project comments fall back to an auto-created portal contact when a client has none, and the notification mark-as-read flow now redirects with a flash message.
+- **Client portal currency** — Dashboard and report summaries display the invoice currency instead of assuming a fixed code.
+- **Admin user roles** — Editing a user now replaces the full role set with the selected role, preventing stale roles from lingering.
+
+### Documentation
+
+- **Version** — Documented release **5.8.6** to match `setup.py` (single source of truth for the application version).
+
 ## [5.8.5] - 2026-06-25
 
 ### Fixed

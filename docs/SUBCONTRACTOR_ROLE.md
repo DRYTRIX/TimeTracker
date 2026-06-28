@@ -8,7 +8,7 @@ The **Subcontractor** role lets you restrict specific users to only see and work
 - Confidentiality: limit visibility to only the clients a user works with
 - Multi-tenant-style usage where each user has a clear subset of clients
 
-Subcontractors use the **main application** (same UI as regular users). This is different from the **Client Portal**, which is a separate read-only portal for a single client (see [CLIENT_PORTAL.md](CLIENT_PORTAL.md)).
+Subcontractors use the **main application** (same UI as regular users). This is different from the **Client Portal**, which is a separate portal for a single client (see [CLIENT_PORTAL.md](CLIENT_PORTAL.md)).
 
 ## How It Works
 
@@ -71,6 +71,6 @@ This creates the default roles, including **Subcontractor**, and syncs permissio
 
 ## Related
 
-- [CLIENT_PORTAL.md](CLIENT_PORTAL.md) – Single-client, read-only portal (different use case).
+- [CLIENT_PORTAL.md](CLIENT_PORTAL.md) – Single-client portal with client-facing actions (different use case).
 - [ADVANCED_PERMISSIONS.md](ADVANCED_PERMISSIONS.md) – Roles and permissions overview.
 - [RBAC_PERMISSION_MODEL.md](development/RBAC_PERMISSION_MODEL.md) – Route-level access and scope-restricted users.

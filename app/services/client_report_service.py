@@ -60,11 +60,17 @@ def build_report_data(
             }
 
     # Invoice / payment summary
+    currency = "EUR"
+    for inv in invoices:
+        if getattr(inv, "currency_code", None):
+            currency = inv.currency_code
+            break
     invoice_summary = {
         "total": sum(inv.total_amount for inv in invoices),
         "paid": sum(inv.total_amount for inv in invoices if inv.payment_status == "fully_paid"),
         "unpaid": sum(inv.outstanding_amount for inv in invoices if inv.payment_status != "fully_paid"),
         "overdue": sum(inv.outstanding_amount for inv in invoices if getattr(inv, "is_overdue", False)),
+        "currency": currency,
     }
 
     # Task/status summary (tasks under client's projects)

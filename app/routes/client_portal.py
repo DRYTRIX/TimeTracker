@@ -5,7 +5,6 @@ invoices, and time entries. Uses separate authentication from regular users.
 """
 
 from datetime import date, datetime, timedelta
-from functools import wraps
 
 from flask import (
     Blueprint,
@@ -21,14 +20,12 @@ from flask import (
     url_for,
 )
 from flask_babel import gettext as _
-from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db
 from app.models import (
     DEFAULT_WIDGET_ORDER,
     VALID_WIDGET_IDS,
-    Activity,
     Client,
     ClientAttachment,
     ClientPortalDashboardPreference,
@@ -39,7 +36,6 @@ from app.models import (
     Project,
     ProjectAttachment,
     Quote,
-    TimeEntry,
     User,
 )
 from app.models.client_time_approval import ClientTimeApproval
@@ -49,9 +45,46 @@ from app.services.checkout_service import CheckoutService
 from app.services.payment_gateway_service import PaymentGatewayService
 from app.utils.backup import is_database_restore_in_progress
 from app.utils.db import safe_commit
-from app.utils.module_helpers import module_enabled
 
 client_portal_bp = Blueprint("client_portal", __name__)
+
+
+def _display_currency(invoices):
+    """Resolve a display currency code from invoice data."""
+    for invoice in invoices or []:
+        if getattr(invoice, "currency_code", None):
+            return invoice.currency_code
+    return "EUR"
+
+
+def _resolve_portal_contact(client):
+    """Return an active contact for portal actions, creating a fallback when needed."""
+    active_contacts = Contact.get_active_contacts(client.id)
+    if active_contacts:
+        return Contact.get_primary_contact(client.id) or active_contacts[0]
+
+    creator = User.query.filter_by(is_active=True).order_by(User.id).first()
+    if not creator:
+        return None
+
+    name_parts = (client.name or "Portal").strip().split(None, 1)
+    first_name = name_parts[0] if name_parts else "Portal"
+    last_name = name_parts[1] if len(name_parts) > 1 else "Contact"
+
+    contact = Contact(
+        client_id=client.id,
+        first_name=first_name,
+        last_name=last_name,
+        created_by=creator.id,
+        is_primary=True,
+        role="portal",
+        notes="Auto-created for client portal access",
+    )
+    db.session.add(contact)
+    if not safe_commit("client_portal_contact_fallback", {"client_id": client.id}):
+        db.session.rollback()
+        return None
+    return contact
 
 
 # Custom error handlers for client portal
@@ -152,7 +185,7 @@ def get_current_client():
         user_id = session.get("_user_id")
         if user_id:
             user = User.query.get(user_id)
-            if user and user.is_client_portal_user:
+            if user and user.is_active and user.is_client_portal_user and user.client and user.client.is_active:
                 return user.client
     except SQLAlchemyError:
         try:
@@ -266,11 +299,14 @@ def check_client_portal_access():
         if not user.client and user.client_id:
             # Query the client directly if relationship not loaded
             client = Client.query.get(user.client_id)
-            if not client:
+            if not client or not client.is_active:
                 abort(403)
             return client
 
         if not user.client:
+            abort(403)
+
+        if not user.client.is_active:
             abort(403)
 
         return user.client
@@ -350,6 +386,11 @@ def login():
         return render_template("client_portal/login.html")
 
     # Log in the client
+    from flask_login import logout_user
+
+    logout_user()
+    session.pop("_user_id", None)
+    session.pop("user_id", None)
     session["client_portal_id"] = client.id
     session.permanent = True
 
@@ -366,9 +407,17 @@ def login():
 @client_portal_bp.route("/client-portal/logout")
 def logout():
     """Client portal logout"""
+    from flask_login import logout_user
+
+    was_native_client = "client_portal_id" in session
     session.pop("client_portal_id", None)
+    session.pop("_user_id", None)
+    session.pop("user_id", None)
+    logout_user()
     flash(_("You have been logged out."), "info")
-    return redirect(url_for("client_portal.login"))
+    if was_native_client:
+        return redirect(url_for("client_portal.login"))
+    return redirect(url_for("auth.login"))
 
 
 @client_portal_bp.route("/client-portal/set-password", methods=["GET", "POST"])
@@ -502,6 +551,7 @@ def dashboard():
         unread_notifications_count=unread_notifications_count,
         widget_ids=widget_ids,
         widget_order=widget_order,
+        display_currency=_display_currency(portal_data["invoices"]),
     )
 
 
@@ -727,7 +777,7 @@ def issues():
     client = result
 
     # Check if issue reporting is enabled
-    if not client.has_portal_access or not client.portal_issues_enabled:
+    if not client.portal_issues_enabled:
         flash(_("Issue reporting is not available."), "error")
         return redirect(url_for("client_portal.dashboard"))
 
@@ -761,7 +811,7 @@ def new_issue():
     client = result
 
     # Check if issue reporting is enabled
-    if not client.has_portal_access or not client.portal_issues_enabled:
+    if not client.portal_issues_enabled:
         flash(_("Issue reporting is not available."), "error")
         return redirect(url_for("client_portal.dashboard"))
 
@@ -853,7 +903,7 @@ def view_issue(issue_id):
     client = result
 
     # Check if issue reporting is enabled
-    if not client.has_portal_access or not client.portal_issues_enabled:
+    if not client.portal_issues_enabled:
         flash(_("Issue reporting is not available."), "error")
         return redirect(url_for("client_portal.dashboard"))
 
@@ -949,12 +999,8 @@ def approve_time_entry(approval_id):
         flash(_("Approval not found."), "error")
         abort(404)
 
-    # Get contact ID (use primary contact or first active contact)
-    contact = (
-        Contact.get_primary_contact(client.id) or Contact.get_active_contacts(client.id)[0]
-        if Contact.get_active_contacts(client.id)
-        else None
-    )
+    # Get contact ID (use primary contact or auto-created portal fallback)
+    contact = _resolve_portal_contact(client)
     if not contact:
         flash(_("No contact found for approval."), "error")
         return redirect(url_for("client_portal.time_entry_approvals"))
@@ -995,11 +1041,7 @@ def reject_time_entry(approval_id):
         return redirect(url_for("client_portal.view_approval", approval_id=approval_id))
 
     # Get contact ID
-    contact = (
-        Contact.get_primary_contact(client.id) or Contact.get_active_contacts(client.id)[0]
-        if Contact.get_active_contacts(client.id)
-        else None
-    )
+    contact = _resolve_portal_contact(client)
     if not contact:
         flash(_("No contact found for approval."), "error")
         return redirect(url_for("client_portal.time_entry_approvals"))
@@ -1202,7 +1244,14 @@ def payment_success():
             flash(_("Payment capture failed. Please contact support."), "error")
             return redirect(url_for("client_portal.view_invoice", invoice_id=invoice_id))
 
-    flash(_("Thank you! Your payment has been received."), "success")
+    db.session.refresh(invoice)
+    if invoice.payment_status == "fully_paid":
+        flash(_("Thank you! Your payment has been received."), "success")
+    else:
+        flash(
+            _("Your payment is being processed. We will confirm once it is complete."),
+            "info",
+        )
     return redirect(url_for("client_portal.view_invoice", invoice_id=invoice_id))
 
 
@@ -1228,14 +1277,10 @@ def project_comments(project_id):
             flash(_("Comment cannot be empty."), "error")
             return redirect(url_for("client_portal.project_comments", project_id=project_id))
 
-        # Get contact for comment author
-        contact = (
-            Contact.get_primary_contact(client.id) or Contact.get_active_contacts(client.id)[0]
-            if Contact.get_active_contacts(client.id)
-            else None
-        )
+        # Get contact for comment author (or auto-created portal fallback)
+        contact = _resolve_portal_contact(client)
         if not contact:
-            flash(_("No contact found for commenting."), "error")
+            flash(_("Unable to post comment. Please contact support."), "error")
             return redirect(url_for("client_portal.project_comments", project_id=project_id))
 
         # Create comment with client contact
@@ -1309,9 +1354,10 @@ def mark_notification_read(notification_id):
 
     success = service.mark_as_read(notification_id, client.id)
     if success:
-        return jsonify({"success": True})
+        flash(_("Notification marked as read."), "success")
     else:
-        return jsonify({"success": False, "error": "Notification not found"}), 404
+        flash(_("Notification not found."), "error")
+    return redirect(url_for("client_portal.notifications"))
 
 
 @client_portal_bp.route("/client-portal/notifications/mark-all-read", methods=["POST"])
@@ -1367,6 +1413,10 @@ def documents():
     for att in project_attachments:
         if att.project_id:
             att.project = Project.query.get(att.project_id)
+        att.portal_attachment_type = "project"
+
+    for att in attachments:
+        att.portal_attachment_type = "client"
 
     # Combine and sort
     all_attachments = list(attachments) + list(project_attachments)
@@ -1393,27 +1443,14 @@ def download_attachment(attachment_id):
 
     import os
 
-    # Try client attachment first
-    attachment = ClientAttachment.query.get(attachment_id)
-    if attachment and attachment.client_id == client.id and attachment.is_visible_to_client:
-        # Get file directory - file_path is relative to static or uploads folder
-        if attachment.file_path.startswith("uploads/"):
-            file_dir = os.path.join(current_app.root_path, "..", "app/static/uploads")
-            filename = os.path.basename(attachment.file_path)
-        else:
-            file_dir = os.path.join(current_app.root_path, "static", os.path.dirname(attachment.file_path))
-            filename = os.path.basename(attachment.file_path)
+    attachment_type = request.args.get("type", "client")
+    if attachment_type not in ("client", "project"):
+        flash(_("Invalid attachment type."), "error")
+        return redirect(url_for("client_portal.documents"))
 
-        return send_from_directory(file_dir, filename, as_attachment=True, download_name=attachment.original_filename)
-
-    # Try project attachment
-    from app.models import Project, ProjectAttachment
-
-    attachment = ProjectAttachment.query.get(attachment_id)
-    if attachment:
-        project = Project.query.get(attachment.project_id)
-        if project and project.client_id == client.id and attachment.is_visible_to_client:
-            # Get file directory
+    if attachment_type == "client":
+        attachment = ClientAttachment.query.get(attachment_id)
+        if attachment and attachment.client_id == client.id and attachment.is_visible_to_client:
             if attachment.file_path.startswith("uploads/"):
                 file_dir = os.path.join(current_app.root_path, "..", "app/static/uploads")
                 filename = os.path.basename(attachment.file_path)
@@ -1424,6 +1461,21 @@ def download_attachment(attachment_id):
             return send_from_directory(
                 file_dir, filename, as_attachment=True, download_name=attachment.original_filename
             )
+    else:
+        attachment = ProjectAttachment.query.get(attachment_id)
+        if attachment:
+            project = Project.query.get(attachment.project_id)
+            if project and project.client_id == client.id and attachment.is_visible_to_client:
+                if attachment.file_path.startswith("uploads/"):
+                    file_dir = os.path.join(current_app.root_path, "..", "app/static/uploads")
+                    filename = os.path.basename(attachment.file_path)
+                else:
+                    file_dir = os.path.join(current_app.root_path, "static", os.path.dirname(attachment.file_path))
+                    filename = os.path.basename(attachment.file_path)
+
+                return send_from_directory(
+                    file_dir, filename, as_attachment=True, download_name=attachment.original_filename
+                )
 
     flash(_("Attachment not found or access denied."), "error")
     return redirect(url_for("client_portal.documents"))
@@ -1472,6 +1524,7 @@ def reports():
         time_by_date=report_data["time_by_date"],
         recent_entries=report_data["recent_entries"],
         date_range_days=date_range_days,
+        report_currency=report_data["invoice_summary"].get("currency", "EUR"),
     )
 
 
