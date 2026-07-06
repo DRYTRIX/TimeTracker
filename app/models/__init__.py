@@ -1,3 +1,12 @@
+from .attendance_compliance import (
+    AttendanceBreak,
+    AttendanceBreakType,
+    AttendanceCorrection,
+    AttendanceCorrectionStatus,
+    AttendanceDayStatus,
+    AttendanceWorkPeriod,
+    DailyAttendanceRecord,
+)
 from .activity import Activity
 from .api_idempotency_key import ApiIdempotencyKey
 from .api_token import ApiToken
@@ -133,6 +142,13 @@ __all__ = [
     "WeeklyTimeGoal",
     "WorkdaySession",
     "WorkingTimeViolation",
+    "DailyAttendanceRecord",
+    "AttendanceWorkPeriod",
+    "AttendanceBreak",
+    "AttendanceCorrection",
+    "AttendanceDayStatus",
+    "AttendanceBreakType",
+    "AttendanceCorrectionStatus",
     "Expense",
     "Permission",
     "Role",

@@ -101,10 +101,13 @@ def dashboard():
     workday_week_hours = stats.get("workday_hours", {}).get("week", 0.0)
     workday_month_hours = stats.get("workday_hours", {}).get("month", 0.0)
 
+    from app.services.attendance_compliance_service import AttendanceComplianceService
     from app.services.workday_session_service import WorkdaySessionService
     from app.services.working_time_limit_service import WorkingTimeLimitService
 
     active_workday_session = WorkdaySessionService().get_active_session(current_user.id)
+    attendance_status = AttendanceComplianceService().get_status(current_user.id)
+    attendance_break_active = attendance_status.get("break_active", False)
     pending_violations = WorkingTimeLimitService().get_pending_violations_for_user(current_user.id)
 
     # Overtime for dashboard cards (today and week)
@@ -260,6 +263,7 @@ def dashboard():
     template_data = {
         "active_timer": active_timer,
         "active_workday_session": active_workday_session,
+        "attendance_break_active": attendance_break_active,
         "workday_today_hours": workday_today_hours,
         "workday_week_hours": workday_week_hours,
         "workday_month_hours": workday_month_hours,

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{{ page_header('fas fa-edit', _('Attendance corrections'), _('Review pending correction requests.')) }}
+
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
+    <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+                <th class="px-4 py-2 text-left">{{ _('Date') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Entity') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Reason') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Requested') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-border-light dark:divide-border-dark">
+            {% for c in corrections %}
+            <tr>
+                <td class="px-4 py-3">{{ c.attendance_day.work_date|user_date if c.attendance_day else '—' }}</td>
+                <td class="px-4 py-3">{{ c.entity_type }} #{{ c.entity_id }}</td>
+                <td class="px-4 py-3">{{ c.reason }}</td>
+                <td class="px-4 py-3">{{ c.created_at|user_datetime }}</td>
+                <td class="px-4 py-3">
+                    <form method="POST" action="{{ url_for('workday.admin_review_correction', correction_id=c.id) }}" class="inline-flex gap-2">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="text" name="review_comment" placeholder="{{ _('Comment') }}" class="form-input text-xs w-32">
+                        <button type="submit" name="action" value="approve" class="btn btn-primary btn-sm">{{ _('Approve') }}</button>
+                        <button type="submit" name="action" value="reject" class="btn btn-secondary btn-sm">{{ _('Reject') }}</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="px-4 py-6 text-center">{{ _('No pending corrections.') }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

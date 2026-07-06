@@ -48,6 +48,8 @@
         {% if can_approve %}
         <a class="btn btn-secondary" href="{{ url_for('workforce.locked_periods_export_csv', start_date=cap_start.isoformat(), end_date=cap_end.isoformat()) }}">{{ _('Locked Periods CSV') }}</a>
         <a class="btn btn-secondary" href="{{ url_for('workforce.audit_events_export_csv', start_date=cap_start.isoformat(), end_date=cap_end.isoformat(), user_id=selected_user_id if current_user.is_admin else current_user.id) }}">{{ _('Audit Events CSV') }}</a>
+        <a class="btn btn-secondary" href="{{ url_for('workforce.belgium_attendance_export_csv', start_date=cap_start.isoformat(), end_date=cap_end.isoformat(), user_id=selected_user_id if current_user.is_admin else none) }}">{{ _('Belgium Attendance CSV') }}</a>
+        <a class="btn btn-secondary" href="{{ url_for('workday.admin_corrections_list') }}">{{ _('Attendance Corrections') }}</a>
         {% endif %}
     </div>
 </div>

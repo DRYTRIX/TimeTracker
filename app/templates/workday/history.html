@@ -2,28 +2,55 @@
 {% from "components/ui.html" import page_header %}
 
 {% block content %}
-{{ page_header('fas fa-history', _('Workday history'), _('Your clock-in and clock-out sessions.')) }}
+{{ page_header('fas fa-history', _('My attendance'), _('Unified daily work, break, and absence records for compliance.')) }}
 
 <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
     <table class="min-w-full text-sm">
         <thead class="bg-gray-50 dark:bg-gray-800">
             <tr>
-                <th class="px-4 py-2 text-left">{{ _('Start') }}</th>
-                <th class="px-4 py-2 text-left">{{ _('End') }}</th>
-                <th class="px-4 py-2 text-left">{{ _('Duration') }}</th>
-                <th class="px-4 py-2 text-left">{{ _('Source') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Date') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Status') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Work periods') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Breaks') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Net work') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Warnings') }}</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-border-light dark:divide-border-dark">
-            {% for s in sessions %}
+            {% for record in records %}
+            {% set day_warnings = warnings_by_date.get(record.work_date, []) %}
             <tr>
-                <td class="px-4 py-3">{{ s.start_time|user_datetime }}</td>
-                <td class="px-4 py-3">{% if s.end_time %}{{ s.end_time|user_datetime }}{% if s.auto_closed %} <span class="text-xs text-amber-600">({{ _('auto-closed') }})</span>{% endif %}{% else %}<span class="text-green-600">{{ _('Active') }}</span>{% endif %}</td>
-                <td class="px-4 py-3">{{ s.duration_formatted }}</td>
-                <td class="px-4 py-3">{{ s.source }}</td>
+                <td class="px-4 py-3 font-medium">{{ record.work_date|user_date }}</td>
+                <td class="px-4 py-3">
+                    <span class="capitalize">{{ record.status.value if record.status is not string else record.status }}</span>
+                    {% if record.leave_type %}- {{ record.leave_type.name }}{% endif %}
+                    {% if record.is_locked %}<span class="text-xs text-amber-600 ml-1">({{ _('locked') }})</span>{% endif %}
+                </td>
+                <td class="px-4 py-3">
+                    {% for p in record.work_periods %}
+                    <div>{{ p.start_time|user_datetime }}{% if p.end_time %} – {{ p.end_time|user_datetime }}{% else %} <span class="text-green-600">({{ _('active') }})</span>{% endif %}</div>
+                    {% else %}
+                    <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
+                    {% endfor %}
+                </td>
+                <td class="px-4 py-3">
+                    {% for b in record.breaks %}
+                    <div>{{ b.start_time|user_datetime }}{% if b.end_time %} – {{ b.end_time|user_datetime }}{% else %} <span class="text-amber-600">({{ _('active') }})</span>{% endif %}</div>
+                    {% else %}
+                    <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
+                    {% endfor %}
+                </td>
+                <td class="px-4 py-3">{{ "%.2f"|format((record.total_work_seconds or 0) / 3600) }}h</td>
+                <td class="px-4 py-3">
+                    {% for w in day_warnings %}
+                    <div class="text-xs text-amber-700 dark:text-amber-300">{{ w.message }}</div>
+                    {% else %}
+                    <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
+                    {% endfor %}
+                </td>
             </tr>
             {% else %}
-            <tr><td colspan="4" class="px-4 py-6 text-center">{{ _('No workday sessions yet.') }}</td></tr>
+            <tr><td colspan="6" class="px-4 py-6 text-center">{{ _('No attendance records yet.') }}</td></tr>
             {% endfor %}
         </tbody>
     </table>

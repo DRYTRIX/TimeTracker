@@ -574,6 +574,56 @@ class ApiClient {
     return List<Map<String, dynamic>>.from(res.data?['users'] ?? const []);
   }
 
+  Map<String, dynamic> _unwrapData(Map<String, dynamic>? body) {
+    if (body == null) return {};
+    final data = body['data'];
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return body;
+  }
+
+  Future<Map<String, dynamic>> getAttendanceStatus() async {
+    final res = await _dio.get<Map<String, dynamic>>('/api/v1/attendance/status');
+    _throwIfError(res);
+    return _unwrapData(res.data);
+  }
+
+  Future<Map<String, dynamic>> startWorkday({String? notes, String source = 'mobile'}) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/workday/start',
+      data: <String, dynamic>{
+        if (notes != null) 'notes': notes,
+        'source': source,
+      },
+    );
+    _throwIfError(res);
+    return _unwrapData(res.data);
+  }
+
+  Future<Map<String, dynamic>> endWorkday({String? notes}) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/workday/end',
+      data: <String, dynamic>{if (notes != null) 'notes': notes},
+    );
+    _throwIfError(res);
+    return _unwrapData(res.data);
+  }
+
+  Future<Map<String, dynamic>> startAttendanceBreak({String breakType = 'rest'}) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/attendance/break/start',
+      data: <String, dynamic>{'break_type': breakType},
+    );
+    _throwIfError(res);
+    return _unwrapData(res.data);
+  }
+
+  Future<Map<String, dynamic>> endAttendanceBreak() async {
+    final res = await _dio.post<Map<String, dynamic>>('/api/v1/attendance/break/end');
+    _throwIfError(res);
+    return _unwrapData(res.data);
+  }
+
   void _throwIfError(Response<dynamic> res) {
     final code = res.statusCode ?? 0;
     if (code >= 200 && code < 300) return;

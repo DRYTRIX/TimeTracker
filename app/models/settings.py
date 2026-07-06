@@ -173,6 +173,18 @@ class Settings(db.Model):
     hour_limit_enforcement = db.Column(db.String(20), default="soft_email", nullable=False)
     hour_limit_email_enabled = db.Column(db.Boolean, default=True, nullable=False)
 
+    # Belgium / EU attendance compliance (2027)
+    compliance_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    compliance_jurisdiction_preset = db.Column(db.String(30), default="custom", nullable=False)
+    compliance_standard_daily_hours = db.Column(db.Float, default=8.0, nullable=False)
+    compliance_standard_weekly_hours = db.Column(db.Float, default=38.0, nullable=False)
+    compliance_break_after_hours = db.Column(db.Float, default=6.0, nullable=False)
+    compliance_min_break_minutes = db.Column(db.Integer, default=15, nullable=False)
+    compliance_min_daily_rest_hours = db.Column(db.Float, default=11.0, nullable=False)
+    compliance_attendance_retention_years = db.Column(db.Integer, default=10, nullable=False)
+    compliance_require_workday_registration = db.Column(db.Boolean, default=False, nullable=False)
+    compliance_royal_decree_config = db.Column(db.JSON, nullable=True)
+
     # Default break rules for time entries (e.g. Germany: >6h = 30 min, >9h = 45 min). User can override per entry.
     break_after_hours_1 = db.Column(db.Float, nullable=True)  # e.g. 6
     break_minutes_1 = db.Column(db.Integer, nullable=True)  # e.g. 30

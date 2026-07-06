@@ -1012,6 +1012,15 @@ def check_working_time_limits():
 
         if emails_sent:
             logger.info("Sent %d working time limit notification(s)", emails_sent)
+
+        if getattr(settings, "compliance_enabled", False):
+            from app.services.attendance_compliance_service import AttendanceComplianceService
+
+            svc = AttendanceComplianceService()
+            svc.sync_all_approved_time_off()
+            today = datetime.utcnow().date()
+            svc.sync_company_holidays(today - timedelta(days=7), today + timedelta(days=365))
+
         return emails_sent
     except Exception as e:
         logger.error("Error in check_working_time_limits: %s", e)

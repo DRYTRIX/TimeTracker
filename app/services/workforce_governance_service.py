@@ -141,6 +141,9 @@ class WorkforceGovernanceService:
         if reason:
             period.close_reason = reason
         db.session.commit()
+        from app.services.attendance_compliance_service import AttendanceComplianceService
+
+        AttendanceComplianceService().lock_days_for_period(period, closer_id)
         return {"success": True, "period": period}
 
     def is_time_entry_locked(self, user_id: int, start_time: datetime, end_time: Optional[datetime] = None) -> bool:
@@ -252,6 +255,10 @@ class WorkforceGovernanceService:
         req.reviewed_by = reviewer_id
         req.review_comment = comment
         db.session.commit()
+        if approve:
+            from app.services.attendance_compliance_service import AttendanceComplianceService
+
+            AttendanceComplianceService().sync_time_off_request(req)
         return {"success": True, "request": req}
 
     def get_leave_balance(self, user_id: int) -> List[Dict[str, Any]]:
@@ -384,6 +391,11 @@ class WorkforceGovernanceService:
             or_(
                 AuditLog.entity_type.ilike("%timeentry%"),
                 AuditLog.entity_type.ilike("%timesheet%"),
+                AuditLog.entity_type.ilike("%attendance%"),
+                AuditLog.entity_type.ilike("DailyAttendanceRecord"),
+                AuditLog.entity_type.ilike("AttendanceWorkPeriod"),
+                AuditLog.entity_type.ilike("AttendanceBreak"),
+                AuditLog.entity_type.ilike("AttendanceCorrection"),
             )
         )
 

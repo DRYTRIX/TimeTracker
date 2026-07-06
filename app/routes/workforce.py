@@ -659,3 +659,45 @@ def audit_events_export_csv():
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=compliance_audit_events.csv"},
     )
+
+
+@workforce_bp.route("/workforce/reports/belgium-attendance.csv", methods=["GET"])
+@login_required
+def belgium_attendance_export_csv():
+    if not _can_approve():
+        flash(_("Access denied"), "error")
+        return redirect(url_for("workforce.dashboard"))
+
+    from app.services.attendance_compliance_service import AttendanceComplianceService
+
+    start = _parse_date(request.args.get("start_date"))
+    end = _parse_date(request.args.get("end_date"))
+    user_id = request.args.get("user_id", type=int)
+
+    if not start or not end:
+        flash(_("start_date and end_date are required (YYYY-MM-DD)"), "error")
+        return redirect(url_for("workforce.dashboard"))
+
+    if not current_user.is_admin:
+        user_id = current_user.id
+
+    rows = AttendanceComplianceService().belgium_inspector_rows(
+        start_date=start, end_date=end, user_id=user_id
+    )
+
+    output = io.StringIO()
+    if rows:
+        writer = csv.DictWriter(output, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+    else:
+        writer = csv.writer(output)
+        writer.writerow(["message"])
+        writer.writerow(["No records in range"])
+
+    filename = f"belgium_attendance_{start.isoformat()}_{end.isoformat()}.csv"
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )

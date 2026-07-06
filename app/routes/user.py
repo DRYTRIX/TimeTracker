@@ -219,6 +219,15 @@ def settings():
                 else:
                     current_user.weekly_hour_limit_override = None
 
+            if hasattr(current_user, "has_other_employers"):
+                current_user.has_other_employers = request.form.get("has_other_employers") == "on"
+                note = (request.form.get("other_employers_note") or "").strip() or None
+                current_user.other_employers_note = note
+                if current_user.has_other_employers and not current_user.other_employers_declared_at:
+                    from app.models.time_entry import local_now
+
+                    current_user.other_employers_declared_at = local_now()
+
             # Save changes
             if safe_commit(db.session):
                 # Log activity

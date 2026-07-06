@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Belgium 2027 attendance compliance** — Optional attendance compliance module with Belgium preset (daily/weekly hours, break and rest rules, 10-year retention). Employees clock in/out and track breaks via workday flows; corrections require admin approval; workforce CSV export and mobile API support inspector-ready records. See [BELGIUM_2027.md](docs/compliance/BELGIUM_2027.md).
+
 ### Fixed
 
 - **Client portal login and logout (#677)** — External clients with portal credentials can sign in at `/login` as well as `/client-portal/login`; wrong passwords no longer fall through to self-registration. Portal logout (native and user-based sessions) redirects to `/client-portal/login`. Portal usernames are matched case-insensitively. See [CLIENT_PORTAL.md](docs/CLIENT_PORTAL.md).

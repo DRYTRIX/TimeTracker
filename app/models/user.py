@@ -92,6 +92,14 @@ class User(UserMixin, db.Model):
     daily_hour_limit_override = db.Column(db.Float, nullable=True)
     weekly_hour_limit_override = db.Column(db.Float, nullable=True)
 
+    # Belgium / EU compliance profile (null = inherit from Settings)
+    has_other_employers = db.Column(db.Boolean, default=False, nullable=False)
+    other_employers_note = db.Column(db.Text, nullable=True)
+    other_employers_declared_at = db.Column(db.DateTime, nullable=True)
+    compliance_jurisdiction_preset = db.Column(db.String(30), nullable=True)
+    compliance_standard_daily_hours = db.Column(db.Float, nullable=True)
+    compliance_standard_weekly_hours = db.Column(db.Float, nullable=True)
+
     # Client portal settings
     client_portal_enabled = db.Column(db.Boolean, default=False, nullable=False)  # Enable/disable client portal access
     client_id = db.Column(

@@ -162,6 +162,56 @@
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Limits use workday session hours when available. Employees receive an email and can submit a justification (soft enforcement).') }}</p>
                         </div>
                     </div>
+                    <div class="pt-4 border-t border-border-light dark:border-border-dark mt-4">
+                        <h3 class="text-sm font-semibold mb-3">{{ _('Belgium / EU attendance compliance (2027)') }}</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center">
+                                <input type="checkbox" name="compliance_enabled" id="compliance_enabled" {% if getattr(settings, 'compliance_enabled', False) %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600">
+                                <label for="compliance_enabled" class="ml-2 text-sm">{{ _('Enable attendance compliance module') }}</label>
+                            </div>
+                            <div class="flex flex-wrap gap-4">
+                                <div>
+                                    <label for="compliance_jurisdiction_preset" class="form-label">{{ _('Jurisdiction preset') }}</label>
+                                    <select name="compliance_jurisdiction_preset" id="compliance_jurisdiction_preset" class="form-input mt-1">
+                                        <option value="custom" {% if getattr(settings, 'compliance_jurisdiction_preset', 'custom') == 'custom' %}selected{% endif %}>{{ _('Custom') }}</option>
+                                        <option value="belgium" {% if getattr(settings, 'compliance_jurisdiction_preset', 'custom') == 'belgium' %}selected{% endif %}>{{ _('Belgium (2027)') }}</option>
+                                        <option value="eu_generic" {% if getattr(settings, 'compliance_jurisdiction_preset', 'custom') == 'eu_generic' %}selected{% endif %}>{{ _('EU generic') }}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="compliance_standard_daily_hours" class="form-label">{{ _('Standard daily hours') }}</label>
+                                    <input type="number" name="compliance_standard_daily_hours" id="compliance_standard_daily_hours" value="{{ getattr(settings, 'compliance_standard_daily_hours', 8.0) }}" min="1" max="12" step="0.5" class="form-input w-32 mt-1">
+                                </div>
+                                <div>
+                                    <label for="compliance_standard_weekly_hours" class="form-label">{{ _('Standard weekly hours') }}</label>
+                                    <input type="number" name="compliance_standard_weekly_hours" id="compliance_standard_weekly_hours" value="{{ getattr(settings, 'compliance_standard_weekly_hours', 38.0) }}" min="1" max="60" step="0.5" class="form-input w-32 mt-1">
+                                </div>
+                                <div>
+                                    <label for="compliance_attendance_retention_years" class="form-label">{{ _('Retention (years)') }}</label>
+                                    <input type="number" name="compliance_attendance_retention_years" id="compliance_attendance_retention_years" value="{{ getattr(settings, 'compliance_attendance_retention_years', 10) }}" min="5" max="30" step="1" class="form-input w-32 mt-1">
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-4">
+                                <div>
+                                    <label for="compliance_break_after_hours" class="form-label">{{ _('Break required after (hours)') }}</label>
+                                    <input type="number" name="compliance_break_after_hours" id="compliance_break_after_hours" value="{{ getattr(settings, 'compliance_break_after_hours', 6.0) }}" min="1" max="12" step="0.5" class="form-input w-32 mt-1">
+                                </div>
+                                <div>
+                                    <label for="compliance_min_break_minutes" class="form-label">{{ _('Minimum break (minutes)') }}</label>
+                                    <input type="number" name="compliance_min_break_minutes" id="compliance_min_break_minutes" value="{{ getattr(settings, 'compliance_min_break_minutes', 15) }}" min="5" max="120" step="5" class="form-input w-32 mt-1">
+                                </div>
+                                <div>
+                                    <label for="compliance_min_daily_rest_hours" class="form-label">{{ _('Minimum daily rest (hours)') }}</label>
+                                    <input type="number" name="compliance_min_daily_rest_hours" id="compliance_min_daily_rest_hours" value="{{ getattr(settings, 'compliance_min_daily_rest_hours', 11.0) }}" min="8" max="16" step="0.5" class="form-input w-32 mt-1">
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="compliance_require_workday_registration" id="compliance_require_workday_registration" {% if getattr(settings, 'compliance_require_workday_registration', False) %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600">
+                                <label for="compliance_require_workday_registration" class="ml-2 text-sm">{{ _('Require workday registration for all employees') }}</label>
+                            </div>
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Belgium preset: 8h/day, 38h/week, 15 min break after 6h, 11h daily rest, 10-year retention. Inspector export: Workforce → Belgium attendance report.') }}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 

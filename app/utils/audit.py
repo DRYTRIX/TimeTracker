@@ -59,7 +59,18 @@ TRACKED_MODELS = [
     "InvoiceTemplate",
     "InvoicePDFTemplate",
     "ClientPrepaidConsumption",
+    "DailyAttendanceRecord",
+    "AttendanceWorkPeriod",
+    "AttendanceBreak",
+    "AttendanceCorrection",
 ]
+
+# Models that cannot be hard-deleted (compliance immutability)
+IMMUTABLE_DELETE_MODELS = {
+    "DailyAttendanceRecord",
+    "AttendanceWorkPeriod",
+    "AttendanceBreak",
+}
 
 # Fields to exclude from audit logging (internal/system fields)
 EXCLUDED_FIELDS = {
@@ -323,9 +334,14 @@ def receive_before_flush(session, flush_context, instances=None):
                     )
 
         # Track deletes
-        for instance in session.deleted:
+        for instance in list(session.deleted):
+            entity_type = get_entity_type(instance)
+            if entity_type in IMMUTABLE_DELETE_MODELS:
+                session.add(instance)
+                raise ValueError(
+                    f"Hard delete of {entity_type} is not allowed. Use the attendance correction workflow."
+                )
             if should_track_model(instance):
-                entity_type = get_entity_type(instance)
                 entity_id = instance.id if hasattr(instance, "id") else None
                 entity_name = get_entity_name(instance)
                 try:

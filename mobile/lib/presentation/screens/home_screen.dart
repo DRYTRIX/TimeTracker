@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timetracker_mobile/data/models/project.dart';
 import 'package:timetracker_mobile/core/theme/app_tokens.dart';
+import '../providers/attendance_provider.dart';
 import '../providers/timer_provider.dart';
 import '../providers/time_entries_provider.dart';
 import '../providers/projects_provider.dart';
@@ -115,6 +116,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
     // Load data on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(timerProvider.notifier).checkTimerStatus();
+      ref.read(attendanceProvider.notifier).refresh();
       ref.read(projectsProvider.notifier).loadProjects();
       final now = DateTime.now();
       ref.read(timeEntriesProvider.notifier).loadTimeEntries(
@@ -143,6 +145,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   @override
   Widget build(BuildContext context) {
     final timerState = ref.watch(timerProvider);
+    final attendanceState = ref.watch(attendanceProvider);
     final entriesState = ref.watch(timeEntriesProvider);
     final projectsState = ref.watch(projectsProvider);
     final theme = Theme.of(context);
@@ -215,6 +218,90 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                         ),
                     ],
                   ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Workday (compliance)',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      attendanceState.workActive
+                          ? 'At work'
+                          : 'Not clocked in',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: attendanceState.workActive
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    if (attendanceState.breakActive)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.xs),
+                        child: Text(
+                          'On break',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.tertiary,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: [
+                        if (!attendanceState.workActive)
+                          FilledButton.icon(
+                            onPressed: attendanceState.loading
+                                ? null
+                                : () => ref
+                                    .read(attendanceProvider.notifier)
+                                    .startWorkday(),
+                            icon: const Icon(Icons.login),
+                            label: const Text('Start workday'),
+                          )
+                        else ...[
+                          FilledButton.icon(
+                            onPressed: attendanceState.loading
+                                ? null
+                                : () => ref
+                                    .read(attendanceProvider.notifier)
+                                    .endWorkday(),
+                            icon: const Icon(Icons.logout),
+                            label: const Text('End workday'),
+                          ),
+                          if (!attendanceState.breakActive)
+                            OutlinedButton.icon(
+                              onPressed: attendanceState.loading
+                                  ? null
+                                  : () => ref
+                                      .read(attendanceProvider.notifier)
+                                      .startBreak(),
+                              icon: const Icon(Icons.coffee),
+                              label: const Text('Start break'),
+                            )
+                          else
+                            OutlinedButton.icon(
+                              onPressed: attendanceState.loading
+                                  ? null
+                                  : () => ref
+                                      .read(attendanceProvider.notifier)
+                                      .endBreak(),
+                              icon: const Icon(Icons.coffee_outlined),
+                              label: const Text('End break'),
+                            ),
+                        ],
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
