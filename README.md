@@ -90,6 +90,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.9.0
+
+**Minor (5.9.0):** **Workforce & attendance** — Belgium 2027 compliance module, missed clock-in reminders, retroactive workday corrections, and time-off request PDFs. **Calendar** — company holidays and time-off overlays on main and timer views. **Mobile** — shared Workday card on Home and Timer screens. **Slack** — `/in`, `/brb`, `/back`, `/out` slash commands for clock-in/out and breaks. **Client portal** — unified login at `/login` and correct logout redirect ([#677](https://github.com/DRYTRIX/TimeTracker/issues/677)). See [CHANGELOG.md](CHANGELOG.md#590---2026-07-06).
+
 ### ✨ Highlights of v5.8.6
 
 **Patch (5.8.6):** **Client portal** — internal user accounts can be restricted to portal-only access (no main app), with hardened access checks for inactive users/clients, gateway-aware payment confirmation, safer document downloads, and currency-aware summaries. **Security** — deleted usernames are reserved to block recreation via self-registration, OIDC, or LDAP. **Peppol** — Peppyrus now authenticates with the `X-Api-Key` header. See [CHANGELOG.md](CHANGELOG.md#586---2026-06-28).
