@@ -18,6 +18,7 @@ KIND_LONG_TIMER = "timer_running_long"
 KIND_DAILY_SUMMARY = "daily_summary"
 KIND_BREAK_REMINDER = "break_reminder"
 KIND_END_OF_DAY = "end_of_day_reminder"
+KIND_MISSED_CLOCK_IN = "missed_clock_in"
 
 _HHMM_RE = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
 
@@ -118,6 +119,45 @@ def _in_hour_slot(user_local_now: datetime, target_hour: int, slot_minutes: int)
     return user_local_now.hour == target_hour and user_local_now.minute < slot_minutes
 
 
+def _in_time_slot_after(user_local_now: datetime, target_h: int, target_m: int, slot_minutes: int) -> bool:
+    """Fire once in the window [target_time, target_time + slot_minutes)."""
+    target = user_local_now.replace(hour=target_h, minute=target_m, second=0, microsecond=0)
+    slot_end = target + timedelta(minutes=slot_minutes)
+    return target <= user_local_now < slot_end
+
+
+def is_expected_work_day(user_id: int, work_date: date) -> bool:
+    """Mon–Fri, excluding company holidays and approved time off."""
+    if work_date.weekday() >= 5:
+        return False
+    from app.services.workforce_governance_service import WorkforceGovernanceService
+
+    if WorkforceGovernanceService().is_holiday(work_date):
+        return False
+    from app.models.time_off import TimeOffRequest, TimeOffRequestStatus
+
+    off = TimeOffRequest.query.filter(
+        TimeOffRequest.user_id == user_id,
+        TimeOffRequest.status == TimeOffRequestStatus.APPROVED,
+        TimeOffRequest.start_date <= work_date,
+        TimeOffRequest.end_date >= work_date,
+    ).first()
+    return off is None
+
+
+def has_workday_started_today(user_id: int, work_date: date) -> bool:
+    """True if the user has an active or completed work period for the given date."""
+    from app.models.attendance_compliance import AttendanceWorkPeriod, DailyAttendanceRecord
+
+    active = AttendanceWorkPeriod.query.filter_by(user_id=user_id, end_time=None).first()
+    if active:
+        return True
+    day = DailyAttendanceRecord.query.filter_by(user_id=user_id, work_date=work_date).first()
+    if not day:
+        return False
+    return AttendanceWorkPeriod.query.filter_by(attendance_day_id=day.id).count() > 0
+
+
 def _bucket_marker_exists(user_id: int, kind: str, bucket_key: str) -> bool:
     """True if a UserSmartNotificationDismissal row already records this bucket (i.e. already fired)."""
     return (
@@ -157,6 +197,7 @@ class NotificationService:
 
     _PRIORITY = {
         KIND_LONG_TIMER: 0,
+        KIND_MISSED_CLOCK_IN: 0,
         KIND_BREAK_REMINDER: 1,
         KIND_NO_TRACKING: 1,
         KIND_DAILY_SUMMARY: 2,
@@ -171,6 +212,7 @@ class NotificationService:
             KIND_DAILY_SUMMARY,
             KIND_BREAK_REMINDER,
             KIND_END_OF_DAY,
+            KIND_MISSED_CLOCK_IN,
         ):
             return False
         if not local_date or len(local_date) != 10:
@@ -203,6 +245,7 @@ class NotificationService:
         default_nudge = (cfg.get("SMART_NOTIFY_NO_TRACKING_AFTER") or "16:00").strip()
         default_summary = (cfg.get("SMART_NOTIFY_SUMMARY_AT") or "18:00").strip()
         default_end_of_day = (cfg.get("SMART_NOTIFY_END_OF_DAY_AT") or "17:00").strip()
+        default_missed_clock_in = (cfg.get("SMART_NOTIFY_MISSED_CLOCK_IN_AT") or "09:30").strip()
 
         meta_base = {
             "max_per_day": max_per,
@@ -221,6 +264,9 @@ class NotificationService:
                     "no_tracking_after": (getattr(user, "smart_notify_no_tracking_after", None) or default_nudge),
                     "summary_at": (getattr(user, "smart_notify_summary_at", None) or default_summary),
                     "end_of_day_at": (getattr(user, "smart_notify_end_of_day_time", None) or default_end_of_day),
+                    "missed_clock_in_at": (
+                        getattr(user, "smart_notify_missed_clock_in_at", None) or default_missed_clock_in
+                    ),
                     "browser_push": bool(getattr(user, "smart_notify_browser", False)),
                 },
             }
@@ -235,12 +281,17 @@ class NotificationService:
         nudge_t = parse_hhmm(getattr(user, "smart_notify_no_tracking_after", None)) or parse_hhmm(default_nudge)
         summary_t = parse_hhmm(getattr(user, "smart_notify_summary_at", None)) or parse_hhmm(default_summary)
         end_of_day_t = parse_hhmm(getattr(user, "smart_notify_end_of_day_time", None)) or parse_hhmm(default_end_of_day)
+        missed_clock_in_t = (
+            parse_hhmm(getattr(user, "smart_notify_missed_clock_in_at", None)) or parse_hhmm(default_missed_clock_in)
+        )
         if not nudge_t:
             nudge_t = (16, 0)
         if not summary_t:
             summary_t = (18, 0)
         if not end_of_day_t:
             end_of_day_t = (17, 0)
+        if not missed_clock_in_t:
+            missed_clock_in_t = (9, 30)
 
         meta = {
             **meta_base,
@@ -249,6 +300,7 @@ class NotificationService:
             "no_tracking_after": f"{nudge_t[0]:02d}:{nudge_t[1]:02d}",
             "summary_at": f"{summary_t[0]:02d}:{summary_t[1]:02d}",
             "end_of_day_at": f"{end_of_day_t[0]:02d}:{end_of_day_t[1]:02d}",
+            "missed_clock_in_at": f"{missed_clock_in_t[0]:02d}:{missed_clock_in_t[1]:02d}",
             "browser_push": bool(getattr(user, "smart_notify_browser", False)),
         }
 
@@ -345,6 +397,25 @@ class NotificationService:
                                     "action": {"label": "Pause timer", "url": "/timer/pause"},
                                 }
                             )
+
+        # Missed workday clock-in (morning reminder on expected work days)
+        if getattr(user, "smart_notify_missed_clock_in", False) and KIND_MISSED_CLOCK_IN not in dismissed:
+            user_today = user_local_now.date()
+            if is_expected_work_day(user.id, user_today) and not has_workday_started_today(user.id, user_today):
+                if _in_time_slot_after(user_local_now, missed_clock_in_t[0], missed_clock_in_t[1], slot_minutes):
+                    candidates.append(
+                        {
+                            "kind": KIND_MISSED_CLOCK_IN,
+                            "title": "Workday not started",
+                            "message": (
+                                "You have not started your workday yet. "
+                                "Press Start Workday when you begin working."
+                            ),
+                            "type": "warning",
+                            "priority": "high",
+                            "action": {"label": "Start workday", "url": "/"},
+                        }
+                    )
 
         # End-of-day reminder (time slot)
         if getattr(user, "smart_notify_end_of_day", False) and KIND_END_OF_DAY not in dismissed:

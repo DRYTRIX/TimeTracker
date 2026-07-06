@@ -125,6 +125,41 @@ class TestAttendanceComplianceService:
             assert review["success"] is True
             assert review["correction"].status == AttendanceCorrectionStatus.APPLIED
 
+    def test_add_missing_work_period_correction(self, app, compliance_user):
+        with app.app_context():
+            from app import db
+
+            admin = User(username="compliance_admin2", role="admin")
+            admin.set_password("test")
+            db.session.add(admin)
+            db.session.commit()
+
+            svc = AttendanceComplianceService()
+            work_date = date.today() - timedelta(days=1)
+            start = datetime.combine(work_date, datetime.min.time()).replace(hour=9, minute=0)
+            end = datetime.combine(work_date, datetime.min.time()).replace(hour=17, minute=0)
+
+            corr = svc.request_missing_work_period(
+                user_id=compliance_user.id,
+                work_date=work_date,
+                start_time=start,
+                end_time=end,
+                reason="Forgot to clock in yesterday",
+            )
+            assert corr["success"] is True
+
+            review = svc.review_correction(corr["correction"].id, admin.id, approve=True)
+            assert review["success"] is True
+
+            day = DailyAttendanceRecord.query.filter_by(
+                user_id=compliance_user.id, work_date=work_date
+            ).first()
+            assert day is not None
+            assert day.work_periods.count() == 1
+            period = day.work_periods.first()
+            assert period.start_time.hour == 9
+            assert period.end_time.hour == 17
+
     def test_belgium_inspector_export_shape(self, app, compliance_user):
         with app.app_context():
             svc = AttendanceComplianceService()

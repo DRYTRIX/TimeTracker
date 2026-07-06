@@ -1,10 +1,11 @@
 """REST API v1 - Comprehensive API endpoints with token authentication"""
 
+import io
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
-from flask import Blueprint, Response, current_app, g, jsonify, request
+from flask import Blueprint, Response, current_app, g, jsonify, request, send_file
 from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
@@ -4885,6 +4886,29 @@ def delete_time_off_request_api(request_id):
     if not result.get("success"):
         return jsonify({"error": result.get("message", "Could not delete request")}), 400
     return jsonify({"message": "Time-off request deleted"})
+
+
+@api_v1_bp.route("/time-off/requests/<int:request_id>/pdf", methods=["GET"])
+@require_api_token("read:time_entries")
+def export_time_off_pdf_api(request_id):
+    from app.models.time_off import TimeOffRequest
+    from app.utils.time_off_pdf import build_time_off_pdf
+
+    req = TimeOffRequest.query.get_or_404(request_id)
+    if req.user_id != g.api_user.id and not g.api_user.is_admin and not _is_api_approver(g.api_user):
+        return jsonify({"error": "Access denied"}), 403
+
+    try:
+        pdf_bytes = build_time_off_pdf(req)
+    except Exception as e:
+        return jsonify({"error": f"PDF export failed: {e}"}), 500
+
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"time_off_request_{request_id}.pdf",
+    )
 
 
 @api_v1_bp.route("/time-off/balances", methods=["GET"])

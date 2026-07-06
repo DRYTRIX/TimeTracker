@@ -195,6 +195,9 @@
                             <button class="btn btn-sm btn-danger" type="submit">{{ _('Delete') }}</button>
                         </form>
                         {% endif %}
+                        <a href="{{ url_for('workforce.export_time_off_pdf', request_id=r.id) }}" class="btn btn-sm btn-secondary" target="_blank" rel="noopener">
+                            {{ _('PDF') }}
+                        </a>
                     </div>
                 </div>
                 {% endfor %}

@@ -55,6 +55,7 @@ def settings():
             current_user.notification_task_comments = "notification_task_comments" in request.form
             current_user.notification_weekly_summary = "notification_weekly_summary" in request.form
             current_user.notification_remind_to_log = "notification_remind_to_log" in request.form
+            current_user.notification_missed_clock_in = "notification_missed_clock_in" in request.form
             reminder_time = request.form.get("reminder_to_log_time", "").strip()
             if reminder_time and len(reminder_time) <= 5:
                 import re
@@ -74,10 +75,12 @@ def settings():
             current_user.smart_notify_browser = "smart_notify_browser" in request.form
             current_user.smart_notify_break_reminder = "smart_notify_break_reminder" in request.form
             current_user.smart_notify_end_of_day = "smart_notify_end_of_day" in request.form
+            current_user.smart_notify_missed_clock_in = "smart_notify_missed_clock_in" in request.form
             for form_key, attr in (
                 ("smart_notify_no_tracking_after", "smart_notify_no_tracking_after"),
                 ("smart_notify_summary_at", "smart_notify_summary_at"),
                 ("smart_notify_end_of_day_time", "smart_notify_end_of_day_time"),
+                ("smart_notify_missed_clock_in_at", "smart_notify_missed_clock_in_at"),
             ):
                 raw = (request.form.get(form_key) or "").strip()
                 if raw and len(raw) <= 5:
@@ -103,6 +106,19 @@ def settings():
             email = request.form.get("email", "").strip()
             if email:
                 current_user.email = email
+
+            slack_user_id = request.form.get("slack_user_id", "").strip()
+            if slack_user_id:
+                existing = User.query.filter(
+                    User.slack_user_id == slack_user_id,
+                    User.id != current_user.id,
+                ).first()
+                if existing:
+                    flash(_("That Slack user ID is already linked to another account."), "error")
+                    return redirect(url_for("user.settings"))
+                current_user.slack_user_id = slack_user_id
+            else:
+                current_user.slack_user_id = None
 
             # Display preferences
             theme_preference = request.form.get("theme_preference")

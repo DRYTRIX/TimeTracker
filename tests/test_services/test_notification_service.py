@@ -11,6 +11,7 @@ from app import db
 from app.models import TimeEntry, User, UserSmartNotificationDismissal
 from app.services.notification_service import (
     KIND_LONG_TIMER,
+    KIND_MISSED_CLOCK_IN,
     KIND_NO_TRACKING,
     NotificationService,
     get_today_summary_for_user,
@@ -228,3 +229,25 @@ def test_get_today_summary_for_user(app, user, project):
             s = get_today_summary_for_user(user)
         assert s["hours"] == 1.0
         assert s["projects"] == 1
+
+
+@pytest.mark.unit
+def test_missed_clock_in_notification_on_workday(app, user):
+    with app.app_context():
+        _commit_user_prefs(
+            user.id,
+            smart_notifications_enabled=True,
+            smart_notify_missed_clock_in=True,
+            smart_notify_missed_clock_in_at="09:30",
+            smart_notify_no_tracking=False,
+            smart_notify_long_timer=False,
+            smart_notify_daily_summary=False,
+            timezone="Europe/Brussels",
+        )
+        user = db.session.get(User, user.id)
+        now_utc = datetime(2026, 6, 10, 7, 35, 0, tzinfo=timezone.utc)  # 09:35 Brussels (CEST)
+        with patch("app.utils.timezone.now_in_user_timezone") as m_now:
+            m_now.return_value = datetime(2026, 6, 10, 9, 35, tzinfo=ZoneInfo("Europe/Brussels"))
+            out = NotificationService.build_for_user(user, now_utc=now_utc)
+        kinds = [n["kind"] for n in out["notifications"]]
+        assert KIND_MISSED_CLOCK_IN in kinds

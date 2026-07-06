@@ -10,9 +10,14 @@ Employees can start and end their **workday** without selecting a project or cli
 
 Workday hours and project hours are shown **separately** on the dashboard (“At work today” vs “On projects today”). They are never added together.
 
-### History
+### History and corrections
 
-Personal workday history: `/workday/history`.
+Personal attendance history: `/workday/history`.
+
+- **Forgot to clock in today:** press **Start Workday**, then request a correction to adjust the start time on an existing work period.
+- **Missing day entirely:** use **Request missing workday** on the history page (date, start/end times, reason). An admin approves under **Attendance corrections** (`/admin/attendance/corrections`).
+
+Enable **missed workday reminders** under **Settings → Notifications** (in-app smart notification and/or email).
 
 ## Working time limits (admin)
 

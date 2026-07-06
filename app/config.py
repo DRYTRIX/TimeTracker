@@ -316,6 +316,7 @@ class Config:
     SMART_NOTIFY_SUMMARY_AT = os.getenv("SMART_NOTIFY_SUMMARY_AT", "18:00").strip()
     SMART_NOTIFY_LONG_TIMER_HOURS = float(os.getenv("SMART_NOTIFY_LONG_TIMER_HOURS", "4"))
     SMART_NOTIFY_END_OF_DAY_AT = os.getenv("SMART_NOTIFY_END_OF_DAY_AT", "17:00").strip()
+    SMART_NOTIFY_MISSED_CLOCK_IN_AT = os.getenv("SMART_NOTIFY_MISSED_CLOCK_IN_AT", "09:30").strip()
     # Fire time-based kinds only during the first N minutes of the configured hour (same idea as email remind-to-log).
     SMART_NOTIFY_SCHEDULER_SLOT_MINUTES = max(1, min(59, int(os.getenv("SMART_NOTIFY_SCHEDULER_SLOT_MINUTES", "30"))))
 

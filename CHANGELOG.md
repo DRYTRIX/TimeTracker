@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Belgium 2027 attendance compliance** — Optional attendance compliance module with Belgium preset (daily/weekly hours, break and rest rules, 10-year retention). Employees clock in/out and track breaks via workday flows; corrections require admin approval; workforce CSV export and mobile API support inspector-ready records. See [BELGIUM_2027.md](docs/compliance/BELGIUM_2027.md).
+- **Missed workday reminders** — Smart notification and optional email when an employee has not pressed **Start Workday** on an expected work day (Mon–Fri, excluding holidays and approved time off). User settings under **Settings → Notifications**; migration `165_add_missed_clock_in_notifications`. See [SMART_NOTIFICATIONS.md](docs/features/SMART_NOTIFICATIONS.md) and [WORKDAY_SESSIONS.md](docs/features/WORKDAY_SESSIONS.md).
+- **Attendance correction for missing workdays** — Employees can request admin-approved retroactive work periods from `/workday/history` when they forgot to clock in on a past day.
+- **Time-off request PDF** — Printable leave/vacation form with employee details, approval metadata, and signature lines. Download from the Workforce dashboard (`/workforce/time-off/<id>/pdf`) or `GET /api/v1/time-off/requests/<id>/pdf`.
+- **Calendar holidays and time-off overlay** — Company holidays and the user's time-off (approved and pending) appear on the main calendar and timer calendar views with filter toggles.
+- **Mobile workday controls** — Shared **Workday** card on Home and Timer screens with error feedback via SnackBar.
 
 ### Fixed
 

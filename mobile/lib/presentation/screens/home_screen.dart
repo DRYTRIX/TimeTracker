@@ -9,6 +9,7 @@ import '../providers/projects_provider.dart';
 import '../providers/user_prefs_provider.dart';
 import 'package:timetracker_mobile/utils/date_format_utils.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/workday_card.dart';
 import 'timer_screen.dart';
 import 'projects_screen.dart';
 import 'time_entries_screen.dart';
@@ -145,7 +146,6 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   @override
   Widget build(BuildContext context) {
     final timerState = ref.watch(timerProvider);
-    final attendanceState = ref.watch(attendanceProvider);
     final entriesState = ref.watch(timeEntriesProvider);
     final projectsState = ref.watch(projectsProvider);
     final theme = Theme.of(context);
@@ -222,89 +222,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Workday (compliance)',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      attendanceState.workActive
-                          ? 'At work'
-                          : 'Not clocked in',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: attendanceState.workActive
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    if (attendanceState.breakActive)
-                      Padding(
-                        padding: const EdgeInsets.only(top: AppSpacing.xs),
-                        child: Text(
-                          'On break',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.tertiary,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
-                      children: [
-                        if (!attendanceState.workActive)
-                          FilledButton.icon(
-                            onPressed: attendanceState.loading
-                                ? null
-                                : () => ref
-                                    .read(attendanceProvider.notifier)
-                                    .startWorkday(),
-                            icon: const Icon(Icons.login),
-                            label: const Text('Start workday'),
-                          )
-                        else ...[
-                          FilledButton.icon(
-                            onPressed: attendanceState.loading
-                                ? null
-                                : () => ref
-                                    .read(attendanceProvider.notifier)
-                                    .endWorkday(),
-                            icon: const Icon(Icons.logout),
-                            label: const Text('End workday'),
-                          ),
-                          if (!attendanceState.breakActive)
-                            OutlinedButton.icon(
-                              onPressed: attendanceState.loading
-                                  ? null
-                                  : () => ref
-                                      .read(attendanceProvider.notifier)
-                                      .startBreak(),
-                              icon: const Icon(Icons.coffee),
-                              label: const Text('Start break'),
-                            )
-                          else
-                            OutlinedButton.icon(
-                              onPressed: attendanceState.loading
-                                  ? null
-                                  : () => ref
-                                      .read(attendanceProvider.notifier)
-                                      .endBreak(),
-                              icon: const Icon(Icons.coffee_outlined),
-                              label: const Text('End break'),
-                            ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            const WorkdayCard(),
             const SizedBox(height: AppSpacing.md),
             // Today's Summary Card
             Card(

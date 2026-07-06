@@ -1250,6 +1250,8 @@ def calendar_events():
     end = request.args.get("end")
     include_tasks = request.args.get("include_tasks", "true").lower() == "true"
     include_time_entries = request.args.get("include_time_entries", "true").lower() == "true"
+    include_holidays = request.args.get("include_holidays", "true").lower() == "true"
+    include_time_off = request.args.get("include_time_off", "true").lower() == "true"
     project_id = request.args.get("project_id", type=int)
     task_id = request.args.get("task_id", type=int)
     tags = request.args.get("tags", "").strip()
@@ -1392,6 +1394,48 @@ def calendar_events():
 
     # Combine all items
     all_items = events + tasks + time_entries
+
+    from app.utils.calendar_overlay import (
+        HOLIDAY_COLOR,
+        TIME_OFF_COLOR,
+        get_holidays_for_calendar,
+        get_time_off_for_calendar,
+    )
+
+    overlay_start = start_dt.date()
+    overlay_end = end_dt.date()
+    if include_holidays:
+        for item in get_holidays_for_calendar(overlay_start, overlay_end):
+            all_items.append(
+                {
+                    "id": item["id"],
+                    "title": item["title"],
+                    "start": item["start"][:10],
+                    "end": item["start"][:10],
+                    "allDay": True,
+                    "display": "background",
+                    "backgroundColor": HOLIDAY_COLOR + "33",
+                    "borderColor": HOLIDAY_COLOR,
+                    "editable": False,
+                    "extendedProps": {**item, "item_type": "holiday"},
+                }
+            )
+    if include_time_off:
+        for item in get_time_off_for_calendar(user_id, overlay_start, overlay_end):
+            all_items.append(
+                {
+                    "id": item["id"],
+                    "title": item["title"],
+                    "start": item["start"][:10],
+                    "end": item["start"][:10],
+                    "allDay": True,
+                    "display": "background",
+                    "backgroundColor": (item.get("color") or TIME_OFF_COLOR) + "33",
+                    "borderColor": item.get("color") or TIME_OFF_COLOR,
+                    "editable": False,
+                    "extendedProps": {**item, "item_type": "time_off"},
+                }
+            )
 
     return jsonify(
         {

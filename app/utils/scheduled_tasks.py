@@ -21,6 +21,7 @@ from app.services.integration_service import IntegrationService
 from app.services.scheduled_report_service import ScheduledReportService
 from app.utils.budget_forecasting import check_budget_alerts
 from app.utils.email import (
+    send_missed_clock_in_email,
     send_overdue_invoice_notification,
     send_quote_expired_notification,
     send_remind_to_log_email,
@@ -632,6 +633,27 @@ def register_scheduled_tasks(scheduler, app=None):
         )
         logger.info("Registered remind-to-log task")
 
+        def process_missed_clock_in_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for missed clock-in processing")
+                    return
+            with app_instance.app_context():
+                process_missed_clock_in()
+
+        scheduler.add_job(
+            func=process_missed_clock_in_with_app,
+            trigger="cron",
+            minute=0,
+            id="process_missed_clock_in",
+            name="Process missed clock-in email reminders",
+            replace_existing=True,
+        )
+        logger.info("Registered missed clock-in email task")
+
         # Smart reminder browser push notifications – every 15 minutes
         def send_smart_reminder_push_with_app():
             app_instance = app
@@ -810,6 +832,7 @@ def send_smart_reminder_push_notifications():
                     User.smart_notify_break_reminder == True,
                     User.smart_notify_end_of_day == True,
                     User.smart_notify_no_tracking == True,
+                    User.smart_notify_missed_clock_in == True,
                 ),
             ).all()
         except Exception as e:
@@ -971,6 +994,57 @@ def process_remind_to_log():
         return sent
     except Exception as e:
         logger.error("Error in process_remind_to_log: %s", e)
+        return 0
+
+
+def process_missed_clock_in():
+    """Email users who enabled missed clock-in reminders and have not started workday today."""
+    from app.services.notification_service import (
+        has_workday_started_today,
+        is_expected_work_day,
+        parse_hhmm,
+        _in_time_slot_after,
+    )
+    from app.utils.timezone import now_in_user_timezone
+
+    try:
+        users = User.query.filter(
+            User.is_active == True,
+            User.email_notifications == True,
+            User.notification_missed_clock_in == True,
+        ).all()
+        if not users:
+            return 0
+        slot_minutes = int(current_app.config.get("SMART_NOTIFY_SCHEDULER_SLOT_MINUTES") or 30)
+        default_at = (current_app.config.get("SMART_NOTIFY_MISSED_CLOCK_IN_AT") or "09:30").strip()
+        sent = 0
+        for user in users:
+            try:
+                if not user.email:
+                    continue
+                user_now = now_in_user_timezone(user)
+                reminder_t = parse_hhmm(getattr(user, "smart_notify_missed_clock_in_at", None)) or parse_hhmm(default_at)
+                if not reminder_t:
+                    reminder_t = (9, 30)
+                if not _in_time_slot_after(user_now, reminder_t[0], reminder_t[1], slot_minutes):
+                    continue
+                today = user_now.date()
+                if not is_expected_work_day(user.id, today):
+                    continue
+                if has_workday_started_today(user.id, today):
+                    continue
+                send_missed_clock_in_email(user)
+                sent += 1
+                logger.info("Sent missed clock-in email to %s", user.username)
+            except Exception as e:
+                logger.error(
+                    "Failed to process missed clock-in for user %s: %s",
+                    getattr(user, "username", user.id),
+                    e,
+                )
+        return sent
+    except Exception as e:
+        logger.error("Error in process_missed_clock_in: %s", e)
         return 0
 
 

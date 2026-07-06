@@ -4,6 +4,40 @@
 {% block content %}
 {{ page_header('fas fa-history', _('My attendance'), _('Unified daily work, break, and absence records for compliance.')) }}
 
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl p-4 mb-6">
+    <h2 class="text-lg font-semibold mb-3">{{ _('Request missing workday') }}</h2>
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">
+        {{ _('Forgot to press Start Workday? Submit the date and times you actually worked. An admin will review and apply the correction.') }}
+    </p>
+    <form method="POST" action="{{ url_for('workday.request_correction') }}" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="entity_type" value="AddWorkPeriod">
+        <div>
+            <label class="block text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Date') }}</label>
+            <input type="date" name="work_date" class="form-input w-full" required>
+        </div>
+        <div>
+            <label class="block text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Start time') }}</label>
+            <input type="datetime-local" name="start_time" class="form-input w-full" required>
+        </div>
+        <div>
+            <label class="block text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('End time (optional)') }}</label>
+            <input type="datetime-local" name="end_time" class="form-input w-full">
+        </div>
+        <div>
+            <label class="block text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Notes (optional)') }}</label>
+            <input type="text" name="notes" class="form-input w-full" placeholder="{{ _('e.g. Forgot to clock in') }}">
+        </div>
+        <div class="md:col-span-2">
+            <label class="block text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Reason (required)') }}</label>
+            <input type="text" name="reason" class="form-input w-full" required placeholder="{{ _('Why is this correction needed?') }}">
+        </div>
+        <div class="md:col-span-2">
+            <button type="submit" class="btn btn-primary">{{ _('Submit correction request') }}</button>
+        </div>
+    </form>
+</div>
+
 <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
     <table class="min-w-full text-sm">
         <thead class="bg-gray-50 dark:bg-gray-800">
@@ -14,6 +48,7 @@
                 <th class="px-4 py-2 text-left">{{ _('Breaks') }}</th>
                 <th class="px-4 py-2 text-left">{{ _('Net work') }}</th>
                 <th class="px-4 py-2 text-left">{{ _('Warnings') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Actions') }}</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-border-light dark:divide-border-dark">
@@ -48,9 +83,28 @@
                     <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endfor %}
                 </td>
+                <td class="px-4 py-3">
+                    {% if not record.is_locked %}
+                    {% for p in record.work_periods %}
+                    <details class="text-xs">
+                        <summary class="cursor-pointer text-primary">{{ _('Correct period') }}</summary>
+                        <form method="POST" action="{{ url_for('workday.request_correction') }}" class="mt-2 space-y-1">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="attendance_day_id" value="{{ record.id }}">
+                            <input type="hidden" name="entity_type" value="AttendanceWorkPeriod">
+                            <input type="hidden" name="entity_id" value="{{ p.id }}">
+                            <input type="datetime-local" name="start_time" class="form-input text-xs w-full" value="{{ p.start_time.strftime('%Y-%m-%dT%H:%M') if p.start_time else '' }}">
+                            <input type="datetime-local" name="end_time" class="form-input text-xs w-full" value="{{ p.end_time.strftime('%Y-%m-%dT%H:%M') if p.end_time else '' }}">
+                            <input type="text" name="reason" class="form-input text-xs w-full" required placeholder="{{ _('Reason') }}">
+                            <button type="submit" class="btn btn-secondary btn-xs">{{ _('Request change') }}</button>
+                        </form>
+                    </details>
+                    {% endfor %}
+                    {% endif %}
+                </td>
             </tr>
             {% else %}
-            <tr><td colspan="6" class="px-4 py-6 text-center">{{ _('No attendance records yet.') }}</td></tr>
+            <tr><td colspan="7" class="px-4 py-6 text-center">{{ _('No attendance records yet.') }}</td></tr>
             {% endfor %}
         </tbody>
     </table>

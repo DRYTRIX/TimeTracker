@@ -118,19 +118,44 @@ def workday_history():
 @workday_bp.route("/workday/corrections/request", methods=["POST"])
 @login_required
 def request_correction():
-    result = AttendanceComplianceService().request_correction(
-        attendance_day_id=request.form.get("attendance_day_id", type=int),
-        entity_type=request.form.get("entity_type"),
-        entity_id=request.form.get("entity_id", type=int),
-        corrected_values={
-            "start_time": request.form.get("start_time") or None,
-            "end_time": request.form.get("end_time") or None,
-            "status": request.form.get("status") or None,
-            "compliance_notes": request.form.get("compliance_notes") or None,
-        },
-        reason=request.form.get("reason", ""),
-        requested_by=current_user.id,
-    )
+    service = AttendanceComplianceService()
+    entity_type = request.form.get("entity_type")
+    if entity_type == "AddWorkPeriod":
+        work_date_str = request.form.get("work_date")
+        start_str = request.form.get("start_time")
+        end_str = request.form.get("end_time")
+        try:
+            work_date = datetime.strptime(work_date_str, "%Y-%m-%d").date()
+            start_time = datetime.fromisoformat(start_str) if start_str else None
+            end_time = datetime.fromisoformat(end_str) if end_str else None
+        except (ValueError, TypeError):
+            flash(_("Invalid date or time"), "error")
+            return redirect(request.referrer or url_for("workday.workday_history"))
+        if not start_time:
+            flash(_("Start time is required"), "error")
+            return redirect(request.referrer or url_for("workday.workday_history"))
+        result = service.request_missing_work_period(
+            user_id=current_user.id,
+            work_date=work_date,
+            start_time=start_time,
+            end_time=end_time,
+            reason=request.form.get("reason", ""),
+            notes=request.form.get("notes") or None,
+        )
+    else:
+        result = service.request_correction(
+            attendance_day_id=request.form.get("attendance_day_id", type=int),
+            entity_type=entity_type,
+            entity_id=request.form.get("entity_id", type=int),
+            corrected_values={
+                "start_time": request.form.get("start_time") or None,
+                "end_time": request.form.get("end_time") or None,
+                "status": request.form.get("status") or None,
+                "compliance_notes": request.form.get("compliance_notes") or None,
+            },
+            reason=request.form.get("reason", ""),
+            requested_by=current_user.id,
+        )
     if result["success"]:
         flash(_("Correction request submitted for review"), "success")
     else:

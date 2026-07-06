@@ -453,6 +453,31 @@ TimeTracker
     send_email(subject, user.email, text_body, html_body)
 
 
+def send_missed_clock_in_email(user):
+    """Remind user to start their workday (attendance clock-in)."""
+    if not user.email or not user.email_notifications or not getattr(user, "notification_missed_clock_in", False):
+        return
+    subject = "Reminder: start your workday"
+    dashboard_url = url_for("main.dashboard", _external=True)
+    history_url = url_for("workday.workday_history", _external=True)
+    display = getattr(user, "full_name", None) or user.username
+    text_body = f"""Hello {display},
+
+You have not started your workday yet. Press Start Workday when you begin working.
+
+Dashboard: {dashboard_url}
+Attendance history (request a correction if needed): {history_url}
+
+---
+TimeTracker
+"""
+    html_body = f"""<p>Hello {display},</p>
+<p>You have not started your workday yet. Press <strong>Start Workday</strong> when you begin working.</p>
+<p><a href="{dashboard_url}">Open Dashboard</a> · <a href="{history_url}">Attendance history</a></p>
+<p style="color:#64748b;font-size:0.875rem;">— TimeTracker</p>"""
+    send_email(subject, user.email, text_body, html_body)
+
+
 def send_comment_notification(comment, task, mentioned_users):
     """Send notification about a new comment
 

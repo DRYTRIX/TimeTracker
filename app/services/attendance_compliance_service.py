@@ -422,17 +422,27 @@ class AttendanceComplianceService:
         day = DailyAttendanceRecord.query.get(attendance_day_id)
         if not day:
             return {"success": False, "message": "Attendance day not found"}
+        requester = User.query.get(requested_by)
+        if day.user_id != requested_by and not (requester and requester.is_admin):
+            return {"success": False, "message": "You can only request corrections for your own attendance"}
         if day.is_locked:
             return {"success": False, "message": "Locked attendance records require admin-approved corrections"}
 
-        original_values = self._snapshot_entity(entity_type, entity_id)
-        if original_values is None:
-            return {"success": False, "message": "Entity not found"}
+        if entity_type == "AddWorkPeriod":
+            if day.work_periods.count() > 0:
+                return {"success": False, "message": "This day already has work periods; edit an existing period instead"}
+            if not corrected_values.get("start_time"):
+                return {"success": False, "message": "Start time is required"}
+            original_values: Dict[str, Any] = {}
+        else:
+            original_values = self._snapshot_entity(entity_type, entity_id)
+            if original_values is None:
+                return {"success": False, "message": "Entity not found"}
 
         correction = AttendanceCorrection(
             attendance_day_id=attendance_day_id,
             entity_type=entity_type,
-            entity_id=entity_id,
+            entity_id=entity_id or 0,
             original_values=original_values,
             corrected_values=corrected_values,
             reason=reason,
@@ -443,6 +453,33 @@ class AttendanceComplianceService:
         if not safe_commit("request_attendance_correction", {"correction_id": correction.id}):
             return {"success": False, "message": "Could not save correction request"}
         return {"success": True, "correction": correction}
+
+    def request_missing_work_period(
+        self,
+        *,
+        user_id: int,
+        work_date: date,
+        start_time: datetime,
+        end_time: Optional[datetime],
+        reason: str,
+        notes: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        if self.is_day_locked(user_id, work_date):
+            return {"success": False, "message": "Attendance record is locked for this date"}
+        day = self.get_or_create_day(user_id, work_date)
+        corrected = {
+            "start_time": start_time.isoformat(),
+            "end_time": end_time.isoformat() if end_time else None,
+            "notes": notes,
+        }
+        return self.request_correction(
+            attendance_day_id=day.id,
+            entity_type="AddWorkPeriod",
+            entity_id=0,
+            corrected_values=corrected,
+            reason=reason,
+            requested_by=user_id,
+        )
 
     def review_correction(
         self,
@@ -525,6 +562,32 @@ class AttendanceComplianceService:
                     pass
             if "compliance_notes" in values:
                 day.compliance_notes = values["compliance_notes"]
+        elif entity_type == "AddWorkPeriod":
+            day = DailyAttendanceRecord.query.get(correction.attendance_day_id)
+            if not day:
+                return False
+            if day.work_periods.count() > 0:
+                return False
+            start_raw = values.get("start_time")
+            if not start_raw:
+                return False
+            start_time = datetime.fromisoformat(start_raw)
+            end_time = None
+            if values.get("end_time"):
+                end_time = datetime.fromisoformat(values["end_time"])
+            period = AttendanceWorkPeriod(
+                attendance_day_id=day.id,
+                user_id=day.user_id,
+                start_time=start_time,
+                end_time=end_time,
+                notes=values.get("notes"),
+                source="correction",
+            )
+            db.session.add(period)
+            period.calculate_duration()
+            if day.status == AttendanceDayStatus.ABSENT:
+                day.status = AttendanceDayStatus.PRESENT
+            day.recalculate_totals()
         else:
             return False
         return True

@@ -9,7 +9,8 @@
         <thead class="bg-gray-50 dark:bg-gray-800">
             <tr>
                 <th class="px-4 py-2 text-left">{{ _('Date') }}</th>
-                <th class="px-4 py-2 text-left">{{ _('Entity') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Type') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Change') }}</th>
                 <th class="px-4 py-2 text-left">{{ _('Reason') }}</th>
                 <th class="px-4 py-2 text-left">{{ _('Requested') }}</th>
                 <th class="px-4 py-2 text-left">{{ _('Actions') }}</th>
@@ -19,7 +20,20 @@
             {% for c in corrections %}
             <tr>
                 <td class="px-4 py-3">{{ c.attendance_day.work_date|user_date if c.attendance_day else '—' }}</td>
-                <td class="px-4 py-3">{{ c.entity_type }} #{{ c.entity_id }}</td>
+                <td class="px-4 py-3">
+                    {% if c.entity_type == 'AddWorkPeriod' %}
+                    {{ _('Add missing work period') }}
+                    {% else %}
+                    {{ c.entity_type }} #{{ c.entity_id }}
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-xs">
+                    {% if c.corrected_values %}
+                    {% if c.corrected_values.start_time %}{{ _('Start') }}: {{ c.corrected_values.start_time }}<br>{% endif %}
+                    {% if c.corrected_values.end_time %}{{ _('End') }}: {{ c.corrected_values.end_time }}<br>{% endif %}
+                    {% if c.corrected_values.notes %}{{ _('Notes') }}: {{ c.corrected_values.notes }}{% endif %}
+                    {% else %}—{% endif %}
+                </td>
                 <td class="px-4 py-3">{{ c.reason }}</td>
                 <td class="px-4 py-3">{{ c.created_at|user_datetime }}</td>
                 <td class="px-4 py-3">
@@ -32,7 +46,7 @@
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="5" class="px-4 py-6 text-center">{{ _('No pending corrections.') }}</td></tr>
+            <tr><td colspan="6" class="px-4 py-6 text-center">{{ _('No pending corrections.') }}</td></tr>
             {% endfor %}
         </tbody>
     </table>

@@ -2,7 +2,7 @@ import csv
 import io
 from datetime import date, datetime, timedelta
 
-from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
+from flask import Blueprint, Response, flash, redirect, render_template, request, send_file, url_for
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
 
@@ -389,6 +389,39 @@ def delete_time_off_request(request_id):
         "success" if result.get("success") else "error",
     )
     return redirect(url_for("workforce.dashboard"))
+
+
+def _can_view_time_off_request(req: TimeOffRequest) -> bool:
+    if req.user_id == current_user.id:
+        return True
+    if current_user.is_admin or _can_approve():
+        return True
+    return False
+
+
+@workforce_bp.route("/workforce/time-off/<int:request_id>/pdf")
+@login_required
+def export_time_off_pdf(request_id):
+    req = TimeOffRequest.query.get_or_404(request_id)
+    if not _can_view_time_off_request(req):
+        flash(_("Access denied"), "error")
+        return redirect(url_for("workforce.dashboard"))
+
+    try:
+        from app.utils.time_off_pdf import build_time_off_pdf
+
+        pdf_bytes = build_time_off_pdf(req)
+    except Exception as e:
+        flash(_("PDF export failed: %(error)s", error=str(e)), "error")
+        return redirect(url_for("workforce.dashboard"))
+
+    filename = f"time_off_request_{request_id}.pdf"
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=filename,
+    )
 
 
 @workforce_bp.route("/workforce/holidays/create", methods=["POST"])

@@ -79,6 +79,8 @@ def get_events():
     end_str = request.args.get("end")
     include_tasks = request.args.get("include_tasks", "true").lower() == "true"
     include_time_entries = request.args.get("include_time_entries", "true").lower() == "true"
+    include_holidays = request.args.get("include_holidays", "true").lower() == "true"
+    include_time_off = request.args.get("include_time_off", "true").lower() == "true"
 
     print(f"\n{'='*80}")
     print(f"API ENDPOINT CALLED - /api/calendar/events")
@@ -139,11 +141,27 @@ def get_events():
         else:
             e["color"] = get_type_color("time_entry")
 
+    from app.utils.calendar_overlay import (
+        HOLIDAY_COLOR,
+        TIME_OFF_COLOR,
+        get_holidays_for_calendar,
+        get_time_off_for_calendar,
+    )
+
+    overlay_start = start_date.date()
+    overlay_end = end_date.date()
+    holidays = get_holidays_for_calendar(overlay_start, overlay_end) if include_holidays else []
+    time_off = get_time_off_for_calendar(current_user.id, overlay_start, overlay_end) if include_time_off else []
+
+    result["holidays"] = holidays
+    result["time_off"] = time_off
     result["typeColors"] = {
         "event": get_type_color("event"),
         "task": get_type_color("task"),
         "time_entry": get_type_color("time_entry"),
         "time_entry_running": get_type_color("time_entry_running"),
+        "holiday": HOLIDAY_COLOR,
+        "time_off": TIME_OFF_COLOR,
     }
 
     print(f"\n{'='*80}")
