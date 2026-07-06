@@ -2,7 +2,7 @@ import csv
 import io
 from datetime import date, datetime, timedelta
 
-from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
+from flask import Blueprint, Response, flash, redirect, render_template, request, send_file, url_for
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
 
@@ -391,6 +391,39 @@ def delete_time_off_request(request_id):
     return redirect(url_for("workforce.dashboard"))
 
 
+def _can_view_time_off_request(req: TimeOffRequest) -> bool:
+    if req.user_id == current_user.id:
+        return True
+    if current_user.is_admin or _can_approve():
+        return True
+    return False
+
+
+@workforce_bp.route("/workforce/time-off/<int:request_id>/pdf")
+@login_required
+def export_time_off_pdf(request_id):
+    req = TimeOffRequest.query.get_or_404(request_id)
+    if not _can_view_time_off_request(req):
+        flash(_("Access denied"), "error")
+        return redirect(url_for("workforce.dashboard"))
+
+    try:
+        from app.utils.time_off_pdf import build_time_off_pdf
+
+        pdf_bytes = build_time_off_pdf(req)
+    except Exception as e:
+        flash(_("PDF export failed: %(error)s", error=str(e)), "error")
+        return redirect(url_for("workforce.dashboard"))
+
+    filename = f"time_off_request_{request_id}.pdf"
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=filename,
+    )
+
+
 @workforce_bp.route("/workforce/holidays/create", methods=["POST"])
 @login_required
 def create_holiday():
@@ -658,4 +691,46 @@ def audit_events_export_csv():
         output.getvalue(),
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=compliance_audit_events.csv"},
+    )
+
+
+@workforce_bp.route("/workforce/reports/belgium-attendance.csv", methods=["GET"])
+@login_required
+def belgium_attendance_export_csv():
+    if not _can_approve():
+        flash(_("Access denied"), "error")
+        return redirect(url_for("workforce.dashboard"))
+
+    from app.services.attendance_compliance_service import AttendanceComplianceService
+
+    start = _parse_date(request.args.get("start_date"))
+    end = _parse_date(request.args.get("end_date"))
+    user_id = request.args.get("user_id", type=int)
+
+    if not start or not end:
+        flash(_("start_date and end_date are required (YYYY-MM-DD)"), "error")
+        return redirect(url_for("workforce.dashboard"))
+
+    if not current_user.is_admin:
+        user_id = current_user.id
+
+    rows = AttendanceComplianceService().belgium_inspector_rows(
+        start_date=start, end_date=end, user_id=user_id
+    )
+
+    output = io.StringIO()
+    if rows:
+        writer = csv.DictWriter(output, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+    else:
+        writer = csv.writer(output)
+        writer.writerow(["message"])
+        writer.writerow(["No records in range"])
+
+    filename = f"belgium_attendance_{start.isoformat()}_{end.isoformat()}.csv"
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )

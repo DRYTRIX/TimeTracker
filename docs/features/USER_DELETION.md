@@ -273,6 +273,8 @@ Instead of deleting users, consider:
 
 When an administrator deletes a user, the username is reserved in the `deleted_usernames` table. If **Allow Self-Registration** is enabled, that username **cannot** be recreated automatically on login (local, OIDC, or LDAP provisioning). This prevents deleted accounts from reappearing when someone signs in again on `/login`.
 
+Native **client portal** credentials (`clients.portal_username`) are separate from `User` accounts. If a portal client's username matches a reserved deleted username, `/login` authenticates against portal credentials first and does not create a shadow `User` when the password is wrong.
+
 To allow the same username again, an administrator must explicitly create the user under **Admin → Users → Create User** (admin-created accounts are not blocked).
 
 If you need to revoke access without deletion, **deactivate** the user or disable **Client Portal Access** instead.

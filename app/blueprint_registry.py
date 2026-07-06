@@ -56,6 +56,7 @@ def register_all_blueprints(app, logger=None):
     from importlib import import_module
 
     import_module("app.routes.api_v1_workday")
+    import_module("app.routes.api_v1_attendance")
     from app.routes.api_v1_ai import api_v1_ai_bp
     from app.routes.api_v1_clients import api_v1_clients_bp
     from app.routes.api_v1_contacts import api_v1_contacts_bp

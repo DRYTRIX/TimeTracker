@@ -66,6 +66,9 @@ class User(UserMixin, db.Model):
     smart_notify_break_interval_minutes = db.Column(db.Integer, default=60, nullable=False)
     smart_notify_end_of_day = db.Column(db.Boolean, default=False, nullable=False)
     smart_notify_end_of_day_time = db.Column(db.String(5), nullable=True)  # HH:MM; null = use app config
+    smart_notify_missed_clock_in = db.Column(db.Boolean, default=False, nullable=False)
+    smart_notify_missed_clock_in_at = db.Column(db.String(5), nullable=True)  # HH:MM; null = default 09:30
+    notification_missed_clock_in = db.Column(db.Boolean, default=False, nullable=False)
     timezone = db.Column(db.String(50), nullable=True)  # User-specific timezone override
     date_format = db.Column(db.String(20), default=None, nullable=True)  # None = use system default
     time_format = db.Column(db.String(10), default=None, nullable=True)  # None = use system default
@@ -91,6 +94,14 @@ class User(UserMixin, db.Model):
     # Per-user overrides for working time limits (null = use global Settings)
     daily_hour_limit_override = db.Column(db.Float, nullable=True)
     weekly_hour_limit_override = db.Column(db.Float, nullable=True)
+
+    # Belgium / EU compliance profile (null = inherit from Settings)
+    has_other_employers = db.Column(db.Boolean, default=False, nullable=False)
+    other_employers_note = db.Column(db.Text, nullable=True)
+    other_employers_declared_at = db.Column(db.DateTime, nullable=True)
+    compliance_jurisdiction_preset = db.Column(db.String(30), nullable=True)
+    compliance_standard_daily_hours = db.Column(db.Float, nullable=True)
+    compliance_standard_weekly_hours = db.Column(db.Float, nullable=True)
 
     # Client portal settings
     client_portal_enabled = db.Column(db.Boolean, default=False, nullable=False)  # Enable/disable client portal access
@@ -178,6 +189,9 @@ class User(UserMixin, db.Model):
     # can act on the right account). Optional, not unique – a single GitHub
     # login can map to multiple TimeTracker users in shared installations.
     github_username = db.Column(db.String(100), nullable=True)
+
+    # Slack user ID for workspace attendance slash commands (/in, /out, etc.).
+    slack_user_id = db.Column(db.String(50), nullable=True, unique=True, index=True)
 
     # Custom theme preferences (see app/services/theme_service.py).
     # theme_name picks one of the built-in themes; the remaining four

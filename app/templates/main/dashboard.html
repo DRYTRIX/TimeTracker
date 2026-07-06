@@ -58,6 +58,21 @@
                     <i class="fas fa-stop mr-2"></i>{{ _('End Workday') }}
                 </button>
             </form>
+            {% if attendance_break_active %}
+            <form method="POST" action="{{ url_for('workday.end_break') }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-secondary" aria-label="{{ _('End Break') }}">
+                    <i class="fas fa-coffee mr-2"></i>{{ _('End Break') }}
+                </button>
+            </form>
+            {% else %}
+            <form method="POST" action="{{ url_for('workday.start_break') }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-secondary" aria-label="{{ _('Start Break') }}">
+                    <i class="fas fa-coffee mr-2"></i>{{ _('Start Break') }}
+                </button>
+            </form>
+            {% endif %}
             {% else %}
             <form method="POST" action="{{ url_for('workday.start_workday') }}" class="inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

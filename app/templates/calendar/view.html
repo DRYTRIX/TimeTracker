@@ -83,6 +83,14 @@
                 <input type="checkbox" id="showTimeEntries" checked class="form-checkbox">
                 <span class="ml-2">{{ _('Time Entries') }}</span>
             </label>
+            <label class="inline-flex items-center">
+                <input type="checkbox" id="showHolidays" checked class="form-checkbox">
+                <span class="ml-2">{{ _('Holidays') }}</span>
+            </label>
+            <label class="inline-flex items-center">
+                <input type="checkbox" id="showTimeOff" checked class="form-checkbox">
+                <span class="ml-2">{{ _('Time Off') }}</span>
+            </label>
         </div>
 
         <!-- Calendar colors -->
@@ -107,6 +115,8 @@
                 <span class="inline-flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-full" style="background-color: {{ type_colors.event }}"></span> {{ _('Events') }}</span>
                 <span class="inline-flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-full" style="background-color: {{ type_colors.task }}"></span> {{ _('Tasks') }}</span>
                 <span class="inline-flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-full" style="background-color: {{ type_colors.time_entry }}"></span> {{ _('Time Entries') }}</span>
+                <span class="inline-flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-full" style="background-color: #9333ea"></span> {{ _('Holidays') }}</span>
+                <span class="inline-flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-full" style="background-color: #ec4899"></span> {{ _('Time Off') }}</span>
             </div>
             <button type="button" id="saveCalendarColorsBtn" class="btn btn-sm btn-primary">
                 <i class="fas fa-save mr-1"></i>{{ _('Save') }}

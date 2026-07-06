@@ -12,11 +12,15 @@ class Calendar {
         this.events = [];
         this.tasks = [];
         this.timeEntries = [];
+        this.holidays = [];
+        this.timeOff = [];
         
         // Filters
         this.showEvents = true;
         this.showTasks = true;
         this.showTimeEntries = true;
+        this.showHolidays = true;
+        this.showTimeOff = true;
         
         this.init();
     }
@@ -56,6 +60,16 @@ class Calendar {
         
         document.getElementById('showTimeEntries')?.addEventListener('change', (e) => {
             this.showTimeEntries = e.target.checked;
+            this.render();
+        });
+
+        document.getElementById('showHolidays')?.addEventListener('change', (e) => {
+            this.showHolidays = e.target.checked;
+            this.render();
+        });
+
+        document.getElementById('showTimeOff')?.addEventListener('change', (e) => {
+            this.showTimeOff = e.target.checked;
             this.render();
         });
         
@@ -160,6 +174,16 @@ class Calendar {
                 ...e,
                 color: e.color != null ? e.color : typeColors.time_entry,
                 extendedProps: { ...(e.extendedProps || {}), ...e, item_type: (e.extendedProps && e.extendedProps.item_type) || 'time_entry' }
+            }));
+            this.holidays = (data.holidays || []).map(h => ({
+                ...h,
+                color: h.color || typeColors.holiday || '#9333ea',
+                extendedProps: { ...(h.extendedProps || {}), ...h, item_type: 'holiday' }
+            }));
+            this.timeOff = (data.time_off || []).map(t => ({
+                ...t,
+                color: t.color || typeColors.time_off || '#ec4899',
+                extendedProps: { ...(t.extendedProps || {}), ...t, item_type: 'time_off' }
             }));
             
             this.render();
@@ -714,10 +738,28 @@ class Calendar {
         dayStart.setHours(0, 0, 0, 0);
         const dayEnd = new Date(day);
         dayEnd.setHours(23, 59, 59, 999);
+        const dayKey = day.toISOString().split('T')[0];
         
         let html = '<div class="month-events">';
         let count = 0;
         const maxDisplay = 3;
+
+        if (this.showHolidays) {
+            this.holidays.forEach(item => {
+                const itemDay = (item.start || '').slice(0, 10);
+                if (itemDay === dayKey) {
+                    html += `<div class="event-badge holiday-badge" style="background-color: ${item.color}22; border-left: 3px solid ${item.color}; color: inherit;" title="${this.escapeHtml(item.title)}">🏖 ${this.escapeHtml(item.title)}</div>`;
+                }
+            });
+        }
+        if (this.showTimeOff) {
+            this.timeOff.forEach(item => {
+                const itemDay = (item.start || '').slice(0, 10);
+                if (itemDay === dayKey) {
+                    html += `<div class="event-badge time-off-badge" style="background-color: ${item.color}22; border-left: 3px solid ${item.color}; color: inherit;" title="${this.escapeHtml(item.title)}">🌴 ${this.escapeHtml(item.title)}</div>`;
+                }
+            });
+        }
         
         // Events (and any time_entry items that ended up in this.events - use item_type for badge and modal)
         if (this.showEvents) {

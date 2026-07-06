@@ -701,8 +701,7 @@ class TestClientPortalLogout:
 
         resp = client.get("/client-portal/logout", follow_redirects=False)
         assert resp.status_code in (302, 303)
-        assert "/login" in resp.headers.get("Location", "")
-        assert "/client-portal/login" not in resp.headers.get("Location", "")
+        assert "/client-portal/login" in resp.headers.get("Location", "")
 
         dash = client.get("/client-portal/dashboard", follow_redirects=False)
         assert dash.status_code in (302, 303)
@@ -722,6 +721,78 @@ class TestClientPortalLogout:
         resp = client.get("/client-portal/logout", follow_redirects=False)
         assert resp.status_code in (302, 303)
         assert "/client-portal/login" in resp.headers.get("Location", "")
+
+
+@pytest.mark.routes
+@pytest.mark.integration
+class TestUnifiedClientPortalLogin:
+    def test_main_login_with_portal_credentials_creates_portal_session(self, app, client, test_client):
+        with app.app_context():
+            test_client.portal_enabled = True
+            test_client.portal_username = "portalclient"
+            test_client.set_portal_password("password123")
+            db.session.commit()
+
+        resp = client.post(
+            "/login",
+            data={"username": "portalclient", "password": "password123"},
+            follow_redirects=False,
+        )
+        assert resp.status_code in (302, 303)
+        assert "/client-portal" in resp.headers.get("Location", "")
+
+        with client.session_transaction() as sess:
+            assert sess.get("client_portal_id") == test_client.id
+            assert sess.get("_user_id") is None
+
+    def test_main_login_with_portal_username_wrong_password_does_not_self_register(self, app, client, test_client):
+        with app.app_context():
+            from app.models import Settings
+
+            settings = Settings.get_settings()
+            settings.allow_self_register = True
+            test_client.portal_enabled = True
+            test_client.portal_username = "portalclient"
+            test_client.set_portal_password("password123")
+            db.session.commit()
+
+        resp = client.post(
+            "/login",
+            data={"username": "portalclient", "password": "wrongpassword"},
+            follow_redirects=True,
+        )
+        assert resp.status_code == 200
+
+        with app.app_context():
+            assert User.query.filter_by(username="portalclient").first() is None
+
+    def test_auth_logout_for_portal_only_user_redirects_to_portal_login(self, app, client, user, test_client):
+        with app.app_context():
+            user = set_client_portal_access(user, test_client.id, portal_only=True)
+            user.set_password("password123")
+            db.session.commit()
+            username = user.username
+
+        client.post(
+            "/login",
+            data={"username": username, "password": "password123"},
+            follow_redirects=True,
+        )
+
+        resp = client.get("/logout", follow_redirects=False)
+        assert resp.status_code in (302, 303)
+        assert "/client-portal/login" in resp.headers.get("Location", "")
+
+    def test_authenticate_portal_is_case_insensitive(self, app, test_client):
+        with app.app_context():
+            test_client.portal_enabled = True
+            test_client.portal_username = "PortalClient"
+            test_client.set_portal_password("password123")
+            db.session.commit()
+
+            authenticated = Client.authenticate_portal("portalclient", "password123")
+            assert authenticated is not None
+            assert authenticated.id == test_client.id
 
 
 # ============================================================================

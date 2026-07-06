@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timetracker_mobile/data/models/project.dart';
 import 'package:timetracker_mobile/core/theme/app_tokens.dart';
+import '../providers/attendance_provider.dart';
 import '../providers/timer_provider.dart';
 import '../providers/time_entries_provider.dart';
 import '../providers/projects_provider.dart';
 import '../providers/user_prefs_provider.dart';
 import 'package:timetracker_mobile/utils/date_format_utils.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/workday_card.dart';
 import 'timer_screen.dart';
 import 'projects_screen.dart';
 import 'time_entries_screen.dart';
@@ -115,6 +117,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
     // Load data on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(timerProvider.notifier).checkTimerStatus();
+      ref.read(attendanceProvider.notifier).refresh();
       ref.read(projectsProvider.notifier).loadProjects();
       final now = DateTime.now();
       ref.read(timeEntriesProvider.notifier).loadTimeEntries(
@@ -218,6 +221,8 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                 ),
               ),
             ),
+            const SizedBox(height: AppSpacing.md),
+            const WorkdayCard(),
             const SizedBox(height: AppSpacing.md),
             // Today's Summary Card
             Card(

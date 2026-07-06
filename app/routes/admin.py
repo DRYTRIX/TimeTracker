@@ -1534,6 +1534,38 @@ def settings():
             # Keep settings save tolerant to missing columns/invalid form values; log for troubleshooting.
             safe_log(f"Skipping working time limits update due to invalid or unavailable fields: {exc}")
 
+        # Attendance compliance (Belgium 2027)
+        try:
+            from app.services.attendance_compliance_service import AttendanceComplianceService
+
+            settings_obj.compliance_enabled = request.form.get("compliance_enabled") == "on"
+            settings_obj.compliance_require_workday_registration = (
+                request.form.get("compliance_require_workday_registration") == "on"
+            )
+            preset = (request.form.get("compliance_jurisdiction_preset") or "custom").strip()
+            if preset in ("custom", "belgium", "eu_generic"):
+                settings_obj.compliance_jurisdiction_preset = preset
+            if preset == "belgium":
+                AttendanceComplianceService().apply_belgium_preset(settings_obj)
+            else:
+                for field, cast, lo, hi in (
+                    ("compliance_standard_daily_hours", float, 1, 12),
+                    ("compliance_standard_weekly_hours", float, 1, 60),
+                    ("compliance_break_after_hours", float, 1, 12),
+                    ("compliance_min_daily_rest_hours", float, 8, 16),
+                ):
+                    val = request.form.get(field, type=cast)
+                    if val is not None and lo <= val <= hi:
+                        setattr(settings_obj, field, val)
+                brk_min = request.form.get("compliance_min_break_minutes", type=int)
+                if brk_min is not None and 5 <= brk_min <= 120:
+                    settings_obj.compliance_min_break_minutes = brk_min
+                retention = request.form.get("compliance_attendance_retention_years", type=int)
+                if retention is not None and 5 <= retention <= 30:
+                    settings_obj.compliance_attendance_retention_years = retention
+        except (AttributeError, ValueError, TypeError) as exc:
+            safe_log(f"Skipping compliance settings update: {exc}")
+
         # Update AI helper settings (server-side provider config; secrets are not exposed to clients)
         try:
             ai_enabled_mode = (request.form.get("ai_enabled_mode") or "env").strip().lower()

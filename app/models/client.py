@@ -367,9 +367,22 @@ class Client(db.Model):
         self.password_setup_token_expires = None
 
     @classmethod
+    def find_portal_by_username(cls, username):
+        """Find an enabled portal client by username (case-insensitive)."""
+        from sqlalchemy import func
+
+        if not username:
+            return None
+        normalized = username.strip().lower()
+        return cls.query.filter(
+            cls.portal_enabled.is_(True),
+            func.lower(cls.portal_username) == normalized,
+        ).first()
+
+    @classmethod
     def authenticate_portal(cls, username, password):
         """Authenticate a client portal login"""
-        client = cls.query.filter_by(portal_username=username, portal_enabled=True).first()
+        client = cls.find_portal_by_username(username)
         if not client:
             return None
 

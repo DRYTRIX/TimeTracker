@@ -409,15 +409,12 @@ def logout():
     """Client portal logout"""
     from flask_login import logout_user
 
-    was_native_client = "client_portal_id" in session
     session.pop("client_portal_id", None)
     session.pop("_user_id", None)
     session.pop("user_id", None)
     logout_user()
     flash(_("You have been logged out."), "info")
-    if was_native_client:
-        return redirect(url_for("client_portal.login"))
-    return redirect(url_for("auth.login"))
+    return redirect(url_for("client_portal.login"))
 
 
 @client_portal_bp.route("/client-portal/set-password", methods=["GET", "POST"])
