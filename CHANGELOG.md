@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Client portal login and logout (#677)** — External clients with portal credentials can sign in at `/login` as well as `/client-portal/login`; wrong passwords no longer fall through to self-registration. Portal logout (native and user-based sessions) redirects to `/client-portal/login`. Portal usernames are matched case-insensitively. See [CLIENT_PORTAL.md](docs/CLIENT_PORTAL.md).
+
 ## [5.8.6] - 2026-06-28
 
 ### Added

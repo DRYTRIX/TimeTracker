@@ -32,7 +32,7 @@ For customers who should **only** view their invoices, projects, and time entrie
 1. Navigate to **Clients** → edit the client record
 2. Enable **Client Portal** and set a **portal username** (and password, or send the password-setup email)
 3. Optionally enable **Issue reporting** for the client portal
-4. Share the login URL: **`/client-portal/login`**
+4. Share the login URL: **`/client-portal/login`** (clients may also sign in at **`/login`** with the same portal username and password)
 
 This uses dedicated portal credentials on the `clients` table (`portal_username`, `portal_password_hash`). The client never needs a user account under Admin → Users.
 
@@ -52,8 +52,12 @@ The user can access the portal at `/client-portal` after signing in (at `/login`
 
 | Account type | Login URL |
 |--------------|-----------|
-| Client-record portal (external) | `/client-portal/login` |
+| Client-record portal (external) | `/client-portal/login` or `/login` (unified login) |
 | User with portal access (internal) | `/login` (main app) or `/client-portal` if already signed in |
+
+**Unified login:** The main `/login` page accepts native client portal credentials when no matching `User` account exists. Successful authentication creates a `client_portal_id` session and redirects to `/client-portal/dashboard`. If the username matches a portal client but the password is wrong, login fails without creating a new user (even when self-registration is enabled). Portal usernames are matched case-insensitively.
+
+**Logout:** Signing out from the client portal (`/client-portal/logout`) or from the main app (`/logout` for portal users) returns to `/client-portal/login`.
 
 ### User Requirements (user-based portal)
 
@@ -77,8 +81,8 @@ For a user to access the client portal:
 ## Portal Routes
 
 ### Authentication
-- **Login**: `/client-portal/login` (native client credentials)
-- **Logout**: `/client-portal/logout`
+- **Login**: `/client-portal/login` (native client credentials) or `/login` (unified login for the same credentials)
+- **Logout**: `/client-portal/logout` (always redirects to `/client-portal/login`)
 - **Set password**: `/client-portal/set-password?token=...` (password setup email link)
 
 ### Dashboard
@@ -265,7 +269,7 @@ Comprehensive tests are available in `tests/test_client_portal.py`:
 - Model tests for user portal properties
 - Route tests for access control
 - Admin interface tests for enabling/disabling portal access
-- Native login, notification redirects, issues access, attachment type checks, inactive client blocking
+- Native login, unified login via `/login`, notification redirects, issues access, attachment type checks, inactive client blocking
 - Smoke tests for basic functionality
 
 Run tests with:

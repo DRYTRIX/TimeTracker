@@ -117,6 +117,53 @@ def _resolve_post_login_url(user: User, next_page: str | None) -> str:
     return next_page
 
 
+def _try_client_portal_login(username: str, password: str):
+    """Try native client portal credentials from the main /login form.
+
+    Returns a Flask response when this login attempt should end here, or None when
+    no portal client matches the username (caller continues normal user auth).
+    """
+    from app.models import Client
+
+    client = Client.find_portal_by_username(username)
+    if not client:
+        return None
+
+    if not client.is_active:
+        log_event(
+            "auth.login_failed",
+            username=username,
+            reason="client_portal_inactive",
+            auth_method="client_portal",
+        )
+        flash(_("Account is disabled. Please contact an administrator."), "error")
+        return render_template("auth/login.html", **_login_template_vars())
+
+    if not password or not client.check_portal_password(password):
+        log_event(
+            "auth.login_failed",
+            username=username,
+            reason="client_portal_invalid_password",
+            auth_method="client_portal",
+        )
+        flash(_("Invalid username or password"), "error")
+        return render_template("auth/login.html", **_login_template_vars())
+
+    logout_user()
+    session.pop("_user_id", None)
+    session.pop("user_id", None)
+    session["client_portal_id"] = client.id
+    session.permanent = True
+
+    log_event("auth.login", client_id=client.id, auth_method="client_portal")
+    flash(_("Welcome, %(client_name)s!", client_name=client.name), "success")
+
+    next_page = request.form.get("next") or request.args.get("next")
+    if not next_page or not next_page.startswith("/client-portal"):
+        next_page = url_for("client_portal.dashboard")
+    return redirect(next_page)
+
+
 def _finalize_login_after_verification(user: User, *, log_auth_method: str):
     """After successful local or LDAP verification: 2FA gate or establish session and redirect."""
     if getattr(user, "two_factor_enabled", False):
@@ -372,6 +419,9 @@ def login():
                 ldap_user = LDAPService.authenticate(username, password)
                 if ldap_user:
                     return _finalize_login_after_verification(ldap_user, log_auth_method="ldap")
+                portal_login_response = _try_client_portal_login(username, password)
+                if portal_login_response is not None:
+                    return portal_login_response
                 log_event("auth.login_failed", username=username, reason="ldap_auth_failed", auth_method=auth_method)
                 flash(_("Invalid username or password"), "error")
                 return render_template("auth/login.html", **_login_template_vars())
@@ -395,6 +445,10 @@ def login():
                         return _finalize_login_after_verification(ldap_user, log_auth_method="ldap")
 
             if not user:
+                portal_login_response = _try_client_portal_login(username, password)
+                if portal_login_response is not None:
+                    return portal_login_response
+
                 # Check if self-registration is allowed (use ConfigManager to respect database settings)
                 allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
                 if allow_self_register and (include_local or auth_method == "none"):
@@ -737,11 +791,15 @@ def logout():
             cache.delete(cache_key)
         except Exception:
             pass
+    is_portal_user = getattr(current_user, "portal_only", False) or getattr(
+        current_user, "is_client_portal_user", False
+    )
     logout_user()
     # Ensure both possible session keys are cleared for compatibility
     try:
         session.pop("_user_id", None)
         session.pop("user_id", None)
+        session.pop("client_portal_id", None)
     except Exception:
         pass
     flash(_("Goodbye, %(username)s!", username=username), "info")
@@ -767,6 +825,8 @@ def logout():
                 except Exception:
                     pass
 
+    if is_portal_user:
+        return redirect(url_for("client_portal.login"))
     return redirect(url_for("auth.login"))
 
 
