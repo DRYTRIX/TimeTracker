@@ -190,6 +190,9 @@ class User(UserMixin, db.Model):
     # login can map to multiple TimeTracker users in shared installations.
     github_username = db.Column(db.String(100), nullable=True)
 
+    # Slack user ID for workspace attendance slash commands (/in, /out, etc.).
+    slack_user_id = db.Column(db.String(50), nullable=True, unique=True, index=True)
+
     # Custom theme preferences (see app/services/theme_service.py).
     # theme_name picks one of the built-in themes; the remaining four
     # columns let users override individual aspects independently.

@@ -21,6 +21,13 @@ enabled or disabled by each user without affecting anyone else.
   command (`start`, `stop`, `status`, `today`), and an optional daily
   summary post.
 
+## Workspace connectors (admin)
+
+- **[Slack Attendance](SLACK_ATTENDANCE.md)** — Workspace-level
+  `/in`, `/brb`, `/back`, `/out` slash commands in a dedicated channel
+  for clock-in/out and breaks. Maps Slack users by ID or profile email.
+  Configured under **Integrations → Workspace integrations**.
+
 ## Workspace / project connectors
 
 - **[ActivityWatch](ACTIVITYWATCH.md)** — Local-first automated time

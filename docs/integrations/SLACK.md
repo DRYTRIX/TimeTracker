@@ -22,6 +22,11 @@ a daily summary at a chosen local time.
   Every reply is an *ephemeral* JSON response, so it's only visible to
   the user who invoked the command. The endpoint returns within Slack's
   3-second budget.
+
+> **Attendance commands:** For workspace-wide clock-in/out and breaks
+> (`/in`, `/brb`, `/back`, `/out`) in a shared channel, see
+> [SLACK_ATTENDANCE.md](SLACK_ATTENDANCE.md). That integration is
+> separate from this per-user timer connector.
 - **Daily summary** — Optional once-a-day post at a user-configured
   local time, driven by the `slack_daily_summary` APScheduler job
   (every 30 minutes; the connector matches the configured time against

@@ -19,6 +19,13 @@ Personal attendance history: `/workday/history`.
 
 Enable **missed workday reminders** under **Settings → Notifications** (in-app smart notification and/or email).
 
+### Slack attendance (optional)
+
+Admins can enable workspace-level Slack slash commands (`/in`, `/brb`,
+`/back`, `/out`) so employees clock in/out from a dedicated channel.
+Successful commands post in-channel confirmations; records use
+`source=slack`. See [SLACK_ATTENDANCE.md](../integrations/SLACK_ATTENDANCE.md).
+
 ## Working time limits (admin)
 
 **Admin → Settings → Time entry requirements → Working time limits**

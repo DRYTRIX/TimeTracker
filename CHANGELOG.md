@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Time-off request PDF** — Printable leave/vacation form with employee details, approval metadata, and signature lines. Download from the Workforce dashboard (`/workforce/time-off/<id>/pdf`) or `GET /api/v1/time-off/requests/<id>/pdf`.
 - **Calendar holidays and time-off overlay** — Company holidays and the user's time-off (approved and pending) appear on the main calendar and timer calendar views with filter toggles.
 - **Mobile workday controls** — Shared **Workday** card on Home and Timer screens with error feedback via SnackBar.
+- **Slack attendance commands** — Workspace-level `/in`, `/brb`, `/back`, `/out` slash commands for clock-in/out and breaks in a dedicated Slack channel, with in-channel confirmations and email/Slack-ID user linking. Admin setup under **Integrations → Workspace integrations**; migration `166_add_slack_user_id`. See [SLACK_ATTENDANCE.md](docs/integrations/SLACK_ATTENDANCE.md).
 
 ### Fixed
 

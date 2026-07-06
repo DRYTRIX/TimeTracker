@@ -355,6 +355,102 @@
     </div>
 </div>
 
+{% if current_user.is_admin %}
+<div class="mt-8">
+    <h2 class="text-xl font-semibold text-text-light dark:text-text-dark mb-3">
+        {{ _('Workspace integrations') }}
+    </h2>
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+        {{ _('Admin-only integrations shared across the organization.') }}
+    </p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div id="connector-card-slack-attendance"
+         class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm hover:shadow-lg transition-shadow overflow-hidden"
+         data-status-url="{{ url_for('integrations_webhooks.slack_attendance_status') }}"
+         data-config-url="{{ url_for('integrations_webhooks.slack_attendance_save_config') }}"
+         data-test-url="{{ url_for('integrations_webhooks.slack_attendance_test') }}"
+         data-attendance-url="{{ _base_url }}{{ url_for('integrations_webhooks.slack_attendance') }}">
+        <div class="p-6">
+            <div class="flex items-start justify-between mb-4 gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <i class="fab fa-slack text-primary text-xl"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Slack Attendance') }}</h3>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark line-clamp-2">
+                            {{ _('Workspace clock-in/out and breaks via /in, /brb, /back, /out in a dedicated channel.') }}
+                        </p>
+                    </div>
+                </div>
+                <span data-role="badge"
+                      class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 font-medium">
+                    <i class="fas fa-circle mr-1"></i>{{ _('Not Connected') }}
+                </span>
+            </div>
+
+            <form data-role="form" class="space-y-3" autocomplete="off">
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Bot token (xoxb-…)') }}
+                    </label>
+                    <input type="password" name="bot_token"
+                           class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2"
+                           placeholder="xoxb-..." autocomplete="new-password">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Signing secret') }}
+                    </label>
+                    <input type="password" name="signing_secret"
+                           class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2"
+                           autocomplete="new-password">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Attendance channel ID (e.g. C1234567890)') }}
+                    </label>
+                    <input type="text" name="attendance_channel_id"
+                           class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2"
+                           placeholder="C1234567890">
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                        {{ _('When set, slash commands only work in this channel.') }}
+                    </p>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                        {{ _('Slash command URL') }}
+                    </label>
+                    <div class="flex gap-2">
+                        <input type="text" data-role="attendance-url" readonly
+                               value="{{ _base_url }}{{ url_for('integrations_webhooks.slack_attendance') }}"
+                               class="w-full rounded-lg border border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-900 text-sm px-3 py-2 font-mono">
+                        <button type="button" data-role="copy" data-copy-from="data-role:attendance-url"
+                                class="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
+                            {{ _('Copy') }}
+                        </button>
+                    </div>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                        {{ _('Register /in, /brb, /back, and /out slash commands in your Slack app pointing to this URL.') }}
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-2 pt-2">
+                    <button type="submit" class="px-3 py-2 text-sm rounded-lg bg-primary text-white hover:bg-primary/90">
+                        {{ _('Save') }}
+                    </button>
+                    <button type="button" data-role="test" class="px-3 py-2 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">
+                        {{ _('Send test message') }}
+                    </button>
+                </div>
+                <p data-role="message" class="text-xs text-text-muted-light dark:text-text-muted-dark min-h-[1em]"></p>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <script>
 (function () {
     "use strict";
@@ -570,6 +666,35 @@
             });
         });
         slLoad();
+    }
+
+    // ---------------- Slack Attendance (admin workspace) ----------------
+    var sla = document.getElementById("connector-card-slack-attendance");
+    if (sla) {
+        copyHandler(sla);
+        var slaForm = sla.querySelector('[data-role="form"]');
+        function slaLoad() {
+            getJSON(sla.dataset.statusUrl).then(function (s) {
+                setConnectedBadge(sla, !!s.connected);
+                if (s.attendance_channel_id) slaForm.elements["attendance_channel_id"].value = s.attendance_channel_id;
+            }).catch(function () {});
+        }
+        slaForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+            var data = formToObject(slaForm);
+            if (!data.bot_token) delete data.bot_token;
+            if (!data.signing_secret) delete data.signing_secret;
+            postJSON(sla.dataset.configUrl, data).then(function (r) {
+                flash(sla, r.body.ok ? "{{ _('Saved.') }}" : (r.body.error || "{{ _('Save failed.') }}"), !r.body.ok);
+                if (r.body.ok) slaLoad();
+            });
+        });
+        sla.querySelector('[data-role="test"]').addEventListener("click", function () {
+            postJSON(sla.dataset.testUrl, {}).then(function (r) {
+                flash(sla, r.body.ok ? "{{ _('Test message sent.') }}" : (r.body.error || "{{ _('Test failed.') }}"), !r.body.ok);
+            });
+        });
+        slaLoad();
     }
 })();
 </script>
