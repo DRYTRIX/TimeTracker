@@ -233,6 +233,13 @@ Each event shows:
 GET /api/calendar/events?start=<ISO>&end=<ISO>&project_id=<id>&task_id=<id>&tags=<string>
 ```
 
+#### Get Calendar View Data (holidays + time off overlays)
+This endpoint powers the `/calendar` view (custom calendar UI) and returns holidays/time-off as separate arrays.
+
+```
+GET /api/calendar/data?start=<ISO>&end=<ISO>&include_tasks=<bool>&include_time_entries=<bool>&include_holidays=<bool>&include_time_off=<bool>
+```
+
 **Query Parameters:**
 - `start` (required): ISO datetime for range start
 - `end` (required): ISO datetime for range end
@@ -462,7 +469,9 @@ Date input fields on **Log Time**, **Time entries**, and **Gantt Charts** (and o
 ### Events Not Loading
 
 1. Check browser console for errors
-2. Verify `/api/calendar/events` endpoint is accessible
+2. Verify the correct endpoint is accessible:
+   - `/timer/calendar` uses `/api/calendar/events`
+   - `/calendar` uses `/api/calendar/data`
 3. Check date range parameters
 4. Ensure user is authenticated
 

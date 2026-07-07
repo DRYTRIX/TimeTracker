@@ -149,6 +149,13 @@ Use the checkboxes at the top of the calendar to toggle visibility:
 GET /api/calendar/events?start={start_date}&end={end_date}&include_tasks={boolean}&include_time_entries={boolean}
 ```
 
+#### Get Calendar View Data (holidays + time off overlays)
+This endpoint powers the `/calendar` view (custom calendar UI) and returns holidays/time-off separately.
+
+```http
+GET /api/calendar/data?start={start_date}&end={end_date}&include_tasks={boolean}&include_time_entries={boolean}&include_holidays={boolean}&include_time_off={boolean}
+```
+
 **Parameters:**
 - `start`: ISO 8601 datetime (required)
 - `end`: ISO 8601 datetime (required)

@@ -5,7 +5,7 @@ Tests calendar views, event CRUD operations, and API endpoints.
 
 import pytest
 import json
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from app.models import CalendarEvent, Task
 from app import db
 
@@ -122,6 +122,33 @@ def test_get_calendar_events_api(authenticated_client, user, app):
         assert "events" in data
         assert len(data["events"]) > 0
         assert data["events"][0]["title"] == "Test Event"
+
+
+@pytest.mark.api
+@pytest.mark.routes
+def test_get_calendar_data_includes_holidays(authenticated_client, app):
+    """Test that the calendar view data API returns holidays separately."""
+    from app.models.time_off import CompanyHoliday
+
+    with app.app_context():
+        holiday_date = date.today() + timedelta(days=5)
+        holiday = CompanyHoliday(
+            name="Test Holiday",
+            start_date=holiday_date,
+            end_date=holiday_date,
+            enabled=True,
+        )
+        db.session.add(holiday)
+        db.session.commit()
+
+        start_str = (holiday_date - timedelta(days=1)).isoformat()
+        end_str = (holiday_date + timedelta(days=1)).isoformat()
+        response = authenticated_client.get(f"/api/calendar/data?start={start_str}&end={end_str}")
+
+        assert response.status_code == 200
+        data = response.get_json()
+        assert "holidays" in data
+        assert any(h.get("title") == "Test Holiday" for h in data["holidays"])
 
 
 @pytest.mark.api
