@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.9.1] - 2026-07-13
+
+### Fixed
+
+- **Calendar holiday and time-off overlays** — Restored holiday overlays on `/calendar` via a dedicated `/api/calendar/data` feed (avoids route collision with `/api/calendar/events`). Fixed local date keying, merged overlay handling, and FullCalendar overlay end dates.
+- **Dashboard working-time limit banner** — Banner now appears only when justifications are pending.
+- **Attendance compliance** — Stopped eager loading of dynamic attendance relationships that caused regressions in `list_days`.
+- **Template globals** — Fixed `Settings` shadowing in Jinja template globals.
+
+### Documentation
+
+- **NAS deployment** — Added `docker-compose.nas.yml` and [NAS_DEPLOYMENT.md](docs/admin/deployment/NAS_DEPLOYMENT.md) for QNAP, Synology, and Portainer installs without cloning the repo.
+- **Calendar API** — Documented `/api/calendar/data` endpoint in calendar feature docs.
+- **Version** — Documented release **5.9.1** to match `setup.py` (single source of truth for the application version).
+
 ## [5.9.0] - 2026-07-06
 
 ### Added
