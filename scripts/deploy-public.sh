@@ -1,114 +1,100 @@
 #!/bin/bash
 
-# Time Tracker Public Image Deployment Script
-# This script deploys Time Tracker using the pre-built public Docker image
+# TimeTracker Public Image Deployment Script
+# Deploys using the official GHCR image and docker-compose.nas.yml (app + PostgreSQL)
 
 set -e
 
-echo "🚀 Time Tracker Public Image Deployment"
-echo "======================================="
+COMPOSE_FILE="docker-compose.nas.yml"
+IMAGE="ghcr.io/drytrix/timetracker:latest"
+
+echo "🚀 TimeTracker Public Image Deployment"
+echo "======================================"
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
     echo "❌ Docker is not installed. Please install Docker first:"
     echo "   curl -fsSL https://get.docker.com -o get-docker.sh"
     echo "   sudo sh get-docker.sh"
-    echo "   sudo usermod -aG docker $USER"
+    echo "   sudo usermod -aG docker \$USER"
     exit 1
 fi
 
-# Check if Docker Compose is installed
-if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Docker Compose is not installed. Please install Docker Compose first:"
-    echo "   sudo apt-get update"
-    echo "   sudo apt-get install docker-compose-plugin"
+# Prefer docker compose plugin, fall back to docker-compose
+if docker compose version &> /dev/null; then
+    COMPOSE_CMD="docker compose"
+elif command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker-compose"
+else
+    echo "❌ Docker Compose is not installed."
     exit 1
 fi
 
 echo "✅ Docker and Docker Compose are installed"
+echo "📦 Using public image: $IMAGE"
 
-# Get GitHub repository from git remote or prompt user
-GITHUB_REPO=$(git remote get-url origin 2>/dev/null | sed 's/.*github\.com[:/]\([^/]*\/[^/]*\)\.git/\1/' || echo "")
-
-if [ -z "$GITHUB_REPO" ]; then
-    echo "⚠️  Could not detect GitHub repository from git remote"
-    read -p "Enter your GitHub repository (e.g., username/timetracker): " GITHUB_REPO
+# Ensure compose file exists (download if running outside cloned repo)
+if [ ! -f "$COMPOSE_FILE" ]; then
+    echo "📥 Downloading $COMPOSE_FILE..."
+    curl -fsSL -o "$COMPOSE_FILE" \
+        "https://raw.githubusercontent.com/drytrix/TimeTracker/main/$COMPOSE_FILE"
 fi
 
-# Export for docker-compose
-export GITHUB_REPOSITORY="$GITHUB_REPO"
-
-echo "📦 Using public image: ghcr.io/$GITHUB_REPOSITORY"
-
-# Create necessary directories
-echo "📁 Creating directories..."
-mkdir -p data logs backups
-
-# Copy environment file if it doesn't exist
+# Create .env with SECRET_KEY if missing
 if [ ! -f .env ]; then
-    echo "📝 Creating .env file from template..."
-    cp env.example .env
-    echo "⚠️  Please edit .env file with your configuration before starting"
-    echo "   Key settings to review:"
-    echo "   - SECRET_KEY: Change this to a secure random string"
-    echo "   - ADMIN_USERNAMES: Set your admin usernames"
-    echo "   - TZ: Set your timezone"
-    echo "   - CURRENCY: Set your currency"
+    echo "📝 Creating .env file..."
+    if command -v openssl &> /dev/null; then
+        SECRET_KEY=$(openssl rand -hex 32)
+    else
+        echo "❌ openssl is required to generate SECRET_KEY. Install openssl or create .env manually."
+        exit 1
+    fi
+    cat > .env <<EOF
+SECRET_KEY=$SECRET_KEY
+TZ=Europe/Brussels
+CURRENCY=EUR
+HTTP_PORT=8080
+EOF
+    echo "✅ Generated SECRET_KEY in .env"
 else
     echo "✅ .env file already exists"
 fi
 
 # Pull the latest image
-echo "📥 Pulling latest Time Tracker image..."
-docker pull "ghcr.io/$GITHUB_REPOSITORY:latest"
+echo "📥 Pulling latest TimeTracker image..."
+docker pull "$IMAGE"
 
-# Start the application using public image
-echo "🚀 Starting Time Tracker with public image..."
-docker-compose -f docker-compose.public.yml up -d
+# Start the application
+echo "🚀 Starting TimeTracker..."
+$COMPOSE_CMD -f "$COMPOSE_FILE" up -d
 
 # Wait for application to start
-echo "⏳ Waiting for application to start..."
-sleep 10
+echo "⏳ Waiting for application to start (migrations may take 1–2 minutes)..."
+for i in $(seq 1 24); do
+    if curl -f -s http://localhost:8080/_health > /dev/null 2>&1; then
+        break
+    fi
+    sleep 5
+done
 
-# Check if application is running
-if curl -f http://localhost:8080/_health > /dev/null 2>&1; then
-    echo "✅ Time Tracker is running successfully!"
+if curl -f -s http://localhost:8080/_health > /dev/null 2>&1; then
+    echo "✅ TimeTracker is running successfully!"
     echo ""
     echo "🌐 Access the application at:"
-    echo "   http://$(hostname -I | awk '{print $1}'):8080"
-    echo ""
-    echo "📋 Next steps:"
-    echo "   1. Open the application in your browser"
-    echo "   2. Log in with your admin username"
-    echo "   3. Create your first project"
-    echo "   4. Start tracking time!"
+    echo "   http://localhost:8080"
+    if command -v hostname &> /dev/null; then
+        echo "   http://$(hostname -I 2>/dev/null | awk '{print $1}'):8080"
+    fi
     echo ""
     echo "🔧 Useful commands:"
-    echo "   View logs: docker-compose -f docker-compose.public.yml logs -f"
-    echo "   Stop app:  docker-compose -f docker-compose.public.yml down"
-    echo "   Restart:   docker-compose -f docker-compose.public.yml restart"
-    echo "   Update:    docker pull ghcr.io/$GITHUB_REPOSITORY:latest && docker-compose -f docker-compose.public.yml up -d"
+    echo "   View logs: $COMPOSE_CMD -f $COMPOSE_FILE logs -f"
+    echo "   Stop app:  $COMPOSE_CMD -f $COMPOSE_FILE down"
+    echo "   Update:    docker pull $IMAGE && $COMPOSE_CMD -f $COMPOSE_FILE up -d"
 else
-    echo "❌ Application failed to start. Check logs with:"
-    echo "   docker-compose -f docker-compose.public.yml logs"
+    echo "❌ Application not healthy yet. Check logs:"
+    echo "   $COMPOSE_CMD -f $COMPOSE_FILE logs"
     exit 1
-fi
-
-# Optional: Enable TLS with reverse proxy
-read -p "🔒 Enable HTTPS with reverse proxy? (y/N): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "🔒 Starting with TLS support..."
-    docker-compose -f docker-compose.public.yml --profile tls up -d
-    echo "✅ HTTPS enabled! Access at:"
-    echo "   https://$(hostname -I | awk '{print $1}')"
 fi
 
 echo ""
 echo "🎉 Deployment complete!"
-echo ""
-echo "💡 Benefits of using the public image:"
-echo "   - Faster deployment (no build time)"
-echo "   - Consistent builds across environments"
-echo "   - Automatic updates when you push to main"
-echo "   - Multi-architecture support (AMD64, ARM64, ARMv7)"

@@ -1,0 +1,45 @@
+{
+  "version": 2,
+  "templates": [
+    {
+      "type": 3,
+      "title": "TimeTracker",
+      "description": "Self-hosted time tracking and project management with PostgreSQL",
+      "note": "Set SECRET_KEY before deploying (generate with: openssl rand -hex 32). First boot may take 1-2 minutes while migrations run.",
+      "categories": ["productivity"],
+      "platform": "linux",
+      "logo": "https://raw.githubusercontent.com/drytrix/TimeTracker/main/app/static/images/timetracker-logo-icon.svg",
+      "repository": {
+        "url": "https://github.com/drytrix/TimeTracker",
+        "stackfile": "docker-compose.nas.yml"
+      },
+      "env": [
+        {
+          "name": "SECRET_KEY",
+          "label": "Secret key (required — openssl rand -hex 32)",
+          "default": ""
+        },
+        {
+          "name": "HTTP_PORT",
+          "label": "Web port on host",
+          "default": "8080"
+        },
+        {
+          "name": "TZ",
+          "label": "Timezone",
+          "default": "Europe/Brussels"
+        },
+        {
+          "name": "CURRENCY",
+          "label": "Default currency",
+          "default": "EUR"
+        },
+        {
+          "name": "ADMIN_USERNAMES",
+          "label": "Admin username(s)",
+          "default": "admin"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>TimeTracker</Name>
+  <Repository>ghcr.io/drytrix/timetracker:latest</Repository>
+  <Registry>https://ghcr.io</Registry>
+  <Network>timetracker</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/drytrix/TimeTracker/issues</Support>
+  <Project>https://github.com/drytrix/TimeTracker</Project>
+  <Overview>Self-hosted time tracking and project management. Requires TimeTracker-DB on the same timetracker network.</Overview>
+  <Category>Productivity: Tools</Category>
+  <WebUI>http://[IP]:[PORT:8080]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/drytrix/TimeTracker/main/templates/unraid/timetracker-app.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/drytrix/TimeTracker/main/app/static/images/timetracker-logo-icon.svg</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <Requires>Deploy TimeTracker-DB first. Generate SECRET_KEY with: openssl rand -hex 32</Requires>
+  <Config Name="Web Port" Target="8080" Default="8080" Mode="tcp" Description="TimeTracker web interface port" Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+  <Config Name="App Data" Target="/data" Default="/mnt/user/appdata/timetracker/data" Mode="rw" Description="Application data" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/timetracker/data</Config>
+  <Config Name="Uploads" Target="/app/app/static/uploads" Default="/mnt/user/appdata/timetracker/uploads" Mode="rw" Description="Uploaded files" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/timetracker/uploads</Config>
+  <Config Name="Logs" Target="/app/logs" Default="/mnt/user/appdata/timetracker/logs" Mode="rw" Description="Application logs" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/timetracker/logs</Config>
+  <Environment>
+    <Variable>
+      <Value/>
+      <Name>SECRET_KEY</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>postgresql+psycopg2://timetracker:timetracker@TimeTracker-DB:5432/timetracker</Value>
+      <Name>DATABASE_URL</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>Europe/Brussels</Value>
+      <Name>TZ</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>EUR</Value>
+      <Name>CURRENCY</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>admin</Value>
+      <Name>ADMIN_USERNAMES</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>false</Value>
+      <Name>WTF_CSRF_SSL_STRICT</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>false</Value>
+      <Name>SESSION_COOKIE_SECURE</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>false</Value>
+      <Name>CSRF_COOKIE_SECURE</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>http</Value>
+      <Name>PREFERRED_URL_SCHEME</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>/app/logs/timetracker.log</Value>
+      <Name>LOG_FILE</Name>
+      <Mode/>
+    </Variable>
+  </Environment>
+  <Labels/>
+  <TailscaleStateDir/>
+</Container>

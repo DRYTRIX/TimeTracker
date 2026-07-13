@@ -6,7 +6,7 @@
 
 **Track time. Manage projects. Generate invoices. All in one place.**
 
-[🆕 What's New](#-whats-new) • [🚀 Quick Start](#-quick-start) • [✨ Features](#-features) • [📸 Screenshots](#-screenshots) • [📖 Getting Started](docs/GETTING_STARTED.md) • [📚 Documentation](docs/) • [🗑️ Uninstall](UNINSTALL.md) • [📋 Changelog](CHANGELOG.md) • [🐳 Deploy](#-deployment)
+[🆕 What's New](#-whats-new) • [📥 Download & Install](#-download--install) • [🚀 Quick Start](#-quick-start) • [✨ Features](#-features) • [📸 Screenshots](#-screenshots) • [📖 Getting Started](docs/GETTING_STARTED.md) • [📚 Documentation](docs/) • [🗑️ Uninstall](UNINSTALL.md) • [📋 Changelog](CHANGELOG.md) • [🐳 Deploy](#-deployment)
 
 ---
 
@@ -23,6 +23,21 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 - 🔒 **Privacy-focused organizations** wanting self-hosted solutions
 
 You can [support the project and purchase a key](https://timetracker.drytrix.com/support.html) to hide donate prompts in your instance.
+
+---
+
+## 📥 Download & Install
+
+| Method | Best for | Get started |
+|--------|----------|-------------|
+| **Docker image** | Servers, VPS, homelab | `docker pull ghcr.io/drytrix/timetracker:latest` or [Docker Hub](https://hub.docker.com/r/drytrix/timetracker) (`drytrix/timetracker`) |
+| **NAS compose** | QNAP, Synology, Portainer | Paste [`docker-compose.nas.yml`](docker-compose.nas.yml) — [NAS guide](docs/admin/deployment/NAS_DEPLOYMENT.md) |
+| **GitHub Release** | Compose files + desktop/mobile | [Releases](https://github.com/drytrix/TimeTracker/releases) |
+| **Cloud (Render)** | Managed hosting | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/drytrix/TimeTracker) |
+
+**Full list of install paths:** [Distribution Guide](docs/admin/deployment/DISTRIBUTION.md) (Portainer templates, Unraid, Railway, Fly.io, Coolify, [Docker Hub](https://hub.docker.com/r/drytrix/timetracker))
+
+> **Docker Hub namespace:** images are published at [`drytrix/timetracker`](https://hub.docker.com/r/drytrix/timetracker) (formerly `driesp/timetracker`).
 
 ---
 

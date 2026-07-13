@@ -97,6 +97,7 @@ See [features/](features/) for additional feature documentation.
 - **[Support visibility](admin/configuration/SUPPORT_VISIBILITY.md)** — Hide donate/support UI with a purchased key; [purchase key](https://timetracker.drytrix.com/support.html)
 
 ### Deployment
+- **[Distribution & Download](admin/deployment/DISTRIBUTION.md)** — All install paths and marketplaces
 - **[NAS Deployment](admin/deployment/NAS_DEPLOYMENT.md)** — QNAP, Synology, Portainer (no git clone)
 - **[Portainer Deployment](admin/deployment/PORTAINER_DEPLOYMENT.md)** — Portainer stack guide
 - **[Version Management](admin/deployment/VERSION_MANAGEMENT.md)** — Managing versions

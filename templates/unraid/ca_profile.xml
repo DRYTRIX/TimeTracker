@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<CA>
+  <Name>TimeTracker</Name>
+  <Overview>Self-hosted time tracking and project management for freelancers and teams.</Overview>
+  <Description>
+TimeTracker is a web-based time tracking application with project management, invoicing, and reporting.
+
+Install TimeTracker-DB first, then TimeTracker. Both containers use the custom timetracker network.
+
+Documentation: https://github.com/drytrix/TimeTracker/blob/main/docs/admin/deployment/DISTRIBUTION.md
+  </Description>
+  <Category>Productivity: Tools</Category>
+  <Icon>https://raw.githubusercontent.com/drytrix/TimeTracker/main/app/static/images/timetracker-logo-icon.svg</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/drytrix/TimeTracker/main/templates/unraid/timetracker-app.xml</TemplateURL>
+  <Support>https://github.com/drytrix/TimeTracker/issues</Support>
+  <Project>https://github.com/drytrix/TimeTracker</Project>
+  <ReadMe>https://github.com/drytrix/TimeTracker/blob/main/docs/admin/deployment/DISTRIBUTION.md</ReadMe>
+  <Registry>https://ghcr.io/drytrix/timetracker</Registry>
+</CA>

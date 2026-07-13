@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>TimeTracker-DB</Name>
+  <Repository>postgres:16-alpine</Repository>
+  <Registry>https://hub.docker.com/r/library/postgres/</Registry>
+  <Network>timetracker</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/drytrix/TimeTracker/issues</Support>
+  <Project>https://github.com/drytrix/TimeTracker</Project>
+  <Overview>PostgreSQL 16 database for TimeTracker. Deploy this container before the TimeTracker app.</Overview>
+  <Category>Productivity: Tools</Category>
+  <WebUI/>
+  <TemplateURL>https://raw.githubusercontent.com/drytrix/TimeTracker/main/templates/unraid/timetracker-db.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/drytrix/TimeTracker/main/app/static/images/timetracker-logo-icon.svg</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <Requires>Install TimeTracker-DB before the TimeTracker app. Both containers must use the timetracker network.</Requires>
+  <Config Name="Database Data" Target="/var/lib/postgresql/data" Default="/mnt/user/appdata/timetracker/db" Mode="rw" Description="PostgreSQL data directory" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/timetracker/db</Config>
+  <Config Name="Container Port" Target="5432" Default="5432" Mode="tcp" Description="PostgreSQL port (internal only)" Type="Port" Display="advanced" Required="false" Mask="false">5432</Config>
+  <Environment>
+    <Variable>
+      <Value>timetracker</Value>
+      <Name>POSTGRES_DB</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>timetracker</Value>
+      <Name>POSTGRES_USER</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>timetracker</Value>
+      <Name>POSTGRES_PASSWORD</Name>
+      <Mode/>
+    </Variable>
+    <Variable>
+      <Value>Europe/Brussels</Value>
+      <Name>TZ</Name>
+      <Mode/>
+    </Variable>
+  </Environment>
+  <Labels/>
+  <TailscaleStateDir/>
+</Container>

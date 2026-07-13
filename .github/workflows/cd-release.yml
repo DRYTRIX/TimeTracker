@@ -39,7 +39,7 @@ env:
   # Requires GitHub Actions secrets:
   # - DOCKERHUB_USERNAME
   # - DOCKERHUB_TOKEN (recommended) or DOCKERHUB_PASSWORD
-  DOCKERHUB_IMAGE: driesp/timetracker
+  DOCKERHUB_IMAGE: drytrix/timetracker
   PYTHON_VERSION: '3.11'
   NODE_VERSION: '24'
 
@@ -1134,6 +1134,9 @@ jobs:
           if [ -f "docker-compose.production.yml" ]; then
             cp docker-compose.production.yml "$RELEASE_DIR/" || true
           fi
+          if [ -f "docker-compose.nas.yml" ]; then
+            cp docker-compose.nas.yml "$RELEASE_DIR/" || true
+          fi
           if [ -f "k8s-deployment.yml" ]; then
             cp k8s-deployment.yml "$RELEASE_DIR/" || true
           fi
@@ -1257,6 +1260,7 @@ jobs:
           prerelease: ${{ needs.determine-version.outputs.is_prerelease }}
           files: |
             release-files/docker-compose.production.yml
+            release-files/docker-compose.nas.yml
             release-files/k8s-deployment.yml
             release-files/desktop/**/*
             release-files/mobile/**/*
