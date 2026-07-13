@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.9.2] - 2026-07-13
+
+### Added
+
+- **Distribution hub** — [DISTRIBUTION.md](docs/admin/deployment/DISTRIBUTION.md) consolidates install paths for Docker, NAS, PaaS (Render, Railway, Fly.io, Coolify), Unraid, and Portainer.
+- **Portainer app templates** — One-click stack in Portainer via `templates/portainer/templates.json`.
+- **Unraid Community Applications** — App templates for the TimeTracker app and PostgreSQL database.
+- **PaaS deploy configs** — `fly.toml` and `railway.toml` for Fly.io and Railway one-click deploys.
+- **Docker Hub README** — `docker/hub-README.md` for the Docker Hub repository page.
+
+### Changed
+
+- **Docker Hub namespace** — Images now publish to `drytrix/timetracker` (replacing `driesp/timetracker`). CI release workflow, deploy scripts, and docs updated accordingly.
+
+### Documentation
+
+- **Version** — Documented release **5.9.2** to match `setup.py` (single source of truth for the application version).
+
 ## [5.9.1] - 2026-07-13
 
 ### Fixed

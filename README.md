@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.9.2
+
+**Patch (5.9.2):** **Distribution** — new distribution hub, Portainer/Unraid templates, Fly.io and Railway configs, and refreshed deploy scripts for installs without cloning the repo. **Docker Hub** — images now publish to `drytrix/timetracker` (replacing `driesp/timetracker`). See [CHANGELOG.md](CHANGELOG.md#592---2026-07-13).
+
 ### ✨ Highlights of v5.9.1
 
 **Patch (5.9.1):** **Calendar** — restored holiday and time-off overlays with correct date handling and a dedicated `/api/calendar/data` feed. **Dashboard** — working-time limit banner only for pending justifications. **Compliance** — fixed attendance relationship eager-loading regression. **Deployment** — NAS-friendly compose stack and guide for QNAP, Synology, and Portainer. See [CHANGELOG.md](CHANGELOG.md#591---2026-07-13).

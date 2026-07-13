@@ -47,7 +47,7 @@ curl -fsSL https://raw.githubusercontent.com/drytrix/TimeTracker/main/scripts/de
 |-----|-------------|
 | `latest` | Latest stable release |
 | `stable` | Same as latest (non-prerelease) |
-| `v5.9.0` | Specific version |
+| `v5.9.2` | Specific version |
 | `develop` | Development build |
 
 ## Platforms
