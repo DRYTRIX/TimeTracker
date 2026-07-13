@@ -1,0 +1,45 @@
+# Fly.io deployment config for TimeTracker
+# Requires external PostgreSQL (Fly Postgres, Neon, Supabase, etc.)
+#
+# Setup:
+#   fly launch --no-deploy --image ghcr.io/drytrix/timetracker:latest
+#   fly secrets set SECRET_KEY="$(openssl rand -hex 32)"
+#   fly secrets set DATABASE_URL="postgresql+psycopg2://user:pass@host:5432/timetracker"
+#   fly secrets set REDIS_ENABLED="false"
+#   fly deploy
+
+app = "timetracker"
+primary_region = "ams"
+
+[build]
+  image = "ghcr.io/drytrix/timetracker:latest"
+
+[env]
+  FLASK_ENV = "production"
+  AUTH_METHOD = "local"
+  REDIS_ENABLED = "false"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 100
+    soft_limit = 80
+
+[[http_service.checks]]
+  grace_period = "60s"
+  interval = "30s"
+  method = "GET"
+  path = "/_health"
+  timeout = "10s"
+
+[[vm]]
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1

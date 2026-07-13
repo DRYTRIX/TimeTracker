@@ -6,7 +6,7 @@
 
 **Track time. Manage projects. Generate invoices. All in one place.**
 
-[🆕 What's New](#-whats-new) • [🚀 Quick Start](#-quick-start) • [✨ Features](#-features) • [📸 Screenshots](#-screenshots) • [📖 Getting Started](docs/GETTING_STARTED.md) • [📚 Documentation](docs/) • [🗑️ Uninstall](UNINSTALL.md) • [📋 Changelog](CHANGELOG.md) • [🐳 Deploy](#-deployment)
+[🆕 What's New](#-whats-new) • [📥 Download & Install](#-download--install) • [🚀 Quick Start](#-quick-start) • [✨ Features](#-features) • [📸 Screenshots](#-screenshots) • [📖 Getting Started](docs/GETTING_STARTED.md) • [📚 Documentation](docs/) • [🗑️ Uninstall](UNINSTALL.md) • [📋 Changelog](CHANGELOG.md) • [🐳 Deploy](#-deployment)
 
 ---
 
@@ -23,6 +23,21 @@ TimeTracker is a **self-hosted, web-based time tracking application** designed f
 - 🔒 **Privacy-focused organizations** wanting self-hosted solutions
 
 You can [support the project and purchase a key](https://timetracker.drytrix.com/support.html) to hide donate prompts in your instance.
+
+---
+
+## 📥 Download & Install
+
+| Method | Best for | Get started |
+|--------|----------|-------------|
+| **Docker image** | Servers, VPS, homelab | `docker pull ghcr.io/drytrix/timetracker:latest` or [Docker Hub](https://hub.docker.com/r/drytrix/timetracker) (`drytrix/timetracker`) |
+| **NAS compose** | QNAP, Synology, Portainer | Paste [`docker-compose.nas.yml`](docker-compose.nas.yml) — [NAS guide](docs/admin/deployment/NAS_DEPLOYMENT.md) |
+| **GitHub Release** | Compose files + desktop/mobile | [Releases](https://github.com/drytrix/TimeTracker/releases) |
+| **Cloud (Render)** | Managed hosting | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/drytrix/TimeTracker) |
+
+**Full list of install paths:** [Distribution Guide](docs/admin/deployment/DISTRIBUTION.md) (Portainer templates, Unraid, Railway, Fly.io, Coolify, [Docker Hub](https://hub.docker.com/r/drytrix/timetracker))
+
+> **Docker Hub namespace:** images are published at [`drytrix/timetracker`](https://hub.docker.com/r/drytrix/timetracker) (formerly `driesp/timetracker`).
 
 ---
 
@@ -89,6 +104,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 > **📋 For complete release history, see [CHANGELOG.md](CHANGELOG.md)**
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
+
+### ✨ Highlights of v5.9.2
+
+**Patch (5.9.2):** **Distribution** — new distribution hub, Portainer/Unraid templates, Fly.io and Railway configs, and refreshed deploy scripts for installs without cloning the repo. **Docker Hub** — images now publish to `drytrix/timetracker` (replacing `driesp/timetracker`). See [CHANGELOG.md](CHANGELOG.md#592---2026-07-13).
 
 ### ✨ Highlights of v5.9.1
 

@@ -20,24 +20,43 @@ This guide explains how to set up and use the public Docker image for TimeTracke
 
 ### Step 2: Deploy Using Public Image
 
-#### Option A: Automated Deployment Script
+#### Option A: Automated Deployment Script (no git clone required)
+
+**Linux/macOS:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/drytrix/TimeTracker/main/scripts/deploy-public.sh | bash
+```
+
+**Windows:** run [`scripts/deploy-public.bat`](../../../scripts/deploy-public.bat) from a cloned repo, or download it from GitHub.
+
+#### Option B: NAS-friendly compose (no git clone)
+
+```bash
+curl -fsSL -o docker-compose.nas.yml \
+  https://raw.githubusercontent.com/drytrix/TimeTracker/main/docker-compose.nas.yml
+echo "SECRET_KEY=$(openssl rand -hex 32)" > .env
+docker compose -f docker-compose.nas.yml up -d
+```
+
+See [Distribution Guide](../deployment/DISTRIBUTION.md) for Portainer, Unraid, and cloud options.
+
+#### Option C: Clone repo + HTTPS compose
 
 **Linux/macOS:**
 ```bash
 git clone https://github.com/drytrix/TimeTracker.git
 cd TimeTracker
-# Remote production image (latest)
-docker-compose -f docker-compose.remote.yml up -d
+docker compose -f docker/docker-compose.remote.yml up -d
 ```
 
 **Windows:**
 ```cmd
 git clone https://github.com/drytrix/TimeTracker.git
 cd TimeTracker
-docker-compose -f docker-compose.remote.yml up -d
+docker compose -f docker/docker-compose.remote.yml up -d
 ```
 
-#### Option B: Manual Deployment
+#### Option D: Manual Deployment
 
 1. **Clone the repository:**
    ```bash
@@ -45,7 +64,7 @@ docker-compose -f docker-compose.remote.yml up -d
    cd TimeTracker
    ```
 
-2. (Optional) **Use a specific version tag:** set the tag in `docker-compose.remote.yml`.
+2. (Optional) **Use a specific version tag:** set the tag in `docker/docker-compose.remote.yml`.
 
 3. **Create environment file:**
    ```bash
@@ -56,7 +75,7 @@ docker-compose -f docker-compose.remote.yml up -d
 4. **Pull and run the image:**
    ```bash
    docker pull ghcr.io/drytrix/timetracker:latest
-   docker-compose -f docker-compose.remote.yml up -d
+   docker-compose -f docker/docker-compose.remote.yml up -d
    ```
 
 ## 🔧 Configuration
@@ -88,7 +107,7 @@ DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker
 
 ### Docker Compose Configuration
 
-Use `docker-compose.remote.yml` (production) or `docker-compose.remote-dev.yml` (testing):
+Use `docker/docker-compose.remote.yml` (production) or `docker/docker-compose.remote-dev.yml` (testing):
 
 - **App**: `ghcr.io/drytrix/timetracker` image
 - **PostgreSQL**: Database service with healthcheck
@@ -119,7 +138,7 @@ The public image is automatically updated when you push to the main branch. To u
 docker pull ghcr.io/drytrix/timetracker:latest
 
 # Restart the containers
-docker-compose -f docker-compose.remote.yml up -d
+docker-compose -f docker/docker-compose.remote.yml up -d
 ```
 
 ### Manual Updates
@@ -130,9 +149,9 @@ For specific versions:
 # Pull a specific version
 docker pull ghcr.io/drytrix/timetracker:v1.0.0
 
-# Update docker-compose.remote.yml to use the specific tag
+# Update docker/docker-compose.remote.yml to use the specific tag
 # Then restart
-docker-compose -f docker-compose.remote.yml up -d
+docker-compose -f docker/docker-compose.remote.yml up -d
 ```
 
 ## 🛠️ Troubleshooting
@@ -171,18 +190,18 @@ docker-compose -f docker-compose.remote.yml up -d
 **Solution:**
 1. Check container logs for initialization errors:
    ```bash
-   docker-compose -f docker-compose.remote.yml logs app | grep -i "database\|migration\|initialization"
+   docker-compose -f docker/docker-compose.remote.yml logs app | grep -i "database\|migration\|initialization"
    ```
 
 2. Manually trigger database initialization:
    ```bash
-   docker-compose -f docker-compose.remote.yml exec app flask db upgrade
+   docker-compose -f docker/docker-compose.remote.yml exec app flask db upgrade
    ```
 
 3. For a fresh start with clean volumes:
    ```bash
-   docker-compose -f docker-compose.remote.yml down -v
-   docker-compose -f docker-compose.remote.yml up -d
+   docker-compose -f docker/docker-compose.remote.yml down -v
+   docker-compose -f docker/docker-compose.remote.yml up -d
    ```
 
 #### 5. Cannot Login with Admin Username
@@ -213,13 +232,13 @@ docker inspect ghcr.io/drytrix/timetracker:latest
 
 ```bash
 # Application logs
-docker-compose -f docker-compose.remote.yml logs app
+docker-compose -f docker/docker-compose.remote.yml logs app
 
 # Database logs
-docker-compose -f docker-compose.remote.yml logs db
+docker-compose -f docker/docker-compose.remote.yml logs db
 
 # All logs
-docker-compose -f docker-compose.remote.yml logs -f
+docker-compose -f docker/docker-compose.remote.yml logs -f
 ```
 
 #### Health Check
@@ -229,7 +248,7 @@ docker-compose -f docker-compose.remote.yml logs -f
 curl http://localhost:8080/_health
 
 # Check container status
-docker-compose -f docker-compose.remote.yml ps
+docker-compose -f docker/docker-compose.remote.yml ps
 ```
 
 ## 🔒 Security Considerations
@@ -275,10 +294,10 @@ docker ps --format "table {{.Names}}\t{{.Status}}"
 
 ```bash
 # Follow application logs
-docker-compose -f docker-compose.remote.yml logs -f app
+docker-compose -f docker/docker-compose.remote.yml logs -f app
 
 # Export logs for analysis
-docker-compose -f docker-compose.remote.yml logs app > timetracker.log
+docker-compose -f docker/docker-compose.remote.yml logs app > timetracker.log
 ```
 
 ## 🚀 Production Deployment

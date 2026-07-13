@@ -1,0 +1,29 @@
+# Railway deployment config for TimeTracker
+# https://docs.railway.app/reference/config-as-code
+#
+# Setup:
+#   1. Create a Railway project at https://railway.app
+#   2. Add a PostgreSQL plugin
+#   3. Add a service from Docker image: ghcr.io/drytrix/timetracker:latest
+#   4. Set environment variables below (DATABASE_URL from Postgres plugin)
+#   5. Deploy
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+# When deploying from Docker image directly (recommended), skip build and set
+# the image in Railway dashboard: ghcr.io/drytrix/timetracker:latest
+
+[deploy]
+healthcheckPath = "/_health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+# Required environment variables (set in Railway dashboard):
+#   SECRET_KEY          — generate with: openssl rand -hex 32
+#   DATABASE_URL        — from PostgreSQL plugin (postgresql://...)
+#   FLASK_ENV           — production
+#   REDIS_ENABLED       — false
+#   AUTH_METHOD         — local
