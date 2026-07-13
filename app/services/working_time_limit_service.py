@@ -166,3 +166,13 @@ class WorkingTimeLimitService:
             .order_by(WorkingTimeViolation.created_at.desc())
             .all()
         )
+
+    def get_violations_needing_justification(self, user_id: int):
+        return (
+            WorkingTimeViolation.query.filter(
+                WorkingTimeViolation.user_id == user_id,
+                WorkingTimeViolation.status == WorkingTimeViolation.STATUS_PENDING,
+            )
+            .order_by(WorkingTimeViolation.created_at.desc())
+            .all()
+        )

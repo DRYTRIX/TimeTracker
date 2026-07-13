@@ -199,7 +199,6 @@ def register_context_processors(app):
                     get_long_session_minutes,
                     get_social_proof_text,
                 )
-                from app.models import Settings
                 from app.services.support_prompt_service import SupportPromptService
                 from app.services.usage_stats_service import UsageStatsService
                 from app.utils.license_utils import is_license_activated

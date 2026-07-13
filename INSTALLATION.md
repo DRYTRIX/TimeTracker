@@ -98,6 +98,28 @@ docker-compose -f docker/docker-compose.local-test.yml up --build
 
 Then open **http://localhost:8080**. No `.env` is required for this compose file. SQLite is for evaluation only; use PostgreSQL for production.
 
+## Alternative: NAS Install (QNAP / Synology / Portainer)
+
+To run TimeTracker on a NAS **without cloning the repository**, use the self-contained NAS compose file:
+
+1. Open your NAS Docker UI (QNAP Container Station, Synology Container Manager, or Portainer).
+2. Create a new stack/project and paste the contents of [`docker-compose.nas.yml`](docker-compose.nas.yml).
+3. Set environment variables:
+   - **SECRET_KEY** (required) — generate with: `openssl rand -hex 32`
+   - **TZ**, **CURRENCY**, **HTTP_PORT** (optional)
+4. Deploy the stack and open **http://\<your-nas-ip\>:8080**.
+
+Or via SSH (no git clone):
+
+```bash
+curl -fsSL -o docker-compose.nas.yml \
+  https://raw.githubusercontent.com/drytrix/TimeTracker/main/docker-compose.nas.yml
+echo "SECRET_KEY=$(openssl rand -hex 32)" > .env
+docker compose -f docker-compose.nas.yml up -d
+```
+
+**Full guide:** [NAS Deployment Guide](docs/admin/deployment/NAS_DEPLOYMENT.md)
+
 ## Production Deployment
 
 For production:

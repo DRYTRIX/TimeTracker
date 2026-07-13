@@ -151,6 +151,7 @@ The TimeTracker calendar feature has been **completely redesigned and enhanced**
 2. **`app/routes/api.py`**
    - Enhanced `/api/calendar/events` endpoint
    - New `/api/calendar/export` endpoint
+   - Calendar overlays (`holiday`, `time_off`) use proper exclusive end dates for FullCalendar background rendering
    - Advanced filtering logic
    - Color coding function
    - iCal and CSV generation

@@ -108,7 +108,7 @@ def dashboard():
     active_workday_session = WorkdaySessionService().get_active_session(current_user.id)
     attendance_status = AttendanceComplianceService().get_status(current_user.id)
     attendance_break_active = attendance_status.get("break_active", False)
-    pending_violations = WorkingTimeLimitService().get_pending_violations_for_user(current_user.id)
+    pending_violations = WorkingTimeLimitService().get_violations_needing_justification(current_user.id)
 
     # Overtime for dashboard cards (today and week)
     today_dt = datetime.utcnow().date()

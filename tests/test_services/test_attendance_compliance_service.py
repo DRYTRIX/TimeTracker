@@ -25,8 +25,8 @@ def compliance_user(app):
         db.session.add(user)
         db.session.commit()
         yield user
-        DailyAttendanceRecord.query.filter_by(user_id=user.id).delete()
         AttendanceWorkPeriod.query.filter_by(user_id=user.id).delete()
+        DailyAttendanceRecord.query.filter_by(user_id=user.id).delete()
         db.session.delete(user)
         db.session.commit()
 
@@ -187,3 +187,14 @@ class TestAttendanceComplianceService:
             assert settings.compliance_enabled is True
             assert settings.compliance_jurisdiction_preset == "belgium"
             assert settings.compliance_attendance_retention_years == 10
+
+    def test_list_days_with_work_periods(self, app, compliance_user):
+        with app.app_context():
+            svc = AttendanceComplianceService()
+            svc.clock_in(compliance_user.id)
+            svc.clock_out(compliance_user.id)
+
+            today = date.today()
+            records = svc.list_days(compliance_user.id, today, today)
+            assert len(records) == 1
+            assert records[0].work_periods.count() == 1

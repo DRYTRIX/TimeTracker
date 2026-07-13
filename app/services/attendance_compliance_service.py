@@ -248,20 +248,15 @@ class AttendanceComplianceService:
         user_id: int,
         start_date: date,
         end_date: date,
-        include_periods: bool = False,
     ) -> List[DailyAttendanceRecord]:
+        from sqlalchemy.orm import joinedload
+
         query = DailyAttendanceRecord.query.filter(
             DailyAttendanceRecord.user_id == user_id,
             DailyAttendanceRecord.work_date >= start_date,
             DailyAttendanceRecord.work_date <= end_date,
         )
-        from sqlalchemy.orm import joinedload
-
-        query = query.options(
-            joinedload(DailyAttendanceRecord.work_periods),
-            joinedload(DailyAttendanceRecord.breaks),
-            joinedload(DailyAttendanceRecord.leave_type),
-        )
+        query = query.options(joinedload(DailyAttendanceRecord.leave_type))
         return query.order_by(DailyAttendanceRecord.work_date.desc()).all()
 
     def sync_time_off_request(self, request: TimeOffRequest) -> int:

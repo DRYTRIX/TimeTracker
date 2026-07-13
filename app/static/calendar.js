@@ -24,6 +24,13 @@ class Calendar {
         
         this.init();
     }
+
+    formatLocalDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
     
     init() {
         this.setupEventListeners();
@@ -152,6 +159,8 @@ class Calendar {
                 tasksForDisplay = rawEvents.filter(e => getItemType(e) === 'task');
                 timeEntriesForDisplay = rawEvents.filter(e => getItemType(e) === 'time_entry');
             }
+            const holidaysFromMerged = rawEvents.filter(e => getItemType(e) === 'holiday');
+            const timeOffFromMerged = rawEvents.filter(e => getItemType(e) === 'time_off');
 
             this.events = eventsForDisplay.map(e => ({
                 ...e,
@@ -175,12 +184,12 @@ class Calendar {
                 color: e.color != null ? e.color : typeColors.time_entry,
                 extendedProps: { ...(e.extendedProps || {}), ...e, item_type: (e.extendedProps && e.extendedProps.item_type) || 'time_entry' }
             }));
-            this.holidays = (data.holidays || []).map(h => ({
+            this.holidays = (data.holidays?.length ? data.holidays : holidaysFromMerged).map(h => ({
                 ...h,
                 color: h.color || typeColors.holiday || '#9333ea',
                 extendedProps: { ...(h.extendedProps || {}), ...h, item_type: 'holiday' }
             }));
-            this.timeOff = (data.time_off || []).map(t => ({
+            this.timeOff = (data.time_off?.length ? data.time_off : timeOffFromMerged).map(t => ({
                 ...t,
                 color: t.color || typeColors.time_off || '#ec4899',
                 extendedProps: { ...(t.extendedProps || {}), ...t, item_type: 'time_off' }
@@ -558,7 +567,7 @@ class Calendar {
         }).join('');
         const dayColumns = days.map(day => {
             const blocks = this.renderWeekDayBlocks(day);
-            return `<div class="week-day-column" data-date="${day.toISOString().split('T')[0]}"><div class="week-day-blocks">${blocks}</div></div>`;
+            return `<div class="week-day-column" data-date="${this.formatLocalDate(day)}"><div class="week-day-blocks">${blocks}</div></div>`;
         }).join('');
         const dayHeaders = days.map(day => {
             const isToday = this.isToday(day);
@@ -710,7 +719,7 @@ class Calendar {
             for (let day = 0; day < 7; day++) {
                 const isCurrentMonth = currentDate.getMonth() === month;
                 const isToday = this.isToday(currentDate);
-                html += `<td class="month-cell ${!isCurrentMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}" data-date="${currentDate.toISOString()}">`;
+                html += `<td class="month-cell ${!isCurrentMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}" data-date="${this.formatLocalDate(currentDate)}">`;
                 html += `<div class="date-number">${currentDate.getDate()}</div>`;
                 html += this.renderMonthCellEvents(currentDate);
                 html += '</td>';
@@ -727,7 +736,7 @@ class Calendar {
             cell.addEventListener('click', (e) => {
                 if (e.target.classList.contains('month-cell') || e.target.classList.contains('date-number')) {
                     const date = new Date(cell.dataset.date);
-                    window.location.href = `${window.calendarData.newEventUrl}?date=${date.toISOString().split('T')[0]}`;
+                    window.location.href = `${window.calendarData.newEventUrl}?date=${this.formatLocalDate(date)}`;
                 }
             });
         });
@@ -738,7 +747,7 @@ class Calendar {
         dayStart.setHours(0, 0, 0, 0);
         const dayEnd = new Date(day);
         dayEnd.setHours(23, 59, 59, 999);
-        const dayKey = day.toISOString().split('T')[0];
+        const dayKey = this.formatLocalDate(day);
         
         let html = '<div class="month-events">';
         let count = 0;

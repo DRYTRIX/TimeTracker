@@ -102,3 +102,38 @@ class TestWorkingTimeLimitService:
             )
             assert result["success"] is True
             assert result["violation"].status == WorkingTimeViolation.STATUS_SUBMITTED
+
+    def test_violations_needing_justification_excludes_submitted(self, app, workday_user):
+        with app.app_context():
+            today = local_now().date()
+            pending = WorkingTimeViolation(
+                user_id=workday_user.id,
+                period_type=WorkingTimeViolation.PERIOD_DAILY,
+                period_start=today,
+                period_end=today,
+                limit_hours=8.0,
+                actual_hours=10.0,
+                hours_over=2.0,
+                status=WorkingTimeViolation.STATUS_PENDING,
+            )
+            submitted = WorkingTimeViolation(
+                user_id=workday_user.id,
+                period_type=WorkingTimeViolation.PERIOD_WEEKLY,
+                period_start=today,
+                period_end=today,
+                limit_hours=40.0,
+                actual_hours=45.0,
+                hours_over=5.0,
+                status=WorkingTimeViolation.STATUS_SUBMITTED,
+                justification="Already explained",
+            )
+            db.session.add_all([pending, submitted])
+            db.session.commit()
+
+            svc = WorkingTimeLimitService()
+            needing = svc.get_violations_needing_justification(workday_user.id)
+            pending_all = svc.get_pending_violations_for_user(workday_user.id)
+
+            assert len(needing) == 1
+            assert needing[0].status == WorkingTimeViolation.STATUS_PENDING
+            assert len(pending_all) == 2
