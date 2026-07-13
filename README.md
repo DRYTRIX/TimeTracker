@@ -535,6 +535,18 @@ docker-compose -f docker/docker-compose.local-test.yml up --build
 
 **📖 Need help?** Check the [Getting Started Guide](docs/GETTING_STARTED.md) for detailed instructions.
 
+### Option 4: Install on a NAS (QNAP / Synology / Portainer)
+
+No git clone required — paste a single compose file into your NAS Docker UI:
+
+1. Copy [`docker-compose.nas.yml`](docker-compose.nas.yml) into Container Station, Synology Container Manager, or Portainer.
+2. Set **`SECRET_KEY`** — generate with: `openssl rand -hex 32`
+3. Deploy and open **`http://<your-nas-ip>:8080`**
+
+Works on **QNAP**, **Synology**, **Unraid/Portainer**, and other Docker-capable NAS devices (amd64 and arm64).
+
+**📖 Full step-by-step guide:** [NAS Deployment Guide](docs/admin/deployment/NAS_DEPLOYMENT.md)
+
 ---
 
 ## 💻 System Requirements

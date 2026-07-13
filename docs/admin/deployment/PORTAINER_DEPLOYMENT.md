@@ -4,7 +4,7 @@ This guide explains how to deploy TimeTracker using Portainer, addressing common
 
 ## Overview
 
-TimeTracker can be deployed using Portainer's Docker Compose stack feature. The compose files have been optimized to work seamlessly with Portainer, eliminating dependencies on host filesystem mounts for critical components.
+TimeTracker can be deployed using Portainer's Docker Compose stack feature. For **web editor** deployments (paste YAML directly), use [`docker-compose.nas.yml`](../../../docker-compose.nas.yml) — it requires no git clone, no local builds, and no host folder mounts. For **HTTPS with automatic certificates**, use repository mode with `docker/docker-compose.remote.yml`.
 
 ## Prerequisites
 
@@ -15,25 +15,38 @@ TimeTracker can be deployed using Portainer's Docker Compose stack feature. The 
 
 ## Quick Start
 
-### Option 1: Using Git Repository (Recommended)
+### Option 1: Web Editor — NAS-friendly stack (Recommended for Portainer)
+
+Best for Unraid, TrueNAS, homelab servers, and any Portainer install where you paste YAML directly:
+
+1. **In Portainer, go to Stacks → Add Stack**
+2. **Choose "Web editor"**
+3. **Copy the contents of [`docker-compose.nas.yml`](../../../docker-compose.nas.yml)** from the repository (or [raw GitHub link](https://raw.githubusercontent.com/drytrix/TimeTracker/main/docker-compose.nas.yml))
+4. **Paste into the editor**
+5. **Configure environment variables** (see Environment Variables section below). At minimum, set `SECRET_KEY`.
+6. **Click "Deploy the stack"**
+7. Open **`http://<host-ip>:8080`**
+
+This stack pulls `ghcr.io/drytrix/timetracker:latest` and uses named volumes only — no build steps or bind mounts.
+
+### Option 2: Using Git Repository (HTTPS with nginx)
+
+Use this when you want HTTPS (ports 80/443) with the bundled nginx reverse proxy and automatic self-signed certificates:
 
 1. **In Portainer, go to Stacks → Add Stack**
 2. **Choose "Repository"**
 3. **Enter repository details:**
    - Repository URL: `https://github.com/DRYTRIX/TimeTracker.git`
    - Repository reference: `main` (or your preferred branch/tag)
-   - Compose path: `docker-compose.remote.yml`
+   - Compose path: `docker/docker-compose.remote.yml`
 4. **Configure environment variables** (see Environment Variables section below)
 5. **Click "Deploy the stack"**
 
-### Option 2: Using Web Editor
+> **Note:** Repository mode clones the full repo so `certgen` can build and nginx config folders are available on the host. Do **not** use `docker/docker-compose.remote.yml` in the web editor — it requires local build contexts and bind mounts that are not available when pasting YAML alone.
 
-1. **In Portainer, go to Stacks → Add Stack**
-2. **Choose "Web editor"**
-3. **Copy the contents of `docker-compose.remote.yml`** from the repository
-4. **Paste into the editor**
-5. **Configure environment variables** (see Environment Variables section below)
-6. **Click "Deploy the stack"**
+### Option 3: Web Editor — legacy (not recommended)
+
+If you previously used the web editor with `docker-compose.remote.yml`, switch to **Option 1** (`docker-compose.nas.yml`) for HTTP access, or **Option 2** (repository mode) for HTTPS.
 
 ## Environment Variables
 
@@ -42,9 +55,11 @@ Create a `.env` file or configure environment variables in Portainer:
 ### Required Variables
 
 ```bash
-SECRET_KEY=your-secure-random-string-here  # Generate: python -c "import secrets; print(secrets.token_hex(32))"
+SECRET_KEY=your-secure-random-string-here  # Generate: openssl rand -hex 32
 ADMIN_USERNAMES=admin
 ```
+
+> **Tip:** `openssl rand -hex 32` works on most NAS and Linux hosts without Python.
 
 ### Recommended Variables
 
@@ -263,6 +278,7 @@ services:
 
 ## Related Documentation
 
+- [NAS Deployment Guide](NAS_DEPLOYMENT.md) - QNAP, Synology, and general NAS install (uses `docker-compose.nas.yml`)
 - [Docker Compose Setup](../configuration/DOCKER_COMPOSE_SETUP.md) - General Docker Compose guide
 - [Docker Public Setup](../configuration/DOCKER_PUBLIC_SETUP.md) - Public image deployment
 - [Automatic HTTPS Setup](../security/README_HTTPS_AUTO.md) - HTTPS configuration
