@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Docker Hub automation** — Release workflow (`cd-release.yml`) now auto-publishes the repository description from `docker/hub-README.md` (with current version injected). Development builds (`cd-development.yml`) also push the `develop` tag to Docker Hub when credentials are configured.
+
+### Changed
+
+- **Docker Hub publish resilience** — Release and development workflows only push to Docker Hub when `DOCKERHUB_USERNAME` and token/password secrets are set; GHCR-only builds no longer fail on missing Docker Hub credentials.
+
 ## [5.9.2] - 2026-07-13
 
 ### Added
