@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from functools import lru_cache
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError, available_timezones
 
@@ -409,6 +409,12 @@ def format_user_datetime(dt, format_str=None, user=None, assume_app_timezone=Tru
         return ""
 
     resolved_user = _get_authenticated_user(user)
+
+    # Plain calendar dates have no time component; timezone conversion does not apply.
+    if isinstance(dt, date) and not isinstance(dt, datetime):
+        if format_str is None:
+            format_str = get_user_date_format(resolved_user)
+        return dt.strftime(format_str)
 
     if format_str is None:
         format_str = get_user_datetime_format(resolved_user)
