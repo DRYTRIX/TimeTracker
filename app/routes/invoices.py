@@ -1426,9 +1426,7 @@ def send_invoice_email_route(invoice_id):
 
     # Get recipient email from request (form POST or JSON API)
     data = request.get_json(silent=True) or {}
-    recipient_email = (
-        request.form.get("recipient_email") or data.get("recipient_email") or ""
-    ).strip()
+    recipient_email = (request.form.get("recipient_email") or data.get("recipient_email") or "").strip()
     if not recipient_email:
         recipient_email = (invoice.client_email or "").strip()
 
@@ -1436,9 +1434,7 @@ def send_invoice_email_route(invoice_id):
         return jsonify({"error": "Recipient email address is required"}), 400
 
     # Get custom message if provided
-    custom_message = (
-        request.form.get("custom_message") or data.get("custom_message") or ""
-    ).strip()
+    custom_message = (request.form.get("custom_message") or data.get("custom_message") or "").strip()
 
     # Get email template ID if provided
     email_template_id = request.form.get("email_template_id", type=int) or data.get("email_template_id")

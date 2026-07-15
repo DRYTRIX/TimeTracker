@@ -61,7 +61,9 @@ class DailyAttendanceRecord(db.Model):
     created_at = db.Column(db.DateTime, default=local_now, nullable=False)
     updated_at = db.Column(db.DateTime, default=local_now, onupdate=local_now, nullable=False)
 
-    user = db.relationship("User", foreign_keys=[user_id], backref=db.backref("daily_attendance_records", lazy="dynamic"))
+    user = db.relationship(
+        "User", foreign_keys=[user_id], backref=db.backref("daily_attendance_records", lazy="dynamic")
+    )
     locker = db.relationship("User", foreign_keys=[locked_by])
     time_off_request = db.relationship("TimeOffRequest", backref=db.backref("attendance_days", lazy="dynamic"))
     leave_type = db.relationship("LeaveType")
@@ -129,7 +131,9 @@ class DailyAttendanceRecord(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
         if include_periods:
-            data["work_periods"] = [p.to_dict() for p in self.work_periods.order_by(AttendanceWorkPeriod.start_time.asc())]
+            data["work_periods"] = [
+                p.to_dict() for p in self.work_periods.order_by(AttendanceWorkPeriod.start_time.asc())
+            ]
             data["breaks"] = [b.to_dict() for b in self.breaks.order_by(AttendanceBreak.start_time.asc())]
         return data
 

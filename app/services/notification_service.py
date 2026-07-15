@@ -281,8 +281,8 @@ class NotificationService:
         nudge_t = parse_hhmm(getattr(user, "smart_notify_no_tracking_after", None)) or parse_hhmm(default_nudge)
         summary_t = parse_hhmm(getattr(user, "smart_notify_summary_at", None)) or parse_hhmm(default_summary)
         end_of_day_t = parse_hhmm(getattr(user, "smart_notify_end_of_day_time", None)) or parse_hhmm(default_end_of_day)
-        missed_clock_in_t = (
-            parse_hhmm(getattr(user, "smart_notify_missed_clock_in_at", None)) or parse_hhmm(default_missed_clock_in)
+        missed_clock_in_t = parse_hhmm(getattr(user, "smart_notify_missed_clock_in_at", None)) or parse_hhmm(
+            default_missed_clock_in
         )
         if not nudge_t:
             nudge_t = (16, 0)
@@ -408,8 +408,7 @@ class NotificationService:
                             "kind": KIND_MISSED_CLOCK_IN,
                             "title": "Workday not started",
                             "message": (
-                                "You have not started your workday yet. "
-                                "Press Start Workday when you begin working."
+                                "You have not started your workday yet. " "Press Start Workday when you begin working."
                             ),
                             "type": "warning",
                             "priority": "high",

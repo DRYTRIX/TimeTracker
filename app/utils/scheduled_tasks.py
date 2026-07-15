@@ -1000,10 +1000,10 @@ def process_remind_to_log():
 def process_missed_clock_in():
     """Email users who enabled missed clock-in reminders and have not started workday today."""
     from app.services.notification_service import (
+        _in_time_slot_after,
         has_workday_started_today,
         is_expected_work_day,
         parse_hhmm,
-        _in_time_slot_after,
     )
     from app.utils.timezone import now_in_user_timezone
 
@@ -1023,7 +1023,9 @@ def process_missed_clock_in():
                 if not user.email:
                     continue
                 user_now = now_in_user_timezone(user)
-                reminder_t = parse_hhmm(getattr(user, "smart_notify_missed_clock_in_at", None)) or parse_hhmm(default_at)
+                reminder_t = parse_hhmm(getattr(user, "smart_notify_missed_clock_in_at", None)) or parse_hhmm(
+                    default_at
+                )
                 if not reminder_t:
                     reminder_t = (9, 30)
                 if not _in_time_slot_after(user_now, reminder_t[0], reminder_t[1], slot_minutes):
@@ -1273,7 +1275,9 @@ def sync_integrations():
                     if last_run:
                         try:
                             last_dt = datetime.fromisoformat(last_run.replace("Z", "+00:00"))
-                            if (datetime.utcnow() - last_dt.replace(tzinfo=None)).total_seconds() < interval_minutes * 60:
+                            if (
+                                datetime.utcnow() - last_dt.replace(tzinfo=None)
+                            ).total_seconds() < interval_minutes * 60:
                                 logger.debug(f"Skipping integration {integration.id}: sync interval not elapsed")
                                 continue
                         except (ValueError, TypeError):

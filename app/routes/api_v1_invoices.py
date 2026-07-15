@@ -56,9 +56,7 @@ def list_invoices():
 @require_api_token("read:invoices")
 def get_invoice(invoice_id):
     """Get invoice by id with line items and payments."""
-    result = _invoice_service().get_invoice_detail(
-        invoice_id, user_id=g.api_user.id, is_admin=g.api_user.is_admin
-    )
+    result = _invoice_service().get_invoice_detail(invoice_id, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
     if not result.get("success"):
         status = 404 if result.get("error") == "not_found" else 403
         return error_response(result.get("message", "Error"), status_code=status)
@@ -346,12 +344,15 @@ def request_invoice_approval(invoice_id):
     )
     if not result.get("success"):
         return error_response(result.get("message", "Request failed"), status_code=400)
-    return jsonify(
-        {
-            "message": result["message"],
-            "invoice_approval": _approval_to_api_dict(result["approval"]),
-        }
-    ), 201
+    return (
+        jsonify(
+            {
+                "message": result["message"],
+                "invoice_approval": _approval_to_api_dict(result["approval"]),
+            }
+        ),
+        201,
+    )
 
 
 @api_v1_invoices_bp.route("/invoice-approvals/<int:approval_id>/approve", methods=["POST"])

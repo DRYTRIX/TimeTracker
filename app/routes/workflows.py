@@ -62,9 +62,7 @@ def create_workflow():
         flash(_("Workflow created successfully"), "success")
         return redirect(url_for("workflows.list_workflows"))
 
-    return render_template(
-        "workflows/create.html", trigger_types=get_trigger_types(), action_types=get_action_types()
-    )
+    return render_template("workflows/create.html", trigger_types=get_trigger_types(), action_types=get_action_types())
 
 
 @workflows_bp.route("/workflows/<int:workflow_id>")

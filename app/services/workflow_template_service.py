@@ -1,7 +1,6 @@
 """Workflow template service."""
 
 from datetime import datetime
-
 from typing import Optional
 
 from app import db
