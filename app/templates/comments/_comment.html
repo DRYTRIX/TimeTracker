@@ -154,7 +154,7 @@
             {% endif %}
             <input type="hidden" name="parent_id" value="{{ comment.id }}">
             <div class="mb-3">
-                <textarea name="content" class="form-control" rows="3" placeholder="{{ _('Write your reply...') }}" required></textarea>
+                <textarea name="content" class="form-control" rows="3" data-mentions placeholder="{{ _('Write your reply...') }}" required></textarea>
             </div>
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-primary btn-sm">

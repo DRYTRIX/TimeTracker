@@ -1765,6 +1765,29 @@ def get_users():
     return jsonify({"users": [user.to_dict(total_hours_override=total_hours_by_user.get(user.id)) for user in users]})
 
 
+@api_bp.route("/api/users/search")
+@login_required
+def search_users_for_mentions():
+    """Lightweight active-user list for @mention autocomplete.
+
+    Available to any authenticated user (unlike /api/users, which is admin
+    only) and returns just the fields the mention UI needs. An optional ``q``
+    query narrows the list by username or display name.
+    """
+    q = (request.args.get("q") or "").strip().lower()
+    query = User.query.filter_by(is_active=True)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            db.or_(
+                db.func.lower(User.username).like(like),
+                db.func.lower(User.full_name).like(like),
+            )
+        )
+    users = query.order_by(User.username).limit(500).all()
+    return jsonify({"users": [{"id": u.id, "username": u.username, "display_name": u.display_name} for u in users]})
+
+
 @api_bp.route("/api/stats")
 @login_required
 def get_stats():

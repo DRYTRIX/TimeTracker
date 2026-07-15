@@ -288,7 +288,7 @@
                 <input type="hidden" name="quote_id" value="{{ quote.id }}">
                 <div>
                     <label for="comment-content" class="form-label">{{ _('Your Comment') }}</label>
-                    <textarea name="content" id="comment-content" rows="4" class="w-full form-input" placeholder="{{ _('Share your thoughts, updates, or questions...') }}" required></textarea>
+                    <textarea name="content" id="comment-content" rows="4" class="w-full form-input" data-mentions placeholder="{{ _('Share your thoughts, updates, or questions...') }}" required></textarea>
                 </div>
                 <div class="flex items-center">
                     <label class="flex items-center">
@@ -373,7 +373,7 @@
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="quote_id" value="{{ quote.id }}">
                                 <input type="hidden" name="parent_id" value="{{ comment.id }}">
-                                <textarea name="content" rows="2" class="w-full form-input text-sm" placeholder="{{ _('Write a reply...') }}" required></textarea>
+                                <textarea name="content" rows="2" class="w-full form-input text-sm" data-mentions placeholder="{{ _('Write a reply...') }}" required></textarea>
                                 <div class="flex items-center mt-1">
                                     <label class="flex items-center">
                                         <input type="checkbox" name="is_internal" value="true" checked class="mr-2">

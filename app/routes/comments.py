@@ -80,6 +80,10 @@ def create_comment():
             # Log comment creation
             log_event("comment.created", user_id=current_user.id, comment_id=comment.id, target_type=target_type)
             track_event(current_user.id, "comment.created", {"comment_id": comment.id, "target_type": target_type})
+            # Notify any @mentioned teammates (best-effort; never blocks the comment)
+            from app.services.mention_service import notify_mentioned_users
+
+            notify_mentioned_users(comment, current_user)
             flash(_("Comment added successfully"), "success")
         else:
             flash(_("Error adding comment"), "error")
