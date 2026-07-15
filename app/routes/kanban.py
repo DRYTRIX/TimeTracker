@@ -133,6 +133,9 @@ def create_column():
         icon = request.form.get("icon", "fas fa-circle").strip()
         color = request.form.get("color", "secondary").strip()
         is_complete_state = request.form.get("is_complete_state") == "on"
+        wip_limit = request.form.get("wip_limit", type=int)
+        if not wip_limit or wip_limit < 1:
+            wip_limit = None
         project_id = request.form.get("project_id", type=int) or None
 
         # Validate required fields
@@ -169,6 +172,7 @@ def create_column():
             color=color,
             position=max_position + 1,
             is_complete_state=is_complete_state,
+            wip_limit=wip_limit,
             is_system=False,
             is_active=True,
             project_id=project_id,
@@ -238,6 +242,9 @@ def edit_column(column_id):
         color = request.form.get("color", "secondary").strip()
         is_complete_state = request.form.get("is_complete_state") == "on"
         is_active = request.form.get("is_active") == "on"
+        wip_limit = request.form.get("wip_limit", type=int)
+        if not wip_limit or wip_limit < 1:
+            wip_limit = None
 
         # Validate required fields
         if not label:
@@ -250,6 +257,7 @@ def edit_column(column_id):
         column.color = color
         column.is_complete_state = is_complete_state
         column.is_active = is_active
+        column.wip_limit = wip_limit
 
         # Explicitly flush to write changes immediately
         try:
