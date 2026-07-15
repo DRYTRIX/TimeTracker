@@ -134,6 +134,12 @@
                 <span>{{ task.due_date|format_date }}</span>
               </div>
               {% endif %}
+              {% if task.checklist_total %}
+              <div class="kanban-meta-item kanban-meta-checklist {% if task.checklist_done == task.checklist_total %}kanban-meta-checklist-done{% endif %}" title="{{ _('Checklist') }}">
+                <i class="fas fa-list-check"></i>
+                <span>{{ task.checklist_done }}/{{ task.checklist_total }}</span>
+              </div>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -636,6 +642,15 @@
 
 .kanban-meta-overdue i {
   color: #dc2626;
+}
+
+.kanban-meta-checklist-done {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.kanban-meta-checklist-done i {
+  color: #16a34a;
 }
 
 /* Responsive Design */

@@ -56,6 +56,46 @@
         </div>
         {% endif %}
 
+        {% set can_edit_checklist = current_user.is_admin or task.assigned_to == current_user.id or task.created_by == current_user.id %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm"
+             id="checklistCard" data-task-id="{{ task.id }}" data-can-edit="{{ '1' if can_edit_checklist else '0' }}">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold">{{ _('Checklist') }}</h2>
+                <span id="checklistCounter" class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                    {{ task.checklist_done }} / {{ task.checklist_total }}
+                </span>
+            </div>
+            <div class="w-full bg-background-light dark:bg-background-dark rounded-full h-2 mb-4 overflow-hidden">
+                <div id="checklistBar" class="bg-green-500 h-2 rounded-full transition-all" style="width: {{ task.checklist_progress }}%"></div>
+            </div>
+            <ul id="checklistItems" class="space-y-2">
+                {% for item in task.checklist_items %}
+                <li class="flex items-center gap-2 group" data-item-id="{{ item.id }}">
+                    <input type="checkbox" class="checklist-toggle h-4 w-4 rounded border-border-light dark:border-border-dark"
+                           {% if item.is_done %}checked{% endif %} {% if not can_edit_checklist %}disabled{% endif %}>
+                    <span class="checklist-text flex-1 text-sm {% if item.is_done %}line-through text-text-muted-light dark:text-text-muted-dark{% endif %}">{{ item.text }}</span>
+                    {% if can_edit_checklist %}
+                    <button type="button" class="checklist-delete opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-xs px-1" title="{{ _('Delete') }}" aria-label="{{ _('Delete checklist item') }}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            <li id="checklistEmpty" class="text-sm text-text-muted-light dark:text-text-muted-dark {% if task.checklist_total %}hidden{% endif %} list-none mt-1">
+                {{ _('No checklist items yet.') }}
+            </li>
+            {% if can_edit_checklist %}
+            <form id="checklistAddForm" class="mt-4 flex items-center gap-2">
+                <input type="text" id="checklistNewText" name="text" maxlength="500" placeholder="{{ _('Add an item…') }}"
+                       class="flex-1 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-gray-700 px-3 py-2 text-sm">
+                <button type="submit" class="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-primary text-white text-sm hover:opacity-90">
+                    <i class="fas fa-plus"></i> {{ _('Add') }}
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">Time Entries</h2>
             <div class="overflow-x-auto">
@@ -182,4 +222,110 @@
 ) }}
 {% endif %}
 {% endfor %}
+{% endblock %}
+
+{% block scripts_extra %}
+{{ super() }}
+<script>
+(function () {
+    const card = document.getElementById('checklistCard');
+    if (!card || card.dataset.canEdit !== '1') return;
+
+    const taskId = card.dataset.taskId;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const list = document.getElementById('checklistItems');
+    const counter = document.getElementById('checklistCounter');
+    const bar = document.getElementById('checklistBar');
+    const empty = document.getElementById('checklistEmpty');
+    const addForm = document.getElementById('checklistAddForm');
+    const newText = document.getElementById('checklistNewText');
+
+    function post(url, body) {
+        return fetch(url, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken },
+            body: body,
+        }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); });
+    }
+
+    function applyState(state) {
+        if (!state) return;
+        counter.textContent = state.done + ' / ' + state.total;
+        bar.style.width = state.progress + '%';
+        empty.classList.toggle('hidden', state.total > 0);
+    }
+
+    function markDone(span, done) {
+        span.classList.toggle('line-through', done);
+        span.classList.toggle('text-text-muted-light', done);
+        span.classList.toggle('dark:text-text-muted-dark', done);
+    }
+
+    function buildItem(item) {
+        const li = document.createElement('li');
+        li.className = 'flex items-center gap-2 group';
+        li.dataset.itemId = item.id;
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'checklist-toggle h-4 w-4 rounded border-border-light dark:border-border-dark';
+        cb.checked = item.is_done;
+
+        const span = document.createElement('span');
+        span.className = 'checklist-text flex-1 text-sm';
+        span.textContent = item.text;
+        if (item.is_done) markDone(span, true);
+
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'checklist-delete opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-xs px-1';
+        const delIcon = document.createElement('i');
+        delIcon.className = 'fas fa-times';
+        del.appendChild(delIcon);
+
+        li.appendChild(cb);
+        li.appendChild(span);
+        li.appendChild(del);
+        return li;
+    }
+
+    list.addEventListener('change', function (e) {
+        const cb = e.target.closest('.checklist-toggle');
+        if (!cb) return;
+        const li = cb.closest('li');
+        post('/tasks/checklist/' + li.dataset.itemId + '/toggle', new FormData()).then(function (res) {
+            if (!res.ok) { cb.checked = !cb.checked; return; }
+            markDone(li.querySelector('.checklist-text'), res.data.item.is_done);
+            applyState(res.data.checklist);
+        });
+    });
+
+    list.addEventListener('click', function (e) {
+        const btn = e.target.closest('.checklist-delete');
+        if (!btn) return;
+        const li = btn.closest('li');
+        post('/tasks/checklist/' + li.dataset.itemId + '/delete', new FormData()).then(function (res) {
+            if (!res.ok) return;
+            li.remove();
+            applyState(res.data.checklist);
+        });
+    });
+
+    if (addForm) {
+        addForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const text = (newText.value || '').trim();
+            if (!text) return;
+            const body = new FormData();
+            body.append('text', text);
+            post('/tasks/' + taskId + '/checklist', body).then(function (res) {
+                if (!res.ok) return;
+                list.appendChild(buildItem(res.data.item));
+                newText.value = '';
+                applyState(res.data.checklist);
+            });
+        });
+    }
+})();
+</script>
 {% endblock %}
