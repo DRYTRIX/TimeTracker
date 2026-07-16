@@ -34,7 +34,9 @@ class WorkingTimeViolation(db.Model):
     created_at = db.Column(db.DateTime, default=local_now, nullable=False)
     updated_at = db.Column(db.DateTime, default=local_now, onupdate=local_now, nullable=False)
 
-    user = db.relationship("User", foreign_keys=[user_id], backref=db.backref("working_time_violations", lazy="dynamic"))
+    user = db.relationship(
+        "User", foreign_keys=[user_id], backref=db.backref("working_time_violations", lazy="dynamic")
+    )
     acknowledged_by = db.relationship("User", foreign_keys=[acknowledged_by_user_id])
 
     def to_dict(self):

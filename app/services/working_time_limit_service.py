@@ -40,9 +40,7 @@ class WorkingTimeLimitService:
         end_dt = datetime.combine(day, datetime.max.time())
         from app.repositories import TimeEntryRepository
 
-        seconds = TimeEntryRepository().get_total_duration(
-            user_id=user_id, start_date=start_dt, end_date=end_dt
-        )
+        seconds = TimeEntryRepository().get_total_duration(user_id=user_id, start_date=start_dt, end_date=end_dt)
         return round(seconds / 3600, 2)
 
     def get_worked_hours_for_week(self, user: User, week_start: date, week_end: date) -> float:
@@ -53,9 +51,7 @@ class WorkingTimeLimitService:
         end_dt = datetime.combine(week_end, datetime.max.time())
         from app.repositories import TimeEntryRepository
 
-        seconds = TimeEntryRepository().get_total_duration(
-            user_id=user.id, start_date=start_dt, end_date=end_dt
-        )
+        seconds = TimeEntryRepository().get_total_duration(user_id=user.id, start_date=start_dt, end_date=end_dt)
         return round(seconds / 3600, 2)
 
     def get_or_create_violation(

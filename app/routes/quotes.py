@@ -1723,9 +1723,7 @@ def send_quote_email(quote_id):
 
     # Get recipient email from request (form POST or JSON API)
     data = request.get_json(silent=True) or {}
-    recipient_email = (
-        request.form.get("recipient_email") or data.get("recipient_email") or ""
-    ).strip()
+    recipient_email = (request.form.get("recipient_email") or data.get("recipient_email") or "").strip()
     if not recipient_email and quote.client and quote.client.email:
         recipient_email = quote.client.email
 
@@ -1737,9 +1735,7 @@ def send_quote_email(quote_id):
         return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
     # Get custom message if provided
-    custom_message = (
-        request.form.get("custom_message") or data.get("custom_message") or ""
-    ).strip()
+    custom_message = (request.form.get("custom_message") or data.get("custom_message") or "").strip()
 
     try:
         from app.utils.email import send_quote_email

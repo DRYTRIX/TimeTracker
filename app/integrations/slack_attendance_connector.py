@@ -163,16 +163,12 @@ class SlackAttendanceConnector(BaseConnector):
         channel_id = (form.get("channel_id") or "").strip()
         allowed_channel = (self._cfg().get("attendance_channel_id") or "").strip()
         if allowed_channel and channel_id and channel_id != allowed_channel:
-            return self._ephemeral(
-                "This command can only be used in the configured attendance channel."
-            )
+            return self._ephemeral("This command can only be used in the configured attendance channel.")
 
         command = (form.get("command") or "").strip().lower()
         action = ATTENDANCE_COMMANDS.get(command)
         if not action:
-            return self._ephemeral(
-                "Unknown command. Available: `/in`, `/brb`, `/back`, `/out`."
-            )
+            return self._ephemeral("Unknown command. Available: `/in`, `/brb`, `/back`, `/out`.")
 
         slack_user_id = (form.get("user_id") or "").strip()
         if not slack_user_id:

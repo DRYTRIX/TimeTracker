@@ -84,9 +84,7 @@ def workday_history():
 
     service = AttendanceComplianceService()
     records = service.list_days(current_user.id, start_date, end_date)
-    warnings_by_date = {
-        r.work_date: service.get_compliance_warnings(current_user.id, r.work_date) for r in records
-    }
+    warnings_by_date = {r.work_date: service.get_compliance_warnings(current_user.id, r.work_date) for r in records}
 
     total = len(records)
     start_idx = (page - 1) * per_page
@@ -214,9 +212,7 @@ def violation_justify(violation_id):
 
     if request.method == "POST":
         justification = request.form.get("justification", "").strip()
-        result = WorkingTimeLimitService().submit_justification(
-            violation_id, current_user.id, justification
-        )
+        result = WorkingTimeLimitService().submit_justification(violation_id, current_user.id, justification)
         if result["success"]:
             flash(_("Thank you. Your justification has been submitted."), "success")
             return redirect(url_for("workday.violations_list"))
@@ -239,7 +235,9 @@ def admin_working_time_list():
     if status_filter and status_filter != "all":
         query = query.filter_by(status=status_filter)
     violations = query.order_by(WorkingTimeViolation.created_at.desc()).limit(200).all()
-    users = {u.id: u for u in User.query.filter(User.id.in_({v.user_id for v in violations})).all()} if violations else {}
+    users = (
+        {u.id: u for u in User.query.filter(User.id.in_({v.user_id for v in violations})).all()} if violations else {}
+    )
 
     return render_template(
         "workday/admin_violations.html",

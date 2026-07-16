@@ -714,9 +714,7 @@ def belgium_attendance_export_csv():
     if not current_user.is_admin:
         user_id = current_user.id
 
-    rows = AttendanceComplianceService().belgium_inspector_rows(
-        start_date=start, end_date=end, user_id=user_id
-    )
+    rows = AttendanceComplianceService().belgium_inspector_rows(start_date=start, end_date=end, user_id=user_id)
 
     output = io.StringIO()
     if rows:

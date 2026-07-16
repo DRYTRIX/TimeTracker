@@ -47,13 +47,14 @@ def _record_blueprint_status(
 def register_all_blueprints(app, logger=None):
     """Import and register all route blueprints. Optional blueprints log failures; dev may re-raise."""
     _log = logger or app.logger
+    # importlib avoids shadowing the Flask `app` parameter (plain `import app.routes...` binds local `app`)
+    from importlib import import_module
+
     from app.routes.admin import admin_bp
     from app.routes.analytics import analytics_bp
     from app.routes.api import api_bp
     from app.routes.api_docs import api_docs_bp, swaggerui_blueprint
     from app.routes.api_v1 import api_v1_bp
-    # importlib avoids shadowing the Flask `app` parameter (plain `import app.routes...` binds local `app`)
-    from importlib import import_module
 
     import_module("app.routes.api_v1_workday")
     import_module("app.routes.api_v1_attendance")

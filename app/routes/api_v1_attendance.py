@@ -51,9 +51,7 @@ def api_attendance_history():
     days = request.args.get("days", 30, type=int)
     end_date = datetime.utcnow().date()
     start_date = end_date - timedelta(days=max(1, days))
-    records = AttendanceComplianceService().list_days(
-        g.api_user.id, start_date, end_date, include_periods=False
-    )
+    records = AttendanceComplianceService().list_days(g.api_user.id, start_date, end_date, include_periods=False)
     return success_response(
         data={
             "records": [r.to_dict(include_periods=True) for r in records],

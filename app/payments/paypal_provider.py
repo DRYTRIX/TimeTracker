@@ -137,12 +137,12 @@ class PayPalProvider(PaymentProvider):
             except (TypeError, ValueError):
                 invoice_id = None
         elif event_type == "PAYMENT.CAPTURE.COMPLETED":
-            custom_id = (resource.get("custom_id") or resource.get("invoice_id"))
+            custom_id = resource.get("custom_id") or resource.get("invoice_id")
             try:
                 invoice_id = int(custom_id) if custom_id else None
             except (TypeError, ValueError):
                 invoice_id = None
-            amt = (resource.get("amount") or {})
+            amt = resource.get("amount") or {}
             try:
                 amount = Decimal(str(amt.get("value") or "0"))
             except Exception:

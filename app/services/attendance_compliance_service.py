@@ -116,7 +116,11 @@ class AttendanceComplianceService:
         now = at_time or local_now()
         work_date = now.date()
         if self.is_day_locked(user_id, work_date):
-            return {"success": False, "message": "Attendance record is locked for this date", "error": "attendance_locked"}
+            return {
+                "success": False,
+                "message": "Attendance record is locked for this date",
+                "error": "attendance_locked",
+            }
 
         ok, msg = self.can_start_work(user_id)
         if not ok:
@@ -153,7 +157,11 @@ class AttendanceComplianceService:
             return {"success": False, "message": "No active workday session", "error": "no_active_workday"}
 
         if self.is_day_locked(user_id, period.start_time.date()):
-            return {"success": False, "message": "Attendance record is locked for this date", "error": "attendance_locked"}
+            return {
+                "success": False,
+                "message": "Attendance record is locked for this date",
+                "error": "attendance_locked",
+            }
 
         active_break = self.get_active_break(user_id)
         if active_break:
@@ -186,7 +194,11 @@ class AttendanceComplianceService:
             return {"success": False, "message": "Break already in progress", "error": "break_already_active"}
 
         if self.is_day_locked(user_id, period.start_time.date()):
-            return {"success": False, "message": "Attendance record is locked for this date", "error": "attendance_locked"}
+            return {
+                "success": False,
+                "message": "Attendance record is locked for this date",
+                "error": "attendance_locked",
+            }
 
         try:
             bt = AttendanceBreakType(break_type)
@@ -215,7 +227,11 @@ class AttendanceComplianceService:
             return {"success": False, "message": "No active break", "error": "no_active_break"}
 
         if self.is_day_locked(user_id, brk.start_time.date()):
-            return {"success": False, "message": "Attendance record is locked for this date", "error": "attendance_locked"}
+            return {
+                "success": False,
+                "message": "Attendance record is locked for this date",
+                "error": "attendance_locked",
+            }
 
         self._end_break(brk, now)
         day = brk.attendance_day
@@ -425,7 +441,10 @@ class AttendanceComplianceService:
 
         if entity_type == "AddWorkPeriod":
             if day.work_periods.count() > 0:
-                return {"success": False, "message": "This day already has work periods; edit an existing period instead"}
+                return {
+                    "success": False,
+                    "message": "This day already has work periods; edit an existing period instead",
+                }
             if not corrected_values.get("start_time"):
                 return {"success": False, "message": "Start time is required"}
             original_values: Dict[str, Any] = {}

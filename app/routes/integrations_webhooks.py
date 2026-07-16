@@ -48,10 +48,10 @@ from app.integrations.github_connector import PROVIDER_KEY as GH_PROVIDER
 from app.integrations.github_connector import GitHubConnector
 from app.integrations.google_calendar_connector import PROVIDER_KEY as GCAL_PROVIDER
 from app.integrations.google_calendar_connector import GoogleCalendarConnector
-from app.integrations.slack_connector import PROVIDER_KEY as SLACK_PROVIDER
-from app.integrations.slack_connector import SlackConnector
 from app.integrations.slack_attendance_connector import PROVIDER_KEY as SLACK_ATTENDANCE_PROVIDER
 from app.integrations.slack_attendance_connector import SlackAttendanceConnector
+from app.integrations.slack_connector import PROVIDER_KEY as SLACK_PROVIDER
+from app.integrations.slack_connector import SlackConnector
 from app.models import Integration
 from app.utils.db import safe_commit
 

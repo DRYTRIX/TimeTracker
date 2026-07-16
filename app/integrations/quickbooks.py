@@ -251,7 +251,12 @@ class QuickBooksConnector(BaseConnector):
         try:
             config = self.integration.config or {}
             if not export_enabled(config, "quickbooks"):
-                return {"success": True, "synced_count": 0, "message": "Export disabled by sync_direction", "errors": []}
+                return {
+                    "success": True,
+                    "synced_count": 0,
+                    "message": "Export disabled by sync_direction",
+                    "errors": [],
+                }
 
             realm_id = config.get("realm_id")
             if not realm_id:
@@ -324,7 +329,12 @@ class QuickBooksConnector(BaseConnector):
                 db.session.commit()
             except Exception as e:
                 db.session.rollback()
-                return {"success": False, "message": f"Database error during sync: {str(e)}", "synced_count": synced_count, "errors": errors}
+                return {
+                    "success": False,
+                    "message": f"Database error during sync: {str(e)}",
+                    "synced_count": synced_count,
+                    "errors": errors,
+                }
 
             message = f"Successfully synced {synced_count} items."
             if errors:
@@ -512,7 +522,9 @@ class QuickBooksConnector(BaseConnector):
         # Try to get account ID from expense category mapping or use default
         account_id = default_expense_account
         if expense.category:
-            account_id = account_mapping.get(str(expense.category), account_mapping.get(expense.category, default_expense_account))
+            account_id = account_mapping.get(
+                str(expense.category), account_mapping.get(expense.category, default_expense_account)
+            )
         integration_meta = getattr(expense, "integration_metadata", None) or {}
         if not account_id and isinstance(integration_meta, dict):
             account_id = integration_meta.get("quickbooks", {}).get("account_id", default_expense_account)
