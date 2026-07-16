@@ -1580,6 +1580,30 @@
     <script src="{{ url_for('static', filename='floating-actions.js') }}?v={{ app_version }}"></script>
     <script src="{{ url_for('static', filename='floating-timer-bar.js') }}"></script>
     <script src="{{ url_for('static', filename='idle.js') }}"></script>
+    <!-- Real-time @mention notifications -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous"></script>
+    <script>
+        (function(){
+            var uid = {{ current_user.id }};
+            if (!uid || typeof io === 'undefined') return;
+            try {
+                var socket = io();
+                socket.on('connect', function(){ socket.emit('join_user_room', { user_id: uid }); });
+                socket.on('user_mentioned', function(data){
+                    if (!data) return;
+                    var title = data.title || '{{ _('New mention') }}';
+                    var msg = data.message || '{{ _('You were mentioned in a comment') }}';
+                    if (window.toastManager && typeof window.toastManager.info === 'function') {
+                        window.toastManager.info(msg, title);
+                    } else if (typeof showToast === 'function') {
+                        try { showToast(msg, 'info'); } catch (e) {}
+                    }
+                });
+            } catch (e) {
+                console.error('Mention socket init failed', e);
+            }
+        })();
+    </script>
     {% if ai_enabled %}
     <script src="{{ url_for('static', filename='ai-helper.js') }}?v={{ app_version }}-ai1"></script>
     {% endif %}

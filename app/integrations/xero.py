@@ -232,7 +232,12 @@ class XeroConnector(BaseConnector):
         try:
             config = self.integration.config or {}
             if not export_enabled(config, "xero"):
-                return {"success": True, "synced_count": 0, "message": "Export disabled by sync_direction", "errors": []}
+                return {
+                    "success": True,
+                    "synced_count": 0,
+                    "message": "Export disabled by sync_direction",
+                    "errors": [],
+                }
 
             tenant_id = config.get("tenant_id")
             if not tenant_id and self.credentials and self.credentials.extra_data:
@@ -316,7 +321,11 @@ class XeroConnector(BaseConnector):
         # Build Xero invoice structure
         xero_invoice = {
             "Type": "ACCREC",
-            "Date": invoice.issue_date.strftime("%Y-%m-%d") if invoice.issue_date else datetime.utcnow().strftime("%Y-%m-%d"),
+            "Date": (
+                invoice.issue_date.strftime("%Y-%m-%d")
+                if invoice.issue_date
+                else datetime.utcnow().strftime("%Y-%m-%d")
+            ),
             "DueDate": (
                 invoice.due_date.strftime("%Y-%m-%d") if invoice.due_date else datetime.utcnow().strftime("%Y-%m-%d")
             ),
@@ -362,13 +371,19 @@ class XeroConnector(BaseConnector):
         # Try to get account code from expense category mapping or use default
         account_code = default_expense_account
         if expense.category:
-            account_code = account_mapping.get(str(expense.category), account_mapping.get(expense.category, default_expense_account))
+            account_code = account_mapping.get(
+                str(expense.category), account_mapping.get(expense.category, default_expense_account)
+            )
         integration_meta = getattr(expense, "integration_metadata", None) or {}
         if isinstance(integration_meta, dict) and integration_meta.get("xero", {}).get("account_code"):
             account_code = integration_meta["xero"]["account_code"]
 
         xero_expense = {
-            "Date": expense.expense_date.strftime("%Y-%m-%d") if expense.expense_date else datetime.utcnow().strftime("%Y-%m-%d"),
+            "Date": (
+                expense.expense_date.strftime("%Y-%m-%d")
+                if expense.expense_date
+                else datetime.utcnow().strftime("%Y-%m-%d")
+            ),
             "Contact": {"Name": expense.vendor or "Unknown"},
             "LineItems": [
                 {

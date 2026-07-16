@@ -50,7 +50,9 @@ class MetricsService:
             .filter(Expense.expense_date >= start_date, Expense.expense_date <= end_date)
             .group_by(Expense.project_id)
         )
-        expenses_by_project = {row.project_id: Decimal(str(row.total or 0)) for row in expense_q.all() if row.project_id}
+        expenses_by_project = {
+            row.project_id: Decimal(str(row.total or 0)) for row in expense_q.all() if row.project_id
+        }
 
         cost_q = (
             db.session.query(ProjectCost.project_id, func.sum(ProjectCost.amount).label("total"))
@@ -128,13 +130,13 @@ class MetricsService:
             upper.append(round(max(0.0, pred + band), 2))
         return forecast, lower, upper
 
-    def org_utilization_forecast(
-        self, start_date: date, end_date: date, forecast_weeks: int = 4
-    ) -> Dict[str, Any]:
+    def org_utilization_forecast(self, start_date: date, end_date: date, forecast_weeks: int = 4) -> Dict[str, Any]:
         """Admin org-level utilization projection from historical billable ratio."""
         total_seconds = (
             db.session.query(func.sum(TimeEntry.duration_seconds))
-            .filter(TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_date, TimeEntry.start_time <= end_date)
+            .filter(
+                TimeEntry.end_time.isnot(None), TimeEntry.start_time >= start_date, TimeEntry.start_time <= end_date
+            )
             .scalar()
             or 0
         )

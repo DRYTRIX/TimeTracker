@@ -56,9 +56,7 @@ class AnalyticsService:
         if user_id:
             today_date = today.date()
             workday_today = WorkdaySession.get_total_hours_for_period(user_id, today_date, today_date)
-            workday_week = WorkdaySession.get_total_hours_for_period(
-                user_id, week_start.date(), datetime.now().date()
-            )
+            workday_week = WorkdaySession.get_total_hours_for_period(user_id, week_start.date(), datetime.now().date())
             workday_month = WorkdaySession.get_total_hours_for_period(
                 user_id, month_start.date(), datetime.now().date()
             )

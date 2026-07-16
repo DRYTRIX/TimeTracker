@@ -39,9 +39,9 @@ from app.models import (
     User,
 )
 from app.models.client_time_approval import ClientTimeApproval
+from app.services.checkout_service import CheckoutService
 from app.services.client_approval_service import ClientApprovalService
 from app.services.client_notification_service import ClientNotificationService
-from app.services.checkout_service import CheckoutService
 from app.services.payment_gateway_service import PaymentGatewayService
 from app.utils.backup import is_database_restore_in_progress
 from app.utils.db import safe_commit

@@ -37,6 +37,45 @@
       </div>
     </div>
 
+    <!-- Board templates toolbar -->
+    <div class="mb-6 bg-card-light dark:bg-card-dark rounded-xl shadow ring-1 ring-border-light/60 dark:ring-border-dark/60 p-4">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="flex items-start gap-2">
+          <i class="fas fa-layer-group mt-1 text-primary"></i>
+          <div>
+            <div class="font-semibold">{{ _('Board Templates') }}</div>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Save this column layout as a reusable template, or apply an existing one to this board.') }}</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          {% if templates %}
+          <form method="POST" action="{{ url_for('kanban.apply_template', template_id=0) }}" id="applyTemplateForm" class="flex items-center gap-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if project_id %}<input type="hidden" name="project_id" value="{{ project_id }}">{% endif %}
+            <select id="applyTemplateSelect" class="rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-gray-700 px-3 py-2 text-sm" aria-label="{{ _('Choose a template to apply') }}">
+              <option value="">{{ _('Apply template…') }}</option>
+              {% for template in templates %}
+              <option value="{{ template.id }}">{{ template.name }} ({{ template.column_count }})</option>
+              {% endfor %}
+            </select>
+            <label class="inline-flex items-center gap-1 text-sm text-text-muted-light dark:text-text-muted-dark" title="{{ _('Delete existing columns before applying') }}">
+              <input type="checkbox" name="replace" value="1" class="rounded border-border-light dark:border-border-dark"> {{ _('Replace') }}
+            </label>
+            <button type="submit" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark text-sm">
+              <i class="fas fa-check"></i> {{ _('Apply') }}
+            </button>
+          </form>
+          {% endif %}
+          <button type="button" onclick="showSaveTemplateModal()" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark text-sm">
+            <i class="fas fa-save"></i> {{ _('Save as Template') }}
+          </button>
+          <a href="{{ url_for('kanban.list_templates') }}" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark text-sm">
+            <i class="fas fa-cog"></i> {{ _('Manage') }}
+          </a>
+        </div>
+      </div>
+    </div>
+
     <!-- Flash messages are globally converted to toasts in base.html -->
 
     <div class="bg-card-light dark:bg-card-dark rounded-xl shadow ring-1 ring-border-light/60 dark:ring-border-dark/60">
@@ -51,6 +90,7 @@
               <th scope="col" class="px-4 py-3 w-28">{{ _('Color') }}</th>
               <th scope="col" class="px-4 py-3 w-28">{{ _('Status') }}</th>
               <th scope="col" class="px-4 py-3 w-32">{{ _('Complete?') }}</th>
+              <th scope="col" class="px-4 py-3 w-24">{{ _('WIP Limit') }}</th>
               <th scope="col" class="px-4 py-3 w-28">{{ _('System') }}</th>
               <th scope="col" class="px-4 py-3 w-52">{{ _('Actions') }}</th>
             </tr>
@@ -79,6 +119,13 @@
                   <span class="inline-flex items-center gap-1 text-sm text-green-700 dark:text-green-300"><i class="fas fa-check-circle"></i> {{ _('Yes') }}</span>
                 {% else %}
                   <span class="inline-flex items-center gap-1 text-sm text-text-muted-light dark:text-text-muted-dark"><i class="fas fa-circle"></i> {{ _('No') }}</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3">
+                {% if column.wip_limit %}
+                  <span class="inline-flex items-center px-2 py-1 rounded text-xs bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark">{{ column.wip_limit }}</span>
+                {% else %}
+                  <span class="text-text-muted-light dark:text-text-muted-dark">&mdash;</span>
                 {% endif %}
               </td>
               <td class="px-4 py-3">
@@ -129,6 +176,42 @@
         <li>{{ _('Inactive columns are hidden from the kanban board but tasks with that status remain accessible') }}</li>
       </ul>
     </div>
+  </div>
+</div>
+
+<!-- Save Template Modal -->
+<div id="saveTemplateModal" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="saveTemplateTitle">
+  <div class="absolute inset-0 bg-black/50" onclick="hideSaveTemplateModal()"></div>
+  <div class="relative max-w-lg mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-xl ring-1 ring-border-light/60 dark:ring-border-dark/60">
+    <form method="POST" action="{{ url_for('kanban.save_template') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% if project_id %}<input type="hidden" name="project_id" value="{{ project_id }}">{% endif %}
+      <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+        <h5 id="saveTemplateTitle" class="text-lg font-semibold flex items-center gap-2">
+          <i class="fas fa-save text-primary"></i> {{ _('Save Board Template') }}
+        </h5>
+        <button type="button" class="px-2 py-1 hover:bg-background-light dark:hover:bg-background-dark rounded" aria-label="{{ _('Close') }}" onclick="hideSaveTemplateModal()">&times;</button>
+      </div>
+      <div class="p-4 space-y-4">
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Captures the current %(count)d column(s) so you can re-apply this layout to other boards.', count=columns|length) }}</p>
+        <div>
+          <label for="templateName" class="block text-sm font-medium mb-1">{{ _('Template name') }} <span class="text-danger">*</span></label>
+          <input type="text" id="templateName" name="name" required maxlength="100" class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-gray-700 px-3 py-2" placeholder="{{ _('e.g. Standard Delivery Board') }}">
+        </div>
+        <div>
+          <label for="templateDescription" class="block text-sm font-medium mb-1">{{ _('Description') }}</label>
+          <input type="text" id="templateDescription" name="description" maxlength="255" class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-gray-700 px-3 py-2" placeholder="{{ _('Optional') }}">
+        </div>
+      </div>
+      <div class="p-4 border-t border-border-light dark:border-border-dark flex items-center justify-between">
+        <button type="button" class="inline-flex items-center gap-2 px-3 py-2 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark" onclick="hideSaveTemplateModal()">
+          <i class="fas fa-times"></i> {{ _('Cancel') }}
+        </button>
+        <button type="submit" class="inline-flex items-center gap-2 px-3 py-2 rounded bg-primary text-white hover:opacity-90">
+          <i class="fas fa-save"></i> {{ _('Save Template') }}
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -188,9 +271,37 @@ function hideDeleteModal(){
   if (modal) modal.classList.add('hidden');
 }
 
+// Save-as-template modal
+function showSaveTemplateModal(){
+  const modal = document.getElementById('saveTemplateModal');
+  if (modal) modal.classList.remove('hidden');
+  const nameEl = document.getElementById('templateName');
+  if (nameEl) nameEl.focus();
+}
+
+function hideSaveTemplateModal(){
+  const modal = document.getElementById('saveTemplateModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+// Point the apply form at the selected template before submitting
+const applyForm = document.getElementById('applyTemplateForm');
+if (applyForm) {
+  applyForm.addEventListener('submit', function(e){
+    const select = document.getElementById('applyTemplateSelect');
+    const templateId = select ? select.value : '';
+    if (!templateId) {
+      e.preventDefault();
+      try { showToast('{{ _('Please choose a template to apply.') }}', 'error'); } catch(_) { alert('{{ _('Please choose a template to apply.') }}'); }
+      return;
+    }
+    applyForm.action = "{{ url_for('kanban.apply_template', template_id=0) }}".replace('0', templateId);
+  });
+}
+
 // Close on Escape
 document.addEventListener('keydown', function(e){
-  if (e.key === 'Escape') hideDeleteModal();
+  if (e.key === 'Escape') { hideDeleteModal(); hideSaveTemplateModal(); }
 });
 
 // Enable drag-and-drop reordering

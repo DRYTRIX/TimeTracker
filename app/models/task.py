@@ -85,6 +85,24 @@ class Task(db.Model):
         return date.today() > self.due_date and self.status not in ["done", "cancelled"]
 
     @property
+    def checklist_total(self):
+        """Number of checklist items on this task."""
+        return len(self.checklist_items)
+
+    @property
+    def checklist_done(self):
+        """Number of completed checklist items on this task."""
+        return sum(1 for item in self.checklist_items if item.is_done)
+
+    @property
+    def checklist_progress(self):
+        """Checklist completion as an integer percentage (0-100)."""
+        total = self.checklist_total
+        if not total:
+            return 0
+        return round(self.checklist_done * 100 / total)
+
+    @property
     def total_hours(self):
         """Calculate total hours spent on this task"""
         # Use cached value if available (set by TaskService.list_tasks for performance)

@@ -1,3 +1,6 @@
+from .activity import Activity
+from .api_idempotency_key import ApiIdempotencyKey
+from .api_token import ApiToken
 from .attendance_compliance import (
     AttendanceBreak,
     AttendanceBreakType,
@@ -7,9 +10,6 @@ from .attendance_compliance import (
     AttendanceWorkPeriod,
     DailyAttendanceRecord,
 )
-from .activity import Activity
-from .api_idempotency_key import ApiIdempotencyKey
-from .api_token import ApiToken
 from .audit_log import AuditLog
 from .budget_alert import BudgetAlert
 from .calendar_event import CalendarEvent
@@ -50,6 +50,7 @@ from .invoice_pdf_template import InvoicePDFTemplate
 from .invoice_peppol import InvoicePeppolTransmission
 from .invoice_template import InvoiceTemplate
 from .issue import Issue
+from .kanban_board_template import KanbanBoardTemplate
 from .kanban_column import KanbanColumn
 from .lead import Lead
 from .lead_activity import LeadActivity
@@ -87,6 +88,7 @@ from .supplier import Supplier
 from .supplier_stock_item import SupplierStockItem
 from .task import Task
 from .task_activity import TaskActivity
+from .task_checklist_item import TaskChecklistItem
 from .tax_rule import TaxRule
 from .team_chat import ChatChannel, ChatChannelMember, ChatMessage, ChatReadReceipt
 from .time_entry import TimeEntry
@@ -104,8 +106,8 @@ from .warehouse_stock import WarehouseStock
 from .webhook import Webhook, WebhookDelivery
 from .weekly_time_goal import WeeklyTimeGoal
 from .workday_session import WorkdaySession
-from .working_time_violation import WorkingTimeViolation
 from .workflow import WorkflowExecution, WorkflowRule, WorkflowTemplate
+from .working_time_violation import WorkingTimeViolation
 
 __all__ = [
     "User",
@@ -118,6 +120,7 @@ __all__ = [
     "InvoiceItem",
     "Client",
     "TaskActivity",
+    "TaskChecklistItem",
     "Comment",
     "FocusSession",
     "RecurringBlock",
@@ -134,6 +137,7 @@ __all__ = [
     "SavedReportView",
     "ReportEmailSchedule",
     "KanbanColumn",
+    "KanbanBoardTemplate",
     "TimeEntryTemplate",
     "Activity",
     "UserFavoriteProject",

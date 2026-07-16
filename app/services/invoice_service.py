@@ -571,9 +571,7 @@ class InvoiceService:
         other_project_unbilled_hours = 0.0
         other_project_names: List[str] = []
         if client_id and project_id:
-            other_projects = Project.query.filter(
-                Project.client_id == client_id, Project.id != project_id
-            ).all()
+            other_projects = Project.query.filter(Project.client_id == client_id, Project.id != project_id).all()
             for other_project in other_projects:
                 other_entries = TimeEntry.query.filter(
                     TimeEntry.project_id == other_project.id,
@@ -942,8 +940,7 @@ class InvoiceService:
         detail = invoice.to_dict()
         detail["items"] = [item.to_dict() for item in invoice.items.all()]
         detail["payments"] = [
-            p.to_dict()
-            for p in invoice.payments.order_by(Payment.payment_date.desc(), Payment.created_at.desc()).all()
+            p.to_dict() for p in invoice.payments.order_by(Payment.payment_date.desc(), Payment.created_at.desc()).all()
         ]
         if invoice.project:
             detail["project_name"] = invoice.project.name
