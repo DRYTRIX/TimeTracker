@@ -50,6 +50,7 @@ from .invoice_pdf_template import InvoicePDFTemplate
 from .invoice_peppol import InvoicePeppolTransmission
 from .invoice_template import InvoiceTemplate
 from .issue import Issue
+from .kanban_board_template import KanbanBoardTemplate
 from .kanban_column import KanbanColumn
 from .lead import Lead
 from .lead_activity import LeadActivity
@@ -136,6 +137,7 @@ __all__ = [
     "SavedReportView",
     "ReportEmailSchedule",
     "KanbanColumn",
+    "KanbanBoardTemplate",
     "TimeEntryTemplate",
     "Activity",
     "UserFavoriteProject",

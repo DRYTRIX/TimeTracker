@@ -3,7 +3,7 @@ from flask_babel import gettext as _
 from flask_login import current_user, login_required
 
 from app import db, socketio
-from app.models import KanbanColumn, Task
+from app.models import KanbanBoardTemplate, KanbanColumn, Task
 from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
 from app.utils.permissions import admin_or_permission_required
@@ -110,8 +110,17 @@ def list_columns():
 
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()
 
+    # Saved board templates for the save/apply toolbar
+    templates = KanbanBoardTemplate.query.order_by(KanbanBoardTemplate.name.asc()).all()
+
     # Prevent browser caching
-    response = render_template("kanban/columns.html", columns=columns, projects=projects, project_id=project_id)
+    response = render_template(
+        "kanban/columns.html",
+        columns=columns,
+        projects=projects,
+        project_id=project_id,
+        templates=templates,
+    )
     resp = make_response(response)
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
     resp.headers["Pragma"] = "no-cache"
@@ -492,3 +501,113 @@ def api_list_columns():
     except Exception:
         pass
     return response
+
+
+# ---------------------------------------------------------------------------
+# Board templates: save a column layout and re-apply it to other projects
+# ---------------------------------------------------------------------------
+
+
+@kanban_bp.route("/kanban/templates")
+@login_required
+@module_enabled("kanban")
+@admin_or_permission_required("manage_kanban")
+def list_templates():
+    """List saved board templates."""
+    templates = KanbanBoardTemplate.query.order_by(KanbanBoardTemplate.name.asc()).all()
+    response = make_response(render_template("kanban/templates.html", templates=templates))
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    return response
+
+
+@kanban_bp.route("/kanban/templates/save", methods=["POST"])
+@login_required
+@module_enabled("kanban")
+@admin_or_permission_required("manage_kanban")
+def save_template():
+    """Save the current columns of a scope (project or global) as a template."""
+    name = (request.form.get("name") or "").strip()
+    description = (request.form.get("description") or "").strip() or None
+    project_id = request.form.get("project_id", type=int) or None
+
+    if not name:
+        flash(_("Template name is required"), "error")
+        return redirect(
+            url_for("kanban.list_columns", project_id=project_id) if project_id else url_for("kanban.list_columns")
+        )
+
+    if KanbanBoardTemplate.query.filter(db.func.lower(KanbanBoardTemplate.name) == name.lower()).first():
+        flash(_("A template with that name already exists"), "error")
+        return redirect(
+            url_for("kanban.list_columns", project_id=project_id) if project_id else url_for("kanban.list_columns")
+        )
+
+    columns = KanbanColumn.get_all_columns(project_id=project_id)
+    if not columns:
+        flash(_("There are no columns to save for this board"), "error")
+        return redirect(
+            url_for("kanban.list_columns", project_id=project_id) if project_id else url_for("kanban.list_columns")
+        )
+
+    template = KanbanBoardTemplate.from_columns(
+        name=name, columns=columns, description=description, created_by=current_user.id
+    )
+    db.session.add(template)
+    if not safe_commit("save_kanban_template", {"name": name}):
+        flash(_("Could not save template due to a database error. Please check server logs."), "error")
+        return redirect(
+            url_for("kanban.list_columns", project_id=project_id) if project_id else url_for("kanban.list_columns")
+        )
+
+    flash(_('Template "%(name)s" saved with %(count)d columns', name=name, count=len(columns)), "success")
+    return redirect(url_for("kanban.list_templates"))
+
+
+@kanban_bp.route("/kanban/templates/<int:template_id>/apply", methods=["POST"])
+@login_required
+@module_enabled("kanban")
+@admin_or_permission_required("manage_kanban")
+def apply_template(template_id):
+    """Apply a template's columns to a project (or the global board)."""
+    template = KanbanBoardTemplate.query.get_or_404(template_id)
+    project_id = request.form.get("project_id", type=int) or None
+    replace = request.form.get("replace") in ("on", "1", "true", "yes")
+
+    created = template.apply_to_project(project_id=project_id, replace=replace)
+    if not safe_commit("apply_kanban_template", {"template_id": template_id, "project_id": project_id}):
+        flash(_("Could not apply template due to a database error. Please check server logs."), "error")
+        return redirect(url_for("kanban.list_templates"))
+
+    db.session.expire_all()
+    try:
+        socketio.emit(
+            "kanban_columns_updated",
+            {"action": "template_applied", "template_id": template_id, "project_id": project_id},
+            broadcast=True,
+        )
+    except Exception as e:
+        print(f"[KANBAN] Failed to emit event: {e}")
+
+    if created:
+        flash(_("Applied template: %(count)d columns added", count=created), "success")
+    else:
+        flash(_("Template applied; no new columns were needed"), "info")
+    return redirect(
+        url_for("kanban.list_columns", project_id=project_id) if project_id else url_for("kanban.list_columns")
+    )
+
+
+@kanban_bp.route("/kanban/templates/<int:template_id>/delete", methods=["POST"])
+@login_required
+@module_enabled("kanban")
+@admin_or_permission_required("manage_kanban")
+def delete_template(template_id):
+    """Delete a saved board template."""
+    template = KanbanBoardTemplate.query.get_or_404(template_id)
+    name = template.name
+    db.session.delete(template)
+    if not safe_commit("delete_kanban_template", {"template_id": template_id}):
+        flash(_("Could not delete template due to a database error. Please check server logs."), "error")
+        return redirect(url_for("kanban.list_templates"))
+    flash(_('Template "%(name)s" deleted', name=name), "success")
+    return redirect(url_for("kanban.list_templates"))
