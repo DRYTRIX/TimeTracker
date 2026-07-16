@@ -22,6 +22,8 @@ class KanbanColumn(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)  # Can be disabled without deletion
     is_system = db.Column(db.Boolean, default=False, nullable=False)  # System columns cannot be deleted
     is_complete_state = db.Column(db.Boolean, default=False, nullable=False)  # Marks task as completed
+    # WIP (work-in-progress) limit: max tasks allowed in this column. NULL / 0 = no limit.
+    wip_limit = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=now_in_app_timezone, nullable=False)
     updated_at = db.Column(
         db.DateTime,
@@ -54,6 +56,7 @@ class KanbanColumn(db.Model):
             "is_active": self.is_active,
             "is_system": self.is_system,
             "is_complete_state": self.is_complete_state,
+            "wip_limit": self.wip_limit,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

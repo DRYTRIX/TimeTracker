@@ -64,6 +64,12 @@
           </div>
 
           <div class="mt-4">
+            <label for="wip_limit" class="block text-sm font-medium mb-1">{{ _('WIP Limit') }}</label>
+            <input type="number" id="wip_limit" name="wip_limit" min="1" step="1" value="{{ column.wip_limit or '' }}" placeholder="{{ _('No limit') }}" class="w-full md:w-48 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-gray-700 px-3 py-2">
+            <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Maximum number of tasks allowed in this column. Leave blank for no limit; the board flags the column when it is over.') }}</p>
+          </div>
+
+          <div class="mt-4">
             <div class="flex items-start gap-2">
               <input type="checkbox" id="is_complete_state" name="is_complete_state" {% if column.is_complete_state %}checked{% endif %} class="mt-1" aria-describedby="completeHelp">
               <div>

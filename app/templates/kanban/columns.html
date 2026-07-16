@@ -51,6 +51,7 @@
               <th scope="col" class="px-4 py-3 w-28">{{ _('Color') }}</th>
               <th scope="col" class="px-4 py-3 w-28">{{ _('Status') }}</th>
               <th scope="col" class="px-4 py-3 w-32">{{ _('Complete?') }}</th>
+              <th scope="col" class="px-4 py-3 w-24">{{ _('WIP Limit') }}</th>
               <th scope="col" class="px-4 py-3 w-28">{{ _('System') }}</th>
               <th scope="col" class="px-4 py-3 w-52">{{ _('Actions') }}</th>
             </tr>
@@ -79,6 +80,13 @@
                   <span class="inline-flex items-center gap-1 text-sm text-green-700 dark:text-green-300"><i class="fas fa-check-circle"></i> {{ _('Yes') }}</span>
                 {% else %}
                   <span class="inline-flex items-center gap-1 text-sm text-text-muted-light dark:text-text-muted-dark"><i class="fas fa-circle"></i> {{ _('No') }}</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3">
+                {% if column.wip_limit %}
+                  <span class="inline-flex items-center px-2 py-1 rounded text-xs bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark">{{ column.wip_limit }}</span>
+                {% else %}
+                  <span class="text-text-muted-light dark:text-text-muted-dark">&mdash;</span>
                 {% endif %}
               </td>
               <td class="px-4 py-3">
