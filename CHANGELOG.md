@@ -7,13 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.9.3] - 2026-07-16
+
 ### Added
 
+- **Kanban WIP limits** — Per-column work-in-progress limits on Kanban boards.
+- **Task checklists** — Per-task checklists and subtasks on the Kanban board.
+- **Kanban board templates** — Save and reuse board layouts as templates.
+- **Comment @mentions** — Teammates are notified when mentioned in task comments.
 - **Docker Hub automation** — Release workflow (`cd-release.yml`) now auto-publishes the repository description from `docker/hub-README.md` (with current version injected). Development builds (`cd-development.yml`) also push the `develop` tag to Docker Hub when credentials are configured.
 
 ### Changed
 
 - **Docker Hub publish resilience** — Release and development workflows only push to Docker Hub when `DOCKERHUB_USERNAME` and token/password secrets are set; GHCR-only builds no longer fail on missing Docker Hub credentials.
+
+### Fixed
+
+- **Client portal sessions** — Native client portal users stay in the portal UI after login instead of being redirected to the main app ([#677](https://github.com/DRYTRIX/TimeTracker/issues/677)).
+- **Calendar holiday overlays** — Holiday overlays now appear correctly in day and week views.
+- **Workday history dates** — Fixed date formatting on the workday history page.
+
+### Documentation
+
+- **Version** — Documented release **5.9.3** to match `setup.py` (single source of truth for the application version).
 
 ## [5.9.2] - 2026-07-13
 
