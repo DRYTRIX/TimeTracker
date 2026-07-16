@@ -134,3 +134,39 @@ def test_peppyrus_test_credentials(monkeypatch):
     assert data["ok"] is True
     assert data["provider"] == "peppyrus"
 
+    assert len(responses.calls) == 1
+    req_headers = responses.calls[0].request.headers
+    assert req_headers.get("X-Api-Key") == "k_test"
+    assert "Authorization" not in req_headers
+
+
+@responses.activate
+def test_peppyrus_send_uses_x_api_key(monkeypatch):
+    monkeypatch.setenv("PEPPOL_BRIDGE_PROVIDER", "peppyrus")
+    monkeypatch.setenv("PEPPYRUS_API_KEY", "k_test")
+    monkeypatch.setenv("PEPPYRUS_BASE_URL", "https://api.peppyrus.be/v1")
+
+    from peppol_bridge.app import create_app
+
+    app = create_app()
+    app.config["TESTING"] = True
+    c = app.test_client()
+
+    responses.add(
+        responses.POST,
+        "https://api.peppyrus.be/v1/message",
+        json={"id": "msg_123"},
+        status=200,
+        content_type="application/json",
+    )
+    resp = c.post("/send", json=_tt_payload())
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ok"] is True
+    assert data["message_id"] == "msg_123"
+
+    assert len(responses.calls) == 1
+    req_headers = responses.calls[0].request.headers
+    assert req_headers.get("X-Api-Key") == "k_test"
+    assert "Authorization" not in req_headers
+
