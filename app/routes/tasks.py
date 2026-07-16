@@ -21,7 +21,7 @@ from flask_login import current_user, login_required
 
 import app as app_module
 from app import db
-from app.models import Activity, KanbanColumn, Project, Task, TaskActivity, TimeEntry, User
+from app.models import Activity, KanbanColumn, Project, Task, TaskActivity, TaskChecklistItem, TimeEntry, User
 from app.utils.db import safe_commit
 from app.utils.pagination import get_pagination_params
 from app.utils.timezone import convert_app_datetime_to_user, now_in_app_timezone
@@ -1655,3 +1655,123 @@ def api_update_status(task_id):
         return jsonify({"success": True, "task": task.to_dict()})
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
+
+
+# ---------------------------------------------------------------------------
+# Task checklists / subtasks
+# ---------------------------------------------------------------------------
+
+
+def _can_edit_task(task):
+    """Return True if the current user may modify the given task."""
+    return current_user.is_admin or task.assigned_to == current_user.id or task.created_by == current_user.id
+
+
+def _checklist_state(task):
+    """Serialize a task's checklist plus its progress counters for JSON responses."""
+    return {
+        "items": [item.to_dict() for item in task.checklist_items],
+        "total": task.checklist_total,
+        "done": task.checklist_done,
+        "progress": task.checklist_progress,
+    }
+
+
+@tasks_bp.route("/tasks/<int:task_id>/checklist", methods=["POST"])
+@login_required
+def add_checklist_item(task_id):
+    """Add a checklist item to a task."""
+    task = Task.query.get_or_404(task_id)
+    if not _can_edit_task(task):
+        return jsonify({"error": "You do not have permission to modify this task"}), 403
+
+    text = (request.form.get("text") or "").strip()
+    if not text:
+        return jsonify({"error": "Checklist item text is required"}), 400
+    if len(text) > 500:
+        text = text[:500]
+
+    max_position = db.session.query(db.func.max(TaskChecklistItem.position)).filter_by(task_id=task.id).scalar()
+    item = TaskChecklistItem(task_id=task.id, text=text, position=(max_position or -1) + 1)
+    db.session.add(item)
+    if not safe_commit("add_checklist_item", {"task_id": task.id}):
+        return jsonify({"error": "Could not add checklist item due to a database error"}), 500
+
+    return jsonify({"success": True, "item": item.to_dict(), "checklist": _checklist_state(task)})
+
+
+@tasks_bp.route("/tasks/checklist/<int:item_id>/toggle", methods=["POST"])
+@login_required
+def toggle_checklist_item(item_id):
+    """Toggle the done state of a checklist item."""
+    item = TaskChecklistItem.query.get_or_404(item_id)
+    if not _can_edit_task(item.task):
+        return jsonify({"error": "You do not have permission to modify this task"}), 403
+
+    item.is_done = not item.is_done
+    item.updated_at = now_in_app_timezone()
+    if not safe_commit("toggle_checklist_item", {"item_id": item.id}):
+        return jsonify({"error": "Could not update checklist item due to a database error"}), 500
+
+    return jsonify({"success": True, "item": item.to_dict(), "checklist": _checklist_state(item.task)})
+
+
+@tasks_bp.route("/tasks/checklist/<int:item_id>/edit", methods=["POST"])
+@login_required
+def edit_checklist_item(item_id):
+    """Edit the text of a checklist item."""
+    item = TaskChecklistItem.query.get_or_404(item_id)
+    if not _can_edit_task(item.task):
+        return jsonify({"error": "You do not have permission to modify this task"}), 403
+
+    text = (request.form.get("text") or "").strip()
+    if not text:
+        return jsonify({"error": "Checklist item text is required"}), 400
+    item.text = text[:500]
+    item.updated_at = now_in_app_timezone()
+    if not safe_commit("edit_checklist_item", {"item_id": item.id}):
+        return jsonify({"error": "Could not update checklist item due to a database error"}), 500
+
+    return jsonify({"success": True, "item": item.to_dict(), "checklist": _checklist_state(item.task)})
+
+
+@tasks_bp.route("/tasks/checklist/<int:item_id>/delete", methods=["POST"])
+@login_required
+def delete_checklist_item(item_id):
+    """Delete a checklist item."""
+    item = TaskChecklistItem.query.get_or_404(item_id)
+    task = item.task
+    if not _can_edit_task(task):
+        return jsonify({"error": "You do not have permission to modify this task"}), 403
+
+    db.session.delete(item)
+    if not safe_commit("delete_checklist_item", {"item_id": item_id}):
+        return jsonify({"error": "Could not delete checklist item due to a database error"}), 500
+
+    return jsonify({"success": True, "checklist": _checklist_state(task)})
+
+
+@tasks_bp.route("/tasks/<int:task_id>/checklist/reorder", methods=["POST"])
+@login_required
+def reorder_checklist_items(task_id):
+    """Reorder a task's checklist items to match the given list of item IDs."""
+    task = Task.query.get_or_404(task_id)
+    if not _can_edit_task(task):
+        return jsonify({"error": "You do not have permission to modify this task"}), 403
+
+    ordered_ids = request.form.getlist("item_ids[]", type=int) or request.form.getlist("item_ids", type=int)
+    if not ordered_ids:
+        data = request.get_json(silent=True) or {}
+        ordered_ids = [int(i) for i in data.get("item_ids", [])]
+
+    by_id = {item.id: item for item in task.checklist_items}
+    position = 0
+    for item_id in ordered_ids:
+        item = by_id.get(item_id)
+        if item is not None:
+            item.position = position
+            position += 1
+    if not safe_commit("reorder_checklist_items", {"task_id": task.id}):
+        return jsonify({"error": "Could not reorder checklist due to a database error"}), 500
+
+    return jsonify({"success": True, "checklist": _checklist_state(task)})
