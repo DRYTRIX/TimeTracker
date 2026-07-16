@@ -1,3 +1,5 @@
+<!-- Published automatically by cd-release.yml — edit this file in the repo, not on Docker Hub. -->
+
 # TimeTracker
 
 Self-hosted time tracking and project management for freelancers, teams, and businesses.
@@ -47,7 +49,7 @@ curl -fsSL https://raw.githubusercontent.com/drytrix/TimeTracker/main/scripts/de
 |-----|-------------|
 | `latest` | Latest stable release |
 | `stable` | Same as latest (non-prerelease) |
-| `v5.9.2` | Specific version |
+| `{{VERSION}}` | Specific version (current release) |
 | `develop` | Development build |
 
 ## Platforms

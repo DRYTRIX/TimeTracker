@@ -24,7 +24,7 @@ Official multi-arch images (`linux/amd64`, `linux/arm64`) are built on every rel
 
 ```bash
 docker pull ghcr.io/drytrix/timetracker:latest
-docker pull ghcr.io/drytrix/timetracker:v5.9.2   # specific version
+docker pull ghcr.io/drytrix/timetracker:v5.9.3   # specific version
 ```
 
 ### Docker Hub (mirror)
@@ -208,7 +208,7 @@ Track demand via GitHub issues labeled `platform:nas` before investing in native
 On each release, maintainers should:
 
 1. Verify GHCR and Docker Hub images published (CI: `cd-release.yml`)
-2. Update Docker Hub description from [`docker/hub-README.md`](../../../docker/hub-README.md)
+2. Verify Docker Hub description was auto-updated from [`docker/hub-README.md`](../../../docker/hub-README.md) (`cd-release.yml`)
 3. Confirm GitHub Release includes `docker-compose.nas.yml`
 4. Re-test Portainer template URL and Unraid XML if compose changed
 

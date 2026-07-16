@@ -258,7 +258,7 @@ git cherry-pick <fix-commit>
 - [ ] Update release notes on GitHub
 - [ ] Update documentation website
 - [ ] Notify via social media/newsletters
-- [ ] Update Docker Hub description from [`docker/hub-README.md`](../../../docker/hub-README.md) at [hub.docker.com/r/drytrix/timetracker](https://hub.docker.com/r/drytrix/timetracker) (Repository → Description → paste contents)
+- [ ] Verify Docker Hub description was auto-updated by the release workflow ([`docker/hub-README.md`](../../../docker/hub-README.md) → [hub.docker.com/r/drytrix/timetracker](https://hub.docker.com/r/drytrix/timetracker))
 - [ ] Verify GitHub Release includes `docker-compose.nas.yml` and `docker-compose.production.yml` artifacts
 - [ ] Confirm [Distribution guide](DISTRIBUTION.md) links are current (Portainer template URL, Unraid XML paths)
 

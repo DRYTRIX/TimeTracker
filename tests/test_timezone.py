@@ -1,6 +1,6 @@
 import pytest
 import pytz
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from app import create_app, db
 from app.models import Settings, TimeEntry, User, Project
 from app.utils.timezone import (
@@ -297,6 +297,18 @@ def test_convert_app_datetime_to_user_falls_back_to_app_timezone(app, user):
         assert "America/Denver" in str(local_time.tzinfo)
         assert local_time.hour == 9
         assert local_time.minute == 0
+
+
+def test_format_user_datetime_handles_plain_date(app, user):
+    """Plain calendar dates should format without timezone conversion."""
+    with app.app_context():
+        user = db.session.merge(user)
+        user.date_format = "DD.MM.YYYY"
+        db.session.commit()
+
+        work_date = date(2026, 7, 14)
+        formatted = format_user_datetime(work_date, user=user)
+        assert formatted == "14.07.2026"
 
 
 def test_update_preferences_allows_clearing_user_timezone(app, user):

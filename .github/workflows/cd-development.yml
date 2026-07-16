@@ -44,6 +44,7 @@ permissions: write-all
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  DOCKERHUB_IMAGE: drytrix/timetracker
   PYTHON_VERSION: '3.11'
 
 jobs:
@@ -147,12 +148,55 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set lowercase image name
+        id: image-name
+        run: |
+          IMAGE_NAME_LOWER=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_NAME_LOWER=${IMAGE_NAME_LOWER}" >> $GITHUB_OUTPUT
+          echo "✅ Image name set to: ${IMAGE_NAME_LOWER}"
+
+      - name: Check Docker Hub credentials
+        id: dockerhub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+        run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && { [ -n "$DOCKERHUB_TOKEN" ] || [ -n "$DOCKERHUB_PASSWORD" ]; }; then
+            echo "enabled=true" >> $GITHUB_OUTPUT
+            echo "✅ Docker Hub credentials found — will publish to ${{ env.DOCKERHUB_IMAGE }}"
+          else
+            echo "enabled=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Docker Hub credentials not configured — publishing to GHCR only"
+          fi
+
+      - name: Log in to Docker Hub
+        if: steps.dockerhub.outputs.enabled == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Set image list for metadata
+        id: image-list
+        run: |
+          IMAGES="${{ steps.image-name.outputs.IMAGE_NAME_LOWER }}"
+          if [ "${{ steps.dockerhub.outputs.enabled }}" = "true" ]; then
+            IMAGES="${IMAGES}
+          ${{ env.DOCKERHUB_IMAGE }}"
+          fi
+          {
+            echo "images<<EOF"
+            echo "$IMAGES"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
       
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ steps.image-list.outputs.images }}
           tags: |
             type=raw,value=develop
             type=raw,value=dev-{{date 'YYYYMMDD-HHmmss'}}
@@ -190,7 +234,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             APP_VERSION=${{ steps.version.outputs.version }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop
+          cache-from: type=registry,ref=${{ steps.image-name.outputs.IMAGE_NAME_LOWER }}:develop
           cache-to: type=inline
       
       - name: Generate deployment manifest
@@ -342,6 +386,7 @@ jobs:
             echo "### 🐳 Docker Image" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
             echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop" >> $GITHUB_STEP_SUMMARY
+            echo "${{ env.DOCKERHUB_IMAGE }}:develop" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             

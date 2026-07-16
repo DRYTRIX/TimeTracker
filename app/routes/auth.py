@@ -350,6 +350,12 @@ def login():
             return redirect(url_for("client_portal.dashboard"))
         return redirect(url_for("main.dashboard"))
 
+    if request.method == "GET":
+        from app.utils.client_portal_session import get_active_native_client_portal_id
+
+        if get_active_native_client_portal_id():
+            return redirect(url_for("client_portal.dashboard"))
+
     # Get authentication method from Flask app config (reads from environment)
     try:
         auth_method = normalize_auth_method(current_app.config.get("AUTH_METHOD", "local"))

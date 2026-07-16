@@ -1008,9 +1008,20 @@ def edit_user(user_id):
         user.roles.append(role_obj)
 
         user.is_active = is_active
+        was_portal_enabled = user.client_portal_enabled
         user.client_portal_enabled = client_portal_enabled
         user.client_id = int(client_id) if client_id else None
-        user.portal_only = portal_only if client_portal_enabled else False
+        if client_portal_enabled:
+            # Safe default for external clients: newly enabled portal access is portal-only
+            # unless the admin explicitly checked "Portal only" off on an already-enabled user.
+            if portal_only:
+                user.portal_only = True
+            elif was_portal_enabled:
+                user.portal_only = False
+            else:
+                user.portal_only = True
+        else:
+            user.portal_only = False
 
         # Subcontractor: sync assigned clients (only when role is subcontractor)
         assigned_client_ids = [int(x) for x in request.form.getlist("assigned_client_ids") if x and x.isdigit()]

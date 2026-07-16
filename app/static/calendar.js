@@ -31,6 +31,29 @@ class Calendar {
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     }
+
+    renderDayOverlayBadges(day) {
+        const dayKey = this.formatLocalDate(day);
+        let html = '';
+
+        if (this.showHolidays) {
+            this.holidays.forEach(item => {
+                const itemDay = (item.start || '').slice(0, 10);
+                if (itemDay === dayKey) {
+                    html += `<div class="event-badge holiday-badge day-overlay-badge" style="background-color: ${item.color}22; border-left: 3px solid ${item.color}; color: inherit;" title="${this.escapeHtml(item.title)}">🏖 ${this.escapeHtml(item.title)}</div>`;
+                }
+            });
+        }
+        if (this.showTimeOff) {
+            this.timeOff.forEach(item => {
+                const itemDay = (item.start || '').slice(0, 10);
+                if (itemDay === dayKey) {
+                    html += `<div class="event-badge time-off-badge day-overlay-badge" style="background-color: ${item.color}22; border-left: 3px solid ${item.color}; color: inherit;" title="${this.escapeHtml(item.title)}">🌴 ${this.escapeHtml(item.title)}</div>`;
+                }
+            });
+        }
+        return html;
+    }
     
     init() {
         this.setupEventListeners();
@@ -495,6 +518,10 @@ class Calendar {
         this.assignOverlapColumnsByTime(timedItems);
         
         let html = '<div class="day-events-container">';
+        const overlayBadges = this.renderDayOverlayBadges(this.currentDate);
+        if (overlayBadges) {
+            html += `<div class="day-overlay-banners">${overlayBadges}</div>`;
+        }
         
         timedItems.forEach(item => {
             const { left, width } = this.columnStyle(item.column, item.totalColumns);
@@ -567,7 +594,11 @@ class Calendar {
         }).join('');
         const dayColumns = days.map(day => {
             const blocks = this.renderWeekDayBlocks(day);
-            return `<div class="week-day-column" data-date="${this.formatLocalDate(day)}"><div class="week-day-blocks">${blocks}</div></div>`;
+            const overlayBadges = this.renderDayOverlayBadges(day);
+            const overlayHtml = overlayBadges
+                ? `<div class="day-overlay-banners">${overlayBadges}</div>`
+                : '';
+            return `<div class="week-day-column" data-date="${this.formatLocalDate(day)}">${overlayHtml}<div class="week-day-blocks">${blocks}</div></div>`;
         }).join('');
         const dayHeaders = days.map(day => {
             const isToday = this.isToday(day);
