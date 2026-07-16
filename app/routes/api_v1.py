@@ -1289,6 +1289,10 @@ def create_comment():
     )
     db.session.add(cmt)
     db.session.commit()
+    # Notify any @mentioned teammates (best-effort; never blocks the response)
+    from app.services.mention_service import notify_mentioned_users
+
+    notify_mentioned_users(cmt, g.api_user)
     return jsonify({"message": "Comment created successfully", "comment": cmt.to_dict()}), 201
 
 

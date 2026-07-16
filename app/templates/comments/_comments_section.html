@@ -26,10 +26,10 @@
                     {% endif %}
                     <div class="mb-3">
                         <label for="comment-content" class="form-label">{{ _('Your Comment') }}</label>
-                        <textarea name="content" id="comment-content" class="form-control" rows="4" 
+                        <textarea name="content" id="comment-content" class="form-control" rows="4" data-mentions
                                   placeholder="{{ _('Share your thoughts, updates, or questions...') }}" required></textarea>
                         <div class="form-text d-flex justify-content-between align-items-center">
-                            <span>{{ _('You can use line breaks to format your comment.') }}</span>
+                            <span>{{ _('Type @ to mention a teammate. You can use line breaks to format your comment.') }}</span>
                             <label class="btn btn-sm btn-outline-secondary mb-0">
                                 <i class="fas fa-image me-1"></i>{{ _('Add Image') }}
                                 <input type="file" id="commentImageInput" accept="image/*" class="d-none">
