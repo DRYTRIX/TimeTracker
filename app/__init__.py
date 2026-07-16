@@ -476,6 +476,18 @@ def create_app(config=None):
     login_manager.login_message = "Please log in to access this page."
     login_manager.login_message_category = "info"
 
+    @login_manager.unauthorized_handler
+    def _handle_unauthorized():
+        """Send portal sessions to the client portal login instead of the main app login."""
+        from app.utils.client_portal_session import get_active_native_client_portal_id
+
+        if get_active_native_client_portal_id() or request.path.startswith("/client-portal"):
+            flash(_("Please log in to access the client portal."), "error")
+            return redirect(url_for("client_portal.login", next=request.url))
+
+        flash(login_manager.login_message, login_manager.login_message_category)
+        return redirect(url_for(login_manager.login_view, next=request.url))
+
     # Internationalization selector handled via babel.init_app(locale_selector=...)
 
     # Ensure compatibility with tests and different Flask-Login versions:
@@ -578,6 +590,20 @@ def create_app(config=None):
                 return
 
             return redirect(url_for("client_portal.dashboard"))
+        except Exception:
+            pass
+
+    @app.before_request
+    def restrict_native_client_portal_sessions():
+        """Keep native client portal sessions inside the client portal UI."""
+        try:
+            from app.utils.client_portal_session import (
+                redirect_native_client_to_portal,
+                should_redirect_native_client_portal_session,
+            )
+
+            if should_redirect_native_client_portal_session():
+                return redirect_native_client_to_portal()
         except Exception:
             pass
 

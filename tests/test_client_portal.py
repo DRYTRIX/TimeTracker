@@ -785,14 +785,123 @@ class TestUnifiedClientPortalLogin:
 
     def test_authenticate_portal_is_case_insensitive(self, app, test_client):
         with app.app_context():
-            test_client.portal_enabled = True
-            test_client.portal_username = "PortalClient"
-            test_client.set_portal_password("password123")
+            client = Client.query.get(test_client.id)
+            client.portal_enabled = True
+            client.portal_username = "PortalClient"
+            client.set_portal_password("password123")
             db.session.commit()
 
             authenticated = Client.authenticate_portal("portalclient", "password123")
             assert authenticated is not None
             assert authenticated.id == test_client.id
+
+
+@pytest.mark.routes
+@pytest.mark.integration
+class TestNativeClientPortalSessionContainment:
+    """Regression for issue #677: native portal sessions must not bounce to /login."""
+
+    def _login_native_client(self, client, username="portalclient", password="password123"):
+        return client.post(
+            "/login",
+            data={"username": username, "password": password},
+            follow_redirects=False,
+        )
+
+    def test_native_client_main_login_then_root_stays_in_portal(self, app, client, test_client):
+        with app.app_context():
+            test_client.portal_enabled = True
+            test_client.portal_username = "portalclient"
+            test_client.set_portal_password("password123")
+            db.session.commit()
+
+        login_resp = self._login_native_client(client)
+        assert login_resp.status_code in (302, 303)
+        assert "/client-portal" in login_resp.headers.get("Location", "")
+
+        root_resp = client.get("/", follow_redirects=False)
+        assert root_resp.status_code in (302, 303)
+        location = root_resp.headers.get("Location", "")
+        assert "/client-portal" in location
+        assert "/login" not in location or "/client-portal/login" in location
+
+    def test_native_client_main_login_then_dashboard_stays_in_portal(self, app, client, test_client):
+        with app.app_context():
+            test_client.portal_enabled = True
+            test_client.portal_username = "portalclient"
+            test_client.set_portal_password("password123")
+            db.session.commit()
+
+        self._login_native_client(client)
+
+        dash_resp = client.get("/dashboard", follow_redirects=False)
+        assert dash_resp.status_code in (302, 303)
+        location = dash_resp.headers.get("Location", "")
+        assert "/client-portal" in location
+        assert location.endswith("/login") is False or "/client-portal/login" in location
+
+    def test_native_client_get_login_redirects_to_portal_dashboard(self, app, client, test_client):
+        with app.app_context():
+            test_client.portal_enabled = True
+            test_client.portal_username = "portalclient"
+            test_client.set_portal_password("password123")
+            db.session.commit()
+            client_id = test_client.id
+
+        with client.session_transaction() as sess:
+            sess["client_portal_id"] = client_id
+
+        resp = client.get("/login", follow_redirects=False)
+        assert resp.status_code in (302, 303)
+        assert "/client-portal/dashboard" in resp.headers.get("Location", "")
+
+    def test_native_client_unauthorized_handler_uses_portal_login(self, app, client, test_client):
+        with app.app_context():
+            test_client.portal_enabled = True
+            test_client.portal_username = "portalclient"
+            test_client.set_portal_password("password123")
+            db.session.commit()
+            client_id = test_client.id
+
+        with client.session_transaction() as sess:
+            sess["client_portal_id"] = client_id
+            sess.pop("_user_id", None)
+
+        # Simulate a protected main-app route without tripping the before_request guard
+        resp = client.get("/settings", follow_redirects=False)
+        assert resp.status_code in (302, 303)
+        assert "/client-portal" in resp.headers.get("Location", "")
+
+    def test_admin_enable_client_portal_defaults_portal_only(self, app, admin_authenticated_client, user, test_client):
+        with app.app_context():
+            assert user.client_portal_enabled is False
+
+            get_response = admin_authenticated_client.get(f"/admin/users/{user.id}/edit", follow_redirects=True)
+            assert get_response.status_code == 200
+            html = get_response.get_data(as_text=True)
+            import re
+
+            csrf_match = re.search(r'name="csrf_token"\s+value="([^"]+)"', html)
+            csrf_token = csrf_match.group(1) if csrf_match else ""
+
+            admin_authenticated_client.post(
+                f"/admin/users/{user.id}/edit",
+                data={
+                    "username": user.username,
+                    "role": user.role,
+                    "is_active": "on",
+                    "client_portal_enabled": "on",
+                    "client_id": str(test_client.id),
+                    "csrf_token": csrf_token,
+                },
+                follow_redirects=True,
+            )
+
+            db.session.expire_all()
+            updated_user = User.query.get(user.id)
+            assert updated_user.client_portal_enabled is True
+            assert updated_user.client_id == test_client.id
+            assert updated_user.portal_only is True
 
 
 # ============================================================================
