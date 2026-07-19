@@ -5,7 +5,6 @@ from __future__ import annotations
 from flask import request, session, url_for
 from flask.helpers import redirect
 
-
 _NATIVE_CLIENT_ALLOWED_ENDPOINTS = frozenset(
     {
         "auth.login",
