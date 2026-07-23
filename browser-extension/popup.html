@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TimeTracker</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="header">
+        <h1>TimeTracker</h1>
+        <div class="row" style="flex: 0; gap: 10px">
+          <a href="options.html" id="open-options" target="_blank">Settings</a>
+        </div>
+      </div>
+
+      <div id="message" class="hidden" role="status"></div>
+
+      <div id="need-setup" class="card hidden">
+        <p class="muted" style="margin: 0 0 10px">
+          Connect to your TimeTracker server to start and stop timers from the toolbar.
+        </p>
+        <button type="button" class="btn btn-primary btn-block" id="go-settings">Open settings</button>
+      </div>
+
+      <div id="running-view" class="card hidden">
+        <div class="timer-display">
+          <div class="elapsed" id="elapsed">00h:00m</div>
+          <div class="meta">
+            <strong id="running-project">—</strong>
+            <span id="running-task-wrap" class="hidden"> · <span id="running-task"></span></span>
+          </div>
+        </div>
+        <button type="button" class="btn btn-danger" id="stop-btn">Stop timer</button>
+      </div>
+
+      <div id="idle-view" class="hidden">
+        <div class="card">
+          <div class="field">
+            <label for="project-filter">Project</label>
+            <input type="search" id="project-filter" placeholder="Search projects…" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="project-select">Select</label>
+            <select id="project-select" size="6"></select>
+          </div>
+          <div class="field">
+            <label for="task-select">Task (optional)</label>
+            <select id="task-select">
+              <option value="">— No task —</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="notes">Notes (optional)</label>
+            <input type="text" id="notes" placeholder="What are you working on?" maxlength="500" />
+          </div>
+          <button type="button" class="btn btn-primary btn-block" id="start-btn">Start timer</button>
+        </div>
+
+        <div class="section-title">Quick create</div>
+        <div class="tabs" role="tablist">
+          <button type="button" class="active" data-create-tab="task" id="tab-task">Task</button>
+          <button type="button" data-create-tab="project" id="tab-project">Project</button>
+        </div>
+
+        <div id="create-task" class="card">
+          <div class="field">
+            <label for="new-task-name">Task name</label>
+            <input type="text" id="new-task-name" placeholder="New task" maxlength="200" />
+          </div>
+          <div class="field">
+            <label for="new-task-project">Project</label>
+            <select id="new-task-project"></select>
+          </div>
+          <button type="button" class="btn btn-secondary btn-block" id="create-task-btn">Create task</button>
+        </div>
+
+        <div id="create-project" class="card hidden">
+          <div class="field">
+            <label for="new-project-name">Project name</label>
+            <input type="text" id="new-project-name" placeholder="New project" maxlength="200" />
+          </div>
+          <div class="field">
+            <label for="new-project-client">Client</label>
+            <select id="new-project-client"></select>
+          </div>
+          <button type="button" class="btn btn-secondary btn-block" id="create-project-btn">Create project</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

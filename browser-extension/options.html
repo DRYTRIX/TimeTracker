@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TimeTracker Extension Settings</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="options-wrap">
+      <h1>TimeTracker extension</h1>
+      <p class="lead">Connect to your self-hosted TimeTracker instance. Same API tokens as the desktop and mobile apps.</p>
+
+      <div id="message" class="hidden" role="status"></div>
+
+      <div class="card stack">
+        <div class="field">
+          <label for="server-url">Server URL</label>
+          <input type="url" id="server-url" placeholder="https://timetracker.example.com" autocomplete="url" />
+        </div>
+        <p class="hint">Base URL only — no path. Example: <code>http://localhost:8080</code></p>
+
+        <div class="section-title" style="margin-top: 0">Sign in with password</div>
+        <div class="field">
+          <label for="username">Username</label>
+          <input type="text" id="username" autocomplete="username" />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" autocomplete="current-password" />
+        </div>
+        <button type="button" class="btn btn-primary" id="login-btn">Connect with password</button>
+
+        <hr class="sep" />
+
+        <div class="section-title" style="margin-top: 0">Or paste an API token</div>
+        <p class="hint">
+          Use this for OIDC-only installs, or a token from Admin → API tokens. Token must start with
+          <code>tt_</code>.
+        </p>
+        <div class="field">
+          <label for="api-token">API token</label>
+          <input type="password" id="api-token" placeholder="tt_…" autocomplete="off" />
+        </div>
+        <button type="button" class="btn btn-secondary" id="token-btn">Save token</button>
+
+        <hr class="sep" />
+
+        <div id="status-line" class="muted">Not connected.</div>
+        <button type="button" class="btn btn-secondary" id="disconnect-btn">Disconnect</button>
+      </div>
+    </div>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

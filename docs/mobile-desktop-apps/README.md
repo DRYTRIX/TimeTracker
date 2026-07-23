@@ -1,10 +1,10 @@
-# Mobile and Desktop Apps
+# Mobile, Desktop, and Browser Extension
 
-This directory contains documentation for the TimeTracker mobile (Flutter) and desktop (Electron) applications.
+This directory contains documentation for the TimeTracker mobile (Flutter) and desktop (Electron) applications. The Chromium toolbar extension lives in [`browser-extension/`](../../browser-extension/) and uses the same `/api/v1` auth and timer APIs.
 
 ## Overview
 
-The TimeTracker mobile and desktop apps provide native client applications that connect to the TimeTracker backend via REST API.
+The TimeTracker mobile and desktop apps (and the browser extension) connect to the TimeTracker backend via the REST API.
 
 ## Mobile App (Flutter)
 
@@ -59,15 +59,31 @@ See [desktop/README.md](../../desktop/README.md) for setup instructions.
 
 Gap analysis vs the webapp: [DESKTOP_WEBAPP_GAP.md](DESKTOP_WEBAPP_GAP.md).
 
+## Browser Extension (Chromium)
+
+Located in `browser-extension/` directory. See [browser-extension/README.md](../../browser-extension/README.md).
+
+### Features
+
+- Toolbar popup to start/stop a project timer with optional task and notes
+- Badge + red clock icon while a timer is running
+- Quick-create task or project (project needs an existing client)
+- Username/password login or pasted `tt_…` API token (useful for OIDC-only installs)
+
+### Setup
+
+Load the folder as an **unpacked** extension in Chrome/Edge developer mode, then open Options to connect to your server URL.
+
 ## API Integration
 
-Both apps use the TimeTracker REST API v1 (`/api/v1/`). See [API Documentation](../api/REST_API.md) for details.
+Mobile, desktop, and the browser extension use the TimeTracker REST API v1 (`/api/v1/`). See [API Documentation](../api/REST_API.md) for details.
 
 ### Authentication
 
 1. **Mobile app**: Sign in with your web username and password; the server returns an API token (`tt_…`) which is stored securely. Changing the **Server URL** in Settings probes the new host with your saved token before persisting the change.
 2. **Desktop app**: Two-step wizard (test server, then username/password). The app calls `POST /api/v1/auth/login` and stores the returned token. Optional long-lived tokens can still be created under **Admin → Security & Access → API tokens**.
-3. Clients validate the server with `GET /api/v1/info` (and respect `setup_required` when the installation is not finished) and validate the token with authenticated API calls.
+3. **Browser extension**: Options page — server URL plus password login or a pasted API token; host access is requested with `chrome.permissions` for that origin. See [browser-extension/README.md](../../browser-extension/README.md).
+4. Clients validate the server with `GET /api/v1/info` (and respect `setup_required` when the installation is not finished) and validate the token with authenticated API calls.
 
 ### Required API Scopes
 
@@ -120,6 +136,12 @@ The mobile app sends an **`Idempotency-Key`** on queued **`POST /api/v1/time-ent
 2. Run `npm install` in `desktop/` directory
 3. Run `npm run dev` to start development
 
+### Browser Extension Development
+
+1. Load `browser-extension/` as an unpacked extension in Chrome/Edge (Developer mode)
+2. After code changes, click **Reload** on the extension card
+3. See [browser-extension/README.md](../../browser-extension/README.md)
+
 ## Distribution
 
 ### Mobile Apps
@@ -133,12 +155,18 @@ The mobile app sends an **`Idempotency-Key`** on queued **`POST /api/v1/time-ent
 - macOS: DMG installer (requires code signing for distribution)
 - Linux: AppImage and .deb packages
 
+### Browser Extension
+
+- Load unpacked for self-hosted / development use
+- Chrome Web Store packaging is not included in this repository yet
+
 ## Version Management
 
 App versions should align with the backend version (see `setup.py` for current version). Update version numbers in:
 
 - Mobile: `mobile/pubspec.yaml`
 - Desktop: `desktop/package.json`
+- Browser extension: `browser-extension/manifest.json`
 - Backend: `setup.py`
 
 ## Support

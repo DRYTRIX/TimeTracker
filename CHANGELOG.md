@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Chromium timer extension (#700)** — New `browser-extension/` Manifest V3 package connects to `/api/v1` (same tokens as desktop/mobile), starts/stops timers from the toolbar, shows elapsed time on a red badge/icon, and supports quick-create project/task. Load unpacked from the folder; see `browser-extension/README.md`.
+
+
 ### Fixed
 
 - **Desktop and browser lost connection after idle (#702, #703)** — Closing the desktop app with X (tray hide) or leaving a browser tab idle could leave a sticky "connection lost" / "Service temporarily unavailable" state. Session and health probes now recover on success, re-check when the UI becomes visible again, and health checks no longer toast via the service worker's synthetic 503.
