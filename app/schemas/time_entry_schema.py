@@ -40,6 +40,7 @@ class TimeEntrySchema(Schema):
 class TimeEntryCreateSchema(Schema):
     """Schema for creating a time entry"""
 
+    user_id = fields.Int(allow_none=True)  # Admin-only: create on behalf of another user
     project_id = fields.Int(allow_none=True)
     client_id = fields.Int(allow_none=True)
     task_id = fields.Int(allow_none=True)
