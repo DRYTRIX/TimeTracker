@@ -95,6 +95,8 @@
         /* Sidebar collapsed helpers */
         .sidebar-collapsed .sidebar-label { display: none; }
         .sidebar-collapsed .sidebar-header-title { display: none; }
+        .sidebar-collapsed .sidebar-expanded-only { display: none !important; }
+        .sidebar-collapsed #sidebar .sidebar-toolbar { justify-content: center; }
         .sidebar-collapsed #sidebar { width: 4.5rem !important; overflow-x: hidden; }
         .sidebar-collapsed #sidebar ul[id$="Dropdown"] { display: none !important; }
         .sidebar-collapsed #sidebar .sidebar-nav-item {
@@ -516,11 +518,11 @@
                 {% set admin_data_open = ep == 'expense_categories.list_categories' or ep == 'per_diem.list_rates' or ep.startswith('time_entry_templates.') or ep.startswith('custom_field_definitions.') or ep.startswith('link_templates.') %}
                 {% set admin_maintenance_open = ep == 'admin.system_info' or ep == 'admin.backups_management' or ep == 'admin.telemetry_dashboard' %}
                 {% set pdf_open = ep == 'admin.pdf_layout' or ep == 'admin.quote_pdf_layout' %}
-                <div class="flex items-center justify-between mb-3">
+                <div class="sidebar-toolbar flex items-center justify-between mb-3">
                     <span class="text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider sidebar-label">{{ _('Navigation') }}</span>
                     <button
                         type="button"
-                        class="p-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark"
+                        class="sidebar-expanded-only p-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark"
                         onclick="window.openCommandPalette?.()"
                         aria-label="{{ _('Open command palette') }}"
                         title="{{ _('Open command palette') }}"

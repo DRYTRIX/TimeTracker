@@ -817,7 +817,7 @@ const defaultTourSteps = [
     {
         target: '#sidebar',
         title: 'Welcome to TimeTracker! 👋',
-        content: 'Let\'s take a quick tour to help you get started. This is your main navigation where you can access all features. <strong>Tip:</strong> You can collapse the sidebar by clicking the arrow icon to maximize your workspace.',
+        content: 'Let\'s take a quick tour to help you get started. This is your main navigation where you can access all features. <strong>Tip:</strong> Click the arrow icon to collapse or expand the sidebar and maximize your workspace. You can also press <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>B</kbd> to toggle it.',
         position: 'right'
     },
     {
