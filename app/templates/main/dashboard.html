@@ -4,13 +4,13 @@
 {% from "components/client_select.html" import client_select %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
-<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/toastui/toastui-editor.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/toastui/theme/toastui-editor-dark.css') }}">
 {% endblock %}
 
 {% block content %}
 {% if timer_stopped_toast %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function() {
     var data = {{ timer_stopped_toast|tojson }};
     var msg = {{ _("Logged %(duration)s on %(project)s", duration=timer_stopped_toast.duration, project=timer_stopped_toast.project_name)|tojson }};
@@ -571,7 +571,7 @@
             <div class="relative" style="height: 220px;">
                 <canvas id="dashboardTimeByProjectChart" aria-label="{{ _('Time distribution by project for the last 7 days') }}"></canvas>
             </div>
-            <script>
+            <script nonce="{{ csp_nonce() }}">
             (function() {
                 var labels = {{ chart_labels_7d|tojson }};
                 var hours = {{ chart_hours_7d|tojson }};
@@ -743,7 +743,7 @@
     </div>
     {% endif %}
     {% if support_dashboard_prompt %}
-    <script>window.__TT_DASHBOARD_SUPPORT_PROMPT = {{ support_dashboard_prompt|tojson }};</script>
+    <script nonce="{{ csp_nonce() }}">window.__TT_DASHBOARD_SUPPORT_PROMPT = {{ support_dashboard_prompt|tojson }};</script>
     {% endif %}
 </div>
     <!-- Delete Entry Confirmation Dialogs -->
@@ -882,7 +882,7 @@
 
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
     document.addEventListener('DOMContentLoaded', function() {
         // Single adjust-time form: buttons set delta and submit
         (function initAdjustTimerForm() {
@@ -1759,7 +1759,7 @@
 </script>
 
 {% if ai_enabled %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Wire AI suggestion chips inside the Start Timer modal: clicking a chip pre-fills the form.
 document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('startTimerModal');
@@ -1811,5 +1811,5 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endif %}
 
 <!-- Toast UI Editor -->
-<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+<script src="{{ url_for('static', filename='vendor/toastui/toastui-editor.js') }}"></script>
 {% endblock %}

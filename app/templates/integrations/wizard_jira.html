@@ -234,7 +234,7 @@
 {% endblock %}
 
 {% block wizard_js %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof IntegrationWizard !== 'undefined') {
         const wizard = new IntegrationWizard({

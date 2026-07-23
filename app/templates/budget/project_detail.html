@@ -290,8 +290,8 @@
 </div>
 {% endif %}
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script>
+<script src="{{ url_for('static', filename='vendor/chartjs/chart.umd.js') }}"></script>
+<script nonce="{{ csp_nonce() }}">
 window.BUDGET_CURRENCY_SYMBOL = {{ (settings.currency|currency_symbol)|tojson }};
 function budgetFormatCurrency(value) {
     return window.BUDGET_CURRENCY_SYMBOL + ' ' + Number(value).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');

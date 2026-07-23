@@ -94,6 +94,23 @@
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('timer.bulk_entry') }}" id="bulkEntryForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% if current_user.is_admin and users %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="user_id" class="form-label fw-semibold">
+                                        <i class="fas fa-user me-1"></i>{{ _('Log time for') }}
+                                    </label>
+                                    <select class="form-select" id="user_id" name="user_id">
+                                        {% for user in users %}
+                                        <option value="{{ user.id }}" {% if selected_user_id is not none and (selected_user_id|string) == (user.id|string) %}selected{% elif selected_user_id is none and user.id == current_user.id %}selected{% endif %}>{{ user.display_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">{{ _('As admin, you can create entries for other users') }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">

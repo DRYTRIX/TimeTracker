@@ -132,7 +132,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function buildComposeSnippet() {
   const preset = document.getElementById('wizardProviderPreset')?.value || 'einvoice';
   const token = (document.getElementById('wizardBridgeAuthToken')?.value || 'CHANGE_ME').trim() || 'CHANGE_ME';

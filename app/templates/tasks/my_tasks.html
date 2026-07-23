@@ -592,7 +592,7 @@
 }
 </style>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function toggleFilterVisibility() {
     const filterBody = document.getElementById('filterBody');
     const toggleIcon = document.getElementById('filterToggleIcon');

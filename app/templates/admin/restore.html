@@ -101,7 +101,7 @@
         {% endif %}
         
         {% if progress.status == 'running' %}
-        <script>
+        <script nonce="{{ csp_nonce() }}">
         // Auto-refresh every 2 seconds while running
         setTimeout(function() {
             window.location.href = "{{ url_for('admin.restore', token=token) }}";
@@ -246,7 +246,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Update file name display
 function updateFileName(input) {
     const fileName = input.files[0]?.name || '';

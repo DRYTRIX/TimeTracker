@@ -93,7 +93,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function showDeleteTemplateModal(templateId, name){
   const nameEl = document.getElementById('deleteTemplateName');
   const formEl = document.getElementById('deleteTemplateForm');

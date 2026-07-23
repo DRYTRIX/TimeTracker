@@ -99,7 +99,7 @@
     <div id="bulkTaskIds"></div>
 </form>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Track selected task IDs
 let selectedTaskIds = new Set();
 

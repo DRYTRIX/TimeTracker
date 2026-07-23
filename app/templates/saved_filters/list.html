@@ -100,7 +100,7 @@
     ) }}
     {% endif %}
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function applyFilter(filterId, scope) {
     // Fetch filter data
     fetch(`/api/filters/${filterId}`)

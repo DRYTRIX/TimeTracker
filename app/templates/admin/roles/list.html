@@ -205,7 +205,7 @@
     </p>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 async function confirmDeleteRole(roleId, roleName) {
     const confirmed = await showConfirm(
         '{{ _("Are you sure you want to delete the role") }} "' + roleName + '"?',

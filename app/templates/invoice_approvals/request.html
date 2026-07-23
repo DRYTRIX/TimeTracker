@@ -41,7 +41,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.querySelector('form').addEventListener('submit', function(e) {
     const checked = document.querySelectorAll('input[name="approver_ids"]:checked');
     if (checked.length === 0) {

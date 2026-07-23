@@ -106,7 +106,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     const deleteForms = document.querySelectorAll('.delete-field-form');
     deleteForms.forEach(function(form) {

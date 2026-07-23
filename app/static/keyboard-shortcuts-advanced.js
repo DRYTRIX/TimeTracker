@@ -12,6 +12,16 @@ class KeyboardShortcutManager {
         /** Registry: id -> { defaultKey, callback, context, description, category, preventDefault, stopPropagation, originalKey } for applying overrides */
         this.registry = [];
         this.customShortcuts = new Map();
+        /**
+         * Buffer for multi-key sequences such as 'g r' (go to Reports).
+         * Sequence shortcuts are registered by initDefaultShortcuts() but were never
+         * matched, because handleKeyPress only ever looked up a single key combo.
+         * The buffer collects unmodified printable keys and is cleared on match, on a
+         * non-prefix key, or after SEQUENCE_TIMEOUT_MS.
+         */
+        this.sequence = [];
+        this.sequenceTimer = null;
+        this.SEQUENCE_TIMEOUT_MS = 1000;
         this.initDefaultShortcuts();
         this.applyUserOverrides();
         this.init();
@@ -181,6 +191,10 @@ class KeyboardShortcutManager {
             }
         }
 
+        // Multi-key sequences ('g r' etc.) take priority over single-key lookup, so a
+        // pending 'g' does not also fire a single-key 'g' shortcut.
+        if (this.handleSequence(e, normalizedKey)) return;
+
         // Check context-specific shortcuts (already include user overrides via applyUserOverrides)
         const contextShortcuts = this.shortcuts.get(this.currentContext);
         if (contextShortcuts && contextShortcuts.has(normalizedKey)) {
@@ -199,6 +213,59 @@ class KeyboardShortcutManager {
             if (shortcut.stopPropagation) e.stopPropagation();
             shortcut.callback(e);
         }
+    }
+
+    /**
+     * Collect and match multi-key sequences such as 'g r'.
+     *
+     * @param {KeyboardEvent} e
+     * @param {string} normalizedKey - single-key combo already normalized.
+     * @returns {boolean} true when the event was consumed (matched or buffered).
+     */
+    handleSequence(e, normalizedKey) {
+        // Only unmodified, single printable characters can form a sequence.
+        if (e.ctrlKey || e.metaKey || e.altKey || String(e.key || '').length !== 1) {
+            this.resetSequence();
+            return false;
+        }
+
+        const candidate = this.sequence.concat(normalizedKey).join(' ');
+        const maps = [this.shortcuts.get(this.currentContext), this.shortcuts.get('global')];
+
+        for (const map of maps) {
+            if (map && map.has(candidate)) {
+                const shortcut = map.get(candidate);
+                if (shortcut.preventDefault) e.preventDefault();
+                if (shortcut.stopPropagation) e.stopPropagation();
+                this.resetSequence();
+                shortcut.callback(e);
+                return true;
+            }
+        }
+
+        // Keep buffering while the candidate is still a prefix of some sequence.
+        const prefix = candidate + ' ';
+        const isPrefix = maps.some(
+            (map) => map && Array.from(map.keys()).some((k) => k.startsWith(prefix))
+        );
+
+        if (isPrefix) {
+            this.sequence.push(normalizedKey);
+            clearTimeout(this.sequenceTimer);
+            this.sequenceTimer = setTimeout(() => this.resetSequence(), this.SEQUENCE_TIMEOUT_MS);
+            e.preventDefault();
+            return true;
+        }
+
+        this.resetSequence();
+        return false;
+    }
+
+    /** Clear any partially typed key sequence. */
+    resetSequence() {
+        this.sequence = [];
+        clearTimeout(this.sequenceTimer);
+        this.sequenceTimer = null;
     }
 
     /**

@@ -8,11 +8,14 @@
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
     <link rel="alternate icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
-    <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
-    <link href="https://fonts.bunny.net/css?family=Inter:400,500,600,700&display=swap" rel="stylesheet">
+    {# Inter is self-hosted via @font-face in dist/output.css (app/static/vendor/inter). #}
+    {# Font Awesome must load BEFORE dist/output.css: its `.fa-solid{display:inline-block}`
+       has the same specificity as Tailwind's `.hidden{display:none}`, so whichever
+       loads last wins. #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}?v={{ app_version }}-toastfix1">
     <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}?v={{ app_version }}-toastfix1">
-    <script>
+    <script nonce="{{ csp_nonce() }}">
         // On page load or when changing themes, best to add inline in `head` to avoid FOUC
         if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
@@ -67,7 +70,7 @@
                     <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="TimeTracker Logo" class="w-10 h-10">
                     <span class="text-xl font-bold text-primary">TimeTracker</span>
                 </div>
-                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-4" id="wizard-progress-label">{{ _('Step 1 of 6') }}</p>
+                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-4" id="wizard-progress-label">{{ _('Step 1 of 7') }}</p>
                 <div class="flex gap-1 mb-6" aria-hidden="true">
                     <div class="h-1 flex-1 rounded-full bg-primary setup-progress-dot" data-step="1"></div>
                     <div class="h-1 flex-1 rounded-full bg-gray-200 dark:bg-gray-700 setup-progress-dot" data-step="2"></div>
@@ -75,6 +78,7 @@
                     <div class="h-1 flex-1 rounded-full bg-gray-200 dark:bg-gray-700 setup-progress-dot" data-step="4"></div>
                     <div class="h-1 flex-1 rounded-full bg-gray-200 dark:bg-gray-700 setup-progress-dot" data-step="5"></div>
                     <div class="h-1 flex-1 rounded-full bg-gray-200 dark:bg-gray-700 setup-progress-dot" data-step="6"></div>
+                    <div class="h-1 flex-1 rounded-full bg-gray-200 dark:bg-gray-700 setup-progress-dot" data-step="7"></div>
                 </div>
 
                 <form id="setup-form" class="space-y-6" method="POST" action="{{ url_for('setup.initial_setup') }}">
@@ -92,8 +96,32 @@
                         </div>
                     </div>
 
-                    <!-- Step 2: Region & time -->
+                    <!-- Step 2: What will you use TimeTracker for? -->
                     <div class="wizard-step hidden" data-step="2">
+                        <h2 class="text-xl font-bold tracking-tight">{{ _('What will you use TimeTracker for?') }}</h2>
+                        <p class="mt-2 text-sm text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('TimeTracker ships with a lot of modules. Pick the closest match and we will switch off the ones you are unlikely to need, so the navigation stays manageable. You can change this any time in Admin → Modules.') }}
+                        </p>
+                        <fieldset class="mt-4 space-y-3">
+                            <legend class="sr-only">{{ _('Module preset') }}</legend>
+                            {% for preset in module_presets %}
+                            <label class="flex items-start gap-3 p-4 rounded-lg border border-border-light dark:border-border-dark cursor-pointer hover:border-primary transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                                <input type="radio" name="module_preset" value="{{ preset.value }}" class="mt-1 flex-shrink-0"
+                                       {% if preset.value == default_module_preset %}checked{% endif %}>
+                                <span class="min-w-0">
+                                    <span class="block font-semibold">{{ preset.label }}</span>
+                                    <span class="block text-sm text-text-muted-light dark:text-text-muted-dark">{{ preset.description }}</span>
+                                    <span class="block mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                                        {{ _('Enables %(enabled)s of %(total)s modules', enabled=preset.enabled_count, total=preset.total_count) }}
+                                    </span>
+                                </span>
+                            </label>
+                            {% endfor %}
+                        </fieldset>
+                    </div>
+
+                    <!-- Step 3: Region & time -->
+                    <div class="wizard-step hidden" data-step="3">
                         <h2 class="text-xl font-bold tracking-tight">{{ _('Region & time') }}</h2>
                         <p class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Set your default timezone, date and time format, and currency.') }}</p>
                         <div class="mt-4 space-y-4">
@@ -130,8 +158,8 @@
                         </div>
                     </div>
 
-                    <!-- Step 3: Company -->
-                    <div class="wizard-step hidden" data-step="3">
+                    <!-- Step 4: Company -->
+                    <div class="wizard-step hidden" data-step="4">
                         <h2 class="text-xl font-bold tracking-tight">{{ _('Company') }}</h2>
                         <p class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Company details for invoices and branding.') }}</p>
                         <div class="mt-4 space-y-4">
@@ -160,8 +188,8 @@
                         </div>
                     </div>
 
-                    <!-- Step 4: System -->
-                    <div class="wizard-step hidden" data-step="4">
+                    <!-- Step 5: System -->
+                    <div class="wizard-step hidden" data-step="5">
                         <h2 class="text-xl font-bold tracking-tight">{{ _('System') }}</h2>
                         <p class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('App behavior and timer settings.') }}</p>
                         <div class="mt-4 space-y-4">
@@ -197,8 +225,8 @@
                         </div>
                     </div>
 
-                    <!-- Step 5: Integrations -->
-                    <div class="wizard-step hidden" data-step="5">
+                    <!-- Step 6: Integrations -->
+                    <div class="wizard-step hidden" data-step="6">
                         <h2 class="text-xl font-bold tracking-tight">{{ _('Integrations') }} ({{ _('optional') }})</h2>
                         <p class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Configure calendar OAuth now or later in Admin → Settings.') }}</p>
                         <div class="mt-4 bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg p-4">
@@ -232,8 +260,8 @@
                         <p class="mt-3 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _("You can skip this step and configure integrations later.") }}</p>
                     </div>
 
-                    <!-- Step 6: Privacy & finish -->
-                    <div class="wizard-step hidden" data-step="6">
+                    <!-- Step 7: Privacy & finish -->
+                    <div class="wizard-step hidden" data-step="7">
                         <h2 class="text-xl font-bold tracking-tight">{{ _('Privacy & finish') }}</h2>
                         <p class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Choose whether to help improve TimeTracker with anonymous usage data.') }}</p>
                         <div class="mt-4 bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg p-4">
@@ -305,9 +333,8 @@
         {% endwith %}
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
-    <script src="{{ url_for('static', filename='toast-notifications.js') }}?v={{ app_version }}-toastfix1"></script>
-    <script src="{{ url_for('static', filename='error-handling-enhanced.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/setup-wizard.js') }}"></script>
+    <script src="{{ asset_url('toast') }}"></script>
+    <script src="{{ asset_url('errors') }}"></script>
+    <script src="{{ asset_url('setup-wizard') }}"></script>
 </body>
 </html>

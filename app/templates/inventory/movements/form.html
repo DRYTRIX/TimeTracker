@@ -120,7 +120,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
     (function () {
         const form = document.getElementById('movement_form');
         const movementType = document.getElementById('movement_type');

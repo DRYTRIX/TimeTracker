@@ -226,7 +226,7 @@
 
 {% block scripts_extra %}
 {{ super() }}
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function () {
     const card = document.getElementById('checklistCard');
     if (!card || card.dataset.canEdit !== '1') return;

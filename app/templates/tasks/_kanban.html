@@ -797,7 +797,7 @@
 }
 </style>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function(){
   const board = document.getElementById('kanbanBoard');
   if (!board) return;
@@ -1052,7 +1052,7 @@
 </script>
 
 <!-- Task Modal JavaScript -->
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Global function to open task modal
 window.openTaskModal = async function(taskId) {
   const modalEl = document.getElementById('taskQuickViewModal');

@@ -156,7 +156,7 @@
 {% endblock %}
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     const filterForm = document.getElementById('filterForm');
     const filterBtn = document.getElementById('filterBtn');

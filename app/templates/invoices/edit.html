@@ -393,7 +393,7 @@
 {% endblock %}
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     const itemsContainer = document.getElementById('invoice-items');
     const expensesContainer = document.getElementById('invoice-expenses');
@@ -763,7 +763,7 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function showSendEmailModal() {
   const modal = document.getElementById('sendEmailModal');
   if (modal) modal.classList.remove('hidden');

@@ -311,21 +311,15 @@ def license():
             secret=current_app.config.get("DONATE_HIDE_UNLOCK_SECRET") or "",
         )
         if not valid:
-            current_app.logger.warning(
-                "License verify failed: %s (system_id_prefix=%s)", reason, sid_prefix
-            )
+            current_app.logger.warning("License verify failed: %s (system_id_prefix=%s)", reason, sid_prefix)
             flash(_("Invalid code."), "error")
             return redirect(url_for("user.license"))
         settings_obj.donate_ui_hidden = True
         if safe_commit(db.session):
-            current_app.logger.info(
-                "License activated (system_id_prefix=%s)", sid_prefix
-            )
+            current_app.logger.info("License activated (system_id_prefix=%s)", sid_prefix)
             flash(_("License activated. Thank you for supporting TimeTracker!"), "success")
         else:
-            current_app.logger.warning(
-                "License verify failed: save_error (system_id_prefix=%s)", sid_prefix
-            )
+            current_app.logger.warning("License verify failed: save_error (system_id_prefix=%s)", sid_prefix)
             flash(_("Error saving settings."), "error")
         return redirect(url_for("user.license"))
     return render_template(
@@ -353,20 +347,14 @@ def verify_donate_hide_code():
         secret=current_app.config.get("DONATE_HIDE_UNLOCK_SECRET") or "",
     )
     if not valid:
-        current_app.logger.warning(
-            "Donate-hide verify failed: %s (system_id_prefix=%s)", reason, sid_prefix
-        )
+        current_app.logger.warning("Donate-hide verify failed: %s (system_id_prefix=%s)", reason, sid_prefix)
         return jsonify({"error": _("Invalid code.")}), 400
 
     current_user.ui_show_donate = False
     if safe_commit(db.session):
-        current_app.logger.info(
-            "Donate-hide activated for user (system_id_prefix=%s)", sid_prefix
-        )
+        current_app.logger.info("Donate-hide activated for user (system_id_prefix=%s)", sid_prefix)
         return jsonify({"success": True})
-    current_app.logger.warning(
-        "Donate-hide verify failed: save_error (system_id_prefix=%s)", sid_prefix
-    )
+    current_app.logger.warning("Donate-hide verify failed: save_error (system_id_prefix=%s)", sid_prefix)
     return jsonify({"error": _("Error saving settings")}), 500
 
 

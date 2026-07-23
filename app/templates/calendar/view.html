@@ -169,7 +169,7 @@
     </div>
 
 <!-- Pass data to JavaScript -->
-<script>
+<script nonce="{{ csp_nonce() }}">
     window.calendarData = {
         viewType: '{{ view_type }}',
         currentDate: '{{ current_date.strftime('%Y-%m-%d') }}',

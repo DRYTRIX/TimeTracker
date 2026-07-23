@@ -2461,9 +2461,9 @@
 
 {% block scripts_extra %}
 <!-- Load Konva.js from CDN (jsDelivr is whitelisted in CSP) -->
-<script src="https://cdn.jsdelivr.net/npm/konva@9/konva.min.js" crossorigin="anonymous"></script>
+<script src="{{ url_for('static', filename='vendor/konva/konva.min.js') }}" crossorigin="anonymous"></script>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 console.log('PDF Editor script starting...');
 
 const CSRF_TOKEN = {{ csrf_token()|tojson }};

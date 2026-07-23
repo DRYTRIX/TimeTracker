@@ -140,7 +140,7 @@
     {% endif %}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function testWebhook(webhookId) {
     if (!confirm('{{ _("Send a test webhook event?") }}')) {
         return;

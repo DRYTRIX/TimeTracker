@@ -306,7 +306,7 @@
     {% endif %}
 </div>
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function() {
     var form = document.getElementById('time-off-request-form');
     if (!form) return;

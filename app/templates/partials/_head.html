@@ -1,0 +1,183 @@
+{# Static document head: icons, stylesheets and the early inline bootstraps
+   (theme, i18n, date/time formatting).
+
+   IMPORTANT: this file must contain no Jinja block declarations. An include is
+   rendered as a separate template, so a child template's override cannot reach a
+   block declared here -- page titles and per-page CSS would silently fall back to
+   the defaults. All such declarations stay in base.html. #}
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+    <link rel="alternate icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='images/android-chrome-192x192.png') }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='images/android-chrome-512x512.png') }}">
+    <!--
+    Telemetry Privacy Protection:
+    Add the CSS class 'ph-no-capture' to any element containing sensitive data
+    to prevent capture in opt-in telemetry instrumentation.
+    
+    Examples:
+    - Project names: <span class="ph-no-capture">Project ABC</span>
+    - Client names: <div class="ph-no-capture">Client XYZ</div>
+    - Time entry notes: <textarea class="ph-no-capture" name="notes"></textarea>
+    - User emails: <span class="ph-no-capture">user@example.com</span>
+    
+    Telemetry instrumentation should avoid these elements by design.
+    -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="vapid-public-key" content="{{ config.get('VAPID_PUBLIC_KEY', '') }}">
+    <script src="{{ asset_url('head', fallback='pwa-enhancements.js') }}"></script>
+    {# Font Awesome, CSS build only. The SVG-with-JS build (6.4.2) used to be loaded in
+       addition to this one; the two conflicted and doubled the icon payload for no
+       benefit. No template uses the JS-only APIs (fa-layers, data-fa-transform,
+       fa-mask), so the CSS build is sufficient.
+
+       MUST load BEFORE dist/output.css. Font Awesome declares
+       `.fa-solid,.fab,.far,.fas { display: var(--fa-display, inline-block) }`, which has
+       the same specificity (0,1,0) as Tailwind's `.hidden { display: none }`. Source
+       order therefore decides the winner, and Tailwind is not configured with the
+       `important` strategy. Loading Font Awesome last makes every `hidden` on an icon a
+       no-op — 27 elements including the theme-toggle icons. #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
+    {# Inter is self-hosted: @font-face rules in app/static/src/input.css point at
+       app/static/vendor/inter (previously an @import from fonts.bunny.net). #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}?v={{ app_version }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='form-bridge.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='form-validation.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='data-tables-enhanced.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/flatpickr/flatpickr.min.css') }}">
+    <link id="flatpickr-dark-theme" rel="stylesheet" href="{{ url_for('static', filename='vendor/flatpickr/themes/dark.css') }}" media="none">
+    {# Per-user custom theme (see app/services/theme_service.py).
+       Renders an empty string for the default theme so existing users
+       see no visual change until they opt in via the theme picker. #}
+    {{ theme_css | safe }}
+    <script nonce="{{ csp_nonce() }}">
+        // Theme init (unchanged)
+        (function() {
+            var stored = localStorage.getItem('color-theme');
+            var userPref = {% if current_user.is_authenticated %}{% if current_user.theme_preference %}'{{ current_user.theme_preference }}'{% else %}'system'{% endif %}{% else %}null{% endif %};
+            var effective = userPref || stored || 'system';
+            if (effective === 'system' || !effective) {
+                effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            if (effective === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            if (userPref) localStorage.setItem('color-theme', userPref === 'system' || !userPref ? 'system' : userPref);
+        })();
+        var fpDark = document.getElementById('flatpickr-dark-theme');
+        if (fpDark) fpDark.media = document.documentElement.classList.contains('dark') ? 'all' : 'none';
+    </script>
+    
+    <!-- i18n translations for JavaScript (use tojson to avoid syntax errors from quotes/ampersands in translations) -->
+    <script nonce="{{ csp_nonce() }}">
+        window.i18n = {
+            toast: {
+                success: {{ _("Success")|tojson }},
+                error: {{ _("Error")|tojson }},
+                warning: {{ _("Warning")|tojson }},
+                info: {{ _("Information")|tojson }}
+            },
+            common: {
+                loading: {{ _("Loading...")|tojson }},
+                saving: {{ _("Saving...")|tojson }},
+                deleting: {{ _("Deleting...")|tojson }},
+                cancel: {{ _("Cancel")|tojson }},
+                confirm: {{ _("Confirm")|tojson }},
+                close: {{ _("Close")|tojson }},
+                save: {{ _("Save")|tojson }},
+                delete: {{ _("Delete")|tojson }},
+                edit: {{ _("Edit")|tojson }},
+                add: {{ _("Add")|tojson }},
+                remove: {{ _("Remove")|tojson }},
+                yes: {{ _("Yes")|tojson }},
+                no: {{ _("No")|tojson }},
+                ok: {{ _("OK")|tojson }}
+            },
+            messages: {
+                confirmDelete: {{ _("Are you sure you want to delete this?")|tojson }},
+                unsavedChanges: {{ _("You have unsaved changes. Are you sure you want to leave?")|tojson }},
+                operationFailed: {{ _("Operation failed")|tojson }},
+                operationSuccess: {{ _("Operation completed successfully")|tojson }},
+                noItemsSelected: {{ _("No items selected")|tojson }},
+                invalidInput: {{ _("Invalid input")|tojson }},
+                requiredField: {{ _("This field is required")|tojson }},
+                noActiveTimer: {{ _("No active timer")|tojson }},
+                timerStopped: {{ _("Timer stopped")|tojson }},
+                timerStopFailed: {{ _("Failed to stop timer")|tojson }},
+                errorStoppingTimer: {{ _("Error stopping timer")|tojson }},
+                noFormToSave: {{ _("No form to save")|tojson }},
+                noTimerFound: {{ _("No timer found")|tojson }},
+                timerStoppedInactivity: {{ _("Timer stopped due to inactivity")|tojson }},
+                selectProjectOrClient: {{ _("Please select either a project or a client")|tojson }},
+                endTimeAfterStartTime: {{ _("End time must be after start time")|tojson }}
+            }
+        };
+    </script>
+
+    <!-- User date/time format preferences for JavaScript (resolved: user override or system default) -->
+    <script nonce="{{ csp_nonce() }}">
+        window.userPrefs = {
+            dateFormat: {{ resolved_date_format_key|tojson }},
+            timeFormat: {{ resolved_time_format_key|tojson }},
+            weekStartDay: {{ resolved_week_start_day|tojson }}
+        };
+        /**
+         * Format a JS Date according to the user's preferred date format.
+         * @param {Date} date
+         * @returns {string}
+         */
+        window.formatUserDate = function(date) {
+            if (!date || isNaN(date)) return '';
+            var d = date.getDate().toString().padStart(2, '0');
+            var m = (date.getMonth() + 1).toString().padStart(2, '0');
+            var y = date.getFullYear();
+            switch (window.userPrefs.dateFormat) {
+                case 'DD/MM/YYYY': return d + '/' + m + '/' + y;
+                case 'DD.MM.YYYY': return d + '.' + m + '.' + y;
+                case 'MM/DD/YYYY': return m + '/' + d + '/' + y;
+                default:           return y + '-' + m + '-' + d;
+            }
+        };
+        /**
+         * Format a JS Date's time portion according to the user's preferred time format.
+         * @param {Date} date
+         * @returns {string}
+         */
+        window.formatUserTime = function(date) {
+            if (!date || isNaN(date)) return '';
+            if (window.userPrefs.timeFormat === '12h') {
+                var h = date.getHours();
+                var ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12 || 12;
+                return h.toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0') + ' ' + ampm;
+            }
+            return date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+        };
+        /**
+         * Format a JS Date as date + time according to user preferences.
+         * @param {Date} date
+         * @returns {string}
+         */
+        window.formatUserDateTime = function(date) {
+            if (!date || isNaN(date)) return '';
+            return window.formatUserDate(date) + ' ' + window.formatUserTime(date);
+        };
+        /**
+         * Locale options for toLocaleTimeString / Intl that respect userPrefs.timeFormat.
+         * Prefer formatUserTime / formatUserDateTime when possible.
+         * @returns {Object} hour, minute, hour12 options for Intl
+         */
+        window.getUserTimeLocaleOptions = function() {
+            return {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: window.userPrefs && window.userPrefs.timeFormat === '12h'
+            };
+        };
+    </script>
+    

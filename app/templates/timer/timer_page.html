@@ -288,7 +288,7 @@
 {% endblock %}
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
 // Load tasks when project is selected and sync with client selection
 const projectSelectEl = document.getElementById('project_id');

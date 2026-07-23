@@ -86,7 +86,7 @@
 {% endblock %}
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function() {
     const templateId = {{ template.id }};
     function showTestResult(ok, msg) {

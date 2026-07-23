@@ -291,7 +291,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Calculate and display total amount
 function updateTotal() {
     const amount = parseFloat(document.getElementById('amount').value) || 0;

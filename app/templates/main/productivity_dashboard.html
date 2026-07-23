@@ -238,7 +238,7 @@
 </div>
 
 {# Server-rendered initial dataset for charts #}
-<script id="productivityInitialData" type="application/json">
+<script nonce="{{ csp_nonce() }}" id="productivityInitialData" type="application/json">
 {{ {
     'summary': summary,
     'daily_breakdown': daily_breakdown,
@@ -254,7 +254,7 @@
 {% endblock %}
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function () {
     'use strict';
 

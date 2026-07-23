@@ -85,7 +85,7 @@
     animation: field-flash 0.6s ease-out;
 }
 </style>
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     var projectSelect = document.getElementById('project_id');
     var clientName = document.getElementById('client_name');

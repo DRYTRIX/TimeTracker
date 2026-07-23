@@ -97,7 +97,7 @@
     </table>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function confirmDeleteUser(userId, username, timeEntriesCount) {
     // Check if user has time entries
     if (timeEntriesCount > 0) {

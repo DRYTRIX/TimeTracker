@@ -144,7 +144,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 const tasksApiUrlTemplate = {{ url_for('api.get_project_tasks', project_id=0)|tojson }};
 function buildTasksUrl(projectId) {
     const pid = String(projectId || '').trim();

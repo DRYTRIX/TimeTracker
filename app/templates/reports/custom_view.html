@@ -100,7 +100,7 @@
     {% endif %}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Render chart if chart component exists
 {% if 'chart' in config.components and report_data.data and report_data.data|length > 0 %}
 const ctx = document.getElementById('reportChart');

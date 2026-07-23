@@ -272,7 +272,7 @@
 
 {% block scripts_extra %}
 {% include 'quotes/_edit_quote_form_scripts.html' %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     var qi = document.getElementById('quote-items');
     if (qi && qi.children.length === 0) {

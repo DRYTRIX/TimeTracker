@@ -1,0 +1,128 @@
+{# Top header: global search, theme picker, language switcher, user menu. #}
+            <header class="bg-card-light dark:bg-card-dark p-3 sm:p-4 border-b border-border-light dark:border-border-dark flex items-center gap-2 min-w-0 shadow-sm">
+                <!-- Mobile menu button -->
+                <button id="mobileSidebarBtn" class="md:hidden shrink-0 flex items-center justify-center w-10 h-10 rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Open sidebar') }}" type="button">
+                    <i class="fas fa-bars text-lg"></i>
+                </button>
+
+                <!-- Search (Ctrl+K opens command palette) -->
+                <div class="hidden sm:flex flex-1 min-w-0 justify-center px-2">
+                    <div class="w-full max-w-md relative">
+                        <form class="navbar-search" role="search" action="{{ url_for('main.search') }}" method="get" autocomplete="off">
+                            <label for="header-search" class="sr-only">{{ _('Search') }}</label>
+                            <input id="header-search" name="q" type="search" placeholder="{{ _('Search') }}" aria-label="{{ _('Search') }}" data-enhanced-search='{"endpoint": "/api/search", "minChars": 2, "maxResults": 10}' class="w-full bg-background-light dark:bg-gray-700 border border-transparent dark:border-transparent rounded-lg py-2 pl-10 pr-20 text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+                        </form>
+                        <kbd class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-600 text-text-muted-light dark:text-text-muted-dark border border-gray-200 dark:border-gray-500" title="{{ _('Open command palette') }}">Ctrl+K</kbd>
+                    </div>
+                </div>
+
+                <!-- Right side controls -->
+                <div class="flex items-center gap-2">
+                    <div class="relative z-50" id="theme-dropdown-container">
+                        <button id="theme-toggle" type="button" class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50" aria-label="{{ _('Theme') }}" aria-haspopup="true" aria-expanded="false" aria-controls="themeDropdown">
+                            <i id="theme-toggle-dark-icon" class="hidden fa-solid fa-moon w-5 h-5"></i>
+                            <i id="theme-toggle-light-icon" class="hidden fa-solid fa-sun w-5 h-5"></i>
+                            <i id="theme-toggle-system-icon" class="hidden fa-solid fa-desktop w-5 h-5"></i>
+                        </button>
+                        <ul id="themeDropdown" class="hidden absolute right-0 mt-2 w-40 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg py-1" role="menu" aria-label="{{ _('Theme options') }}">
+                            <li role="none"><button type="button" class="theme-option w-full text-left px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" data-theme="light" role="menuitem"><i class="fas fa-sun w-4" aria-hidden="true"></i>{{ _('Light') }}</button></li>
+                            <li role="none"><button type="button" class="theme-option w-full text-left px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" data-theme="dark" role="menuitem"><i class="fas fa-moon w-4" aria-hidden="true"></i>{{ _('Dark') }}</button></li>
+                            <li role="none"><button type="button" class="theme-option w-full text-left px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" data-theme="system" role="menuitem"><i class="fas fa-desktop w-4" aria-hidden="true"></i>{{ _('System') }}</button></li>
+                        </ul>
+                    </div>
+
+                    <!-- Chat, Timer, Help - icon buttons -->
+                    <div class="flex items-center gap-1">
+                        {% if is_module_enabled('team_chat') %}
+                        <button onclick="if(typeof toggleChatWidget === 'function') { toggleChatWidget(); } else { openChatUserSelector(); }" class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50" aria-label="{{ _('Open chat') }}" title="{{ _('Open chat') }}">
+                            <i class="fas fa-comments"></i>
+                        </button>
+                        {% endif %}
+                        {% if current_user.is_authenticated %}
+                        <div id="floatingTimerBar" class="flex shrink-0 items-center justify-center w-9 h-9"
+                             data-start-label="{{ _('Start Timer') }}"
+                             data-stop-label="{{ _('Stop') }}"
+                             data-manual-url="{{ url_for('timer.manual_entry') }}"
+                             aria-label="{{ _('Timer') }}"></div>
+                        {% endif %}
+                        <a href="{{ url_for('main.help') }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50" aria-label="{{ _('Help') }}" title="{{ _('Help') }}">
+                            <i class="fas fa-life-ring"></i>
+                        </a>
+                        {% if current_user.is_authenticated and ai_enabled %}
+                        <button type="button" data-ai-helper-open class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50" aria-label="{{ _('AI Helper') }}" title="{{ _('AI Helper') }}">
+                            <i class="fas fa-wand-magic-sparkles"></i>
+                        </button>
+                        {% endif %}
+                        {% if current_user.is_authenticated and not is_license_activated %}
+                        <button type="button" id="headerSupportBtn" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-amber-800 dark:text-amber-200 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 dark:border-amber-500/40 focus:outline-none focus:ring-2 focus:ring-amber-500/40" title="{{ _('Support TimeTracker') }}">
+                            <i class="fas fa-heart text-amber-600 dark:text-amber-300" aria-hidden="true"></i>
+                            <span class="max-w-[10rem] truncate">{{ _('Support TimeTracker') }}</span>
+                        </button>
+                        {% endif %}
+                    </div>
+
+                    <!-- Language Switcher -->
+                    <div class="relative z-50">
+                        <button data-dropdown="langDropdown" class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50 lg:w-auto lg:px-2.5" aria-label="{{ _('Change language') }}" aria-haspopup="true" aria-expanded="false" aria-controls="langDropdown" title="{{ _('Change language') }}">
+                            <i class="fas fa-globe"></i>
+                            <span class="ml-2 hidden lg:inline">{{ current_language_label }}</span>
+                        </button>
+                        <ul id="langDropdown" class="hidden absolute right-0 mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg max-h-96 overflow-y-auto">
+                            <li class="px-4 py-2 text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider border-b border-border-light dark:border-border-dark">{{ _('Language') }}</li>
+                            {% for code, label in available_languages.items() %}
+                            <li>
+                                <a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between" href="{{ url_for('user.set_language_direct', language=code) }}">
+                                    <span>{{ label }}</span>
+                                    {% if code == current_language_code %}
+                                    <i class="fas fa-check text-primary"></i>
+                                    {% endif %}
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <!-- User Profile -->
+                    <div class="relative z-50">
+                        <button data-dropdown="userDropdown" class="flex items-center space-x-2" aria-label="{{ _('User menu') }}" aria-haspopup="true" aria-expanded="false" aria-controls="userDropdown">
+                            {% if current_user.is_authenticated %}
+                                {% if current_user.get_avatar_url() %}
+                                    <img id="userAvatar" src="{{ current_user.get_avatar_url() }}" alt="{{ current_user.display_name }}" class="w-8 h-8 rounded-full object-cover border-2 border-primary" onerror="this.onerror=null; this.style.display='none'; document.getElementById('userAvatarFallback').style.display='flex';">
+                                    <div id="userAvatarFallback" class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-sm" style="display: none;">
+                                        {{ current_user.display_name[0:1].upper() }}
+                                    </div>
+                                {% else %}
+                                    <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-sm border-2 border-primary">
+                                        {{ current_user.display_name[0:1].upper() }}
+                                    </div>
+                                {% endif %}
+                                <span class="hidden md:inline text-text-light dark:text-text-dark font-medium">{{ current_user.display_name }}</span>
+                                {% if is_license_activated %}
+                                <span class="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 border border-emerald-200/80 dark:border-emerald-700/60" title="{{ _('Supporter') }}">{{ _('Supporter') }}</span>
+                                {% endif %}
+                            {% else %}
+                                <div class="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                                <span class="hidden md:inline text-text-light dark:text-text-dark">{{ _('Guest') }}</span>
+                            {% endif %}
+                            <i class="fas fa-chevron-down text-text-muted-light dark:text-text-muted-dark hidden md:inline" aria-hidden="true"></i>
+                        </button>
+                        <ul id="userDropdown" class="hidden absolute right-0 mt-2 w-48 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg z-50">
+                            <li class="px-4 py-3 border-b border-border-light dark:border-border-dark">
+                                <div class="text-sm font-medium text-text-light dark:text-text-dark">{{ current_user.display_name if current_user.is_authenticated else _('Guest') }}</div>
+                                <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ current_user.email if current_user.is_authenticated else '' }}</div>
+                            </li>
+                            <li><a href="{{ url_for('auth.profile') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-user w-4"></i> {{ _('My Profile') }}</a></li>
+                            <li><a href="{{ url_for('user.settings') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-cog w-4"></i> {{ _('My Settings') }}</a></li>
+                            {% if current_user.is_authenticated %}
+                            <li><a href="{{ url_for('user.license') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-key w-4"></i> {{ _('License') }}</a></li>
+                            {% endif %}
+                            {% if current_user.is_authenticated and not is_license_activated %}
+                            <li><button type="button" class="js-open-support-modal w-full text-left flex flex-col gap-0.5 px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-100 dark:hover:bg-gray-700"><span class="font-medium"><i class="fas fa-heart w-4" aria-hidden="true"></i> {{ _('Support TimeTracker') }}</span><span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Donate or get a supporter license') }}</span></button></li>
+                            {% endif %}
+                            <li class="border-t border-border-light dark:border-border-dark"><a href="{{ url_for('auth.logout') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-sign-out-alt w-4"></i> {{ _('Logout') }}</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </header>

@@ -44,7 +44,7 @@
 </div>
 {% endset %}
 {{ page_header('fas fa-file-invoice', 'Invoice ' ~ invoice.invoice_number, actions_html=actions, breadcrumbs=[{'text': _('Invoices'), 'url': url_for('invoices.list_invoices')}, {'text': invoice.invoice_number or _('View Invoice')}]) }}
-<script>
+<script nonce="{{ csp_nonce() }}">
     document.addEventListener('DOMContentLoaded', function() {
         const sizeSelector = document.getElementById('pdf-size-selector');
         const exportLink = document.getElementById('export-pdf-link');
@@ -523,7 +523,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function showSendEmailModal() {
   const modal = document.getElementById('sendEmailModal');
   if (modal) modal.classList.remove('hidden');

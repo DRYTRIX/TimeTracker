@@ -6,22 +6,40 @@
   "scripts": {
     "generate:icons": "node scripts/generate-icons.js",
     "install:all": "npm install && npm install -D tailwindcss postcss autoprefixer",
-    "install:cmdk": "npm install cmdk",
+    "copy:vendor": "node scripts/copy-vendor.mjs",
     "build:css": "tailwindcss -i ./app/static/src/input.css -o ./app/static/dist/output.css --watch",
-    "build:docker": "npx tailwindcss -i ./app/static/src/input.css -o ./app/static/dist/output.css"
+    "build:css:once": "tailwindcss -i ./app/static/src/input.css -o ./app/static/dist/output.css",
+    "build:js": "node scripts/build-js.mjs",
+    "watch:js": "node scripts/build-js.mjs --watch",
+    "build:docker": "npm run build:css:once && npm run copy:vendor && npm run build:js",
+    "build:assets": "npm run build:docker"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.61.1",
     "autoprefixer": "^10.4.16",
+    "esbuild": "^0.24.0",
     "postcss": "^8.4.31",
     "sharp": "^0.35.3",
     "tailwindcss": "^3.3.5",
     "to-ico": "^1.1.4"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.0.16",
+    "@fortawesome/fontawesome-free": "6.4.2",
+    "@simonwep/pickr": "1.9.1",
+    "@toast-ui/editor": "3.2.2",
+    "animejs": "3.2.1",
+    "chart.js": "4.4.0",
     "cmdk": "^1.1.1",
-    "framer-motion": "^12.23.24"
+    "flatpickr": "4.6.13",
+    "frappe-gantt": "0.6.1",
+    "fullcalendar": "6.1.15",
+    "konva": "9.3.16",
+    "socket.io-client": "4.5.4",
+    "sortablejs": "1.15.0"
   }
 }

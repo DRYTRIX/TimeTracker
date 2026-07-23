@@ -56,11 +56,11 @@
 </div>
 
 <!-- Include Frappe Gantt library and app overrides -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/frappe-gantt/frappe-gantt.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/gantt-chart.css') }}">
-<script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.js"></script>
+<script src="{{ url_for('static', filename='vendor/frappe-gantt/frappe-gantt.min.js') }}"></script>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 let ganttChart = null;
 
 // Initialize date inputs

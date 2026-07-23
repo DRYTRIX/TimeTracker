@@ -104,7 +104,7 @@
 {{ empty_state('fas fa-check-circle', _('No Overdue Tasks!'), _('Great job! All tasks are currently on schedule.'), actions, type='success') }}
 {% endif %}
 
-<script type="application/json" id="i18n-json-tasks-overdue">
+<script nonce="{{ csp_nonce() }}" type="application/json" id="i18n-json-tasks-overdue">
 {
     "enter_new_due_date": {{ _('Enter new due date (YYYY-MM-DD):')|tojson }},
     "confirm_extend_prefix": {{ _('Are you sure you want to extend the due date to')|tojson }},
@@ -117,7 +117,7 @@
     "error_message": {{ _('Update failed. Please try again.')|tojson }}
 }
 </script>
-<script>
+<script nonce="{{ csp_nonce() }}">
 var i18n_overdue = (function(){
     try { var el = document.getElementById('i18n-json-tasks-overdue'); return el ? JSON.parse(el.textContent) : {}; }
     catch(e) { return {}; }

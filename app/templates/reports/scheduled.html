@@ -118,7 +118,7 @@
     {% endif %}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     const triggerButtons = document.querySelectorAll('.trigger-report-btn');
     

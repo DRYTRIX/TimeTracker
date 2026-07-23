@@ -211,6 +211,12 @@ package-lock.json
 
 # Tailwind CSS build output (keep source in git)
 app/static/dist/
+
+# Vendored third-party browser libraries, produced by `npm run copy:vendor`
+# from node_modules (see scripts/copy-vendor.mjs). Build output, not source.
+app/static/vendor/
+# ...except grapesjs, which is committed rather than pulled from npm.
+!app/static/vendor/grapesjs/
 /logs
 logs/app.jsonl
 

@@ -186,7 +186,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize DataTable if available
     if (typeof $.fn.dataTable !== 'undefined') {

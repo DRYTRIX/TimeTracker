@@ -202,7 +202,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function confirmRestore(filename) {
     document.getElementById('restoreFilename').textContent = 'File: ' + filename;
     document.getElementById('restoreForm').action = "{{ url_for('admin.restore', filename='PLACEHOLDER') }}".replace('PLACEHOLDER', filename);

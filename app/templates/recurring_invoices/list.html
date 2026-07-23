@@ -76,7 +76,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function generateInvoice(recurringId) {
     if (!confirm('Generate an invoice from this recurring template now?')) {
         return;

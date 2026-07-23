@@ -103,7 +103,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function toggleCronField() {
     const cadence = document.getElementById('cadence').value;
     const cronField = document.getElementById('cronField');

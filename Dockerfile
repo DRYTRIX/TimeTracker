@@ -4,15 +4,23 @@
 FROM node:18-slim as frontend
 WORKDIR /app
 COPY package*.json ./
+# `npm install`, not `npm ci`: package-lock.json is intentionally gitignored
+# (see .gitignore "Node.js / Frontend build"), so no lockfile reaches this stage.
 RUN npm install
-# Copy files needed for Tailwind build
+# Copy files needed for the Tailwind, vendor and JS builds
 COPY tailwind.config.js ./
 COPY postcss.config.js ./
-COPY app/static/src ./app/static/src
+COPY scripts/copy-vendor.mjs scripts/build-js.mjs ./scripts/
+COPY app/static ./app/static
 COPY app/templates ./app/templates
 # Create dist directory for output
 RUN mkdir -p app/static/dist
-# Run the build (creates app/static/dist/output.css)
+# build:docker runs three steps:
+#   1. Tailwind  -> app/static/dist/output.css
+#   2. copy:vendor -> app/static/vendor/ (self-hosted third-party libs; the app must
+#      render with no outbound network access)
+#   3. build:js  -> app/static/dist/*.min.js + manifest.json (content-hashed bundles
+#      resolved at render time by asset_url(), see app/utils/assets.py)
 RUN npm run build:docker
 
 # --- Stage 2: Python Application ---
@@ -102,11 +110,17 @@ RUN chmod -R 775 /app/translations \
     && chmod 755 /app/app/static/dist \
     && chmod -R 755 /app/app/static
 
-# Copy compiled assets from frontend stage (after general COPY to ensure it overwrites any local version)
-COPY --chown=timetracker:timetracker --from=frontend /app/app/static/dist/output.css /app/app/static/dist/output.css
+# Copy compiled assets from frontend stage (after general COPY to ensure it overwrites any local version).
+# dist/  = Tailwind output.css + hashed JS bundles + manifest.json
+# vendor/ = self-hosted third-party libraries (Font Awesome, Chart.js, flatpickr,
+#           socket.io, Toast UI, Pickr, Konva, Sortable, FullCalendar, frappe-gantt,
+#           anime.js, Inter webfonts). Without these the app would reach out to
+#           cdnjs/jsDelivr/uicdn at runtime and fail in air-gapped installs.
+COPY --chown=timetracker:timetracker --from=frontend /app/app/static/dist /app/app/static/dist
+COPY --chown=timetracker:timetracker --from=frontend /app/app/static/vendor /app/app/static/vendor
 
-# Ensure the CSS file has correct permissions
-RUN chmod 644 /app/app/static/dist/output.css
+# Ensure the built assets are world-readable
+RUN chmod -R a+rX /app/app/static/dist /app/app/static/vendor
 
 # Copy the startup script
 COPY --chown=timetracker:timetracker docker/start-fixed.py /app/start.py

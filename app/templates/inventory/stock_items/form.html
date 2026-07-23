@@ -141,7 +141,7 @@
 </div>
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     const suppliersContainer = document.getElementById('suppliers-container');
     const addSupplierBtn = document.getElementById('add-supplier');

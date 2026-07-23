@@ -220,7 +220,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     const projectSelect = document.getElementById('project_id');
     const taskSelect = document.getElementById('task_id');

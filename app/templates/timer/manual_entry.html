@@ -51,6 +51,26 @@
         <input type="hidden" name="worked_time_mode" id="worked_time_mode" value="{{ prefill_worked_time_mode or '' }}">
 
         <div class="space-y-8">
+            {% if current_user.is_admin and users %}
+            {# Section: User (admin only — book time for another person) #}
+            <section class="pb-6 border-b border-border-light dark:border-border-dark">
+                <h2 class="form-section-title">
+                    <i class="fas fa-user text-primary"></i>{{ _('User') }}
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="user_id" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Log time for') }}</label>
+                        <select name="user_id" id="user_id" class="form-input">
+                            {% for user in users %}
+                            <option value="{{ user.id }}" {% if selected_user_id is not none and (selected_user_id|string) == (user.id|string) %}selected{% elif selected_user_id is none and user.id == current_user.id %}selected{% endif %}>{{ user.display_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('As admin, you can create entries for other users') }}</p>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
             {# Section: Project & task #}
             <section class="pb-6 border-b border-border-light dark:border-border-dark">
                 <div class="flex items-center justify-between gap-3 flex-wrap">

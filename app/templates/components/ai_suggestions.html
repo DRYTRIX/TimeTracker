@@ -36,7 +36,7 @@
     <div data-ai-suggestions-list class="hidden flex gap-2 overflow-x-auto pb-1 -mx-1 px-1"></div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function() {
     const panel = document.getElementById('ai-suggestions-panel');
     if (!panel || panel.__aiSuggestionsBound) return;

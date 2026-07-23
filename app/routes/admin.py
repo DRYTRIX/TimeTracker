@@ -1865,18 +1865,14 @@ def admin_verify_donate_hide_code():
         secret=current_app.config.get("DONATE_HIDE_UNLOCK_SECRET") or "",
     )
     if not valid:
-        current_app.logger.warning(
-            "License verify failed: %s (system_id_prefix=%s)", reason, sid_prefix
-        )
+        current_app.logger.warning("License verify failed: %s (system_id_prefix=%s)", reason, sid_prefix)
         return jsonify({"error": _("Invalid code.")}), 400
 
     settings_obj.donate_ui_hidden = True
     if safe_commit(db.session):
         current_app.logger.info("License activated (system_id_prefix=%s)", sid_prefix)
         return jsonify({"success": True})
-    current_app.logger.warning(
-        "License verify failed: save_error (system_id_prefix=%s)", sid_prefix
-    )
+    current_app.logger.warning("License verify failed: save_error (system_id_prefix=%s)", sid_prefix)
     return jsonify({"error": _("Error saving settings")}), 500
 
 

@@ -5,7 +5,9 @@
     'use strict';
 
     var currentStep = 1;
-    var totalSteps = 6;
+    // Derived from the DOM so adding or removing a wizard step in the template does
+    // not require touching this file.
+    var totalSteps = document.querySelectorAll('.wizard-step').length || 6;
 
     function getProgressLabel() {
         var el = document.getElementById('wizard-progress-label');
