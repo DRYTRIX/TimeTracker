@@ -1,8 +1,12 @@
-import { commandScore } from 'https://cdn.jsdelivr.net/npm/cmdk@1.1.1/dist/command-score.mjs';
+// Resolved at build time to node_modules/cmdk/dist/command-score.mjs via the `alias`
+// map in scripts/build-js.mjs. cmdk's package exports only expose ".", and that entry
+// pulls in React, so the deep path is aliased rather than imported directly.
+// This was previously a bare `https://cdn.jsdelivr.net/...` import, which meant the
+// command palette silently failed without internet access.
+import { commandScore } from 'cmdk/command-score';
 
 (() => {
   if (window.__ttCommandPaletteLoaded) return;
-  window.__ttCommandPaletteLoaded = true;
 
   const isMac = (() => {
     try {
@@ -33,7 +37,9 @@ import { commandScore } from 'https://cdn.jsdelivr.net/npm/cmdk@1.1.1/dist/comma
   const $all = (s, r = document) => Array.from(r.querySelectorAll(s));
 
   const root = $(sel.root);
+  // Only mark loaded after the palette DOM exists so an early script load can retry.
   if (!root) return;
+  window.__ttCommandPaletteLoaded = true;
 
   const input = $(sel.input);
   const list = $(sel.list);

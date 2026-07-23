@@ -177,8 +177,8 @@
 {% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
-<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/toastui/toastui-editor.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/toastui/theme/toastui-editor-dark.css') }}">
 <style>
 #email_preview {
     font-family: Arial, sans-serif;
@@ -191,8 +191,8 @@
 {% endblock %}
 
 {% block scripts_extra %}
-<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
-<script>
+<script src="{{ url_for('static', filename='vendor/toastui/toastui-editor.js') }}"></script>
+<script nonce="{{ csp_nonce() }}">
 let htmlEditor = null;
 let isCodeMode = false;
 let originalHtml = {{ (html or '') | tojson }};

@@ -206,9 +206,9 @@
 
 {% block scripts_extra %}
 <!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='vendor/chartjs/chart.umd.js') }}"></script>
 
-<script type="application/json" id="i18n-json-analytics-dashboard">
+<script nonce="{{ csp_nonce() }}" type="application/json" id="i18n-json-analytics-dashboard">
 {
     "error_loading_charts": {{ _('Failed to load charts. Please try again.')|tojson }},
     "error_refreshing_charts": {{ _('Failed to refresh charts. Please try again.')|tojson }},
@@ -227,7 +227,7 @@
 }
 </script>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Ensure i18n_analytics is globally available
 window.i18n_analytics = (function(){
     try { var el = document.getElementById('i18n-json-analytics-dashboard'); return el ? JSON.parse(el.textContent) : {}; } catch(e){ return {}; }

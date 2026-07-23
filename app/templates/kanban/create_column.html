@@ -105,7 +105,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Auto-generate key from label
 document.getElementById('label').addEventListener('input', function(e) {
   const keyInput = document.getElementById('key');

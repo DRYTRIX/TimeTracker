@@ -9,6 +9,26 @@ from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
 
+class ModulePreset(str, Enum):
+    """
+    First-run module presets offered by the setup wizard.
+
+    Every module defaults to enabled, which means a brand-new instance presents all
+    41 of them and 80+ navigation destinations at once. The wizard uses these presets
+    to switch off whole areas that a given kind of user will never open; everything
+    stays reachable later via Admin -> Modules.
+
+    Presets are cumulative in practice (TEAM is a superset of SOLO, COMPLIANCE of
+    TEAM), but membership is declared explicitly per module so the sets stay correct
+    as new modules are added.
+    """
+
+    SOLO = "solo"
+    TEAM = "team"
+    COMPLIANCE = "compliance"
+    EVERYTHING = "everything"
+
+
 class ModuleCategory(Enum):
     """Module categories for organization"""
 
@@ -42,6 +62,9 @@ class ModuleDefinition:
     routes: List[str] = field(default_factory=list)  # Route endpoints
     icon: Optional[str] = None  # FontAwesome icon class
     order: int = 0  # Display order in navigation
+    # First-run presets this module belongs to (see ModulePreset). A module in no
+    # preset is only enabled by the "everything" preset or manually in Admin.
+    presets: List[str] = field(default_factory=list)
 
     def __post_init__(self):
         """Validate and normalize module definition"""
@@ -49,6 +72,8 @@ class ModuleDefinition:
             self.dependencies = []
         if self.routes is None:
             self.routes = []
+        if self.presets is None:
+            self.presets = []
 
 
 class ModuleRegistry:
@@ -786,4 +811,106 @@ class ModuleRegistry:
             )
         )
 
+        cls._apply_preset_membership()
         cls._initialized = True
+
+    # ------------------------------------------------------------------
+    # First-run presets
+    # ------------------------------------------------------------------
+
+    #: Modules that make up the "Solo freelancer" preset: track time, organise it by
+    #: project/client, bill it, and see where it went. Nothing else.
+    _SOLO_MODULES = {
+        "auth",
+        "main",
+        "projects",
+        "timer",
+        "tasks",
+        "clients",
+        "reports",
+        "invoices",
+        "payments",
+        "expenses",
+        "saved_filters",
+        "import_export",
+    }
+
+    #: Adds collaboration, scheduling and light process on top of SOLO.
+    _TEAM_EXTRA_MODULES = {
+        "calendar",
+        "kanban",
+        "gantt",
+        "issues",
+        "weekly_goals",
+        "activity_feed",
+        "team_chat",
+        "time_approvals",
+        "project_templates",
+        "time_entry_templates",
+        "recurring_tasks",
+        "recurring_invoices",
+        "quotes",
+        "analytics",
+        "budget_alerts",
+        "client_portal",
+    }
+
+    #: Adds governance and audit surfaces on top of TEAM.
+    _COMPLIANCE_EXTRA_MODULES = {
+        "invoice_approvals",
+        "custom_reports",
+        "scheduled_reports",
+        "mileage",
+        "per_diem",
+        "workflows",
+        "integrations",
+    }
+
+    @classmethod
+    def _apply_preset_membership(cls):
+        """Populate ModuleDefinition.presets from the preset sets above."""
+        solo = cls._SOLO_MODULES
+        team = solo | cls._TEAM_EXTRA_MODULES
+        compliance = team | cls._COMPLIANCE_EXTRA_MODULES
+
+        for module_id, module in cls._modules.items():
+            presets = [ModulePreset.EVERYTHING.value]
+            if module_id in compliance:
+                presets.append(ModulePreset.COMPLIANCE.value)
+            if module_id in team:
+                presets.append(ModulePreset.TEAM.value)
+            if module_id in solo:
+                presets.append(ModulePreset.SOLO.value)
+            module.presets = presets
+
+    @classmethod
+    def get_disabled_ids_for_preset(cls, preset: str) -> List[str]:
+        """
+        Module IDs to switch off for a given preset.
+
+        Returns the complement of the preset's membership, which is what
+        ``Settings.disabled_module_ids`` stores. An unknown preset (or "everything")
+        disables nothing, preserving the historical default.
+        """
+        cls.initialize_defaults()
+
+        valid = {p.value for p in ModulePreset}
+        if preset not in valid or preset == ModulePreset.EVERYTHING.value:
+            return []
+
+        disabled = [module_id for module_id, module in cls._modules.items() if preset not in module.presets]
+
+        # Reuse the same dependency/core-module guard the Admin -> Modules form applies,
+        # so a preset can never produce a combination an admin would be blocked from
+        # saving by hand. Iterate to a fixed point: re-enabling one module can make
+        # another one's dependency valid again.
+        changed = True
+        while changed:
+            changed = False
+            for module_id in list(disabled):
+                can_disable, _affected = cls.validate_module_disable(module_id, disabled)
+                if not can_disable:
+                    disabled.remove(module_id)
+                    changed = True
+
+        return sorted(disabled)

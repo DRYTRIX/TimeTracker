@@ -168,49 +168,51 @@ def check_project_budget_alerts():
 
     This task should be run periodically (e.g., every 6 hours) to check
     project budgets and create alerts when thresholds are exceeded.
+
+    Note: This function should be called within an app context.
+    Use check_project_budget_alerts_with_app() wrapper for scheduled tasks.
     """
-    with current_app.app_context():
-        try:
-            logger.info("Checking project budget alerts...")
+    try:
+        logger.info("Checking project budget alerts...")
 
-            # Get all active projects with budgets
-            projects = Project.query.filter(Project.budget_amount.isnot(None), Project.status == "active").all()
+        # Get all active projects with budgets
+        projects = Project.query.filter(Project.budget_amount.isnot(None), Project.status == "active").all()
 
-            logger.info(f"Found {len(projects)} active projects with budgets")
+        logger.info(f"Found {len(projects)} active projects with budgets")
 
-            total_alerts_created = 0
-            for project in projects:
-                try:
-                    # Check for budget alerts
-                    alerts_to_create = check_budget_alerts(project.id)
+        total_alerts_created = 0
+        for project in projects:
+            try:
+                # Check for budget alerts
+                alerts_to_create = check_budget_alerts(project.id)
 
-                    # Create alerts
-                    for alert_data in alerts_to_create:
-                        alert = BudgetAlert.create_alert(
-                            project_id=alert_data["project_id"],
-                            alert_type=alert_data["type"],
-                            budget_consumed_percent=alert_data["budget_consumed_percent"],
-                            budget_amount=alert_data["budget_amount"],
-                            consumed_amount=alert_data["consumed_amount"],
-                        )
-                        total_alerts_created += 1
-                        logger.info(f"Created {alert_data['type']} alert for project {project.name}")
-                        try:
-                            from app.utils.workflow_bridge import fire_budget_threshold_workflow
+                # Create alerts
+                for alert_data in alerts_to_create:
+                    alert = BudgetAlert.create_alert(
+                        project_id=alert_data["project_id"],
+                        alert_type=alert_data["type"],
+                        budget_consumed_percent=alert_data["budget_consumed_percent"],
+                        budget_amount=alert_data["budget_amount"],
+                        consumed_amount=alert_data["consumed_amount"],
+                    )
+                    total_alerts_created += 1
+                    logger.info(f"Created {alert_data['type']} alert for project {project.name}")
+                    try:
+                        from app.utils.workflow_bridge import fire_budget_threshold_workflow
 
-                            fire_budget_threshold_workflow(project, alert_data)
-                        except Exception as wf_err:
-                            logger.debug(f"Workflow budget_threshold trigger skipped: {wf_err}")
+                        fire_budget_threshold_workflow(project, alert_data)
+                    except Exception as wf_err:
+                        logger.debug(f"Workflow budget_threshold trigger skipped: {wf_err}")
 
-                except Exception as e:
-                    logger.error(f"Error checking budget alerts for project {project.id}: {e}")
+            except Exception as e:
+                logger.error(f"Error checking budget alerts for project {project.id}: {e}")
 
-            logger.info(f"Created {total_alerts_created} budget alerts")
-            return total_alerts_created
+        logger.info(f"Created {total_alerts_created} budget alerts")
+        return total_alerts_created
 
-        except Exception as e:
-            logger.error(f"Error checking project budget alerts: {e}")
-            return 0
+    except Exception as e:
+        logger.error(f"Error checking project budget alerts: {e}")
+        return 0
 
 
 def check_task_deadline_approaching():
@@ -430,8 +432,21 @@ def register_scheduled_tasks(scheduler, app=None):
         logger.info("Registered weekly summaries task")
 
         # Check budget alerts every 6 hours
+        def check_project_budget_alerts_with_app():
+            """Wrapper that uses the captured app instance"""
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for budget alerts check")
+                    return
+
+            with app_instance.app_context():
+                return check_project_budget_alerts()
+
         scheduler.add_job(
-            func=check_project_budget_alerts,
+            func=check_project_budget_alerts_with_app,
             trigger="cron",
             hour="*/6",
             minute=0,

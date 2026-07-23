@@ -64,7 +64,7 @@
 <!-- Provider-specific JavaScript will be included here -->
 {% endblock %}
 
-<script>
+<script nonce="{{ csp_nonce() }}">
     // Initialize wizard with configuration
     document.addEventListener('DOMContentLoaded', function() {
         if (typeof IntegrationWizard !== 'undefined') {

@@ -106,6 +106,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Health probes must hit the network directly (no synthetic 503 on transient fail).
+  if (path === '/api/health' || path === '/_health') {
+    return;
+  }
+
   if (path.startsWith('/static/')) {
     event.respondWith(cacheFirst(request));
     return;

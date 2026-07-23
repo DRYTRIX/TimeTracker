@@ -26,8 +26,8 @@ def test_onboarding_js_loaded(authenticated_client):
     """Test that onboarding JavaScript is loaded in base template"""
     response = authenticated_client.get("/dashboard")
     assert response.status_code == 200
-    # Check that onboarding-enhanced.js is included
-    assert b"onboarding-enhanced.js" in response.data
+    # onboarding-enhanced.js ships in the "core-d" bundle (scripts/build-js.mjs).
+    assert b"core-d" in response.data
 
 
 @pytest.mark.unit

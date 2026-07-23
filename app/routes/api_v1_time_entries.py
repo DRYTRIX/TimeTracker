@@ -177,9 +177,22 @@ def create_time_entry():
     start_time = validated["start_time"]
     end_time = validated.get("end_time") or start_time
 
+    # Admins may create entries for another active user (parity with calendar API)
+    target_user_id = g.api_user.id
+    requested_user_id = validated.get("user_id")
+    if requested_user_id and requested_user_id != g.api_user.id:
+        if not g.api_user.is_admin:
+            return error_response("Only admins can create time entries for other users", status_code=403)
+        from app.models import User
+
+        target = User.query.filter_by(id=requested_user_id, is_active=True).first()
+        if not target:
+            return error_response("Selected user is invalid or inactive", status_code=400)
+        target_user_id = target.id
+
     time_tracking_service = TimeTrackingService()
     result = time_tracking_service.create_manual_entry(
-        user_id=g.api_user.id,
+        user_id=target_user_id,
         project_id=validated.get("project_id"),
         client_id=validated.get("client_id"),
         start_time=start_time,
@@ -223,6 +236,7 @@ def create_time_entry():
                 "task_name": task_name,
                 "duration_formatted": duration_formatted,
                 "duration_hours": entry.duration_hours if hasattr(entry, "duration_hours") else None,
+                "target_user_id": target_user_id,
             },
             ip_address=ip_address,
             user_agent=user_agent,

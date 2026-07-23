@@ -155,7 +155,7 @@
                     <div class="ml-8 mt-1 {% if not user.notification_remind_to_log %}opacity-60{% endif %}" id="reminder_time_wrap">
                         <label for="reminder_to_log_time" class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ _('Reminder time (your timezone)') }}</label>
                         <input type="time" id="reminder_to_log_time" name="reminder_to_log_time" value="{{ user.reminder_to_log_time or '17:00' }}"
-                               class="w-32 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm">
+                               class="w-32 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm user-time-input">
                     </div>
 
                     <label for="notification_missed_clock_in" class="flex items-center min-h-[44px] cursor-pointer rounded-lg px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
@@ -218,7 +218,7 @@
                             <label for="smart_notify_end_of_day_time" class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ _('End of day time (your timezone)') }}</label>
                             <input type="time" id="smart_notify_end_of_day_time" name="smart_notify_end_of_day_time"
                                    value="{{ user.smart_notify_end_of_day_time or '17:00' }}"
-                                   class="w-32 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm">
+                                   class="w-32 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm user-time-input">
                         </div>
                         <label for="smart_notify_missed_clock_in" class="flex items-center min-h-[40px] cursor-pointer rounded-lg px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <input type="checkbox" id="smart_notify_missed_clock_in" name="smart_notify_missed_clock_in"
@@ -230,7 +230,7 @@
                             <label for="smart_notify_missed_clock_in_at" class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ _('Missed workday reminder time (your timezone)') }}</label>
                             <input type="time" id="smart_notify_missed_clock_in_at" name="smart_notify_missed_clock_in_at"
                                    value="{{ user.smart_notify_missed_clock_in_at or '09:30' }}"
-                                   class="w-32 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm">
+                                   class="w-32 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm user-time-input">
                         </div>
                         <label for="smart_notify_browser" class="flex items-center min-h-[40px] cursor-pointer rounded-lg px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <input type="checkbox" id="smart_notify_browser" name="smart_notify_browser"
@@ -243,13 +243,13 @@
                                 <label for="smart_notify_no_tracking_after" class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ _('No-tracking nudge hour (optional override, HH:MM)') }}</label>
                                 <input type="time" id="smart_notify_no_tracking_after" name="smart_notify_no_tracking_after"
                                        value="{{ user.smart_notify_no_tracking_after or '' }}"
-                                       class="w-full max-w-[12rem] px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm">
+                                       class="w-full max-w-[12rem] px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm user-time-input">
                             </div>
                             <div>
                                 <label for="smart_notify_summary_at" class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ _('Summary hour (optional override, HH:MM)') }}</label>
                                 <input type="time" id="smart_notify_summary_at" name="smart_notify_summary_at"
                                        value="{{ user.smart_notify_summary_at or '' }}"
-                                       class="w-full max-w-[12rem] px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm">
+                                       class="w-full max-w-[12rem] px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm user-time-input">
                             </div>
                         </div>
                     </div>
@@ -600,7 +600,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Live theme preview
 document.getElementById('theme_preference').addEventListener('change', function() {
     const theme = this.value;

@@ -51,6 +51,26 @@
         <input type="hidden" name="worked_time_mode" id="worked_time_mode" value="{{ prefill_worked_time_mode or '' }}">
 
         <div class="space-y-8">
+            {% if current_user.is_admin and users %}
+            {# Section: User (admin only — book time for another person) #}
+            <section class="pb-6 border-b border-border-light dark:border-border-dark">
+                <h2 class="form-section-title">
+                    <i class="fas fa-user text-primary"></i>{{ _('User') }}
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="user_id" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Log time for') }}</label>
+                        <select name="user_id" id="user_id" class="form-input">
+                            {% for user in users %}
+                            <option value="{{ user.id }}" {% if selected_user_id is not none and (selected_user_id|string) == (user.id|string) %}selected{% elif selected_user_id is none and user.id == current_user.id %}selected{% endif %}>{{ user.display_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('As admin, you can create entries for other users') }}</p>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
             {# Section: Project & task #}
             <section class="pb-6 border-b border-border-light dark:border-border-dark">
                 <div class="flex items-center justify-between gap-3 flex-wrap">
@@ -131,11 +151,11 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label for="start_time" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Start Time') }}</label>
-                            <input type="time" name="start_time" id="start_time" class="form-input" value="{{ prefill_start_time or '' }}">
+                            <input type="time" name="start_time" id="start_time" class="form-input user-time-input" value="{{ prefill_start_time or '' }}">
                         </div>
                         <div>
                             <label for="end_time" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('End Time') }}</label>
-                            <input type="time" name="end_time" id="end_time" class="form-input" value="{{ prefill_end_time or '' }}">
+                            <input type="time" name="end_time" id="end_time" class="form-input user-time-input" value="{{ prefill_end_time or '' }}">
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -189,7 +209,7 @@
         </div>
     </form>
 </div>
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function() {
     // Issue #557: avoid loading Toast UI Editor on mobile to prevent browser freeze
     window.isMobileView = window.matchMedia('(max-width: 767px)').matches;
@@ -205,7 +225,7 @@
     }
 })();
 </script>
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', async function(){
     // Default values for date/time to now (use local date, not UTC, for timezones ahead of UTC)
     const now = new Date();
@@ -774,7 +794,7 @@ document.addEventListener('DOMContentLoaded', async function(){
 </script>
 
 <!-- Toast UI Editor: load only on desktop to avoid mobile freeze (Issue #557) -->
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     if (window.isMobileView) {
         window.mdEditor = null;
@@ -782,14 +802,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     var link1 = document.createElement('link');
     link1.rel = 'stylesheet';
-    link1.href = 'https://uicdn.toast.com/editor/latest/toastui-editor.min.css';
+    link1.href = '{{ url_for('static', filename='vendor/toastui/toastui-editor.css') }}';
     document.head.appendChild(link1);
     var link2 = document.createElement('link');
     link2.rel = 'stylesheet';
-    link2.href = 'https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css';
+    link2.href = '{{ url_for('static', filename='vendor/toastui/theme/toastui-editor-dark.css') }}';
     document.head.appendChild(link2);
     var scriptEl = document.createElement('script');
-    scriptEl.src = 'https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js';
+    scriptEl.src = '{{ url_for('static', filename='vendor/toastui/toastui-editor.js') }}';
     scriptEl.onload = function initToastEditorManualEntry() {
     const notesInput = document.getElementById('notes');
     let mdEditor = null;
@@ -1133,7 +1153,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 {% if ai_enabled %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function() {
     const container = document.getElementById('aiAutofillContainer');
     const button = document.getElementById('aiAutofillBtn');

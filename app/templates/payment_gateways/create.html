@@ -82,7 +82,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function updateProviderFields() {
     const provider = document.getElementById('provider').value;
     document.getElementById('stripeFields').classList.add('hidden');

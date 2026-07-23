@@ -196,7 +196,7 @@
 {% endblock %}
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 function togglePortalFields() {
     const checkbox = document.getElementById('portal_enabled');
     const container = document.getElementById('portal_fields');

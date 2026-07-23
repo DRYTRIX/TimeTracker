@@ -64,6 +64,25 @@ test('timerElapsedSeconds respects pause and break_seconds', () => {
   assert.match(formatSource, /paused_at/);
 });
 
+test('React shell revalidates session on poll success and app resume', () => {
+  assert.match(mainJsx, /revalidateSession/);
+  assert.match(mainJsx, /state:\s*'connected'/);
+  assert.match(mainJsx, /visibilitychange/);
+  assert.match(mainJsx, /onAppResume/);
+  assert.match(mainJsx, /revalidateOnResume/);
+});
+
+test('main process notifies renderer on show and power resume', () => {
+  const mainSource = fs.readFileSync(path.join(root, 'src/main/main.js'), 'utf8');
+  const preloadSource = fs.readFileSync(path.join(root, 'src/main/preload.js'), 'utf8');
+  assert.match(mainSource, /powerMonitor/);
+  assert.match(mainSource, /notifyAppResume/);
+  assert.match(mainSource, /app:resume/);
+  assert.match(mainSource, /mainWindow\.on\('show'/);
+  assert.match(preloadSource, /onAppResume/);
+  assert.match(preloadSource, /app:resume/);
+});
+
 test('unwrapReportSummary prefers nested summary object', () => {
   assert.match(apiSource, /payload\?\.summary \|\| payload/);
 });

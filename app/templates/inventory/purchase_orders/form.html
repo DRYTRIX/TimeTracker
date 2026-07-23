@@ -108,7 +108,7 @@
 </div>
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     const itemsContainer = document.getElementById('po-items');
     const addItemBtn = document.getElementById('add-item');

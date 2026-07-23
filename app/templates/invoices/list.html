@@ -193,7 +193,7 @@
     border-color: currentColor;
 }
 </style>
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Status filter function
 function filterByStatus(status) {
     document.getElementById('statusFilter').value = status;

@@ -386,7 +386,7 @@
 <script src="{{ url_for('static', filename='kiosk-barcode.js') }}"></script>
 <script src="{{ url_for('static', filename='kiosk-timer.js') }}"></script>
 <script src="{{ url_for('static', filename='kiosk-mode.js') }}"></script>
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Load tasks when project is selected (for initial form)
 document.addEventListener('DOMContentLoaded', function() {
     const projectSelect = document.getElementById('timer-project');

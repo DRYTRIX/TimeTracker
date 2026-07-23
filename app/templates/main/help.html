@@ -848,7 +848,7 @@
 </div>
 {% endblock %}
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function(){
   const links = Array.from(document.querySelectorAll('#help-nav .help-link'));
   const filter = document.getElementById('help-nav-filter');

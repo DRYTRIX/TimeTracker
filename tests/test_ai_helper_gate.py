@@ -14,7 +14,9 @@ def test_dashboard_hides_ai_helper_when_disabled(app, authenticated_client):
     assert response.status_code == 200
     html = response.get_data(as_text=True)
     assert "aiHelperDrawer" not in html
-    assert "ai-helper.js" not in html
+    # ai-helper.js ships inside the hashed "core-ai" bundle (scripts/build-js.mjs),
+    # which base.html emits only when AI is enabled.
+    assert "core-ai" not in html
 
 
 def test_dashboard_shows_ai_helper_when_enabled(app, authenticated_client):
@@ -23,7 +25,7 @@ def test_dashboard_shows_ai_helper_when_enabled(app, authenticated_client):
     assert response.status_code == 200
     html = response.get_data(as_text=True)
     assert "aiHelperDrawer" in html
-    assert "ai-helper.js" in html
+    assert "core-ai" in html
 
 
 def test_session_ai_context_preview_503_when_disabled(app, authenticated_client):

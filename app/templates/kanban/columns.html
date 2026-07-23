@@ -254,8 +254,8 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<script>
+<script src="{{ url_for('static', filename='vendor/sortablejs/Sortable.min.js') }}"></script>
+<script nonce="{{ csp_nonce() }}">
 // Show delete modal
 function showDeleteModal(columnId, label, key) {
   const keyEl = document.getElementById('deleteColumnKey');

@@ -278,6 +278,146 @@ jobs:
       - name: Run mypy
         run: mypy app/ || true
 
+      # Ratchets: these may improve but must never regress.
+      - name: Check silent exception handlers
+        run: python scripts/check_silent_excepts.py
+
+      - name: Check translation coverage
+        run: python scripts/check_translation_coverage.py
+
+  # ============================================================================
+  # Frontend Assets - build pipeline and self-hosting guarantees
+  # ============================================================================
+  frontend-assets:
+    name: Frontend Assets & Offline Guarantee
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      # Runs Tailwind, vendors third-party libraries into app/static/vendor,
+      # and produces the content-hashed JS bundles + manifest.json.
+      - name: Build assets
+        run: npm run build:docker
+
+      - name: Verify build output
+        run: |
+          test -f app/static/dist/output.css
+          test -f app/static/dist/manifest.json
+          test -d app/static/vendor/fontawesome
+          echo "Bundles built:"
+          python -c "import json;print('\n'.join(f'  {k} -> {v}' for k,v in json.load(open('app/static/dist/manifest.json')).items()))"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-test.txt
+          pip install -e .
+
+      # Fails if any template, stylesheet or script reaches out to a CDN, if Font
+      # Awesome is double-loaded, if the CSP allowlists a third party, or if an
+      # inline <script> is missing its nonce.
+      - name: Enforce no external assets
+        run: pytest tests/test_no_external_assets.py -v
+
+  # ============================================================================
+  # End-to-end: CSP, offline rendering, accessibility, page-weight budget
+  # ============================================================================
+  e2e:
+    name: E2E, CSP & Accessibility
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: timetracker
+          POSTGRES_PASSWORD: timetracker
+          POSTGRES_DB: timetracker
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # Build and run the real image so the assets under test are the ones that ship.
+      - name: Build image
+        run: docker build -t timetracker-e2e:ci .
+
+      - name: Start application
+        env:
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD || 'e2e-local-password-123' }}
+        run: |
+          docker run -d --name timetracker-e2e --network host \
+            -e SECRET_KEY=ci-e2e-secret-key-not-for-production \
+            -e DATABASE_URL=postgresql://timetracker:timetracker@localhost:5432/timetracker \
+            -e ADMIN_USERNAME=e2eadmin \
+            -e ADMIN_PASSWORD="$E2E_ADMIN_PASSWORD" \
+            -e TZ=UTC \
+            timetracker-e2e:ci
+
+          echo "Waiting for the app to become healthy..."
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/login >/dev/null 2>&1; then
+              echo "Ready after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "App did not start; container logs:" >&2
+          docker logs timetracker-e2e >&2
+          exit 1
+
+      - name: Run Playwright suite
+        env:
+          E2E_BASE_URL: http://localhost:8080
+          E2E_USERNAME: e2eadmin
+          E2E_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD || 'e2e-local-password-123' }}
+        run: npx playwright test
+
+      - name: Container logs on failure
+        if: failure()
+        run: docker logs timetracker-e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
   # ============================================================================
   # Docker Build Test
   # ============================================================================
@@ -510,7 +650,7 @@ jobs:
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [smoke-tests, unit-tests, integration-tests, security-tests, code-quality, docker-build, full-test-suite]
+    needs: [smoke-tests, unit-tests, integration-tests, security-tests, code-quality, frontend-assets, e2e, docker-build, full-test-suite]
     if: always() && github.event_name == 'pull_request'
     permissions:
       contents: read
@@ -528,6 +668,8 @@ jobs:
               { name: 'Integration Tests', result: '${{ needs.integration-tests.result }}' },
               { name: 'Security Tests', result: '${{ needs.security-tests.result }}' },
               { name: 'Code Quality', result: '${{ needs.code-quality.result }}' },
+              { name: 'Frontend Assets', result: '${{ needs.frontend-assets.result }}' },
+              { name: 'E2E, CSP & Accessibility', result: '${{ needs.e2e.result }}' },
               { name: 'Docker Build', result: '${{ needs.docker-build.result }}' },
               { name: 'Full Test Suite', result: '${{ needs.full-test-suite.result }}' }
             ];

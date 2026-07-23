@@ -122,7 +122,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     var projectSelect = document.getElementById('project_id');
     var clientSelect = document.getElementById('client_id');

@@ -87,7 +87,7 @@
 {% endblock %}
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.getElementById('communication_date').value = new Date().toISOString().slice(0, 16);
 </script>
 {% endblock %}

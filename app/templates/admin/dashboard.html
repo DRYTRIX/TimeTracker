@@ -378,7 +378,7 @@
 
 {% block scripts_extra %}
 <!-- Chart.js Scripts -->
-<script>
+<script nonce="{{ csp_nonce() }}">
 {% autoescape false %}
 document.addEventListener('DOMContentLoaded', function() {
     // Theme-aware colors

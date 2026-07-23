@@ -1,4 +1,39 @@
-@import url('https://fonts.bunny.net/css?family=Inter:400,500,600,700&display=swap');
+/* Inter, self-hosted from app/static/vendor/inter (see scripts/copy-vendor.mjs).
+   Previously @import-ed from fonts.bunny.net, which made every page load contact a
+   third party — unacceptable for a self-hosted, privacy-focused deployment and a
+   hard failure in air-gapped installs. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/static/vendor/inter/files/inter-latin-400-normal.woff2') format('woff2'),
+       url('/static/vendor/inter/files/inter-latin-400-normal.woff') format('woff');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/static/vendor/inter/files/inter-latin-500-normal.woff2') format('woff2'),
+       url('/static/vendor/inter/files/inter-latin-500-normal.woff') format('woff');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/static/vendor/inter/files/inter-latin-600-normal.woff2') format('woff2'),
+       url('/static/vendor/inter/files/inter-latin-600-normal.woff') format('woff');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/static/vendor/inter/files/inter-latin-700-normal.woff2') format('woff2'),
+       url('/static/vendor/inter/files/inter-latin-700-normal.woff') format('woff');
+}
 
 @tailwind base;
 @tailwind components;
@@ -704,4 +739,356 @@
   --cmdk-color-separator: #4A5568;
   --cmdk-color-item-hover: #2D3748;
   --cmdk-color-item-active: #4A5568;
+}
+
+/* ==========================================================================
+   App shell styles — moved out of the inline <style> block in base.html.
+   These were 309 uncacheable, unminified lines rendered on every page load and
+   were the reason base.html could not be served under a script/style nonce.
+   Includes the RTL rules that used to be duplicated in the (now removed)
+   app/static/css/rtl-support.css, which no template ever loaded.
+   ========================================================================== */
+/* RTL Support */
+html[dir="rtl"] {
+    direction: rtl;
+}
+html[dir="rtl"] .ml-auto { margin-left: 0; margin-right: auto; }
+html[dir="rtl"] .mr-auto { margin-right: 0; margin-left: auto; }
+html[dir="rtl"] .text-left { text-align: right; }
+html[dir="rtl"] .text-right { text-align: left; }
+html[dir="rtl"] #sidebar { left: auto; right: 0; }
+html[dir="rtl"] #mainContent { margin-left: 0; margin-right: 16rem; }
+@media (max-width: 767px) {
+    html[dir="rtl"] #mainContent { margin-right: 0; }
+}
+
+/* Minimal styles to properly align enhanced search UI */
+.search-enhanced .search-input-wrapper { position: relative; }
+.search-enhanced .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #A0AEC0; pointer-events: none; }
+.dark .search-enhanced .search-icon { color: #718096; }
+.search-enhanced .search-actions { position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 0.25rem; }
+.search-enhanced .search-actions .search-kbd { font-size: 11px; line-height: 1; padding: 2px 6px; border: 1px solid #E2E8F0; border-radius: 4px; color: #A0AEC0; }
+.dark .search-enhanced .search-actions .search-kbd { border-color: #4A5568; color: #718096; }
+/* Autocomplete dropdown: overlay below input */
+.search-enhanced { position: relative; }
+.search-enhanced .search-autocomplete { position: absolute; top: calc(100% + 4px); left: 0; right: 0; display: none; z-index: 50; background: #FFFFFF; color: #2D3748; border: 1px solid #E2E8F0; border-radius: 0.5rem; box-shadow: 0 8px 24px rgba(0,0,0,0.12); max-height: 22rem; overflow-y: auto; }
+.dark .search-enhanced .search-autocomplete { background: #2D3748; color: #E2E8F0; border-color: #4A5568; }
+.search-enhanced .search-autocomplete.show { display: block; }
+.search-enhanced .search-section { padding: 0.5rem 0.5rem; }
+.search-enhanced .search-section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: .06em; margin: 0.25rem 0.5rem; color: #A0AEC0; }
+.dark .search-enhanced .search-section-title { color: #718096; }
+.search-enhanced .search-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem; text-decoration: none; color: inherit; }
+.search-enhanced .search-item:hover, .search-enhanced .search-item.keyboard-focus { background: #F7F9FB; }
+.dark .search-enhanced .search-item:hover, .dark .search-enhanced .search-item.keyboard-focus { background: #1A202C; }
+.search-enhanced .search-item-title { font-weight: 500; }
+/* Sidebar collapsed helpers */
+.sidebar-collapsed .sidebar-label { display: none; }
+.sidebar-collapsed .sidebar-header-title { display: none; }
+.sidebar-collapsed .sidebar-expanded-only { display: none !important; }
+.sidebar-collapsed #sidebar .sidebar-toolbar { display: none; }
+.sidebar-collapsed #sidebar .sidebar-header {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 0.75rem;
+}
+/* Logo fills the narrow rail; hide it when collapsed so the expand control stays visible */
+.sidebar-collapsed #sidebar .sidebar-header img {
+    display: none !important;
+}
+.sidebar-collapsed #sidebar #sidebarCollapseBtn {
+    margin-left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+}
+.sidebar-collapsed #sidebar {
+    width: 4.5rem !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    overflow-x: hidden;
+}
+/* Desktop topbar expand control: only when sidebar is collapsed (md+) */
+#desktopSidebarBtn {
+    display: none;
+}
+@media (min-width: 768px) {
+    .sidebar-collapsed #desktopSidebarBtn {
+        display: inline-flex;
+    }
+}
+.sidebar-collapsed #sidebar ul[id$="Dropdown"] { display: none !important; }
+.sidebar-collapsed #sidebar .sidebar-nav-item {
+    justify-content: center;
+    padding-left: 0.625rem;
+    padding-right: 0.625rem;
+}
+.sidebar-collapsed #sidebar .sidebar-nav-item > i:first-child {
+    margin-right: 0 !important;
+}
+.sidebar-collapsed #sidebar .sidebar-nav-item .fa-chevron-down {
+    display: none;
+}
+/* App version in sidebar footer: not using .sidebar-label so it stays visible when collapsed */
+.sidebar-collapsed #sidebar .sidebar-version-row {
+    flex-direction: column;
+    gap: 0.125rem;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+}
+.sidebar-collapsed #sidebar .sidebar-version-text {
+    margin-left: 0 !important;
+    font-size: 0.625rem;
+    line-height: 1.15;
+    text-align: center;
+    max-width: 100%;
+}
+#sidebarFlyout {
+    min-width: 14rem;
+    max-width: 18rem;
+    max-height: min(70vh, 32rem);
+    overflow-y: auto;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+#sidebarFlyout .flyout-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #718096;
+    padding: 0.375rem 0.75rem 0.5rem;
+}
+.dark #sidebarFlyout .flyout-title {
+    color: #A0AEC0;
+}
+#sidebarFlyout .flyout-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.65rem 0.75rem;
+    border-radius: 0.875rem;
+    color: inherit;
+    text-decoration: none;
+    transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+#sidebarFlyout .flyout-link:hover {
+    background: #F7F9FB;
+    transform: translateX(2px);
+}
+.dark #sidebarFlyout .flyout-link:hover {
+    background: #1A202C;
+}
+#sidebarFlyout .flyout-link i {
+    width: 1rem;
+    text-align: center;
+    flex-shrink: 0;
+}
+#sidebarFlyout .flyout-link.is-active {
+    background: rgba(74, 144, 226, 0.12);
+    color: #4A90E2;
+    font-weight: 600;
+}
+/* Multi-line sidebar labels: left-align wrapped text, allow flex shrink for wrapping, keep icons/chevron centered */
+#sidebar .sidebar-nav-item span.sidebar-label { text-align: start; min-width: 0; flex: 1 1 0%; }
+#sidebar .sidebar-nav-item > i { flex-shrink: 0; }
+/* Shared bulk menu */
+.bulk-menu { z-index: 50; max-height: 16rem; overflow-y: auto; }
+/* Layout fixes */
+#mainContent {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow-x: hidden;
+    width: 100%;
+    min-width: 0;
+}
+#mainContentAnchor {
+    flex: 1 0 auto;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+    overflow-x: hidden;
+}
+/* Ensure body and html don't cause horizontal overflow */
+html, body { overflow-x: hidden; }
+#appShell { overflow-x: hidden; width: 100%; min-width: 0; }
+/* Header toolbar: allow horizontal scroll without visible scrollbar (narrow phones) */
+.header-toolbar-scroll {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.header-toolbar-scroll::-webkit-scrollbar {
+    display: none;
+}
+/* Issue #573: compact bottom nav on narrow phones without requiring Tailwind arbitrary breakpoint in build */
+@media (max-width: 400px) {
+    .mobile-bottom-nav {
+        min-height: 3rem;
+    }
+    .mobile-bottom-nav .bottom-nav-text {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+    }
+    .mobile-bottom-nav a.relative,
+    .mobile-bottom-nav button.relative {
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+    }
+}
+
+/* Custom scrollbar styling for sidebar */
+#sidebar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+.dark #sidebar {
+    scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+}
+/* Webkit scrollbar styling (Chrome, Edge, Safari) */
+#sidebar::-webkit-scrollbar {
+    width: 8px;
+}
+#sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+#sidebar::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.5);
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+#sidebar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(156, 163, 175, 0.7);
+}
+.dark #sidebar::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.3);
+}
+.dark #sidebar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(156, 163, 175, 0.5);
+}
+/* Bottom-right floating hub: one deterministic dock, one actions menu. */
+#fabDock {
+    --fab-size: 3.5rem;
+    --fab-gap: 0.75rem;
+    --fab-edge: 1.25rem;
+    --fab-menu-gap: 0.75rem;
+    position: fixed;
+    right: var(--fab-edge);
+    bottom: var(--fab-edge);
+    z-index: 65;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    gap: var(--fab-gap);
+    pointer-events: none;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+#fabDock.fab-dock--admin {
+    bottom: 8rem;
+}
+#fabDock > * {
+    pointer-events: auto;
+}
+#fabDock.fab-dock--menu-open > :not(#unifiedActionsRoot) {
+    opacity: 0.35;
+    pointer-events: none;
+    transition: opacity 120ms ease;
+}
+#unifiedActionsRoot,
+#persistentChatWidget,
+#aiHelperRoot {
+    margin: 0;
+    flex-shrink: 0;
+    align-self: flex-end;
+    width: var(--fab-size);
+    min-height: var(--fab-size);
+}
+html[dir="rtl"] #unifiedActionsRoot,
+html[dir="rtl"] #persistentChatWidget,
+html[dir="rtl"] #aiHelperRoot {
+    align-self: flex-start;
+}
+#unifiedActionsFab,
+#chatWidgetToggle,
+#aiHelperFab {
+    width: var(--fab-size);
+    height: var(--fab-size);
+}
+#unifiedActionsRoot {
+    position: relative;
+    z-index: 80;
+}
+#unifiedActionsRoot.is-open {
+    z-index: 100;
+}
+#unifiedActionsMenu {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + var(--fab-menu-gap));
+    min-width: 14rem;
+    z-index: 101;
+    transform-origin: bottom right;
+}
+html[dir="rtl"] #unifiedActionsMenu {
+    right: auto;
+    left: 0;
+    transform-origin: bottom left;
+}
+#persistentChatWidget {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+#chatWidgetPanel {
+    position: fixed;
+    right: var(--fab-edge);
+    bottom: var(--fab-edge);
+    width: min(24rem, calc(100vw - (var(--fab-edge) * 2)));
+    height: min(600px, calc(100vh - var(--fab-edge) - 2rem));
+    z-index: 85;
+}
+body.fab-dock-admin #chatWidgetPanel {
+    bottom: 8rem;
+}
+html[dir="rtl"] #persistentChatWidget {
+    align-items: flex-start;
+}
+html[dir="rtl"] #chatWidgetPanel {
+    right: auto;
+    left: var(--fab-edge);
+}
+html[dir="rtl"] #fabDock {
+    right: auto;
+    left: var(--fab-edge);
+    align-items: flex-start;
+}
+@media (max-width: 767px) {
+    #fabDock {
+        --fab-edge: 1rem;
+        bottom: 5rem;
+    }
+    #fabDock.fab-dock--admin {
+        bottom: 11rem;
+    }
+    #unifiedActionsMenu {
+        min-width: min(14rem, calc(100vw - 2rem));
+    }
+    #chatWidgetPanel {
+        bottom: 5rem;
+    }
+    body.fab-dock-admin #chatWidgetPanel {
+        bottom: 11rem;
+    }
 }

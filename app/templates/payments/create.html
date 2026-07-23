@@ -165,7 +165,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function updateInvoiceDetails(select) {
     const selectedOption = select.options[select.selectedIndex];
     const detailsDiv = document.getElementById('invoice-details');

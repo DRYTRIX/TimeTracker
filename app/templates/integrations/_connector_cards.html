@@ -314,7 +314,7 @@
                         {{ _('Daily summary time') }}
                     </label>
                     <input type="time" name="daily_summary_time" value="18:00"
-                           class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2">
+                           class="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-gray-900 text-sm px-3 py-2 user-time-input">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
@@ -451,7 +451,7 @@
 </div>
 {% endif %}
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function () {
     "use strict";
 

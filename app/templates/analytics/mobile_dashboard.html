@@ -152,9 +152,9 @@
 
 {% block extra_head %}
 <!-- Chart.js library -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='vendor/chartjs/chart.umd.js') }}"></script>
 
-<script type="application/json" id="i18n-json-analytics-mobile">
+<script nonce="{{ csp_nonce() }}" type="application/json" id="i18n-json-analytics-mobile">
     {
         "error_loading_charts": {{ _('Failed to load charts. Please try again.')|tojson }},
         "error_refreshing_charts": {{ _('Failed to refresh charts. Please try again.')|tojson }},
@@ -164,7 +164,7 @@
         "revenue_label": {{ _('Revenue')|tojson }}
     }
 </script>
-<script>
+<script nonce="{{ csp_nonce() }}">
     // Ensure i18n_analytics is always defined globally
     window.i18n_analytics = (function(){
         try {
@@ -195,7 +195,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Mobile-optimized chart defaults
 Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 Chart.defaults.font.size = 11;

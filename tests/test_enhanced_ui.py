@@ -19,38 +19,43 @@ class TestEnhancedUI:
         """Test that enhanced UI JavaScript is loaded"""
         response = authenticated_client.get(url_for("main.dashboard"))
         assert response.status_code == 200
-        assert b"enhanced-ui.js" in response.data
+        # enhanced-ui.js ships in the "core-d" bundle (scripts/build-js.mjs).
+        assert b"core-d" in response.data
 
     def test_charts_js_loaded(self, authenticated_client):
         """Test that charts JavaScript is loaded"""
         response = authenticated_client.get(url_for("main.dashboard"))
         assert response.status_code == 200
-        assert b"charts.js" in response.data
+        # charts.js ships in the "core-d" bundle.
+        assert b"core-d" in response.data
 
     def test_onboarding_js_loaded(self, authenticated_client):
         """Test that onboarding JavaScript is loaded"""
         response = authenticated_client.get(url_for("main.dashboard"))
         assert response.status_code == 200
-        assert b"onboarding.js" in response.data
+        # onboarding.js ships in the "core-d" bundle.
+        assert b"core-d" in response.data
 
     def test_toast_notifications_js_loaded(self, authenticated_client):
         """Test that toast notification script is loaded on dashboard"""
         response = authenticated_client.get(url_for("main.dashboard"))
         assert response.status_code == 200
-        assert b"toast-notifications.js" in response.data
+        # toast-notifications.js ships in the "core-a1" bundle.
+        assert b"core-a1" in response.data
 
     def test_set_submit_button_loading_available(self, authenticated_client):
         """Test that setSubmitButtonLoading helper is provided by enhanced-ui.js"""
         response = authenticated_client.get(url_for("main.dashboard"))
         assert response.status_code == 200
-        assert b"enhanced-ui.js" in response.data
+        assert b"core-d" in response.data
         assert b"setSubmitButtonLoading" in response.data
 
     def test_filter_ajax_error_toast_message_in_enhanced_ui(self, authenticated_client):
         """Test that enhanced-ui.js shows consistent error toast on filter failure"""
         response = authenticated_client.get(url_for("projects.list_projects"))
         assert response.status_code == 200
-        assert b"enhanced-ui.js" in response.data
+        # enhanced-ui.js ships in the "core-d" bundle.
+        assert b"core-d" in response.data
         assert b"Failed to filter results" in response.data
 
 

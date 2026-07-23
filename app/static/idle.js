@@ -32,7 +32,9 @@
   }
 
   function formatTime(d){
-    return window.formatUserTime ? window.formatUserTime(d) : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (window.formatUserTime) return window.formatUserTime(d);
+    var hour12 = window.userPrefs && window.userPrefs.timeFormat === '12h';
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: hour12 });
   }
 
   async function stopAt(ts){

@@ -109,7 +109,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function addTaskItem() {
     const container = document.getElementById('tasks-container');
     const newItem = container.firstElementChild.cloneNode(true);

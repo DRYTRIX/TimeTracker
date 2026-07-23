@@ -40,6 +40,9 @@ class EnhancedErrorHandler {
      * Network Status Monitoring
      */
     setupNetworkMonitoring() {
+        this._healthProbeTimer = null;
+        this._originalFetch = null;
+
         window.addEventListener('online', () => {
             this.isOnline = true;
             this.handleOnline();
@@ -50,33 +53,125 @@ class EnhancedErrorHandler {
             this.handleOffline();
         });
 
-        // Periodic online check - every 30 seconds
-        // This helps detect cases where browser thinks it's online but server is unreachable
-        // The browser's online/offline events handle most cases, this is a fallback
-        setInterval(() => {
-            this.checkOnlineStatus();
-        }, 30000); // Check every 30 seconds instead of 5
+        // Re-probe when the tab becomes active again (background timers may have gone stale)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                this.startHealthProbeInterval();
+                this.checkOnlineStatus({ quiet: true, onResume: true });
+            } else {
+                this.stopHealthProbeInterval();
+            }
+        });
+
+        window.addEventListener('pageshow', (event) => {
+            // Only re-probe on bfcache restore; initial load is covered by boot + intervals
+            if (event.persisted && document.visibilityState === 'visible') {
+                this.checkOnlineStatus({ quiet: true, onResume: true });
+            }
+        });
+
+        if (!document.hidden) {
+            this.startHealthProbeInterval();
+        }
     }
 
-    checkOnlineStatus() {
-        fetch('/api/health', { method: 'GET', cache: 'no-cache' })
+    startHealthProbeInterval() {
+        if (this._healthProbeTimer) return;
+        this._healthProbeTimer = window.setInterval(() => {
+            if (!document.hidden) {
+                this.checkOnlineStatus({ quiet: true });
+            }
+        }, 30000);
+    }
+
+    stopHealthProbeInterval() {
+        if (!this._healthProbeTimer) return;
+        window.clearInterval(this._healthProbeTimer);
+        this._healthProbeTimer = null;
+    }
+
+    isQuietHealthUrl(url) {
+        try {
+            const path = typeof url === 'string'
+                ? new URL(url, window.location.origin).pathname
+                : (url && url.url ? new URL(url.url, window.location.origin).pathname : '');
+            return path === '/api/health' || path === '/_health';
+        } catch (_) {
+            const raw = String(url || '');
+            return raw.includes('/api/health') || raw.includes('/_health');
+        }
+    }
+
+    quietFetch(url, options = {}) {
+        const fetchFn = this._originalFetch || window.fetch;
+        return fetchFn(url, { ...options, cache: options.cache || 'no-cache' });
+    }
+
+    checkOnlineStatus({ quiet = true, onResume = false } = {}) {
+        const request = quiet
+            ? this.quietFetch('/api/health', { method: 'GET', cache: 'no-cache' })
+            : fetch('/api/health', { method: 'GET', cache: 'no-cache' });
+
+        return request
             .then((response) => {
-                if (response.ok && !this.isOnline) {
+                if (response.ok) {
+                    const wasOffline = !this.isOnline;
                     this.isOnline = true;
-                    this.handleOnline();
+                    if (wasOffline || onResume) {
+                        this.dismissConnectivityErrors();
+                    }
+                    if (wasOffline) {
+                        this.handleOnline();
+                    } else if (onResume) {
+                        this.processOfflineQueue();
+                        this.retryFailedOperations();
+                    }
+                    return true;
                 }
+                // Soft failure (e.g. transient 503): mark offline only if we already thought we were online
+                // but do not toast — quiet probes never go through the interceptor toast path.
+                if (this.isOnline && onResume) {
+                    // Keep prior online state; a follow-up probe can recover without alarming the user.
+                    return false;
+                }
+                return false;
             })
             .catch(() => {
                 if (this.isOnline) {
                     this.isOnline = false;
                     this.handleOffline();
                 }
+                return false;
             });
+    }
+
+    dismissConnectivityErrors() {
+        if (!window.toastManager || !window.toastManager.container) return;
+        const connectivityHints = [
+            'Service temporarily unavailable',
+            'The server is temporarily unavailable',
+            'Unable to connect to the server',
+            'Request timeout',
+        ];
+        const toasts = Array.from(window.toastManager.container.children || []);
+        toasts.forEach((el) => {
+            const text = (el.textContent || '').toLowerCase();
+            if (connectivityHints.some((hint) => text.includes(hint.toLowerCase()))) {
+                const toastId = el.getAttribute('data-toast-id');
+                if (toastId != null && typeof window.toastManager.dismiss === 'function') {
+                    window.toastManager.dismiss(toastId);
+                } else {
+                    el.remove();
+                }
+            }
+        });
     }
 
     handleOnline() {
         // Show online indicator
         this.showOnlineIndicator();
+
+        this.dismissConnectivityErrors();
         
         // Process offline queue
         this.processOfflineQueue();
@@ -230,23 +325,35 @@ class EnhancedErrorHandler {
      * Fetch Interceptor for Error Handling
      */
     setupFetchInterceptor() {
-        const originalFetch = window.fetch;
+        const originalFetch = window.fetch.bind(window);
+        this._originalFetch = originalFetch;
         
         window.fetch = async (...args) => {
             const [url, options = {}] = args;
+            const quiet = Boolean(options && options.__ttQuiet) || this.isQuietHealthUrl(url);
             
             try {
-                const response = await originalFetch(...args);
+                const fetchOptions = options && typeof options === 'object' ? { ...options } : options;
+                if (fetchOptions && fetchOptions.__ttQuiet) {
+                    delete fetchOptions.__ttQuiet;
+                }
+                const response = await originalFetch(url, fetchOptions);
                 
-                // Handle non-ok responses
+                // Handle non-ok responses (skip toast for health / quiet probes)
                 if (!response.ok) {
-                    return this.handleFetchError(response, url, options);
+                    if (quiet) {
+                        return response;
+                    }
+                    return this.handleFetchError(response, url, fetchOptions || {});
                 }
                 
                 return response;
             } catch (error) {
+                if (quiet) {
+                    throw error;
+                }
                 // Network error or other fetch error
-                return this.handleFetchException(error, url, options);
+                return this.handleFetchException(error, url, options || {});
             }
         };
     }

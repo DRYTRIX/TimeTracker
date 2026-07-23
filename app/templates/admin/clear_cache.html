@@ -59,7 +59,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Check ServiceWorker status on load
 async function checkSWStatus() {
     const statusDiv = document.getElementById('sw-status');

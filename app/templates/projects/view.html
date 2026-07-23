@@ -508,7 +508,7 @@
 {% endblock %}
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('click', function(e) {
     const container = document.getElementById('moreActionsContainer');
     const menu = document.getElementById('moreActionsMenu');

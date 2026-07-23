@@ -258,7 +258,7 @@
 .filter-collapsed { display: none !important; }
 .filter-toggle-transition { transition: all 0.3s ease-in-out; }
 </style>
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function() {
     function getMileageFilterParams() {
         const form = document.querySelector('[data-filter-form]');

@@ -37,6 +37,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onShortcutAction: (callback) => {
     ipcRenderer.on('shortcut:action', (event, action) => callback(action));
   },
+  onAppResume: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('app:resume', handler);
+    return () => ipcRenderer.removeListener('app:resume', handler);
+  },
   
   // Timer actions (to main process)
   timerStart: (projectId, taskId) => ipcRenderer.send('timer:start', { projectId, taskId }),

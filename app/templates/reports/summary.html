@@ -29,7 +29,7 @@
         <div class="relative" style="height: 280px;">
             <canvas id="summaryProjectChart" aria-label="{{ _('Time distribution by project') }}"></canvas>
         </div>
-        <script>
+        <script nonce="{{ csp_nonce() }}">
         (function() {
             var labels = {{ chart_labels_summary|tojson }};
             var hours = {{ chart_hours_summary|tojson }};
@@ -72,7 +72,7 @@
         <div class="relative" style="height: 280px;">
             <canvas id="summaryTrendChart" aria-label="{{ _('Daily hours trend') }}"></canvas>
         </div>
-        <script>
+        <script nonce="{{ csp_nonce() }}">
         (function() {
             var labels = {{ trend_dates|tojson }};
             var hours = {{ trend_hours|tojson }};

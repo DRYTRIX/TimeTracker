@@ -116,102 +116,87 @@ class TestKeyboardShortcutsJavaScriptLogic:
         """
         Documentation test: Verify isTyping/isTypingContext methods exist.
 
-        The keyboard shortcut files should have methods to detect
-        when user is typing in an input field:
-        - keyboard-shortcuts.js: isTyping()
-        - keyboard-shortcuts-enhanced.js: isTypingContext()
-        - keyboard-shortcuts-advanced.js: isTyping()
+        keyboard-shortcuts-advanced.js is the live implementation loaded by base.html
+        and must detect when the user is typing in an input field via isTyping().
+
+        (The former keyboard-shortcuts.js and keyboard-shortcuts-enhanced.js were
+        never referenced by any template and have been removed.)
         """
-        # Read the JavaScript files with UTF-8 encoding
-        with open("app/static/keyboard-shortcuts.js", "r", encoding="utf-8") as f:
-            content = f.read()
-            assert "isTyping" in content, "isTyping method not found in keyboard-shortcuts.js"
-            assert "tagName === 'input'" in content or 'tagname === "input"' in content.lower()
-
-        with open("app/static/keyboard-shortcuts-enhanced.js", "r", encoding="utf-8") as f:
-            content = f.read()
-            assert "isTypingContext" in content, "isTypingContext method not found"
-            assert "tagName" in content or "tagname" in content.lower()
-
         with open("app/static/keyboard-shortcuts-advanced.js", "r", encoding="utf-8") as f:
             content = f.read()
             assert "isTyping" in content, "isTyping method not found in keyboard-shortcuts-advanced.js"
+            assert "tagName" in content or "tagname" in content.lower()
 
     def test_input_check_before_sequences(self):
         """
-        Documentation test: Verify input checks happen before sequence handling.
+        Verify input checks happen before sequence handling.
 
-        The keyboard shortcut handlers should check if user is typing
-        BEFORE processing key sequences like 'g r'.
+        The live handler must consult isTyping() before processing key sequences
+        like 'g r'.
         """
-        with open("app/static/keyboard-shortcuts.js", "r", encoding="utf-8") as f:
+        with open("app/static/keyboard-shortcuts-advanced.js", "r", encoding="utf-8") as f:
             content = f.read()
-            # Should check isTyping before handling sequences
             assert "isTyping" in content
-            assert "keySequence" in content
+            # The advanced manager tracks partial sequences via `sequence`/`sequenceBuffer`.
+            assert "sequence" in content.lower()
 
     def test_sequence_cleared_when_typing(self):
-        """
-        Documentation test: Verify key sequences are cleared when typing.
-
-        When user starts typing in an input field, any existing
-        key sequence should be cleared to prevent partial matches.
-        """
-        with open("app/static/keyboard-shortcuts.js", "r", encoding="utf-8") as f:
+        """Verify partial key sequences are reset so typing cannot complete a shortcut."""
+        with open("app/static/keyboard-shortcuts-advanced.js", "r", encoding="utf-8") as f:
             content = f.read()
-            # Look for sequence clearing logic
-            assert "keySequence = []" in content or "keySequence=[]" in content
+            lowered = content.lower()
+            assert "resetsequence" in lowered or "sequence = ''" in lowered or "sequence = []" in lowered
 
     def test_allowed_shortcuts_in_inputs(self):
         """
-        Documentation test: Verify certain shortcuts are allowed in inputs.
+        Verify certain shortcuts still work while typing.
 
-        Some shortcuts like Ctrl+K (command palette), Ctrl+/ (search),
-        and Shift+? (help) should work even when in an input field.
+        Ctrl+/ (search) and Ctrl+K (command palette) are explicitly allowed through
+        the isTyping guard in keyboard-shortcuts-advanced.js.
         """
-        # Check keyboard-shortcuts-enhanced.js for allowed shortcuts
-        with open("app/static/keyboard-shortcuts-enhanced.js", "r", encoding="utf-8") as f:
+        with open("app/static/keyboard-shortcuts-advanced.js", "r", encoding="utf-8") as f:
             content = f.read()
-            assert "isAllowedInInput" in content, "isAllowedInInput method not found"
-            # Should include ctrl+k, ctrl+/, shift+?
-            assert "ctrl+k" in content.lower() or "ctrlKey" in content
+            assert "isTyping" in content
+            assert "ctrlKey" in content and "metaKey" in content
+            assert "openCommandPalette" in content
 
     def test_contenteditable_check(self):
         """
-        Documentation test: Verify contentEditable elements are handled.
+        Verify contentEditable elements count as "typing".
 
-        The isTyping check should also cover contentEditable elements,
-        not just input and textarea.
+        Detection lives in the shared window.TimeTracker.isTyping helper
+        (app/static/typing-utils.js), which the shortcut manager delegates to.
         """
-        with open("app/static/keyboard-shortcuts.js", "r", encoding="utf-8") as f:
+        with open("app/static/typing-utils.js", "r", encoding="utf-8") as f:
             content = f.read()
-            assert "isContentEditable" in content or "contentEditable" in content
+            assert "isContentEditable" in content or "contenteditable" in content.lower()
 
     def test_rich_text_editor_detection(self):
         """
-        Documentation test: Verify rich text editors are detected.
+        Verify rich text editors are detected as "typing" contexts.
 
-        The isTyping check should detect popular rich text editors like:
-        - Toast UI Editor (used in this project)
-        - TinyMCE
-        - Quill
-        - CodeMirror
+        Toast UI (used by this project), ProseMirror, CodeMirror, Quill and TinyMCE
+        are all matched by the shared helper in app/static/typing-utils.js.
         """
-        with open("app/static/keyboard-shortcuts.js", "r", encoding="utf-8") as f:
+        with open("app/static/typing-utils.js", "r", encoding="utf-8") as f:
             content = f.read()
-            # Should check for Toast UI Editor
-            assert "toastui-editor" in content.lower(), "Toast UI Editor detection not found"
-            # Should check for other popular editors
-            assert "CodeMirror" in content or "codemirror" in content.lower()
+            lowered = content.lower()
+            assert "toastui-editor" in lowered, "Toast UI Editor detection not found"
+            assert "codemirror" in lowered
             assert "closest" in content, "Should use closest() to check parent elements"
 
-        with open("app/static/keyboard-shortcuts-enhanced.js", "r", encoding="utf-8") as f:
-            content = f.read()
-            assert "toastui-editor" in content.lower(), "Toast UI Editor detection not found in enhanced"
+    def test_shortcut_manager_delegates_to_shared_helper(self):
+        """
+        The shortcut manager must not re-implement typing detection.
 
+        Two former copies (keyboard-shortcuts.js, keyboard-shortcuts-enhanced.js) each
+        carried their own version and were never loaded by any template; they have been
+        removed. keyboard-shortcuts-advanced.js is the only live implementation and
+        delegates to window.TimeTracker.isTyping.
+        """
         with open("app/static/keyboard-shortcuts-advanced.js", "r", encoding="utf-8") as f:
             content = f.read()
-            assert "toastui-editor" in content.lower(), "Toast UI Editor detection not found in advanced"
+            assert "window.TimeTracker" in content and "isTyping" in content
 
 
 class TestKeyboardShortcutsBugScenarios:

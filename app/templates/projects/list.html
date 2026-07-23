@@ -404,7 +404,7 @@
     transform: translateY(-2px);
 }
 </style>
-<script>
+<script nonce="{{ csp_nonce() }}">
 // View mode toggle
 function setViewMode(mode) {
     const listView = document.getElementById('listView');
@@ -441,7 +441,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <form id="confirmBulkDelete-form" method="POST" action="{{ url_for('projects.bulk_delete_projects') }}" class="hidden">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 </form>
-<script>
+<script nonce="{{ csp_nonce() }}">
 function toggleFilterVisibility() {
     const filterBody = document.getElementById('filterBody');
     const toggleIcon = document.getElementById('filterToggleIcon');

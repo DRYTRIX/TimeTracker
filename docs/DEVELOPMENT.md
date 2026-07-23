@@ -117,7 +117,7 @@ See [Contributing – Testing](docs/development/CONTRIBUTING.md#testing) for mor
 
 ## Build Steps
 
-- **Web app:** No separate frontend build required; Tailwind and static assets are served as-is (or built via your pipeline if you use one). Run the app with `flask run` or `python app.py`.
+- **Web app:** Run `npm install && npm run build:docker` once to produce `app/static/dist/` (Tailwind CSS + hashed JS bundles) and `app/static/vendor/` (self-hosted third-party libraries). Both are gitignored build output, and the UI will be unstyled and non-interactive without them. Then run the app with `flask run` or `python app.py`. See [FRONTEND.md](FRONTEND.md#building-assets).
 - **Docker image:** `docker build -t timetracker .` from repo root. See [Docker Compose Setup](docs/admin/configuration/DOCKER_COMPOSE_SETUP.md).
 - **Mobile/Desktop:** See [Build Guide](../scripts/README-BUILD.md) and [mobile-desktop-apps/README.md](mobile-desktop-apps/README.md) for Flutter and Electron build steps.
 

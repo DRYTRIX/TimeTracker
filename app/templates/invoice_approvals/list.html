@@ -89,7 +89,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function showRejectModal(approvalId) {
     const form = document.getElementById('rejectForm');
     form.action = '{{ url_for("invoice_approvals.reject", approval_id=0) }}'.replace('0', approvalId);

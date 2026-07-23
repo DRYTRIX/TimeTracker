@@ -152,7 +152,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function toggleClientPortalOptions() {
     const checkbox = document.getElementById('client_portal_enabled');
     const clientContainer = document.getElementById('client_select_container');

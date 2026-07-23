@@ -48,10 +48,10 @@ class TestKeyboardShortcutsRoutes:
         assert b"keyboard" in response.data.lower()
 
     def test_keyboard_shortcuts_js_exists(self):
-        """Test keyboard shortcuts JavaScript file exists"""
-        response = self.client.get("/static/keyboard-shortcuts-enhanced.js")
+        """Test the live keyboard shortcuts JavaScript file exists"""
+        response = self.client.get("/static/keyboard-shortcuts-advanced.js")
         assert response.status_code == 200
-        assert b"EnhancedKeyboardShortcuts" in response.data
+        assert b"KeyboardShortcutManager" in response.data
 
 
 class TestKeyboardShortcutsIntegration:
@@ -69,7 +69,8 @@ class TestKeyboardShortcutsIntegration:
         assert response.status_code == 200
         # base.html loads the advanced keyboard shortcuts script on every
         # page; the cheat-sheet CSS is loaded on the dedicated settings page.
-        assert b"keyboard-shortcuts-advanced.js" in response.data
+        # keyboard-shortcuts-advanced.js ships in the "core-e" bundle.
+        assert b"core-e" in response.data
 
     def test_command_palette_in_base_template(self):
         """Test command palette is available"""
@@ -326,7 +327,7 @@ class TestKeyboardShortcutsPerformance:
 
     def test_js_file_size_reasonable(self):
         """Test JavaScript file is not too large"""
-        response = self.client.get("/static/keyboard-shortcuts-enhanced.js")
+        response = self.client.get("/static/keyboard-shortcuts-advanced.js")
         assert response.status_code == 200
         size = len(response.data)
         assert size < 500000, f"JavaScript file is {size} bytes (should be < 500KB)"

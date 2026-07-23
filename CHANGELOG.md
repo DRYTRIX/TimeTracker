@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.10.0] - 2026-07-23
+
+### Added
+
+- **Admin book time for others (#701)** — Admins can create manual and bulk time entries (and API v1 creates) on behalf of another active user.
+- **Chromium timer extension (#700)** — New `browser-extension/` Manifest V3 package connects to `/api/v1` (same tokens as desktop/mobile), starts/stops timers from the toolbar, shows elapsed time on a red badge/icon, and supports quick-create project/task. Load unpacked from the folder; see `browser-extension/README.md`.
+- **Self-hosted frontend assets** — All 17 third-party browser libraries (Font Awesome, Chart.js, flatpickr, Socket.IO, Toast UI Editor, Pickr, Konva, SortableJS, FullCalendar, frappe-gantt, anime.js, cmdk, and the Inter webfont) are now vendored into `app/static/vendor/` from npm instead of being fetched from cdnjs, jsDelivr, uicdn.toast.com and fonts.bunny.net at runtime. The app renders fully with no outbound network access, which makes air-gapped installs work and stops leaking every user's IP address to three CDNs.
+- **JavaScript build pipeline** — New esbuild-based build (`scripts/build-js.mjs`) minifies and bundles the previously unbundled scripts into content-hashed files resolved through a new `asset_url()` Jinja helper (`app/utils/assets.py`). The dashboard drops from **32 JS requests / ~550 KB to 12 requests / ~284 KB**.
+- **First-run module presets** — The setup wizard asks what you will use TimeTracker for and switches off modules you are unlikely to need. Previously every one of the 41 modules was enabled by default, presenting 80+ navigation destinations on a fresh install. The "Just me" preset enables 12 modules; "A team or agency" 28; "Compliance" 35; "Show me everything" keeps the old behaviour. Existing installs are unaffected, and Admin → Modules still controls everything afterwards.
+- **Strict CSP (report-only)** — A nonce-based Content-Security-Policy is now emitted as `Content-Security-Policy-Report-Only` alongside the enforced policy, so violations are observable before `'unsafe-inline'` is dropped. All 196 inline `<script>` blocks carry a per-request nonce.
+- **End-to-end, CSP and accessibility CI** — New Playwright suite (`tests/e2e/`) runs against the real Docker image, asserting zero CSP violations, that the app renders with every external host blocked, an axe-core accessibility baseline, and a JavaScript page-weight budget. CI previously had eight jobs and none of them opened a browser.
+- **Regression guards** — `tests/test_no_external_assets.py` fails the build if a CDN reference, remote font `@import`, duplicate Font Awesome load, or un-nonced inline script reappears. `scripts/check_translation_coverage.py` and `scripts/check_silent_excepts.py` add ratchets that may improve but never regress.
+
+### Fixed
+
+- **Desktop and browser lost connection after idle (#702, #703)** — Closing the desktop app with X (tray hide) or leaving a browser tab idle could leave a sticky "connection lost" / "Service temporarily unavailable" state. Session and health probes now recover on success, re-check when the UI becomes visible again, and health checks no longer toast via the service worker's synthetic 503.
+- **24h time format preference ignored (#704)** — Native time inputs followed the browser locale (AM/PM). Flatpickr now respects the user's time format preference, and client-side displays use `formatUserTime` / `formatUserDateTime`.
+- **Sidebar expand clipped when collapsed (#699)** — Hide the Commands shortcut in the collapsed rail so the expand control stays visible; clarified the onboarding tip (including Ctrl/Cmd+B).
+- **Sidebar expand, theme icons, and Ctrl+K** — Collapse control stays reachable when the rail is narrow; theme switcher shows the current mode icon; command palette loads after its markup so Ctrl+K registers.
+- **Socket.IO / Flask session crash** — Bumped Flask-SocketIO for Flask 3.1 compatibility; supporter-key verify logging no longer leaks codes; budget alert jobs push a real app context.
+- **Multi-key keyboard shortcuts never worked** — `g d`, `g p`, `g t`, `g r` and `g i` were registered but could never fire: the live handler only ever matched a single key combo, and the sequence-buffering logic existed solely in two script files that no template loaded. Added sequence handling to `keyboard-shortcuts-advanced.js`.
+- **Font Awesome loaded twice** — Both the CSS build (6.4.0) and the conflicting SVG-with-JS build (6.4.2) were loaded on every page, roughly doubling the icon payload. Four templates loaded *only* the JS build via a `<script>` tag pointing at a stylesheet, which is a no-op.
+- **Command palette broke without internet** — `command-palette.js` imported its scoring helper from jsDelivr at runtime, so Ctrl+K silently failed in offline and air-gapped deployments.
+- **Contacts navigation was a dead end** — The CRM menu showed "Contacts (via Clients)" as unclickable grey text. It now links to Clients, with a tooltip explaining that contacts are scoped per client.
+- **Silenced dashboard errors** — Donation-metric failures on the dashboard were swallowed entirely, so a genuine database fault appeared only as a slow page. Now logged.
+- **Inter webfont fetched from a third party** — `input.css` `@import`-ed the font from `fonts.bunny.net` on every page load. Now self-hosted, shipping only the four latin weights actually declared (8 files instead of the package's 126).
+- **Tailwind's `hidden` had no effect on icons** — Font Awesome's `.fa-solid { display: inline-block }` and Tailwind's `.hidden { display: none }` have identical specificity, and Font Awesome was loaded last, so it won. Every element combining `hidden` with an `fa-*` class stayed permanently visible — 27 of them, including the theme switcher, which rendered its light, dark *and* system icons at once. Font Awesome now loads before the compiled Tailwind CSS in all eight templates that load both, and a regression test enforces the order.
+- **Rich-text editor failed to load** — Toast UI Editor threw `Cannot read properties of undefined (reading 'PluginKey')` on all ten screens that use it. The npm package's UMD build declares the eight `prosemirror-*` packages as webpack *externals* and `require()`s them at runtime, so they were undefined in the browser; the CDN file it replaced was the "all" build with those dependencies bundled in, which npm does not publish. A genuinely self-contained bundle is now produced from the package's ESM entry by `scripts/build-js.mjs`.
+- **CSP Report-Only was inert and drowned the console** — It had no `report-uri`, so browsers had nowhere to send violations ("will not block and cannot report violations"), and because `script-src-attr` was undeclared it fell back to `script-src`, making all ~547 inline event handlers violate on every page load. The policy now declares `script-src-attr 'unsafe-inline'` so it reports only what nonces actually fix, and posts violations to a new rate-limited `/csp-report` endpoint.
+
+### Changed
+
+- **nginx** — `Connection` on the `/socket.io/` proxy is now set conditionally via a `map` instead of being hardcoded to `upgrade`, which is the documented pattern for mixing WebSocket and HTTP long-polling. (This was investigated as the cause of `/socket.io/` handshakes returning HTTP 400; an A/B test returned 200 with both the old and new header, so that report remains open.) Added `gzip` for text assets, which matters now that vendored libraries are served exactly as their packages ship them (the Toast UI bundle compresses 580 KB → 209 KB).
+- **`base.html` split into partials** — Reduced from 2,614 to ~1,267 lines by extracting `partials/_head.html`, `_sidebar.html` and `_topbar.html`, and relocating 309 lines of inline CSS into `app/static/src/input.css`.
+- **Removed ~4,800 lines of dead frontend code** — Ten static assets and one duplicate macro library that no template referenced: `commands.js`, `global-fab.js`, `keyboard-shortcuts.js`, `keyboard-shortcuts-enhanced.js`, `quick-actions.js`, `reports-enhanced.js`, `kiosk-mode.css`, `ui-enhancements.css`, `css/brand-colors.css`, `css/rtl-support.css`, `templates/_components.html`, plus eight unused `pdf_editor/*.mjs` re-export stubs.
+- **CSP no longer allowlists any third party** — Removed six CDN origins plus stale `code.jquery.com` and `cdn.datatables.net` entries, and added `object-src 'none'`, `base-uri 'self'` and `form-action 'self'`.
+- **Client versions** — Synced Electron (`desktop/package.json`) and Flutter (`mobile/pubspec.yaml`) to **5.10.0** with the webapp (`setup.py`).
+
+### Documentation
+
+- **Version** — Documented release **5.10.0** to match `setup.py` (single source of truth for the application version).
+
 ## [5.9.4] - 2026-07-23
 
 ### Added

@@ -94,6 +94,23 @@
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('timer.bulk_entry') }}" id="bulkEntryForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% if current_user.is_admin and users %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="user_id" class="form-label fw-semibold">
+                                        <i class="fas fa-user me-1"></i>{{ _('Log time for') }}
+                                    </label>
+                                    <select class="form-select" id="user_id" name="user_id">
+                                        {% for user in users %}
+                                        <option value="{{ user.id }}" {% if selected_user_id is not none and (selected_user_id|string) == (user.id|string) %}selected{% elif selected_user_id is none and user.id == current_user.id %}selected{% endif %}>{{ user.display_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">{{ _('As admin, you can create entries for other users') }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -168,7 +185,7 @@
                                 <div class="card border-0 shadow-sm">
                                     <div class="card-body">
                                         <div class="mb-2 fw-semibold text-primary"><i class="fas fa-play me-1"></i>{{ _('Start Time') }} *</div>
-                                        <input type="time" class="form-control" name="start_time" id="start_time" required value="{{ request.form.get('start_time','') }}">
+                                        <input type="time" class="form-control user-time-input" name="start_time" id="start_time" required value="{{ request.form.get('start_time','') }}">
                                         <div class="form-text">{{ _('Same start time for all days') }}</div>
                                     </div>
                                 </div>
@@ -177,7 +194,7 @@
                                 <div class="card border-0 shadow-sm">
                                     <div class="card-body">
                                         <div class="mb-2 fw-semibold text-primary"><i class="fas fa-stop me-1"></i>{{ _('End Time') }} *</div>
-                                        <input type="time" class="form-control" name="end_time" id="end_time" required value="{{ request.form.get('end_time','') }}">
+                                        <input type="time" class="form-control user-time-input" name="end_time" id="end_time" required value="{{ request.form.get('end_time','') }}">
                                         <div class="form-text">{{ _('Same end time for all days') }}</div>
                                     </div>
                                 </div>
@@ -328,7 +345,7 @@
 }
 </style>
 
-<script type="application/json" id="i18n-json-timer-bulk">
+<script nonce="{{ csp_nonce() }}" type="application/json" id="i18n-json-timer-bulk">
 {
   "no_task": {{ _('No task')|tojson }},
   "failed_load": {{ _('Failed to load tasks')|tojson }},
@@ -338,7 +355,7 @@
   "entries_for": {{ _('Entries will be created for')|tojson }}
 }
 </script>
-<script>
+<script nonce="{{ csp_nonce() }}">
 var i18nTimerBulk = (function(){ try{ var el=document.getElementById('i18n-json-timer-bulk'); return el?JSON.parse(el.textContent):{}; }catch(e){ return {}; } })();
 document.addEventListener('DOMContentLoaded', function() {
     // Set default dates to today

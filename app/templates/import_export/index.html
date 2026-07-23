@@ -281,7 +281,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 // CSV Upload - Time Entries
 async function handleCsvUpload(input) {
     const file = input.files[0];
@@ -609,7 +609,7 @@ async function loadImportHistory() {
                         <span class="font-medium text-gray-900 dark:text-white">${imp.import_type.toUpperCase()}</span>
                         <span class="ml-2 px-2 py-1 text-xs rounded ${getStatusClass(imp.status)}">${imp.status}</span>
                     </div>
-                    <span class="text-xs text-gray-500">${new Date(imp.started_at).toLocaleString()}</span>
+                    <span class="text-xs text-gray-500">${window.formatUserDateTime ? window.formatUserDateTime(new Date(imp.started_at)) : new Date(imp.started_at).toLocaleString()}</span>
                 </div>
                 ${imp.status === 'completed' || imp.status === 'partial' ? `
                 <div class="mt-1 text-sm text-gray-600 dark:text-gray-400">
@@ -643,7 +643,7 @@ async function loadExportHistory() {
                         <span class="font-medium text-gray-900 dark:text-white">${exp.export_type.toUpperCase()}</span>
                         <span class="ml-2 px-2 py-1 text-xs rounded ${getStatusClass(exp.status)}">${exp.status}</span>
                     </div>
-                    <span class="text-xs text-gray-500">${new Date(exp.created_at).toLocaleString()}</span>
+                    <span class="text-xs text-gray-500">${window.formatUserDateTime ? window.formatUserDateTime(new Date(exp.created_at)) : new Date(exp.created_at).toLocaleString()}</span>
                 </div>
                 ${exp.status === 'completed' && !exp.is_expired ? `
                 <div class="mt-2">

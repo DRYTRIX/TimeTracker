@@ -153,7 +153,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Toggle all checkboxes in a category
 function toggleCategory(button) {
     const category = button.closest('.border');

@@ -267,7 +267,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Calculate and display amount
 function updateAmount() {
     const distance = parseFloat(document.getElementById('distance_km').value) || 0;

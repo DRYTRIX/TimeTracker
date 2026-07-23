@@ -232,13 +232,13 @@
     }
 }
 </style>
-<script type="application/json" id="i18n-json-tasks-list">
+<script nonce="{{ csp_nonce() }}" type="application/json" id="i18n-json-tasks-list">
 {
   "confirm_delete": {{ _('Are you sure you want to delete the task "{name}"?')|tojson }},
   "confirm_delete_with_entries": {{ _('Cannot delete task "{name}" because it has time entries. Please delete the time entries first.')|tojson }}
 }
 </script>
-<script>
+<script nonce="{{ csp_nonce() }}">
 var i18nTasksList = (function(){ try{ var el=document.getElementById('i18n-json-tasks-list'); return el?JSON.parse(el.textContent):{}; }catch(e){ return {}; } })();
 
 // Bulk delete functions

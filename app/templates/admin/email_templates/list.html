@@ -87,7 +87,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function showDeleteModal(templateId, name) {
     document.getElementById('deleteTemplateName').textContent = name;
     document.getElementById('deleteTemplateForm').action = "{{ url_for('admin.delete_email_template', template_id=0) }}".replace('0', templateId);

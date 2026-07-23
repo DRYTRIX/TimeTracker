@@ -18,7 +18,7 @@ from flask_babel import gettext as _
 from flask_login import current_user, login_required
 from sqlalchemy import text
 
-from app import db, track_event, track_page_view
+from app import csrf, db, limiter, track_event, track_page_view
 from app.models import Activity, Client, Project, Settings, TimeEntry, TimeEntryTemplate, User, WeeklyTimeGoal
 from app.models.time_entry import local_now
 from app.utils.license_utils import is_license_activated
@@ -86,13 +86,14 @@ def dashboard():
             try:
                 cache.set(dashboard_stats_key, stats, ttl=90)
             except Exception:
-                pass
+                # Cache is best-effort; a miss just means recomputing next request.
+                current_app.logger.debug("Could not cache dashboard stats", exc_info=True)
         if chart_data is None:
             chart_data = analytics_service.get_time_by_project_chart(current_user.id, days=7, limit=10)
             try:
                 cache.set(dashboard_chart_key, chart_data, ttl=90)
             except Exception:
-                pass
+                current_app.logger.debug("Could not cache dashboard chart data", exc_info=True)
 
     today_hours = stats["time_tracking"]["today_hours"]
     week_hours = stats["time_tracking"]["week_hours"]
@@ -210,7 +211,9 @@ def dashboard():
         user_stats = DonationInteraction.get_user_engagement_metrics(current_user.id)
         support_banner_suppressed_dashboard = DonationInteraction.has_recent_donation_click(current_user.id, days=30)
     except Exception:
-        # Fallback if table doesn't exist yet
+        # Fallback if table doesn't exist yet. Log it: any *other* database fault lands
+        # here too, and silently degrading made a real error look like a slow dashboard.
+        current_app.logger.warning("Donation engagement metrics unavailable; using fallback stats", exc_info=True)
         days_since_signup = (datetime.utcnow() - current_user.created_at).days if current_user.created_at else 0
         time_entries_count = TimeEntry.query.filter_by(user_id=current_user.id).count()
         total_hours = current_user.total_hours if hasattr(current_user, "total_hours") else 0.0
@@ -390,8 +393,8 @@ def donate():
             },
         )
     except Exception:
-        # Don't fail if tracking fails (e.g., table doesn't exist yet)
-        pass
+        # Don't fail the page if tracking fails (e.g. table doesn't exist yet).
+        current_app.logger.debug("Could not record donate page view", exc_info=True)
 
     return render_template(
         "main/donate.html",
@@ -549,7 +552,7 @@ def track_support_event():
             variant=variant,
         )
     except Exception:
-        pass
+        current_app.logger.debug("Could not record donation interaction", exc_info=True)
 
     return jsonify({"success": True})
 
@@ -631,7 +634,8 @@ def set_language():
         try:
             db.session.rollback()
         except Exception:
-            pass
+            # A rollback that itself fails leaves the session unusable — surface it.
+            current_app.logger.error("Rollback failed after settings save error", exc_info=True)
 
     # Redirect back if referer exists, add timestamp to force reload
     next_url = request.headers.get("Referer") or url_for("main.dashboard")
@@ -692,3 +696,35 @@ def offline_page():
 def service_worker():
     """Site-scoped service worker; implementation lives in app/static/js/sw.js."""
     return send_from_directory(current_app.static_folder, "js/sw.js", mimetype="application/javascript")
+
+
+@main_bp.route("/csp-report", methods=["POST"])
+@csrf.exempt
+@limiter.limit("60 per hour")
+def csp_report():
+    """
+    Collection point for Content-Security-Policy violation reports.
+
+    The strict, nonce-based policy ships as Content-Security-Policy-Report-Only (see
+    apply_security_headers in app/__init__.py) so violations can be observed before the
+    policy is enforced. Without a report-uri the browser has nowhere to send them —
+    Firefox warns that such a policy "will not block and cannot report violations" — so
+    the reports only reached each user's own console, where nobody sees them.
+
+    Unauthenticated and CSRF-exempt by necessity: the browser posts these itself, with
+    no session or token. Rate-limited because the endpoint is world-writable and a
+    misconfigured or hostile client could otherwise flood the log.
+    """
+    payload = request.get_json(force=True, silent=True) or {}
+    report = payload.get("csp-report", payload)
+
+    if not isinstance(report, dict):
+        return "", 204
+
+    current_app.logger.warning(
+        "CSP violation: directive=%s blocked=%s document=%s",
+        report.get("violated-directive") or report.get("effective-directive") or "?",
+        report.get("blocked-uri") or "?",
+        report.get("document-uri") or "?",
+    )
+    return "", 204

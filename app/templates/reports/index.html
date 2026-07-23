@@ -279,7 +279,7 @@
 {% endblock %}
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Date range presets
 function setDateRange(preset) {
     const today = new Date();
@@ -397,8 +397,12 @@ function loadScheduledReports() {
         .then(data => {
             if (data.schedules && data.schedules.length > 0) {
                 listContainer.innerHTML = data.schedules.map(schedule => {
-                    const nextRun = schedule.next_run_at ? new Date(schedule.next_run_at).toLocaleString() : 'Not scheduled';
-                    const lastRun = schedule.last_run_at ? new Date(schedule.last_run_at).toLocaleString() : 'Never';
+                    const nextRun = schedule.next_run_at
+                        ? (window.formatUserDateTime ? window.formatUserDateTime(new Date(schedule.next_run_at)) : new Date(schedule.next_run_at).toLocaleString())
+                        : 'Not scheduled';
+                    const lastRun = schedule.last_run_at
+                        ? (window.formatUserDateTime ? window.formatUserDateTime(new Date(schedule.last_run_at)) : new Date(schedule.last_run_at).toLocaleString())
+                        : 'Never';
                     const statusBadge = schedule.active 
                         ? '<span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">Active</span>'
                         : '<span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 rounded text-xs">Inactive</span>';

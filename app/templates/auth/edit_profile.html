@@ -93,7 +93,7 @@
     </a>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 function previewAvatar(input) {
     const preview = document.getElementById('avatar-preview');
     const fallback = document.getElementById('avatarPreviewFallback');

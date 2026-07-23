@@ -264,7 +264,7 @@
 .filter-collapsed { display: none !important; }
 .filter-toggle-transition { transition: all 0.3s ease-in-out; }
 </style>
-<script>
+<script nonce="{{ csp_nonce() }}">
 function toggleFilterVisibility() {
     const filterBody = document.getElementById('filterBody');
     const toggleIcon = document.getElementById('filterToggleIcon');

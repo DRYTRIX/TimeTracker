@@ -237,7 +237,7 @@
 {% endblock %}
 
 {% block scripts_extra %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('generateFromTimeForm');
     if (!form) return;
