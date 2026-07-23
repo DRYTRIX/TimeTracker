@@ -29,13 +29,28 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 # Load environment variables
 load_dotenv()
 
+class PathExemptCSRFProtect(CSRFProtect):
+    """CSRFProtect that skips validation for the token API under /api/v1.
+
+    Bearer/API-key clients do not send CSRF tokens. Exempting by path (not by
+    individual blueprints) keeps coverage when /api/v1 routes are split or added.
+    Do not broaden this to all of /api/ — kiosk and import stay cookie/CSRF protected.
+    """
+
+    def protect(self):
+        path = request.path or ""
+        if path == "/api/v1" or path.startswith("/api/v1/"):
+            return
+        return super().protect()
+
+
 # Initialize extensions
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
 socketio = SocketIO()
 babel = Babel()
-csrf = CSRFProtect()
+csrf = PathExemptCSRFProtect()
 limiter = Limiter(key_func=get_remote_address, default_limits=[])
 oauth = OAuth()
 
@@ -1071,15 +1086,14 @@ def create_app(config=None):
     except Exception as e:
         logger.warning(f"Could not register integration connectors: {e}")
 
-    # Exempt API blueprints from CSRF protection (requires api_bp, api_v1_bp, api_docs_bp)
+    # Exempt legacy session JSON API and docs from CSRF.
+    # /api/v1 is skipped by PathExemptCSRFProtect (path prefix), so split
+    # api_v1_* blueprints do not need individual csrf.exempt() calls.
     from app.routes.api import api_bp
     from app.routes.api_docs import api_docs_bp
-    from app.routes.api_v1 import api_v1_bp
 
-    # Only if CSRF is enabled (JSON API uses token authentication, not CSRF tokens)
     if app.config.get("WTF_CSRF_ENABLED"):
         csrf.exempt(api_bp)
-        csrf.exempt(api_v1_bp)
         csrf.exempt(api_docs_bp)
 
     # Initialize OIDC IP cache
