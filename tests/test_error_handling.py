@@ -145,8 +145,8 @@ def test_error_handling_js_loaded(authenticated_client):
     """Test that error handling JavaScript is loaded in base template"""
     response = authenticated_client.get("/dashboard")
     assert response.status_code == 200
-    # Check that error-handling-enhanced.js is included
-    assert b"error-handling-enhanced.js" in response.data
+    # error-handling-enhanced.js ships in the "core-d" bundle (scripts/build-js.mjs).
+    assert b"core-d" in response.data
 
 
 @pytest.mark.unit
@@ -197,6 +197,29 @@ def test_error_handling_network_monitoring():
             content = f.read()
             assert "setupNetworkMonitoring" in content, "Network monitoring should be implemented"
             assert "checkOnlineStatus" in content, "Online status checking should exist"
+            assert "visibilitychange" in content, "Tab visibility reconnect should exist"
+            assert "isQuietHealthUrl" in content, "Health probes should be quiet"
+            assert "quietFetch" in content, "Quiet fetch helper should exist"
+            assert "dismissConnectivityErrors" in content, "Connectivity toasts should be dismissible on resume"
+
+
+@pytest.mark.unit
+@pytest.mark.error_handling
+def test_error_handling_skips_toast_for_health_probe():
+    """Health/status probes must not trigger the global error toast interceptor."""
+    import os
+
+    error_file = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "app", "static", "error-handling-enhanced.js"
+    )
+    assert os.path.exists(error_file)
+    with open(error_file, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "__ttQuiet" in content or "isQuietHealthUrl" in content
+    assert "/api/health" in content
+    # Interceptor must short-circuit quiet responses before handleFetchError toasts
+    assert "if (quiet)" in content
+    assert "handleFetchError" in content
 
 
 @pytest.mark.unit

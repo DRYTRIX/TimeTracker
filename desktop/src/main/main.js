@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, powerMonitor } = require('electron');
 const { createWindow } = require('./window');
 const { createTray, destroyTray } = require('./tray');
 const Store = require('electron-store');
@@ -108,9 +108,17 @@ function attachTray(win) {
     : null;
 }
 
+function notifyAppResume(reason = 'show') {
+  sendToMainWindow('app:resume', { reason, at: Date.now() });
+}
+
 function createMainWindow(options = {}) {
   mainWindow = createWindow(options);
   attachTray(mainWindow);
+
+  mainWindow.on('show', () => {
+    notifyAppResume('show');
+  });
 
   mainWindow.on('close', (event) => {
     const minimizeToTray = store ? store.get('minimize_to_tray', true) : true;
@@ -164,6 +172,14 @@ app.whenReady().then(() => {
   parseCommandLineArgs();
   createMainWindow({ showSplash: true });
   registerGlobalShortcuts();
+
+  try {
+    powerMonitor.on('resume', () => {
+      notifyAppResume('power-resume');
+    });
+  } catch (e) {
+    console.warn('TimeTracker: could not register powerMonitor resume:', e.message);
+  }
   
   // Listen for timer status updates from renderer (via IPC)
   ipcMain.on('timer:status-update', (event, data) => {

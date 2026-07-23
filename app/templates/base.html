@@ -1589,6 +1589,12 @@
             try {
                 var socket = io();
                 socket.on('connect', function(){ socket.emit('join_user_room', { user_id: uid }); });
+                document.addEventListener('visibilitychange', function(){
+                    if (document.visibilityState !== 'visible') return;
+                    if (socket.disconnected) {
+                        try { socket.connect(); } catch (e) {}
+                    }
+                });
                 socket.on('user_mentioned', function(data){
                     if (!data) return;
                     var title = data.title || '{{ _('New mention') }}';

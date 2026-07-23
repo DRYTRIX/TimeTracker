@@ -213,16 +213,68 @@ function App() {
     return () => engine.stop();
   }, [apiClient, settings.autoSync, settings.syncInterval, refreshCoreData, showToast]);
 
+  const revalidateSession = useCallback(async ({ refresh = false } = {}) => {
+    if (!apiClient) return false;
+    const session = await apiClient.validateSession();
+    if (!session.ok) {
+      setConnection((c) => ({ ...c, state: 'error', message: session.message }));
+      return false;
+    }
+    setConnection((c) => ({
+      ...c,
+      state: 'connected',
+      message: 'Connected',
+      lastOk: Date.now(),
+    }));
+    if (refresh) {
+      await refreshCoreData();
+    }
+    return true;
+  }, [apiClient, refreshCoreData]);
+
+  const lastResumeRevalidateRef = useRef(0);
+  const revalidateOnResume = useCallback(() => {
+    const now = Date.now();
+    if (now - lastResumeRevalidateRef.current < 5000) return;
+    lastResumeRevalidateRef.current = now;
+    revalidateSession({ refresh: true });
+  }, [revalidateSession]);
+
   useEffect(() => {
     if (!apiClient) return undefined;
-    const id = window.setInterval(async () => {
-      const session = await apiClient.validateSession();
-      if (!session.ok) {
-        setConnection((c) => ({ ...c, state: 'error', message: session.message }));
-      }
+    const id = window.setInterval(() => {
+      revalidateSession();
     }, 30000);
     return () => window.clearInterval(id);
-  }, [apiClient]);
+  }, [apiClient, revalidateSession]);
+
+  useEffect(() => {
+    if (!apiClient) return undefined;
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        revalidateOnResume();
+      }
+    };
+    const onFocus = () => {
+      revalidateOnResume();
+    };
+    const onAppResume = () => {
+      revalidateOnResume();
+    };
+
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    const unsubscribeResume = window.electronAPI?.onAppResume?.(onAppResume);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+      if (typeof unsubscribeResume === 'function') {
+        unsubscribeResume();
+      }
+    };
+  }, [apiClient, revalidateOnResume]);
 
   const pushTimerStatusToTray = useCallback((timerPayload) => {
     if (!window.electronAPI?.sendTimerStatus) return;
