@@ -8,7 +8,7 @@
 
 {% block extra_js %}
 {% if can_edit_schedule %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     const projectSelect = document.getElementById('project_id');
     const taskSelect = document.getElementById('task_id');
@@ -267,7 +267,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <label for="start_time" class="form-label">
                             <i class="fas fa-clock mr-1"></i>{{ _('Start Time') }}
                         </label>
-                        <input type="time" class="form-input" id="start_time" name="start_time" 
+                        <input type="time" class="form-input user-time-input" id="start_time" name="start_time" 
                                value="{{ timer.start_time.strftime('%H:%M') }}" required>
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Time the work started') }}</p>
                     </div>
@@ -287,7 +287,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <label for="end_time" class="form-label">
                             <i class="fas fa-stop-circle mr-1"></i>{{ _('End Time') }}
                         </label>
-                        <input type="time" class="form-input" id="end_time" name="end_time" 
+                        <input type="time" class="form-input user-time-input" id="end_time" name="end_time" 
                                value="{{ timer.end_time.strftime('%H:%M') if timer.end_time else '' }}">
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Time the work ended') }}</p>
                     </div>
@@ -554,7 +554,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function() {
     // Issue #557: avoid loading Toast UI Editor on mobile to prevent browser freeze
     window.isMobileView = window.matchMedia('(max-width: 767px)').matches;
@@ -574,7 +574,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <!-- Toast UI Editor: load only on desktop to avoid mobile freeze (Issue #557) -->
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     if (window.isMobileView) {
         window.mdEditor = null;
@@ -582,14 +582,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     var link1 = document.createElement('link');
     link1.rel = 'stylesheet';
-    link1.href = 'https://uicdn.toast.com/editor/latest/toastui-editor.min.css';
+    link1.href = '{{ url_for('static', filename='vendor/toastui/toastui-editor.css') }}';
     document.head.appendChild(link1);
     var link2 = document.createElement('link');
     link2.rel = 'stylesheet';
-    link2.href = 'https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css';
+    link2.href = '{{ url_for('static', filename='vendor/toastui/theme/toastui-editor-dark.css') }}';
     document.head.appendChild(link2);
     var scriptEl = document.createElement('script');
-    scriptEl.src = 'https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js';
+    scriptEl.src = '{{ url_for('static', filename='vendor/toastui/toastui-editor.js') }}';
     scriptEl.onload = function initToastEditorEditTimer() {
     const notesInput = document.getElementById('notes');
     let mdEditor = null;

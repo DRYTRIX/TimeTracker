@@ -131,11 +131,11 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label for="start_time" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Start Time') }}</label>
-                            <input type="time" name="start_time" id="start_time" class="form-input" value="{{ prefill_start_time or '' }}">
+                            <input type="time" name="start_time" id="start_time" class="form-input user-time-input" value="{{ prefill_start_time or '' }}">
                         </div>
                         <div>
                             <label for="end_time" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('End Time') }}</label>
-                            <input type="time" name="end_time" id="end_time" class="form-input" value="{{ prefill_end_time or '' }}">
+                            <input type="time" name="end_time" id="end_time" class="form-input user-time-input" value="{{ prefill_end_time or '' }}">
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -189,7 +189,7 @@
         </div>
     </form>
 </div>
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function() {
     // Issue #557: avoid loading Toast UI Editor on mobile to prevent browser freeze
     window.isMobileView = window.matchMedia('(max-width: 767px)').matches;
@@ -205,7 +205,7 @@
     }
 })();
 </script>
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', async function(){
     // Default values for date/time to now (use local date, not UTC, for timezones ahead of UTC)
     const now = new Date();
@@ -774,7 +774,7 @@ document.addEventListener('DOMContentLoaded', async function(){
 </script>
 
 <!-- Toast UI Editor: load only on desktop to avoid mobile freeze (Issue #557) -->
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     if (window.isMobileView) {
         window.mdEditor = null;
@@ -782,14 +782,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     var link1 = document.createElement('link');
     link1.rel = 'stylesheet';
-    link1.href = 'https://uicdn.toast.com/editor/latest/toastui-editor.min.css';
+    link1.href = '{{ url_for('static', filename='vendor/toastui/toastui-editor.css') }}';
     document.head.appendChild(link1);
     var link2 = document.createElement('link');
     link2.rel = 'stylesheet';
-    link2.href = 'https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.css';
+    link2.href = '{{ url_for('static', filename='vendor/toastui/theme/toastui-editor-dark.css') }}';
     document.head.appendChild(link2);
     var scriptEl = document.createElement('script');
-    scriptEl.src = 'https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js';
+    scriptEl.src = '{{ url_for('static', filename='vendor/toastui/toastui-editor.js') }}';
     scriptEl.onload = function initToastEditorManualEntry() {
     const notesInput = document.getElementById('notes');
     let mdEditor = null;
@@ -1133,7 +1133,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 {% if ai_enabled %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function() {
     const container = document.getElementById('aiAutofillContainer');
     const button = document.getElementById('aiAutofillBtn');

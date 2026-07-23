@@ -122,7 +122,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Chat widget state
 let chatWidgetState = {
     isOpen: false,
@@ -343,7 +343,9 @@ function renderChatWidgetMessages(messages) {
     }
 
     container.innerHTML = messages.map(msg => {
-        const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const time = window.formatUserTime
+            ? window.formatUserTime(new Date(msg.created_at))
+            : new Date(msg.created_at).toLocaleTimeString([], window.getUserTimeLocaleOptions ? window.getUserTimeLocaleOptions() : { hour: '2-digit', minute: '2-digit' });
         return `
             <div class="flex items-start gap-2">
                 <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">

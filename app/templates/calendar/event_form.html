@@ -51,7 +51,7 @@
                     <input type="time" 
                            id="startTime" 
                            name="startTime" 
-                           class="form-control"
+                           class="form-control user-time-input"
                            value="{% if event %}{{ event.start_time|user_time('%H:%M') }}{% elif initial_time %}{{ initial_time.strftime('%H:%M') }}{% else %}09:00{% endif %}">
                 </div>
             </div>
@@ -72,7 +72,7 @@
                     <input type="time" 
                            id="endTime" 
                            name="endTime" 
-                           class="form-control"
+                           class="form-control user-time-input"
                            value="{% if event %}{{ event.end_time|user_time('%H:%M') }}{% else %}10:00{% endif %}">
                 </div>
             </div>
@@ -241,7 +241,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
     // Show/hide recurring options
     document.getElementById('isRecurring').addEventListener('change', function() {
         const recurringOptions = document.getElementById('recurringOptions');

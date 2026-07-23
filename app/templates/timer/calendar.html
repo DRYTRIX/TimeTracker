@@ -3,7 +3,7 @@
 {% block title %}{{ _('Calendar') }} - {{ app_name }}{% endblock %}
 
 {% block extra_css %}
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
+{# FullCalendar v6 injects its own styles from the JS bundle; no separate stylesheet. #}
 <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
 <style>
 .event-modal-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
@@ -168,7 +168,7 @@
           </div>
           <div class="col-md-6 mb-3">
             <label class="form-label">{{ _('Start Time') }} <span class="text-danger">*</span></label>
-            <input type="time" class="form-control" id="createStartTime" required>
+            <input type="time" class="form-control user-time-input" id="createStartTime" required>
           </div>
         </div>
         
@@ -179,7 +179,7 @@
           </div>
           <div class="col-md-6 mb-3">
             <label class="form-label">{{ _('End Time') }} <span class="text-danger">*</span></label>
-            <input type="time" class="form-control" id="createEndTime" required>
+            <input type="time" class="form-control user-time-input" id="createEndTime" required>
           </div>
         </div>
         
@@ -351,8 +351,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
-<script>
+<script src="{{ url_for('static', filename='vendor/fullcalendar/index.global.min.js') }}"></script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
   const calendarEl = document.getElementById('calendar');
   const projectSelect = document.getElementById('assignProject');
@@ -386,6 +386,16 @@ document.addEventListener('DOMContentLoaded', function() {
     slotMaxTime: '22:00:00',
     height: 'auto',
     eventResizableFromStart: true,
+    eventTimeFormat: {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: !!(window.userPrefs && window.userPrefs.timeFormat === '12h')
+    },
+    slotLabelFormat: {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: !!(window.userPrefs && window.userPrefs.timeFormat === '12h')
+    },
     
     events: async (info, success, failure) => {
       try {
@@ -834,12 +844,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const formatDate = (date) => {
-      return new Date(date).toLocaleString('{{ current_user.preferred_language or "en" }}', {
+      const d = new Date(date);
+      if (window.formatUserDateTime) return window.formatUserDateTime(d);
+      return d.toLocaleString('{{ current_user.preferred_language or "en" }}', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        ...(window.getUserTimeLocaleOptions ? window.getUserTimeLocaleOptions() : { hour: '2-digit', minute: '2-digit' })
       });
     };
 
@@ -1044,14 +1055,12 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="agenda-date-group">
           <div class="agenda-date-header">${date}</div>
           ${dateEvents.map(event => {
-            const start = new Date(event.start).toLocaleTimeString('{{ current_user.preferred_language or "en" }}', {
-              hour: '2-digit',
-              minute: '2-digit'
-            });
-            const end = new Date(event.end).toLocaleTimeString('{{ current_user.preferred_language or "en" }}', {
-              hour: '2-digit',
-              minute: '2-digit'
-            });
+            const start = window.formatUserTime
+              ? window.formatUserTime(new Date(event.start))
+              : new Date(event.start).toLocaleTimeString('{{ current_user.preferred_language or "en" }}', window.getUserTimeLocaleOptions ? window.getUserTimeLocaleOptions() : { hour: '2-digit', minute: '2-digit' });
+            const end = window.formatUserTime
+              ? window.formatUserTime(new Date(event.end))
+              : new Date(event.end).toLocaleTimeString('{{ current_user.preferred_language or "en" }}', window.getUserTimeLocaleOptions ? window.getUserTimeLocaleOptions() : { hour: '2-digit', minute: '2-digit' });
             
             return `
               <div class="agenda-event" style="border-left-color: ${event.backgroundColor};" onclick="showAgendaEvent(${event.id})">
