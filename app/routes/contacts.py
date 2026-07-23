@@ -10,7 +10,7 @@ from app import db
 from app.models import Client, Contact, ContactCommunication
 from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
-from app.utils.timezone import parse_local_datetime
+from app.utils.timezone import parse_local_datetime_from_string
 
 contacts_bp = Blueprint("contacts", __name__)
 
@@ -160,10 +160,10 @@ def create_communication(contact_id):
     if request.method == "POST":
         try:
             comm_date_str = request.form.get("communication_date", "")
-            comm_date = parse_local_datetime(comm_date_str) if comm_date_str else datetime.utcnow()
+            comm_date = parse_local_datetime_from_string(comm_date_str) or datetime.utcnow()
 
             follow_up_str = request.form.get("follow_up_date", "")
-            follow_up_date = parse_local_datetime(follow_up_str) if follow_up_str else None
+            follow_up_date = parse_local_datetime_from_string(follow_up_str) if follow_up_str else None
 
             communication = ContactCommunication(
                 contact_id=contact_id,
