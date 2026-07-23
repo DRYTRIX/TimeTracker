@@ -7,7 +7,6 @@ import { commandScore } from 'cmdk/command-score';
 
 (() => {
   if (window.__ttCommandPaletteLoaded) return;
-  window.__ttCommandPaletteLoaded = true;
 
   const isMac = (() => {
     try {
@@ -38,7 +37,9 @@ import { commandScore } from 'cmdk/command-score';
   const $all = (s, r = document) => Array.from(r.querySelectorAll(s));
 
   const root = $(sel.root);
+  // Only mark loaded after the palette DOM exists so an early script load can retry.
   if (!root) return;
+  window.__ttCommandPaletteLoaded = true;
 
   const input = $(sel.input);
   const list = $(sel.list);

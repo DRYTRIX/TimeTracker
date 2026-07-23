@@ -141,8 +141,8 @@ class KeyboardShortcutManager {
             classList: e.target.classList ? Array.from(e.target.classList) : [],
             isContentEditable: e.target.isContentEditable
         };
-        // When palette is open, do not trigger a second open; let commands.js handle focus
-        const palette = document.getElementById('commandPaletteModal');
+        // When palette is open, do not trigger a second open; let command-palette.js handle focus
+        const palette = document.getElementById('ttCommandPalette');
         const paletteOpen = palette && !palette.classList.contains('hidden');
 
         // Check if typing in input field
@@ -160,7 +160,7 @@ class KeyboardShortcutManager {
                 e.preventDefault();
                 if (paletteOpen) {
                     // Just refocus input when already open
-                    const inputExisting = document.getElementById('commandPaletteInput');
+                    const inputExisting = document.getElementById('ttCommandPaletteInput');
                     if (inputExisting) setTimeout(() => inputExisting.focus(), 50);
                 } else {
                     this.openCommandPalette();
@@ -185,7 +185,7 @@ class KeyboardShortcutManager {
             // If user hits palette keys while open, just refocus and exit
             if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'k' || e.key === '?')) {
                 e.preventDefault();
-                const inputExisting = document.getElementById('commandPaletteInput');
+                const inputExisting = document.getElementById('ttCommandPaletteInput');
                 if (inputExisting) setTimeout(() => inputExisting.focus(), 50);
                 return;
             }
@@ -436,16 +436,16 @@ class KeyboardShortcutManager {
             return;
         }
 
-        // Fallback for older builds/pages: try to open the legacy modal if present.
-        const modal = document.getElementById('commandPaletteModal');
+        // Fallback: open the palette modal directly if present.
+        const modal = document.getElementById('ttCommandPalette');
         if (!modal) return;
         if (!modal.classList.contains('hidden')) {
-            const inputExisting = document.getElementById('commandPaletteInput');
+            const inputExisting = document.getElementById('ttCommandPaletteInput');
             if (inputExisting) setTimeout(() => inputExisting.focus(), 50);
             return;
         }
         modal.classList.remove('hidden');
-        const input = document.getElementById('commandPaletteInput');
+        const input = document.getElementById('ttCommandPaletteInput');
         if (input) setTimeout(() => input.focus(), 100);
     }
 

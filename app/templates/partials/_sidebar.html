@@ -1,9 +1,12 @@
 {# Primary sidebar navigation. Visibility of each section is driven by
    is_module_enabled() (app/utils/module_helpers.py). #}
         <aside id="sidebar" class="sidebar-scrollbar-hover w-64 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark p-4 flex-col hidden md:flex transition-all duration-200 ease-in-out fixed top-0 left-0 h-screen overflow-y-auto z-10" aria-label="{{ _('Main navigation') }}">
-            <div class="flex items-center mb-8">
-                <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="Logo" class="h-10 w-10 mr-2">
-                <h1 class="text-2xl font-bold text-primary sidebar-header-title"><a href="{{ url_for('main.dashboard') }}" class="no-underline">TimeTracker</a></h1>
+            <div class="sidebar-header flex items-center mb-8 gap-1">
+                <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="Logo" class="h-10 w-10 mr-2 shrink-0">
+                <h1 class="text-2xl font-bold text-primary sidebar-header-title min-w-0"><a href="{{ url_for('main.dashboard') }}" class="no-underline">TimeTracker</a></h1>
+                <button id="sidebarCollapseBtn" type="button" class="ml-auto shrink-0 p-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Toggle sidebar') }}" title="{{ _('Toggle sidebar') }}">
+                    <i id="sidebarCollapseIcon" class="fas fa-angles-left"></i>
+                </button>
             </div>
             <nav class="flex-1">
                 {% set ep = request.endpoint or '' %}
@@ -38,9 +41,6 @@
                                 <kbd class="px-1.5 py-0.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded text-[11px]">K</kbd>
                             </span>
                         </span>
-                    </button>
-                    <button id="sidebarCollapseBtn" class="p-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Toggle sidebar') }}" title="{{ _('Toggle sidebar') }}">
-                        <i id="sidebarCollapseIcon" class="fas fa-angles-left"></i>
                     </button>
                 </div>
                 <ul>

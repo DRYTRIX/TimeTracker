@@ -785,8 +785,41 @@ html[dir="rtl"] #mainContent { margin-left: 0; margin-right: 16rem; }
 .sidebar-collapsed .sidebar-label { display: none; }
 .sidebar-collapsed .sidebar-header-title { display: none; }
 .sidebar-collapsed .sidebar-expanded-only { display: none !important; }
-.sidebar-collapsed #sidebar .sidebar-toolbar { justify-content: center; }
-.sidebar-collapsed #sidebar { width: 4.5rem !important; overflow-x: hidden; }
+.sidebar-collapsed #sidebar .sidebar-toolbar { display: none; }
+.sidebar-collapsed #sidebar .sidebar-header {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 0.75rem;
+}
+/* Logo fills the narrow rail; hide it when collapsed so the expand control stays visible */
+.sidebar-collapsed #sidebar .sidebar-header img {
+    display: none !important;
+}
+.sidebar-collapsed #sidebar #sidebarCollapseBtn {
+    margin-left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+}
+.sidebar-collapsed #sidebar {
+    width: 4.5rem !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    overflow-x: hidden;
+}
+/* Desktop topbar expand control: only when sidebar is collapsed (md+) */
+#desktopSidebarBtn {
+    display: none;
+}
+@media (min-width: 768px) {
+    .sidebar-collapsed #desktopSidebarBtn {
+        display: inline-flex;
+    }
+}
 .sidebar-collapsed #sidebar ul[id$="Dropdown"] { display: none !important; }
 .sidebar-collapsed #sidebar .sidebar-nav-item {
     justify-content: center;

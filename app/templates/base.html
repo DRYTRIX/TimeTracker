@@ -280,8 +280,6 @@
     {% if is_admin_user %}
     <script src="{{ asset_url('core-admin') }}"></script>
     {% endif %}
-    <!-- Global Command Palette -->
-    <script src="{{ asset_url('command-palette') }}"></script>
     <script nonce="{{ csp_nonce() }}">window.__BASE_INIT__={timerStatus:"{{ url_for('timer.timer_status') }}",stopTimer:"{{ url_for('timer.stop_timer') }}",dashboard:"{{ url_for('main.dashboard') }}",manualEntry:"{{ url_for('timer.manual_entry') }}",newTask:"{{ url_for('tasks.create_task') }}"};</script>
     <script src="{{ asset_url('core-c') }}"></script>
     <script nonce="{{ csp_nonce() }}">
@@ -291,6 +289,7 @@
             const sidebar = document.getElementById('sidebar');
             const main = document.getElementById('mainContent');
             const collapseBtn = document.getElementById('sidebarCollapseBtn');
+            const desktopBtn = document.getElementById('desktopSidebarBtn');
             const mobileBtn = document.getElementById('mobileSidebarBtn');
             let flyout;
 
@@ -320,18 +319,21 @@
                 }
             }
 
+            function toggleDesktopSidebar() {
+                const nowCollapsed = !appShell.classList.contains('sidebar-collapsed');
+                applyCollapsed(nowCollapsed);
+                try { localStorage.setItem('sidebar-collapsed', String(nowCollapsed)); } catch(_) {}
+            }
+
             // Initialize from storage
             try {
                 const saved = localStorage.getItem('sidebar-collapsed');
                 applyCollapsed(saved === 'true');
             } catch(_) {}
 
-            // Desktop toggle
-            collapseBtn && collapseBtn.addEventListener('click', function(){
-                const nowCollapsed = !appShell.classList.contains('sidebar-collapsed');
-                applyCollapsed(nowCollapsed);
-                try { localStorage.setItem('sidebar-collapsed', String(nowCollapsed)); } catch(_) {}
-            });
+            // Desktop toggle (sidebar header + topbar expand)
+            collapseBtn && collapseBtn.addEventListener('click', toggleDesktopSidebar);
+            desktopBtn && desktopBtn.addEventListener('click', toggleDesktopSidebar);
 
             // Mobile toggle with backdrop and proper close handlers
             let backdrop = null;
@@ -676,8 +678,9 @@
     <!-- Keyboard Shortcuts Help Modal -->
     {% include 'components/keyboard_shortcuts_help.html' %}
 
-    <!-- Global Command Palette Modal -->
+    <!-- Global Command Palette Modal (script must load after markup) -->
     {% include 'partials/_command_palette.html' %}
+    <script src="{{ asset_url('command-palette') }}"></script>
     <script nonce="{{ csp_nonce() }}">
         var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
         var themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
@@ -699,12 +702,12 @@
             if (themeToggleSystemIcon) themeToggleSystemIcon.classList.add('hidden');
             if (stored === 'system') {
                 if (themeToggleSystemIcon) themeToggleSystemIcon.classList.remove('hidden');
-                else if (getEffectiveTheme() === 'dark') themeToggleLightIcon.classList.remove('hidden');
-                else themeToggleDarkIcon.classList.remove('hidden');
+                else if (getEffectiveTheme() === 'dark') themeToggleDarkIcon.classList.remove('hidden');
+                else themeToggleLightIcon.classList.remove('hidden');
             } else if (stored === 'dark') {
-                themeToggleLightIcon.classList.remove('hidden');
-            } else {
                 themeToggleDarkIcon.classList.remove('hidden');
+            } else {
+                themeToggleLightIcon.classList.remove('hidden');
             }
         }
         function applyTheme(theme) {
