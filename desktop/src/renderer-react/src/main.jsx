@@ -5,22 +5,42 @@ import { ApiClient, classifyAxiosError, normalizeServerUrlInput } from './servic
 import { storeClear, storeDelete, storeGet, storeSet } from './services/store.js';
 import { buildDiagnostics } from './services/diagnostics.js';
 import { createSyncEngine } from './sync/syncEngine.js';
-
-const views = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'projects', label: 'Projects' },
-  { id: 'entries', label: 'Time Entries' },
-  { id: 'invoices', label: 'Invoices' },
-  { id: 'expenses', label: 'Expenses' },
-  { id: 'workforce', label: 'Workforce' },
-  { id: 'settings', label: 'Settings' },
-];
+import { LoadingScreen, Toast } from './components/ui.jsx';
+import { formatDuration, isTimerPaused, timerElapsedSeconds } from './utils/format.js';
+import { AuthFlow, Sidebar, TopBar } from './views/Shell.jsx';
+import { DashboardView } from './views/DashboardView.jsx';
+import { ProjectsView } from './views/ProjectsView.jsx';
+import { EntriesView } from './views/EntriesView.jsx';
+import { InvoicesView } from './views/InvoicesView.jsx';
+import { ExpensesView } from './views/ExpensesView.jsx';
+import { WorkforceView } from './views/WorkforceView.jsx';
+import { SettingsView } from './views/SettingsView.jsx';
+import { ReportsView } from './views/ReportsView.jsx';
+import { KanbanView } from './views/KanbanView.jsx';
+import { CrmView } from './views/CrmView.jsx';
+import { FinanceExtraView } from './views/FinanceExtraView.jsx';
+import { StartTimerDialog, TimeEntryDialog } from './views/Dialogs.jsx';
+import { formatAttendanceError, runAttendanceAction } from './views/WorkdayCard.jsx';
 
 const defaultConnection = {
   state: 'not_configured',
   serverUrl: '',
   message: 'Not configured',
   lastOk: null,
+};
+
+const emptyData = {
+  user: null,
+  timer: null,
+  projects: [],
+  tasks: [],
+  entries: [],
+  invoices: [],
+  expenses: [],
+  clients: [],
+  workforce: {},
+  invoiceApprovals: [],
+  timeEntryApprovals: [],
 };
 
 function App() {
@@ -37,19 +57,7 @@ function App() {
   const [activeView, setActiveView] = useState('dashboard');
   const [theme, setTheme] = useState('system');
   const [toast, setToast] = useState(null);
-  const [data, setData] = useState({
-    user: null,
-    timer: null,
-    projects: [],
-    tasks: [],
-    entries: [],
-    invoices: [],
-    expenses: [],
-    clients: [],
-    workforce: {},
-    invoiceApprovals: [],
-    timeEntryApprovals: [],
-  });
+  const [data, setData] = useState(emptyData);
   const [loading, setLoading] = useState({});
   const [filters, setFilters] = useState({ project: '', entrySearch: '' });
   const [settings, setSettings] = useState({ autoSync: true, syncInterval: 60 });
@@ -61,6 +69,8 @@ function App() {
   });
   const [startTimerOpen, setStartTimerOpen] = useState(false);
   const [newEntryOpen, setNewEntryOpen] = useState(false);
+  const [attendance, setAttendance] = useState(null);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
   const syncEngineRef = useRef(null);
 
   const showToast = useCallback((message, type = 'info') => {
@@ -140,6 +150,19 @@ function App() {
     storeSet('theme_mode', theme);
   }, [theme]);
 
+  const refreshAttendance = useCallback(async () => {
+    if (!apiClient) return;
+    setAttendanceLoading(true);
+    try {
+      const status = await apiClient.getAttendanceStatus();
+      setAttendance(status);
+    } catch {
+      setAttendance(null);
+    } finally {
+      setAttendanceLoading(false);
+    }
+  }, [apiClient]);
+
   const refreshCoreData = useCallback(async () => {
     if (!apiClient) return;
     setLoading((s) => ({ ...s, core: true }));
@@ -165,6 +188,7 @@ function App() {
         timeEntries: entries.time_entries || entries.entries || entries.items || [],
       });
       setConnection((c) => ({ ...c, state: 'connected', message: 'Connected', lastOk: Date.now() }));
+      refreshAttendance();
     } catch (error) {
       const classified = classifyAxiosError(error);
       setConnection((c) => ({ ...c, state: 'error', message: classified.message }));
@@ -172,7 +196,7 @@ function App() {
     } finally {
       setLoading((s) => ({ ...s, core: false }));
     }
-  }, [apiClient, showToast]);
+  }, [apiClient, showToast, refreshAttendance]);
 
   useEffect(() => {
     if (!apiClient) return;
@@ -204,23 +228,19 @@ function App() {
     if (!window.electronAPI?.sendTimerStatus) return;
     const active = Boolean(timerPayload?.active);
     const timer = timerPayload?.timer;
+    const paused = isTimerPaused(timerPayload);
     let elapsedLabel = '';
     if (active && timer?.start_time) {
-      const elapsed = Math.max(0, Math.floor((Date.now() - new Date(timer.start_time).getTime()) / 1000));
-      const m = Math.floor(elapsed / 60);
-      const s = elapsed % 60;
-      elapsedLabel = `${m}:${String(s).padStart(2, '0')}`;
+      elapsedLabel = formatDuration(timerElapsedSeconds(timerPayload));
     }
-    window.electronAPI.sendTimerStatus({ active, timer, elapsedLabel });
+    window.electronAPI.sendTimerStatus({ active, paused, timer, elapsedLabel });
   }, []);
 
   useEffect(() => {
     if (!apiClient) return undefined;
     pushTimerStatusToTray(data.timer);
     const id = window.setInterval(() => {
-      if (data.timer?.active) {
-        pushTimerStatusToTray(data.timer);
-      }
+      if (data.timer?.active) pushTimerStatusToTray(data.timer);
     }, 1000);
     return () => window.clearInterval(id);
   }, [apiClient, data.timer, pushTimerStatusToTray]);
@@ -315,49 +335,55 @@ function App() {
     setUsername('');
     setPassword('');
     setAuthStep('server');
-    setData({ user: null, timer: null, projects: [], tasks: [], entries: [], invoices: [], expenses: [], clients: [], workforce: {}, invoiceApprovals: [], timeEntryApprovals: [] });
+    setData(emptyData);
+    setAttendance(null);
     setConnection(defaultConnection);
   };
 
-  const loadView = useCallback(async (view) => {
-    if (!apiClient) return;
-    setLoading((s) => ({ ...s, [view]: true }));
-    try {
-      if (view === 'invoices') {
-        const [response, clients] = await Promise.all([
-          apiClient.getInvoices({ perPage: 25 }),
-          apiClient.getClients({ perPage: 100 }).catch(() => ({ clients: [] })),
-        ]);
-        setData((d) => ({
-          ...d,
-          invoices: response.invoices || response.items || [],
-          clients: clients.clients || clients.items || [],
-        }));
-      } else if (view === 'expenses') {
-        const response = await apiClient.getExpenses({ perPage: 25 });
-        setData((d) => ({ ...d, expenses: response.expenses || response.items || [] }));
-      } else if (view === 'workforce') {
-        const [periods, capacity, requests, invoiceApprovals, timeEntryApprovals] = await Promise.all([
-          apiClient.getTimesheetPeriods({}).catch(() => ({ timesheet_periods: [] })),
-          apiClient.getCapacityReport({}).catch(() => ({ capacity: [] })),
-          apiClient.getTimeOffRequests({}).catch(() => ({ time_off_requests: [] })),
-          apiClient.getInvoiceApprovals().catch(() => ({ invoice_approvals: [] })),
-          apiClient.getTimeEntryApprovals().catch(() => ({ approvals: [] })),
-        ]);
-        setData((d) => ({
-          ...d,
-          workforce: { periods, capacity, requests },
-          invoiceApprovals: invoiceApprovals.invoice_approvals || [],
-          timeEntryApprovals: timeEntryApprovals.approvals || [],
-        }));
+  const loadView = useCallback(
+    async (view) => {
+      if (!apiClient) return;
+      setLoading((s) => ({ ...s, [view]: true }));
+      try {
+        if (view === 'invoices' || view === 'payments' || view === 'credit' || view === 'quotes') {
+          const [response, clients] = await Promise.all([
+            apiClient.getInvoices({ perPage: 25 }).catch(() => ({ invoices: [] })),
+            apiClient.getClients({ perPage: 100 }).catch(() => ({ clients: [] })),
+          ]);
+          setData((d) => ({
+            ...d,
+            invoices: response.invoices || response.items || [],
+            clients: clients.clients || clients.items || [],
+          }));
+        } else if (view === 'expenses' || view === 'mileage') {
+          const response = await apiClient.getExpenses({ perPage: 25 }).catch(() => ({ expenses: [] }));
+          setData((d) => ({ ...d, expenses: response.expenses || response.items || [] }));
+        } else if (view === 'crm') {
+          const clients = await apiClient.getClients({ perPage: 100 }).catch(() => ({ clients: [] }));
+          setData((d) => ({ ...d, clients: clients.clients || clients.items || [] }));
+        } else if (view === 'workforce') {
+          const [periods, capacity, requests, invoiceApprovals, timeEntryApprovals] = await Promise.all([
+            apiClient.getTimesheetPeriods({}).catch(() => ({ timesheet_periods: [] })),
+            apiClient.getCapacityReport({}).catch(() => ({ capacity: [] })),
+            apiClient.getTimeOffRequests({}).catch(() => ({ time_off_requests: [] })),
+            apiClient.getInvoiceApprovals().catch(() => ({ invoice_approvals: [] })),
+            apiClient.getTimeEntryApprovals().catch(() => ({ approvals: [] })),
+          ]);
+          setData((d) => ({
+            ...d,
+            workforce: { periods, capacity, requests },
+            invoiceApprovals: invoiceApprovals.invoice_approvals || [],
+            timeEntryApprovals: timeEntryApprovals.approvals || [],
+          }));
+        }
+      } catch (error) {
+        showToast(classifyAxiosError(error).message, 'error');
+      } finally {
+        setLoading((s) => ({ ...s, [view]: false }));
       }
-    } catch (error) {
-      const classified = classifyAxiosError(error);
-      showToast(classified.message, 'error');
-    } finally {
-      setLoading((s) => ({ ...s, [view]: false }));
-    }
-  }, [apiClient, showToast]);
+    },
+    [apiClient, showToast],
+  );
 
   const changeView = (view) => {
     setActiveView(view);
@@ -378,8 +404,7 @@ function App() {
       await refreshCoreData();
       showToast('Timer started', 'success');
     } catch (error) {
-      const classified = classifyAxiosError(error);
-      showToast(classified.message, 'error');
+      showToast(classifyAxiosError(error).message, 'error');
     }
   };
 
@@ -395,8 +420,43 @@ function App() {
       await refreshCoreData();
       showToast('Timer stopped', 'success');
     } catch (error) {
-      const classified = classifyAxiosError(error);
-      showToast(classified.message, 'error');
+      showToast(classifyAxiosError(error).message, 'error');
+    }
+  };
+
+  const pauseTimer = async () => {
+    if (!apiClient) return;
+    try {
+      await apiClient.pauseTimer();
+      await refreshCoreData();
+      showToast('Timer paused', 'success');
+    } catch (error) {
+      showToast(classifyAxiosError(error).message, 'error');
+    }
+  };
+
+  const resumeTimer = async () => {
+    if (!apiClient) return;
+    try {
+      await apiClient.resumeTimer();
+      await refreshCoreData();
+      showToast('Timer resumed', 'success');
+    } catch (error) {
+      showToast(classifyAxiosError(error).message, 'error');
+    }
+  };
+
+  const handleAttendanceAction = async (action) => {
+    if (!apiClient) return;
+    setAttendanceLoading(true);
+    try {
+      const status = await runAttendanceAction(apiClient, action);
+      setAttendance(status);
+      if (action !== 'refresh') showToast('Workday updated', 'success');
+    } catch (error) {
+      showToast(formatAttendanceError(error), 'error');
+    } finally {
+      setAttendanceLoading(false);
     }
   };
 
@@ -405,22 +465,24 @@ function App() {
     const handleTray = async (action) => {
       if (action === 'start-timer') {
         if (data.timer?.active) return;
-        if (data.projects?.length) {
-          await startTimer({ projectId: data.projects[0].id, taskId: null, notes: '' });
-        } else {
+        if (data.projects?.length) await startTimer({ projectId: data.projects[0].id, taskId: null, notes: '' });
+        else {
           setStartTimerOpen(true);
           window.electronAPI?.showWindow?.();
         }
       } else if (action === 'stop-timer' && data.timer?.active) {
         await stopTimer();
+      } else if (action === 'pause-timer' && data.timer?.active && !isTimerPaused(data.timer)) {
+        await pauseTimer();
+      } else if (action === 'resume-timer' && data.timer?.active && isTimerPaused(data.timer)) {
+        await resumeTimer();
       }
     };
     const handleShortcut = async (action) => {
       if (action !== 'toggle-timer') return;
       if (data.timer?.active) await stopTimer();
-      else if (data.projects?.length) {
-        await startTimer({ projectId: data.projects[0].id, taskId: null, notes: '' });
-      } else {
+      else if (data.projects?.length) await startTimer({ projectId: data.projects[0].id, taskId: null, notes: '' });
+      else {
         setStartTimerOpen(true);
         window.electronAPI?.showWindow?.();
       }
@@ -428,7 +490,7 @@ function App() {
     window.electronAPI.onTrayAction?.(handleTray);
     window.electronAPI.onShortcutAction?.(handleShortcut);
     return undefined;
-  }, [apiClient, data.timer?.active, data.projects]);
+  }, [apiClient, data.timer, data.projects]);
 
   const createTimeEntry = async (payload) => {
     if (!apiClient) return;
@@ -444,8 +506,7 @@ function App() {
       await refreshCoreData();
       showToast('Time entry created', 'success');
     } catch (error) {
-      const classified = classifyAxiosError(error);
-      showToast(classified.message, 'error');
+      showToast(classifyAxiosError(error).message, 'error');
     }
   };
 
@@ -510,7 +571,12 @@ function App() {
               onRefresh={refreshCoreData}
               onStart={() => setStartTimerOpen(true)}
               onStop={stopTimer}
+              onPause={pauseTimer}
+              onResume={resumeTimer}
               syncStatus={syncStatus}
+              attendance={attendance}
+              onAttendanceAction={handleAttendanceAction}
+              attendanceLoading={attendanceLoading}
             />
           )}
           {activeView === 'projects' && (
@@ -530,6 +596,15 @@ function App() {
               loading={loading.core}
             />
           )}
+          {activeView === 'reports' && (
+            <ReportsView projects={data.projects} apiClient={apiClient} showToast={showToast} />
+          )}
+          {activeView === 'kanban' && (
+            <KanbanView projects={data.projects} apiClient={apiClient} showToast={showToast} />
+          )}
+          {activeView === 'crm' && (
+            <CrmView clients={data.clients} apiClient={apiClient} showToast={showToast} />
+          )}
           {activeView === 'invoices' && (
             <InvoicesView
               invoices={data.invoices}
@@ -548,6 +623,66 @@ function App() {
               loading={loading.expenses}
               apiClient={apiClient}
               onRefresh={() => loadView('expenses')}
+              showToast={showToast}
+            />
+          )}
+          {activeView === 'payments' && (
+            <FinanceExtraView
+              kind="payments"
+              title="Payments"
+              subtitle="Record and review payments."
+              clients={data.clients}
+              projects={data.projects}
+              invoices={data.invoices}
+              apiClient={apiClient}
+              showToast={showToast}
+            />
+          )}
+          {activeView === 'mileage' && (
+            <FinanceExtraView
+              kind="mileage"
+              title="Mileage"
+              subtitle="Log trips (GPS tracking stays in the web app)."
+              clients={data.clients}
+              projects={data.projects}
+              invoices={data.invoices}
+              apiClient={apiClient}
+              showToast={showToast}
+            />
+          )}
+          {activeView === 'quotes' && (
+            <FinanceExtraView
+              kind="quotes"
+              title="Quotes"
+              subtitle="Create and review quotes."
+              clients={data.clients}
+              projects={data.projects}
+              invoices={data.invoices}
+              apiClient={apiClient}
+              showToast={showToast}
+            />
+          )}
+          {activeView === 'recurring' && (
+            <FinanceExtraView
+              kind="recurring"
+              title="Recurring invoices"
+              subtitle="List schedules and generate invoices."
+              clients={data.clients}
+              projects={data.projects}
+              invoices={data.invoices}
+              apiClient={apiClient}
+              showToast={showToast}
+            />
+          )}
+          {activeView === 'credit' && (
+            <FinanceExtraView
+              kind="credit"
+              title="Credit notes"
+              subtitle="Create and review credit notes."
+              clients={data.clients}
+              projects={data.projects}
+              invoices={data.invoices}
+              apiClient={apiClient}
               showToast={showToast}
             />
           )}
@@ -613,631 +748,6 @@ function App() {
       {toast && <Toast toast={toast} />}
     </div>
   );
-}
-
-function LoadingScreen() {
-  return (
-    <div className="loading-screen">
-      <img src="../assets/logo.svg" alt="TimeTracker" />
-      <div className="spinner" />
-      <h1>TimeTracker</h1>
-      <p>Preparing your workspace…</p>
-    </div>
-  );
-}
-
-function AuthFlow(props) {
-  const {
-    step,
-    setStep,
-    serverUrl,
-    setServerUrl,
-    username,
-    setUsername,
-    password,
-    setPassword,
-    error,
-    info,
-    diagnostics,
-    connection,
-    onTestServer,
-    onLogin,
-    theme,
-    setTheme,
-  } = props;
-  return (
-    <div className="auth-shell">
-      <section className="auth-card">
-        <div className="auth-brand">
-          <img src="../assets/logo.svg" alt="" />
-          <div>
-            <p className="eyebrow">Desktop workspace</p>
-            <h1>Connect to TimeTracker</h1>
-            <p>Use your server URL and normal TimeTracker account.</p>
-          </div>
-        </div>
-        <div className="stepper" aria-label="Setup progress">
-          <span className={step === 'server' ? 'active' : ''}>1. Server</span>
-          <span className={step === 'credentials' ? 'active' : ''}>2. Sign in</span>
-        </div>
-        {step === 'server' ? (
-          <div className="form-grid">
-            <label>
-              Server URL
-              <input value={serverUrl} onChange={(e) => setServerUrl(e.target.value)} placeholder="https://127.0.0.1" />
-            </label>
-            <p className="hint">Use the base URL only. For your Docker stack this is usually https://127.0.0.1.</p>
-            <button className="btn primary" onClick={onTestServer}>Test server</button>
-          </div>
-        ) : (
-          <form className="form-grid" onSubmit={onLogin}>
-            <label>
-              Server URL
-              <input value={serverUrl} onChange={(e) => setServerUrl(e.target.value)} />
-            </label>
-            <label>
-              Username
-              <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
-            </label>
-            <label>
-              Password
-              <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" autoComplete="current-password" />
-            </label>
-            <div className="button-row">
-              <button type="button" className="btn ghost" onClick={() => setStep('server')}>Back</button>
-              <button className="btn primary" type="submit">Sign in</button>
-            </div>
-          </form>
-        )}
-        {info && <div className="message success">{info}</div>}
-        {error && <div className="message error">{error}</div>}
-        {diagnostics && <DiagnosticsPanel diagnostics={diagnostics} />}
-        <div className="auth-footer">
-          <ConnectionPill connection={connection} />
-          <ThemeSwitch theme={theme} setTheme={setTheme} />
-        </div>
-      </section>
-      <aside className="auth-hero">
-        <p className="eyebrow">Modern offline-ready app</p>
-        <h2>Track time, sync safely, stay in control.</h2>
-        <ul>
-          <li>Server diagnostics for bad URLs, TLS, and network issues.</li>
-          <li>Local cache and queued writes when your network drops.</li>
-          <li>Light, dark, and system theme modes.</li>
-        </ul>
-      </aside>
-    </div>
-  );
-}
-
-function Sidebar({ activeView, onChange }) {
-  return (
-    <aside className="sidebar">
-      <div className="sidebar-brand">
-        <img src="../assets/logo.svg" alt="" />
-        <div>
-          <strong>TimeTracker</strong>
-          <span>Desktop</span>
-        </div>
-      </div>
-      <nav>
-        {views.map((view) => (
-          <button
-            key={view.id}
-            className={activeView === view.id ? 'active' : ''}
-            onClick={() => onChange(view.id)}
-            aria-current={activeView === view.id ? 'page' : undefined}
-          >
-            {view.label}
-          </button>
-        ))}
-      </nav>
-    </aside>
-  );
-}
-
-function TopBar({ connection, user, syncStatus, theme, setTheme, onSyncNow, onLogout }) {
-  return (
-    <header className="topbar">
-      <div>
-        <p className="eyebrow">Welcome{user?.username ? `, ${user.username}` : ''}</p>
-        <h1>{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</h1>
-      </div>
-      <div className="topbar-actions">
-        <ConnectionPill connection={connection} />
-        <button className="sync-pill" onClick={onSyncNow} title={syncStatus.lastError || 'Sync now'}>
-          {syncStatus.syncing ? 'Syncing…' : `Queue ${syncStatus.queueDepth}`}
-        </button>
-        <ThemeSwitch theme={theme} setTheme={setTheme} />
-        <button className="btn ghost" onClick={onLogout}>Sign out</button>
-      </div>
-    </header>
-  );
-}
-
-function DashboardView({ data, loading, onRefresh, onStart, onStop, syncStatus }) {
-  const active = data.timer?.active;
-  const seconds = active && data.timer?.timer?.start_time
-    ? Math.max(0, Math.floor((Date.now() - new Date(data.timer.timer.start_time).getTime()) / 1000))
-    : 0;
-  return (
-    <div className="view-stack">
-      <div className="hero-card">
-        <div>
-          <p className="eyebrow">Active timer</p>
-          <h2>{active ? formatDuration(seconds) : 'No timer running'}</h2>
-          <p>{active ? data.timer?.timer?.project_name || 'Tracking time' : 'Start a focused session when you are ready.'}</p>
-        </div>
-        <div className="button-row">
-          <button className="btn primary" onClick={onStart}>Start timer</button>
-          <button className="btn danger" onClick={onStop} disabled={!active}>Stop</button>
-          <button className="btn ghost" onClick={onRefresh}>{loading ? 'Refreshing…' : 'Refresh'}</button>
-        </div>
-      </div>
-      <div className="stats-grid">
-        <StatCard label="Projects" value={data.projects.length} />
-        <StatCard label="Recent entries" value={data.entries.length} />
-        <StatCard label="Queued sync" value={syncStatus.queueDepth} />
-      </div>
-      <Panel title="Recent time entries" action={<button className="btn small" onClick={onRefresh}>Reload</button>}>
-        <EntryList entries={data.entries.slice(0, 8)} />
-      </Panel>
-    </div>
-  );
-}
-
-function ProjectsView({ projects, filter, setFilter, loading }) {
-  return (
-    <div className="view-stack">
-      <ViewHeader title="Projects" subtitle="Search and pick work quickly." />
-      <input className="command-input" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search projects…" />
-      {loading ? <SkeletonGrid /> : (
-        <div className="card-grid">
-          {projects.map((project) => (
-            <article className="project-card" key={project.id || project.name}>
-              <span className="status-dot" />
-              <h3>{project.name}</h3>
-              <p>{project.client_name || project.status || 'Active project'}</p>
-            </article>
-          ))}
-          {!projects.length && <EmptyState title="No projects found" text="Try a different search or sync with the server." />}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function EntriesView({ entries, filter, setFilter, onNew, loading }) {
-  return (
-    <div className="view-stack">
-      <ViewHeader title="Time entries" subtitle="Review recent work and add manual entries." action={<button className="btn primary" onClick={onNew}>New entry</button>} />
-      <input className="command-input" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search notes, projects, tasks…" />
-      {loading ? <SkeletonList /> : <EntryList entries={entries} />}
-    </div>
-  );
-}
-
-function InvoicesView({ invoices, projects, clients, loading, apiClient, onRefresh, showToast }) {
-  const [selectedId, setSelectedId] = useState(null);
-  const [detail, setDetail] = useState(null);
-  const [busy, setBusy] = useState(false);
-
-  const loadDetail = async (id) => {
-    setSelectedId(id);
-    try {
-      const res = await apiClient.getInvoice(id);
-      setDetail(res.invoice || null);
-    } catch (error) {
-      showToast(classifyAxiosError(error).message, 'error');
-    }
-  };
-
-  const createInvoice = async () => {
-    const project = projects[0];
-    const client = clients[0];
-    if (!project || !client) {
-      showToast('Need at least one project and client', 'error');
-      return;
-    }
-    setBusy(true);
-    try {
-      const due = new Date();
-      due.setDate(due.getDate() + 30);
-      await apiClient.createInvoice({
-        project_id: project.id,
-        client_id: client.id,
-        client_name: client.name,
-        due_date: due.toISOString().slice(0, 10),
-      });
-      showToast('Invoice created', 'success');
-      onRefresh();
-    } catch (error) {
-      showToast(classifyAxiosError(error).message, 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const updateStatus = async (status, amountPaid) => {
-    if (!selectedId) return;
-    setBusy(true);
-    try {
-      const payload = { status };
-      if (amountPaid != null) payload.amount_paid = amountPaid;
-      await apiClient.updateInvoice(selectedId, payload);
-      showToast('Invoice updated', 'success');
-      await loadDetail(selectedId);
-      onRefresh();
-    } catch (error) {
-      showToast(classifyAxiosError(error).message, 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const downloadPdf = async () => {
-    if (!selectedId || !detail) return;
-    try {
-      const buffer = await apiClient.downloadInvoicePdf(selectedId);
-      const blob = new Blob([buffer], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${detail.invoice_number || 'invoice'}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      showToast(classifyAxiosError(error).message, 'error');
-    }
-  };
-
-  return (
-    <div className="view-stack split-view">
-      <ViewHeader
-        title="Invoices"
-        subtitle="Create, review, and update invoices."
-        action={<button className="btn primary" onClick={createInvoice} disabled={busy}>New invoice</button>}
-      />
-      {loading ? <SkeletonList /> : (
-        <div className="split-panels">
-          <div className="list-card">
-            {invoices?.length ? invoices.map((item) => (
-              <button type="button" className={`list-row buttonish ${selectedId === item.id ? 'active' : ''}`} key={item.id} onClick={() => loadDetail(item.id)}>
-                <strong>{item.invoice_number || `Invoice ${item.id}`}</strong>
-                <span>{item.status} · {item.total_amount}</span>
-              </button>
-            )) : <EmptyState title="No invoices yet" text="Create one to get started." />}
-          </div>
-          <Panel title={detail ? detail.invoice_number : 'Details'} action={detail && <button className="btn small" onClick={downloadPdf}>PDF</button>}>
-            {!detail ? <EmptyState title="Select an invoice" text="Choose a row to view line items." /> : (
-              <div className="form-grid">
-                <p>{detail.client_name} · {detail.status}</p>
-                <p>Total: {detail.total_amount}</p>
-                {(detail.items || []).map((item) => <div key={item.id} className="list-row"><span>{item.description}</span><span>{item.total_amount}</span></div>)}
-                <div className="button-row">
-                  {detail.status !== 'sent' && <button className="btn" onClick={() => updateStatus('sent')}>Mark sent</button>}
-                  {detail.status !== 'paid' && <button className="btn" onClick={() => updateStatus('paid', detail.total_amount)}>Mark paid</button>}
-                  <button className="btn ghost" onClick={onRefresh}>Refresh list</button>
-                </div>
-              </div>
-            )}
-          </Panel>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ExpensesView({ expenses, projects, loading, apiClient, onRefresh, showToast }) {
-  const [busy, setBusy] = useState(false);
-  const createExpense = async () => {
-    const project = projects[0];
-    if (!project) {
-      showToast('Need a project to log an expense', 'error');
-      return;
-    }
-    setBusy(true);
-    try {
-      await apiClient.createExpense({
-        project_id: project.id,
-        title: 'Desktop expense',
-        amount: 0,
-        expense_date: new Date().toISOString().slice(0, 10),
-        category: 'general',
-      });
-      showToast('Expense created', 'success');
-      onRefresh();
-    } catch (error) {
-      showToast(classifyAxiosError(error).message, 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <div className="view-stack">
-      <ViewHeader title="Expenses" subtitle="Track project expenses." action={<button className="btn primary" onClick={createExpense} disabled={busy}>New expense</button>} />
-      {loading ? <SkeletonList /> : (
-        <div className="list-card">
-          {expenses?.length ? expenses.map((item) => (
-            <div className="list-row" key={item.id}>
-              <strong>{item.title || item.category || `Expense ${item.id}`}</strong>
-              <span>{item.amount} · {item.expense_date || item.status}</span>
-            </div>
-          )) : <EmptyState title="No expenses yet" text="Create one from a project." />}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function WorkforceView({ workforce, user, invoiceApprovals, timeEntryApprovals, loading, apiClient, onRefresh, showToast }) {
-  const periods = workforce?.periods?.timesheet_periods || workforce?.periods?.periods || workforce?.periods?.items || [];
-  const requests = workforce?.requests?.time_off_requests || workforce?.requests?.requests || workforce?.requests?.items || [];
-  const isAdmin = user?.is_admin;
-  const canApprove = isAdmin || ['admin', 'owner', 'manager', 'approver'].includes(String(user?.role || '').toLowerCase());
-
-  const act = async (fn, success) => {
-    try {
-      await fn();
-      showToast(success, 'success');
-      onRefresh();
-    } catch (error) {
-      showToast(classifyAxiosError(error).message, 'error');
-    }
-  };
-
-  return (
-    <div className="view-stack">
-      <ViewHeader title="Workforce" subtitle="Timesheets, approvals, and leave." action={<button className="btn small" onClick={onRefresh}>Refresh</button>} />
-      {loading ? <SkeletonGrid /> : (
-        <>
-          {(invoiceApprovals.length > 0 || timeEntryApprovals.length > 0) && canApprove && (
-            <Panel title="Approvals inbox">
-              {invoiceApprovals.map((a) => (
-                <div className="list-row" key={`inv-${a.id}`}>
-                  <span>Invoice {a.invoice_number || a.invoice_id}</span>
-                  <div className="button-row">
-                    <button className="btn small" onClick={() => act(() => apiClient.approveInvoiceApproval(a.id), 'Approved')}>Approve</button>
-                    <button className="btn small danger" onClick={() => act(() => apiClient.rejectInvoiceApproval(a.id, 'Rejected'), 'Rejected')}>Reject</button>
-                  </div>
-                </div>
-              ))}
-              {timeEntryApprovals.map((a) => (
-                <div className="list-row" key={`te-${a.id}`}>
-                  <span>Time entry #{a.time_entry_id}</span>
-                  <div className="button-row">
-                    <button className="btn small" onClick={() => act(() => apiClient.approveTimeEntryApproval(a.id), 'Approved')}>Approve</button>
-                    <button className="btn small danger" onClick={() => act(() => apiClient.rejectTimeEntryApproval(a.id, 'Rejected'), 'Rejected')}>Reject</button>
-                  </div>
-                </div>
-              ))}
-            </Panel>
-          )}
-          <div className="stats-grid">
-            <StatCard label="Timesheet periods" value={periods.length} />
-            <StatCard label="Time-off requests" value={requests.length} />
-            <StatCard label="Capacity rows" value={(workforce?.capacity?.capacity || workforce?.capacity?.items || []).length} />
-          </div>
-          <Panel title="Timesheet periods">
-            {periods.map((period) => (
-              <div className="list-row" key={period.id}>
-                <span>{period.period_start} – {period.period_end} ({period.status})</span>
-                <div className="button-row">
-                  {period.status === 'draft' && <button className="btn small" onClick={() => act(() => apiClient.submitTimesheetPeriod(period.id), 'Submitted')}>Submit</button>}
-                  {canApprove && period.status === 'submitted' && (
-                    <>
-                      <button className="btn small" onClick={() => act(() => apiClient.approveTimesheetPeriod(period.id), 'Approved')}>Approve</button>
-                      <button className="btn small danger" onClick={() => act(() => apiClient.rejectTimesheetPeriod(period.id, 'Rejected'), 'Rejected')}>Reject</button>
-                    </>
-                  )}
-                  {isAdmin && period.status === 'approved' && (
-                    <button className="btn small" onClick={() => act(() => apiClient.closeTimesheetPeriod(period.id), 'Closed')}>Close</button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </Panel>
-          <Panel title="Time-off requests">
-            {requests.map((req) => (
-              <div className="list-row" key={req.id}>
-                <span>{req.leave_type_name || 'Leave'} · {req.status}</span>
-                {canApprove && req.status === 'submitted' && (
-                  <div className="button-row">
-                    <button className="btn small" onClick={() => act(() => apiClient.approveTimeOffRequest(req.id), 'Approved')}>Approve</button>
-                    <button className="btn small danger" onClick={() => act(() => apiClient.rejectTimeOffRequest(req.id), 'Rejected')}>Reject</button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </Panel>
-        </>
-      )}
-    </div>
-  );
-}
-
-
-function SettingsView(props) {
-  const {
-    serverUrl,
-    setServerUrl,
-    username,
-    setUsername,
-    settings,
-    setSettings,
-    syncStatus,
-    theme,
-    setTheme,
-    onSave,
-    onReset,
-    onSyncNow,
-  } = props;
-  const [password, setPassword] = useState('');
-  return (
-    <div className="view-stack">
-      <ViewHeader title="Settings" subtitle="Server, sign-in, theme, and sync controls." />
-      <div className="settings-grid">
-        <Panel title="Connection">
-          <label>Server URL<input value={serverUrl} onChange={(e) => setServerUrl(e.target.value)} /></label>
-          <label>Username<input value={username} onChange={(e) => setUsername(e.target.value)} /></label>
-          <label>Password<input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Enter to re-authenticate" /></label>
-          <button className="btn primary" onClick={() => onSave({ nextUrl: serverUrl, nextUsername: username, nextPassword: password, nextSettings: settings })}>Save settings</button>
-        </Panel>
-        <Panel title="Appearance">
-          <ThemeSwitch theme={theme} setTheme={setTheme} expanded />
-        </Panel>
-        <Panel title="Offline sync">
-          <label className="switch-row"><input type="checkbox" checked={settings.autoSync} onChange={(e) => setSettings((s) => ({ ...s, autoSync: e.target.checked }))} /> Auto sync</label>
-          <label>Interval seconds<input type="number" min="10" value={settings.syncInterval} onChange={(e) => setSettings((s) => ({ ...s, syncInterval: Number(e.target.value || 60) }))} /></label>
-          <p className="hint">Queue depth: {syncStatus.queueDepth}. Last sync: {syncStatus.lastSyncAt ? new Date(syncStatus.lastSyncAt).toLocaleString() : 'Never'}.</p>
-          {syncStatus.lastError && <p className="message error">{syncStatus.lastError}</p>}
-          <div className="button-row">
-            <button className="btn" onClick={onSyncNow}>Sync now</button>
-            <button className="btn danger" onClick={onReset}>Reset app</button>
-          </div>
-        </Panel>
-      </div>
-    </div>
-  );
-}
-
-function StartTimerDialog({ projects, tasks, onClose, onSubmit }) {
-  const [projectId, setProjectId] = useState('');
-  const [taskId, setTaskId] = useState('');
-  const [notes, setNotes] = useState('');
-  const filteredTasks = tasks.filter((task) => !projectId || String(task.project_id) === String(projectId));
-  return (
-    <Dialog title="Start timer" onClose={onClose}>
-      <label>Project<select value={projectId} onChange={(e) => setProjectId(e.target.value)}><option value="">Choose project</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-      <label>Task<select value={taskId} onChange={(e) => setTaskId(e.target.value)}><option value="">No task</option>{filteredTasks.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
-      <label>Notes<textarea value={notes} onChange={(e) => setNotes(e.target.value)} /></label>
-      <div className="button-row"><button className="btn ghost" onClick={onClose}>Cancel</button><button className="btn primary" onClick={() => onSubmit({ projectId, taskId, notes })}>Start</button></div>
-    </Dialog>
-  );
-}
-
-function TimeEntryDialog({ projects, tasks, onClose, onSubmit }) {
-  const [projectId, setProjectId] = useState('');
-  const [taskId, setTaskId] = useState('');
-  const [notes, setNotes] = useState('');
-  const [duration, setDuration] = useState(60);
-  const today = new Date().toISOString().slice(0, 10);
-  const filteredTasks = tasks.filter((task) => !projectId || String(task.project_id) === String(projectId));
-  return (
-    <Dialog title="New time entry" onClose={onClose}>
-      <label>Project<select value={projectId} onChange={(e) => setProjectId(e.target.value)}><option value="">Choose project</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-      <label>Task<select value={taskId} onChange={(e) => setTaskId(e.target.value)}><option value="">No task</option>{filteredTasks.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
-      <label>Minutes<input type="number" min="1" value={duration} onChange={(e) => setDuration(Number(e.target.value || 0))} /></label>
-      <label>Notes<textarea value={notes} onChange={(e) => setNotes(e.target.value)} /></label>
-      <div className="button-row">
-        <button className="btn ghost" onClick={onClose}>Cancel</button>
-        <button className="btn primary" onClick={() => onSubmit({ project_id: projectId, task_id: taskId || null, duration_minutes: duration, date: today, notes })}>Create</button>
-      </div>
-    </Dialog>
-  );
-}
-
-function Dialog({ title, children, onClose }) {
-  useEffect(() => {
-    const handler = (event) => event.key === 'Escape' && onClose();
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
-  return (
-    <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
-      <section className="dialog" role="dialog" aria-modal="true" aria-label={title} onMouseDown={(e) => e.stopPropagation()}>
-        <div className="dialog-head"><h2>{title}</h2><button className="icon-btn" onClick={onClose}>×</button></div>
-        <div className="form-grid">{children}</div>
-      </section>
-    </div>
-  );
-}
-
-function DiagnosticsPanel({ diagnostics }) {
-  return (
-    <details className="diagnostics">
-      <summary>Connection diagnostics</summary>
-      <ul>{diagnostics.checks.map((check) => <li key={check}>{check}</li>)}</ul>
-      <pre>{diagnostics.technical}</pre>
-    </details>
-  );
-}
-
-function EntryList({ entries }) {
-  if (!entries?.length) return <EmptyState title="No time entries" text="Create one manually or sync with the server." />;
-  return (
-    <div className="list-card">
-      {entries.map((entry, index) => (
-        <div className="list-row" key={entry.id || index}>
-          <div>
-            <strong>{entry.project_name || entry.project?.name || 'Time entry'}</strong>
-            <p>{entry.task_name || entry.notes || entry.description || 'No notes'}</p>
-          </div>
-          <span>{entry.duration_formatted || formatMinutes(entry.duration_minutes || entry.duration || 0)}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ViewHeader({ title, subtitle, action }) {
-  return <div className="view-header"><div><p className="eyebrow">Workspace</p><h2>{title}</h2><p>{subtitle}</p></div>{action}</div>;
-}
-
-function Panel({ title, action, children }) {
-  return <section className="panel"><div className="panel-head"><h3>{title}</h3>{action}</div>{children}</section>;
-}
-
-function StatCard({ label, value }) {
-  return <div className="stat-card"><span>{label}</span><strong>{value}</strong></div>;
-}
-
-function EmptyState({ title, text }) {
-  return <div className="empty-state"><h3>{title}</h3><p>{text}</p></div>;
-}
-
-function SkeletonGrid() {
-  return <div className="card-grid">{[1, 2, 3].map((i) => <div className="skeleton-card" key={i} />)}</div>;
-}
-
-function SkeletonList() {
-  return <div className="list-card">{[1, 2, 3, 4].map((i) => <div className="skeleton-row" key={i} />)}</div>;
-}
-
-function ConnectionPill({ connection }) {
-  return <span className={`connection-pill ${connection.state}`}>{connection.message || connection.state}</span>;
-}
-
-function ThemeSwitch({ theme, setTheme, expanded }) {
-  return (
-    <label className={expanded ? 'theme-switch expanded' : 'theme-switch'}>
-      {expanded && <span>Theme</span>}
-      <select value={theme} onChange={(e) => setTheme(e.target.value)}>
-        <option value="system">System</option>
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-      </select>
-    </label>
-  );
-}
-
-function Toast({ toast }) {
-  return <div className={`toast ${toast.type}`} role="status">{toast.message}</div>;
-}
-
-function formatDuration(totalSeconds) {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  if (hours) return `${hours}h ${minutes}m`;
-  return `${minutes}m ${seconds}s`;
-}
-
-function formatMinutes(minutes) {
-  if (!minutes) return '0m';
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return h ? `${h}h ${m}m` : `${m}m`;
 }
 
 createRoot(document.getElementById('root')).render(<App />);

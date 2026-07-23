@@ -121,11 +121,22 @@ def api_info():
     installation_config = get_installation_config()
     setup_required = not installation_config.is_setup_complete()
 
+    enabled_modules = []
+    try:
+        from app.models import Settings
+        from app.utils.module_registry import ModuleRegistry
+
+        settings = Settings.get_settings()
+        enabled_modules = [m.id for m in ModuleRegistry.get_enabled_modules(settings=settings)]
+    except Exception:
+        enabled_modules = []
+
     return jsonify(
         {
             "api_version": "v1",
             "app_version": app_version,
             "setup_required": setup_required,
+            "enabled_modules": enabled_modules,
             "documentation_url": "/api/docs",
             "authentication": "API Token (Bearer or X-API-Key header)",
             "endpoints": {
@@ -140,6 +151,7 @@ def api_info():
                 "deals": "/api/v1/deals",
                 "leads": "/api/v1/leads",
                 "contacts": "/api/v1/clients/<client_id>/contacts",
+                "issues": "/api/v1/issues",
                 "time_entry_approvals": "/api/v1/time-entry-approvals",
                 "per_diems": "/api/v1/per-diems",
                 "per_diem_rates": "/api/v1/per-diem-rates",
@@ -2805,6 +2817,7 @@ def get_current_user():
         description: Current user information
     """
     from app.models import Settings
+    from app.utils.module_registry import ModuleRegistry
 
     response = {"user": g.api_user.to_dict()}
     settings = Settings.get_settings()
@@ -2813,6 +2826,7 @@ def get_current_user():
         "require_description": getattr(settings, "time_entry_require_description", False),
         "description_min_length": getattr(settings, "time_entry_description_min_length", 20),
     }
+    response["enabled_modules"] = [m.id for m in ModuleRegistry.get_enabled_modules(settings=settings, user=g.api_user)]
     return jsonify(response)
 
 

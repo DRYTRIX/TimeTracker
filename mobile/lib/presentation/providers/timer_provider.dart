@@ -40,7 +40,8 @@ class TimerState {
   }
 
   bool get isActive => timer != null;
-  bool get isRunning => isActive;
+  bool get isRunning => isActive && !(timer?.isPaused ?? false);
+  bool get isPaused => timer?.isPaused ?? false;
   Timer? get activeTimer => timer;
 }
 
@@ -119,6 +120,35 @@ class TimerNotifier extends StateNotifier<TimerState> {
     }
   }
 
+  Future<void> pauseTimer() async {
+    if (repository == null) {
+      state = state.copyWith(error: 'Not connected to server');
+      return;
+    }
+    try {
+      state = state.copyWith(isLoading: true, clearError: true);
+      final timer = await repository!.pauseTimer();
+      state = state.copyWith(timer: timer, isLoading: false);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<void> resumeTimer() async {
+    if (repository == null) {
+      state = state.copyWith(error: 'Not connected to server');
+      return;
+    }
+    try {
+      state = state.copyWith(isLoading: true, clearError: true);
+      final timer = await repository!.resumeTimer();
+      state = state.copyWith(timer: timer, isLoading: false);
+      _startPolling();
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
   Future<void> refresh() async {
     await _loadTimerStatus();
   }
@@ -128,7 +158,7 @@ class TimerNotifier extends StateNotifier<TimerState> {
     if (state.timer == null) {
       return Duration.zero;
     }
-    return DateTime.now().difference(state.timer!.startTime);
+    return state.timer!.elapsed;
   }
 
   Future<void> checkTimerStatus() async {

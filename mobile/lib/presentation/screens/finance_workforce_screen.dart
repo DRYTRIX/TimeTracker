@@ -1,5 +1,10 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../providers/api_provider.dart';
 import '../providers/finance_workforce_providers.dart';
@@ -686,6 +691,26 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
     }
   }
 
+  Future<void> _shareTimeOffPdf(int requestId) async {
+    try {
+      final client = await ref.read(apiClientProvider.future);
+      if (client == null) return;
+      final bytes = await client.downloadTimeOffPdf(requestId);
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/time-off-$requestId.pdf');
+      await file.writeAsBytes(Uint8List.fromList(bytes));
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Time-off request #$requestId',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('PDF export failed: $e')),
+      );
+    }
+  }
+
   Future<void> _openCreateTimeOffDialog(_FinanceWorkforceData data) async {
     if (data.leaveTypes.isEmpty) {
       if (!mounted) return;
@@ -1155,7 +1180,7 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
                             final canDelete = requestId != null &&
                                 ['draft', 'submitted', 'cancelled'].contains(status.toLowerCase()) &&
                                 (reqUserId == _currentUserId || _canApprove);
-                            final showMenu = (isSubmitted && _canApprove) || canDelete;
+                            final showMenu = (isSubmitted && _canApprove) || canDelete || requestId != null;
                             return ListTile(
                               dense: true,
                               contentPadding: EdgeInsets.zero,
@@ -1165,6 +1190,12 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(status),
+                                  if (requestId != null)
+                                    IconButton(
+                                      tooltip: 'Share PDF',
+                                      icon: const Icon(Icons.picture_as_pdf),
+                                      onPressed: () => _shareTimeOffPdf(requestId),
+                                    ),
                                   if (showMenu && requestId != null)
                                     PopupMenuButton<String>(
                                       onSelected: (value) async {
@@ -1174,10 +1205,14 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
                                           await _reviewTimeOffRequest(requestId: requestId, approve: false);
                                         } else if (value == 'delete') {
                                           await _deleteTimeOffRequest(requestId);
+                                        } else if (value == 'pdf') {
+                                          await _shareTimeOffPdf(requestId);
                                         }
                                       },
                                       itemBuilder: (context) {
-                                        final items = <PopupMenuItem<String>>[];
+                                        final items = <PopupMenuItem<String>>[
+                                          const PopupMenuItem(value: 'pdf', child: Text('PDF')),
+                                        ];
                                         if (isSubmitted && _canApprove) {
                                           items.add(const PopupMenuItem(value: 'approve', child: Text('Approve')));
                                           items.add(const PopupMenuItem(value: 'reject', child: Text('Reject')));

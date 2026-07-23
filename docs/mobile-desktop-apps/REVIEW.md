@@ -1,5 +1,7 @@
 # Implementation Review - Mobile and Desktop Apps
 
+> **Superseded for desktop status.** This review is historical. Current desktop vs webapp gaps and catch-up progress: [DESKTOP_WEBAPP_GAP.md](DESKTOP_WEBAPP_GAP.md).
+
 ## ✅ Fully Implemented
 
 ### Flutter Mobile App

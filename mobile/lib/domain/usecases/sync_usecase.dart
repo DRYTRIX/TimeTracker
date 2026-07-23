@@ -11,6 +11,9 @@ class SyncUseCase {
   final Connectivity _connectivity = Connectivity();
   Timer? _syncTimer;
 
+  /// Shared instance so login/home can start periodic sync once.
+  static final SyncUseCase shared = SyncUseCase();
+
   /// Last sync error message for UI or support (cleared on successful sync start).
   static String? lastError;
 
@@ -19,7 +22,10 @@ class SyncUseCase {
   // Start periodic sync if auto-sync is enabled
   Future<void> startPeriodicSync() async {
     final autoSync = await AppConfig.getAutoSync();
-    if (!autoSync) return;
+    if (!autoSync) {
+      stopPeriodicSync();
+      return;
+    }
 
     _syncTimer?.cancel();
     final intervalSeconds = await AppConfig.getSyncInterval();

@@ -5,6 +5,7 @@ import '../../core/config/app_config.dart';
 import '../../domain/usecases/sync_usecase.dart';
 import '../providers/api_provider.dart';
 import '../../utils/auth/auth_service.dart';
+import '../../utils/network/server_info.dart';
 import '../providers/theme_mode_provider.dart';
 import 'package:timetracker_mobile/data/api/api_client.dart';
 import 'login_screen.dart';
@@ -58,8 +59,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _runManualSync() async {
     setState(() => _syncing = true);
-    final uc = SyncUseCase();
-    await uc.sync();
+    await SyncUseCase.shared.sync();
     if (mounted) {
       setState(() {
         _syncing = false;
@@ -156,9 +156,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
 
     final normalized = _normalizeServerUrlForSettings(result);
+    final trustedHosts = await AppConfig.getTrustedInsecureHosts();
+    final infoResult = await probeServerInfo(
+      normalized,
+      trustedInsecureHosts: trustedHosts,
+    );
+    if (!infoResult.ok) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(infoResult.message ?? 'Invalid TimeTracker server')),
+      );
+      return;
+    }
+
     final token = await AuthService.getToken();
     if (token != null && token.isNotEmpty) {
-      final trustedHosts = await AppConfig.getTrustedInsecureHosts();
       final probe = ApiClient(baseUrl: normalized, trustedInsecureHosts: trustedHosts);
       await probe.setAuthToken(token);
       final validation = await probe.validateTokenRaw();
@@ -183,7 +195,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (mounted) {
       setState(() => _serverUrl = normalized);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Server URL updated')),
+        SnackBar(
+          content: Text(
+            infoResult.appVersion != null
+                ? 'Server URL updated (app ${infoResult.appVersion})'
+                : 'Server URL updated',
+          ),
+        ),
       );
     }
   }
@@ -330,6 +348,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             value: _autoSync,
             onChanged: (value) async {
               await AppConfig.setAutoSync(value);
+              if (value) {
+                await SyncUseCase.shared.startPeriodicSync();
+              } else {
+                SyncUseCase.shared.stopPeriodicSync();
+              }
               if (mounted) setState(() => _autoSync = value);
             },
           ),
@@ -399,6 +422,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               );
               if (confirm == true && mounted) {
+                SyncUseCase.shared.stopPeriodicSync();
                 await AuthService.deleteToken();
                 await AppConfig.clear();
                 if (mounted) {

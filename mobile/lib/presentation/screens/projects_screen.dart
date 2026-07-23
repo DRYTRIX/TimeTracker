@@ -7,6 +7,7 @@ import '../providers/timer_provider.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_view.dart';
 import '../widgets/start_timer_sheet.dart';
+import 'project_tasks_screen.dart';
 
 class ProjectsScreen extends ConsumerStatefulWidget {
   const ProjectsScreen({super.key});
@@ -155,7 +156,18 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
                                       icon: const Icon(Icons.play_arrow),
                                       tooltip: 'Start timer',
                                     ),
-                                    onTap: () => _startTimerForProject(project),
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ProjectTasksScreen(
+                                            projectId: project.id,
+                                            projectName: project.name,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    onLongPress: () => _startTimerForProject(project),
                                   ),
                                 );
                               },

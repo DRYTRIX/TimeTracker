@@ -12,12 +12,14 @@ Located in `mobile/` directory.
 
 ### Features
 
-- Time tracking with start/stop timer
+- Time tracking with start/pause/resume/stop timer
 - Project and task management
-- Time entries with calendar view
-- Offline support with automatic sync
-- Secure token-based authentication
-- Background timer updates
+- Time entries with filters and offline queue
+- Workday clock-in/out and breaks
+- Finance & workforce (invoices, expenses, time-off, timesheets, approvals)
+- Offline support with periodic automatic sync
+- Secure token-based authentication (username/password login → API token)
+- Server discovery via `GET /api/v1/info` (rejects non-TimeTracker hosts and unfinished setup)
 
 ### Setup
 
@@ -34,12 +36,16 @@ Located in `desktop/` directory.
 
 ### Features
 
-- Time tracking with system tray integration
-- Project and task management
-- Time entries viewing
-- Offline support
-- Secure token-based authentication
-- Global keyboard shortcuts (planned)
+- Time tracking with system tray integration (start/stop/pause/resume)
+- Workday clock-in/out and break controls
+- Project and task management, Kanban board
+- Time entries, reports summary
+- Invoices, expenses, payments, mileage, quotes, recurring invoices, credit notes
+- CRM: leads, deals, client contacts and notes
+- Workforce: timesheets, time-off, approvals
+- Offline support for timer and time-entry mutations
+- Username/password login → API token (`tt_…`)
+- Global keyboard shortcuts (timer toggle, show window)
 
 ### Setup
 
@@ -51,6 +57,8 @@ See [desktop/README.md](../../desktop/README.md) for setup instructions.
 - macOS: `npm run build:mac`
 - Linux: `npm run build:linux`
 
+Gap analysis vs the webapp: [DESKTOP_WEBAPP_GAP.md](DESKTOP_WEBAPP_GAP.md).
+
 ## API Integration
 
 Both apps use the TimeTracker REST API v1 (`/api/v1/`). See [API Documentation](../api/REST_API.md) for details.
@@ -58,7 +66,7 @@ Both apps use the TimeTracker REST API v1 (`/api/v1/`). See [API Documentation](
 ### Authentication
 
 1. **Mobile app**: Sign in with your web username and password; the server returns an API token (`tt_…`) which is stored securely. Changing the **Server URL** in Settings probes the new host with your saved token before persisting the change.
-2. **Desktop app**: Use the two-step sign-in wizard (test server, then API token) or **Settings** with an API token from **Admin → Security & Access → API tokens** (no username/password flow in the Electron app).
+2. **Desktop app**: Two-step wizard (test server, then username/password). The app calls `POST /api/v1/auth/login` and stores the returned token. Optional long-lived tokens can still be created under **Admin → Security & Access → API tokens**.
 3. Clients validate the server with `GET /api/v1/info` (and respect `setup_required` when the installation is not finished) and validate the token with authenticated API calls.
 
 ### Required API Scopes
@@ -68,16 +76,21 @@ Both apps use the TimeTracker REST API v1 (`/api/v1/`). See [API Documentation](
 - `read:projects` - View projects
 - `read:tasks` - View tasks
 - `read:users` - Optional on desktop tokens; preferred so `GET /api/v1/users/me` can be used for session verification
+- Additional scopes as needed for invoices, CRM, attendance, etc. (password-login tokens typically include broad app scopes)
 
 ### API Endpoints Used
 
 - `GET /api/v1/info` - API metadata (includes `setup_required` when the server install is not complete); used for discovery without auth
+- `POST /api/v1/auth/login` - Username/password → token
 - `GET /api/v1/timer/status` - Get active timer status
 - `POST /api/v1/timer/start` - Start timer
-- `POST /api/v1/timer/stop` - Stop timer
+- `POST /api/v1/timer/pause` / `resume` / `stop` - Timer control
+- `GET /api/v1/attendance/status`, `POST /api/v1/workday/start|end`, attendance break start/end
 - `GET /api/v1/time-entries` - List time entries
 - `POST /api/v1/time-entries` - Create time entry
 - `PUT /api/v1/time-entries/{id}` - Update time entry
+- `GET /api/v1/projects` / `tasks` / `clients` / `reports/summary`
+- Finance, CRM, Kanban, and workforce routes as used by the desktop views
 - `DELETE /api/v1/time-entries/{id}` - Delete time entry
 - `GET /api/v1/projects` - List projects
 - `GET /api/v1/tasks` - List tasks

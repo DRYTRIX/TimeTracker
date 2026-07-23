@@ -67,9 +67,9 @@ For detailed instructions, see [Windows Code Signing Guide](../../docs/WINDOWS_C
 
 ## Development
 
-### Renderer bundle
+### Renderer (React + Vite)
 
-The UI is bundled from [`src/renderer/js/app.js`](src/renderer/js/app.js) into [`src/renderer/js/bundle.js`](src/renderer/js/bundle.js) with esbuild (`npm run build:renderer`). Anything the app needs at runtime (including [`src/renderer/js/utils/helpers.js`](src/renderer/js/utils/helpers.js), which sets `window.Helpers`) must be imported from `app.js` so it is included in the bundle. After changing renderer source files, run `npm run build:renderer` before packaging or committing an updated `bundle.js`.
+The primary UI lives in [`src/renderer-react/`](src/renderer-react/) and builds to [`dist-renderer/`](dist-renderer/) via Vite (`npm run build:renderer`). Electron loads `dist-renderer/index.html`, with the legacy [`src/renderer/`](src/renderer/) bundle kept only as a fallback.
 
 ### Run in Development Mode
 
@@ -77,7 +77,7 @@ The UI is bundled from [`src/renderer/js/app.js`](src/renderer/js/app.js) into [
 npm start
 ```
 
-(`npm start` and every packaging script run `build:renderer` first so installers do not ship a stale `bundle.js`.)
+(`npm start` and every packaging script run `build:renderer` first so installers do not ship a stale Vite build.)
 
 ### Run with DevTools
 
@@ -87,40 +87,17 @@ npm run dev
 
 ## Configuration
 
-### Getting an API Token
-
-Before connecting the desktop app, you need to create an API token:
-
-1. **Log in to TimeTracker Web App** as an administrator
-2. Navigate to **Admin > Security & Access > Api-tokens** (`/admin/api-tokens`)
-3. Click **"Create Token"**
-4. Fill in the required information:
-   - **Name**: A descriptive name (e.g., "Desktop App - Windows")
-   - **User**: Select the user this token will authenticate as
-   - **Scopes**: Select at least the following permissions:
-     - `read:projects` - View projects
-     - `read:tasks` - View tasks
-     - `read:time_entries` - View time entries (required for timer status; the app uses this if `read:users` is not granted)
-     - `write:time_entries` - Create and update time entries
-     - `read:users` - Recommended: lets the app verify your session with `GET /api/v1/users/me` (otherwise it falls back to timer status)
-   - **Expires In**: Optional expiration period (leave empty for no expiration)
-5. Click **"Create Token"**
-6. **Important**: Copy the generated token immediately - you won't be able to see it again!
-   - Token format: `tt_<32_random_characters>`
-   - Example: `tt_abc123def456ghi789jkl012mno345pq`
-
 ### Connecting the App
 
-The desktop app can be configured in multiple ways:
+Sign in with your TimeTracker **username and password**. The app calls `POST /api/v1/auth/login` and stores the returned API token (`tt_…`) securely. You can still create long-lived tokens under **Admin → Security & Access → API tokens** if you prefer to manage tokens in the web UI.
 
 #### Method 1: In-App Login (Recommended)
 
 1. **Launch the desktop app**
-2. **Step 1 — Server**: Enter your TimeTracker **base URL** (e.g. `https://your-server.com` or `http://192.168.1.10:5000`). Trailing slashes are normalized away. You may omit the scheme for convenience; the app assumes `https://` when checking.
-3. Click **Test server** and confirm you see a success message (the app calls `GET /api/v1/info` and checks for a TimeTracker response).
-4. Click **Continue to token**.
-5. **Step 2 — API token**: Paste the `tt_…` token from the web app, then **Log in**. The app verifies the token with the server (user profile or timer status).
-6. If successful, the main window opens. If initial server setup is not finished in the browser, `setup_required` in the API response is surfaced so you can complete setup first.
+2. **Step 1 — Server**: Enter your TimeTracker **base URL** (e.g. `https://your-server.com`). Trailing slashes are normalized. Omitting the scheme assumes `https://`.
+3. Click **Test server** (`GET /api/v1/info`).
+4. **Step 2 — Sign in**: Enter username and password, then **Sign in**.
+5. On success the main window opens. If the server still requires initial setup, that is surfaced from the info response.
 
 #### Method 2: Command Line
 
@@ -128,7 +105,7 @@ The desktop app can be configured in multiple ways:
 TimeTracker.exe --server-url https://your-server.com
 ```
 
-Then enter your API token in the login screen.
+Then complete username/password sign-in in the app.
 
 #### Method 3: Environment Variable
 
@@ -144,10 +121,10 @@ export TIMETRACKER_SERVER_URL=https://your-server.com
 
 #### Method 4: Settings Screen
 
-1. Launch the app
-2. Navigate to **Settings** tab
-3. Enter your **Server URL** and **API Token**
-4. Click **"Save Settings"** or **"Test Connection"** to verify
+1. Launch the app and sign in
+2. Open **Settings**
+3. Update **Server URL** / username; enter password to re-authenticate
+4. Save settings
 
 ### Connection Status
 

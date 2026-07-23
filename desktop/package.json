@@ -1,12 +1,12 @@
 {
   "name": "timetracker-desktop",
-  "version": "5.8.2",
+  "version": "5.9.3",
   "description": "TimeTracker desktop app for Windows, Linux, and macOS",
   "main": "src/main/main.js",
   "scripts": {
     "prestart": "npm run build:renderer",
     "prebuild": "npm run build:renderer",
-    "test": "node --test \"test/**/*.test.js\"",
+    "test": "node --test test/*.test.js",
     "start": "npm run build:renderer && electron .",
     "dev": "npm run build:renderer && electron . --dev",
     "dev:renderer": "vite --host 127.0.0.1",

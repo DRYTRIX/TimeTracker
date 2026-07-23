@@ -4,11 +4,13 @@ Flutter mobile application for Android and iOS that integrates with the TimeTrac
 
 ## Features
 
-- ⏱️ **Time Tracking** - Start, stop, and manage timers
-- 📊 **Projects & Tasks** - View and select projects and tasks
-- 📝 **Time Entries** - View and manage time entries with calendar
-- 🔄 **Offline Support** - Work offline with automatic sync
-- 🔐 **Secure Authentication** - Sign in with your web username and password; the app obtains an API token in the background for the same basics access as the web app
+- **Time Tracking** - Start, pause, resume, and stop timers
+- **Projects & Tasks** - View and select projects and tasks
+- **Time Entries** - View, filter, and manage time entries
+- **Workday** - Clock in/out and breaks
+- **Finance & workforce** - Invoices, expenses, time-off, timesheets, approvals
+- **Offline Support** - Queue changes offline; periodic auto-sync when online
+- **Secure Authentication** - Sign in with your web username and password; the app obtains an API token and validates the server via `GET /api/v1/info`
 
 ## Setup
 

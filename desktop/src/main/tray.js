@@ -57,6 +57,7 @@ function createTray(mainWindow) {
   tray.setToolTip('TimeTracker');
 
   let isTimerRunning = false;
+  let isTimerPaused = false;
 
   function buildMenu() {
     return Menu.buildFromTemplate([
@@ -77,6 +78,28 @@ function createTray(mainWindow) {
         click: () => {
           if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('tray:action', 'start-timer');
+          }
+        },
+      },
+      {
+        label: 'Pause Timer',
+        id: 'pause-timer',
+        enabled: isTimerRunning && !isTimerPaused,
+        visible: isTimerRunning && !isTimerPaused,
+        click: () => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('tray:action', 'pause-timer');
+          }
+        },
+      },
+      {
+        label: 'Resume Timer',
+        id: 'resume-timer',
+        enabled: isTimerRunning && isTimerPaused,
+        visible: isTimerRunning && isTimerPaused,
+        click: () => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('tray:action', 'resume-timer');
           }
         },
       },
@@ -103,9 +126,10 @@ function createTray(mainWindow) {
 
   tray.setContextMenu(buildMenu());
 
-  function updateTrayMenu(running) {
+  function updateTrayMenu(running, paused = false) {
     if (!tray || tray.isDestroyed()) return;
     isTimerRunning = running;
+    isTimerPaused = Boolean(paused);
     tray.setContextMenu(buildMenu());
   }
 

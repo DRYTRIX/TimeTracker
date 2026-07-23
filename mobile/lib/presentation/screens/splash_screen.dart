@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/config/app_config.dart';
 import '../../core/constants/app_constants.dart';
+import '../../domain/usecases/sync_usecase.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -31,6 +32,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     final route = (serverUrl != null && serverUrl.isNotEmpty && hasToken)
         ? AppConstants.routeHome
         : AppConstants.routeLogin;
+    if (route == AppConstants.routeHome) {
+      // ignore: unawaited_futures
+      SyncUseCase.shared.startPeriodicSync();
+    }
     final elapsed = DateTime.now().difference(start).inMilliseconds;
     const minDisplayMs = 800;
     if (elapsed < minDisplayMs) {
@@ -45,43 +50,43 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     return Scaffold(
       body: SafeArea(
         child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Image.asset(
+                    'assets/icon/app_icon.png',
+                    fit: BoxFit.contain,
+                    semanticLabel: 'TimeTracker logo',
                   ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Image.asset(
-                  'assets/icon/app_icon.png',
-                  fit: BoxFit.contain,
-                  semanticLabel: 'TimeTracker logo',
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'TimeTracker',
-              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 48),
-            const CircularProgressIndicator(),
-          ],
-        ),
+              const SizedBox(height: 24),
+              Text(
+                'TimeTracker',
+                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 48),
+              const CircularProgressIndicator(),
+            ],
+          ),
         ),
       ),
     );
