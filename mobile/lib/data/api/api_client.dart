@@ -38,6 +38,13 @@ class ApiClient {
     return _dio.get<dynamic>('/api/v1/timer/status');
   }
 
+  /// Public discovery: API metadata (`api_version`, `setup_required`, `app_version`).
+  Future<Map<String, dynamic>> getInfo() async {
+    final res = await _dio.get<Map<String, dynamic>>('/api/v1/info');
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
   Future<Map<String, dynamic>> getUsersMe() async {
     final res = await _dio.get<Map<String, dynamic>>('/api/v1/users/me');
     _throwIfError(res);
@@ -86,6 +93,18 @@ class ApiClient {
       response: res,
       type: DioExceptionType.badResponse,
     );
+  }
+
+  Future<Map<String, dynamic>> pauseTimer() async {
+    final res = await _dio.post<Map<String, dynamic>>('/api/v1/timer/pause');
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> resumeTimer() async {
+    final res = await _dio.post<Map<String, dynamic>>('/api/v1/timer/resume');
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
   }
 
   Future<Map<String, dynamic>> getTimeEntries({
@@ -622,6 +641,524 @@ class ApiClient {
     final res = await _dio.post<Map<String, dynamic>>('/api/v1/attendance/break/end');
     _throwIfError(res);
     return _unwrapData(res.data);
+  }
+
+  Future<Map<String, dynamic>> getAttendanceHistory({int days = 30}) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/attendance/history',
+      queryParameters: {'days': days},
+    );
+    _throwIfError(res);
+    return _unwrapData(res.data);
+  }
+
+  Future<Map<String, dynamic>> requestAttendanceCorrection({
+    int? attendanceDayId,
+    String? entityType,
+    int? entityId,
+    Map<String, dynamic>? correctedValues,
+    required String reason,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/attendance/corrections',
+      data: <String, dynamic>{
+        if (attendanceDayId != null) 'attendance_day_id': attendanceDayId,
+        if (entityType != null) 'entity_type': entityType,
+        if (entityId != null) 'entity_id': entityId,
+        if (correctedValues != null) 'corrected_values': correctedValues,
+        'reason': reason,
+      },
+    );
+    _throwIfError(res);
+    return _unwrapData(res.data);
+  }
+
+  Future<List<int>> downloadTimeOffPdf(int requestId) async {
+    final res = await _dio.get<List<int>>(
+      '/api/v1/time-off/requests/$requestId/pdf',
+      options: Options(responseType: ResponseType.bytes),
+    );
+    _throwIfError(res);
+    final data = res.data;
+    if (data == null) return <int>[];
+    return List<int>.from(data);
+  }
+
+  Future<Map<String, dynamic>> getBelgiumAttendanceReport({
+    required String startDate,
+    required String endDate,
+    int? userId,
+  }) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/reports/compliance/belgium-attendance',
+      queryParameters: <String, dynamic>{
+        'start_date': startDate,
+        'end_date': endDate,
+        if (userId != null) 'user_id': userId,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> getClient(int clientId) async {
+    final res = await _dio.get<Map<String, dynamic>>('/api/v1/clients/$clientId');
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> createClient({
+    required String name,
+    String? email,
+    String? phone,
+    String? address,
+    String? status,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/clients',
+      data: <String, dynamic>{
+        'name': name,
+        if (email != null) 'email': email,
+        if (phone != null) 'phone': phone,
+        if (address != null) 'address': address,
+        if (status != null) 'status': status,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> createTask({
+    required int projectId,
+    required String name,
+    String? description,
+    String? status,
+    String? priority,
+    int? assigneeId,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/tasks',
+      data: <String, dynamic>{
+        'project_id': projectId,
+        'name': name,
+        if (description != null) 'description': description,
+        if (status != null) 'status': status,
+        if (priority != null) 'priority': priority,
+        if (assigneeId != null) 'assignee_id': assigneeId,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> updateTask(
+    int taskId, {
+    String? name,
+    String? description,
+    String? status,
+    String? priority,
+    int? projectId,
+    int? assigneeId,
+  }) async {
+    final res = await _dio.patch<Map<String, dynamic>>(
+      '/api/v1/tasks/$taskId',
+      data: <String, dynamic>{
+        if (name != null) 'name': name,
+        if (description != null) 'description': description,
+        if (status != null) 'status': status,
+        if (priority != null) 'priority': priority,
+        if (projectId != null) 'project_id': projectId,
+        if (assigneeId != null) 'assignee_id': assigneeId,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<void> deleteTask(int taskId) async {
+    final res = await _dio.delete<Map<String, dynamic>>('/api/v1/tasks/$taskId');
+    _throwIfError(res);
+  }
+
+  Future<Map<String, dynamic>> getMileage({
+    int? page,
+    int? perPage,
+    int? projectId,
+    String? startDate,
+    String? endDate,
+  }) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/mileage',
+      queryParameters: <String, dynamic>{
+        if (page != null) 'page': page,
+        if (perPage != null) 'per_page': perPage,
+        if (projectId != null) 'project_id': projectId,
+        if (startDate != null) 'start_date': startDate,
+        if (endDate != null) 'end_date': endDate,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> createMileage({
+    required String tripDate,
+    required String purpose,
+    required String startLocation,
+    required String endLocation,
+    required num distanceKm,
+    required num ratePerKm,
+    int? projectId,
+    int? clientId,
+    String? notes,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/mileage',
+      data: <String, dynamic>{
+        'trip_date': tripDate,
+        'purpose': purpose,
+        'start_location': startLocation,
+        'end_location': endLocation,
+        'distance_km': distanceKm,
+        'rate_per_km': ratePerKm,
+        if (projectId != null) 'project_id': projectId,
+        if (clientId != null) 'client_id': clientId,
+        if (notes != null) 'notes': notes,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<void> deleteMileage(int entryId) async {
+    final res = await _dio.delete<Map<String, dynamic>>('/api/v1/mileage/$entryId');
+    _throwIfError(res);
+  }
+
+  Future<Map<String, dynamic>> getPerDiems({int? page, int? perPage}) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/per-diems',
+      queryParameters: <String, dynamic>{
+        if (page != null) 'page': page,
+        if (perPage != null) 'per_page': perPage,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> getPerDiemRates() async {
+    final res = await _dio.get<Map<String, dynamic>>('/api/v1/per-diem-rates');
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> createPerDiem({
+    required String tripPurpose,
+    required String startDate,
+    required String endDate,
+    required String country,
+    required num fullDayRate,
+    required num halfDayRate,
+    String? notes,
+    int? projectId,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/per-diems',
+      data: <String, dynamic>{
+        'trip_purpose': tripPurpose,
+        'start_date': startDate,
+        'end_date': endDate,
+        'country': country,
+        'full_day_rate': fullDayRate,
+        'half_day_rate': halfDayRate,
+        if (notes != null) 'notes': notes,
+        if (projectId != null) 'project_id': projectId,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<void> deletePerDiem(int id) async {
+    final res = await _dio.delete<Map<String, dynamic>>('/api/v1/per-diems/$id');
+    _throwIfError(res);
+  }
+
+  Future<Map<String, dynamic>> getCalendarEvents({
+    String? startDate,
+    String? endDate,
+  }) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/calendar/events',
+      queryParameters: <String, dynamic>{
+        if (startDate != null) 'start': startDate,
+        if (endDate != null) 'end': endDate,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> createCalendarEvent({
+    required String title,
+    required String startTime,
+    required String endTime,
+    String? description,
+    bool allDay = false,
+    String? location,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/calendar/events',
+      data: <String, dynamic>{
+        'title': title,
+        'start_time': startTime,
+        'end_time': endTime,
+        if (description != null) 'description': description,
+        'all_day': allDay,
+        if (location != null) 'location': location,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> updateCalendarEvent(
+    int eventId, {
+    String? title,
+    String? startTime,
+    String? endTime,
+    String? description,
+    bool? allDay,
+  }) async {
+    final res = await _dio.patch<Map<String, dynamic>>(
+      '/api/v1/calendar/events/$eventId',
+      data: <String, dynamic>{
+        if (title != null) 'title': title,
+        if (startTime != null) 'start_time': startTime,
+        if (endTime != null) 'end_time': endTime,
+        if (description != null) 'description': description,
+        if (allDay != null) 'all_day': allDay,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<void> deleteCalendarEvent(int eventId) async {
+    final res = await _dio.delete<Map<String, dynamic>>('/api/v1/calendar/events/$eventId');
+    _throwIfError(res);
+  }
+
+  Future<Map<String, dynamic>> getKanbanColumns({int? projectId}) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/kanban/columns',
+      queryParameters: <String, dynamic>{
+        if (projectId != null) 'project_id': projectId,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> getContacts(int clientId) async {
+    final res = await _dio.get<Map<String, dynamic>>('/api/v1/clients/$clientId/contacts');
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> createContact(
+    int clientId, {
+    required String name,
+    String? email,
+    String? phone,
+    String? role,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/clients/$clientId/contacts',
+      data: <String, dynamic>{
+        'name': name,
+        if (email != null) 'email': email,
+        if (phone != null) 'phone': phone,
+        if (role != null) 'role': role,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> getDeals({int? page, int? perPage, String? status}) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/deals',
+      queryParameters: <String, dynamic>{
+        if (page != null) 'page': page,
+        if (perPage != null) 'per_page': perPage,
+        if (status != null) 'status': status,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> getDeal(int dealId) async {
+    final res = await _dio.get<Map<String, dynamic>>('/api/v1/deals/$dealId');
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> createDeal({
+    required String name,
+    int? clientId,
+    num? value,
+    String? stage,
+    String? status,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/deals',
+      data: <String, dynamic>{
+        'name': name,
+        if (clientId != null) 'client_id': clientId,
+        if (value != null) 'value': value,
+        if (stage != null) 'stage': stage,
+        if (status != null) 'status': status,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> getLeads({int? page, int? perPage, String? status}) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/leads',
+      queryParameters: <String, dynamic>{
+        if (page != null) 'page': page,
+        if (perPage != null) 'per_page': perPage,
+        if (status != null) 'status': status,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> getLead(int leadId) async {
+    final res = await _dio.get<Map<String, dynamic>>('/api/v1/leads/$leadId');
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> createLead({
+    required String firstName,
+    required String lastName,
+    String? email,
+    String? companyName,
+    String? status,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/leads',
+      data: <String, dynamic>{
+        'first_name': firstName,
+        'last_name': lastName,
+        if (email != null) 'email': email,
+        if (companyName != null) 'company_name': companyName,
+        if (status != null) 'status': status,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> getQuotes({int? page, int? perPage, String? status}) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/quotes',
+      queryParameters: <String, dynamic>{
+        if (page != null) 'page': page,
+        if (perPage != null) 'per_page': perPage,
+        if (status != null) 'status': status,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> getQuote(int quoteId) async {
+    final res = await _dio.get<Map<String, dynamic>>('/api/v1/quotes/$quoteId');
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> getIssues({
+    int? page,
+    int? perPage,
+    int? projectId,
+    String? status,
+  }) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/issues',
+      queryParameters: <String, dynamic>{
+        if (page != null) 'page': page,
+        if (perPage != null) 'per_page': perPage,
+        if (projectId != null) 'project_id': projectId,
+        if (status != null) 'status': status,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> getIssue(int issueId) async {
+    final res = await _dio.get<Map<String, dynamic>>('/api/v1/issues/$issueId');
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> createIssue({
+    required String title,
+    required int clientId,
+    int? projectId,
+    String? description,
+    String? status,
+    String? priority,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/issues',
+      data: <String, dynamic>{
+        'title': title,
+        'client_id': clientId,
+        if (projectId != null) 'project_id': projectId,
+        if (description != null) 'description': description,
+        if (status != null) 'status': status,
+        if (priority != null) 'priority': priority,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> updateIssue(
+    int issueId, {
+    String? title,
+    String? description,
+    String? status,
+    String? priority,
+    int? projectId,
+  }) async {
+    final res = await _dio.patch<Map<String, dynamic>>(
+      '/api/v1/issues/$issueId',
+      data: <String, dynamic>{
+        if (title != null) 'title': title,
+        if (description != null) 'description': description,
+        if (status != null) 'status': status,
+        if (priority != null) 'priority': priority,
+        if (projectId != null) 'project_id': projectId,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<void> deleteIssue(int issueId) async {
+    final res = await _dio.delete<Map<String, dynamic>>('/api/v1/issues/$issueId');
+    _throwIfError(res);
   }
 
   void _throwIfError(Response<dynamic> res) {

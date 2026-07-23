@@ -145,6 +145,44 @@ class TimeTrackingRepository {
     }
   }
 
+  /// Pause the active timer
+  Future<Timer> pauseTimer() async {
+    if (apiClient == null) {
+      throw Exception('Not connected to server');
+    }
+    try {
+      final response = await runMobileSpan(
+        'mobile.timer.pause',
+        () => apiClient!.pauseTimer(),
+      );
+      final raw = response['time_entry'] ?? response['timer'];
+      final timer = Timer.fromJson(raw as Map<String, dynamic>);
+      await LocalStorage.saveTimer(timer);
+      return timer;
+    } catch (e) {
+      throw Exception('Failed to pause timer: $e');
+    }
+  }
+
+  /// Resume a paused timer
+  Future<Timer> resumeTimer() async {
+    if (apiClient == null) {
+      throw Exception('Not connected to server');
+    }
+    try {
+      final response = await runMobileSpan(
+        'mobile.timer.resume',
+        () => apiClient!.resumeTimer(),
+      );
+      final raw = response['time_entry'] ?? response['timer'];
+      final timer = Timer.fromJson(raw as Map<String, dynamic>);
+      await LocalStorage.saveTimer(timer);
+      return timer;
+    } catch (e) {
+      throw Exception('Failed to resume timer: $e');
+    }
+  }
+
   // ==================== Time Entry Operations ====================
 
   /// Get time entries with filters

@@ -637,3 +637,74 @@ label {
 .list-row.buttonish.active {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
+
+.nav-group {
+  margin-bottom: 0.75rem;
+}
+
+.nav-group-label {
+  margin: 0.4rem 0.75rem 0.25rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.workday-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.report-filters {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  align-items: end;
+}
+
+.tab-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.kanban-column {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  min-height: 200px;
+}
+
+.kanban-column-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.kanban-card {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  padding: 0.65rem;
+  margin-bottom: 0.5rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.detail-pre {
+  max-height: 320px;
+  overflow: auto;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+

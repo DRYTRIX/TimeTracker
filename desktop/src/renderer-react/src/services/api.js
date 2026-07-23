@@ -166,8 +166,12 @@ export class ApiClient {
   getTimerStatus() { return this.unwrap(this.client.get('/api/v1/timer/status')); }
   startTimer(data) { return this.unwrap(this.client.post('/api/v1/timer/start', { project_id: data.projectId, task_id: data.taskId || null, notes: data.notes || '' })); }
   stopTimer() { return this.unwrap(this.client.post('/api/v1/timer/stop')); }
+  pauseTimer() { return this.unwrap(this.client.post('/api/v1/timer/pause')); }
+  resumeTimer() { return this.unwrap(this.client.post('/api/v1/timer/resume')); }
   getProjects(params = {}) { return this.unwrap(this.client.get('/api/v1/projects', { params })); }
   getTasks(params = {}) { return this.unwrap(this.client.get('/api/v1/tasks', { params })); }
+  updateTask(id, data) { return this.unwrap(this.client.patch(`/api/v1/tasks/${id}`, data)); }
+  createTask(data) { return this.unwrap(this.client.post('/api/v1/tasks', data)); }
   getTimeEntries(params = {}) { return this.unwrap(this.client.get('/api/v1/time-entries', { params })); }
   createTimeEntry(data) { return this.unwrap(this.client.post('/api/v1/time-entries', data)); }
   updateTimeEntry(id, data) { return this.unwrap(this.client.put(`/api/v1/time-entries/${id}`, data)); }
@@ -189,6 +193,9 @@ export class ApiClient {
   getClients(params = {}) { return this.unwrap(this.client.get('/api/v1/clients', { params })); }
   getUsers(params = {}) { return this.unwrap(this.client.get('/api/v1/users', { params })); }
   getReportSummary(params = {}) { return this.unwrap(this.client.get('/api/v1/reports/summary', { params })); }
+  unwrapReportSummary(payload) {
+    return payload?.summary || payload || {};
+  }
   getTimeEntryApprovals() { return this.unwrap(this.client.get('/api/v1/time-entry-approvals')); }
   approveTimeEntryApproval(id, comment) { return this.unwrap(this.client.post(`/api/v1/time-entry-approvals/${id}/approve`, { comment })); }
   rejectTimeEntryApproval(id, reason) { return this.unwrap(this.client.post(`/api/v1/time-entry-approvals/${id}/reject`, { reason })); }
@@ -209,4 +216,55 @@ export class ApiClient {
   getCapacityReport(params = {}) { return this.unwrap(this.client.get('/api/v1/reports/capacity', { params })); }
   getTimesheetPeriods(params = {}) { return this.unwrap(this.client.get('/api/v1/timesheet-periods', { params })); }
   getTimeOffRequests(params = {}) { return this.unwrap(this.client.get('/api/v1/time-off/requests', { params })); }
+
+  getAttendanceStatus() { return this.unwrap(this.client.get('/api/v1/attendance/status')); }
+  startWorkday(data = {}) {
+    return this.unwrap(this.client.post('/api/v1/workday/start', { notes: data.notes || '', source: data.source || 'desktop' }));
+  }
+  endWorkday(data = {}) { return this.unwrap(this.client.post('/api/v1/workday/end', { notes: data.notes || '' })); }
+  startBreak(data = {}) {
+    return this.unwrap(this.client.post('/api/v1/attendance/break/start', { break_type: data.breakType || 'rest' }));
+  }
+  endBreak() { return this.unwrap(this.client.post('/api/v1/attendance/break/end')); }
+
+  getKanbanColumns(params = {}) { return this.unwrap(this.client.get('/api/v1/kanban/columns', { params })); }
+  createKanbanColumn(data) { return this.unwrap(this.client.post('/api/v1/kanban/columns', data)); }
+  updateKanbanColumn(id, data) { return this.unwrap(this.client.patch(`/api/v1/kanban/columns/${id}`, data)); }
+  deleteKanbanColumn(id) { return this.unwrap(this.client.delete(`/api/v1/kanban/columns/${id}`)); }
+  reorderKanbanColumns(columnIds, projectId = null) {
+    return this.unwrap(this.client.post('/api/v1/kanban/columns/reorder', { column_ids: columnIds, project_id: projectId }));
+  }
+
+  getLeads(params = {}) { return this.unwrap(this.client.get('/api/v1/leads', { params })); }
+  getLead(id) { return this.unwrap(this.client.get(`/api/v1/leads/${id}`)); }
+  createLead(data) { return this.unwrap(this.client.post('/api/v1/leads', data)); }
+  updateLead(id, data) { return this.unwrap(this.client.patch(`/api/v1/leads/${id}`, data)); }
+  deleteLead(id) { return this.unwrap(this.client.delete(`/api/v1/leads/${id}`)); }
+  getDeals(params = {}) { return this.unwrap(this.client.get('/api/v1/deals', { params })); }
+  getDeal(id) { return this.unwrap(this.client.get(`/api/v1/deals/${id}`)); }
+  createDeal(data) { return this.unwrap(this.client.post('/api/v1/deals', data)); }
+  updateDeal(id, data) { return this.unwrap(this.client.patch(`/api/v1/deals/${id}`, data)); }
+  deleteDeal(id) { return this.unwrap(this.client.delete(`/api/v1/deals/${id}`)); }
+  getContacts(clientId) { return this.unwrap(this.client.get(`/api/v1/clients/${clientId}/contacts`)); }
+  createContact(clientId, data) { return this.unwrap(this.client.post(`/api/v1/clients/${clientId}/contacts`, data)); }
+  updateContact(id, data) { return this.unwrap(this.client.patch(`/api/v1/contacts/${id}`, data)); }
+  deleteContact(id) { return this.unwrap(this.client.delete(`/api/v1/contacts/${id}`)); }
+  getClientNotes(clientId) { return this.unwrap(this.client.get(`/api/v1/clients/${clientId}/notes`)); }
+  createClientNote(clientId, data) { return this.unwrap(this.client.post(`/api/v1/clients/${clientId}/notes`, data)); }
+  updateClientNote(id, data) { return this.unwrap(this.client.patch(`/api/v1/client-notes/${id}`, data)); }
+  deleteClientNote(id) { return this.unwrap(this.client.delete(`/api/v1/client-notes/${id}`)); }
+
+  getPayments(params = {}) { return this.unwrap(this.client.get('/api/v1/payments', { params })); }
+  createPayment(data) { return this.unwrap(this.client.post('/api/v1/payments', data)); }
+  getMileage(params = {}) { return this.unwrap(this.client.get('/api/v1/mileage', { params })); }
+  createMileage(data) { return this.unwrap(this.client.post('/api/v1/mileage', data)); }
+  updateMileage(id, data) { return this.unwrap(this.client.patch(`/api/v1/mileage/${id}`, data)); }
+  getQuotes(params = {}) { return this.unwrap(this.client.get('/api/v1/quotes', { params })); }
+  getQuote(id) { return this.unwrap(this.client.get(`/api/v1/quotes/${id}`)); }
+  createQuote(data) { return this.unwrap(this.client.post('/api/v1/quotes', data)); }
+  getRecurringInvoices(params = {}) { return this.unwrap(this.client.get('/api/v1/recurring-invoices', { params })); }
+  generateRecurringInvoice(id) { return this.unwrap(this.client.post(`/api/v1/recurring-invoices/${id}/generate`)); }
+  getCreditNotes(params = {}) { return this.unwrap(this.client.get('/api/v1/credit-notes', { params })); }
+  getCreditNote(id) { return this.unwrap(this.client.get(`/api/v1/credit-notes/${id}`)); }
+  createCreditNote(data) { return this.unwrap(this.client.post('/api/v1/credit-notes', data)); }
 }

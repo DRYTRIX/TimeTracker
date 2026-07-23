@@ -15,6 +15,7 @@ import 'projects_screen.dart';
 import 'time_entries_screen.dart';
 import 'settings_screen.dart';
 import 'finance_workforce_screen.dart';
+import 'more_hub_screen.dart';
 import 'dart:async';
 
 class HomeScreen extends StatefulWidget {
@@ -32,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const ProjectsScreen(),
     const TimeEntriesScreen(),
     const FinanceWorkforceScreen(),
+    const MoreHubScreen(),
     const SettingsScreen(),
   ];
 
@@ -69,6 +71,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.account_balance_wallet_outlined),
             selectedIcon: Icon(Icons.account_balance_wallet),
             label: 'Finance',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.more_horiz),
+            selectedIcon: Icon(Icons.more_horiz),
+            label: 'More',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

@@ -64,6 +64,7 @@ def register_all_blueprints(app, logger=None):
     from app.routes.api_v1_deals import api_v1_deals_bp
     from app.routes.api_v1_expenses import api_v1_expenses_bp
     from app.routes.api_v1_invoices import api_v1_invoices_bp
+    from app.routes.api_v1_issues import api_v1_issues_bp
     from app.routes.api_v1_leads import api_v1_leads_bp
     from app.routes.api_v1_mileage import api_v1_mileage_bp
     from app.routes.api_v1_payments import api_v1_payments_bp
@@ -174,6 +175,7 @@ def register_all_blueprints(app, logger=None):
     app.register_blueprint(api_v1_deals_bp)
     app.register_blueprint(api_v1_leads_bp)
     app.register_blueprint(api_v1_contacts_bp)
+    app.register_blueprint(api_v1_issues_bp)
     app.register_blueprint(api_docs_bp)
     app.register_blueprint(swaggerui_blueprint)
     app.register_blueprint(analytics_bp)

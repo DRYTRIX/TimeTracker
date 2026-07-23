@@ -24,7 +24,7 @@ Official multi-arch images (`linux/amd64`, `linux/arm64`) are built on every rel
 
 ```bash
 docker pull ghcr.io/drytrix/timetracker:latest
-docker pull ghcr.io/drytrix/timetracker:v5.9.3   # specific version
+docker pull ghcr.io/drytrix/timetracker:v5.9.4   # specific version
 ```
 
 ### Docker Hub (mirror)

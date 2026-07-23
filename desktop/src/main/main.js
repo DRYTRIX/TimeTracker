@@ -168,20 +168,19 @@ app.whenReady().then(() => {
   // Listen for timer status updates from renderer (via IPC)
   ipcMain.on('timer:status-update', (event, data) => {
     const active = Boolean(data && data.active);
+    const paused = Boolean(data && data.paused);
     if (global.updateTrayMenu) {
-      global.updateTrayMenu(active);
+      global.updateTrayMenu(active, paused);
     }
     if (global.updateTrayTitle) {
-      global.updateTrayTitle(active ? (data.elapsedLabel || '') : '');
+      const title = active
+        ? `${paused ? '⏸ ' : ''}${data.elapsedLabel || ''}`
+        : '';
+      global.updateTrayTitle(title);
     }
-    if (updateTrayTooltip && active && data.timer) {
-      const startTime = new Date(data.timer.start_time);
-      const elapsed = Math.floor((new Date() - startTime) / 1000);
-      const hours = Math.floor(elapsed / 3600);
-      const minutes = Math.floor((elapsed % 3600) / 60);
-      const seconds = elapsed % 60;
-      const timeStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m ${seconds}s`;
-      updateTrayTooltip(`Timer: ${timeStr}`);
+    if (updateTrayTooltip && active) {
+      const label = data.elapsedLabel || 'running';
+      updateTrayTooltip(paused ? `Paused: ${label}` : `Timer: ${label}`);
     } else if (updateTrayTooltip) {
       updateTrayTooltip('TimeTracker');
     }
