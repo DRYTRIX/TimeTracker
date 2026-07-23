@@ -184,7 +184,7 @@ To update the version for all applications:
    ```python
    setup(
        name='timetracker',
-       version='5.9.3',  # Update here
+       version='5.9.4',  # Update here
        ...
    )
    ```

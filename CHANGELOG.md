@@ -7,14 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.9.4] - 2026-07-23
+
 ### Added
 
-- **Desktop app catch-up (5.9.3)** — Timer pause/resume (incl. tray), Reports summary view, workday/attendance controls matching mobile, Kanban board, CRM (leads/deals/contacts/notes), and finance depth (payments, mileage, quotes, recurring invoices, credit notes). See [DESKTOP_WEBAPP_GAP.md](docs/mobile-desktop-apps/DESKTOP_WEBAPP_GAP.md).
+- **Desktop app catch-up** — Timer pause/resume (incl. tray), Reports summary view, workday/attendance controls matching mobile, Kanban board, CRM (leads/deals/contacts/notes), and finance depth (payments, mileage, quotes, recurring invoices, credit notes). See [DESKTOP_WEBAPP_GAP.md](docs/mobile-desktop-apps/DESKTOP_WEBAPP_GAP.md).
+- **Mobile app catch-up** — Calendar, Kanban, CRM hub, clients, issues, mileage, per diem, Belgium report, and deeper project/task flows aligned with the webapp.
+- **Issues API (v1)** — Exposed issues endpoints on the REST API for mobile and desktop clients.
 
 ### Changed
 
-- **Desktop version** — Synced Electron app version to **5.9.3** with the webapp (`setup.py`).
 - **Desktop docs** — Auth docs now describe username/password login and the React+Vite renderer.
+- **Client versions** — Synced Electron (`desktop/package.json`) and Flutter (`mobile/pubspec.yaml`) to **5.9.4** with the webapp (`setup.py`).
+
+### Documentation
+
+- **Version** — Documented release **5.9.4** to match `setup.py` (single source of truth for the application version).
 
 ## [5.9.3] - 2026-07-16
 
