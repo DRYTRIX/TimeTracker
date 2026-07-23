@@ -46,7 +46,6 @@ def verify_ed25519_signature(signature_b64: str, system_id: str, public_key_pem:
         True if the signature is valid for this system_id and public key.
     """
     try:
-        from cryptography.exceptions import InvalidSignature
         from cryptography.hazmat.primitives import serialization
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
@@ -61,3 +60,43 @@ def verify_ed25519_signature(signature_b64: str, system_id: str, public_key_pem:
         return True
     except Exception:
         return False
+
+
+def verify_supporter_code(
+    code: str,
+    system_id: str | None,
+    public_key_pem: str = "",
+    secret: str = "",
+) -> tuple[bool, str | None]:
+    """Verify a supporter / donate-hide code (Ed25519 or HMAC).
+
+    Returns ``(True, None)`` on success, or ``(False, reason)`` where reason is one of:
+    ``missing_system_id``, ``no_verifier_configured``, ``invalid_signature``.
+
+    Does not log or return the submitted code.
+    """
+    if not system_id:
+        return False, "missing_system_id"
+
+    verifier_configured = False
+    valid = False
+    if public_key_pem:
+        verifier_configured = True
+        valid = verify_ed25519_signature(code, system_id, public_key_pem)
+    if not valid and secret:
+        verifier_configured = True
+        expected = compute_donate_hide_code(secret, system_id)
+        valid = bool(expected and hmac.compare_digest(code, expected))
+
+    if valid:
+        return True, None
+    if not verifier_configured:
+        return False, "no_verifier_configured"
+    return False, "invalid_signature"
+
+
+def system_id_log_prefix(system_id: str | None) -> str:
+    """Short prefix for logs (never the full ID when avoidable; first 8 chars)."""
+    if not system_id:
+        return "-"
+    return system_id[:8]

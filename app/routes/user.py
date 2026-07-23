@@ -1,6 +1,5 @@
 """User profile and settings routes"""
 
-import hmac
 import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -11,7 +10,7 @@ from flask_login import current_user, login_required
 from app import db
 from app.models import Activity, Settings, User
 from app.utils.db import safe_commit
-from app.utils.donate_hide_code import compute_donate_hide_code, verify_ed25519_signature
+from app.utils.donate_hide_code import system_id_log_prefix, verify_supporter_code
 from app.utils.license_utils import is_license_activated
 from app.utils.timezone import get_available_timezones
 
@@ -304,25 +303,29 @@ def license():
             return redirect(url_for("user.license"))
         code = (request.form.get("license_key") or request.form.get("code") or "").strip()
         system_id = Settings.get_system_instance_id()
-        if not system_id:
-            flash(_("Invalid code."), "error")
-            return redirect(url_for("user.license"))
-        valid = False
-        public_key_pem = current_app.config.get("DONATE_HIDE_PUBLIC_KEY_PEM") or ""
-        if public_key_pem:
-            valid = verify_ed25519_signature(code, system_id, public_key_pem)
+        sid_prefix = system_id_log_prefix(system_id)
+        valid, reason = verify_supporter_code(
+            code,
+            system_id,
+            public_key_pem=current_app.config.get("DONATE_HIDE_PUBLIC_KEY_PEM") or "",
+            secret=current_app.config.get("DONATE_HIDE_UNLOCK_SECRET") or "",
+        )
         if not valid:
-            secret = current_app.config.get("DONATE_HIDE_UNLOCK_SECRET") or ""
-            if secret:
-                expected = compute_donate_hide_code(secret, system_id)
-                valid = bool(expected and hmac.compare_digest(code, expected))
-        if not valid:
+            current_app.logger.warning(
+                "License verify failed: %s (system_id_prefix=%s)", reason, sid_prefix
+            )
             flash(_("Invalid code."), "error")
             return redirect(url_for("user.license"))
         settings_obj.donate_ui_hidden = True
         if safe_commit(db.session):
+            current_app.logger.info(
+                "License activated (system_id_prefix=%s)", sid_prefix
+            )
             flash(_("License activated. Thank you for supporting TimeTracker!"), "success")
         else:
+            current_app.logger.warning(
+                "License verify failed: save_error (system_id_prefix=%s)", sid_prefix
+            )
             flash(_("Error saving settings."), "error")
         return redirect(url_for("user.license"))
     return render_template(
@@ -342,26 +345,28 @@ def verify_donate_hide_code():
     data = request.get_json() or {}
     code = (data.get("code") or "").strip()
     system_id = Settings.get_system_instance_id()
-
-    if not system_id:
-        return jsonify({"error": _("Invalid code.")}), 400
-
-    valid = False
-    public_key_pem = current_app.config.get("DONATE_HIDE_PUBLIC_KEY_PEM") or ""
-    if public_key_pem:
-        valid = verify_ed25519_signature(code, system_id, public_key_pem)
+    sid_prefix = system_id_log_prefix(system_id)
+    valid, reason = verify_supporter_code(
+        code,
+        system_id,
+        public_key_pem=current_app.config.get("DONATE_HIDE_PUBLIC_KEY_PEM") or "",
+        secret=current_app.config.get("DONATE_HIDE_UNLOCK_SECRET") or "",
+    )
     if not valid:
-        secret = current_app.config.get("DONATE_HIDE_UNLOCK_SECRET") or ""
-        if secret:
-            expected = compute_donate_hide_code(secret, system_id)
-            valid = bool(expected and hmac.compare_digest(code, expected))
-
-    if not valid:
+        current_app.logger.warning(
+            "Donate-hide verify failed: %s (system_id_prefix=%s)", reason, sid_prefix
+        )
         return jsonify({"error": _("Invalid code.")}), 400
 
     current_user.ui_show_donate = False
     if safe_commit(db.session):
+        current_app.logger.info(
+            "Donate-hide activated for user (system_id_prefix=%s)", sid_prefix
+        )
         return jsonify({"success": True})
+    current_app.logger.warning(
+        "Donate-hide verify failed: save_error (system_id_prefix=%s)", sid_prefix
+    )
     return jsonify({"error": _("Error saving settings")}), 500
 
 

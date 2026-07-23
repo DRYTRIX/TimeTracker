@@ -49,7 +49,7 @@ TimeTracker is built with modern, reliable technologies:
 - **Python 3.11+** — Core programming language
 - **Flask 3.0.0** — Web framework
 - **SQLAlchemy 2.0.23** — ORM and database toolkit
-- **Flask-SocketIO 5.3.6** — WebSocket support for real-time updates
+- **Flask-SocketIO 5.6.1** — WebSocket support for real-time updates
 - **Flask-Migrate 4.0.5** — Database migrations
 - **Flask-Babel 4.0.0** — Internationalization (i18n)
 
