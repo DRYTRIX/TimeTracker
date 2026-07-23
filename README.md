@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.10.0
+
+**Minor (5.10.0):** **Admins can book time for others (#701)** — manual, bulk, and API v1 creates. **Chromium timer extension (#700)** — toolbar start/stop with badge. **Self-hosted frontend** — vendored assets, esbuild pipeline, air-gapped-friendly CSP. **Fixes** — idle connection recovery (#702/#703), 24h time preference (#704), sidebar expand (#699). See [CHANGELOG.md](CHANGELOG.md#5100---2026-07-23).
+
 ### ✨ Highlights of v5.9.4
 
 **Patch (5.9.4):** **Desktop & mobile catch-up** — timer pause/resume, workday/attendance, reports, Kanban, CRM, and deeper finance flows brought in line with the webapp. **API** — issues endpoints on REST API v1 for clients. See [CHANGELOG.md](CHANGELOG.md#594---2026-07-23).

@@ -7,8 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.10.0] - 2026-07-23
+
 ### Added
 
+- **Admin book time for others (#701)** — Admins can create manual and bulk time entries (and API v1 creates) on behalf of another active user.
 - **Chromium timer extension (#700)** — New `browser-extension/` Manifest V3 package connects to `/api/v1` (same tokens as desktop/mobile), starts/stops timers from the toolbar, shows elapsed time on a red badge/icon, and supports quick-create project/task. Load unpacked from the folder; see `browser-extension/README.md`.
 - **Self-hosted frontend assets** — All 17 third-party browser libraries (Font Awesome, Chart.js, flatpickr, Socket.IO, Toast UI Editor, Pickr, Konva, SortableJS, FullCalendar, frappe-gantt, anime.js, cmdk, and the Inter webfont) are now vendored into `app/static/vendor/` from npm instead of being fetched from cdnjs, jsDelivr, uicdn.toast.com and fonts.bunny.net at runtime. The app renders fully with no outbound network access, which makes air-gapped installs work and stops leaking every user's IP address to three CDNs.
 - **JavaScript build pipeline** — New esbuild-based build (`scripts/build-js.mjs`) minifies and bundles the previously unbundled scripts into content-hashed files resolved through a new `asset_url()` Jinja helper (`app/utils/assets.py`). The dashboard drops from **32 JS requests / ~550 KB to 12 requests / ~284 KB**.
@@ -20,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Desktop and browser lost connection after idle (#702, #703)** — Closing the desktop app with X (tray hide) or leaving a browser tab idle could leave a sticky "connection lost" / "Service temporarily unavailable" state. Session and health probes now recover on success, re-check when the UI becomes visible again, and health checks no longer toast via the service worker's synthetic 503.
+- **24h time format preference ignored (#704)** — Native time inputs followed the browser locale (AM/PM). Flatpickr now respects the user's time format preference, and client-side displays use `formatUserTime` / `formatUserDateTime`.
+- **Sidebar expand clipped when collapsed (#699)** — Hide the Commands shortcut in the collapsed rail so the expand control stays visible; clarified the onboarding tip (including Ctrl/Cmd+B).
+- **Sidebar expand, theme icons, and Ctrl+K** — Collapse control stays reachable when the rail is narrow; theme switcher shows the current mode icon; command palette loads after its markup so Ctrl+K registers.
+- **Socket.IO / Flask session crash** — Bumped Flask-SocketIO for Flask 3.1 compatibility; supporter-key verify logging no longer leaks codes; budget alert jobs push a real app context.
 - **Multi-key keyboard shortcuts never worked** — `g d`, `g p`, `g t`, `g r` and `g i` were registered but could never fire: the live handler only ever matched a single key combo, and the sequence-buffering logic existed solely in two script files that no template loaded. Added sequence handling to `keyboard-shortcuts-advanced.js`.
 - **Font Awesome loaded twice** — Both the CSS build (6.4.0) and the conflicting SVG-with-JS build (6.4.2) were loaded on every page, roughly doubling the icon payload. Four templates loaded *only* the JS build via a `<script>` tag pointing at a stylesheet, which is a no-op.
 - **Command palette broke without internet** — `command-palette.js` imported its scoring helper from jsDelivr at runtime, so Ctrl+K silently failed in offline and air-gapped deployments.
@@ -36,6 +43,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`base.html` split into partials** — Reduced from 2,614 to ~1,267 lines by extracting `partials/_head.html`, `_sidebar.html` and `_topbar.html`, and relocating 309 lines of inline CSS into `app/static/src/input.css`.
 - **Removed ~4,800 lines of dead frontend code** — Ten static assets and one duplicate macro library that no template referenced: `commands.js`, `global-fab.js`, `keyboard-shortcuts.js`, `keyboard-shortcuts-enhanced.js`, `quick-actions.js`, `reports-enhanced.js`, `kiosk-mode.css`, `ui-enhancements.css`, `css/brand-colors.css`, `css/rtl-support.css`, `templates/_components.html`, plus eight unused `pdf_editor/*.mjs` re-export stubs.
 - **CSP no longer allowlists any third party** — Removed six CDN origins plus stale `code.jquery.com` and `cdn.datatables.net` entries, and added `object-src 'none'`, `base-uri 'self'` and `form-action 'self'`.
+- **Client versions** — Synced Electron (`desktop/package.json`) and Flutter (`mobile/pubspec.yaml`) to **5.10.0** with the webapp (`setup.py`).
+
+### Documentation
+
+- **Version** — Documented release **5.10.0** to match `setup.py` (single source of truth for the application version).
 
 ## [5.9.4] - 2026-07-23
 
