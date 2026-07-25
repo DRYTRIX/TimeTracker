@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Chrome extension connect did nothing (#700)** — `browser-extension/lib/api.js` was never shipped because root `.gitignore` ignored `lib/`. Connect/Options/background module imports failed silently. The client is now tracked, and Options connect handlers surface unexpected errors.
+
 ## [5.10.0] - 2026-07-23
 
 ### Added

@@ -16,6 +16,8 @@ eggs/
 .eggs/
 lib/
 !mobile/lib/
+!browser-extension/lib/
+!browser-extension/lib/**
 lib64/
 parts/
 sdist/
