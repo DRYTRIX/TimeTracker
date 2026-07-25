@@ -19,6 +19,7 @@ KIND_DAILY_SUMMARY = "daily_summary"
 KIND_BREAK_REMINDER = "break_reminder"
 KIND_END_OF_DAY = "end_of_day_reminder"
 KIND_MISSED_CLOCK_IN = "missed_clock_in"
+KIND_FORGOTTEN_CLOCK_OUT = "forgotten_clock_out"
 
 _HHMM_RE = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
 
@@ -158,6 +159,18 @@ def has_workday_started_today(user_id: int, work_date: date) -> bool:
     return AttendanceWorkPeriod.query.filter_by(attendance_day_id=day.id).count() > 0
 
 
+def has_overnight_open_workday(user_id: int, today: date) -> bool:
+    """True when an active workday/period started before the given local calendar day."""
+    from app.models import WorkdaySession
+    from app.models.attendance_compliance import AttendanceWorkPeriod
+
+    session = WorkdaySession.get_active_for_user(user_id)
+    if session and session.start_time and session.start_time.date() < today:
+        return True
+    period = AttendanceWorkPeriod.query.filter_by(user_id=user_id, end_time=None).first()
+    return bool(period and period.start_time and period.start_time.date() < today)
+
+
 def _bucket_marker_exists(user_id: int, kind: str, bucket_key: str) -> bool:
     """True if a UserSmartNotificationDismissal row already records this bucket (i.e. already fired)."""
     return (
@@ -198,6 +211,7 @@ class NotificationService:
     _PRIORITY = {
         KIND_LONG_TIMER: 0,
         KIND_MISSED_CLOCK_IN: 0,
+        KIND_FORGOTTEN_CLOCK_OUT: 0,
         KIND_BREAK_REMINDER: 1,
         KIND_NO_TRACKING: 1,
         KIND_DAILY_SUMMARY: 2,
@@ -213,6 +227,7 @@ class NotificationService:
             KIND_BREAK_REMINDER,
             KIND_END_OF_DAY,
             KIND_MISSED_CLOCK_IN,
+            KIND_FORGOTTEN_CLOCK_OUT,
         ):
             return False
         if not local_date or len(local_date) != 10:
@@ -397,6 +412,24 @@ class NotificationService:
                                     "action": {"label": "Pause timer", "url": "/timer/pause"},
                                 }
                             )
+
+        # Forgotten overnight clock-out (open session from a previous day)
+        if KIND_FORGOTTEN_CLOCK_OUT not in dismissed:
+            user_today = user_local_now.date()
+            if has_overnight_open_workday(user.id, user_today):
+                candidates.append(
+                    {
+                        "kind": KIND_FORGOTTEN_CLOCK_OUT,
+                        "title": "Forgot to end workday?",
+                        "message": (
+                            "You still have an open workday from yesterday. "
+                            "Confirm when you left so today's hours are correct."
+                        ),
+                        "type": "warning",
+                        "priority": "high",
+                        "action": {"label": "Correct leave time", "url": "/"},
+                    }
+                )
 
         # Missed workday clock-in (morning reminder on expected work days)
         if getattr(user, "smart_notify_missed_clock_in", False) and KIND_MISSED_CLOCK_IN not in dismissed:

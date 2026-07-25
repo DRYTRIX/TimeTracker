@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.10.1] - 2026-07-25
+
+### Added
+
+- **Forgot overnight clock-out (#706)** — If a workday stays open past midnight, the dashboard and Timer page prompt for the actual leave time so yesterday can be corrected before starting a new day. Smart notifications also warn when an overnight session is still open. `POST /workday/end` and `POST /api/v1/workday/end` accept optional `end_time`.
+
+### Fixed
+
+- **Chrome extension connect did nothing (#700)** — `browser-extension/lib/api.js` was never shipped because root `.gitignore` ignored `lib/`. Connect/Options/background module imports failed silently. The client is now tracked, and Options connect handlers surface unexpected errors.
+- **Time entry typing and edit date format (#704 follow-ups)** — Typing `1234` into a time field now becomes `12:34` (not `12:04`). Edit/bulk/calendar date inputs use the user's preferred date format (e.g. DD.MM.YYYY), and edit-page timestamps use `|user_datetime`.
+- **Dashboard “At work today” double-count** — Live workday updater no longer adds full session elapsed on top of server hours that already include the active period.
+
+### Changed
+
+- **Client versions** — Synced Electron (`desktop/package.json`) and Flutter (`mobile/pubspec.yaml`) to **5.10.1** with the webapp (`setup.py`).
+
+### Documentation
+
+- **Version** — Documented release **5.10.1** to match `setup.py` (single source of truth for the application version).
+
 ## [5.10.0] - 2026-07-23
 
 ### Added

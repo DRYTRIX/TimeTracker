@@ -14,11 +14,15 @@ from app.services.working_time_limit_service import WorkingTimeLimitService
 @pytest.fixture
 def workday_user(app):
     with app.app_context():
+        from app.models.attendance_compliance import AttendanceWorkPeriod, DailyAttendanceRecord
+
         user = User(username="workday_test_user", role="user")
         user.set_password("testpass123")
         db.session.add(user)
         db.session.commit()
         yield user
+        AttendanceWorkPeriod.query.filter_by(user_id=user.id).delete()
+        DailyAttendanceRecord.query.filter_by(user_id=user.id).delete()
         WorkdaySession.query.filter_by(user_id=user.id).delete()
         WorkingTimeViolation.query.filter_by(user_id=user.id).delete()
         db.session.delete(user)
@@ -40,6 +44,59 @@ class TestWorkdaySessionService:
             assert end["success"] is True
             assert end["session"].end_time is not None
             assert end["session"].duration_seconds is not None
+
+    def test_end_workday_with_at_time_overnight(self, app, workday_user):
+        """Backdated leave time closes overnight open session with correct duration."""
+        from app.models.attendance_compliance import AttendanceWorkPeriod
+
+        with app.app_context():
+            svc = WorkdaySessionService()
+            start = svc.start_workday(workday_user.id)
+            assert start["success"] is True
+            session = start["session"]
+
+            yesterday_start = (local_now() - timedelta(days=1)).replace(
+                hour=9, minute=0, second=0, microsecond=0
+            )
+            session.start_time = yesterday_start
+            period = AttendanceWorkPeriod.query.filter_by(workday_session_id=session.id).first()
+            assert period is not None
+            period.start_time = yesterday_start
+            db.session.commit()
+
+            assert svc.is_overnight_open_session(session) is True
+
+            leave = yesterday_start.replace(hour=17, minute=0)
+            end = svc.end_workday(workday_user.id, at_time=leave)
+            assert end["success"] is True
+            assert end["session"].end_time == leave
+            assert end["session"].duration_seconds == 8 * 3600
+
+            db.session.refresh(period)
+            assert period.end_time == leave
+            assert period.duration_seconds == 8 * 3600
+
+    def test_end_workday_rejects_invalid_at_time(self, app, workday_user):
+        with app.app_context():
+            svc = WorkdaySessionService()
+            start = svc.start_workday(workday_user.id)
+            assert start["success"] is True
+            session = start["session"]
+
+            before_start = session.start_time - timedelta(minutes=5)
+            bad = svc.end_workday(workday_user.id, at_time=before_start)
+            assert bad["success"] is False
+            assert bad["error"] == "invalid_end_time"
+
+            future = local_now() + timedelta(hours=1)
+            bad_future = svc.end_workday(workday_user.id, at_time=future)
+            assert bad_future["success"] is False
+            assert bad_future["error"] == "invalid_end_time"
+
+            # Session still active
+            assert svc.get_active_session(workday_user.id) is not None
+            ok = svc.end_workday(workday_user.id)
+            assert ok["success"] is True
 
     def test_auto_close_stale_sessions(self, app, workday_user):
         with app.app_context():

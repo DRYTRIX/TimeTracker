@@ -30,8 +30,23 @@ def start_workday():
 @workday_bp.route("/workday/end", methods=["POST"])
 @login_required
 def end_workday():
+    from app.services.workday_session_service import parse_workday_end_time
+
     notes = request.form.get("notes", "").strip() or None
-    result = WorkdaySessionService().end_workday(current_user.id, notes=notes)
+    end_raw = request.form.get("end_time") or request.form.get("at_time")
+    if not end_raw and request.is_json:
+        data = request.get_json(silent=True) or {}
+        notes = (data.get("notes") or notes or "").strip() or None
+        end_raw = data.get("end_time") or data.get("at_time")
+
+    at_time = None
+    if end_raw:
+        at_time = parse_workday_end_time(end_raw)
+        if at_time is None:
+            flash(_("Invalid leave time"), "error")
+            return redirect(request.referrer or url_for("main.dashboard"))
+
+    result = WorkdaySessionService().end_workday(current_user.id, notes=notes, at_time=at_time)
     if result["success"]:
         flash(_("Workday ended"), "success")
     else:

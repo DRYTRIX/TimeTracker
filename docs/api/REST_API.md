@@ -195,7 +195,7 @@ Returns API version and available endpoints. No authentication required.
 ```json
 {
   "api_version": "v1",
-  "app_version": "5.10.0",
+  "app_version": "5.10.1",
   "setup_required": false,
   "enabled_modules": ["projects", "timer", "tasks", "invoices", "calendar"],
   "documentation_url": "/api/docs",
@@ -787,6 +787,16 @@ POST /api/v1/workday/end
 ```
 
 **Required Scope:** `write:time_entries`
+
+**Request Body (optional):**
+```json
+{
+  "notes": "Optional note",
+  "end_time": "2026-07-24T17:00:00"
+}
+```
+
+`end_time` (alias `at_time`) closes the active session at a past leave time — useful when correcting a forgotten overnight clock-out. Must be after the session start and not in the future.
 
 Kiosk equivalents: `POST /api/kiosk/start-workday`, `POST /api/kiosk/end-workday`, `GET /api/kiosk/workday-status`.
 

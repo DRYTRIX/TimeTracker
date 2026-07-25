@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.10.1
+
+**Patch (5.10.1):** **Overnight clock-out (#706)** — prompt to correct leave time when a workday stays open past midnight. **Fixes** — Chrome extension connect (#700), compact time typing / edit date format (#704), dashboard “At work today” double-count. See [CHANGELOG.md](CHANGELOG.md#5101---2026-07-25).
+
 ### ✨ Highlights of v5.10.0
 
 **Minor (5.10.0):** **Admins can book time for others (#701)** — manual, bulk, and API v1 creates. **Chromium timer extension (#700)** — toolbar start/stop with badge. **Self-hosted frontend** — vendored assets, esbuild pipeline, air-gapped-friendly CSP. **Fixes** — idle connection recovery (#702/#703), 24h time preference (#704), sidebar expand (#699). See [CHANGELOG.md](CHANGELOG.md#5100---2026-07-23).

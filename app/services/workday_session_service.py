@@ -3,7 +3,7 @@ Service for workday clock-in/clock-out sessions.
 Delegates to AttendanceComplianceService for unified compliance records.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from typing import Any, Dict, Optional
 
 from app import db
@@ -11,6 +11,26 @@ from app.models import WorkdaySession
 from app.models.time_entry import local_now
 from app.services.attendance_compliance_service import AttendanceComplianceService
 from app.utils.db import safe_commit
+
+
+def parse_workday_end_time(raw: Optional[str]) -> Optional[datetime]:
+    """Parse an optional leave time from form/JSON (ISO or datetime-local)."""
+    if not raw or not isinstance(raw, str):
+        return None
+    s = raw.strip()
+    if not s:
+        return None
+    # datetime-local: YYYY-MM-DDTHH:MM (optionally with seconds)
+    try:
+        return datetime.fromisoformat(s)
+    except ValueError:
+        pass
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+        try:
+            return datetime.strptime(s, fmt)
+        except ValueError:
+            continue
+    return None
 
 
 class WorkdaySessionService:
@@ -21,6 +41,31 @@ class WorkdaySessionService:
 
     def get_active_session(self, user_id: int) -> Optional[WorkdaySession]:
         return WorkdaySession.get_active_for_user(user_id)
+
+    def is_overnight_open_session(self, session: Optional[WorkdaySession]) -> bool:
+        """True when an active session started on a previous local calendar day."""
+        if not session or not session.start_time or session.end_time is not None:
+            return False
+        return session.start_time.date() < local_now().date()
+
+    def suggested_leave_datetime_local(self, session: WorkdaySession, user=None) -> str:
+        """Default leave time for datetime-local inputs (start day at end-of-day preference)."""
+        start_day = session.start_time.date()
+        eod = "17:00"
+        if user is not None:
+            eod = (getattr(user, "smart_notify_end_of_day_time", None) or eod).strip() or eod
+        try:
+            parts = eod.split(":")
+            hour, minute = int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
+        except (TypeError, ValueError, IndexError):
+            hour, minute = 17, 0
+        leave = datetime.combine(start_day, time(hour, minute))
+        if leave <= session.start_time:
+            leave = session.start_time + timedelta(hours=1)
+        now = local_now()
+        if leave > now:
+            leave = now
+        return leave.strftime("%Y-%m-%dT%H:%M")
 
     def can_start_workday(self, user_id: int) -> tuple[bool, Optional[str]]:
         return self.compliance.can_start_work(user_id)
@@ -55,12 +100,34 @@ class WorkdaySessionService:
 
         return {"success": True, "message": "Workday started", "session": session}
 
-    def end_workday(self, user_id: int, notes: Optional[str] = None) -> Dict[str, Any]:
+    def end_workday(
+        self,
+        user_id: int,
+        notes: Optional[str] = None,
+        at_time: Optional[datetime] = None,
+    ) -> Dict[str, Any]:
         session = self.get_active_session(user_id)
         if not session:
             return {"success": False, "message": "No active workday session", "error": "no_active_workday"}
 
-        result = self.compliance.clock_out(user_id, notes=notes)
+        if at_time is not None:
+            if at_time.tzinfo is not None:
+                at_time = at_time.replace(tzinfo=None)
+            now = local_now()
+            if at_time <= session.start_time:
+                return {
+                    "success": False,
+                    "message": "Leave time must be after workday start",
+                    "error": "invalid_end_time",
+                }
+            if at_time > now:
+                return {
+                    "success": False,
+                    "message": "Leave time cannot be in the future",
+                    "error": "invalid_end_time",
+                }
+
+        result = self.compliance.clock_out(user_id, notes=notes, at_time=at_time)
         if not result.get("success"):
             return result
 

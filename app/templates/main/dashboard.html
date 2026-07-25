@@ -878,6 +878,7 @@
         <button type="button" class="btn btn-primary" data-create-task-confirm>{{ _('Create') }}</button>
     {% endset %}
     {{ modal('createTaskModal', _('Create task'), create_task_modal_content, create_task_modal_footer, 'sm') }}
+    {% include 'workday/_overnight_clock_out_modal.html' %}
 {% endblock %}
 
 
@@ -944,7 +945,8 @@
             setInterval(tick, 1000);
         })();
 
-        // Live workday elapsed (separate from project timer — does not add to project hours)
+        // Live workday elapsed (separate from project timer — does not add to project hours).
+        // SSR workday_today_hours already includes active elapsed; only add time since page load.
         (function initLiveWorkday() {
             var workdayWidget = document.querySelector('[data-workday-start]');
             if (!workdayWidget) return;
@@ -952,6 +954,7 @@
             if (!startIso) return;
             var startTime = new Date(startIso).getTime();
             var baseWorkdayHours = parseFloat({{ workday_today_hours|tojson }}) || 0;
+            var pageLoadMs = Date.now();
             function formatWorkdayElapsed(seconds) {
                 var h = Math.floor(seconds / 3600);
                 var m = Math.floor((seconds % 3600) / 60);
@@ -963,7 +966,9 @@
                 var el = document.getElementById('dashboard-workday-elapsed');
                 if (el) el.textContent = formatWorkdayElapsed(elapsedSec);
                 var wh = document.getElementById('workdayTodayHoursValue');
-                if (wh) wh.textContent = (baseWorkdayHours + elapsedSec / 3600).toFixed(2) + 'h';
+                if (wh) {
+                    wh.textContent = (baseWorkdayHours + (Date.now() - pageLoadMs) / 3600000).toFixed(2) + 'h';
+                }
             }
             tickWorkday();
             setInterval(tickWorkday, 1000);

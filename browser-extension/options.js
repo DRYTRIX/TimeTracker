@@ -115,6 +115,8 @@ async function connectWithPassword() {
     els.password.value = '';
     showMessage('Connected successfully.', 'success');
     await updateStatus();
+  } catch (error) {
+    showMessage(error?.message || 'Connect failed. Check the URL and try again.');
   } finally {
     els.loginBtn.disabled = false;
   }
@@ -158,6 +160,8 @@ async function connectWithToken() {
     els.apiToken.value = '';
     showMessage('Token saved successfully.', 'success');
     await updateStatus();
+  } catch (error) {
+    showMessage(error?.message || 'Token save failed. Check the URL and try again.');
   } finally {
     els.tokenBtn.disabled = false;
   }
