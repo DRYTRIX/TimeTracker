@@ -152,11 +152,11 @@
                                         <div class="row g-2">
                                             <div class="col-md-6">
                                                 <label for="start_date" class="form-label fw-semibold">{{ _('Start Date') }}</label>
-                                                <input type="date" class="form-control" name="start_date" id="start_date" required value="{{ request.form.get('start_date','') }}">
+                                                <input type="date" class="form-control user-date-input" name="start_date" id="start_date" required value="{{ request.form.get('start_date','') }}">
                                             </div>
                                             <div class="col-md-6">
                                                 <label for="end_date" class="form-label fw-semibold">{{ _('End Date') }}</label>
-                                                <input type="date" class="form-control" name="end_date" id="end_date" required value="{{ request.form.get('end_date','') }}">
+                                                <input type="date" class="form-control user-date-input" name="end_date" id="end_date" required value="{{ request.form.get('end_date','') }}">
                                             </div>
                                         </div>
                                         <div class="form-check form-switch mt-2">

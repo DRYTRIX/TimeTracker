@@ -259,7 +259,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <label for="start_date" class="form-label">
                             <i class="fas fa-clock mr-1"></i>{{ _('Start Date') }}
                         </label>
-                        <input type="date" class="form-input" id="start_date" name="start_date" 
+                        <input type="date" class="form-input user-date-input" id="start_date" name="start_date" 
                                value="{{ timer.start_time.strftime('%Y-%m-%d') }}" required>
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('When the work started') }}</p>
                     </div>
@@ -279,7 +279,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <label for="end_date" class="form-label">
                             <i class="fas fa-stop-circle mr-1"></i>{{ _('End Date') }}
                         </label>
-                        <input type="date" class="form-input" id="end_date" name="end_date" 
+                        <input type="date" class="form-input user-date-input" id="end_date" name="end_date" 
                                value="{{ timer.end_time.strftime('%Y-%m-%d') if timer.end_time else '' }}">
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('When the work ended (leave empty if still running)') }}</p>
                     </div>
@@ -415,12 +415,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         {% endif %}
                         <div>
                             <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Start:') }}</span>
-                            <span class="ml-2 font-medium">{{ timer.start_time.strftime('%Y-%m-%d %H:%M') }}</span>
+                            <span class="ml-2 font-medium">{{ timer.start_time|user_datetime }}</span>
                         </div>
                         <div>
                             <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('End:') }}</span>
                             {% if timer.end_time %}
-                            <span class="ml-2 font-medium">{{ timer.end_time.strftime('%Y-%m-%d %H:%M') }}</span>
+                            <span class="ml-2 font-medium">{{ timer.end_time|user_datetime }}</span>
                             {% else %}
                             <span class="ml-2 text-amber-600 dark:text-amber-400 font-medium">{{ _('Running') }}</span>
                             {% endif %}
@@ -526,7 +526,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="space-y-3 text-sm">
                 <div>
                     <span class="text-text-muted-light dark:text-text-muted-dark block mb-1">{{ _('Created') }}</span>
-                    <span class="font-medium">{{ timer.created_at.strftime('%Y-%m-%d %H:%M') if timer.created_at else 'N/A' }}</span>
+                    <span class="font-medium">{% if timer.created_at %}{{ timer.created_at|user_datetime }}{% else %}N/A{% endif %}</span>
                 </div>
                 {% if timer.user and (current_user.is_admin or timer.user_id == current_user.id) %}
                 <div>

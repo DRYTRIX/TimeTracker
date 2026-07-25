@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Chrome extension connect did nothing (#700)** — `browser-extension/lib/api.js` was never shipped because root `.gitignore` ignored `lib/`. Connect/Options/background module imports failed silently. The client is now tracked, and Options connect handlers surface unexpected errors.
+- **Time entry typing and edit date format (#704 follow-ups)** — Typing `1234` into a time field now becomes `12:34` (not `12:04`). Edit/bulk/calendar date inputs use the user's preferred date format (e.g. DD.MM.YYYY), and edit-page timestamps use `|user_datetime`.
 
 ## [5.10.0] - 2026-07-23
 
