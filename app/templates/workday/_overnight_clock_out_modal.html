@@ -1,0 +1,79 @@
+{# Overnight open workday: prompt for actual leave time before starting a new day. #}
+{% if overnight_open_workday and active_workday_session %}
+<div id="overnightClockOutModal" class="fixed inset-0 z-[60] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="overnightClockOutTitle" data-session-id="{{ active_workday_session.id }}">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 transition-opacity bg-black/50 dark:bg-gray-900/75" aria-hidden="true" id="overnightClockOutOverlay"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="inline-block align-bottom bg-card-light dark:bg-card-dark rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle max-w-md w-full">
+            <div class="px-6 pt-5 pb-4">
+                <div class="flex items-start justify-between mb-3">
+                    <h3 class="text-lg font-semibold text-text-light dark:text-text-dark" id="overnightClockOutTitle">
+                        {{ _('Forgot to end your workday?') }}
+                    </h3>
+                    <button type="button" class="text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark js-overnight-dismiss" aria-label="{{ _('Close') }}">
+                        <i class="fas fa-times text-xl" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+                    {{ _('You still have an open workday from %(started)s. Confirm when you left so yesterday and today are recorded correctly before you start a new day.', started=active_workday_session.start_time|user_datetime) }}
+                </p>
+                <form method="POST" action="{{ url_for('workday.end_workday') }}" id="overnightLeaveForm" class="space-y-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label for="overnightLeaveTime" class="block text-sm font-medium text-text-light dark:text-text-dark">
+                        {{ _('When did you leave?') }}
+                    </label>
+                    <input type="datetime-local" id="overnightLeaveTime" name="end_time"
+                           value="{{ suggested_leave_time }}"
+                           required
+                           class="form-input w-full">
+                    <div class="flex flex-col sm:flex-row gap-2 pt-2">
+                        <button type="submit" class="btn btn-primary flex-1">
+                            <i class="fas fa-check mr-2" aria-hidden="true"></i>{{ _('Save leave time') }}
+                        </button>
+                        <button type="button" class="btn btn-secondary flex-1 js-overnight-end-now">
+                            {{ _('End now') }}
+                        </button>
+                        <button type="button" class="btn btn-secondary flex-1 js-overnight-dismiss">
+                            {{ _('Still working') }}
+                        </button>
+                    </div>
+                </form>
+                <form method="POST" action="{{ url_for('workday.end_workday') }}" id="overnightEndNowForm" class="hidden">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script nonce="{{ csp_nonce() }}">
+(function () {
+    var modal = document.getElementById('overnightClockOutModal');
+    if (!modal) return;
+    var sessionId = modal.getAttribute('data-session-id') || '';
+    var storageKey = 'overnight_workday_dismissed_' + sessionId;
+    try {
+        if (sessionStorage.getItem(storageKey) === '1') {
+            modal.classList.add('hidden');
+            return;
+        }
+    } catch (e) { /* ignore */ }
+
+    function dismiss() {
+        modal.classList.add('hidden');
+        try { sessionStorage.setItem(storageKey, '1'); } catch (e) { /* ignore */ }
+    }
+
+    modal.querySelectorAll('.js-overnight-dismiss').forEach(function (btn) {
+        btn.addEventListener('click', dismiss);
+    });
+    var overlay = document.getElementById('overnightClockOutOverlay');
+    if (overlay) overlay.addEventListener('click', dismiss);
+
+    var endNowBtn = modal.querySelector('.js-overnight-end-now');
+    var endNowForm = document.getElementById('overnightEndNowForm');
+    if (endNowBtn && endNowForm) {
+        endNowBtn.addEventListener('click', function () { endNowForm.submit(); });
+    }
+})();
+</script>
+{% endif %}

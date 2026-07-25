@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 from app import db
 from app.models import TimeEntry, User, UserSmartNotificationDismissal
 from app.services.notification_service import (
+    KIND_FORGOTTEN_CLOCK_OUT,
     KIND_LONG_TIMER,
     KIND_MISSED_CLOCK_IN,
     KIND_NO_TRACKING,
@@ -251,3 +252,44 @@ def test_missed_clock_in_notification_on_workday(app, user):
             out = NotificationService.build_for_user(user, now_utc=now_utc)
         kinds = [n["kind"] for n in out["notifications"]]
         assert KIND_MISSED_CLOCK_IN in kinds
+
+
+@pytest.mark.unit
+def test_forgotten_clock_out_notification_for_overnight_session(app, user):
+    from app.models import WorkdaySession
+    from app.models.attendance_compliance import AttendanceWorkPeriod, DailyAttendanceRecord
+    from app.services.workday_session_service import WorkdaySessionService
+
+    with app.app_context():
+        _commit_user_prefs(
+            user.id,
+            smart_notifications_enabled=True,
+            smart_notify_missed_clock_in=False,
+            smart_notify_no_tracking=False,
+            smart_notify_long_timer=False,
+            smart_notify_daily_summary=False,
+            smart_notify_end_of_day=False,
+            timezone="Europe/Brussels",
+        )
+        user = db.session.get(User, user.id)
+        svc = WorkdaySessionService()
+        start = svc.start_workday(user.id)
+        assert start["success"] is True
+        session = start["session"]
+        session.start_time = datetime(2026, 6, 10, 9, 0, 0)
+        period = AttendanceWorkPeriod.query.filter_by(workday_session_id=session.id).first()
+        if period:
+            period.start_time = session.start_time
+        db.session.commit()
+
+        now_utc = datetime(2026, 6, 11, 8, 0, 0, tzinfo=timezone.utc)
+        with patch("app.utils.timezone.now_in_user_timezone") as m_now:
+            m_now.return_value = datetime(2026, 6, 11, 10, 0, tzinfo=ZoneInfo("Europe/Brussels"))
+            out = NotificationService.build_for_user(user, now_utc=now_utc)
+        kinds = [n["kind"] for n in out["notifications"]]
+        assert KIND_FORGOTTEN_CLOCK_OUT in kinds
+
+        AttendanceWorkPeriod.query.filter_by(user_id=user.id).delete()
+        DailyAttendanceRecord.query.filter_by(user_id=user.id).delete()
+        WorkdaySession.query.filter_by(user_id=user.id).delete()
+        db.session.commit()

@@ -106,9 +106,16 @@ def dashboard():
     from app.services.workday_session_service import WorkdaySessionService
     from app.services.working_time_limit_service import WorkingTimeLimitService
 
-    active_workday_session = WorkdaySessionService().get_active_session(current_user.id)
+    workday_svc = WorkdaySessionService()
+    active_workday_session = workday_svc.get_active_session(current_user.id)
     attendance_status = AttendanceComplianceService().get_status(current_user.id)
     attendance_break_active = attendance_status.get("break_active", False)
+    overnight_open_workday = workday_svc.is_overnight_open_session(active_workday_session)
+    suggested_leave_time = (
+        workday_svc.suggested_leave_datetime_local(active_workday_session, current_user)
+        if overnight_open_workday and active_workday_session
+        else None
+    )
     pending_violations = WorkingTimeLimitService().get_violations_needing_justification(current_user.id)
 
     # Overtime for dashboard cards (today and week)
@@ -267,6 +274,8 @@ def dashboard():
         "active_timer": active_timer,
         "active_workday_session": active_workday_session,
         "attendance_break_active": attendance_break_active,
+        "overnight_open_workday": overnight_open_workday,
+        "suggested_leave_time": suggested_leave_time,
         "workday_today_hours": workday_today_hours,
         "workday_week_hours": workday_week_hours,
         "workday_month_hours": workday_month_hours,

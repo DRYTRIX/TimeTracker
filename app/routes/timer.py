@@ -1864,14 +1864,23 @@ def timer_page():
     from app.services.attendance_compliance_service import AttendanceComplianceService
     from app.services.workday_session_service import WorkdaySessionService
 
-    active_workday_session = WorkdaySessionService().get_active_session(current_user.id)
+    workday_svc = WorkdaySessionService()
+    active_workday_session = workday_svc.get_active_session(current_user.id)
     attendance_status = AttendanceComplianceService().get_status(current_user.id)
+    overnight_open_workday = workday_svc.is_overnight_open_session(active_workday_session)
+    suggested_leave_time = (
+        workday_svc.suggested_leave_datetime_local(active_workday_session, current_user)
+        if overnight_open_workday and active_workday_session
+        else None
+    )
 
     return render_template(
         "timer/timer_page.html",
         active_timer=active_timer,
         active_workday_session=active_workday_session,
         attendance_break_active=attendance_status.get("break_active", False),
+        overnight_open_workday=overnight_open_workday,
+        suggested_leave_time=suggested_leave_time,
         projects=active_projects,
         clients=active_clients,
         only_one_client=only_one_client,

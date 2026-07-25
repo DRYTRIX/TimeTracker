@@ -788,6 +788,16 @@ POST /api/v1/workday/end
 
 **Required Scope:** `write:time_entries`
 
+**Request Body (optional):**
+```json
+{
+  "notes": "Optional note",
+  "end_time": "2026-07-24T17:00:00"
+}
+```
+
+`end_time` (alias `at_time`) closes the active session at a past leave time — useful when correcting a forgotten overnight clock-out. Must be after the session start and not in the future.
+
 Kiosk equivalents: `POST /api/kiosk/start-workday`, `POST /api/kiosk/end-workday`, `GET /api/kiosk/workday-status`.
 
 ### Tasks
