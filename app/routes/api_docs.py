@@ -229,11 +229,31 @@ Example: `2024-01-15T14:30:00Z`
                     "type": "object",
                     "properties": {
                         "id": {"type": "integer"},
+                        "project_id": {"type": "integer"},
                         "name": {"type": "string"},
                         "description": {"type": "string", "nullable": True},
-                        "project_id": {"type": "integer"},
                         "status": {"type": "string", "enum": ["todo", "in_progress", "review", "done", "cancelled"]},
-                        "priority": {"type": "integer"},
+                        "status_display": {"type": "string", "description": "Human-readable status label"},
+                        "priority": {"type": "string", "enum": ["low", "medium", "high", "urgent"]},
+                        "priority_display": {"type": "string", "description": "Human-readable priority label"},
+                        "priority_class": {"type": "string", "description": "CSS class for priority styling"},
+                        "estimated_hours": {"type": "number", "nullable": True},
+                        "due_date": {"type": "string", "format": "date", "nullable": True},
+                        "assigned_to": {"type": "integer", "nullable": True, "description": "User ID of the assignee"},
+                        "assigned_user": {"type": "string", "nullable": True, "description": "Username of the assignee"},
+                        "created_by": {"type": "integer", "description": "User ID of the creator"},
+                        "creator": {"type": "string", "nullable": True, "description": "Username of the creator"},
+                        "created_at": {"type": "string", "format": "date-time", "nullable": True},
+                        "updated_at": {"type": "string", "format": "date-time", "nullable": True},
+                        "started_at": {"type": "string", "format": "date-time", "nullable": True},
+                        "completed_at": {"type": "string", "format": "date-time", "nullable": True},
+                        "total_hours": {"type": "number", "description": "Total hours tracked on this task"},
+                        "total_billable_hours": {"type": "number", "description": "Total billable hours"},
+                        "progress_percentage": {"type": "number", "description": "Progress based on estimated vs actual hours"},
+                        "is_active": {"type": "boolean", "description": "True if task is not done or cancelled"},
+                        "is_overdue": {"type": "boolean", "description": "True if past due date and not closed"},
+                        "tags": {"type": "string", "nullable": True, "description": "Comma-separated tag string"},
+                        "tag_list": {"type": "array", "items": {"type": "string"}, "description": "Tags as a list"},
                     },
                 },
                 "Client": {
@@ -628,6 +648,301 @@ Example: `2024-01-15T14:30:00Z`
                     ],
                     "responses": {"200": {"description": "List of expenses"}},
                 }
+            },
+            "/tasks": {
+                "get": {
+                    "tags": ["Tasks"],
+                    "summary": "List tasks",
+                    "description": "Get a paginated list of tasks with optional filters",
+                    "parameters": [
+                        {"name": "project_id", "in": "query", "schema": {"type": "integer"}},
+                        {"name": "status", "in": "query", "schema": {"type": "string"}},
+                        {"name": "tags", "in": "query", "schema": {"type": "string"}},
+                        {"name": "page", "in": "query", "schema": {"type": "integer", "default": 1}},
+                        {"name": "per_page", "in": "query", "schema": {"type": "integer", "default": 50, "maximum": 100}},
+                    ],
+                    "responses": {"200": {"description": "List of tasks"}, "401": {"description": "Unauthorized"}},
+                },
+                "post": {
+                    "tags": ["Tasks"],
+                    "summary": "Create task",
+                    "description": "Create a new task",
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": ["name", "project_id"],
+                                    "properties": {
+                                        "name": {"type": "string"},
+                                        "project_id": {"type": "integer"},
+                                        "description": {"type": "string"},
+                                        "assignee_id": {"type": "integer"},
+                                        "priority": {"type": "string", "enum": ["low", "medium", "high", "urgent"], "default": "medium"},
+                                        "due_date": {"type": "string", "format": "date"},
+                                        "estimated_hours": {"type": "number"},
+                                        "tags": {"type": "string"},
+                                    },
+                                }
+                            }
+                        },
+                    },
+                    "responses": {
+                        "201": {"description": "Task created"},
+                        "400": {"description": "Validation error"},
+                    },
+                },
+            },
+            "/tasks/{task_id}": {
+                "get": {
+                    "tags": ["Tasks"],
+                    "summary": "Get task",
+                    "description": "Get details of a specific task",
+                    "parameters": [
+                        {"name": "task_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "responses": {
+                        "200": {"description": "Task details"},
+                        "404": {"description": "Task not found"},
+                    },
+                },
+                "put": {
+                    "tags": ["Tasks"],
+                    "summary": "Update task",
+                    "description": "Update an existing task (full or partial update)",
+                    "parameters": [
+                        {"name": "task_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {"type": "string"},
+                                        "description": {"type": "string"},
+                                        "status": {"type": "string", "enum": ["todo", "in_progress", "review", "done", "cancelled"]},
+                                        "priority": {"type": "string", "enum": ["low", "medium", "high", "urgent"]},
+                                        "assignee_id": {"type": "integer"},
+                                        "due_date": {"type": "string", "format": "date"},
+                                        "estimated_hours": {"type": "number"},
+                                        "tags": {"type": "string"},
+                                    },
+                                }
+                            }
+                        },
+                    },
+                    "responses": {
+                        "200": {"description": "Task updated"},
+                        "400": {"description": "Validation error"},
+                        "404": {"description": "Task not found"},
+                    },
+                },
+                "delete": {
+                    "tags": ["Tasks"],
+                    "summary": "Delete task",
+                    "description": "Permanently delete a task",
+                    "parameters": [
+                        {"name": "task_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "responses": {
+                        "200": {"description": "Task deleted"},
+                        "404": {"description": "Task not found"},
+                    },
+                },
+            },
+            "/clients": {
+                "get": {
+                    "tags": ["Clients"],
+                    "summary": "List clients",
+                    "description": "Get a paginated list of clients",
+                    "parameters": [
+                        {"name": "page", "in": "query", "schema": {"type": "integer", "default": 1}},
+                        {"name": "per_page", "in": "query", "schema": {"type": "integer", "default": 50, "maximum": 100}},
+                    ],
+                    "responses": {"200": {"description": "List of clients"}, "401": {"description": "Unauthorized"}},
+                },
+                "post": {
+                    "tags": ["Clients"],
+                    "summary": "Create client",
+                    "description": "Create a new client",
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": ["name"],
+                                    "properties": {
+                                        "name": {"type": "string"},
+                                        "email": {"type": "string"},
+                                        "company": {"type": "string"},
+                                        "phone": {"type": "string"},
+                                        "address": {"type": "string"},
+                                        "default_hourly_rate": {"type": "number"},
+                                        "custom_fields": {"type": "object"},
+                                    },
+                                }
+                            }
+                        },
+                    },
+                    "responses": {
+                        "201": {"description": "Client created"},
+                        "400": {"description": "Validation error"},
+                    },
+                },
+            },
+            "/clients/{client_id}": {
+                "get": {
+                    "tags": ["Clients"],
+                    "summary": "Get client",
+                    "description": "Get details of a specific client including associated projects",
+                    "parameters": [
+                        {"name": "client_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "responses": {
+                        "200": {"description": "Client details"},
+                        "403": {"description": "Forbidden"},
+                        "404": {"description": "Client not found"},
+                    },
+                },
+            },
+            "/clients/{client_id}/contacts": {
+                "get": {
+                    "tags": ["Clients"],
+                    "summary": "List client contacts",
+                    "description": "Get all active contacts for a client",
+                    "parameters": [
+                        {"name": "client_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "responses": {"200": {"description": "List of contacts"}, "404": {"description": "Client not found"}},
+                },
+                "post": {
+                    "tags": ["Clients"],
+                    "summary": "Create contact",
+                    "description": "Create a new contact for a client",
+                    "parameters": [
+                        {"name": "client_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": ["first_name", "last_name"],
+                                    "properties": {
+                                        "first_name": {"type": "string"},
+                                        "last_name": {"type": "string"},
+                                        "email": {"type": "string"},
+                                        "phone": {"type": "string"},
+                                        "mobile": {"type": "string"},
+                                        "title": {"type": "string"},
+                                        "department": {"type": "string"},
+                                        "role": {"type": "string", "default": "contact"},
+                                        "is_primary": {"type": "boolean", "default": False},
+                                        "address": {"type": "string"},
+                                        "notes": {"type": "string"},
+                                        "tags": {"type": "string"},
+                                    },
+                                }
+                            }
+                        },
+                    },
+                    "responses": {
+                        "201": {"description": "Contact created"},
+                        "400": {"description": "Validation error"},
+                        "404": {"description": "Client not found"},
+                    },
+                },
+            },
+            "/contacts/{contact_id}": {
+                "get": {
+                    "tags": ["Clients"],
+                    "summary": "Get contact",
+                    "description": "Get details of a specific contact",
+                    "parameters": [
+                        {"name": "contact_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "responses": {"200": {"description": "Contact details"}, "404": {"description": "Contact not found"}},
+                },
+                "put": {
+                    "tags": ["Clients"],
+                    "summary": "Update contact",
+                    "description": "Update an existing contact",
+                    "parameters": [
+                        {"name": "contact_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "requestBody": {"required": True, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Contact"}}}},
+                    "responses": {"200": {"description": "Contact updated"}, "404": {"description": "Contact not found"}},
+                },
+                "delete": {
+                    "tags": ["Clients"],
+                    "summary": "Delete contact",
+                    "description": "Soft-delete a contact (sets is_active=False)",
+                    "parameters": [
+                        {"name": "contact_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "responses": {"200": {"description": "Contact deleted"}, "404": {"description": "Contact not found"}},
+                },
+            },
+            "/clients/{client_id}/notes": {
+                "get": {
+                    "tags": ["Clients"],
+                    "summary": "List client notes",
+                    "description": "Get paginated notes for a client (important notes first)",
+                    "parameters": [
+                        {"name": "client_id", "in": "path", "required": True, "schema": {"type": "integer"}},
+                        {"name": "page", "in": "query", "schema": {"type": "integer", "default": 1}},
+                        {"name": "per_page", "in": "query", "schema": {"type": "integer", "default": 50, "maximum": 100}},
+                    ],
+                    "responses": {"200": {"description": "List of notes"}, "404": {"description": "Client not found"}},
+                },
+                "post": {
+                    "tags": ["Clients"],
+                    "summary": "Create client note",
+                    "description": "Create a new note for a client",
+                    "parameters": [{"name": "client_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                    "requestBody": {
+                        "required": True,
+                        "content": {"application/json": {"schema": {"type": "object", "required": ["content"], "properties": {"content": {"type": "string"}, "is_important": {"type": "boolean", "default": False}}}}},
+                    },
+                    "responses": {"201": {"description": "Note created"}, "400": {"description": "content is required"}, "404": {"description": "Client not found"}},
+                },
+            },
+            "/client-notes/{note_id}": {
+                "get": {
+                    "tags": ["Clients"],
+                    "summary": "Get client note",
+                    "parameters": [{"name": "note_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                    "responses": {"200": {"description": "Note details"}, "404": {"description": "Note not found"}},
+                },
+                "put": {
+                    "tags": ["Clients"],
+                    "summary": "Update client note",
+                    "description": "Update an existing client note (author or admin only)",
+                    "parameters": [{"name": "note_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                    "requestBody": {"required": True, "content": {"application/json": {"schema": {"type": "object", "required": ["content"], "properties": {"content": {"type": "string"}, "is_important": {"type": "boolean"}}}}}},
+                    "responses": {"200": {"description": "Note updated"}, "400": {"description": "content is required"}, "403": {"description": "Access denied"}, "404": {"description": "Note not found"}},
+                },
+                "delete": {
+                    "tags": ["Clients"],
+                    "summary": "Delete client note",
+                    "description": "Delete a client note (author or admin only)",
+                    "parameters": [{"name": "note_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                    "responses": {"200": {"description": "Note deleted"}, "403": {"description": "Access denied"}, "404": {"description": "Note not found"}},
+                },
+            },
+            "/clients/{client_id}/invoice-unbilled": {
+                "post": {
+                    "tags": ["Clients"],
+                    "summary": "Create invoice from unbilled time",
+                    "description": "Create a draft invoice from all unbilled billable time entries for this client (grouped by project)",
+                    "parameters": [{"name": "client_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                    "responses": {"200": {"description": "Invoice created (returns invoice_id, invoice_number, total, item_count)"}, "400": {"description": "Cannot create invoice"}, "404": {"description": "Client not found"}},
+                },
             },
         },
     }
