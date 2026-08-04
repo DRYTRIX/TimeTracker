@@ -222,3 +222,39 @@ def post_client_invoice_unbilled(client_id):
         ),
         200,
     )
+
+
+@api_v1_clients_bp.route("/clients/<int:client_id>", methods=["PUT", "PATCH"])
+@require_api_token("write:clients")
+def update_client_api(client_id):
+    """Update a client — restores the pre-5.9 token-API update and adds custom_fields.
+
+    the v5.9+ per-resource API refactor dropped client update;
+    needed for Peppol recipient ids (custom_fields.peppol_endpoint_id/scheme_id).
+    """
+    blocked = _require_module_enabled_for_api("clients")
+    if blocked:
+        return blocked
+    from decimal import Decimal
+
+    from app.services import ClientService
+
+    data = request.get_json() or {}
+    allowed = {}
+    for field in ("name", "email", "company", "phone", "address"):
+        if field in data:
+            allowed[field] = data[field]
+    if data.get("default_hourly_rate") is not None:
+        allowed["default_hourly_rate"] = Decimal(str(data["default_hourly_rate"]))
+    if data.get("custom_fields") is not None:
+        allowed["custom_fields"] = data["custom_fields"]
+    if not allowed:
+        return validation_error_response(
+            errors={"body": ["No updatable fields provided"]},
+            message="No updatable fields provided",
+        )
+    result = ClientService().update_client(client_id, g.api_user.id, **allowed)
+    if not result.get("success"):
+        status = 404 if result.get("error") == "not_found" else 400
+        return error_response(result.get("message", "Could not update client"), status_code=status)
+    return jsonify({"message": "Client updated successfully", "client": result["client"].to_dict()})
