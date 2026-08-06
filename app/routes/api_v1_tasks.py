@@ -11,6 +11,38 @@ from app.utils.api_responses import error_response, not_found_response, validati
 
 api_v1_tasks_bp = Blueprint("api_v1_tasks", __name__, url_prefix="/api/v1")
 
+OPEN_TASK_STATUSES = ["todo", "in_progress", "review"]
+
+
+def parse_task_status_filter(status_raw):
+    """Parse status query param; supports aliases and comma-separated values."""
+    if not status_raw:
+        return None, None
+
+    status_raw = status_raw.strip()
+    if not status_raw:
+        return None, None
+
+    expanded = []
+    for part in (p.strip() for p in status_raw.split(",") if p.strip()):
+        if part.lower() in ("active", "open"):
+            expanded.extend(OPEN_TASK_STATUSES)
+        else:
+            expanded.append(part)
+
+    seen = set()
+    unique = []
+    for value in expanded:
+        if value not in seen:
+            seen.add(value)
+            unique.append(value)
+
+    if len(unique) == 1:
+        return unique[0], None
+    if len(unique) > 1:
+        return None, unique
+    return None, None
+
 
 @api_v1_tasks_bp.route("/tasks", methods=["GET"])
 @require_api_token("read:tasks")
@@ -19,7 +51,8 @@ def list_tasks():
     from app.services import TaskService
 
     project_id = request.args.get("project_id", type=int)
-    status = request.args.get("status")
+    status_raw = request.args.get("status")
+    status, statuses = parse_task_status_filter(status_raw)
     tags = request.args.get("tags", "").strip() or None
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
@@ -28,6 +61,7 @@ def list_tasks():
     result = task_service.list_tasks(
         project_id=project_id,
         status=status,
+        statuses=statuses,
         tags=tags,
         page=page,
         per_page=per_page,

@@ -37,6 +37,8 @@ const els = {
   createProjectBtn: document.getElementById('create-project-btn'),
 };
 
+const OPEN_TASK_STATUSES = new Set(['todo', 'in_progress', 'review']);
+
 /** @type {ApiClient|null} */
 let client = null;
 /** @type {Array<{id:number,name:string,favorite?:boolean}>} */
@@ -167,20 +169,23 @@ function fillProjectSelects(selectedId = null) {
   }
 }
 
-async function loadTasksForProject(projectId) {
+async function loadTasksForProject(projectId, selectedTaskId = null) {
   els.taskSelect.innerHTML = '<option value="">— No task —</option>';
   if (!client || !projectId) return;
   try {
     const data = await client.getTasks({
       project_id: projectId,
-      status: 'active',
-      per_page: 100,
+      per_page: 200,
     });
-    const tasks = data?.tasks || [];
+    const tasks = (data?.tasks || [])
+      .filter((t) => OPEN_TASK_STATUSES.has(t.status))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const selectedId = selectedTaskId != null ? String(selectedTaskId) : '';
     for (const t of tasks) {
       const opt = document.createElement('option');
       opt.value = String(t.id);
       opt.textContent = t.name;
+      if (selectedId && String(t.id) === selectedId) opt.selected = true;
       els.taskSelect.appendChild(opt);
     }
   } catch (error) {
@@ -307,11 +312,8 @@ els.createTaskBtn.addEventListener('click', async () => {
     const result = await client.createTask({ name, projectId });
     els.newTaskName.value = '';
     showMessage('Task created.', 'success');
-    els.projectSelect.value = String(projectId);
-    await loadTasksForProject(projectId);
-    if (result?.task?.id) {
-      els.taskSelect.value = String(result.task.id);
-    }
+    fillProjectSelects(projectId);
+    await loadTasksForProject(projectId, result?.task?.id);
   } catch (error) {
     showMessage(error.message || 'Could not create task.');
   } finally {

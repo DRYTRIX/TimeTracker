@@ -458,6 +458,103 @@ class TestTasks:
         assert "task" in data
         assert data["task"]["name"] == "New Task"
 
+    def test_list_tasks_status_active_alias(self, client, api_token, test_user, test_project):
+        """status=active returns open tasks (todo, in_progress, review)"""
+        open_task = Task(
+            name="Open Task",
+            project_id=test_project.id,
+            status="todo",
+            priority="medium",
+            created_by=int(test_user),
+        )
+        done_task = Task(
+            name="Done Task",
+            project_id=test_project.id,
+            status="done",
+            priority="medium",
+            created_by=int(test_user),
+        )
+        db.session.add_all([open_task, done_task])
+        db.session.commit()
+
+        headers = {"Authorization": f"Bearer {api_token}"}
+        response = client.get(
+            f"/api/v1/tasks?project_id={test_project.id}&status=active",
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert len(data["tasks"]) == 1
+        assert data["tasks"][0]["name"] == "Open Task"
+
+    def test_list_tasks_status_exact_match(self, client, api_token, test_user, test_project):
+        """status=done returns only done tasks"""
+        open_task = Task(
+            name="Open Task",
+            project_id=test_project.id,
+            status="todo",
+            priority="medium",
+            created_by=int(test_user),
+        )
+        done_task = Task(
+            name="Done Task",
+            project_id=test_project.id,
+            status="done",
+            priority="medium",
+            created_by=int(test_user),
+        )
+        db.session.add_all([open_task, done_task])
+        db.session.commit()
+
+        headers = {"Authorization": f"Bearer {api_token}"}
+        response = client.get(
+            f"/api/v1/tasks?project_id={test_project.id}&status=done",
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert len(data["tasks"]) == 1
+        assert data["tasks"][0]["name"] == "Done Task"
+
+    def test_list_tasks_status_comma_separated(self, client, api_token, test_user, test_project):
+        """Comma-separated status values return tasks matching any listed status"""
+        todo_task = Task(
+            name="Todo Task",
+            project_id=test_project.id,
+            status="todo",
+            priority="medium",
+            created_by=int(test_user),
+        )
+        review_task = Task(
+            name="Review Task",
+            project_id=test_project.id,
+            status="review",
+            priority="medium",
+            created_by=int(test_user),
+        )
+        done_task = Task(
+            name="Done Task",
+            project_id=test_project.id,
+            status="done",
+            priority="medium",
+            created_by=int(test_user),
+        )
+        db.session.add_all([todo_task, review_task, done_task])
+        db.session.commit()
+
+        headers = {"Authorization": f"Bearer {api_token}"}
+        response = client.get(
+            f"/api/v1/tasks?project_id={test_project.id}&status=todo,review",
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        names = {task["name"] for task in data["tasks"]}
+        assert names == {"Todo Task", "Review Task"}
+
 
 class TestClients:
     """Test client endpoints"""
