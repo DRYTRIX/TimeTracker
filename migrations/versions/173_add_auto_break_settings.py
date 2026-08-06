@@ -1,4 +1,4 @@
-"""Add auto-break deduction settings columns.
+"""Add auto-break deduction settings and is_auto_break on attendance_breaks.
 
 Revision ID: 173_add_auto_break_settings
 Revises: 172_add_workday_auto_close_confirmation
@@ -39,11 +39,18 @@ def upgrade():
             "settings",
             sa.Column("auto_break_duration_minutes", sa.Integer(), nullable=False, server_default="30"),
         )
+    if not _has_column(inspector, "attendance_breaks", "is_auto_break"):
+        op.add_column(
+            "attendance_breaks",
+            sa.Column("is_auto_break", sa.Boolean(), nullable=False, server_default=sa.false()),
+        )
 
 
 def downgrade():
     bind = op.get_bind()
     inspector = inspect(bind)
+    if _has_column(inspector, "attendance_breaks", "is_auto_break"):
+        op.drop_column("attendance_breaks", "is_auto_break")
     for col in (
         "auto_break_duration_minutes",
         "auto_break_after_hours",

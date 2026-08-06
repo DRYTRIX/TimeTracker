@@ -210,7 +210,7 @@
                                     <input type="checkbox" name="auto_break_enabled" id="auto_break_enabled" {% if getattr(settings, 'auto_break_enabled', False) %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600">
                                     <label for="auto_break_enabled" class="ml-2 text-sm font-medium">{{ _('Automatically deduct break on clock-out') }}</label>
                                 </div>
-                                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('When enabled, a break is inserted automatically if the workday exceeds the threshold and no sufficient break was logged.') }}</p>
+                                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('When enabled, a break is automatically deducted on clock-out if the workday exceeds the threshold and no sufficient break has been recorded.') }}</p>
                                 <div class="flex flex-wrap gap-4">
                                     <div>
                                         <label for="auto_break_after_hours" class="form-label">{{ _('Deduct break after (hours)') }}</label>

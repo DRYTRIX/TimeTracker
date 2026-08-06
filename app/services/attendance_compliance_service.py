@@ -174,7 +174,8 @@ class AttendanceComplianceService:
 
         day = period.attendance_day
         day.recalculate_totals()
-        self._maybe_insert_auto_break(period, day)
+        self._maybe_apply_auto_break(day, period, now)
+        day.recalculate_totals()
 
         if not safe_commit("attendance_clock_out", {"user_id": user_id, "period_id": period.id}):
             return {"success": False, "message": "Could not end workday", "error": "database_error"}
@@ -247,12 +248,17 @@ class AttendanceComplianceService:
         brk.end_time = end_time
         brk.calculate_duration()
 
-    def _maybe_insert_auto_break(self, period: AttendanceWorkPeriod, day: DailyAttendanceRecord) -> None:
-        """Insert a configured break on clock-out when work exceeds the threshold and no sufficient break exists."""
+    def _maybe_apply_auto_break(
+        self,
+        day: DailyAttendanceRecord,
+        period: AttendanceWorkPeriod,
+        clock_out_time: datetime,
+    ) -> None:
+        """Insert a configured break on clock-out when work exceeds the threshold and break is insufficient."""
         settings = Settings.get_settings()
         if not getattr(settings, "auto_break_enabled", False):
             return
-        if not period.end_time or not period.start_time:
+        if not period.start_time or not clock_out_time:
             return
 
         after_hours = float(getattr(settings, "auto_break_after_hours", 6.0) or 6.0)
@@ -260,19 +266,24 @@ class AttendanceComplianceService:
         if after_hours <= 0 or duration_minutes <= 0:
             return
 
-        threshold_seconds = after_hours * 3600
+        threshold_seconds = int(after_hours * 3600)
         if (day.total_work_seconds or 0) < threshold_seconds:
             return
 
-        required_break_seconds = duration_minutes * 60
-        if (day.total_break_seconds or 0) >= required_break_seconds:
+        target_seconds = duration_minutes * 60
+        existing_break_seconds = day.total_break_seconds or 0
+        if existing_break_seconds >= target_seconds:
             return
 
-        break_start = period.start_time + timedelta(hours=after_hours)
-        break_end = break_start + timedelta(minutes=duration_minutes)
-        if break_end > period.end_time:
-            break_end = period.end_time
-            break_start = break_end - timedelta(minutes=duration_minutes)
+        deficit_seconds = target_seconds - existing_break_seconds
+        if deficit_seconds <= 0:
+            return
+
+        break_start = period.start_time + timedelta(seconds=threshold_seconds)
+        break_end = break_start + timedelta(seconds=deficit_seconds)
+        if break_end > clock_out_time:
+            break_end = clock_out_time
+            break_start = break_end - timedelta(seconds=deficit_seconds)
         if break_start < period.start_time:
             break_start = period.start_time
         if break_end <= break_start:
@@ -284,11 +295,11 @@ class AttendanceComplianceService:
             user_id=period.user_id,
             start_time=break_start,
             end_time=break_end,
-            break_type=AttendanceBreakType.MEAL,
+            break_type=AttendanceBreakType.REST,
+            is_auto_break=True,
         )
         db.session.add(brk)
         brk.calculate_duration()
-        day.recalculate_totals()
 
     def get_status(self, user_id: int) -> Dict[str, Any]:
         period = self.get_active_work_period(user_id)
