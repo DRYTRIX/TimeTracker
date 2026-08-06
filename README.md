@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.11.0
+
+**Minor (5.11.0):** **Auto-deduct break on clock-out** — admins can opt in to automatically inserting a meal break when a workday exceeds a configurable threshold, with smart deficit fill for partial manual breaks. **Mobile timer notification (#714)** — persistent Android/iOS notification shows project, task, and elapsed time while a timer runs. **Fixes** — overnight totals clipped (#706), extension task picker (#700), client projects API error (#716), OpenAPI Tasks/Clients endpoints. See [CHANGELOG.md](CHANGELOG.md#5110---2026-08-06).
+
 ### ✨ Highlights of v5.10.1
 
 **Patch (5.10.1):** **Overnight clock-out (#706)** — prompt to correct leave time when a workday stays open past midnight. **Fixes** — Chrome extension connect (#700), compact time typing / edit date format (#704), dashboard “At work today” double-count. See [CHANGELOG.md](CHANGELOG.md#5101---2026-07-25).
