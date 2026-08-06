@@ -25,6 +25,12 @@ class AppConstants {
   static const int notificationTimerRunning = 1;
   static const int notificationSyncStatus = 2;
   static const int notificationIdleReminder = 3;
+
+  // Android notification channel for the persistent timer notification
+  static const String timerNotificationChannelId = 'timer_running';
+  static const String timerNotificationChannelName = 'Timer running';
+  static const String timerNotificationChannelDescription =
+      'Shows while a time tracker is running';
   
   // Time Formats
   static const String timeFormat24h = 'HH:mm:ss';
