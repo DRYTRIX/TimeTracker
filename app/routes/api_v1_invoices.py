@@ -434,13 +434,23 @@ def send_invoice_peppol_api(invoice_id):
     if not invoice:
         return error_response("Invoice not found", status_code=404)
     try:
-        success, tx, message = PeppolService().send_invoice(
+        service = PeppolService()
+        success, tx, message = service.send_invoice(
             invoice=invoice, triggered_by_user_id=g.api_user.id
         )
     except Exception as e:
         current_app.logger.error(f"API Peppol send failed: {type(e).__name__}: {e}")
         return error_response(f"Failed to send via Peppol: {e}", status_code=502)
-    payload = {"success": success, "message": message, "peppol_tx_id": tx.id if tx else None}
+    payload = {
+        "success": success,
+        "message": message,
+        "peppol_tx_id": tx.id if tx else None,
+        # Whether the human-readable PDF travelled inside the UBL (BG-24). Reported
+        # rather than assumed: a PDF failure degrades to a send without it.
+        "pdf_attached": service.last_pdf_status == "embedded",
+        "pdf_status": service.last_pdf_status,
+        "attachment_filenames": service.last_attachment_filenames,
+    }
     if success:
         return jsonify(payload)
     return jsonify(payload), 400
