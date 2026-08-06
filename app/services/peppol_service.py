@@ -1,5 +1,6 @@
 import os
-from typing import Optional, Tuple
+import time
+from typing import List, Optional, Tuple
 
 from flask import current_app
 
@@ -79,6 +80,78 @@ class PeppolService:
             phone=(getattr(client, "phone", None) or "").strip() or None,
         )
         return party, endpoint_id, scheme_id
+
+    @staticmethod
+    def _poll_ap_status(
+        ap_url: str, ap_token: Optional[str], message_id: str,
+        attempts: int = 4, delay_s: float = 4.0,
+    ) -> Tuple[Optional[str], List[dict]]:
+        """Poll the access-point adapter for the AP-side folder of an outbound message.
+
+        Returns (folder lowercased or None, fatal_rules).
+        Stops early on a terminal folder (sent/failed); never raises.
+        """
+        import requests
+
+        base = (ap_url or "").strip().rstrip("/")
+        if base.endswith("/send"):
+            base = base[: -len("/send")]
+        if not base:
+            return None, []
+        url = f"{base}/message/{message_id}/status"
+        # The settings row can hold an empty access-point token (non-None), which wins
+        # over the env var in the caller's resolution; the send transport falls back to
+        # PEPPOL_ACCESS_POINT_TOKEN internally — mirror that here or status polls 401.
+        if not ap_token:
+            ap_token = (os.getenv("PEPPOL_ACCESS_POINT_TOKEN") or "").strip() or None
+        headers = {"Authorization": f"Bearer {ap_token}"} if ap_token else {}
+        folder: Optional[str] = None
+        rules: List[dict] = []
+        for i in range(max(1, attempts)):
+            if i:
+                time.sleep(delay_s)
+            try:
+                resp = requests.get(url, headers=headers, timeout=15)
+                if resp.status_code >= 400:
+                    continue
+                data = resp.json() or {}
+                folder = (data.get("folder") or "").strip().lower() or None
+                rules = data.get("fatal_rules") or []
+                if folder in {"sent", "failed"}:
+                    break
+            except Exception:
+                continue
+        return folder, rules
+
+    def refresh_transmission_status(self, tx) -> dict:
+        """One AP status check for an existing transmission; corrects tx.status when the
+        AP reports failure after we recorded 'sent'."""
+        if tx is None or not getattr(tx, "message_id", None):
+            return {"folder": None, "fatal_rules": []}
+        settings = Settings.get_settings()
+        transport_mode = (
+            (getattr(settings, "peppol_transport_mode", None) or os.getenv("PEPPOL_TRANSPORT_MODE") or "generic")
+            .strip().lower()
+        )
+        if transport_mode == "native":
+            return {"folder": None, "fatal_rules": []}
+        ap_url = (
+            getattr(settings, "peppol_access_point_url", "") or os.getenv("PEPPOL_ACCESS_POINT_URL") or ""
+        ).strip()
+        ap_token_raw = getattr(settings, "peppol_access_point_token", None)
+        ap_token = (
+            (settings.get_secret("peppol_access_point_token") or "").strip()
+            if ap_token_raw is not None
+            else (os.getenv("PEPPOL_ACCESS_POINT_TOKEN") or "").strip()
+        )
+        folder, rules = self._poll_ap_status(ap_url, ap_token or None, tx.message_id, attempts=1)
+        if folder == "failed" and tx.status != "failed":
+            reasons = "; ".join(
+                f"[{r.get('id')}] {r.get('message')}" for r in (rules or [])[:6]
+            ) or "access point reported delivery failure"
+            tx.mark_failed(f"Access point validation/delivery failed: {reasons}")
+            safe_commit("peppol_refresh_mark_failed", {"tx_id": tx.id})
+        return {"folder": folder, "fatal_rules": rules}
 
     def send_invoice(
         self, invoice, triggered_by_user_id: Optional[int] = None
@@ -177,6 +250,26 @@ class PeppolService:
             tx.mark_sent(message_id=message_id, response_payload=resp)
             if not safe_commit("peppol_mark_sent", {"invoice_id": invoice.id, "tx_id": tx.id}):
                 return True, tx, "Sent via Peppol, but failed to persist send status"
+
+            # The AP accepts synchronously but validates/transmits async — poll briefly
+            # so a validation failure doesn't masquerade as a successful send.
+            verify = (os.getenv("PEPPOL_VERIFY_AFTER_SEND", "true").strip().lower()
+                      in {"1", "true", "yes", "on"})
+            if verify and message_id and transport_mode != "native":
+                folder, fatal_rules = self._poll_ap_status(ap_url, ap_token or None, message_id)
+                if folder == "failed":
+                    reasons = "; ".join(
+                        f"[{r.get('id')}] {r.get('message')}" for r in (fatal_rules or [])[:6]
+                    ) or "access point reported delivery failure"
+                    tx.mark_failed(f"Access point validation/delivery failed: {reasons}")
+                    safe_commit("peppol_mark_failed", {"invoice_id": invoice.id, "tx_id": tx.id})
+                    return False, tx, f"Peppol send FAILED at access point: {reasons}"
+                if folder == "sent":
+                    return True, tx, "Invoice sent via Peppol (access point confirmed transmission)"
+                return True, tx, (
+                    "Invoice accepted by access point; async validation/delivery still pending — "
+                    "verify with the peppol-status endpoint before assuming delivery"
+                )
 
             return True, tx, "Invoice sent via Peppol"
         except PeppolTransportError as e:

@@ -397,3 +397,38 @@ def reject_invoice_approval(approval_id):
             "invoice_approval": _approval_to_api_dict(result["approval"]),
         }
     )
+
+
+@api_v1_invoices_bp.route("/invoices/<int:invoice_id>/peppol-status", methods=["GET"])
+@require_api_token("read:invoices")
+def invoice_peppol_status_api(invoice_id):
+    """Latest Peppol transmission for an invoice, refreshed against the access point.
+
+    The AP validates async — a tx recorded 'sent' can still fail later; this
+    re-checks the AP folder and corrects the tx record when it failed.
+    """
+    from app.models import Invoice, InvoicePeppolTransmission
+    from app.services import PeppolService
+
+    invoice = Invoice.query.get(invoice_id)
+    if not invoice:
+        return error_response("Invoice not found", status_code=404)
+    tx = (
+        InvoicePeppolTransmission.query.filter_by(invoice_id=invoice_id)
+        .order_by(InvoicePeppolTransmission.id.desc())
+        .first()
+    )
+    if tx is None:
+        return jsonify({"invoice_id": invoice_id, "transmission": None})
+    refreshed = PeppolService().refresh_transmission_status(tx)
+    return jsonify(
+        {
+            "invoice_id": invoice_id,
+            "peppol_tx_id": tx.id,
+            "status": tx.status,
+            "message_id": tx.message_id,
+            "error_message": tx.error_message,
+            "ap_folder": refreshed.get("folder"),
+            "ap_fatal_rules": refreshed.get("fatal_rules"),
+        }
+    )

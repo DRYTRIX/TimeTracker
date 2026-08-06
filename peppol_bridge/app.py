@@ -154,12 +154,29 @@ def create_app() -> Flask:
         except Exception as e:
             return _json_error(f"Send failed: {e}", 500)
 
+    @app.get("/message/<message_id>/status")
+    def message_status(message_id: str) -> Response:
+        # AP-side delivery status passthrough — a sync-accepted message can still fail
+        # async validation at the provider; callers verify delivery via this route.
+        if cfg.bridge_auth_token:
+            token = _require_bearer(request.headers.get("Authorization", ""))
+            if not token or token != cfg.bridge_auth_token:
+                return _json_error("Unauthorized", 401)
+        try:
+            provider = _build_provider(cfg)
+            data = provider.get_status(message_id)
+            return jsonify({"ok": True, "provider": provider.name, **data})
+        except ProviderError as e:
+            return _json_error(str(e), 502)
+        except Exception as e:
+            return _json_error(f"Status lookup failed: {e}", 500)
+
     @app.get("/")
     def index() -> Response:
         return jsonify(
             {
                 "service": "peppol-bridge",
-                "endpoints": ["/health", "/test", "/send"],
+                "endpoints": ["/health", "/test", "/send", "/message/<id>/status"],
             }
         )
 
