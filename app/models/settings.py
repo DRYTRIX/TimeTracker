@@ -180,6 +180,10 @@ class Settings(db.Model):
     compliance_standard_weekly_hours = db.Column(db.Float, default=38.0, nullable=False)
     compliance_break_after_hours = db.Column(db.Float, default=6.0, nullable=False)
     compliance_min_break_minutes = db.Column(db.Integer, default=15, nullable=False)
+    # Auto-deduct break on clock-out when work exceeds threshold and no sufficient break logged
+    auto_break_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    auto_break_after_hours = db.Column(db.Float, default=6.0, nullable=False)
+    auto_break_duration_minutes = db.Column(db.Integer, default=30, nullable=False)
     compliance_min_daily_rest_hours = db.Column(db.Float, default=11.0, nullable=False)
     compliance_attendance_retention_years = db.Column(db.Integer, default=10, nullable=False)
     compliance_require_workday_registration = db.Column(db.Boolean, default=False, nullable=False)

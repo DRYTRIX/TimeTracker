@@ -174,6 +174,7 @@ class AttendanceComplianceService:
 
         day = period.attendance_day
         day.recalculate_totals()
+        self._maybe_insert_auto_break(period, day)
 
         if not safe_commit("attendance_clock_out", {"user_id": user_id, "period_id": period.id}):
             return {"success": False, "message": "Could not end workday", "error": "database_error"}
@@ -245,6 +246,49 @@ class AttendanceComplianceService:
     def _end_break(self, brk: AttendanceBreak, end_time: datetime) -> None:
         brk.end_time = end_time
         brk.calculate_duration()
+
+    def _maybe_insert_auto_break(self, period: AttendanceWorkPeriod, day: DailyAttendanceRecord) -> None:
+        """Insert a configured break on clock-out when work exceeds the threshold and no sufficient break exists."""
+        settings = Settings.get_settings()
+        if not getattr(settings, "auto_break_enabled", False):
+            return
+        if not period.end_time or not period.start_time:
+            return
+
+        after_hours = float(getattr(settings, "auto_break_after_hours", 6.0) or 6.0)
+        duration_minutes = int(getattr(settings, "auto_break_duration_minutes", 30) or 30)
+        if after_hours <= 0 or duration_minutes <= 0:
+            return
+
+        threshold_seconds = after_hours * 3600
+        if (day.total_work_seconds or 0) < threshold_seconds:
+            return
+
+        required_break_seconds = duration_minutes * 60
+        if (day.total_break_seconds or 0) >= required_break_seconds:
+            return
+
+        break_start = period.start_time + timedelta(hours=after_hours)
+        break_end = break_start + timedelta(minutes=duration_minutes)
+        if break_end > period.end_time:
+            break_end = period.end_time
+            break_start = break_end - timedelta(minutes=duration_minutes)
+        if break_start < period.start_time:
+            break_start = period.start_time
+        if break_end <= break_start:
+            return
+
+        brk = AttendanceBreak(
+            attendance_day_id=day.id,
+            work_period_id=period.id,
+            user_id=period.user_id,
+            start_time=break_start,
+            end_time=break_end,
+            break_type=AttendanceBreakType.MEAL,
+        )
+        db.session.add(brk)
+        brk.calculate_duration()
+        day.recalculate_totals()
 
     def get_status(self, user_id: int) -> Dict[str, Any]:
         period = self.get_active_work_period(user_id)
