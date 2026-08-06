@@ -34,3 +34,11 @@ class ProviderBase:
     ) -> ProviderSendResult:
         raise NotImplementedError
 
+    def get_status(self, message_id: str) -> Dict[str, Any]:
+        """Return AP-side delivery status for a previously sent message.
+
+        Expected keys: folder (lowercase, e.g. outbox/sent/failed, None if unknown)
+        and fatal_rules (list of {id, message}) when the AP reports a failure.
+        """
+        raise ProviderError(f"Status lookup not supported by provider '{self.name}'")
+
