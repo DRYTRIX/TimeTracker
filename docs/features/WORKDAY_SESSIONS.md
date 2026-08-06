@@ -15,7 +15,8 @@ Workday hours and project hours are shown **separately** on the dashboard (“At
 Personal attendance history: `/workday/history`.
 
 - **Forgot to clock in today:** press **Start Workday**, then request a correction to adjust the start time on an existing work period.
-- **Missing day entirely:** use **Request missing workday** on the history page (date, start/end times, reason). An admin approves under **Attendance corrections** (`/admin/attendance/corrections`).
+- **Missing day entirely:** use **Request missing workday** on the history page (date, start/end times, reason). An admin approves under **Attendance corrections** (`/admin/attendance/corrections`, also linked in the sidebar for admins).
+- **Track your requests:** after submitting a correction, open **My correction requests** on `/workday/history` to see pending, applied, or rejected status. Pending items also appear under **My Requests** on `/approvals` when the time approvals module is enabled.
 - **Forgot to clock out overnight:** if a workday is still open from a previous day, the dashboard and Timer page show a prompt asking when you actually left. Enter the leave time to close yesterday correctly, then press **Start Workday** for today. You can choose **Still working** to keep the session open, or **End now**. Smart notifications also surface this when enabled.
 
 Enable **missed workday reminders** under **Settings → Notifications** (in-app smart notification and/or email).

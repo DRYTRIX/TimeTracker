@@ -47,5 +47,14 @@
 	<true/>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>This app does not track users across apps or websites</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.pravera.flutter_foreground_task.refresh</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

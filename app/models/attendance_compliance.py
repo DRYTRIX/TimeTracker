@@ -212,6 +212,7 @@ class AttendanceBreak(db.Model):
         default=AttendanceBreakType.REST,
         nullable=False,
     )
+    is_auto_break = db.Column(db.Boolean, default=False, nullable=False)
 
     created_at = db.Column(db.DateTime, default=local_now, nullable=False)
     updated_at = db.Column(db.DateTime, default=local_now, onupdate=local_now, nullable=False)
@@ -242,6 +243,7 @@ class AttendanceBreak(db.Model):
             "end_time": self.end_time.isoformat() if self.end_time else None,
             "duration_seconds": self.duration_seconds,
             "break_type": break_type,
+            "is_auto_break": bool(getattr(self, "is_auto_break", False)),
             "is_active": self.is_active,
         }
 

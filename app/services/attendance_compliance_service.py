@@ -174,6 +174,8 @@ class AttendanceComplianceService:
 
         day = period.attendance_day
         day.recalculate_totals()
+        self._maybe_apply_auto_break(day, period, now)
+        day.recalculate_totals()
 
         if not safe_commit("attendance_clock_out", {"user_id": user_id, "period_id": period.id}):
             return {"success": False, "message": "Could not end workday", "error": "database_error"}
@@ -244,6 +246,59 @@ class AttendanceComplianceService:
 
     def _end_break(self, brk: AttendanceBreak, end_time: datetime) -> None:
         brk.end_time = end_time
+        brk.calculate_duration()
+
+    def _maybe_apply_auto_break(
+        self,
+        day: DailyAttendanceRecord,
+        period: AttendanceWorkPeriod,
+        clock_out_time: datetime,
+    ) -> None:
+        """Insert a configured break on clock-out when work exceeds the threshold and break is insufficient."""
+        settings = Settings.get_settings()
+        if not getattr(settings, "auto_break_enabled", False):
+            return
+        if not period.start_time or not clock_out_time:
+            return
+
+        after_hours = float(getattr(settings, "auto_break_after_hours", 6.0) or 6.0)
+        duration_minutes = int(getattr(settings, "auto_break_duration_minutes", 30) or 30)
+        if after_hours <= 0 or duration_minutes <= 0:
+            return
+
+        threshold_seconds = int(after_hours * 3600)
+        if (day.total_work_seconds or 0) < threshold_seconds:
+            return
+
+        target_seconds = duration_minutes * 60
+        existing_break_seconds = day.total_break_seconds or 0
+        if existing_break_seconds >= target_seconds:
+            return
+
+        deficit_seconds = target_seconds - existing_break_seconds
+        if deficit_seconds <= 0:
+            return
+
+        break_start = period.start_time + timedelta(seconds=threshold_seconds)
+        break_end = break_start + timedelta(seconds=deficit_seconds)
+        if break_end > clock_out_time:
+            break_end = clock_out_time
+            break_start = break_end - timedelta(seconds=deficit_seconds)
+        if break_start < period.start_time:
+            break_start = period.start_time
+        if break_end <= break_start:
+            return
+
+        brk = AttendanceBreak(
+            attendance_day_id=day.id,
+            work_period_id=period.id,
+            user_id=period.user_id,
+            start_time=break_start,
+            end_time=break_end,
+            break_type=AttendanceBreakType.REST,
+            is_auto_break=True,
+        )
+        db.session.add(brk)
         brk.calculate_duration()
 
     def get_status(self, user_id: int) -> Dict[str, Any]:
@@ -425,6 +480,7 @@ class AttendanceComplianceService:
         corrected_values: Dict[str, Any],
         reason: str,
         requested_by: int,
+        allow_locked: bool = False,
     ) -> Dict[str, Any]:
         reason = (reason or "").strip()
         if not reason:
@@ -436,7 +492,7 @@ class AttendanceComplianceService:
         requester = User.query.get(requested_by)
         if day.user_id != requested_by and not (requester and requester.is_admin):
             return {"success": False, "message": "You can only request corrections for your own attendance"}
-        if day.is_locked:
+        if day.is_locked and not allow_locked:
             return {"success": False, "message": "Locked attendance records require admin-approved corrections"}
 
         if entity_type == "AddWorkPeriod":
@@ -493,6 +549,24 @@ class AttendanceComplianceService:
             corrected_values=corrected,
             reason=reason,
             requested_by=user_id,
+        )
+
+    def list_pending_corrections(self, limit: int = 200) -> List[AttendanceCorrection]:
+        """Return pending attendance corrections for admin review."""
+        return (
+            AttendanceCorrection.query.filter_by(status=AttendanceCorrectionStatus.PENDING)
+            .order_by(AttendanceCorrection.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+
+    def list_user_corrections(self, user_id: int, limit: int = 50) -> List[AttendanceCorrection]:
+        """Return a user's recent correction requests (any status)."""
+        return (
+            AttendanceCorrection.query.filter_by(requested_by=user_id)
+            .order_by(AttendanceCorrection.created_at.desc())
+            .limit(limit)
+            .all()
         )
 
     def review_correction(
@@ -555,6 +629,14 @@ class AttendanceComplianceService:
                 period.notes = values["notes"]
             period.calculate_duration()
             period.attendance_day.recalculate_totals()
+            if period.workday_session_id:
+                from app.models import WorkdaySession
+
+                linked = WorkdaySession.query.get(period.workday_session_id)
+                if linked:
+                    linked.start_time = period.start_time
+                    linked.end_time = period.end_time
+                    linked.calculate_duration()
         elif entity_type == "AttendanceBreak":
             brk = AttendanceBreak.query.get(entity_id)
             if not brk:

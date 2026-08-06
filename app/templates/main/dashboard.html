@@ -879,6 +879,7 @@
     {% endset %}
     {{ modal('createTaskModal', _('Create task'), create_task_modal_content, create_task_modal_footer, 'sm') }}
     {% include 'workday/_overnight_clock_out_modal.html' %}
+    {% include 'workday/_auto_closed_clock_out_modal.html' %}
 {% endblock %}
 
 

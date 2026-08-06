@@ -7,9 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.11.1] - 2026-08-06
+
+### Changed
+
+- **Client versions** — Synced Electron (`desktop/package.json`) and Flutter (`mobile/pubspec.yaml`) to **5.11.1** with the webapp (`setup.py`).
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.11.1** (single source of truth for the application version).
+
+## [5.11.0] - 2026-08-06
+
+### Added
+
+- **Auto-deduct break on clock-out** — Admins can opt in to automatically inserting a meal break when a workday exceeds a configurable threshold and insufficient break time was logged, reducing manual corrections for regulated break rules. Enabled via Admin → Settings (new `AUTO_BREAK_DURATION_MINUTES` / `AUTO_BREAK_THRESHOLD_MINUTES` settings; migration `173_add_auto_break_settings`).
+- **Smart auto-break fill** — When a partial manual break already exists, only the remaining deficit minutes are inserted on clock-out. Auto-inserted breaks are flagged with `is_auto_break` so they can be distinguished from manual entries.
+- **Mobile timer notification (#714)** — Android keeps a foreground-service notification and iOS shows a local notification with project/task name and elapsed time while a timer is running, so users notice forgotten timers.
+
 ### Fixed
 
+- **Time correction causes exception (#709)** — Fixed Flask-SocketIO room handlers that called nonexistent `socketio.join_room` / `socketio.leave_room` (use module-level `join_room` / `leave_room` instead). Attendance correction requests now appear on `/workday/history` (requester's own list), on `/approvals` for admins and requesters, and under a new sidebar link **Attendance Corrections**. The "Correct period" form now pre-fills and parses times in the user's timezone.
+- **Overnight totals clipped (#706 follow-up)** — Sessions crossing midnight no longer inflate "At work today". Totals are clipped to the requested day, and auto-closed shifts show a dashboard prompt so users can confirm or correct their leave time before starting a new day.
+- **Chrome extension task picker empty (#700)** — The popup requested tasks with `status=active`, which is not a valid task status, so existing tasks never appeared in the dropdown. The extension now loads open tasks (`todo`, `in_progress`, `review`) without that filter, and `GET /api/v1/tasks` accepts `status=active` / `open` aliases plus comma-separated status values for older extension builds.
+- **Client projects joinedload error (#716)** — `GET /api/v1/clients/<id>` raised `InvalidRequestError` because `joinedload` cannot be applied to a `lazy='dynamic'` relationship.
 - **OpenAPI spec missing Tasks and Clients endpoints** — The `/api/openapi.json` document was missing all paths for the Tasks and Clients groups despite the endpoints being fully functional. Added 5 Tasks paths (`/tasks`, `/tasks/{task_id}`) and 14 Clients paths (`/clients`, `/clients/{client_id}`, `/clients/{client_id}/contacts`, `/contacts/{contact_id}`, `/clients/{client_id}/notes`, `/client-notes/{note_id}`, `/clients/{client_id}/invoice-unbilled`). Fixed `Task.priority` schema type from `integer` to `string` enum; expanded `Client` schema from 4 to 16 properties; added `Contact` and `ClientNote` schemas.
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.11.0** (single source of truth for the application version).
 
 ## [5.10.1] - 2026-07-25
 

@@ -39,7 +39,7 @@ curl -H "X-API-Key: YOUR_API_TOKEN" \
 |------|----------------------|-------------|
 | **Projects** | `/api/v1/projects` | List, create, get, update, delete projects |
 | **Time entries** | `/api/v1/time-entries` | List, create, get, update, delete time entries; timer start/stop |
-| **Tasks** | `/api/v1/tasks` | List, create, get, update, delete tasks |
+| **Tasks** | `/api/v1/tasks` | List, create, get, update, delete tasks. List supports `project_id`, `status` (`todo`, `in_progress`, `review`, `done`, `cancelled`, or aliases `active` / `open` for open tasks; comma-separated for multiple), `page`, `per_page` |
 | **Clients** | `/api/v1/clients` | List, create, get, update, delete clients |
 | **Reports** | `/api/v1/reports` | Run reports and export data |
 | **Deals & leads** | `/api/v1/deals`, `/api/v1/leads` | CRM deals and leads |

@@ -205,6 +205,23 @@
                                     <input type="number" name="compliance_min_daily_rest_hours" id="compliance_min_daily_rest_hours" value="{{ getattr(settings, 'compliance_min_daily_rest_hours', 11.0) }}" min="8" max="16" step="0.5" class="form-input w-32 mt-1">
                                 </div>
                             </div>
+                            <div class="mt-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 space-y-3">
+                                <div class="flex items-center">
+                                    <input type="checkbox" name="auto_break_enabled" id="auto_break_enabled" {% if getattr(settings, 'auto_break_enabled', False) %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600">
+                                    <label for="auto_break_enabled" class="ml-2 text-sm font-medium">{{ _('Automatically deduct break on clock-out') }}</label>
+                                </div>
+                                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('When enabled, a break is automatically deducted on clock-out if the workday exceeds the threshold and no sufficient break has been recorded.') }}</p>
+                                <div class="flex flex-wrap gap-4">
+                                    <div>
+                                        <label for="auto_break_after_hours" class="form-label">{{ _('Deduct break after (hours)') }}</label>
+                                        <input type="number" name="auto_break_after_hours" id="auto_break_after_hours" value="{{ getattr(settings, 'auto_break_after_hours', 6.0) }}" min="1" max="12" step="0.5" class="form-input w-32 mt-1">
+                                    </div>
+                                    <div>
+                                        <label for="auto_break_duration_minutes" class="form-label">{{ _('Break duration (minutes)') }}</label>
+                                        <input type="number" name="auto_break_duration_minutes" id="auto_break_duration_minutes" value="{{ getattr(settings, 'auto_break_duration_minutes', 30) }}" min="5" max="120" step="1" class="form-input w-32 mt-1">
+                                    </div>
+                                </div>
+                            </div>
                             <div class="flex items-center">
                                 <input type="checkbox" name="compliance_require_workday_registration" id="compliance_require_workday_registration" {% if getattr(settings, 'compliance_require_workday_registration', False) %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600">
                                 <label for="compliance_require_workday_registration" class="ml-2 text-sm">{{ _('Require workday registration for all employees') }}</label>

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timetracker_mobile/core/constants/app_constants.dart';
+import 'package:timetracker_mobile/core/services/notification_service.dart';
 import 'package:timetracker_mobile/core/telemetry/mobile_otel.dart';
 import 'package:timetracker_mobile/core/theme/app_theme.dart';
 import 'package:timetracker_mobile/data/storage/local_storage.dart';
@@ -13,6 +14,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LocalStorage.init();
   await initMobileOpenTelemetry();
+  await NotificationService.instance.initialize();
   runApp(
     const ProviderScope(
       child: TimeTrackerApp(),

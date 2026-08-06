@@ -1573,6 +1573,13 @@ def settings():
                 retention = request.form.get("compliance_attendance_retention_years", type=int)
                 if retention is not None and 5 <= retention <= 30:
                     settings_obj.compliance_attendance_retention_years = retention
+            settings_obj.auto_break_enabled = request.form.get("auto_break_enabled") == "on"
+            auto_break_hours = request.form.get("auto_break_after_hours", type=float)
+            if auto_break_hours is not None and 1 <= auto_break_hours <= 12:
+                settings_obj.auto_break_after_hours = auto_break_hours
+            auto_break_dur = request.form.get("auto_break_duration_minutes", type=int)
+            if auto_break_dur is not None and 5 <= auto_break_dur <= 120:
+                settings_obj.auto_break_duration_minutes = auto_break_dur
         except (AttributeError, ValueError, TypeError) as exc:
             safe_log(f"Skipping compliance settings update: {exc}")
 

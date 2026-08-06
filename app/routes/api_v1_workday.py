@@ -69,3 +69,55 @@ def api_workday_end():
         data={"session": result["session"].to_dict()},
         message=result["message"],
     )
+
+
+@api_v1_bp.route("/workday/auto-closed/<int:session_id>/resolve", methods=["POST"])
+@require_api_token("write:time_entries")
+def api_resolve_auto_closed_workday(session_id):
+    from app.services.workday_session_service import parse_workday_end_time
+
+    data = request.get_json(silent=True) or {}
+    keep = data.get("keep") in (True, 1, "1")
+    reason = (data.get("reason") or "").strip() or None
+    at_time = None
+    if not keep:
+        end_raw = data.get("end_time") or data.get("at_time")
+        if end_raw:
+            at_time = parse_workday_end_time(str(end_raw))
+            if at_time is None:
+                return error_response(
+                    message="Invalid leave time",
+                    status_code=400,
+                    error_code="invalid_end_time",
+                )
+
+    result = WorkdaySessionService().resolve_auto_closed_session(
+        g.api_user.id,
+        session_id,
+        end_time=at_time,
+        keep=keep,
+        reason=reason,
+    )
+    if not result["success"]:
+        return error_response(
+            message=result.get("message", "Could not resolve auto-closed workday"),
+            status_code=400,
+            error_code=result.get("error"),
+        )
+
+    from app.utils.cache import get_cache
+
+    try:
+        get_cache().delete(f"dashboard:stats:{g.api_user.id}")
+    except Exception:
+        pass
+
+    return success_response(
+        data={
+            "session": result["session"].to_dict(),
+            "applied": result.get("applied", False),
+            "pending_review": result.get("pending_review", False),
+            "already_resolved": result.get("already_resolved", False),
+        },
+        message=result["message"],
+    )

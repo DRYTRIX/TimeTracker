@@ -52,11 +52,9 @@ def get_client(client_id):
     blocked = _require_module_enabled_for_api("clients")
     if blocked:
         return blocked
-    from sqlalchemy.orm import joinedload
-
     from app.utils.scope_filter import user_can_access_client
 
-    client = Client.query.options(joinedload(Client.projects)).filter_by(id=client_id).first_or_404()
+    client = Client.query.filter_by(id=client_id).first_or_404()
     if not user_can_access_client(g.api_user, client_id):
         return forbidden_response("You do not have access to this client")
     return jsonify({"client": client.to_dict()})

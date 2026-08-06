@@ -7,10 +7,10 @@ from flask_babel import gettext as _
 from flask_login import current_user, login_required
 
 from app.models import WorkingTimeViolation
-from app.models.attendance_compliance import AttendanceCorrection, AttendanceCorrectionStatus
 from app.services.attendance_compliance_service import AttendanceComplianceService
 from app.services.workday_session_service import WorkdaySessionService
 from app.services.working_time_limit_service import WorkingTimeLimitService
+from app.utils.timezone import parse_user_local_datetime_from_string
 
 workday_bp = Blueprint("workday", __name__)
 
@@ -51,6 +51,63 @@ def end_workday():
         flash(_("Workday ended"), "success")
     else:
         flash(result.get("message", _("Could not end workday")), "error")
+    return redirect(request.referrer or url_for("main.dashboard"))
+
+
+def _invalidate_dashboard_stats_cache(user_id: int) -> None:
+    from app.utils.cache import get_cache
+
+    try:
+        get_cache().delete(f"dashboard:stats:{user_id}")
+    except Exception:
+        pass
+
+
+@workday_bp.route("/workday/auto-closed/<int:session_id>/resolve", methods=["POST"])
+@login_required
+def resolve_auto_closed_workday(session_id):
+    from app.services.workday_session_service import parse_workday_end_time
+
+    keep = request.form.get("keep") == "1"
+    if not keep and request.is_json:
+        data = request.get_json(silent=True) or {}
+        keep = data.get("keep") in (True, 1, "1")
+
+    end_raw = request.form.get("end_time") or request.form.get("at_time")
+    reason = request.form.get("reason", "").strip() or None
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        if not end_raw:
+            end_raw = data.get("end_time") or data.get("at_time")
+        if not reason:
+            reason = (data.get("reason") or "").strip() or None
+
+    at_time = None
+    if end_raw and not keep:
+        at_time = parse_workday_end_time(end_raw)
+        if at_time is None:
+            flash(_("Invalid leave time"), "error")
+            return redirect(request.referrer or url_for("main.dashboard"))
+
+    result = WorkdaySessionService().resolve_auto_closed_session(
+        current_user.id,
+        session_id,
+        end_time=at_time,
+        keep=keep,
+        reason=reason,
+    )
+    if result["success"]:
+        _invalidate_dashboard_stats_cache(current_user.id)
+        if result.get("pending_review"):
+            flash(_("Correction submitted for admin review"), "success")
+        elif result.get("already_resolved"):
+            flash(_("This workday was already resolved"), "info")
+        elif keep:
+            flash(_("Recorded leave time accepted"), "success")
+        else:
+            flash(_("Leave time corrected"), "success")
+    else:
+        flash(result.get("message", _("Could not resolve auto-closed workday")), "error")
     return redirect(request.referrer or url_for("main.dashboard"))
 
 
@@ -119,12 +176,15 @@ def workday_history():
 
     pagination = SimplePagination(page_records, page, per_page, total)
 
+    my_corrections = service.list_user_corrections(current_user.id)
+
     return render_template(
         "workday/history.html",
         records=page_records,
         pagination=pagination,
         warnings_by_date=warnings_by_date,
         compliance_cfg=service.get_compliance_settings(current_user),
+        my_corrections=my_corrections,
     )
 
 
@@ -139,13 +199,16 @@ def request_correction():
         end_str = request.form.get("end_time")
         try:
             work_date = datetime.strptime(work_date_str, "%Y-%m-%d").date()
-            start_time = datetime.fromisoformat(start_str) if start_str else None
-            end_time = datetime.fromisoformat(end_str) if end_str else None
         except (ValueError, TypeError):
             flash(_("Invalid date or time"), "error")
             return redirect(request.referrer or url_for("workday.workday_history"))
+        start_time = parse_user_local_datetime_from_string(start_str, user=current_user)
+        end_time = parse_user_local_datetime_from_string(end_str, user=current_user) if end_str else None
         if not start_time:
             flash(_("Start time is required"), "error")
+            return redirect(request.referrer or url_for("workday.workday_history"))
+        if end_str and end_time is None:
+            flash(_("Invalid date or time"), "error")
             return redirect(request.referrer or url_for("workday.workday_history"))
         result = service.request_missing_work_period(
             user_id=current_user.id,
@@ -156,13 +219,23 @@ def request_correction():
             notes=request.form.get("notes") or None,
         )
     else:
+        start_raw = request.form.get("start_time")
+        end_raw = request.form.get("end_time")
+        start_parsed = parse_user_local_datetime_from_string(start_raw, user=current_user) if start_raw else None
+        end_parsed = parse_user_local_datetime_from_string(end_raw, user=current_user) if end_raw else None
+        if start_raw and start_parsed is None:
+            flash(_("Invalid date or time"), "error")
+            return redirect(request.referrer or url_for("workday.workday_history"))
+        if end_raw and end_parsed is None:
+            flash(_("Invalid date or time"), "error")
+            return redirect(request.referrer or url_for("workday.workday_history"))
         result = service.request_correction(
             attendance_day_id=request.form.get("attendance_day_id", type=int),
             entity_type=entity_type,
             entity_id=request.form.get("entity_id", type=int),
             corrected_values={
-                "start_time": request.form.get("start_time") or None,
-                "end_time": request.form.get("end_time") or None,
+                "start_time": start_parsed.isoformat() if start_parsed else None,
+                "end_time": end_parsed.isoformat() if end_parsed else None,
                 "status": request.form.get("status") or None,
                 "compliance_notes": request.form.get("compliance_notes") or None,
             },
@@ -183,12 +256,7 @@ def admin_corrections_list():
         flash(_("Admin access required"), "error")
         return redirect(url_for("main.dashboard"))
 
-    corrections = (
-        AttendanceCorrection.query.filter_by(status=AttendanceCorrectionStatus.PENDING)
-        .order_by(AttendanceCorrection.created_at.desc())
-        .limit(200)
-        .all()
-    )
+    corrections = AttendanceComplianceService().list_pending_corrections()
     return render_template("workday/admin_corrections.html", corrections=corrections)
 
 

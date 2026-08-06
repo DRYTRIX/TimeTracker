@@ -159,6 +159,25 @@ def has_workday_started_today(user_id: int, work_date: date) -> bool:
     return AttendanceWorkPeriod.query.filter_by(attendance_day_id=day.id).count() > 0
 
 
+def has_unconfirmed_auto_closed_workday(user_id: int, lookback_days: int = 7) -> bool:
+    """True when the user has an auto-closed session they have not yet confirmed."""
+    from app.models import WorkdaySession
+    from app.models.time_entry import local_now
+
+    cutoff = local_now() - timedelta(days=lookback_days)
+    return (
+        WorkdaySession.query.filter(
+            WorkdaySession.user_id == user_id,
+            WorkdaySession.auto_closed.is_(True),
+            WorkdaySession.auto_close_confirmed_at.is_(None),
+            WorkdaySession.start_time >= cutoff,
+        )
+        .with_entities(WorkdaySession.id)
+        .first()
+        is not None
+    )
+
+
 def has_overnight_open_workday(user_id: int, today: date) -> bool:
     """True when an active workday/period started before the given local calendar day."""
     from app.models import WorkdaySession
@@ -416,7 +435,7 @@ class NotificationService:
         # Forgotten overnight clock-out (open session from a previous day)
         if KIND_FORGOTTEN_CLOCK_OUT not in dismissed:
             user_today = user_local_now.date()
-            if has_overnight_open_workday(user.id, user_today):
+            if has_overnight_open_workday(user.id, user_today) or has_unconfirmed_auto_closed_workday(user.id):
                 candidates.append(
                     {
                         "kind": KIND_FORGOTTEN_CLOCK_OUT,
