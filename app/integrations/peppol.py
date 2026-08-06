@@ -14,13 +14,14 @@ Important:
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import os
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Sequence, Tuple
 
 import requests
 
@@ -68,6 +69,25 @@ class PeppolParty:
     country_code: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class PeppolAttachment:
+    """A supporting document to embed in the invoice (BG-24 / BT-125).
+
+    Typically the human-readable PDF of the invoice, so the recipient gets both the
+    structured data and something a person can read.
+
+    - ``document_id`` is BT-122, required by BR-52.
+    - ``filename`` must be unique case-insensitively across attachments (DE-R-022).
+    - ``mime_code`` must be on the EN 16931 mime code list (e.g. ``application/pdf``).
+    """
+
+    document_id: str
+    filename: str
+    mime_code: str
+    content: bytes
+    description: Optional[str] = None
 
 
 def _money(v: Any) -> str:
@@ -151,7 +171,12 @@ def _party(parent: ET.Element, kind: str, party: PeppolParty) -> None:
         _text(contact, cbc + "ElectronicMail", party.email)
 
 
-def build_peppol_ubl_invoice_xml(invoice: Any, supplier: PeppolParty, customer: PeppolParty) -> Tuple[str, str]:
+def build_peppol_ubl_invoice_xml(
+    invoice: Any,
+    supplier: PeppolParty,
+    customer: PeppolParty,
+    attachments: Optional[Sequence[PeppolAttachment]] = None,
+) -> Tuple[str, str]:
     """
     Build UBL 2.1 Invoice XML shaped for Peppol BIS Billing 3.0.
 
@@ -207,6 +232,27 @@ def build_peppol_ubl_invoice_xml(invoice: Any, supplier: PeppolParty, customer: 
         _text(inv_el, cbc + "BuyerReference", _buyer_ref)
 
     # Parties
+    # AdditionalDocumentReference (BG-24): supporting documents embedded in the invoice,
+    # e.g. the human-readable PDF of this invoice. The UBL 2.1 XSD sequence puts this after
+    # the document references and BEFORE Signature/AccountingSupplierParty; emitting it any
+    # later is XSD-invalid, and the access point only reports that asynchronously.
+    # Deliberately no cbc:DocumentTypeCode: code 130 marks an invoiced object identifier
+    # (BT-18), which has no association to BG-24 and must not carry an attachment.
+    _seen_filenames = set()
+    for att in attachments or []:
+        filename = (getattr(att, "filename", "") or "").strip()
+        if not att.content or not filename or filename.lower() in _seen_filenames:
+            continue  # DE-R-022: attachment filenames must be unique (case-insensitive)
+        _seen_filenames.add(filename.lower())
+        adr = ET.SubElement(inv_el, cac + "AdditionalDocumentReference")
+        _text(adr, cbc + "ID", att.document_id or filename)  # BT-122, required by BR-52
+        _text(adr, cbc + "DocumentDescription", att.description)
+        attachment_el = ET.SubElement(adr, cac + "Attachment")
+        binary_el = ET.SubElement(attachment_el, cbc + "EmbeddedDocumentBinaryObject")
+        binary_el.set("mimeCode", att.mime_code or "application/pdf")
+        binary_el.set("filename", filename)
+        binary_el.text = base64.b64encode(att.content).decode("ascii")
+
     _party(inv_el, "AccountingSupplierParty", supplier)
     _party(inv_el, "AccountingCustomerParty", customer)
 

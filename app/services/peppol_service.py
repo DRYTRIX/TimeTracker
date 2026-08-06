@@ -1,11 +1,17 @@
 import os
+import re
 import time
 from typing import List, Optional, Tuple
 
 from flask import current_app
 
 from app import db
-from app.integrations.peppol import PeppolParty, build_peppol_ubl_invoice_xml, peppol_enabled
+from app.integrations.peppol import (
+    PeppolAttachment,
+    PeppolParty,
+    build_peppol_ubl_invoice_xml,
+    peppol_enabled,
+)
 from app.integrations.peppol_transport import (
     GenericTransport,
     NativePeppolTransport,
@@ -24,6 +30,79 @@ class PeppolService:
     - sends via access point
     - persists send attempts for audit/retry
     """
+
+    def __init__(self):
+        # Result detail of the most recent send_invoice() call on this instance (routes
+        # build one per request), so callers can report whether the PDF actually
+        # travelled instead of assuming it did.
+        self.last_pdf_status: str = "not_attempted"
+        self.last_attachment_filenames: List[str] = []
+
+    @staticmethod
+    def embed_pdf_enabled() -> bool:
+        """Whether the human-readable invoice PDF is embedded in the UBL (BG-24).
+
+        Default on. Kill-switch for the case where an access point or a recipient
+        chokes on embedded binaries: PEPPOL_EMBED_INVOICE_PDF=false.
+        """
+        return (os.getenv("PEPPOL_EMBED_INVOICE_PDF", "true") or "").strip().lower() in {
+            "1", "true", "yes", "on",
+        }
+
+    def _build_pdf_attachment(self, invoice) -> Optional[PeppolAttachment]:
+        """Render the invoice PDF for embedding as BT-125.
+
+        Never raises: the UBL is the legal original and the PDF is a convenience copy, so
+        a PDF problem degrades to a send without the attachment rather than blocking a
+        valid invoice. Records the outcome in self.last_pdf_status
+        (embedded | disabled | too_large | empty | error) so it can be reported.
+        """
+        if not self.embed_pdf_enabled():
+            self.last_pdf_status = "disabled"
+            return None
+
+        try:
+            from app.utils.pdf_generator import InvoicePDFGenerator
+
+            pdf_bytes = InvoicePDFGenerator(invoice).generate_pdf()
+        except Exception:
+            current_app.logger.exception(
+                "Peppol: invoice PDF generation failed; sending UBL without attachment"
+            )
+            self.last_pdf_status = "error"
+            return None
+
+        if not pdf_bytes:
+            current_app.logger.warning("Peppol: invoice PDF generator returned no bytes")
+            self.last_pdf_status = "empty"
+            return None
+
+        try:
+            max_mb = float(os.getenv("PEPPOL_EMBED_PDF_MAX_MB", "5") or 5)
+        except ValueError:
+            max_mb = 5.0
+        # Wire cost is roughly 1.85x the raw PDF: base64 inside the XML, and most access
+        # points base64 the whole document again into their transport payload.
+        if len(pdf_bytes) > max_mb * 1024 * 1024:
+            current_app.logger.warning(
+                "Peppol: invoice PDF is %.1f MB (cap %.1f MB); sending UBL without attachment",
+                len(pdf_bytes) / 1024 / 1024, max_mb,
+            )
+            self.last_pdf_status = "too_large"
+            return None
+
+        number = (getattr(invoice, "invoice_number", None) or "").strip() or f"invoice-{getattr(invoice, 'id', '')}"
+        safe_name = re.sub(r"[^A-Za-z0-9._-]+", "-", number).strip("-.") or "invoice"
+        filename = f"{safe_name}.pdf"
+        self.last_pdf_status = "embedded"
+        self.last_attachment_filenames = [filename]
+        return PeppolAttachment(
+            document_id=number,
+            filename=filename,
+            mime_code="application/pdf",
+            content=pdf_bytes,
+            description="Commercial invoice (PDF)",
+        )
 
     def _get_sender_party(self) -> PeppolParty:
         settings = Settings.get_settings()
@@ -156,6 +235,8 @@ class PeppolService:
     def send_invoice(
         self, invoice, triggered_by_user_id: Optional[int] = None
     ) -> Tuple[bool, Optional[InvoicePeppolTransmission], str]:
+        self.last_pdf_status = "not_attempted"
+        self.last_attachment_filenames = []
         if not peppol_enabled():
             return False, None, "Peppol is not enabled"
 
@@ -166,8 +247,12 @@ class PeppolService:
             return False, None, str(e)
 
         try:
+            pdf_attachment = self._build_pdf_attachment(invoice)
             ubl_xml, sha256_hex = build_peppol_ubl_invoice_xml(
-                invoice=invoice, supplier=sender, customer=recipient_party
+                invoice=invoice,
+                supplier=sender,
+                customer=recipient_party,
+                attachments=[pdf_attachment] if pdf_attachment else None,
             )
         except Exception as e:
             current_app.logger.exception("Failed to build Peppol UBL XML")
