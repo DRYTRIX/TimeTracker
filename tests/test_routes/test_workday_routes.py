@@ -100,3 +100,29 @@ def test_dashboard_shows_overnight_clock_out_modal(authenticated_client, app, us
     body = response.data.decode("utf-8", errors="replace")
     assert "overnightClockOutModal" in body
     assert "overnightLeaveTime" in body
+
+
+@pytest.mark.routes
+def test_dashboard_shows_auto_closed_clock_out_modal(authenticated_client, app, user):
+    from app.models import WorkdaySession
+
+    with app.app_context():
+        user = db.session.merge(user)
+        yesterday = (local_now() - timedelta(days=1)).replace(hour=9, minute=0, second=0, microsecond=0)
+        end = yesterday + timedelta(hours=18)
+        session = WorkdaySession(
+            user_id=user.id,
+            start_time=yesterday,
+            end_time=end,
+            auto_closed=True,
+            source="manual",
+        )
+        session.calculate_duration()
+        db.session.add(session)
+        db.session.commit()
+
+    response = authenticated_client.get("/dashboard")
+    assert response.status_code == 200
+    body = response.data.decode("utf-8", errors="replace")
+    assert "autoClosedClockOutModal" in body
+    assert "autoClosedLeaveTime" in body

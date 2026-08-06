@@ -125,6 +125,55 @@ class TestAttendanceComplianceService:
             assert review["success"] is True
             assert review["correction"].status == AttendanceCorrectionStatus.APPLIED
 
+    def test_work_period_correction_updates_linked_workday_session(self, app, compliance_user):
+        with app.app_context():
+            from app import db
+            from app.models import WorkdaySession
+            from app.models.time_entry import local_now
+            from app.services.workday_session_service import WorkdaySessionService
+
+            admin = User(username="compliance_admin_ws", role="admin")
+            admin.set_password("test")
+            db.session.add(admin)
+            db.session.commit()
+
+            start = WorkdaySessionService().start_workday(compliance_user.id)
+            session = start["session"]
+            start_time = local_now().replace(hour=9, minute=0, second=0, microsecond=0)
+            end_time = start_time.replace(hour=17, minute=0)
+            session.start_time = start_time
+            session.end_time = end_time
+            session.calculate_duration()
+            period = AttendanceWorkPeriod.query.filter_by(workday_session_id=session.id).first()
+            assert period is not None
+            period.start_time = start_time
+            period.end_time = end_time
+            period.calculate_duration()
+            period.attendance_day.recalculate_totals()
+            db.session.commit()
+
+            corrected_end = start_time.replace(hour=16, minute=30)
+            svc = AttendanceComplianceService()
+            corr = svc.request_correction(
+                attendance_day_id=period.attendance_day_id,
+                entity_type="AttendanceWorkPeriod",
+                entity_id=period.id,
+                corrected_values={
+                    "start_time": start_time.isoformat(),
+                    "end_time": corrected_end.isoformat(),
+                },
+                reason="Corrected leave time",
+                requested_by=compliance_user.id,
+            )
+            assert corr["success"] is True
+
+            review = svc.review_correction(corr["correction"].id, admin.id, approve=True)
+            assert review["success"] is True
+
+            db.session.refresh(session)
+            assert session.end_time == corrected_end
+            assert session.duration_seconds == int((corrected_end - session.start_time).total_seconds())
+
     def test_add_missing_work_period_correction(self, app, compliance_user):
         with app.app_context():
             from app import db

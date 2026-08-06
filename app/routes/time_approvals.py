@@ -9,6 +9,7 @@ from flask_login import current_user, login_required
 from app import db
 from app.models import TimeEntry
 from app.models.time_entry_approval import ApprovalPolicy, ApprovalStatus, TimeEntryApproval
+from app.services.attendance_compliance_service import AttendanceComplianceService
 from app.services.time_approval_service import TimeApprovalService
 from app.utils.module_helpers import module_enabled
 
@@ -30,7 +31,23 @@ def list_approvals():
         .all()
     )
 
-    return render_template("approvals/list.html", pending_approvals=pending, my_requests=my_requests)
+    attendance_service = AttendanceComplianceService()
+    pending_attendance_corrections = (
+        attendance_service.list_pending_corrections() if current_user.is_admin else []
+    )
+    my_attendance_corrections = [
+        c
+        for c in attendance_service.list_user_corrections(current_user.id)
+        if (c.status.value if hasattr(c.status, "value") else str(c.status)) == "pending"
+    ]
+
+    return render_template(
+        "approvals/list.html",
+        pending_approvals=pending,
+        my_requests=my_requests,
+        pending_attendance_corrections=pending_attendance_corrections,
+        my_attendance_corrections=my_attendance_corrections,
+    )
 
 
 @time_approvals_bp.route("/approvals/<int:approval_id>")

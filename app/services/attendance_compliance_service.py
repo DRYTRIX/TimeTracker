@@ -425,6 +425,7 @@ class AttendanceComplianceService:
         corrected_values: Dict[str, Any],
         reason: str,
         requested_by: int,
+        allow_locked: bool = False,
     ) -> Dict[str, Any]:
         reason = (reason or "").strip()
         if not reason:
@@ -436,7 +437,7 @@ class AttendanceComplianceService:
         requester = User.query.get(requested_by)
         if day.user_id != requested_by and not (requester and requester.is_admin):
             return {"success": False, "message": "You can only request corrections for your own attendance"}
-        if day.is_locked:
+        if day.is_locked and not allow_locked:
             return {"success": False, "message": "Locked attendance records require admin-approved corrections"}
 
         if entity_type == "AddWorkPeriod":
@@ -493,6 +494,24 @@ class AttendanceComplianceService:
             corrected_values=corrected,
             reason=reason,
             requested_by=user_id,
+        )
+
+    def list_pending_corrections(self, limit: int = 200) -> List[AttendanceCorrection]:
+        """Return pending attendance corrections for admin review."""
+        return (
+            AttendanceCorrection.query.filter_by(status=AttendanceCorrectionStatus.PENDING)
+            .order_by(AttendanceCorrection.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+
+    def list_user_corrections(self, user_id: int, limit: int = 50) -> List[AttendanceCorrection]:
+        """Return a user's recent correction requests (any status)."""
+        return (
+            AttendanceCorrection.query.filter_by(requested_by=user_id)
+            .order_by(AttendanceCorrection.created_at.desc())
+            .limit(limit)
+            .all()
         )
 
     def review_correction(
@@ -555,6 +574,14 @@ class AttendanceComplianceService:
                 period.notes = values["notes"]
             period.calculate_duration()
             period.attendance_day.recalculate_totals()
+            if period.workday_session_id:
+                from app.models import WorkdaySession
+
+                linked = WorkdaySession.query.get(period.workday_session_id)
+                if linked:
+                    linked.start_time = period.start_time
+                    linked.end_time = period.end_time
+                    linked.calculate_duration()
         elif entity_type == "AttendanceBreak":
             brk = AttendanceBreak.query.get(entity_id)
             if not brk:

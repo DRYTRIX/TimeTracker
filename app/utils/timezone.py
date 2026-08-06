@@ -365,6 +365,26 @@ def parse_local_datetime_from_string(datetime_str):
         return None
 
 
+def parse_user_local_datetime_from_string(datetime_str, user=None):
+    """Parse a datetime-local string as user's local time; return naive datetime in app timezone.
+
+    Returns None if empty/invalid. Use for attendance correction forms where the user
+    enters times in their timezone but values are stored in app timezone.
+    """
+    if not datetime_str or "T" not in datetime_str:
+        return None
+    s = datetime_str.strip()
+    parts = s.split("T", 1)
+    if len(parts) != 2:
+        return None
+    date_part = parts[0]
+    time_part = parts[1][:5]  # HH:MM
+    try:
+        return parse_user_local_datetime(date_part, time_part, user=user)
+    except ValueError:
+        return None
+
+
 def parse_user_local_datetime(date_str, time_str, user=None):
     """Parse date and time strings as user's local time; return naive datetime in app timezone for storage.
 

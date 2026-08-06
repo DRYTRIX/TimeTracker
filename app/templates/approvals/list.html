@@ -84,7 +84,7 @@
             <i class="fas fa-paper-plane text-blue-500 mr-2"></i>
             {{ _('My Requests') }}
         </h2>
-        {% if my_requests %}
+        {% if my_requests or my_attendance_corrections %}
         <div class="space-y-4">
             {% for request in my_requests %}
             <div class="border border-border-light dark:border-border-dark rounded-lg p-4">
@@ -109,16 +109,100 @@
                 </div>
             </div>
             {% endfor %}
+            {% for correction in my_attendance_corrections %}
+            <div class="border border-border-light dark:border-border-dark rounded-lg p-4">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold mb-1">
+                            {{ _('Attendance correction') }}
+                            {% if correction.attendance_day %}— {{ correction.attendance_day.work_date|user_date }}{% endif %}
+                        </h3>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                            {% if correction.corrected_values and correction.corrected_values.start_time %}
+                            {{ _('Start') }}: {{ correction.corrected_values.start_time|user_datetime }}
+                            {% if correction.corrected_values.end_time %} • {{ _('End') }}: {{ correction.corrected_values.end_time|user_datetime }}{% endif %}
+                            {% endif %}
+                        </p>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                            {{ _('Reason') }}: {{ correction.reason }}
+                        </p>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
+                            {{ _('Status') }}:
+                            <span class="px-2 py-1 rounded text-xs font-medium bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">
+                                {{ _('Pending') }}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
         </div>
         {% else %}
         {{ empty_state(
             'fas fa-inbox',
             _('No pending requests'),
-            _('You have no time entry approval requests.')
+            _('You have no time entry or attendance correction requests awaiting review.')
         ) }}
         {% endif %}
     </div>
 </div>
+
+{% if current_user.is_admin %}
+<div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    <h2 class="text-xl font-semibold mb-4">
+        <i class="fas fa-user-clock text-purple-500 mr-2"></i>
+        {{ _('Attendance corrections') }}
+    </h2>
+    {% if pending_attendance_corrections %}
+    <div class="space-y-4">
+        {% for correction in pending_attendance_corrections %}
+        <div class="border border-border-light dark:border-border-dark rounded-lg p-4">
+            <div class="flex flex-col lg:flex-row justify-between items-start gap-3">
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold mb-1">
+                        {{ correction.requester.username if correction.requester else _('Unknown user') }}
+                        {% if correction.attendance_day %}— {{ correction.attendance_day.work_date|user_date }}{% endif %}
+                    </h3>
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                        {% if correction.entity_type == 'AddWorkPeriod' %}
+                        {{ _('Add missing work period') }}
+                        {% else %}
+                        {{ correction.entity_type }} #{{ correction.entity_id }}
+                        {% endif %}
+                    </p>
+                    {% if correction.corrected_values %}
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                        {% if correction.corrected_values.start_time %}{{ _('Start') }}: {{ correction.corrected_values.start_time|user_datetime }}{% endif %}
+                        {% if correction.corrected_values.end_time %} • {{ _('End') }}: {{ correction.corrected_values.end_time|user_datetime }}{% endif %}
+                    </p>
+                    {% endif %}
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
+                        <i class="fas fa-comment mr-1"></i>{{ correction.reason }}
+                    </p>
+                </div>
+                <form method="POST" action="{{ url_for('workday.admin_review_correction', correction_id=correction.id) }}" class="flex flex-wrap gap-2 items-start">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="text" name="review_comment" placeholder="{{ _('Comment') }}" class="form-input text-sm w-40">
+                    <button type="submit" name="action" value="approve" class="bg-green-600 text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-green-700 transition-colors">
+                        <i class="fas fa-check mr-1"></i>{{ _('Approve') }}
+                    </button>
+                    <button type="submit" name="action" value="reject" class="bg-red-600 text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-red-700 transition-colors">
+                        <i class="fas fa-times mr-1"></i>{{ _('Reject') }}
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    {{ empty_state(
+        'fas fa-user-clock',
+        _('No pending attendance corrections'),
+        _('All attendance correction requests have been reviewed.')
+    ) }}
+    {% endif %}
+</div>
+{% endif %}
 
 <!-- Reject Modal -->
 <div id="rejectModal" class="fixed inset-0 z-50 hidden">

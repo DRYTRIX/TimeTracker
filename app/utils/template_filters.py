@@ -1,4 +1,7 @@
+from datetime import datetime
+
 from app.utils.timezone import (
+    convert_app_datetime_to_user,
     format_local_datetime,
     format_user_datetime,
     get_user_date_format,
@@ -100,11 +103,26 @@ def register_template_filters(app):
         """Format datetime using the authenticated user's timezone and format preferences.
 
         When *format_str* is omitted the user's date_format + time_format
-        preferences are applied automatically.
+        preferences are applied automatically. Accepts datetime objects or ISO strings.
         """
         if dt is None:
             return ""
+        if isinstance(dt, str):
+            try:
+                from datetime import datetime as dt_type
+
+                dt = dt_type.fromisoformat(dt)
+            except ValueError:
+                return dt
         return format_user_datetime(dt, format_str=format_str)
+
+    @app.template_filter("user_datetime_local")
+    def user_datetime_local_filter(dt):
+        """Format datetime for HTML datetime-local inputs (YYYY-MM-DDTHH:MM) in user timezone."""
+        if dt is None:
+            return ""
+        localized = convert_app_datetime_to_user(dt)
+        return localized.strftime("%Y-%m-%dT%H:%M")
 
     @app.template_filter("user_date")
     def user_date_filter(dt, format_str=None):

@@ -38,6 +38,58 @@
     </form>
 </div>
 
+{% if my_corrections %}
+<div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl p-4 mb-6">
+    <h2 class="text-lg font-semibold mb-3">{{ _('My correction requests') }}</h2>
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                    <th class="px-4 py-2 text-left">{{ _('Date') }}</th>
+                    <th class="px-4 py-2 text-left">{{ _('Type') }}</th>
+                    <th class="px-4 py-2 text-left">{{ _('Requested change') }}</th>
+                    <th class="px-4 py-2 text-left">{{ _('Reason') }}</th>
+                    <th class="px-4 py-2 text-left">{{ _('Status') }}</th>
+                    <th class="px-4 py-2 text-left">{{ _('Submitted') }}</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-border-light dark:divide-border-dark">
+                {% for c in my_corrections %}
+                <tr>
+                    <td class="px-4 py-3">{{ c.attendance_day.work_date|user_date if c.attendance_day else '—' }}</td>
+                    <td class="px-4 py-3">
+                        {% if c.entity_type == 'AddWorkPeriod' %}
+                        {{ _('Add missing work period') }}
+                        {% else %}
+                        {{ c.entity_type }}
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-xs">
+                        {% if c.corrected_values %}
+                        {% if c.corrected_values.start_time %}{{ _('Start') }}: {{ c.corrected_values.start_time|user_datetime }}<br>{% endif %}
+                        {% if c.corrected_values.end_time %}{{ _('End') }}: {{ c.corrected_values.end_time|user_datetime }}<br>{% endif %}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="px-4 py-3">{{ c.reason }}</td>
+                    <td class="px-4 py-3">
+                        {% set status = c.status.value if c.status is not string else c.status %}
+                        <span class="px-2 py-1 rounded text-xs font-medium capitalize
+                            {% if status == 'pending' %}bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200
+                            {% elif status == 'applied' %}bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200
+                            {% elif status == 'rejected' %}bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200
+                            {% endif %}">
+                            {{ status }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">{{ c.created_at|user_datetime }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
 <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
     <table class="min-w-full text-sm">
         <thead class="bg-gray-50 dark:bg-gray-800">
@@ -93,8 +145,8 @@
                             <input type="hidden" name="attendance_day_id" value="{{ record.id }}">
                             <input type="hidden" name="entity_type" value="AttendanceWorkPeriod">
                             <input type="hidden" name="entity_id" value="{{ p.id }}">
-                            <input type="datetime-local" name="start_time" class="form-input text-xs w-full" value="{{ p.start_time.strftime('%Y-%m-%dT%H:%M') if p.start_time else '' }}">
-                            <input type="datetime-local" name="end_time" class="form-input text-xs w-full" value="{{ p.end_time.strftime('%Y-%m-%dT%H:%M') if p.end_time else '' }}">
+                            <input type="datetime-local" name="start_time" class="form-input text-xs w-full" value="{{ p.start_time|user_datetime_local if p.start_time else '' }}">
+                            <input type="datetime-local" name="end_time" class="form-input text-xs w-full" value="{{ p.end_time|user_datetime_local if p.end_time else '' }}">
                             <input type="text" name="reason" class="form-input text-xs w-full" required placeholder="{{ _('Reason') }}">
                             <button type="submit" class="btn btn-secondary btn-xs">{{ _('Request change') }}</button>
                         </form>

@@ -1,0 +1,81 @@
+{# Auto-closed workday: prompt user to confirm or correct the 18h cap leave time. #}
+{% if auto_closed_workday_session %}
+<div id="autoClosedClockOutModal" class="fixed inset-0 z-[60] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="autoClosedClockOutTitle" data-session-id="{{ auto_closed_workday_session.id }}">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 transition-opacity bg-black/50 dark:bg-gray-900/75" aria-hidden="true" id="autoClosedClockOutOverlay"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="inline-block align-bottom bg-card-light dark:bg-card-dark rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle max-w-md w-full">
+            <div class="px-6 pt-5 pb-4">
+                <div class="flex items-start justify-between mb-3">
+                    <h3 class="text-lg font-semibold text-text-light dark:text-text-dark" id="autoClosedClockOutTitle">
+                        {{ _('Forgot to end your workday?') }}
+                    </h3>
+                    <button type="button" class="text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark js-auto-closed-dismiss" aria-label="{{ _('Close') }}">
+                        <i class="fas fa-times text-xl" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+                    {{ _('Your workday from %(started)s was automatically stopped after the maximum shift length. Confirm when you actually left so your hours are correct.', started=auto_closed_workday_session.start_time|user_datetime) }}
+                </p>
+                <form method="POST" action="{{ url_for('workday.resolve_auto_closed_workday', session_id=auto_closed_workday_session.id) }}" id="autoClosedLeaveForm" class="space-y-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label for="autoClosedLeaveTime" class="block text-sm font-medium text-text-light dark:text-text-dark">
+                        {{ _('When did you leave?') }}
+                    </label>
+                    <input type="datetime-local" id="autoClosedLeaveTime" name="end_time"
+                           value="{{ auto_closed_suggested_leave_time }}"
+                           {% if auto_closed_max_leave_time %}max="{{ auto_closed_max_leave_time }}"{% endif %}
+                           required
+                           class="form-input w-full">
+                    <div class="flex flex-col sm:flex-row gap-2 pt-2">
+                        <button type="submit" class="btn btn-primary flex-1">
+                            <i class="fas fa-check mr-2" aria-hidden="true"></i>{{ _('Save leave time') }}
+                        </button>
+                        <button type="button" class="btn btn-secondary flex-1 js-auto-closed-keep">
+                            {{ _('The recorded time is correct') }}
+                        </button>
+                        <button type="button" class="btn btn-secondary flex-1 js-auto-closed-dismiss">
+                            {{ _('Remind me later') }}
+                        </button>
+                    </div>
+                </form>
+                <form method="POST" action="{{ url_for('workday.resolve_auto_closed_workday', session_id=auto_closed_workday_session.id) }}" id="autoClosedKeepForm" class="hidden">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="keep" value="1">
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script nonce="{{ csp_nonce() }}">
+(function () {
+    var modal = document.getElementById('autoClosedClockOutModal');
+    if (!modal) return;
+    var sessionId = modal.getAttribute('data-session-id') || '';
+    var storageKey = 'auto_closed_workday_dismissed_' + sessionId;
+    try {
+        if (sessionStorage.getItem(storageKey) === '1') {
+            modal.classList.add('hidden');
+            return;
+        }
+    } catch (e) { /* ignore */ }
+
+    function dismiss() {
+        modal.classList.add('hidden');
+        try { sessionStorage.setItem(storageKey, '1'); } catch (e) { /* ignore */ }
+    }
+
+    modal.querySelectorAll('.js-auto-closed-dismiss').forEach(function (btn) {
+        btn.addEventListener('click', dismiss);
+    });
+    var overlay = document.getElementById('autoClosedClockOutOverlay');
+    if (overlay) overlay.addEventListener('click', dismiss);
+
+    var keepBtn = modal.querySelector('.js-auto-closed-keep');
+    var keepForm = document.getElementById('autoClosedKeepForm');
+    if (keepBtn && keepForm) {
+        keepBtn.addEventListener('click', function () { keepForm.submit(); });
+    }
+})();
+</script>
+{% endif %}

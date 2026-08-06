@@ -116,6 +116,19 @@ def dashboard():
         if overnight_open_workday and active_workday_session
         else None
     )
+    auto_closed_workday_session = (
+        None if overnight_open_workday else workday_svc.get_unconfirmed_auto_closed_session(current_user.id)
+    )
+    auto_closed_suggested_leave_time = (
+        workday_svc.suggested_leave_datetime_local(auto_closed_workday_session, current_user)
+        if auto_closed_workday_session
+        else None
+    )
+    auto_closed_max_leave_time = (
+        auto_closed_workday_session.end_time.strftime("%Y-%m-%dT%H:%M")
+        if auto_closed_workday_session and auto_closed_workday_session.end_time
+        else None
+    )
     pending_violations = WorkingTimeLimitService().get_violations_needing_justification(current_user.id)
 
     # Overtime for dashboard cards (today and week)
@@ -276,6 +289,9 @@ def dashboard():
         "attendance_break_active": attendance_break_active,
         "overnight_open_workday": overnight_open_workday,
         "suggested_leave_time": suggested_leave_time,
+        "auto_closed_workday_session": auto_closed_workday_session,
+        "auto_closed_suggested_leave_time": auto_closed_suggested_leave_time,
+        "auto_closed_max_leave_time": auto_closed_max_leave_time,
         "workday_today_hours": workday_today_hours,
         "workday_week_hours": workday_week_hours,
         "workday_month_hours": workday_month_hours,

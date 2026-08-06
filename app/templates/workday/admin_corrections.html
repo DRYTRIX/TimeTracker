@@ -9,6 +9,7 @@
         <thead class="bg-gray-50 dark:bg-gray-800">
             <tr>
                 <th class="px-4 py-2 text-left">{{ _('Date') }}</th>
+                <th class="px-4 py-2 text-left">{{ _('Requested by') }}</th>
                 <th class="px-4 py-2 text-left">{{ _('Type') }}</th>
                 <th class="px-4 py-2 text-left">{{ _('Change') }}</th>
                 <th class="px-4 py-2 text-left">{{ _('Reason') }}</th>
@@ -20,6 +21,7 @@
             {% for c in corrections %}
             <tr>
                 <td class="px-4 py-3">{{ c.attendance_day.work_date|user_date if c.attendance_day else '—' }}</td>
+                <td class="px-4 py-3">{{ c.requester.username if c.requester else '—' }}</td>
                 <td class="px-4 py-3">
                     {% if c.entity_type == 'AddWorkPeriod' %}
                     {{ _('Add missing work period') }}
@@ -29,8 +31,8 @@
                 </td>
                 <td class="px-4 py-3 text-xs">
                     {% if c.corrected_values %}
-                    {% if c.corrected_values.start_time %}{{ _('Start') }}: {{ c.corrected_values.start_time }}<br>{% endif %}
-                    {% if c.corrected_values.end_time %}{{ _('End') }}: {{ c.corrected_values.end_time }}<br>{% endif %}
+                    {% if c.corrected_values.start_time %}{{ _('Start') }}: {{ c.corrected_values.start_time|user_datetime }}<br>{% endif %}
+                    {% if c.corrected_values.end_time %}{{ _('End') }}: {{ c.corrected_values.end_time|user_datetime }}<br>{% endif %}
                     {% if c.corrected_values.notes %}{{ _('Notes') }}: {{ c.corrected_values.notes }}{% endif %}
                     {% else %}—{% endif %}
                 </td>
@@ -46,7 +48,7 @@
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="6" class="px-4 py-6 text-center">{{ _('No pending corrections.') }}</td></tr>
+            <tr><td colspan="7" class="px-4 py-6 text-center">{{ _('No pending corrections.') }}</td></tr>
             {% endfor %}
         </tbody>
     </table>

@@ -16,6 +16,7 @@ class WorkdaySession(db.Model):
     duration_seconds = db.Column(db.Integer, nullable=True)
     notes = db.Column(db.Text, nullable=True)
     auto_closed = db.Column(db.Boolean, default=False, nullable=False)
+    auto_close_confirmed_at = db.Column(db.DateTime, nullable=True)
     source = db.Column(db.String(20), default="manual", nullable=False)  # manual, kiosk, mobile
     created_at = db.Column(db.DateTime, default=local_now, nullable=False)
     updated_at = db.Column(db.DateTime, default=local_now, onupdate=local_now, nullable=False)
@@ -89,6 +90,9 @@ class WorkdaySession(db.Model):
             "current_duration_seconds": self.current_duration_seconds,
             "notes": self.notes,
             "auto_closed": self.auto_closed,
+            "auto_close_confirmed_at": (
+                self.auto_close_confirmed_at.isoformat() if self.auto_close_confirmed_at else None
+            ),
             "source": self.source,
             "is_active": self.is_active,
         }
@@ -98,9 +102,19 @@ class WorkdaySession(db.Model):
         return cls.query.filter_by(user_id=user_id, end_time=None).first()
 
     @classmethod
+    def _naive(cls, dt):
+        """Return datetime as naive local for range math (handles DB returning aware)."""
+        if dt is None or dt.tzinfo is None:
+            return dt
+        from app.utils.timezone import get_timezone_obj
+
+        tz = get_timezone_obj()
+        return dt.astimezone(tz).replace(tzinfo=None)
+
+    @classmethod
     def get_total_seconds_for_period(cls, user_id, start_date, end_date):
-        """Sum completed session durations plus active session elapsed time in range."""
-        from sqlalchemy import and_, or_
+        """Sum session elapsed time clipped to the requested date range."""
+        from sqlalchemy import or_
 
         start_dt = datetime.combine(start_date, datetime.min.time())
         end_dt = datetime.combine(end_date, datetime.max.time())
@@ -114,13 +128,11 @@ class WorkdaySession(db.Model):
         total = 0
         now = local_now()
         for session in sessions:
-            if session.end_time:
-                total += session.duration_seconds or 0
-            else:
-                effective_start = max(session.start_time, start_dt)
-                effective_end = min(now, end_dt)
-                if effective_end > effective_start:
-                    total += int((effective_end - effective_start).total_seconds())
+            session_end = session.end_time or now
+            effective_start = max(cls._naive(session.start_time), start_dt)
+            effective_end = min(cls._naive(session_end), end_dt)
+            if effective_end > effective_start:
+                total += int((effective_end - effective_start).total_seconds())
         return total
 
     @classmethod
