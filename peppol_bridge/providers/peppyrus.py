@@ -53,6 +53,14 @@ class PeppyrusProvider(ProviderBase):
         process_id: str,
     ) -> ProviderSendResult:
         url = f"{self.base_url}/message"
+        # Peppyrus /v1 requires scheme-prefixed identifiers (see its OpenAPI MessageBody
+        # examples): documentType: busdox-docid-qns::<docid>, processType:
+        # cenbii-procid-ubl::<procid>. Bare ids are rejected with HTTP 422
+        # "Incorrect documentType".
+        if document_type_id and not document_type_id.startswith("busdox-docid-qns::"):
+            document_type_id = f"busdox-docid-qns::{document_type_id}"
+        if process_id and not process_id.startswith("cenbii-procid-ubl::"):
+            process_id = f"cenbii-procid-ubl::{process_id}"
         payload = {
             "sender": f"{sender_scheme_id}:{sender_endpoint_id}" if sender_scheme_id else sender_endpoint_id,
             "recipient": f"{recipient_scheme_id}:{recipient_endpoint_id}" if recipient_scheme_id else recipient_endpoint_id,

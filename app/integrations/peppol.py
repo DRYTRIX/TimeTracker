@@ -112,14 +112,10 @@ def _party(parent: ET.Element, kind: str, party: PeppolParty) -> None:
     ep.set("schemeID", party.endpoint_scheme_id)
     ep.text = party.endpoint_id
 
+    # UBL 2.1 Party child order is fixed by the XSD sequence:
+    # EndpointID, PartyName, PostalAddress, PartyTaxScheme, PartyLegalEntity, Contact.
     p_name = ET.SubElement(party_el, cac + "PartyName")
     _text(p_name, cbc + "Name", party.name)
-
-    if party.tax_id:
-        tax_scheme = ET.SubElement(party_el, cac + "PartyTaxScheme")
-        _text(tax_scheme, cbc + "CompanyID", party.tax_id)
-        ts = ET.SubElement(tax_scheme, cac + "TaxScheme")
-        _text(ts, cbc + "ID", "VAT")
 
     if party.address_line or party.country_code:
         addr = ET.SubElement(party_el, cac + "PostalAddress")
@@ -130,11 +126,29 @@ def _party(parent: ET.Element, kind: str, party: PeppolParty) -> None:
             country = ET.SubElement(addr, cac + "Country")
             _text(country, cbc + "IdentificationCode", party.country_code)
 
-    if party.email:
+    if party.tax_id:
+        tax_scheme = ET.SubElement(party_el, cac + "PartyTaxScheme")
+        _text(tax_scheme, cbc + "CompanyID", party.tax_id)
+        ts = ET.SubElement(tax_scheme, cac + "TaxScheme")
+        _text(ts, cbc + "ID", "VAT")
+
+    # PartyLegalEntity/RegistrationName carries BT-27/BT-44 (seller/buyer name) —
+    # mandatory (BR-06/BR-07); CompanyID (BT-30, ISO 6523 scheme) also satisfies
+    # BR-CO-26 for the seller even when no VAT id is configured.
+    legal = ET.SubElement(party_el, cac + "PartyLegalEntity")
+    _text(legal, cbc + "RegistrationName", party.name)
+    scheme = (party.endpoint_scheme_id or "").strip()
+    if scheme.isdigit() and len(scheme) == 4 and (party.endpoint_id or "").strip():
+        company_id = ET.SubElement(legal, cbc + "CompanyID")
+        company_id.set("schemeID", scheme)
+        company_id.text = party.endpoint_id.strip()
+
+    if party.email or party.phone:
         contact = ET.SubElement(party_el, cac + "Contact")
-        _text(contact, cbc + "ElectronicMail", party.email)
+        # Contact child order per XSD: Name, Telephone, ElectronicMail.
         if party.phone:
             _text(contact, cbc + "Telephone", party.phone)
+        _text(contact, cbc + "ElectronicMail", party.email)
 
 
 def build_peppol_ubl_invoice_xml(invoice: Any, supplier: PeppolParty, customer: PeppolParty) -> Tuple[str, str]:
@@ -158,10 +172,29 @@ def build_peppol_ubl_invoice_xml(invoice: Any, supplier: PeppolParty, customer: 
     cbc = f"{{{ns_cbc}}}"
     cac = f"{{{ns_cac}}}"
 
+    # The cbc header order is fixed by the UBL 2.1 XSD sequence:
+    # CustomizationID, ProfileID, ID, IssueDate, DueDate, InvoiceTypeCode, Note,
+    # DocumentCurrencyCode, BuyerReference — any other order fails XSD validation
+    # at the access point (cvc-complex-type.2.4.a).
     _text(inv_el, cbc + "CustomizationID", PEPPOL_BIS3_CUSTOMIZATION_ID)
     _text(inv_el, cbc + "ProfileID", PEPPOL_BIS3_PROFILE_ID)
-    _text(inv_el, cbc + "InvoiceTypeCode", "380")  # 380 = commercial invoice (PEPPOL BT-3)
     _text(inv_el, cbc + "ID", getattr(invoice, "invoice_number", None) or str(getattr(invoice, "id", "")))
+
+    issue_date = getattr(invoice, "issue_date", None) or date.today()
+    if hasattr(issue_date, "isoformat"):
+        _text(inv_el, cbc + "IssueDate", issue_date.isoformat())
+    due_date = getattr(invoice, "due_date", None)
+    if due_date and hasattr(due_date, "isoformat"):
+        _text(inv_el, cbc + "DueDate", due_date.isoformat())
+
+    _text(inv_el, cbc + "InvoiceTypeCode", "380")  # 380 = commercial invoice (PEPPOL BT-3)
+
+    notes = getattr(invoice, "notes", None)
+    if notes:
+        _text(inv_el, cbc + "Note", notes)
+
+    currency = getattr(invoice, "currency_code", None) or "EUR"
+    _text(inv_el, cbc + "DocumentCurrencyCode", currency)
 
     # BuyerReference (BT-10): required by PEPPOL; use buyer_reference, project name, or invoice number
     _buyer_ref = (
@@ -172,20 +205,6 @@ def build_peppol_ubl_invoice_xml(invoice: Any, supplier: PeppolParty, customer: 
     )
     if _buyer_ref:
         _text(inv_el, cbc + "BuyerReference", _buyer_ref)
-
-    issue_date = getattr(invoice, "issue_date", None) or date.today()
-    if hasattr(issue_date, "isoformat"):
-        _text(inv_el, cbc + "IssueDate", issue_date.isoformat())
-    due_date = getattr(invoice, "due_date", None)
-    if due_date and hasattr(due_date, "isoformat"):
-        _text(inv_el, cbc + "DueDate", due_date.isoformat())
-
-    currency = getattr(invoice, "currency_code", None) or "EUR"
-    _text(inv_el, cbc + "DocumentCurrencyCode", currency)
-
-    notes = getattr(invoice, "notes", None)
-    if notes:
-        _text(inv_el, cbc + "Note", notes)
 
     # Parties
     _party(inv_el, "AccountingSupplierParty", supplier)
@@ -243,6 +262,14 @@ def build_peppol_ubl_invoice_xml(invoice: Any, supplier: PeppolParty, customer: 
 
         item_el = ET.SubElement(il, cac + "Item")
         _text(item_el, cbc + "Name", description[:200])
+
+        # Each line needs exactly one ClassifiedTaxCategory (BT-151, BR-CO-04/UBL-SR-48);
+        # mirrors the document-level VAT category so BR-S-01/BR-S-08 tie out.
+        line_tax_cat = ET.SubElement(item_el, cac + "ClassifiedTaxCategory")
+        _text(line_tax_cat, cbc + "ID", "S" if tax_rate > 0 else "Z")
+        _text(line_tax_cat, cbc + "Percent", _money(tax_rate))
+        line_tax_scheme = ET.SubElement(line_tax_cat, cac + "TaxScheme")
+        _text(line_tax_scheme, cbc + "ID", "VAT")
 
         price_el = ET.SubElement(il, cac + "Price")
         pa = ET.SubElement(price_el, cbc + "PriceAmount")
