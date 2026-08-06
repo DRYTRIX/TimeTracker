@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.11.1] - 2026-08-06
+
+### Changed
+
+- **Client versions** — Synced Electron (`desktop/package.json`) and Flutter (`mobile/pubspec.yaml`) to **5.11.1** with the webapp (`setup.py`).
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.11.1** (single source of truth for the application version).
+
 ## [5.11.0] - 2026-08-06
 
 ### Added

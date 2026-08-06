@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.11.1
+
+**Patch (5.11.1):** **Client version sync** — Electron desktop (`desktop/package.json`) and Flutter mobile (`mobile/pubspec.yaml`) bumped to match the webapp at **5.11.1**. See [CHANGELOG.md](CHANGELOG.md#5111---2026-08-06).
+
 ### ✨ Highlights of v5.11.0
 
 **Minor (5.11.0):** **Auto-deduct break on clock-out** — admins can opt in to automatically inserting a meal break when a workday exceeds a configurable threshold, with smart deficit fill for partial manual breaks. **Mobile timer notification (#714)** — persistent Android/iOS notification shows project, task, and elapsed time while a timer runs. **Fixes** — overnight totals clipped (#706), extension task picker (#700), client projects API error (#716), OpenAPI Tasks/Clients endpoints. See [CHANGELOG.md](CHANGELOG.md#5110---2026-08-06).
