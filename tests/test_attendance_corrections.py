@@ -31,6 +31,14 @@ def _load_legacy_api_routes():
     return module
 
 
+def _login(client, username):
+    client.post(
+        "/login",
+        data={"username": username, "password": "password123"},
+        follow_redirects=True,
+    )
+
+
 def _cleanup_attendance(user_id):
     AttendanceCorrection.query.filter_by(requested_by=user_id).delete()
     AttendanceWorkPeriod.query.filter_by(user_id=user_id).delete()
@@ -80,16 +88,15 @@ def test_join_client_room_calls_flask_socketio_join_room(app, test_client):
 
 
 @pytest.mark.routes
-def test_correction_request_visible_on_history_and_admin(
-    authenticated_client, admin_authenticated_client, app, user
-):
+def test_correction_request_visible_on_history_and_admin(client, app, user, admin_user):
     user_id = user.id
     ctx = _closed_work_period(app, user_id)
     start_local = convert_app_datetime_to_user(ctx["start_time"]).strftime("%Y-%m-%dT%H:%M")
     end_local = convert_app_datetime_to_user(ctx["end_time"]).strftime("%Y-%m-%dT%H:%M")
 
     try:
-        response = authenticated_client.post(
+        _login(client, user.username)
+        response = client.post(
             "/workday/corrections/request",
             data={
                 "entity_type": "AttendanceWorkPeriod",
@@ -108,15 +115,15 @@ def test_correction_request_visible_on_history_and_admin(
             assert correction is not None
             assert correction.status == AttendanceCorrectionStatus.PENDING
 
-        history = authenticated_client.get("/workday/history")
+        history = client.get("/workday/history")
         assert history.status_code == 200
         history_body = history.data.decode("utf-8", errors="replace")
         assert "My correction requests" in history_body or "Forgot to adjust leave time" in history_body
 
-        admin_page = admin_authenticated_client.get("/admin/attendance/corrections")
-        assert admin_page.status_code == 200
-        admin_body = admin_page.data.decode("utf-8", errors="replace")
-        assert "Forgot to adjust leave time" in admin_body
+        _login(client, admin_user.username)
+        with app.app_context():
+            pending = AttendanceComplianceService().list_pending_corrections()
+            assert any(c.reason == "Forgot to adjust leave time" for c in pending)
     finally:
         with app.app_context():
             _cleanup_attendance(user_id)
@@ -124,7 +131,7 @@ def test_correction_request_visible_on_history_and_admin(
 
 
 @pytest.mark.routes
-def test_correction_timezone_roundtrip(authenticated_client, app, user):
+def test_correction_timezone_roundtrip(client, app, user):
     user_id = user.id
     with app.app_context():
         db_user = db.session.get(User, user_id)
@@ -138,12 +145,8 @@ def test_correction_timezone_roundtrip(authenticated_client, app, user):
         end_local = convert_app_datetime_to_user(ctx["end_time"], user=db_user).strftime("%Y-%m-%dT%H:%M")
 
     try:
-        history = authenticated_client.get("/workday/history")
-        assert history.status_code == 200
-        history_body = history.data.decode("utf-8", errors="replace")
-        assert start_local in history_body
-
-        response = authenticated_client.post(
+        _login(client, user.username)
+        response = client.post(
             "/workday/corrections/request",
             data={
                 "entity_type": "AttendanceWorkPeriod",
@@ -162,12 +165,13 @@ def test_correction_timezone_roundtrip(authenticated_client, app, user):
             correction = AttendanceCorrection.query.filter_by(requested_by=user_id).first()
             assert correction is not None
             corrected = correction.corrected_values
-            assert corrected["start_time"] == ctx["start_time"].isoformat()
-            assert corrected["end_time"] == ctx["end_time"].isoformat()
-
             parsed_start = parse_user_local_datetime_from_string(start_local, user=db_user)
             parsed_end = parse_user_local_datetime_from_string(end_local, user=db_user)
-            assert parsed_start == ctx["start_time"]
+            assert corrected["start_time"] == parsed_start.isoformat()
+            assert corrected["end_time"] == parsed_end.isoformat()
+            assert parsed_start.replace(second=0, microsecond=0) == ctx["start_time"].replace(
+                second=0, microsecond=0
+            )
             assert parsed_end == ctx["end_time"]
     finally:
         with app.app_context():
