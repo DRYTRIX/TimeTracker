@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **OpenAPI spec missing Tasks and Clients endpoints** — The `/api/openapi.json` document was missing all paths for the Tasks and Clients groups despite the endpoints being fully functional. Added 5 Tasks paths (`/tasks`, `/tasks/{task_id}`) and 14 Clients paths (`/clients`, `/clients/{client_id}`, `/clients/{client_id}/contacts`, `/contacts/{contact_id}`, `/clients/{client_id}/notes`, `/client-notes/{note_id}`, `/clients/{client_id}/invoice-unbilled`). Fixed `Task.priority` schema type from `integer` to `string` enum; expanded `Client` schema from 4 to 16 properties; added `Contact` and `ClientNote` schemas.
+
 ## [5.10.1] - 2026-07-25
 
 ### Added
