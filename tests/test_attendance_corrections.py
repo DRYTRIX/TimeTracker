@@ -179,3 +179,156 @@ def test_correction_timezone_roundtrip(client, app, user):
             db_user.timezone = None
             _cleanup_attendance(user_id)
             db.session.commit()
+
+
+@pytest.mark.routes
+def test_admin_approve_applies_correction_to_history(client, app, user, admin_user):
+    """#709 follow-up: approving must apply new times to the work period (history)."""
+    user_id = user.id
+    ctx = _closed_work_period(app, user_id)
+    new_end = ctx["end_time"].replace(hour=16, minute=30, second=0, microsecond=0)
+
+    with app.app_context():
+        svc = AttendanceComplianceService()
+        corr = svc.request_correction(
+            attendance_day_id=ctx["attendance_day_id"],
+            entity_type="AttendanceWorkPeriod",
+            entity_id=ctx["period_id"],
+            corrected_values={
+                "start_time": ctx["start_time"].isoformat(),
+                "end_time": new_end.isoformat(),
+            },
+            reason="Left early",
+            requested_by=user_id,
+        )
+        assert corr["success"] is True
+        correction_id = corr["correction"].id
+
+    try:
+        _login(client, admin_user.username)
+        # Simulate Approve button (name=approve) — not the legacy action= field
+        response = client.post(
+            f"/admin/attendance/corrections/{correction_id}/review",
+            data={"approve": "1", "review_comment": "Looks good"},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+
+        with app.app_context():
+            correction = AttendanceCorrection.query.get(correction_id)
+            assert correction is not None
+            assert correction.status == AttendanceCorrectionStatus.APPLIED
+            period = AttendanceWorkPeriod.query.get(ctx["period_id"])
+            assert period is not None
+            assert period.end_time.replace(second=0, microsecond=0) == new_end.replace(
+                second=0, microsecond=0
+            )
+    finally:
+        with app.app_context():
+            _cleanup_attendance(user_id)
+            db.session.commit()
+
+
+@pytest.mark.routes
+def test_admin_review_missing_decision_does_not_reject(client, app, user, admin_user):
+    """#709: POST without approve/reject must not silently reject the correction."""
+    user_id = user.id
+    ctx = _closed_work_period(app, user_id)
+
+    with app.app_context():
+        svc = AttendanceComplianceService()
+        corr = svc.request_correction(
+            attendance_day_id=ctx["attendance_day_id"],
+            entity_type="AttendanceWorkPeriod",
+            entity_id=ctx["period_id"],
+            corrected_values={
+                "start_time": ctx["start_time"].isoformat(),
+                "end_time": ctx["end_time"].isoformat(),
+            },
+            reason="Need review",
+            requested_by=user_id,
+        )
+        assert corr["success"] is True
+        correction_id = corr["correction"].id
+
+    try:
+        _login(client, admin_user.username)
+        # Incomplete POST (e.g. Enter in comment without a successful submit button)
+        response = client.post(
+            f"/admin/attendance/corrections/{correction_id}/review",
+            data={"review_comment": "oops"},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+
+        with app.app_context():
+            correction = AttendanceCorrection.query.get(correction_id)
+            assert correction is not None
+            assert correction.status == AttendanceCorrectionStatus.PENDING
+    finally:
+        with app.app_context():
+            _cleanup_attendance(user_id)
+            db.session.commit()
+
+
+@pytest.mark.routes
+def test_admin_reject_button_rejects(client, app, user, admin_user):
+    user_id = user.id
+    ctx = _closed_work_period(app, user_id)
+
+    with app.app_context():
+        svc = AttendanceComplianceService()
+        corr = svc.request_correction(
+            attendance_day_id=ctx["attendance_day_id"],
+            entity_type="AttendanceWorkPeriod",
+            entity_id=ctx["period_id"],
+            corrected_values={
+                "start_time": ctx["start_time"].isoformat(),
+                "end_time": ctx["end_time"].isoformat(),
+            },
+            reason="Will reject",
+            requested_by=user_id,
+        )
+        correction_id = corr["correction"].id
+        original_end = AttendanceWorkPeriod.query.get(ctx["period_id"]).end_time
+
+    try:
+        _login(client, admin_user.username)
+        response = client.post(
+            f"/admin/attendance/corrections/{correction_id}/review",
+            data={"reject": "1", "review_comment": "No"},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+
+        with app.app_context():
+            correction = AttendanceCorrection.query.get(correction_id)
+            assert correction.status == AttendanceCorrectionStatus.REJECTED
+            period = AttendanceWorkPeriod.query.get(ctx["period_id"])
+            assert period.end_time == original_end
+    finally:
+        with app.app_context():
+            _cleanup_attendance(user_id)
+            db.session.commit()
+
+
+@pytest.mark.unit
+def test_parse_correction_review_decision():
+    from app.routes.workday import _parse_correction_review_decision
+
+    from flask import Flask
+
+    app = Flask(__name__)
+    with app.test_request_context("/review", method="POST", data={"approve": "1"}):
+        assert _parse_correction_review_decision() is True
+    with app.test_request_context("/review", method="POST", data={"reject": "1"}):
+        assert _parse_correction_review_decision() is False
+    with app.test_request_context("/review", method="POST", data={"action": "approve"}):
+        assert _parse_correction_review_decision() is True
+    with app.test_request_context("/review", method="POST", data={"action": "reject"}):
+        assert _parse_correction_review_decision() is False
+    with app.test_request_context("/review", method="POST", data={"review_comment": "x"}):
+        assert _parse_correction_review_decision() is None
+    # Enter-key footgun of the old code: missing action must not become reject
+    with app.test_request_context("/review", method="POST", data={}):
+        assert _parse_correction_review_decision() is None

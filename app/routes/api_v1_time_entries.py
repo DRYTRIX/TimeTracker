@@ -369,10 +369,27 @@ def delete_time_entry(entry_id):
 @require_api_token("read:time_entries")
 def timer_status():
     """Get current timer status."""
+    from app.models import Settings
+
+    settings = Settings.get_settings()
+    idle_timeout_minutes = getattr(settings, "idle_timeout_minutes", 30) or 30
+
     active_timer = g.api_user.active_timer
     if not active_timer:
-        return jsonify({"active": False, "timer": None})
-    return jsonify({"active": True, "timer": active_timer.to_dict()})
+        return jsonify(
+            {
+                "active": False,
+                "timer": None,
+                "idle_timeout_minutes": idle_timeout_minutes,
+            }
+        )
+    return jsonify(
+        {
+            "active": True,
+            "timer": active_timer.to_dict(),
+            "idle_timeout_minutes": idle_timeout_minutes,
+        }
+    )
 
 
 @api_v1_time_entries_bp.route("/timer/start", methods=["POST"])
@@ -453,8 +470,15 @@ def resume_timer():
 @api_v1_time_entries_bp.route("/timer/stop", methods=["POST"])
 @require_api_token("write:time_entries")
 def stop_timer():
-    """Stop the active timer."""
+    """Stop the active timer.
+
+    Optional JSON body field ``stop_time`` (ISO-8601) stops the timer at a
+    specific timestamp (used for idle auto-stop adjustments).
+    """
+    from datetime import datetime
+
     from app.services import TimeTrackingService
+    from app.utils.timezone import utc_to_local
 
     active_timer = g.api_user.active_timer
     if not active_timer:
@@ -463,8 +487,33 @@ def stop_timer():
             error_code="no_active_timer",
             status_code=400,
         )
+
+    data = request.get_json(silent=True) or {}
+    end_time_local = None
+    stop_time_str = data.get("stop_time")
+    if stop_time_str:
+        try:
+            ts = str(stop_time_str).strip()
+            if ts.endswith("Z"):
+                ts = ts[:-1] + "+00:00"
+            parsed = datetime.fromisoformat(ts)
+            if parsed.tzinfo is not None:
+                end_time_local = utc_to_local(parsed).replace(tzinfo=None)
+            else:
+                end_time_local = parsed
+        except Exception:
+            return error_response(
+                "Invalid stop_time format",
+                error_code="invalid_stop_time",
+                status_code=400,
+            )
+
     time_tracking_service = TimeTrackingService()
-    result = time_tracking_service.stop_timer(user_id=g.api_user.id, entry_id=active_timer.id)
+    result = time_tracking_service.stop_timer(
+        user_id=g.api_user.id,
+        entry_id=active_timer.id,
+        end_time=end_time_local,
+    )
     if not result.get("success"):
         return error_response(
             result.get("message", "Could not stop timer"),

@@ -227,8 +227,10 @@ export class ApiClient {
     return this.request('POST', '/api/v1/timer/start', body);
   }
 
-  stopTimer() {
-    return this.request('POST', '/api/v1/timer/stop');
+  stopTimer({ stopTime = null } = {}) {
+    const body = {};
+    if (stopTime) body.stop_time = stopTime;
+    return this.request('POST', '/api/v1/timer/stop', Object.keys(body).length ? body : undefined);
   }
 
   getProjects(params = {}) {

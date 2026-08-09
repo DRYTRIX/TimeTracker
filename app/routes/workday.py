@@ -260,6 +260,29 @@ def admin_corrections_list():
     return render_template("workday/admin_corrections.html", corrections=corrections)
 
 
+def _parse_correction_review_decision():
+    """Resolve approve/reject from the review form without defaulting to reject.
+
+    Prefer distinct submit button names (approve/reject). Also accept action=approve|reject
+    for compatibility. A missing decision must not be treated as reject — that caused
+    Enter-in-comment / incomplete POSTs to silently reject (#709).
+    """
+    if "approve" in request.form and "reject" not in request.form:
+        return True
+    if "reject" in request.form and "approve" not in request.form:
+        return False
+    # Legacy single-field buttons: name="action" value="approve|reject"
+    # If both values are present (hidden default + override), use the last one.
+    actions = [a.strip().lower() for a in request.form.getlist("action") if a and str(a).strip()]
+    if actions:
+        last = actions[-1]
+        if last == "approve":
+            return True
+        if last == "reject":
+            return False
+    return None
+
+
 @workday_bp.route("/admin/attendance/corrections/<int:correction_id>/review", methods=["POST"])
 @login_required
 def admin_review_correction(correction_id):
@@ -267,7 +290,11 @@ def admin_review_correction(correction_id):
         flash(_("Admin access required"), "error")
         return redirect(url_for("main.dashboard"))
 
-    approve = request.form.get("action") == "approve"
+    approve = _parse_correction_review_decision()
+    if approve is None:
+        flash(_("Please choose Approve or Reject"), "error")
+        return redirect(request.referrer or url_for("workday.admin_corrections_list"))
+
     result = AttendanceComplianceService().review_correction(
         correction_id,
         current_user.id,
@@ -278,7 +305,8 @@ def admin_review_correction(correction_id):
         flash(_("Correction approved and applied") if approve else _("Correction rejected"), "success")
     else:
         flash(result.get("message", _("Could not review correction")), "error")
-    return redirect(url_for("workday.admin_corrections_list"))
+    # Prefer returning to the page the admin came from (approvals list vs admin corrections)
+    return redirect(request.referrer or url_for("workday.admin_corrections_list"))
 
 
 @workday_bp.route("/working-time/violations")

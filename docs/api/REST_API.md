@@ -811,7 +811,7 @@ GET /api/v1/tasks
 
 **Query Parameters:**
 - `project_id` - Filter by project
-- `status` - Filter by status (`todo`, `in_progress`, `review`, `done`, `cancelled`). Aliases `active` and `open` match all open statuses (`todo`, `in_progress`, `review`). Comma-separated values match any listed status (e.g. `todo,review`).
+- `status` - Filter by status (`todo`, `in_progress`, `review`, `done`, `cancelled`, or any custom Kanban column key). Aliases `active` and `open` match all non-closed tasks (excludes `done` and `cancelled`, including custom statuses such as `on_hold` or `blocked`). Comma-separated values match any listed status (e.g. `todo,review`).
 - `page` - Page number
 - `per_page` - Items per page
 

@@ -11,37 +11,46 @@ from app.utils.api_responses import error_response, not_found_response, validati
 
 api_v1_tasks_bp = Blueprint("api_v1_tasks", __name__, url_prefix="/api/v1")
 
-OPEN_TASK_STATUSES = ["todo", "in_progress", "review"]
+# Matches Task.is_active — open/active aliases exclude these rather than listing every Kanban key.
+CLOSED_TASK_STATUSES = ["done", "cancelled"]
 
 
 def parse_task_status_filter(status_raw):
-    """Parse status query param; supports aliases and comma-separated values."""
+    """Parse status query param; supports aliases and comma-separated values.
+
+    Returns:
+        (status, statuses, exclude_statuses)
+        - status: single exact status string, or None
+        - statuses: list of exact statuses for IN filter, or None
+        - exclude_statuses: list for NOT IN filter (used by active/open aliases), or None
+    """
     if not status_raw:
-        return None, None
+        return None, None, None
 
     status_raw = status_raw.strip()
     if not status_raw:
-        return None, None
+        return None, None, None
 
-    expanded = []
-    for part in (p.strip() for p in status_raw.split(",") if p.strip()):
-        if part.lower() in ("active", "open"):
-            expanded.extend(OPEN_TASK_STATUSES)
-        else:
-            expanded.append(part)
+    parts = [p.strip() for p in status_raw.split(",") if p.strip()]
+    aliases = [p for p in parts if p.lower() in ("active", "open")]
+    exact = [p for p in parts if p.lower() not in ("active", "open")]
+
+    # active/open alone (or repeated) → exclude closed, include custom Kanban keys
+    if aliases and not exact:
+        return None, None, list(CLOSED_TASK_STATUSES)
 
     seen = set()
     unique = []
-    for value in expanded:
+    for value in exact:
         if value not in seen:
             seen.add(value)
             unique.append(value)
 
     if len(unique) == 1:
-        return unique[0], None
+        return unique[0], None, None
     if len(unique) > 1:
-        return None, unique
-    return None, None
+        return None, unique, None
+    return None, None, None
 
 
 @api_v1_tasks_bp.route("/tasks", methods=["GET"])
@@ -52,7 +61,7 @@ def list_tasks():
 
     project_id = request.args.get("project_id", type=int)
     status_raw = request.args.get("status")
-    status, statuses = parse_task_status_filter(status_raw)
+    status, statuses, exclude_statuses = parse_task_status_filter(status_raw)
     tags = request.args.get("tags", "").strip() or None
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
@@ -62,6 +71,7 @@ def list_tasks():
         project_id=project_id,
         status=status,
         statuses=statuses,
+        exclude_statuses=exclude_statuses,
         tags=tags,
         page=page,
         per_page=per_page,

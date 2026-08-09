@@ -382,6 +382,9 @@ class TestTimer:
         data = json.loads(response.data)
         assert data["active"] == False
         assert data["timer"] is None
+        assert "idle_timeout_minutes" in data
+        assert isinstance(data["idle_timeout_minutes"], int)
+        assert data["idle_timeout_minutes"] >= 1
 
     def test_start_timer(self, client, api_token, test_project):
         """Test starting a timer"""
@@ -415,6 +418,41 @@ class TestTimer:
         data = json.loads(response.data)
         assert "time_entry" in data
         assert data["time_entry"]["end_time"] is not None
+
+    def test_stop_timer_with_stop_time(self, client, api_token, test_user, test_project, app):
+        """Test idle-style stop with an explicit stop_time"""
+        from datetime import timedelta
+
+        from app.models.time_entry import local_now
+
+        start = local_now() - timedelta(hours=1)
+        stop_at = start + timedelta(minutes=30)
+        timer = TimeEntry(
+            user_id=int(test_user),
+            project_id=test_project.id,
+            start_time=start,
+            end_time=None,
+            source="api",
+            billable=True,
+        )
+        db.session.add(timer)
+        db.session.commit()
+
+        headers = {"Authorization": f"Bearer {api_token}", "Content-Type": "application/json"}
+        # Naive ISO — treated as local app time, matching stored start_time
+        response = client.post(
+            "/api/v1/timer/stop",
+            json={"stop_time": stop_at.isoformat()},
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert "time_entry" in data
+        assert data["time_entry"]["end_time"] is not None
+        # Duration should reflect ~30 minutes, not the full hour
+        assert data["time_entry"]["duration_seconds"] is not None
+        assert 25 * 60 <= data["time_entry"]["duration_seconds"] <= 35 * 60
 
 
 class TestTasks:
@@ -459,11 +497,25 @@ class TestTasks:
         assert data["task"]["name"] == "New Task"
 
     def test_list_tasks_status_active_alias(self, client, api_token, test_user, test_project):
-        """status=active returns open tasks (todo, in_progress, review)"""
+        """status=active excludes done/cancelled and includes custom Kanban keys."""
         open_task = Task(
             name="Open Task",
             project_id=test_project.id,
             status="todo",
+            priority="medium",
+            created_by=int(test_user),
+        )
+        on_hold_task = Task(
+            name="On Hold Task",
+            project_id=test_project.id,
+            status="on_hold",
+            priority="medium",
+            created_by=int(test_user),
+        )
+        blocked_task = Task(
+            name="Blocked Task",
+            project_id=test_project.id,
+            status="blocked",
             priority="medium",
             created_by=int(test_user),
         )
@@ -474,7 +526,14 @@ class TestTasks:
             priority="medium",
             created_by=int(test_user),
         )
-        db.session.add_all([open_task, done_task])
+        cancelled_task = Task(
+            name="Cancelled Task",
+            project_id=test_project.id,
+            status="cancelled",
+            priority="medium",
+            created_by=int(test_user),
+        )
+        db.session.add_all([open_task, on_hold_task, blocked_task, done_task, cancelled_task])
         db.session.commit()
 
         headers = {"Authorization": f"Bearer {api_token}"}
@@ -485,8 +544,8 @@ class TestTasks:
 
         assert response.status_code == 200
         data = json.loads(response.data)
-        assert len(data["tasks"]) == 1
-        assert data["tasks"][0]["name"] == "Open Task"
+        names = {t["name"] for t in data["tasks"]}
+        assert names == {"Open Task", "On Hold Task", "Blocked Task"}
 
     def test_list_tasks_status_exact_match(self, client, api_token, test_user, test_project):
         """status=done returns only done tasks"""

@@ -7,6 +7,8 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
+from flask import current_app
+
 from app import db
 from app.models import Settings, User, WorkdaySession
 from app.models.attendance_compliance import (
@@ -588,16 +590,27 @@ class AttendanceComplianceService:
 
         if not approve:
             correction.status = AttendanceCorrectionStatus.REJECTED
-            safe_commit("reject_attendance_correction", {"correction_id": correction_id})
+            if not safe_commit("reject_attendance_correction", {"correction_id": correction_id}):
+                return {"success": False, "message": "Could not save rejection"}
             return {"success": True, "correction": correction, "applied": False}
 
-        applied = self._apply_correction(correction)
+        try:
+            applied = self._apply_correction(correction)
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception(
+                "Failed to apply attendance correction %s", correction_id
+            )
+            return {"success": False, "message": "Could not apply correction"}
+
         if not applied:
+            db.session.rollback()
             return {"success": False, "message": "Could not apply correction"}
 
         correction.status = AttendanceCorrectionStatus.APPLIED
         correction.applied_at = local_now()
-        safe_commit("apply_attendance_correction", {"correction_id": correction_id})
+        if not safe_commit("apply_attendance_correction", {"correction_id": correction_id}):
+            return {"success": False, "message": "Could not save approved correction"}
         return {"success": True, "correction": correction, "applied": True}
 
     def _snapshot_entity(self, entity_type: str, entity_id: int) -> Optional[Dict[str, Any]]:
@@ -612,8 +625,40 @@ class AttendanceComplianceService:
             return obj.to_dict() if obj else None
         return None
 
+    @staticmethod
+    def _parse_corrected_datetime(value: Any) -> Optional[datetime]:
+        """Parse a corrected_values datetime (ISO string or datetime) to naive datetime."""
+        if value is None or value == "":
+            return None
+        if isinstance(value, datetime):
+            return value.replace(tzinfo=None) if value.tzinfo else value
+        if not isinstance(value, str):
+            return None
+        raw = value.strip()
+        if not raw:
+            return None
+        # Accept datetime-local ("YYYY-MM-DDTHH:MM") and full ISO strings
+        try:
+            parsed = datetime.fromisoformat(raw)
+        except ValueError:
+            try:
+                parsed = datetime.strptime(raw[:16], "%Y-%m-%dT%H:%M")
+            except ValueError:
+                return None
+        return parsed.replace(tzinfo=None) if parsed.tzinfo else parsed
+
     def _apply_correction(self, correction: AttendanceCorrection) -> bool:
         values = correction.corrected_values or {}
+        if isinstance(values, str):
+            import json
+
+            try:
+                values = json.loads(values)
+            except (TypeError, ValueError):
+                return False
+        if not isinstance(values, dict):
+            return False
+
         entity_type = correction.entity_type
         entity_id = correction.entity_id
 
@@ -622,9 +667,18 @@ class AttendanceComplianceService:
             if not period:
                 return False
             if "start_time" in values and values["start_time"]:
-                period.start_time = datetime.fromisoformat(values["start_time"])
+                start = self._parse_corrected_datetime(values["start_time"])
+                if start is None:
+                    return False
+                period.start_time = start
             if "end_time" in values:
-                period.end_time = datetime.fromisoformat(values["end_time"]) if values["end_time"] else None
+                if values["end_time"]:
+                    end = self._parse_corrected_datetime(values["end_time"])
+                    if end is None:
+                        return False
+                    period.end_time = end
+                else:
+                    period.end_time = None
             if "notes" in values:
                 period.notes = values["notes"]
             period.calculate_duration()
@@ -642,16 +696,25 @@ class AttendanceComplianceService:
             if not brk:
                 return False
             if "start_time" in values and values["start_time"]:
-                brk.start_time = datetime.fromisoformat(values["start_time"])
+                start = self._parse_corrected_datetime(values["start_time"])
+                if start is None:
+                    return False
+                brk.start_time = start
             if "end_time" in values:
-                brk.end_time = datetime.fromisoformat(values["end_time"]) if values["end_time"] else None
+                if values["end_time"]:
+                    end = self._parse_corrected_datetime(values["end_time"])
+                    if end is None:
+                        return False
+                    brk.end_time = end
+                else:
+                    brk.end_time = None
             brk.calculate_duration()
             brk.attendance_day.recalculate_totals()
         elif entity_type == "DailyAttendanceRecord":
             day = DailyAttendanceRecord.query.get(entity_id)
             if not day:
                 return False
-            if "status" in values:
+            if "status" in values and values["status"]:
                 try:
                     day.status = AttendanceDayStatus(values["status"])
                 except ValueError:
@@ -664,13 +727,10 @@ class AttendanceComplianceService:
                 return False
             if day.work_periods.count() > 0:
                 return False
-            start_raw = values.get("start_time")
-            if not start_raw:
+            start_time = self._parse_corrected_datetime(values.get("start_time"))
+            if not start_time:
                 return False
-            start_time = datetime.fromisoformat(start_raw)
-            end_time = None
-            if values.get("end_time"):
-                end_time = datetime.fromisoformat(values["end_time"])
+            end_time = self._parse_corrected_datetime(values.get("end_time"))
             period = AttendanceWorkPeriod(
                 attendance_day_id=day.id,
                 user_id=day.user_id,
