@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.11.2
+
+**Patch (5.11.2):** **Attendance Approve (#709)** — correction review no longer treats a missing decision as Reject. **Extension task picker (#700)** — custom Kanban and on-hold tasks appear in the timer dropdown. **Idle auto-stop** — unanswered “Still working?” prompts stop the timer after a grace window. See [CHANGELOG.md](CHANGELOG.md#5112---2026-08-09).
+
 ### ✨ Highlights of v5.11.1
 
 **Patch (5.11.1):** **Client version sync** — Electron desktop (`desktop/package.json`) and Flutter mobile (`mobile/pubspec.yaml`) bumped to match the webapp at **5.11.1**. See [CHANGELOG.md](CHANGELOG.md#5111---2026-08-06).
