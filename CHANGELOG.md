@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Chrome extension task picker missing on-hold tasks (#700)** — Tasks with status `on_hold` are active (`Task.is_active`) and appear in the web UI, but the extension (and the `status=open` / `status=active` API aliases) only included `todo`, `in_progress`, and `review`. On-hold tasks are now included, and the extension surfaces a visible error when the task list fails to load (e.g. missing `read:tasks` scope) instead of showing an empty dropdown.
+
 ## [5.11.1] - 2026-08-06
 
 ### Changed

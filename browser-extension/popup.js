@@ -37,7 +37,7 @@ const els = {
   createProjectBtn: document.getElementById('create-project-btn'),
 };
 
-const OPEN_TASK_STATUSES = new Set(['todo', 'in_progress', 'review']);
+const OPEN_TASK_STATUSES = new Set(['todo', 'in_progress', 'review', 'on_hold']);
 
 /** @type {ApiClient|null} */
 let client = null;
@@ -189,8 +189,13 @@ async function loadTasksForProject(projectId, selectedTaskId = null) {
       els.taskSelect.appendChild(opt);
     }
   } catch (error) {
-    // Non-fatal: timer can start without a task list.
+    // Non-fatal: timer can start without a task list, but surface the failure.
     console.warn('Failed to load tasks', error);
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'Could not load tasks';
+    els.taskSelect.appendChild(opt);
+    showMessage(error.message || 'Could not load tasks.');
   }
 }
 

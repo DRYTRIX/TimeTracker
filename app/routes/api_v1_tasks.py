@@ -11,7 +11,7 @@ from app.utils.api_responses import error_response, not_found_response, validati
 
 api_v1_tasks_bp = Blueprint("api_v1_tasks", __name__, url_prefix="/api/v1")
 
-OPEN_TASK_STATUSES = ["todo", "in_progress", "review"]
+OPEN_TASK_STATUSES = ["todo", "in_progress", "review", "on_hold"]
 
 
 def parse_task_status_filter(status_raw):

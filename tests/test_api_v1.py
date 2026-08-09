@@ -497,11 +497,18 @@ class TestTasks:
         assert data["task"]["name"] == "New Task"
 
     def test_list_tasks_status_active_alias(self, client, api_token, test_user, test_project):
-        """status=active returns open tasks (todo, in_progress, review)"""
+        """status=active returns open tasks (todo, in_progress, review, on_hold)"""
         open_task = Task(
             name="Open Task",
             project_id=test_project.id,
             status="todo",
+            priority="medium",
+            created_by=int(test_user),
+        )
+        on_hold_task = Task(
+            name="On Hold Task",
+            project_id=test_project.id,
+            status="on_hold",
             priority="medium",
             created_by=int(test_user),
         )
@@ -512,7 +519,7 @@ class TestTasks:
             priority="medium",
             created_by=int(test_user),
         )
-        db.session.add_all([open_task, done_task])
+        db.session.add_all([open_task, on_hold_task, done_task])
         db.session.commit()
 
         headers = {"Authorization": f"Bearer {api_token}"}
@@ -523,8 +530,8 @@ class TestTasks:
 
         assert response.status_code == 200
         data = json.loads(response.data)
-        assert len(data["tasks"]) == 1
-        assert data["tasks"][0]["name"] == "Open Task"
+        names = {t["name"] for t in data["tasks"]}
+        assert names == {"Open Task", "On Hold Task"}
 
     def test_list_tasks_status_exact_match(self, client, api_token, test_user, test_project):
         """status=done returns only done tasks"""
