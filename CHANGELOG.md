@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Attendance correction Approve silently rejected (#709)** — Review forms treated a missing `action` field as Reject, so incomplete POSTs (e.g. pressing Enter in the comment box without a successful submit button) rejected corrections and left history unchanged. Approve/Reject now use distinct button names, a missing decision returns an error instead of rejecting, and applying an approval checks the DB commit and rolls back on failure so history times update reliably.
 - **Chrome extension task picker empty for custom Kanban statuses (#700)** — The extension and `status=open` / `status=active` API aliases used a fixed allowlist of statuses, so tasks in custom columns (e.g. `blocked`) never appeared. Open now means “not `done` or `cancelled`” (aligned with `Task.is_active`). The extension requests `status=open`, shows non-todo status next to the task name, reloads tasks when the project filter changes the selection, and still surfaces load errors visibly.
 - **Chrome extension task picker missing on-hold tasks (#700)** — Tasks with status `on_hold` are active (`Task.is_active`) and appear in the web UI, but the extension (and the `status=open` / `status=active` API aliases) only included `todo`, `in_progress`, and `review`. On-hold tasks are now included, and the extension surfaces a visible error when the task list fails to load (e.g. missing `read:tasks` scope) instead of showing an empty dropdown.
 

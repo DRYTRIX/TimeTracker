@@ -183,10 +183,11 @@
                 <form method="POST" action="{{ url_for('workday.admin_review_correction', correction_id=correction.id) }}" class="flex flex-wrap gap-2 items-start">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="text" name="review_comment" placeholder="{{ _('Comment') }}" class="form-input text-sm w-40">
-                    <button type="submit" name="action" value="approve" class="bg-green-600 text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-green-700 transition-colors">
+                    {# Distinct button names so Enter/missing action cannot silently reject (#709) #}
+                    <button type="submit" name="approve" value="1" class="bg-green-600 text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-green-700 transition-colors">
                         <i class="fas fa-check mr-1"></i>{{ _('Approve') }}
                     </button>
-                    <button type="submit" name="action" value="reject" class="bg-red-600 text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-red-700 transition-colors">
+                    <button type="submit" name="reject" value="1" class="bg-red-600 text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-red-700 transition-colors">
                         <i class="fas fa-times mr-1"></i>{{ _('Reject') }}
                     </button>
                 </form>
