@@ -3,7 +3,7 @@
   "name": "TimeTracker Timer",
   "version": "1.0.2",
   "description": "Start and stop TimeTracker timers from your browser toolbar.",
-  "permissions": ["storage", "alarms"],
+  "permissions": ["storage", "alarms", "idle", "notifications"],
   "optional_host_permissions": ["http://*/*", "https://*/*"],
   "background": {
     "service_worker": "background.js",

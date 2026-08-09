@@ -1,5 +1,6 @@
 /**
- * Service worker: poll timer status, update toolbar badge and icon.
+ * Service worker: poll timer status, update toolbar badge/icon,
+ * and enforce idle timeout with a "Still working?" grace window.
  */
 
 import {
@@ -9,7 +10,13 @@ import {
 } from './lib/api.js';
 
 const ALARM_NAME = 'tt-timer-poll';
+const IDLE_STOP_ALARM = 'tt-idle-stop';
+const IDLE_NOTIFICATION_ID = 'tt-still-working';
 const POLL_MINUTES = 0.25; // ~15s
+const GRACE_MINUTES = 5;
+const DEFAULT_IDLE_TIMEOUT_MINUTES = 30;
+/** chrome.idle.setDetectionInterval minimum is 15 seconds */
+const MIN_IDLE_DETECTION_SECONDS = 15;
 
 const IDLE_ICONS = {
   16: 'icons/idle-16.png',
@@ -54,10 +61,105 @@ function setRunningUi(timer) {
   chrome.action.setTitle({ title: `TimeTracker — ${project}${task}` });
 }
 
+function clampIdleTimeoutMinutes(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 1) return DEFAULT_IDLE_TIMEOUT_MINUTES;
+  return Math.min(480, Math.floor(n));
+}
+
+async function applyIdleDetectionInterval(idleTimeoutMinutes) {
+  const minutes = clampIdleTimeoutMinutes(idleTimeoutMinutes);
+  const seconds = Math.max(MIN_IDLE_DETECTION_SECONDS, minutes * 60);
+  try {
+    chrome.idle.setDetectionInterval(seconds);
+    await chrome.storage.local.set({ idle_timeout_minutes: minutes });
+  } catch (error) {
+    console.debug('[TimeTracker] idle.setDetectionInterval failed:', error);
+  }
+}
+
+async function clearIdleGraceState() {
+  try {
+    await chrome.alarms.clear(IDLE_STOP_ALARM);
+  } catch (_) {
+    /* ignore */
+  }
+  try {
+    await chrome.notifications.clear(IDLE_NOTIFICATION_ID);
+  } catch (_) {
+    /* ignore */
+  }
+  await chrome.storage.local.remove(['idle_grace_stop_at', 'idle_grace_active']);
+}
+
+async function beginIdleGrace(stopAtMs) {
+  const { last_timer_status } = await chrome.storage.local.get('last_timer_status');
+  if (!last_timer_status?.active || !last_timer_status?.timer) {
+    return;
+  }
+
+  const existing = await chrome.storage.local.get(['idle_grace_active']);
+  if (existing.idle_grace_active) {
+    return;
+  }
+
+  await chrome.storage.local.set({
+    idle_grace_active: true,
+    idle_grace_stop_at: stopAtMs,
+  });
+
+  chrome.alarms.create(IDLE_STOP_ALARM, { delayInMinutes: GRACE_MINUTES });
+
+  try {
+    await chrome.notifications.create(IDLE_NOTIFICATION_ID, {
+      type: 'basic',
+      iconUrl: 'icons/running-128.png',
+      title: 'Still working?',
+      message: `Your timer will stop in ${GRACE_MINUTES} minutes if you do not answer.`,
+      priority: 2,
+      requireInteraction: true,
+      buttons: [
+        { title: 'Yes, still working' },
+        { title: 'No, stop timer' },
+      ],
+    });
+  } catch (error) {
+    console.debug('[TimeTracker] idle notification failed:', error);
+  }
+}
+
+async function confirmStillWorking() {
+  await clearIdleGraceState();
+}
+
+async function stopTimerForIdle({ stopAtMs = null } = {}) {
+  const { server_url, api_token, logged_out, idle_grace_stop_at } = await chrome.storage.local.get([
+    'server_url',
+    'api_token',
+    'logged_out',
+    'idle_grace_stop_at',
+  ]);
+  await clearIdleGraceState();
+
+  if (!server_url || !api_token || logged_out) {
+    return;
+  }
+
+  const stopTime = new Date(stopAtMs || idle_grace_stop_at || Date.now()).toISOString();
+  const client = new ApiClient(server_url, api_token);
+  try {
+    await client.stopTimer({ stopTime });
+  } catch (error) {
+    console.debug('[TimeTracker] idle stop failed:', error);
+  }
+  await refreshTimerStatus({ force: true });
+}
+
 async function refreshTimerStatus({ force = false } = {}) {
   const { server_url, api_token, logged_out } = await getCredentials();
   if (!server_url || !api_token || logged_out) {
     setIdleUi();
+    await clearIdleGraceState();
     await setTimerCache({ active: false, timer: null, error: logged_out ? 'logged_out' : 'not_configured' });
     return { active: false, timer: null };
   }
@@ -66,14 +168,19 @@ async function refreshTimerStatus({ force = false } = {}) {
   try {
     const status = await client.getTimerStatus();
     const active = Boolean(status?.active && status?.timer);
+    const idleTimeoutMinutes = clampIdleTimeoutMinutes(status?.idle_timeout_minutes);
+    await applyIdleDetectionInterval(idleTimeoutMinutes);
+
     if (active) {
       setRunningUi(status.timer);
     } else {
       setIdleUi();
+      await clearIdleGraceState();
     }
     await setTimerCache({
       active,
       timer: status?.timer || null,
+      idle_timeout_minutes: idleTimeoutMinutes,
       error: null,
       force,
     });
@@ -82,6 +189,7 @@ async function refreshTimerStatus({ force = false } = {}) {
     if (error.status === 401 || error.code === 'UNAUTHORIZED') {
       await chrome.storage.local.set({ logged_out: true });
       setIdleUi();
+      await clearIdleGraceState();
       await setTimerCache({ active: false, timer: null, error: 'unauthorized' });
       return { active: false, timer: null, error: 'unauthorized' };
     }
@@ -117,6 +225,10 @@ chrome.runtime.onStartup.addListener(() => {
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === ALARM_NAME) {
     refreshTimerStatus();
+    return;
+  }
+  if (alarm.name === IDLE_STOP_ALARM) {
+    stopTimerForIdle();
   }
 });
 
@@ -139,6 +251,47 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
   return false;
+});
+
+chrome.idle.onStateChanged.addListener(async (newState) => {
+  if (newState === 'active') {
+    // User returned before grace expired — cancel pending auto-stop.
+    await clearIdleGraceState();
+    return;
+  }
+  if (newState !== 'idle' && newState !== 'locked') {
+    return;
+  }
+
+  const { last_timer_status, idle_timeout_minutes } = await chrome.storage.local.get([
+    'last_timer_status',
+    'idle_timeout_minutes',
+  ]);
+  if (!last_timer_status?.active || !last_timer_status?.timer) {
+    return;
+  }
+
+  const minutes = clampIdleTimeoutMinutes(idle_timeout_minutes);
+  // When chrome.idle reports idle/locked, the user has already been inactive
+  // for the configured detection interval — stop at that last-active moment.
+  const stopAtMs = Date.now() - minutes * 60 * 1000;
+  await beginIdleGrace(stopAtMs);
+});
+
+chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
+  if (notificationId !== IDLE_NOTIFICATION_ID) return;
+  if (buttonIndex === 0) {
+    await confirmStillWorking();
+  } else if (buttonIndex === 1) {
+    const { idle_grace_stop_at } = await chrome.storage.local.get('idle_grace_stop_at');
+    await stopTimerForIdle({ stopAtMs: idle_grace_stop_at });
+  }
+});
+
+chrome.notifications.onClicked.addListener(async (notificationId) => {
+  if (notificationId !== IDLE_NOTIFICATION_ID) return;
+  // Clicking the notification body counts as "still working".
+  await confirmStillWorking();
 });
 
 ensureAlarm();

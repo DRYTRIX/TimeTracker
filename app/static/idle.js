@@ -9,14 +9,19 @@
   }
 
   const CHECK_INTERVAL_MS = 60 * 1000; // 1 minute
-  const SNOOZE_MS = 5 * 60 * 1000; // 5 minutes
+  const GRACE_MS = 5 * 60 * 1000; // 5 minutes to answer "Still working?"
 
   let lastActivity = Date.now();
   let promptShown = false;
+  let graceTimerId = null;
+  let countdownIntervalId = null;
 
   function markActive(){
+    // While the "Still working?" grace prompt is open, only Yes/No (or the
+    // 5-minute auto-stop) may clear it — incidental mouse/keyboard activity
+    // must not silently dismiss or re-arm the timer.
+    if (promptShown) return;
     lastActivity = Date.now();
-    promptShown = false;
   }
 
   ['mousemove','keydown','scroll','click','touchstart','visibilitychange'].forEach(evt =>
@@ -37,7 +42,21 @@
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: hour12 });
   }
 
+  function formatCountdown(ms){
+    const totalSec = Math.max(0, Math.ceil(ms / 1000));
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return m + ':' + String(s).padStart(2, '0');
+  }
+
+  function clearGraceTimers(){
+    if (graceTimerId) { clearTimeout(graceTimerId); graceTimerId = null; }
+    if (countdownIntervalId) { clearInterval(countdownIntervalId); countdownIntervalId = null; }
+  }
+
   async function stopAt(ts){
+    clearGraceTimers();
+    promptShown = false;
     try {
       const r = await fetch('/api/timer/stop_at', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stop_time: new Date(ts).toISOString() }) });
       if (r.ok){
@@ -54,38 +73,74 @@
     } catch(e) {}
   }
 
+  function snoozeIdlePrompt(toastEl){
+    clearGraceTimers();
+    lastActivity = Date.now();
+    promptShown = false;
+    try { if (toastEl) toastEl.remove(); } catch(e) {}
+  }
+
   function showIdlePrompt(stopTs){
     if (promptShown) return; promptShown = true;
-    const msg = 'You seem inactive since ' + formatTime(new Date(stopTs)) + '. Stop the timer at that time?';
-    const stopLabel = window.i18n?.messages?.stop || 'Stop';
-    const snoozeLabel = window.i18n?.messages?.snooze || 'Snooze 5 min';
-    const dismissLabel = window.i18n?.messages?.dismiss || 'Dismiss';
+    clearGraceTimers();
+
+    const yesLabel = window.i18n?.messages?.stillWorkingYes || 'Yes, still working';
+    const noLabel = window.i18n?.messages?.stillWorkingNo || 'No, stop timer';
+    const baseMsg = window.i18n?.messages?.stillWorkingPrompt ||
+      ('Still working? You seem inactive since ' + formatTime(new Date(stopTs)) +
+       '. Timer will stop automatically if you do not answer.');
+
+    const deadline = Date.now() + GRACE_MS;
+
+    function buildMessage(){
+      return baseMsg + ' (' + formatCountdown(deadline - Date.now()) + ')';
+    }
+
+    function attachHandlers(toastEl, countdownEl){
+      const yesBtn = toastEl.querySelector('[data-act="yes"]');
+      const noBtn = toastEl.querySelector('[data-act="no"]');
+      if (yesBtn) yesBtn.addEventListener('click', function(){ snoozeIdlePrompt(toastEl); });
+      if (noBtn) noBtn.addEventListener('click', function(){ try { toastEl.remove(); } catch(e){}; stopAt(stopTs); });
+
+      countdownIntervalId = setInterval(function(){
+        if (countdownEl) countdownEl.textContent = buildMessage();
+      }, 1000);
+
+      graceTimerId = setTimeout(function(){
+        clearGraceTimers();
+        try { toastEl.remove(); } catch(e){}
+        stopAt(stopTs);
+      }, GRACE_MS);
+    }
 
     if (window.toastManager) {
       const toastEl = document.createElement('div');
       toastEl.className = 'flex items-center gap-3 p-4 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded-lg shadow-lg pointer-events-auto';
-      toastEl.innerHTML = '<div class="flex-1 text-sm text-amber-900 dark:text-amber-100">' + msg + '</div>' +
-        '<div class="flex gap-2"><button class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-sm font-medium" data-act="stop">' + stopLabel + '</button>' +
-        '<button class="px-3 py-1.5 bg-amber-200 dark:bg-amber-800 hover:bg-amber-300 dark:hover:bg-amber-700 text-amber-900 dark:text-amber-100 rounded text-sm font-medium" data-act="snooze">' + snoozeLabel + '</button>' +
-        '<button class="px-3 py-1.5 text-amber-700 dark:text-amber-300 hover:underline text-sm" data-act="dismiss">' + dismissLabel + '</button></div>';
-      toastEl.querySelector('[data-act="stop"]').addEventListener('click', function(){ toastEl.remove(); stopAt(stopTs); });
-      toastEl.querySelector('[data-act="snooze"]').addEventListener('click', function(){ lastActivity = Date.now(); promptShown = false; toastEl.remove(); });
-      toastEl.querySelector('[data-act="dismiss"]').addEventListener('click', function(){ toastEl.remove(); });
+      toastEl.innerHTML =
+        '<div class="flex-1 text-sm text-amber-900 dark:text-amber-100" data-countdown>' + buildMessage() + '</div>' +
+        '<div class="flex gap-2">' +
+          '<button class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-sm font-medium" data-act="yes">' + yesLabel + '</button>' +
+          '<button class="px-3 py-1.5 bg-amber-200 dark:bg-amber-800 hover:bg-amber-300 dark:hover:bg-amber-700 text-amber-900 dark:text-amber-100 rounded text-sm font-medium" data-act="no">' + noLabel + '</button>' +
+        '</div>';
       const container = document.getElementById('toast-notification-container') || document.getElementById('flash-messages-container') || document.body;
       container.appendChild(toastEl);
-      setTimeout(function(){ try { toastEl.remove(); } catch(e){}; promptShown = false; }, 60000);
+      attachHandlers(toastEl, toastEl.querySelector('[data-countdown]'));
       return;
     }
 
     const t = document.createElement('div');
     t.className = 'toast align-items-center text-white bg-warning border-0 fade show';
-    t.innerHTML = '<div class="d-flex"><div class="toast-body">' + msg + '</div><div class="d-flex gap-2 align-items-center me-2"><button class="btn btn-sm btn-light" data-act="stop">' + stopLabel + '</button><button class="btn btn-sm btn-outline-light" data-act="snooze">' + snoozeLabel + '</button><button class="btn btn-sm btn-outline-light" data-act="dismiss">' + dismissLabel + '</button></div></div>';
+    t.innerHTML =
+      '<div class="d-flex">' +
+        '<div class="toast-body" data-countdown>' + buildMessage() + '</div>' +
+        '<div class="d-flex gap-2 align-items-center me-2">' +
+          '<button class="btn btn-sm btn-light" data-act="yes">' + yesLabel + '</button>' +
+          '<button class="btn btn-sm btn-outline-light" data-act="no">' + noLabel + '</button>' +
+        '</div>' +
+      '</div>';
     const container = document.getElementById('toast-container') || document.body;
     container.appendChild(t);
-    t.querySelector('[data-act="stop"]').addEventListener('click', () => { t.remove(); stopAt(stopTs); });
-    t.querySelector('[data-act="snooze"]').addEventListener('click', () => { lastActivity = Date.now(); promptShown = false; t.remove(); });
-    t.querySelector('[data-act="dismiss"]').addEventListener('click', () => { t.remove(); });
-    setTimeout(() => { try { t.remove(); } catch(e){}; promptShown = false; }, 60000);
+    attachHandlers(t, t.querySelector('[data-countdown]'));
   }
 
   async function tick(){

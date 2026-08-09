@@ -147,9 +147,16 @@ class TimeTrackingService:
 
         return {"success": True, "message": "Timer started successfully", "timer": timer}
 
-    def stop_timer(self, user_id: int, entry_id: Optional[int] = None) -> Dict[str, Any]:
+    def stop_timer(
+        self, user_id: int, entry_id: Optional[int] = None, end_time: Optional[datetime] = None
+    ) -> Dict[str, Any]:
         """
         Stop the active timer for a user.
+
+        Args:
+            user_id: Owner of the timer
+            entry_id: Optional specific entry id
+            end_time: Optional local-naive stop timestamp (idle adjustment). Defaults to now.
 
         Returns:
             dict with 'success', 'message', and 'entry' keys
@@ -168,8 +175,20 @@ class TimeTrackingService:
         if entry.end_time is not None:
             return {"success": False, "message": "Timer is already stopped", "error": "timer_already_stopped"}
 
+        stop_at = end_time if end_time is not None else local_now()
+        if end_time is not None:
+            if stop_at <= entry.start_time:
+                return {
+                    "success": False,
+                    "message": "stop_time must be after start time",
+                    "error": "invalid_stop_time",
+                }
+            now_local = local_now()
+            if stop_at > now_local:
+                stop_at = now_local
+
         # Stop the timer
-        entry.end_time = local_now()
+        entry.end_time = stop_at
         entry.calculate_duration()
 
         if not safe_commit("stop_timer", {"user_id": user_id, "entry_id": entry.id}):
