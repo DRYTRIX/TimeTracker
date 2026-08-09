@@ -37,7 +37,8 @@ const els = {
   createProjectBtn: document.getElementById('create-project-btn'),
 };
 
-const OPEN_TASK_STATUSES = new Set(['todo', 'in_progress', 'review', 'on_hold']);
+/** Closed statuses — matches Task.is_active (anything else is selectable). */
+const CLOSED_TASK_STATUSES = new Set(['done', 'cancelled']);
 
 /** @type {ApiClient|null} */
 let client = null;
@@ -175,16 +176,17 @@ async function loadTasksForProject(projectId, selectedTaskId = null) {
   try {
     const data = await client.getTasks({
       project_id: projectId,
+      status: 'open',
       per_page: 200,
     });
     const tasks = (data?.tasks || [])
-      .filter((t) => OPEN_TASK_STATUSES.has(t.status))
+      .filter((t) => t.status && !CLOSED_TASK_STATUSES.has(t.status))
       .sort((a, b) => a.name.localeCompare(b.name));
     const selectedId = selectedTaskId != null ? String(selectedTaskId) : '';
     for (const t of tasks) {
       const opt = document.createElement('option');
       opt.value = String(t.id);
-      opt.textContent = t.name;
+      opt.textContent = t.status && t.status !== 'todo' ? `${t.name} (${t.status})` : t.name;
       if (selectedId && String(t.id) === selectedId) opt.selected = true;
       els.taskSelect.appendChild(opt);
     }
@@ -258,6 +260,8 @@ async function notifyBackground() {
 
 els.projectFilter.addEventListener('input', () => {
   fillProjectSelects(els.projectSelect.value || null);
+  const id = Number(els.projectSelect.value);
+  loadTasksForProject(id || null);
 });
 
 els.projectSelect.addEventListener('change', () => {

@@ -497,7 +497,7 @@ class TestTasks:
         assert data["task"]["name"] == "New Task"
 
     def test_list_tasks_status_active_alias(self, client, api_token, test_user, test_project):
-        """status=active returns open tasks (todo, in_progress, review, on_hold)"""
+        """status=active excludes done/cancelled and includes custom Kanban keys."""
         open_task = Task(
             name="Open Task",
             project_id=test_project.id,
@@ -512,6 +512,13 @@ class TestTasks:
             priority="medium",
             created_by=int(test_user),
         )
+        blocked_task = Task(
+            name="Blocked Task",
+            project_id=test_project.id,
+            status="blocked",
+            priority="medium",
+            created_by=int(test_user),
+        )
         done_task = Task(
             name="Done Task",
             project_id=test_project.id,
@@ -519,7 +526,14 @@ class TestTasks:
             priority="medium",
             created_by=int(test_user),
         )
-        db.session.add_all([open_task, on_hold_task, done_task])
+        cancelled_task = Task(
+            name="Cancelled Task",
+            project_id=test_project.id,
+            status="cancelled",
+            priority="medium",
+            created_by=int(test_user),
+        )
+        db.session.add_all([open_task, on_hold_task, blocked_task, done_task, cancelled_task])
         db.session.commit()
 
         headers = {"Authorization": f"Bearer {api_token}"}
@@ -531,7 +545,7 @@ class TestTasks:
         assert response.status_code == 200
         data = json.loads(response.data)
         names = {t["name"] for t in data["tasks"]}
-        assert names == {"Open Task", "On Hold Task"}
+        assert names == {"Open Task", "On Hold Task", "Blocked Task"}
 
     def test_list_tasks_status_exact_match(self, client, api_token, test_user, test_project):
         """status=done returns only done tasks"""

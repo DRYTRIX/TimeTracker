@@ -466,8 +466,8 @@ def list_tasks_for_project():
     if status:
         query = query.filter_by(status=status)
     else:
-        # Default to tasks not done/cancelled
-        query = query.filter(Task.status.in_(["todo", "in_progress", "review", "on_hold"]))
+        # Default to tasks not done/cancelled (aligned with Task.is_active / custom Kanban keys)
+        query = query.filter(Task.status.notin_(["done", "cancelled"]))
 
     tasks = query.order_by(Task.priority.desc(), Task.name.asc()).all()
     return jsonify({"tasks": [{"id": t.id, "name": t.name, "status": t.status, "priority": t.priority} for t in tasks]})

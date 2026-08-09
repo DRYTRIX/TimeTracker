@@ -198,6 +198,7 @@ class TaskService:
         self,
         status: Optional[str] = None,
         statuses: Optional[list] = None,
+        exclude_statuses: Optional[list] = None,
         priority: Optional[str] = None,
         project_id: Optional[int] = None,
         assigned_to: Optional[int] = None,
@@ -247,7 +248,9 @@ class TaskService:
 
         step_start = time.time()
         # Apply filters
-        if statuses:
+        if exclude_statuses:
+            query = query.filter(Task.status.notin_(exclude_statuses))
+        elif statuses:
             query = query.filter(Task.status.in_(statuses))
         elif status:
             query = query.filter(Task.status == status)
@@ -309,7 +312,9 @@ class TaskService:
             count_start = time.time()
             count_query = self.task_repo.query()
             # Apply same filters but without eager loading (faster)
-            if statuses:
+            if exclude_statuses:
+                count_query = count_query.filter(Task.status.notin_(exclude_statuses))
+            elif statuses:
                 count_query = count_query.filter(Task.status.in_(statuses))
             elif status:
                 count_query = count_query.filter(Task.status == status)
