@@ -221,11 +221,23 @@ class TimeEntry(db.Model):
         break_sec = self.break_seconds or 0
         raw_seconds = max(0, raw_seconds - break_sec)
 
-        # Apply per-user rounding if user preferences are set
-        if self.user and hasattr(self.user, "time_rounding_enabled"):
+        # Apply per-user rounding if user preferences are set.
+        # On transient instances (not yet in session), self.user may be None or raise —
+        # look up by user_id so rounding still applies.
+        user = None
+        try:
+            user = self.user
+        except Exception:
+            user = None
+        if user is None and self.user_id:
+            from app.models.user import User
+
+            user = db.session.get(User, self.user_id)
+
+        if user and hasattr(user, "time_rounding_enabled"):
             from app.utils.time_rounding import apply_user_rounding
 
-            self.duration_seconds = apply_user_rounding(raw_seconds, self.user)
+            self.duration_seconds = apply_user_rounding(raw_seconds, user)
         else:
             # Fallback to global rounding setting for backward compatibility
             rounding_minutes = Config.ROUNDING_MINUTES
