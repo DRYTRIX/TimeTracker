@@ -16,9 +16,12 @@ const els = {
   runningView: document.getElementById('running-view'),
   idleView: document.getElementById('idle-view'),
   elapsed: document.getElementById('elapsed'),
+  pausedBadge: document.getElementById('paused-badge'),
   runningProject: document.getElementById('running-project'),
   runningTaskWrap: document.getElementById('running-task-wrap'),
   runningTask: document.getElementById('running-task'),
+  pauseBtn: document.getElementById('pause-btn'),
+  resumeBtn: document.getElementById('resume-btn'),
   stopBtn: document.getElementById('stop-btn'),
   projectFilter: document.getElementById('project-filter'),
   projectSelect: document.getElementById('project-select'),
@@ -47,6 +50,8 @@ let projects = [];
 /** @type {object|null} */
 let activeTimer = null;
 let tickHandle = null;
+/** Keep service worker alive while the popup is open (MV3). */
+let keepAlivePort = null;
 
 function showMessage(text, kind = 'error') {
   els.message.textContent = text;
@@ -92,6 +97,14 @@ function renderElapsed() {
   els.elapsed.textContent = formatElapsedHhMm(elapsedSecondsFromTimer(activeTimer));
 }
 
+function updatePauseResumeUi(timer) {
+  const paused = Boolean(timer?.paused_at);
+  els.pausedBadge.classList.toggle('hidden', !paused);
+  els.pauseBtn.classList.toggle('hidden', paused);
+  els.resumeBtn.classList.toggle('hidden', !paused);
+  els.elapsed.classList.toggle('is-paused', paused);
+}
+
 function showRunning(timer) {
   activeTimer = timer;
   els.needSetup.classList.add('hidden');
@@ -104,6 +117,7 @@ function showRunning(timer) {
   } else {
     els.runningTaskWrap.classList.add('hidden');
   }
+  updatePauseResumeUi(timer);
   renderElapsed();
   stopTick();
   if (!timer.paused_at) {
@@ -204,7 +218,7 @@ async function loadTasksForProject(projectId, selectedTaskId = null) {
 async function loadProjects() {
   if (!client) return;
   const [projectsResp, favResp] = await Promise.all([
-    client.getProjects({ status: 'active', per_page: 100 }),
+    client.getAllProjects({ status: 'active', per_page: 100 }),
     client.getFavoriteProjects().catch(() => ({ favorites: [] })),
   ]);
 
@@ -228,13 +242,10 @@ async function loadClients() {
   try {
     const data = await client.getClients({ per_page: 100 });
     const clients = data?.clients || [];
-    if (!clients.length) {
-      const opt = document.createElement('option');
-      opt.value = '';
-      opt.textContent = 'No clients — create one in the web app';
-      els.newProjectClient.appendChild(opt);
-      return;
-    }
+    const none = document.createElement('option');
+    none.value = '';
+    none.textContent = clients.length ? '— No client —' : 'No clients (optional)';
+    els.newProjectClient.appendChild(none);
     for (const c of clients) {
       const opt = document.createElement('option');
       opt.value = String(c.id);
@@ -244,7 +255,7 @@ async function loadClients() {
   } catch (error) {
     const opt = document.createElement('option');
     opt.value = '';
-    opt.textContent = 'Could not load clients';
+    opt.textContent = '— No client —';
     els.newProjectClient.appendChild(opt);
     console.warn(error);
   }
@@ -256,6 +267,30 @@ async function notifyBackground() {
   } catch {
     /* ignore */
   }
+}
+
+function connectKeepAlive() {
+  try {
+    keepAlivePort = chrome.runtime.connect({ name: 'popup-keepalive' });
+  } catch {
+    keepAlivePort = null;
+  }
+}
+
+/** When start conflicts with an existing timer, sync to that running timer. */
+async function syncToActiveTimerOnConflict() {
+  try {
+    const status = await client.getTimerStatus();
+    if (status?.active && status?.timer) {
+      showRunning(status.timer);
+      await notifyBackground();
+      showMessage('A timer is already running.', 'success');
+      return true;
+    }
+  } catch {
+    /* fall through */
+  }
+  return false;
 }
 
 els.projectFilter.addEventListener('input', () => {
@@ -287,9 +322,56 @@ els.startBtn.addEventListener('click', async () => {
     else await bootstrap();
     await notifyBackground();
   } catch (error) {
-    showMessage(error.message || 'Could not start timer.');
+    const isConflict =
+      error.status === 409 ||
+      error.code === 'CONFLICT' ||
+      error.code === 'timer_already_running';
+    if (isConflict) {
+      // Prefer timer from error payload when present; otherwise refetch status.
+      if (error.data?.timer) {
+        showRunning(error.data.timer);
+        await notifyBackground();
+        showMessage('A timer is already running.', 'success');
+      } else if (!(await syncToActiveTimerOnConflict())) {
+        showMessage(error.message || 'A timer is already running.');
+      }
+    } else {
+      showMessage(error.message || 'Could not start timer.');
+    }
   } finally {
     els.startBtn.disabled = false;
+  }
+});
+
+els.pauseBtn.addEventListener('click', async () => {
+  clearMessage();
+  els.pauseBtn.disabled = true;
+  try {
+    const result = await client.pauseTimer();
+    const timer = result?.time_entry || result?.timer;
+    if (timer) showRunning(timer);
+    else await bootstrap();
+    await notifyBackground();
+  } catch (error) {
+    showMessage(error.message || 'Could not pause timer.');
+  } finally {
+    els.pauseBtn.disabled = false;
+  }
+});
+
+els.resumeBtn.addEventListener('click', async () => {
+  clearMessage();
+  els.resumeBtn.disabled = true;
+  try {
+    const result = await client.resumeTimer();
+    const timer = result?.time_entry || result?.timer;
+    if (timer) showRunning(timer);
+    else await bootstrap();
+    await notifyBackground();
+  } catch (error) {
+    showMessage(error.message || 'Could not resume timer.');
+  } finally {
+    els.resumeBtn.disabled = false;
   }
 });
 
@@ -333,9 +415,9 @@ els.createTaskBtn.addEventListener('click', async () => {
 els.createProjectBtn.addEventListener('click', async () => {
   clearMessage();
   const name = els.newProjectName.value.trim();
-  const clientId = Number(els.newProjectClient.value);
-  if (!name || !clientId) {
-    showMessage('Project name and client are required.');
+  const clientId = els.newProjectClient.value ? Number(els.newProjectClient.value) : null;
+  if (!name) {
+    showMessage('Project name is required.');
     return;
   }
   els.createProjectBtn.disabled = true;
@@ -357,6 +439,8 @@ els.createProjectBtn.addEventListener('click', async () => {
 
 async function bootstrap() {
   clearMessage();
+  connectKeepAlive();
+
   const { server_url, api_token, logged_out, last_timer_status } = await chrome.storage.local.get([
     'server_url',
     'api_token',

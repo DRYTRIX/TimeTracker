@@ -253,6 +253,20 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return false;
 });
 
+/** While the popup is open, keep the service worker alive and refresh the badge every 15s.
+ *  Packaged MV3 extensions clamp chrome.alarms to ≥1 minute; this port holds the SW
+ *  and provides a faster badge tick for the duration of the popup session.
+ */
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== 'popup-keepalive') return;
+  const intervalId = setInterval(() => {
+    refreshTimerStatus().catch(() => {});
+  }, 15_000);
+  port.onDisconnect.addListener(() => {
+    clearInterval(intervalId);
+  });
+});
+
 chrome.idle.onStateChanged.addListener(async (newState) => {
   if (newState === 'active') {
     // User returned before grace expired — cancel pending auto-stop.
