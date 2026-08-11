@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.11.3] - 2026-08-11
+
+### Fixed
+
+- **Manual-entry rounding uses deprecated query API (#725)** — Replaced `User.query.get` with `db.session.get` when resolving the target user for duration rounding on the manual entry form, silencing the SQLAlchemy 2.x deprecation warning and aligning with the recommended session API.
+
+### Changed
+
+- **Client versions** — Synced Electron (`desktop/package.json`) and Flutter (`mobile/pubspec.yaml`) to **5.11.3** with the webapp (`setup.py`).
+
+### Tests
+
+- Added integration tests for the start-timer 409 conflict payload (#700), transient `calculate_duration` rounding (#725), and explicit manual-entry duration rounding to catch double-apply and override-ignored regressions.
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.11.3** (single source of truth for the application version).
+
 ## [5.11.2] - 2026-08-09
 
 ### Fixed
