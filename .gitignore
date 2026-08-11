@@ -18,6 +18,8 @@ lib/
 !mobile/lib/
 !browser-extension/lib/
 !browser-extension/lib/**
+!browser-extension/build/
+!browser-extension/build/**
 lib64/
 parts/
 sdist/

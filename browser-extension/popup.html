@@ -27,12 +27,17 @@
       <div id="running-view" class="card hidden">
         <div class="timer-display">
           <div class="elapsed" id="elapsed">00h:00m</div>
+          <div id="paused-badge" class="paused-badge hidden">Paused</div>
           <div class="meta">
             <strong id="running-project">—</strong>
             <span id="running-task-wrap" class="hidden"> · <span id="running-task"></span></span>
           </div>
         </div>
-        <button type="button" class="btn btn-danger" id="stop-btn">Stop timer</button>
+        <div class="row running-actions">
+          <button type="button" class="btn btn-secondary" id="pause-btn">Pause</button>
+          <button type="button" class="btn btn-primary hidden" id="resume-btn">Resume</button>
+          <button type="button" class="btn btn-danger" id="stop-btn">Stop</button>
+        </div>
       </div>
 
       <div id="idle-view" class="hidden">

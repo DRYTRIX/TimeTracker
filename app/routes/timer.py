@@ -1453,6 +1453,15 @@ def manual_entry():
             flash(_("End time must be after start time"), "error")
             return render_template("timer/manual_entry.html", **_manual_ctx(**prefill_kwargs))
 
+        # Apply user's rounding preference to manually-entered duration
+        if duration_seconds_override is not None:
+            from app.utils.time_rounding import apply_user_rounding
+
+            rounding_user = current_user
+            if target_user_id != current_user.id:
+                rounding_user = db.session.get(User, target_user_id) or current_user
+            duration_seconds_override = apply_user_rounding(duration_seconds_override, rounding_user)
+
         # Use service to create entry (handles validation)
         time_tracking_service = TimeTrackingService()
         result = time_tracking_service.create_manual_entry(

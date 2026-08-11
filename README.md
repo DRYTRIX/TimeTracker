@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.11.3
+
+**Patch (5.11.3):** **Manual-entry rounding (#725)** — replaced deprecated `User.query.get` with `db.session.get` when resolving the rounding user, silencing the SQLAlchemy 2.x deprecation warning. Added integration tests for the start-timer 409 payload (#700), `calculate_duration` rounding, and explicit manual-entry duration rounding. See [CHANGELOG.md](CHANGELOG.md#5113---2026-08-11).
+
 ### ✨ Highlights of v5.11.2
 
 **Patch (5.11.2):** **Attendance Approve (#709)** — correction review no longer treats a missing decision as Reject. **Extension task picker (#700)** — custom Kanban and on-hold tasks appear in the timer dropdown. **Idle auto-stop** — unanswered “Still working?” prompts stop the timer after a grace window. See [CHANGELOG.md](CHANGELOG.md#5112---2026-08-09).

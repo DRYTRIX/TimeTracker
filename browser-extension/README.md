@@ -5,11 +5,11 @@ Chromium (Chrome, Edge, Brave, etc.) Manifest V3 extension for starting and stop
 ## Features
 
 - Connect with username/password (`POST /api/v1/auth/login`) or paste an existing `tt_…` API token
-- Start / stop the active project timer
+- Start / pause / resume / stop the active project timer
 - Toolbar badge with elapsed time and a red clock icon while running
-- Searchable project list (favorites first when available)
+- Searchable project list (favorites first when available; paginated beyond 100)
 - Optional task + notes on start
-- Quick-create task or project (project requires an existing client)
+- Quick-create task or project (client optional)
 
 Uses the same `/api/v1` surface as the [desktop](../desktop/) and [mobile](../mobile/) apps. It does **not** use session cookies or Socket.IO.
 
@@ -24,6 +24,15 @@ Uses the same `/api/v1` surface as the [desktop](../desktop/) and [mobile](../mo
    - Paste an API token from **Admin → API tokens** (or a token from a previous app login).
 6. Allow host access when the browser prompts you.
 7. Use the toolbar popup to start/stop timers.
+
+## Package for distribution
+
+```bash
+cd browser-extension
+npm run zip
+```
+
+Creates `dist/timetracker-extension-vX.Y.Z.zip` ready for Chrome Web Store upload or sideload.
 
 ## Required API scopes
 
@@ -70,8 +79,6 @@ browser-extension/
 
 ## Not in this version
 
-- Chrome Web Store packaging / signed CRX CI
 - Firefox-specific packaging
-- Pause / resume UI (API endpoints already exist)
 - Page content scripts / automatic project detection
 - OIDC device flow inside the extension

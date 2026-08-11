@@ -421,11 +421,15 @@ def start_timer():
     )
     if not result.get("success"):
         if result.get("error") == "timer_already_running":
-            return error_response(
-                result.get("message", "Could not start timer"),
-                error_code="timer_already_running",
-                status_code=409,
-            )
+            active = g.api_user.active_timer
+            payload = {
+                "success": False,
+                "error": result.get("message", "Could not start timer"),
+                "message": result.get("message", "Could not start timer"),
+                "error_code": "timer_already_running",
+                "timer": active.to_dict() if active else None,
+            }
+            return jsonify(payload), 409
         return error_response(
             result.get("message", "Could not start timer"),
             status_code=400,

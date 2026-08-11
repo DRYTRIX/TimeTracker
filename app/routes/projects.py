@@ -2162,10 +2162,15 @@ def download_project_attachment(attachment_id):
     """Download a project attachment"""
     import os
 
-    from flask import current_app, send_file
+    from flask import abort, current_app, send_file
+
+    from app.utils.scope_filter import user_can_access_project
 
     attachment = ProjectAttachment.query.get_or_404(attachment_id)
     project = attachment.project
+
+    if not user_can_access_project(current_user, attachment.project_id):
+        abort(403)
 
     # Build file path
     file_path = os.path.join(current_app.root_path, "..", attachment.file_path)

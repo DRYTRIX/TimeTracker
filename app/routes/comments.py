@@ -363,8 +363,25 @@ def upload_comment_attachment(comment_id):
 @login_required
 def download_attachment(attachment_id):
     """Download a comment attachment"""
+    from flask import abort
+
+    from app.utils.scope_filter import user_can_access_project
+
     attachment = CommentAttachment.query.get_or_404(attachment_id)
     comment = attachment.comment
+
+    # Enforce access on the parent project, task, or quote
+    if comment.project_id:
+        if not user_can_access_project(current_user, comment.project_id):
+            abort(403)
+    elif comment.task_id:
+        task = Task.query.get_or_404(comment.task_id)
+        if not user_can_access_project(current_user, task.project_id):
+            abort(403)
+    elif comment.quote_id:
+        quote = Quote.query.get_or_404(comment.quote_id)
+        if not current_user.is_admin and quote.created_by != current_user.id:
+            abort(403)
 
     # Build file path
     file_path = os.path.join(current_app.root_path, "..", attachment.file_path)

@@ -1392,8 +1392,13 @@ def download_client_attachment(attachment_id):
 
     from flask import send_file
 
+    from app.utils.scope_filter import user_can_access_client
+
     attachment = ClientAttachment.query.get_or_404(attachment_id)
     client = attachment.client
+
+    if not user_can_access_client(current_user, attachment.client_id):
+        abort(403)
 
     # Build file path
     file_path = os.path.join(current_app.root_path, "..", attachment.file_path)

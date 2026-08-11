@@ -87,6 +87,27 @@ def test_join_client_room_calls_flask_socketio_join_room(app, test_client):
             mock_join.assert_called_once_with(f"client_portal_{test_client.id}")
 
 
+@pytest.mark.unit
+def test_leave_user_room_calls_flask_socketio_leave_room(app, user):
+    """Regression for #709: leave_room must be imported from flask_socketio, not called on SocketIO."""
+    legacy_api = _load_legacy_api_routes()
+    with app.test_request_context():
+        with patch.object(legacy_api, "leave_room") as mock_leave:
+            legacy_api.handle_leave_user_room({"user_id": user.id})
+            mock_leave.assert_called_once_with(f"user_{user.id}")
+
+
+@pytest.mark.unit
+def test_leave_client_room_calls_flask_socketio_leave_room(app, test_client):
+    """Client portal room leave must use flask_socketio.leave_room."""
+    legacy_api = _load_legacy_api_routes()
+    with app.test_request_context():
+        session["client_portal_id"] = test_client.id
+        with patch.object(legacy_api, "leave_room") as mock_leave:
+            legacy_api.handle_leave_client_room({})
+            mock_leave.assert_called_once_with(f"client_portal_{test_client.id}")
+
+
 @pytest.mark.routes
 def test_correction_request_visible_on_history_and_admin(client, app, user, admin_user):
     user_id = user.id
