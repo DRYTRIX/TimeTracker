@@ -1,5 +1,7 @@
 """Unit tests for time rounding functionality"""
 
+from datetime import datetime, timedelta
+
 import pytest
 from app.utils.time_rounding import (
     round_time_duration,
@@ -201,3 +203,60 @@ class TestFormattingFunctions:
         assert "nearest" in method_values
         assert "up" in method_values
         assert "down" in method_values
+
+
+class TestCalculateDurationTransientUser:
+    """calculate_duration must apply per-user rounding on transient TimeEntry instances."""
+
+    def test_rounding_applies_when_user_relationship_unavailable(self, app, user, project):
+        """When self.user cannot be loaded, fall back to user_id lookup and still round."""
+        from unittest.mock import PropertyMock, patch
+
+        from app import db
+        from app.models import TimeEntry, User
+        from app.utils.time_rounding import apply_user_rounding
+
+        with app.app_context():
+            user_id = user.id
+            project_id = project.id
+
+            # Persist rounding prefs via bulk update to avoid audit-listener lock flakes
+            db.session.query(User).filter_by(id=user_id).update(
+                {
+                    "time_rounding_enabled": True,
+                    "time_rounding_minutes": 15,
+                    "time_rounding_method": "nearest",
+                },
+                synchronize_session=False,
+            )
+            db.session.commit()
+
+            rounding_user = db.session.get(User, user_id)
+            expected = apply_user_rounding(62 * 60, rounding_user)
+            assert expected == 3600
+
+            start = datetime(2025, 6, 1, 9, 0, 0)
+            # 62 minutes raw → nearest 15 min = 60 minutes = 3600 seconds
+            end = start + timedelta(minutes=62)
+            entry = TimeEntry(
+                user_id=user_id,
+                project_id=project_id,
+                start_time=start,
+                end_time=end,
+                source="manual",
+                billable=True,
+            )
+            # Intentionally not added to the session (transient)
+            assert entry not in db.session
+
+            # Simulate the transient-instance relationship failure that #725 fixes
+            with patch.object(
+                TimeEntry,
+                "user",
+                new_callable=PropertyMock,
+                side_effect=Exception("transient: user relationship unavailable"),
+            ):
+                entry.calculate_duration()
+
+            assert entry.duration_seconds == expected
+            assert entry.duration_seconds == 3600

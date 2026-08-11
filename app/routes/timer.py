@@ -1459,7 +1459,7 @@ def manual_entry():
 
             rounding_user = current_user
             if target_user_id != current_user.id:
-                rounding_user = User.query.get(target_user_id) or current_user
+                rounding_user = db.session.get(User, target_user_id) or current_user
             duration_seconds_override = apply_user_rounding(duration_seconds_override, rounding_user)
 
         # Use service to create entry (handles validation)

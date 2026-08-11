@@ -398,6 +398,37 @@ class TestTimer:
         assert "timer" in data
         assert data["timer"]["project_id"] == test_project.id
 
+    def test_start_timer_conflict_includes_active_timer(self, client, api_token, test_user, test_project):
+        """Starting while a timer is running returns 409 with the active timer embedded."""
+        active = TimeEntry(
+            user_id=int(test_user),
+            project_id=test_project.id,
+            start_time=datetime.utcnow(),
+            end_time=None,
+            source="api",
+            billable=True,
+            notes="Already running",
+        )
+        db.session.add(active)
+        db.session.commit()
+        active_id = active.id
+
+        headers = {"Authorization": f"Bearer {api_token}", "Content-Type": "application/json"}
+        response = client.post(
+            "/api/v1/timer/start",
+            json={"project_id": test_project.id},
+            headers=headers,
+        )
+
+        assert response.status_code == 409
+        data = json.loads(response.data)
+        assert data["success"] is False
+        assert data["error_code"] == "timer_already_running"
+        assert data.get("timer") is not None
+        assert data["timer"]["id"] == active_id
+        assert data["timer"]["project_id"] == test_project.id
+        assert data["timer"]["end_time"] is None
+
     def test_stop_timer(self, client, api_token, test_user, test_project):
         """Test stopping a timer"""
         timer = TimeEntry(
