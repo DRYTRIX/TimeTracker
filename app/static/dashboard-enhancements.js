@@ -147,7 +147,8 @@
     async function loadActivityTimeline() {
         try {
             const response = await fetch('/api/activity/timeline', {
-                credentials: 'same-origin'
+                credentials: 'same-origin',
+                __ttQuiet: true
             });
 
             if (!response.ok) {
@@ -283,8 +284,9 @@
             dashboard.insertBefore(indicator, dashboard.firstChild);
         }
 
-        // Start real-time update interval
+        // Start real-time update interval — skip while tab is hidden (#703)
         realTimeUpdateInterval = setInterval(() => {
+            if (typeof document !== 'undefined' && document.hidden) return;
             updateDashboardData();
         }, 30000); // Update every 30 seconds
 
@@ -326,7 +328,8 @@
     async function updateStats() {
         try {
             const response = await fetch('/api/dashboard/stats', {
-                credentials: 'same-origin'
+                credentials: 'same-origin',
+                __ttQuiet: true
             });
 
             if (!response.ok) {
@@ -408,7 +411,8 @@
     async function updateSparklines() {
         try {
             const response = await fetch('/api/dashboard/sparklines', {
-                credentials: 'same-origin'
+                credentials: 'same-origin',
+                __ttQuiet: true
             });
 
             if (!response.ok) {
@@ -465,7 +469,7 @@
         const apiUrl = root.getAttribute('data-api-url') || '/api/reports/week-comparison';
 
         try {
-            const response = await fetch(apiUrl, { credentials: 'same-origin' });
+            const response = await fetch(apiUrl, { credentials: 'same-origin', __ttQuiet: true });
             if (!response.ok) {
                 throw new Error('week-comparison failed');
             }
@@ -625,7 +629,7 @@
         if (contentEl) contentEl.classList.add('hidden');
 
         try {
-            const response = await fetch('/api/stats/value-dashboard', { credentials: 'same-origin' });
+            const response = await fetch('/api/stats/value-dashboard', { credentials: 'same-origin', __ttQuiet: true });
             if (!response.ok) {
                 throw new Error('value-dashboard failed');
             }
