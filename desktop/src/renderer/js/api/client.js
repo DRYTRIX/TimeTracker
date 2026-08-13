@@ -372,6 +372,10 @@ class ApiClient {
     return await this.client.post('/api/v1/timer/stop');
   }
 
+  async sendHeartbeat() {
+    return await this.client.post('/api/v1/timer/heartbeat');
+  }
+
   async getTimeEntries({ projectId, startDate, endDate, billable, page, perPage }) {
     const params = {};
     if (projectId) params.project_id = projectId;

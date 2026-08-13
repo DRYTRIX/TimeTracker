@@ -241,6 +241,10 @@ export class ApiClient {
     return this.request('POST', '/api/v1/timer/stop', Object.keys(body).length ? body : undefined);
   }
 
+  sendHeartbeat() {
+    return this.request('POST', '/api/v1/timer/heartbeat');
+  }
+
   getProjects(params = {}) {
     const qs = new URLSearchParams();
     if (params.status) qs.set('status', params.status);

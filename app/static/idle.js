@@ -15,6 +15,24 @@
   let promptShown = false;
   let graceTimerId = null;
   let countdownIntervalId = null;
+  let lastHeartbeatSent = 0;
+  let hasActiveTimer = false;
+  const HEARTBEAT_THROTTLE_MS = 60 * 1000;
+
+  function sendHeartbeat(){
+    if (!hasActiveTimer) return;
+    const now = Date.now();
+    if (now - lastHeartbeatSent < HEARTBEAT_THROTTLE_MS) return;
+    lastHeartbeatSent = now;
+    try {
+      fetch('/api/timer/heartbeat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
+        __ttQuiet: true,
+      }).catch(function(){});
+    } catch(e) {}
+  }
 
   function markActive(){
     // While the "Still working?" grace prompt is open, only Yes/No (or the
@@ -22,6 +40,7 @@
     // must not silently dismiss or re-arm the timer.
     if (promptShown) return;
     lastActivity = Date.now();
+    sendHeartbeat();
   }
 
   ['mousemove','keydown','scroll','click','touchstart','visibilitychange'].forEach(evt =>
@@ -30,7 +49,7 @@
 
   async function getTimer(){
     try {
-      const r = await fetch('/api/timer/status');
+      const r = await fetch('/api/timer/status', { __ttQuiet: true });
       if (!r.ok) return null; const j = await r.json();
       return j && j.active ? j.timer : null;
     } catch(e){ return null; }
@@ -77,6 +96,8 @@
     clearGraceTimers();
     lastActivity = Date.now();
     promptShown = false;
+    lastHeartbeatSent = 0; // force immediate heartbeat so server clears idle_notified_at
+    sendHeartbeat();
     try { if (toastEl) toastEl.remove(); } catch(e) {}
   }
 
@@ -145,6 +166,7 @@
 
   async function tick(){
     const active = await getTimer();
+    hasActiveTimer = !!active;
     if (!active) return;
     const threshold = getIdleThresholdMs();
     const idleFor = Date.now() - lastActivity;
@@ -155,6 +177,9 @@
     // Break reminder follows the active timer state; check on every tick.
     try { checkBreakNudge(active); } catch(e) {}
   }
+
+  // Prime active-timer flag soon after load so early activity can heartbeat.
+  setTimeout(function(){ tick(); }, 2000);
 
   setInterval(tick, CHECK_INTERVAL_MS);
 
@@ -195,7 +220,10 @@
       return lastNotificationsFetch.payload;
     }
     try {
-      const r = await fetch('/api/notifications', { headers: { 'Accept': 'application/json' } });
+      const r = await fetch('/api/notifications', {
+        headers: { 'Accept': 'application/json' },
+        __ttQuiet: true,
+      });
       if (!r.ok) return null;
       const j = await r.json();
       lastNotificationsFetch = { at: now, payload: j };

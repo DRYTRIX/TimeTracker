@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:timetracker_mobile/core/services/idle_detection_service.dart';
 import 'package:timetracker_mobile/core/services/notification_service.dart';
 import 'package:timetracker_mobile/data/models/timer.dart';
 import 'package:timetracker_mobile/domain/repositories/time_tracking_repository.dart';
@@ -8,7 +9,8 @@ import 'package:timetracker_mobile/presentation/providers/api_provider.dart';
 final timeTrackingRepositoryProvider = Provider<TimeTrackingRepository?>((ref) {
   final apiClientAsync = ref.watch(apiClientProvider);
   return apiClientAsync.when(
-    data: (apiClient) => apiClient != null ? TimeTrackingRepository(apiClient) : null,
+    data: (apiClient) =>
+        apiClient != null ? TimeTrackingRepository(apiClient) : null,
     loading: () => null,
     error: (_, __) => null,
   );
@@ -19,17 +21,23 @@ class TimerState {
   final Timer? timer;
   final bool isLoading;
   final String? error;
+  final int? idleTimeoutMinutes;
+  final bool idleNotified;
 
   TimerState({
     this.timer,
     this.isLoading = false,
     this.error,
+    this.idleTimeoutMinutes,
+    this.idleNotified = false,
   });
 
   TimerState copyWith({
     Timer? timer,
     bool? isLoading,
     String? error,
+    int? idleTimeoutMinutes,
+    bool? idleNotified,
     bool clearTimer = false,
     bool clearError = false,
   }) {
@@ -37,6 +45,8 @@ class TimerState {
       timer: clearTimer ? null : (timer ?? this.timer),
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
+      idleTimeoutMinutes: idleTimeoutMinutes ?? this.idleTimeoutMinutes,
+      idleNotified: idleNotified ?? this.idleNotified,
     );
   }
 
@@ -52,10 +62,16 @@ class TimerNotifier extends StateNotifier<TimerState> {
 
   TimerNotifier(this.repository) : super(TimerState()) {
     if (repository != null) {
+      IdleDetectionService.instance.start(repository);
       _loadTimerStatus();
-      // Poll timer status every 5 seconds if active
       _startPolling();
     }
+  }
+
+  @override
+  void dispose() {
+    IdleDetectionService.instance.setRepository(null);
+    super.dispose();
   }
 
   void _startPolling() {
@@ -72,8 +88,20 @@ class TimerNotifier extends StateNotifier<TimerState> {
 
     try {
       state = state.copyWith(isLoading: true, clearError: true);
-      final timer = await repository!.getTimerStatus();
-      state = state.copyWith(timer: timer, isLoading: false, clearTimer: timer == null);
+      final status = await repository!.getTimerStatusDetailed();
+      final timer = status.timer;
+      state = state.copyWith(
+        timer: timer,
+        isLoading: false,
+        clearTimer: timer == null,
+        idleTimeoutMinutes: status.idleTimeoutMinutes,
+        idleNotified: status.idleNotified,
+      );
+      await IdleDetectionService.instance.updateFromTimerStatus(
+        active: timer != null && !(timer.isPaused),
+        idleTimeoutMinutes: status.idleTimeoutMinutes,
+        idleNotified: status.idleNotified,
+      );
       await _syncNotificationWithState();
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -98,8 +126,9 @@ class TimerNotifier extends StateNotifier<TimerState> {
         notes: notes,
       );
       state = state.copyWith(timer: timer, isLoading: false);
+      IdleDetectionService.instance.markActive();
+      await IdleDetectionService.instance.updateFromTimerStatus(active: true);
       await _showRunningNotification(timer);
-      // Start polling
       _startPolling();
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -115,10 +144,14 @@ class TimerNotifier extends StateNotifier<TimerState> {
     try {
       state = state.copyWith(isLoading: true, clearError: true);
       await repository!.stopTimer();
-      state = state.copyWith(clearTimer: true, isLoading: false, clearError: true);
+      state =
+          state.copyWith(clearTimer: true, isLoading: false, clearError: true);
+      await IdleDetectionService.instance.updateFromTimerStatus(active: false);
       await _cancelRunningNotification();
     } on TimerAlreadyStoppedException catch (e) {
-      state = state.copyWith(clearTimer: true, isLoading: false, error: e.message);
+      state =
+          state.copyWith(clearTimer: true, isLoading: false, error: e.message);
+      await IdleDetectionService.instance.updateFromTimerStatus(active: false);
       await _cancelRunningNotification();
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -134,6 +167,7 @@ class TimerNotifier extends StateNotifier<TimerState> {
       state = state.copyWith(isLoading: true, clearError: true);
       final timer = await repository!.pauseTimer();
       state = state.copyWith(timer: timer, isLoading: false);
+      await IdleDetectionService.instance.updateFromTimerStatus(active: false);
       await _cancelRunningNotification();
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -149,6 +183,8 @@ class TimerNotifier extends StateNotifier<TimerState> {
       state = state.copyWith(isLoading: true, clearError: true);
       final timer = await repository!.resumeTimer();
       state = state.copyWith(timer: timer, isLoading: false);
+      IdleDetectionService.instance.markActive();
+      await IdleDetectionService.instance.updateFromTimerStatus(active: true);
       await _showRunningNotification(timer);
       _startPolling();
     } catch (e) {
@@ -160,7 +196,6 @@ class TimerNotifier extends StateNotifier<TimerState> {
     await _loadTimerStatus();
   }
 
-  /// Get elapsed time for active timer
   Duration getElapsedTime() {
     if (state.timer == null) {
       return Duration.zero;
@@ -172,7 +207,6 @@ class TimerNotifier extends StateNotifier<TimerState> {
     await _loadTimerStatus();
   }
 
-  /// Keep the persistent notification in sync after a status poll.
   Future<void> _syncNotificationWithState() async {
     try {
       final timer = state.timer;

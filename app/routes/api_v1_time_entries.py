@@ -381,6 +381,7 @@ def timer_status():
                 "active": False,
                 "timer": None,
                 "idle_timeout_minutes": idle_timeout_minutes,
+                "idle_notified": False,
             }
         )
     return jsonify(
@@ -388,8 +389,43 @@ def timer_status():
             "active": True,
             "timer": active_timer.to_dict(),
             "idle_timeout_minutes": idle_timeout_minutes,
+            "idle_notified": bool(active_timer.idle_notified_at),
         }
     )
+
+
+@api_v1_time_entries_bp.route("/timer/heartbeat", methods=["POST"])
+@require_api_token("write:time_entries")
+def timer_heartbeat():
+    """Record activity for the active timer (idle timeout safety net).
+
+    Clears any pending idle notification so the server grace window resets.
+    """
+    from app import db
+    from app.utils.db import safe_commit
+
+    active_timer = g.api_user.active_timer
+    if not active_timer:
+        return error_response(
+            "No active timer",
+            error_code="no_active_timer",
+            status_code=400,
+        )
+
+    try:
+        active_timer.record_heartbeat()
+    except ValueError as e:
+        return error_response(str(e), error_code="heartbeat_failed", status_code=400)
+
+    if not safe_commit("timer_heartbeat", {"user_id": g.api_user.id, "entry_id": active_timer.id}):
+        db.session.rollback()
+        return error_response(
+            "Failed to record heartbeat",
+            error_code="database_error",
+            status_code=500,
+        )
+
+    return ("", 204)
 
 
 @api_v1_time_entries_bp.route("/timer/start", methods=["POST"])

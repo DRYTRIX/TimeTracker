@@ -8,6 +8,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:timetracker_mobile/core/constants/app_constants.dart';
 import 'package:timetracker_mobile/core/services/foreground_task_handler.dart';
 
+enum IdlePromptAction { stillWorking, stop }
+
 /// Persistent "timer running" notification for Android (foreground service)
 /// and iOS (local notification with start time).
 class NotificationService {
@@ -20,6 +22,10 @@ class NotificationService {
 
   bool _initialized = false;
   bool _isShowing = false;
+  bool _idlePromptShowing = false;
+
+  /// Callback when the user taps Yes/No on the idle prompt notification.
+  void Function(IdlePromptAction action)? onIdleAction;
 
   bool get isShowing => _isShowing;
 
@@ -99,6 +105,14 @@ class NotificationService {
         importance: Importance.high,
       ),
     );
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        AppConstants.idleReminderChannelId,
+        AppConstants.idleReminderChannelName,
+        description: AppConstants.idleReminderChannelDescription,
+        importance: Importance.high,
+      ),
+    );
   }
 
   Future<void> _requestPermissions() async {
@@ -121,8 +135,22 @@ class NotificationService {
   }
 
   void _onNotificationTapped(NotificationResponse response) {
-    // Launching the app is handled by the OS / FGS tap; nothing else needed.
-    debugPrint('Timer notification tapped: ${response.payload}');
+    debugPrint(
+      'Notification tapped: payload=${response.payload} action=${response.actionId}',
+    );
+    final actionId = response.actionId;
+    if (actionId == 'idle_yes') {
+      onIdleAction?.call(IdlePromptAction.stillWorking);
+      return;
+    }
+    if (actionId == 'idle_no') {
+      onIdleAction?.call(IdlePromptAction.stop);
+      return;
+    }
+    if (response.payload == 'idle_prompt') {
+      // Body tap = still working
+      onIdleAction?.call(IdlePromptAction.stillWorking);
+    }
   }
 
   /// Show (or refresh) the persistent timer notification.
@@ -245,6 +273,67 @@ class NotificationService {
       details,
       payload: 'timer_running',
     );
+  }
+
+  /// "Still working?" idle prompt with Yes / No actions.
+  Future<void> showIdlePrompt({int graceMinutes = 5}) async {
+    if (!_initialized) {
+      await initialize();
+    }
+
+    const title = 'Still working?';
+    final body =
+        'Your timer will stop in $graceMinutes minutes if you do not answer.';
+
+    final details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        AppConstants.idleReminderChannelId,
+        AppConstants.idleReminderChannelName,
+        channelDescription: AppConstants.idleReminderChannelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        category: AndroidNotificationCategory.alarm,
+        ongoing: true,
+        autoCancel: false,
+        actions: const <AndroidNotificationAction>[
+          AndroidNotificationAction(
+            'idle_yes',
+            'Yes, still working',
+            showsUserInterface: true,
+          ),
+          AndroidNotificationAction(
+            'idle_no',
+            'No, stop timer',
+            showsUserInterface: true,
+          ),
+        ],
+      ),
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        interruptionLevel: InterruptionLevel.timeSensitive,
+        categoryIdentifier: 'idle_prompt',
+      ),
+    );
+
+    await _localNotifications.show(
+      AppConstants.notificationIdleReminder,
+      title,
+      body,
+      details,
+      payload: 'idle_prompt',
+    );
+    _idlePromptShowing = true;
+  }
+
+  Future<void> cancelIdlePrompt() async {
+    if (!_idlePromptShowing) {
+      await _localNotifications.cancel(AppConstants.notificationIdleReminder);
+      return;
+    }
+    await _localNotifications.cancel(AppConstants.notificationIdleReminder);
+    _idlePromptShowing = false;
   }
 
   /// Update elapsed text (mainly used on platforms that do not tick via FGS).

@@ -35,6 +35,9 @@ class TimeEntry(db.Model):
     billable = db.Column(db.Boolean, default=True, nullable=False)
     paid = db.Column(db.Boolean, default=False, nullable=False, index=True)
     invoice_number = db.Column(db.String(100), nullable=True)
+    # Idle timeout: clients POST /timer/heartbeat while active; server job auto-stops when stale
+    last_heartbeat_at = db.Column(db.DateTime, nullable=True, index=True)
+    idle_notified_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=local_now, nullable=False)
     updated_at = db.Column(db.DateTime, default=local_now, onupdate=local_now, nullable=False)
 
@@ -249,6 +252,18 @@ class TimeEntry(db.Model):
             else:
                 self.duration_seconds = raw_seconds
 
+    def record_heartbeat(self, at=None):
+        """Record client activity for idle timeout enforcement.
+
+        Clears any pending idle notification so the server grace window resets.
+        """
+        if self.end_time:
+            raise ValueError("Cannot heartbeat a stopped timer")
+        now = at if at is not None else local_now()
+        self.last_heartbeat_at = now
+        self.idle_notified_at = None
+        self.updated_at = local_now()
+
     def stop_timer(self, end_time=None):
         """Stop an active timer"""
         if self.end_time:
@@ -260,6 +275,7 @@ class TimeEntry(db.Model):
         else:
             self.end_time = local_now()
 
+        self.idle_notified_at = None
         self.calculate_duration()
         self.updated_at = local_now()
 
@@ -342,6 +358,9 @@ class TimeEntry(db.Model):
             "paid": self.paid,
             "invoice_number": self.invoice_number,
             "is_active": self.is_active,
+            "last_heartbeat_at": self.last_heartbeat_at.isoformat() if self.last_heartbeat_at else None,
+            "idle_notified": bool(self.idle_notified_at),
+            "idle_notified_at": self.idle_notified_at.isoformat() if self.idle_notified_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "user": self.user.username if self.user else None,

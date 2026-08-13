@@ -27,6 +27,21 @@ def test_error_handler_quiet_health_and_visibility_reconnect():
     assert "startHealthProbeInterval" in content
     assert "/api/health" in content
     assert "if (quiet)" in content
+    # Delayed second probe on resume sweeps errors from background fetches (#703 redux)
+    assert "setTimeout" in content
+    assert "1500" in content
+    assert content.count("checkOnlineStatus({ quiet: true, onResume: true })") >= 2
+
+
+def test_idle_background_fetches_are_quiet():
+    """Background idle polls must not toast on transient resume failures (#703)."""
+    content = (STATIC / "idle.js").read_text(encoding="utf-8")
+    assert "fetch('/api/timer/status', { __ttQuiet: true })" in content
+    assert "__ttQuiet: true" in content
+    assert "/api/timer/heartbeat" in content
+    assert "/api/notifications" in content
+    # Heartbeat and notifications fetches must both carry the quiet flag
+    assert content.count("__ttQuiet: true") >= 3
 
 
 def test_service_worker_bypasses_health_probe():

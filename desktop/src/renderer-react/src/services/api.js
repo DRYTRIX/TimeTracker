@@ -165,7 +165,12 @@ export class ApiClient {
   getUsersMe() { return this.unwrap(this.client.get('/api/v1/users/me')); }
   getTimerStatus() { return this.unwrap(this.client.get('/api/v1/timer/status')); }
   startTimer(data) { return this.unwrap(this.client.post('/api/v1/timer/start', { project_id: data.projectId, task_id: data.taskId || null, notes: data.notes || '' })); }
-  stopTimer() { return this.unwrap(this.client.post('/api/v1/timer/stop')); }
+  stopTimer({ stopTime = null } = {}) {
+    const body = {};
+    if (stopTime) body.stop_time = stopTime;
+    return this.unwrap(this.client.post('/api/v1/timer/stop', Object.keys(body).length ? body : undefined));
+  }
+  sendHeartbeat() { return this.unwrap(this.client.post('/api/v1/timer/heartbeat')); }
   pauseTimer() { return this.unwrap(this.client.post('/api/v1/timer/pause')); }
   resumeTimer() { return this.unwrap(this.client.post('/api/v1/timer/resume')); }
   getProjects(params = {}) { return this.unwrap(this.client.get('/api/v1/projects', { params })); }

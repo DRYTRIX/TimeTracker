@@ -31,6 +31,11 @@ class AppConstants {
   static const String timerNotificationChannelName = 'Timer running';
   static const String timerNotificationChannelDescription =
       'Shows while a time tracker is running';
+
+  static const String idleReminderChannelId = 'idle_reminder';
+  static const String idleReminderChannelName = 'Idle reminder';
+  static const String idleReminderChannelDescription =
+      'Asks if you are still working when the timer is idle';
   
   // Time Formats
   static const String timeFormat24h = 'HH:mm:ss';

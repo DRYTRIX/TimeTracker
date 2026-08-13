@@ -285,8 +285,43 @@ function App() {
     if (active && timer?.start_time) {
       elapsedLabel = formatDuration(timerElapsedSeconds(timerPayload));
     }
-    window.electronAPI.sendTimerStatus({ active, paused, timer, elapsedLabel });
+    window.electronAPI.sendTimerStatus({
+      active,
+      paused,
+      timer,
+      elapsedLabel,
+      idle_timeout_minutes: timerPayload?.idle_timeout_minutes,
+    });
   }, []);
+
+  useEffect(() => {
+    if (!apiClient || !window.electronAPI?.onIdlePrompt) return undefined;
+
+    const unsubPrompt = window.electronAPI.onIdlePrompt((payload) => {
+      const ok = window.confirm(
+        'Still working? Your timer will stop automatically if you do not confirm.\n\nPress OK if you are still working, or Cancel to stop the timer now.',
+      );
+      if (ok) {
+        window.electronAPI.idleStillWorking();
+        apiClient.sendHeartbeat().catch(() => {});
+      } else {
+        window.electronAPI.idleStop();
+      }
+    });
+    const unsubStopped = window.electronAPI.onIdleTimerStopped?.(() => {
+      refreshCoreData();
+      showToast('Timer stopped due to inactivity', 'warning');
+    });
+    const unsubDismissed = window.electronAPI.onIdleDismissed?.(() => {
+      // no-op; heartbeat already sent from main
+    });
+
+    return () => {
+      if (typeof unsubPrompt === 'function') unsubPrompt();
+      if (typeof unsubStopped === 'function') unsubStopped();
+      if (typeof unsubDismissed === 'function') unsubDismissed();
+    };
+  }, [apiClient, refreshCoreData, showToast]);
 
   useEffect(() => {
     if (!apiClient) return undefined;

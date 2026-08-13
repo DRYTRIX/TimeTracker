@@ -694,6 +694,31 @@ def register_scheduled_tasks(scheduler, app=None):
         )
         logger.info("Registered smart reminder push task")
 
+        # Idle timeout safety net – every 5 minutes
+        def check_idle_timers_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for idle timer check")
+                    return
+            with app_instance.app_context():
+                try:
+                    check_idle_timers()
+                except Exception as e:
+                    logger.warning("Idle timer check job failed: %s", e)
+
+        scheduler.add_job(
+            func=check_idle_timers_with_app,
+            trigger="interval",
+            minutes=5,
+            id="check_idle_timers",
+            name="Check idle timers and auto-stop after grace",
+            replace_existing=True,
+        )
+        logger.info("Registered idle timer check task")
+
         def check_working_time_limits_with_app():
             app_instance = app
             if app_instance is None:
@@ -809,6 +834,159 @@ def register_scheduled_tasks(scheduler, app=None):
 
     except Exception as e:
         logger.error(f"Error registering scheduled tasks: {e}")
+
+
+def check_idle_timers():
+    """Server-side idle timeout safety net.
+
+    For every active timer whose last heartbeat (or start time if never heartbeated)
+    is older than ``settings.idle_timeout_minutes``:
+
+    1. First pass: set ``idle_notified_at`` and send a browser push "Still working?".
+    2. Second pass (after 5-minute grace): auto-stop the timer backdated to the
+       last heartbeat (or start time).
+
+    Clients that keep sending heartbeats keep ``last_heartbeat_at`` fresh and
+    clear ``idle_notified_at``, so they are never auto-stopped while active.
+    """
+    from app.models import Settings
+    from app.models.time_entry import local_now
+
+    try:
+        settings = Settings.get_settings()
+        idle_minutes = int(getattr(settings, "idle_timeout_minutes", None) or 30)
+        idle_minutes = max(1, min(480, idle_minutes))
+        threshold = timedelta(minutes=idle_minutes)
+        grace = timedelta(minutes=5)
+        now = local_now()
+        cutoff = now - threshold
+
+        stale = (
+            TimeEntry.query.filter(
+                TimeEntry.end_time.is_(None),
+                db.or_(
+                    TimeEntry.last_heartbeat_at < cutoff,
+                    db.and_(
+                        TimeEntry.last_heartbeat_at.is_(None),
+                        TimeEntry.start_time < cutoff,
+                    ),
+                ),
+            )
+            .all()
+        )
+
+        if not stale:
+            return 0
+
+        notified = 0
+        stopped = 0
+        for entry in stale:
+            try:
+                if entry.idle_notified_at is None:
+                    entry.idle_notified_at = now
+                    entry.updated_at = now
+                    _send_idle_push(entry)
+                    notified += 1
+                    logger.info(
+                        "Idle notify for timer %s user=%s (stale since heartbeat/start)",
+                        entry.id,
+                        entry.user_id,
+                    )
+                else:
+                    notified_at = entry.idle_notified_at
+                    if getattr(notified_at, "tzinfo", None) is not None:
+                        notified_at = notified_at.replace(tzinfo=None)
+                    if (now - notified_at) >= grace:
+                        stop_at = entry.last_heartbeat_at or entry.start_time
+                        if getattr(stop_at, "tzinfo", None) is not None:
+                            stop_at = stop_at.replace(tzinfo=None)
+                        if stop_at and stop_at > now:
+                            stop_at = now
+                        # stop_timer commits; avoid double-commit issues by calling it last
+                        entry_id = entry.id
+                        user_id = entry.user_id
+                        entry.stop_timer(end_time=stop_at)
+                        stopped += 1
+                        logger.info(
+                            "Idle auto-stop timer %s user=%s at %s",
+                            entry_id,
+                            user_id,
+                            stop_at,
+                        )
+                        try:
+                            from app import socketio
+
+                            socketio.emit(
+                                "timer_stopped",
+                                {
+                                    "user_id": user_id,
+                                    "timer_id": entry_id,
+                                    "duration": entry.duration_formatted,
+                                    "reason": "idle_timeout",
+                                },
+                            )
+                        except Exception as emit_err:
+                            logger.debug("socketio emit after idle stop failed: %s", emit_err)
+            except Exception as e:
+                logger.warning(
+                    "Idle check failed for entry %s: %s",
+                    getattr(entry, "id", None),
+                    e,
+                )
+                db.session.rollback()
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            logger.warning("Idle check commit failed: %s", e)
+            db.session.rollback()
+
+        if notified or stopped:
+            logger.info("Idle check: notified=%d stopped=%d", notified, stopped)
+        return notified + stopped
+    except Exception as e:
+        logger.error("Error in check_idle_timers: %s", e)
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return 0
+
+
+def _send_idle_push(entry):
+    """Send a 'Still working?' browser push for an idle active timer."""
+    user = getattr(entry, "user", None)
+    if user is None:
+        try:
+            user = User.query.get(entry.user_id)
+        except Exception:
+            return
+    if not user:
+        return
+
+    try:
+        from app.models import PushSubscription
+    except Exception:
+        return
+
+    try:
+        subscriptions = PushSubscription.get_user_subscriptions(user.id)
+    except Exception:
+        return
+    if not subscriptions:
+        return
+
+    note = {
+        "kind": "idle_timeout",
+        "title": "Still working?",
+        "message": "Your timer has been idle. Confirm you are still working or it will stop automatically.",
+        "type": "warning",
+        "action": {"url": "/", "label": "Open TimeTracker"},
+    }
+    try:
+        _deliver_push_to_subscriptions(user, subscriptions, note)
+    except Exception as e:
+        logger.debug("Idle push failed for user %s: %s", getattr(user, "username", user.id), e)
 
 
 def send_smart_reminder_push_notifications():
