@@ -8,11 +8,14 @@ The Time Rounding Preferences feature allows each user to configure how their ti
 
 - **Per-User Configuration**: Each user can set their own rounding preferences independently
 - **Multiple Rounding Intervals**: Support for 1, 5, 10, 15, 30, and 60-minute intervals
-- **Three Rounding Methods**:
+- **Four Rounding Methods**:
   - **Nearest**: Round to the closest interval (standard rounding)
   - **Up**: Always round up to the next interval (ceiling)
   - **Down**: Always round down to the previous interval (floor)
-- **Enable/Disable Toggle**: Users can disable rounding to track exact time
+  - **Boundary**: Round start time down and end time up to interval markers (e.g. 09:46–09:54 → 09:45–09:55)
+- **Minimum Billable Duration**: Optional floor so short entries bill at least N minutes
+- **Enable/Disable Toggle**: Users can disable rounding to track exact time (minimum duration still applies when set)
+- **Admin Interval Fallback**: When a user’s interval is left at “no rounding” (1 minute), the global admin `ROUNDING_MINUTES` / `Settings.rounding_minutes` value is used
 - **Real-time Preview**: Visual examples show how rounding will be applied
 
 ## User Guide
@@ -25,6 +28,7 @@ The Time Rounding Preferences feature allows each user to configure how their ti
    - Toggle **Enable Time Rounding** on/off
    - Select your preferred **Rounding Interval**
    - Choose your **Rounding Method**
+   - Optionally set a **Minimum Billable Duration**
 4. Click **Save Settings** to apply changes
 
 ### Understanding Rounding Methods
@@ -54,6 +58,17 @@ Always rounds down to the previous interval, ensuring conservative billing.
 - 74 minutes → 60 minutes
 - 75 minutes → 75 minutes (exact match)
 
+#### Round Start/End to Boundaries
+Adjusts the entry’s timestamps instead of only the total duration: start is floored and end is ceiled to the interval. Duration is then recomputed from the adjusted times.
+
+**Example** with 5-minute intervals:
+- 09:46–09:54 → 09:45–09:55 (10 minutes billed)
+- 09:45–09:55 (already on boundaries) → unchanged
+
+### Minimum Billable Duration
+
+After rounding (or when rounding is disabled), duration is raised to at least the configured minimum (5, 10, 15, 30, or 60 minutes). Choose **No minimum** to leave short entries as-is.
+
 ### Choosing the Right Settings
 
 **For Freelancers/Contractors:**
@@ -79,23 +94,27 @@ The following fields are added to the `users` table:
 time_rounding_enabled BOOLEAN DEFAULT 1 NOT NULL
 time_rounding_minutes INTEGER DEFAULT 1 NOT NULL
 time_rounding_method VARCHAR(10) DEFAULT 'nearest' NOT NULL
+time_rounding_minimum_minutes INTEGER DEFAULT 0 NOT NULL
 ```
 
 ### Default Values
 
 For new and existing users:
 - **Enabled**: `True` (rounding is enabled by default)
-- **Minutes**: `1` (no rounding, exact time)
+- **Minutes**: `1` (no personal rounding; falls back to admin `Settings.rounding_minutes` when enabled)
 - **Method**: `'nearest'` (standard rounding)
+- **Minimum**: `0` (no minimum billable floor)
 
 ### How Rounding is Applied
 
 1. **Timer Start**: When a user starts a timer, no rounding is applied
 2. **Timer Stop**: When a user stops a timer:
    - Calculate raw duration (end time - start time)
-   - Apply user's rounding preferences
+   - If method is **boundary**, round start down / end up, then recompute duration
+   - Otherwise apply the user’s duration rounding preferences
+   - Apply the minimum billable duration floor when configured
    - Store rounded duration in `duration_seconds` field
-3. **Manual Entries**: Rounding is applied when creating/editing manual entries
+3. **Manual Entries**: Rounding (and minimum) is applied when creating/editing manual entries, and on other duration write paths (imports, Pomodoro, ActivityWatch, etc.)
 
 ### Backward Compatibility
 
@@ -112,7 +131,7 @@ The feature is fully backward compatible:
 from app.utils.time_rounding import get_user_rounding_settings
 
 settings = get_user_rounding_settings(user)
-# Returns: {'enabled': True, 'minutes': 15, 'method': 'nearest'}
+# Returns: {'enabled': True, 'minutes': 15, 'method': 'nearest', 'minimum_minutes': 0}
 ```
 
 ### Apply Rounding to Duration
@@ -154,8 +173,8 @@ python migrations/manage_migrations.py upgrade
 
 ### Migration Details
 
-- **Migration File**: `migrations/versions/027_add_user_time_rounding_preferences.py`
-- **Adds**: Three new columns to the `users` table
+- **Migration File**: `migrations/versions/027_add_user_time_rounding_preferences.py` (initial columns)
+- **Follow-up**: `migrations/versions/175_add_rounding_boundary_and_minimum.py` adds `time_rounding_minimum_minutes` (boundary is a new method value on the existing method column)
 - **Safe**: Non-destructive, adds columns with default values
 - **Rollback**: Supported via downgrade function
 
@@ -170,11 +189,13 @@ user = User.query.first()
 assert hasattr(user, 'time_rounding_enabled')
 assert hasattr(user, 'time_rounding_minutes')
 assert hasattr(user, 'time_rounding_method')
+assert hasattr(user, 'time_rounding_minimum_minutes')
 
 # Check default values
 assert user.time_rounding_enabled == True
 assert user.time_rounding_minutes == 1
 assert user.time_rounding_method == 'nearest'
+assert user.time_rounding_minimum_minutes == 0
 ```
 
 ## Configuration
@@ -191,14 +212,20 @@ The following intervals are supported:
 
 ### Available Rounding Methods
 
-Three methods are supported:
+Four methods are supported:
 - `'nearest'` - Round to nearest interval
 - `'up'` - Always round up (ceiling)
 - `'down'` - Always round down (floor)
+- `'boundary'` - Round start down and end up to interval markers, then recompute duration
+
+### Minimum Billable Durations
+
+- `0` - No minimum
+- `5`, `10`, `15`, `30`, `60` - Floor duration to at least that many minutes
 
 ### Global Fallback Setting
 
-If per-user rounding is not configured, the system uses the global setting:
+If the user’s personal interval is still the default (1 minute) and rounding is enabled, the system uses the global admin setting:
 
 ```python
 # In app/config.py
@@ -334,6 +361,12 @@ For issues or questions:
 4. Open an issue on the project repository
 
 ## Changelog
+
+### Version 1.1 (2026-08-13) — app 5.11.4
+- Added **boundary** rounding method (start down / end up)
+- Added per-user **minimum billable duration**
+- Admin `Settings.rounding_minutes` fallback when user interval is unset (1 minute)
+- Rounding applied on remaining duration write paths (imports, Pomodoro, ActivityWatch, etc.)
 
 ### Version 1.0 (2025-10-24)
 - Initial implementation of per-user time rounding preferences

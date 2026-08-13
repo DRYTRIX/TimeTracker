@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.11.4] - 2026-08-13
+
+### Added
+
+- **Boundary rounding & minimum billable duration (#725)** — Users can round start down / end up to interval boundaries, and set a per-user minimum billable duration. When a user has not customized their interval, the admin `Settings.rounding_minutes` fallback applies.
+- **Searchable client/project combobox with inline create (#728)** — Timer and edit forms use a filterable combobox with Create rows; shared modals create clients and projects without leaving the page. Client-only entries no longer force-select the first project.
+- **Server-side idle heartbeats (#722)** — Timers track `last_heartbeat_at`; a scheduled job auto-stops forgotten timers when clients go offline. “Still working?” prompts are wired across web, extension, mobile, and desktop, including Socket.IO broadcast beyond web push.
+
+### Fixed
+
+- **Per-user rounding gaps (#725)** — Pomodoro, manual-entry service overrides, CSV/Toggl/Harvest imports, and ActivityWatch no longer store raw `duration_seconds` and skip rounding.
+- **Attendance Approve button dropped on submit (#709)** — Disabling the clicked Approve/Reject button during loading no longer strips its `name` from the form, so the decision reaches the server.
+- **Chrome extension task/project picker races (#700)** — Stale task loads are discarded with a generation counter; tasks and paginated projects are deduped by id.
+- **Idle-tab 503 toasts (#703)** — Dashboard and notification polls are quieted and skipped while the document is hidden so resume no longer sticks on unavailable toasts.
+- **Client detail API joinedload (#716)** — `GET /api/v1/clients/<id>` no longer eager-loads the dynamic `Client.projects` relationship (regression coverage added).
+
+### Changed
+
+- **Client versions** — Synced Electron (`desktop/package.json`) and Flutter (`mobile/pubspec.yaml`) to **5.11.4** with the webapp (`setup.py`).
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.11.4** (single source of truth for the application version).
+- **Time rounding** — Documented boundary method, minimum billable duration, and admin interval fallback in `docs/TIME_ROUNDING_PREFERENCES.md`.
+
 ## [5.11.3] - 2026-08-11
 
 ### Fixed
