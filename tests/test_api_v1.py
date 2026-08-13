@@ -746,6 +746,16 @@ class TestClients:
         assert "client" in data
         assert data["client"]["name"] == "New Client"
 
+    def test_get_client_by_id(self, client, api_token, test_client_model):
+        """Issue #716: GET /api/v1/clients/<id> must not 500 on dynamic projects."""
+        headers = {"Authorization": f"Bearer {api_token}"}
+        response = client.get(f"/api/v1/clients/{test_client_model.id}", headers=headers)
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert "client" in data
+        assert data["client"]["id"] == test_client_model.id
+        assert data["client"]["name"] == test_client_model.name
+
 
 class TestReports:
     """Test report endpoints"""

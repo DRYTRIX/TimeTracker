@@ -4,9 +4,6 @@ Repository for client data access operations.
 
 from typing import List, Optional
 
-from sqlalchemy.orm import joinedload
-
-from app import db
 from app.models import Client
 from app.repositories.base_repository import BaseRepository
 
@@ -18,8 +15,13 @@ class ClientRepository(BaseRepository[Client]):
         super().__init__(Client)
 
     def get_with_projects(self, client_id: int) -> Optional[Client]:
-        """Get client with projects loaded"""
-        return self.model.query.options(joinedload(Client.projects)).get(client_id)
+        """Get client by id.
+
+        ``Client.projects`` is ``lazy='dynamic'`` and cannot be eager-loaded
+        with joinedload (Issue #716). Callers that need projects should use
+        ``client.projects.all()`` or a separate query.
+        """
+        return self.get_by_id(client_id)
 
     def get_active_clients(self) -> List[Client]:
         """Get all active clients"""
