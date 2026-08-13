@@ -148,6 +148,12 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
     }
     if (!active) {
       clearGrace();
+      return;
+    }
+    // Server already marked this timer idle (#722) — show prompt even if OS idle
+    // time has not crossed the threshold yet (e.g. after reconnect).
+    if (data && data.idle_notified && !promptShown) {
+      beginGrace();
     }
   }
 

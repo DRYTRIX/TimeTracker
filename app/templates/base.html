@@ -268,6 +268,21 @@
                         try { showToast(msg, 'info'); } catch (e) {}
                     }
                 });
+                // Server-side idle timeout (#722): show "Still working?" even when
+                // local idle detection did not fire (e.g. tab throttled).
+                socket.on('idle_timeout', function(data){
+                    try {
+                        if (typeof window.__ttShowIdlePrompt === 'function') {
+                            var stopTs = Date.now() - 30 * 60 * 1000;
+                            var meta = document.querySelector('meta[name="idle-timeout-minutes"]');
+                            var mins = meta ? parseInt(meta.getAttribute('content'), 10) : 30;
+                            if (!isNaN(mins) && mins >= 1) stopTs = Date.now() - mins * 60 * 1000;
+                            window.__ttShowIdlePrompt(stopTs);
+                        } else if (window.toastManager && data) {
+                            window.toastManager.warning(data.message || 'Still working?', data.title || 'Idle timer');
+                        }
+                    } catch (e) {}
+                });
             } catch (e) {
                 console.error('Mention socket init failed', e);
             }

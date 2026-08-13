@@ -404,6 +404,11 @@
 
   setInterval(checkNoTimerAndEndOfDayNudges, REMINDER_POLL_MS);
   setTimeout(checkNoTimerAndEndOfDayNudges, 5000);
+
+  // Allow Socket.IO / other modules to trigger the same prompt (Issue #722)
+  window.__ttShowIdlePrompt = function(stopTs){
+    showIdlePrompt(stopTs || (Date.now() - getIdleThresholdMs()));
+  };
 })();
 
 

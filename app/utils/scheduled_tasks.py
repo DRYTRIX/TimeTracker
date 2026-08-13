@@ -954,7 +954,15 @@ def check_idle_timers():
 
 
 def _send_idle_push(entry):
-    """Send a 'Still working?' browser push for an idle active timer."""
+    """Notify the user that their timer is idle ("Still working?").
+
+    Channels (Issue #722):
+    1. Web PushSubscription (browser)
+    2. Socket.IO room ``user_<id>`` so open web/desktop clients show the prompt
+       immediately even without a push subscription
+    3. Mobile/desktop pick up ``idle_notified`` from ``GET /api/v1/timer/status``
+       on their next poll (already wired in IdleDetectionService / desktop idle)
+    """
     user = getattr(entry, "user", None)
     if user is None:
         try:
@@ -964,6 +972,25 @@ def _send_idle_push(entry):
     if not user:
         return
 
+    note = {
+        "kind": "idle_timeout",
+        "title": "Still working?",
+        "message": "Your timer has been idle. Confirm you are still working or it will stop automatically.",
+        "type": "warning",
+        "action": {"url": "/", "label": "Open TimeTracker"},
+        "timer_id": entry.id,
+        "idle_notified_at": entry.idle_notified_at.isoformat() if entry.idle_notified_at else None,
+    }
+
+    # Real-time notify any connected web/desktop Socket.IO clients
+    try:
+        from app import socketio
+
+        socketio.emit("idle_timeout", note, room=f"user_{user.id}")
+    except Exception as e:
+        logger.debug("Idle socket emit failed for user %s: %s", getattr(user, "username", user.id), e)
+
+    # Browser Web Push (when VAPID + subscriptions exist)
     try:
         from app.models import PushSubscription
     except Exception:
@@ -976,13 +1003,6 @@ def _send_idle_push(entry):
     if not subscriptions:
         return
 
-    note = {
-        "kind": "idle_timeout",
-        "title": "Still working?",
-        "message": "Your timer has been idle. Confirm you are still working or it will stop automatically.",
-        "type": "warning",
-        "action": {"url": "/", "label": "Open TimeTracker"},
-    }
     try:
         _deliver_push_to_subscriptions(user, subscriptions, note)
     except Exception as e:
