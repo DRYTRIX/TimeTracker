@@ -818,7 +818,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label for="startTimerClient" class="form-label">{{ _('Client') }}</label>
-                            {{ client_select('client_id', active_clients, required=False, only_one_client=only_one_client|default(false), single_client=single_client, id='startTimerClient') }}
+                            {{ client_select('client_id', active_clients, required=False, only_one_client=only_one_client|default(false), single_client=single_client, id='startTimerClient', searchable=True, can_create=(current_user.is_admin or current_user.has_permission('create_clients'))) }}
                             {% if current_user.is_admin or current_user.has_permission('create_clients') %}
                             <p class="text-xs mt-1">
                                 <button type="button" id="openCreateClientModal" data-client-select-id="startTimerClient" class="text-primary hover:underline">{{ _('Create new client') }}</button>
@@ -830,7 +830,10 @@
                         </div>
                         <div>
                             <label for="startTimerProject" class="form-label">{{ _('Project') }}</label>
-                            <select id="startTimerProject" name="project_id" class="form-input" data-inline-project-select>
+                            <select id="startTimerProject" name="project_id" class="form-input" data-inline-project-select
+                                    data-searchable-select="project"
+                                    {% if current_user.is_admin or current_user.has_permission('create_projects') %}data-can-create="1"{% endif %}
+                                    data-search-placeholder="{{ _('Type to search projects…') }}">
                                 <option value="">{{ _('Select a project (optional)') }}</option>
                                 {% for project in active_projects %}
                                 <option value="{{ project.id }}">{{ project.name }}</option>
@@ -899,6 +902,7 @@
 
 
 {% block scripts_extra %}
+<script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
 <script src="{{ url_for('static', filename='inline-create-client.js') }}"></script>
 <script src="{{ url_for('static', filename='inline-create-project.js') }}"></script>
 <script nonce="{{ csp_nonce() }}">

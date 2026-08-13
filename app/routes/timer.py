@@ -1320,6 +1320,8 @@ def manual_entry():
             "selected_client_id": client_id,
             "selected_task_id": task_id,
             "template_data": template_data,
+            "can_create_clients": current_user.is_admin or current_user.has_permission("create_clients"),
+            "can_create_projects": current_user.is_admin or current_user.has_permission("create_projects"),
         }
         ctx.update(extra)
         return ctx

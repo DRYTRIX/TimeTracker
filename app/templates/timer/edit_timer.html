@@ -9,6 +9,7 @@
 
 {% block extra_js %}
 {% if can_edit_schedule %}
+<script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
 <script src="{{ url_for('static', filename='inline-create-client.js') }}"></script>
 <script src="{{ url_for('static', filename='inline-create-project.js') }}"></script>
 <script nonce="{{ csp_nonce() }}">
@@ -291,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <label for="editTimerClient" class="form-label">
                             <i class="fas fa-building mr-1"></i>{{ _('Client') }}
                         </label>
-                        {{ client_select('client_id', clients, selected_id=timer.client_id, required=False, id='editTimerClient') }}
+                        {{ client_select('client_id', clients, selected_id=timer.client_id, required=False, id='editTimerClient', searchable=True, can_create=can_create_clients) }}
                         {% if can_create_clients %}
                         <p class="text-xs mt-1">
                             <button type="button" id="openCreateClientModal" data-client-select-id="editTimerClient" class="text-primary hover:underline">{{ _('Create new client') }}</button>
@@ -303,8 +304,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         <label for="project_id" class="form-label">
                             <i class="fas fa-project-diagram mr-1"></i>{{ _('Project') }}
                         </label>
-                        <select class="form-input" id="project_id" name="project_id" data-inline-project-select>
-                            <option value="">{% if not timer.project_id %}selected{% endif %}>{{ _('No project (client only)') }}</option>
+                        <select class="form-input" id="project_id" name="project_id" data-inline-project-select
+                                data-searchable-select="project"
+                                {% if can_create_projects %}data-can-create="1"{% endif %}
+                                data-search-placeholder="{{ _('Type to search projects…') }}">
+                            <option value="" {% if not timer.project_id %}selected{% endif %}>{{ _('No project (client only)') }}</option>
                             {% for project in projects %}
                             <option value="{{ project.id }}" {% if project.id == timer.project_id %}selected{% endif %}>
                                 {{ project.name }}
