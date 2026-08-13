@@ -77,7 +77,11 @@ class User(UserMixin, db.Model):
     # Time rounding preferences
     time_rounding_enabled = db.Column(db.Boolean, default=True, nullable=False)  # Enable/disable time rounding
     time_rounding_minutes = db.Column(db.Integer, default=1, nullable=False)  # Rounding interval: 1, 5, 10, 15, 30, 60
-    time_rounding_method = db.Column(db.String(10), default="nearest", nullable=False)  # 'nearest', 'up', or 'down'
+    time_rounding_method = db.Column(
+        db.String(10), default="nearest", nullable=False
+    )  # 'nearest', 'up', 'down', or 'boundary'
+    # Minimum billable duration in minutes (0 = no floor). Applied after rounding.
+    time_rounding_minimum_minutes = db.Column(db.Integer, default=0, nullable=False)
 
     # Overtime settings
     standard_hours_per_day = db.Column(

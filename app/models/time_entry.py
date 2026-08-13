@@ -210,7 +210,12 @@ class TimeEntry(db.Model):
         return dt.astimezone(tz).replace(tzinfo=None)
 
     def calculate_duration(self):
-        """Calculate and set duration in seconds with rounding"""
+        """Calculate and set duration in seconds with rounding.
+
+        When the user (or global fallback) uses the ``boundary`` method, start_time
+        is floored and end_time is ceiled to the rounding interval and persisted
+        before duration is computed (Issue #725).
+        """
         if not self.end_time:
             return
 
@@ -219,12 +224,8 @@ class TimeEntry(db.Model):
         end = self._naive_dt(self.end_time)
         if start is None or end is None:
             return
-        duration = end - start
-        raw_seconds = int(duration.total_seconds())
-        break_sec = self.break_seconds or 0
-        raw_seconds = max(0, raw_seconds - break_sec)
 
-        # Apply per-user rounding if user preferences are set.
+        # Resolve user for per-user rounding preferences.
         # On transient instances (not yet in session), self.user may be None or raise —
         # look up by user_id so rounding still applies.
         user = None
@@ -237,18 +238,45 @@ class TimeEntry(db.Model):
 
             user = db.session.get(User, self.user_id)
 
-        if user and hasattr(user, "time_rounding_enabled"):
-            from app.utils.time_rounding import apply_user_rounding
+        from app.utils.time_rounding import (
+            apply_user_rounding,
+            get_user_rounding_settings,
+            round_entry_boundaries,
+            round_time_duration,
+        )
 
+        if user and hasattr(user, "time_rounding_enabled"):
+            settings = get_user_rounding_settings(user)
+            if settings["enabled"] and settings["method"] == "boundary" and settings["minutes"] > 1:
+                rounded_start, rounded_end = round_entry_boundaries(start, end, settings["minutes"])
+                self.start_time = rounded_start
+                self.end_time = rounded_end
+                start = rounded_start
+                end = rounded_end
+
+            duration = end - start
+            raw_seconds = int(duration.total_seconds())
+            break_sec = self.break_seconds or 0
+            raw_seconds = max(0, raw_seconds - break_sec)
             self.duration_seconds = apply_user_rounding(raw_seconds, user)
         else:
-            # Fallback to global rounding setting for backward compatibility
+            # Fallback to global Settings.rounding_minutes (admin), then env Config
             rounding_minutes = Config.ROUNDING_MINUTES
+            try:
+                from app.models.settings import Settings
+
+                settings_obj = Settings.get_settings()
+                rounding_minutes = int(getattr(settings_obj, "rounding_minutes", None) or rounding_minutes)
+            except Exception:
+                pass
+
+            duration = end - start
+            raw_seconds = int(duration.total_seconds())
+            break_sec = self.break_seconds or 0
+            raw_seconds = max(0, raw_seconds - break_sec)
+
             if rounding_minutes > 1:
-                # Round to nearest interval
-                minutes = raw_seconds / 60
-                rounded_minutes = round(minutes / rounding_minutes) * rounding_minutes
-                self.duration_seconds = int(rounded_minutes * 60)
+                self.duration_seconds = round_time_duration(raw_seconds, rounding_minutes, "nearest")
             else:
                 self.duration_seconds = raw_seconds
 

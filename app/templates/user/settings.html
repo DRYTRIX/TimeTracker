@@ -311,7 +311,7 @@
             </summary>
             <div class="px-6 pb-6">
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                {{ _('Configure how your time entries are rounded. This affects how durations are calculated when you stop timers.') }}
+                {{ _('Configure how your time entries are rounded. Interval "No rounding / use system default" inherits the admin Rounding (Minutes) setting. Boundary mode rounds start down and end up to interval markers.') }}
             </p>
             
             <div class="space-y-4">
@@ -352,6 +352,20 @@
                             {% endfor %}
                         </select>
                         <p id="rounding-method-description" class="text-xs text-gray-500 dark:text-gray-400 mt-1"></p>
+                    </div>
+
+                    <div>
+                        <label for="time_rounding_minimum_minutes" class="form-label">
+                            {{ _('Minimum Entry Duration') }}
+                        </label>
+                        <select id="time_rounding_minimum_minutes" name="time_rounding_minimum_minutes"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                onchange="updateRoundingExample()">
+                            {% for minutes, label in rounding_minimums %}
+                            <option value="{{ minutes }}" {% if (user.time_rounding_minimum_minutes or 0) == minutes %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Short entries are raised to this billable minimum after rounding') }}</p>
                     </div>
                     
                     <!-- Example visualization -->
@@ -657,6 +671,8 @@ function updateRoundingExample() {
     const enabled = document.getElementById('time_rounding_enabled').checked;
     const minutes = parseInt(document.getElementById('time_rounding_minutes').value);
     const method = document.getElementById('time_rounding_method').value;
+    const minimumEl = document.getElementById('time_rounding_minimum_minutes');
+    const minimum = minimumEl ? parseInt(minimumEl.value) || 0 : 0;
     const exampleDiv = document.getElementById('rounding-example');
     
     if (!enabled) {
@@ -664,8 +680,31 @@ function updateRoundingExample() {
         return;
     }
     
-    if (minutes === 1) {
-        exampleDiv.innerHTML = '<p>{{ _("No rounding - times will be recorded exactly as tracked.") }}</p>';
+    if (minutes === 1 && method !== 'boundary') {
+        let msg = '<p>{{ _("No personal interval — the admin Rounding (Minutes) setting is used when set above 1.") }}</p>';
+        if (minimum > 0) {
+            msg += `<p class="text-xs opacity-75">{{ _("Minimum billable duration:") }} ${minimum}{{ _(" minutes") }}</p>`;
+        }
+        exampleDiv.innerHTML = msg;
+        return;
+    }
+
+    const formatTime = (mins) => {
+        const hours = Math.floor(mins / 60);
+        const remainingMins = mins % 60;
+        if (hours > 0) {
+            return remainingMins > 0 ? `${hours}h ${remainingMins}m` : `${hours}h`;
+        }
+        return `${remainingMins}m`;
+    };
+
+    if (method === 'boundary') {
+        // Reporter case: 09:46–09:54 → 09:45–09:55 = 10 min
+        exampleDiv.innerHTML = `
+            <p><strong>{{ _("Actual:") }}</strong> 09:46–09:54 (7m 59s) → <strong>{{ _("Rounded:") }}</strong> 09:45–09:55 (10m)</p>
+            <p class="text-xs opacity-75">{{ _("Start rounded down, end rounded up to ") }}${minutes}{{ _(" minute markers") }}</p>
+            ${minimum > 0 ? `<p class="text-xs opacity-75">{{ _("Minimum billable:") }} ${formatTime(minimum)}</p>` : ''}
+        `;
         return;
     }
     
@@ -680,15 +719,9 @@ function updateRoundingExample() {
     } else {
         rounded = Math.round(testDuration / minutes) * minutes;
     }
-    
-    const formatTime = (mins) => {
-        const hours = Math.floor(mins / 60);
-        const remainingMins = mins % 60;
-        if (hours > 0) {
-            return remainingMins > 0 ? `${hours}h ${remainingMins}m` : `${hours}h`;
-        }
-        return `${remainingMins}m`;
-    };
+    if (minimum > 0) {
+        rounded = Math.max(rounded, minimum);
+    }
     
     exampleDiv.innerHTML = `
         <p><strong>{{ _("Actual time:") }}</strong> ${formatTime(testDuration)} → <strong>{{ _("Rounded:") }}</strong> ${formatTime(rounded)}</p>

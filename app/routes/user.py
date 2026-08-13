@@ -181,8 +181,12 @@ def settings():
                 current_user.time_rounding_minutes = time_rounding_minutes
 
             time_rounding_method = request.form.get("time_rounding_method")
-            if time_rounding_method in ["nearest", "up", "down"]:
+            if time_rounding_method in ["nearest", "up", "down", "boundary"]:
                 current_user.time_rounding_method = time_rounding_method
+
+            time_rounding_minimum = request.form.get("time_rounding_minimum_minutes", type=int)
+            if time_rounding_minimum is not None and time_rounding_minimum in [0, 5, 10, 15, 30, 60]:
+                current_user.time_rounding_minimum_minutes = time_rounding_minimum
 
             # Overtime settings
             standard_hours_per_day = request.form.get("standard_hours_per_day", type=float)
@@ -277,10 +281,15 @@ def settings():
     )
 
     # Get time rounding options
-    from app.utils.time_rounding import get_available_rounding_intervals, get_available_rounding_methods
+    from app.utils.time_rounding import (
+        get_available_minimum_durations,
+        get_available_rounding_intervals,
+        get_available_rounding_methods,
+    )
 
     rounding_intervals = get_available_rounding_intervals()
     rounding_methods = get_available_rounding_methods()
+    rounding_minimums = get_available_minimum_durations()
 
     return render_template(
         "user/settings.html",
@@ -289,6 +298,7 @@ def settings():
         languages=languages,
         rounding_intervals=rounding_intervals,
         rounding_methods=rounding_methods,
+        rounding_minimums=rounding_minimums,
     )
 
 
