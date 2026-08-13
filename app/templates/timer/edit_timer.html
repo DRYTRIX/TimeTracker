@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/client_select.html" import client_select %}
 
 {% block title %}{{ _('Edit Time Entry') }} - {{ app_name }}{% endblock %}
 
@@ -8,11 +9,17 @@
 
 {% block extra_js %}
 {% if can_edit_schedule %}
+<script src="{{ url_for('static', filename='inline-create-client.js') }}"></script>
+<script src="{{ url_for('static', filename='inline-create-project.js') }}"></script>
 <script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     const projectSelect = document.getElementById('project_id');
+    const clientSelect = document.getElementById('editTimerClient') || document.getElementById('client_id');
     const taskSelect = document.getElementById('task_id');
-    const form = document.querySelector('form');
+    const form = document.querySelector('form[data-edit-timer-form]');
+    const projectWarning = document.getElementById('editTimerProjectChanged');
+    const wasClientOnly = {{ 'true' if not timer.project_id else 'false' }};
+    const originalProjectId = {{ (timer.project_id or '')|tojson }};
     const scriptRoot = {{ request.script_root|default('')|tojson }};
 
     function buildTasksUrl(projectId) {
@@ -20,16 +27,28 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!pid) return '';
         return (scriptRoot || '') + '/api/projects/' + encodeURIComponent(pid) + '/tasks';
     }
-    
+
+    function updateProjectWarning() {
+        if (!projectWarning || !projectSelect) return;
+        const selected = projectSelect.value;
+        const show = wasClientOnly && selected && String(selected) !== String(originalProjectId || '');
+        projectWarning.classList.toggle('hidden', !show);
+    }
+
     if (projectSelect && taskSelect) {
         projectSelect.addEventListener('change', function() {
             const projectId = this.value;
-            
+
+            // Mutual exclusivity: project clears client
+            if (projectId && clientSelect && clientSelect.tagName === 'SELECT') {
+                clientSelect.value = '';
+            }
+
             // Clear current tasks
-            taskSelect.innerHTML = '<option value="">No Task</option>';
-            
+            taskSelect.innerHTML = '<option value="">{{ _("No Task") }}</option>';
+            taskSelect.disabled = !projectId;
+
             if (projectId) {
-                // Fetch tasks for the selected project
                 fetch(buildTasksUrl(projectId), { credentials: 'same-origin' })
                     .then(response => response.json())
                     .then(data => {
@@ -46,9 +65,26 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.error('Error fetching tasks:', error);
                     });
             }
+            updateProjectWarning();
         });
     }
-    
+
+    if (clientSelect && clientSelect.tagName === 'SELECT') {
+        clientSelect.addEventListener('change', function() {
+            const cid = this.value;
+            if (cid && projectSelect) {
+                projectSelect.value = '';
+                if (taskSelect) {
+                    taskSelect.innerHTML = '<option value="">{{ _("No Task") }}</option>';
+                    taskSelect.disabled = true;
+                }
+            }
+            updateProjectWarning();
+        });
+    }
+
+    updateProjectWarning();
+
     // Add form submission confirmation for admin users
     if (form) {
         form.addEventListener('submit', function(e) {
@@ -58,8 +94,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 return true;
             }
 
-            const originalProject = '{{ timer.project.name }}';
-            const selectedProject = projectSelect.options[projectSelect.selectedIndex].text;
+            const projectVal = projectSelect ? projectSelect.value : '';
+            const clientVal = clientSelect ? clientSelect.value : '';
+            if (!projectVal && !clientVal) {
+                e.preventDefault();
+                if (window.showAlert) {
+                    window.showAlert('{{ _("Select either a project or a client") }}', { title: '{{ _("Error") }}' });
+                } else {
+                    alert('{{ _("Select either a project or a client") }}');
+                }
+                return false;
+            }
+
+            const originalProject = {% if timer.project %}{{ timer.project.name|tojson }}{% elif timer.client %}{{ (timer.client.name ~ ' (client only)')|tojson }}{% else %}'—'{% endif %};
+            let selectedProject = '—';
+            if (projectSelect && projectSelect.value) {
+                selectedProject = projectSelect.options[projectSelect.selectedIndex].text;
+            } else if (clientSelect && clientSelect.value) {
+                if (clientSelect.tagName === 'SELECT') {
+                    selectedProject = clientSelect.options[clientSelect.selectedIndex].text + ' ({{ _("client only") }})';
+                } else {
+                    selectedProject = '{{ _("client only") }}';
+                }
+            }
             const originalStart = '{{ timer.start_time.strftime("%Y-%m-%d %H:%M") }}';
             const originalEnd = '{{ timer.end_time.strftime("%Y-%m-%d %H:%M") if timer.end_time else "Running" }}';
             const originalNotes = {{ (timer.notes or '')|tojson }};
@@ -79,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const newEnd = endDate && endTime ? `${endDate} ${endTime}` : originalEnd;
             
             const changes = [];
-            if (originalProject !== selectedProject) changes.push({ label: 'Project', from: originalProject, to: selectedProject });
+            if (originalProject !== selectedProject) changes.push({ label: 'Project / Client', from: originalProject, to: selectedProject });
             if (originalStart !== newStart) changes.push({ label: 'Start', from: originalStart, to: newStart });
             if (originalEnd !== newEnd) changes.push({ label: 'End', from: originalEnd, to: newEnd });
             if (originalNotes !== notesVal) changes.push({ label: 'Notes', from: originalNotes || '—', to: notesVal || '—' });
@@ -180,7 +237,13 @@ document.addEventListener('DOMContentLoaded', function() {
             {{ _('Edit Time Entry') }}
         </h1>
         <p class="text-text-muted-light dark:text-text-muted-dark">
+            {% if timer.project %}
             {{ timer.project.name }}{% if timer.task %} - {{ timer.task.name }}{% endif %}
+            {% elif timer.client %}
+            {{ timer.client.name }} <span class="text-xs">({{ _('client only') }})</span>
+            {% else %}
+            {{ _('Time entry') }}
+            {% endif %}
         </p>
     </div>
     {% if current_user.is_admin %}
@@ -219,38 +282,60 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             {% endif %}
 
-            <form method="POST" action="{{ url_for('timer.edit_timer', timer_id=timer.id) }}">
+            <form method="POST" action="{{ url_for('timer.edit_timer', timer_id=timer.id) }}" data-edit-timer-form>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 
-                <!-- Project and Task Selection -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <!-- Client and Project Selection (Issue #728: client first, optional project) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="editTimerClient" class="form-label">
+                            <i class="fas fa-building mr-1"></i>{{ _('Client') }}
+                        </label>
+                        {{ client_select('client_id', clients, selected_id=timer.client_id, required=False, id='editTimerClient') }}
+                        {% if can_create_clients %}
+                        <p class="text-xs mt-1">
+                            <button type="button" id="openCreateClientModal" data-client-select-id="editTimerClient" class="text-primary hover:underline">{{ _('Create new client') }}</button>
+                        </p>
+                        {% endif %}
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select a client, or leave empty when a project is selected') }}</p>
+                    </div>
                     <div>
                         <label for="project_id" class="form-label">
                             <i class="fas fa-project-diagram mr-1"></i>{{ _('Project') }}
                         </label>
-                        <select class="form-input" id="project_id" name="project_id" required>
+                        <select class="form-input" id="project_id" name="project_id" data-inline-project-select>
+                            <option value="">{% if not timer.project_id %}selected{% endif %}>{{ _('No project (client only)') }}</option>
                             {% for project in projects %}
                             <option value="{{ project.id }}" {% if project.id == timer.project_id %}selected{% endif %}>
                                 {{ project.name }}
                             </option>
                             {% endfor %}
                         </select>
-                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select the project this time entry belongs to') }}</p>
+                        {% if can_create_projects %}
+                        <p class="text-xs mt-1">
+                            <button type="button" id="openCreateProjectModal" data-project-select-id="project_id" class="text-primary hover:underline">{{ _('Create new project') }}</button>
+                        </p>
+                        {% endif %}
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional — leave empty to keep this entry on the client only') }}</p>
                     </div>
-                    <div>
-                        <label for="task_id" class="form-label">
-                            <i class="fas fa-tasks mr-1"></i>{{ _('Task (Optional)') }}
-                        </label>
-                        <select class="form-input" id="task_id" name="task_id">
-                            <option value="">No Task</option>
-                            {% for task in tasks %}
-                            <option value="{{ task.id }}" {% if task.id == timer.task_id %}selected{% endif %}>
-                                {{ task.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select a specific task within the project') }}</p>
-                    </div>
+                </div>
+                <div id="editTimerProjectChanged" class="hidden mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800 dark:text-amber-200">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                    {{ _('This entry was booked on a client only. Selecting a project will reassign it — make sure this is the correct project.') }}
+                </div>
+                <div class="mb-6">
+                    <label for="task_id" class="form-label">
+                        <i class="fas fa-tasks mr-1"></i>{{ _('Task (Optional)') }}
+                    </label>
+                    <select class="form-input" id="task_id" name="task_id" {% if not timer.project_id %}disabled{% endif %}>
+                        <option value="">{{ _('No Task') }}</option>
+                        {% for task in tasks %}
+                        <option value="{{ task.id }}" {% if task.id == timer.task_id %}selected{% endif %}>
+                            {{ task.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select a specific task within the project') }}</p>
                 </div>
 
                 <!-- Start Date/Time -->
@@ -405,8 +490,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
                             <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Project:') }}</span>
-                            <span class="ml-2 font-medium">{{ timer.project.name }}</span>
+                            <span class="ml-2 font-medium">{% if timer.project %}{{ timer.project.name }}{% else %}—{% endif %}</span>
                         </div>
+                        {% if timer.client and not timer.project %}
+                        <div>
+                            <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Client:') }}</span>
+                            <span class="ml-2 font-medium">{{ timer.client.name }}</span>
+                        </div>
+                        {% endif %}
                         {% if timer.task %}
                         <div>
                             <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Task:') }}</span>
@@ -553,6 +644,11 @@ document.addEventListener('DOMContentLoaded', function() {
         {% endif %}
     </div>
 </div>
+
+{% if can_edit_schedule %}
+{% include 'components/inline_create_client_modal.html' %}
+{% include 'components/inline_create_project_modal.html' %}
+{% endif %}
 
 <script nonce="{{ csp_nonce() }}">
 (function() {

@@ -304,6 +304,26 @@ def create_project():
     only_one_client = len(clients) == 1
     single_client = clients[0] if only_one_client else None
 
+    # Detect AJAX/JSON request while preserving classic form behavior
+    try:
+        is_classic_form = request.mimetype in ("application/x-www-form-urlencoded", "multipart/form-data")
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Could not get request mimetype: %s", e)
+        is_classic_form = False
+
+    try:
+        wants_json = (
+            request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            or request.is_json
+            or (
+                not is_classic_form
+                and (request.accept_mimetypes["application/json"] > request.accept_mimetypes["text/html"])
+            )
+        )
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Could not determine wants_json: %s", e)
+        wants_json = False
+
     # Track project setup started when user opens the form
     if request.method == "GET":
         track_project_setup_started(current_user.id)
@@ -334,22 +354,24 @@ def create_project():
             billable,
         )
 
-        # Validate required fields
-        if not name or not client_id:
-            flash(_("Project name and client are required"), "error")
-            safe_log(current_app.logger, "warning", "Validation failed: missing required fields for project creation")
+        def _create_form_error(message, status=400):
+            if wants_json:
+                return jsonify({"error": "validation_error", "messages": [message], "message": message}), status
+            flash(message, "error")
             return render_template(
                 "projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client
             )
+
+        # Validate required fields
+        if not name or not client_id:
+            safe_log(current_app.logger, "warning", "Validation failed: missing required fields for project creation")
+            return _create_form_error(_("Project name and client are required"))
 
         # Validate hourly rate
         try:
             hourly_rate = Decimal(hourly_rate) if hourly_rate else None
         except ValueError:
-            flash(_("Invalid hourly rate format"), "error")
-            return render_template(
-                "projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client
-            )
+            return _create_form_error(_("Invalid hourly rate format"))
 
         # Validate budgets
         budget_amount = None
@@ -360,26 +382,14 @@ def create_project():
                 if budget_amount < 0:
                     raise ValueError("Budget cannot be negative")
             except Exception:
-                flash(_("Invalid budget amount"), "error")
-                return render_template(
-                    "projects/create.html",
-                    clients=clients,
-                    only_one_client=only_one_client,
-                    single_client=single_client,
-                )
+                return _create_form_error(_("Invalid budget amount"))
         if budget_threshold_raw:
             try:
                 budget_threshold_percent = int(budget_threshold_raw)
                 if budget_threshold_percent < 0 or budget_threshold_percent > 100:
                     raise ValueError("Invalid threshold")
             except Exception:
-                flash(_("Invalid budget threshold percent (0-100)"), "error")
-                return render_template(
-                    "projects/create.html",
-                    clients=clients,
-                    only_one_client=only_one_client,
-                    single_client=single_client,
-                )
+                return _create_form_error(_("Invalid budget threshold percent (0-100)"))
 
         # Normalize code
         normalized_code = code.upper() if code else None
@@ -403,10 +413,7 @@ def create_project():
         )
 
         if not result.get("success"):
-            flash(_(result.get("message", "Could not create project")), "error")
-            return render_template(
-                "projects/create.html", clients=clients, only_one_client=only_one_client, single_client=single_client
-            )
+            return _create_form_error(_(result.get("message", "Could not create project")))
 
         project = result["project"]
 
@@ -429,16 +436,17 @@ def create_project():
             if field_value:
                 custom_fields[definition.field_key] = field_value
             elif definition.is_mandatory:
-                # Validate mandatory fields
-                flash(_("Custom field '%(field)s' is required", field=definition.label), "error")
-                custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-                return render_template(
-                    "projects/create.html",
-                    clients=clients,
-                    only_one_client=only_one_client,
-                    single_client=single_client,
-                    custom_field_definitions=custom_field_definitions,
-                )
+                # Validate mandatory fields — skip for minimal AJAX creates (Issue #728)
+                if not wants_json:
+                    flash(_("Custom field '%(field)s' is required", field=definition.label), "error")
+                    custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+                    return render_template(
+                        "projects/create.html",
+                        clients=clients,
+                        only_one_client=only_one_client,
+                        single_client=single_client,
+                        custom_field_definitions=custom_field_definitions,
+                    )
 
         # Set custom fields if any
         if custom_fields:
@@ -446,6 +454,16 @@ def create_project():
 
         # Persist color and/or custom fields
         if not safe_commit("create_project_custom_fields_and_color", {"project_id": project.id}):
+            if wants_json:
+                return (
+                    jsonify(
+                        {
+                            "error": "db_error",
+                            "message": _("Could not save project due to a database error"),
+                        }
+                    ),
+                    500,
+                )
             flash(_("Could not save project due to a database error"), "error")
             custom_field_definitions = CustomFieldDefinition.get_active_definitions()
             return render_template(
@@ -528,6 +546,19 @@ def create_project():
             ip_address=request.remote_addr,
             user_agent=request.headers.get("User-Agent"),
         )
+
+        if wants_json:
+            return (
+                jsonify(
+                    {
+                        "id": project.id,
+                        "name": project.name,
+                        "client_id": project.client_id,
+                        "billable": project.billable,
+                    }
+                ),
+                201,
+            )
 
         flash(f'Project "{name}" created successfully', "success")
         return redirect(url_for("projects.view_project", project_id=project.id))

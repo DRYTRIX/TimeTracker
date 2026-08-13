@@ -75,13 +75,19 @@ def _edit_timer_form_projects_tasks(timer, can_edit_schedule):
 
 
 def _edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown):
+    from app.utils.scope_filter import get_active_clients_for_user
+
     projects, tasks = _edit_timer_form_projects_tasks(timer, can_edit_schedule)
+    clients = get_active_clients_for_user(current_user) if can_edit_schedule else []
     return {
         "timer": timer,
         "projects": projects,
         "tasks": tasks,
+        "clients": clients,
         "can_edit_schedule": can_edit_schedule,
         "show_source_dropdown": show_source_dropdown,
+        "can_create_clients": current_user.is_admin or current_user.has_permission("create_clients"),
+        "can_create_projects": current_user.is_admin or current_user.has_permission("create_projects"),
     }
 
 
@@ -849,30 +855,55 @@ def edit_timer(timer_id):
         if update_params["paid"] is False:
             update_params["invoice_number"] = None
 
-        # Admins and users with edit_own_time_entries can edit schedule, project, and task
+        # Admins and users with edit_own_time_entries can edit schedule, project/client, and task
         if can_edit_schedule:
-            # Update project if changed
-            new_project_id = request.form.get("project_id", type=int)
-            if new_project_id and new_project_id != timer.project_id:
-                new_project = Project.query.filter_by(id=new_project_id, status="active").first()
-                if new_project:
-                    update_params["project_id"] = new_project_id
-                else:
-                    flash(_("Invalid project selected"), "error")
-                    return render_template(
-                        "timer/edit_timer.html",
-                        **_edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown),
-                    )
-            else:
-                update_params["project_id"] = None  # Don't change if not provided
+            # Prefer project when both are submitted; otherwise allow client-only (Issue #728)
+            new_project_id = _parse_optional_int(request.form.get("project_id"))
+            new_client_id = _parse_optional_int(request.form.get("client_id"))
 
-            # Update task if changed
-            new_task_id = request.form.get("task_id", type=int)
+            if not new_project_id and not new_client_id:
+                flash(_("Select either a project or a client"), "error")
+                return render_template(
+                    "timer/edit_timer.html",
+                    **_edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown),
+                )
+
+            if new_project_id:
+                if new_project_id != timer.project_id:
+                    new_project = Project.query.filter_by(id=new_project_id, status="active").first()
+                    if new_project:
+                        update_params["project_id"] = new_project_id
+                    else:
+                        flash(_("Invalid project selected"), "error")
+                        return render_template(
+                            "timer/edit_timer.html",
+                            **_edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown),
+                        )
+            else:
+                # Client-only: set/change client (service clears project_id and task_id)
+                if new_client_id != timer.client_id or timer.project_id is not None:
+                    new_client = Client.query.filter_by(id=new_client_id, status="active").first()
+                    if new_client:
+                        update_params["client_id"] = new_client_id
+                    else:
+                        flash(_("Invalid client selected"), "error")
+                        return render_template(
+                            "timer/edit_timer.html",
+                            **_edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown),
+                        )
+
+            # Update task if changed (only valid with a project)
+            new_task_id = _parse_optional_int(request.form.get("task_id"))
+            effective_project_id = new_project_id
             if new_task_id != timer.task_id:
                 if new_task_id:
-                    new_task = Task.query.filter_by(
-                        id=new_task_id, project_id=update_params.get("project_id") or timer.project_id
-                    ).first()
+                    if not effective_project_id:
+                        flash(_("Task can only be assigned to project-based time entries"), "error")
+                        return render_template(
+                            "timer/edit_timer.html",
+                            **_edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown),
+                        )
+                    new_task = Task.query.filter_by(id=new_task_id, project_id=effective_project_id).first()
                     if new_task:
                         update_params["task_id"] = new_task_id
                     else:
@@ -881,10 +912,9 @@ def edit_timer(timer_id):
                             "timer/edit_timer.html",
                             **_edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown),
                         )
-                else:
-                    update_params["task_id"] = None
-            else:
-                update_params["task_id"] = None  # Don't change if not provided
+                elif new_project_id:
+                    # Clear task when "No Task" is selected (0 = clear sentinel in update_entry)
+                    update_params["task_id"] = 0
 
             # Update start and end times if provided
             start_date = request.form.get("start_date")

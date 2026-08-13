@@ -541,14 +541,18 @@ class TimeTrackingService:
             entry.task_id = None
 
         if task_id is not None:
-            # Task can only be set when project_id is set
-            if not entry.project_id:
-                return {
-                    "success": False,
-                    "message": "Task can only be assigned to project-based time entries",
-                    "error": "task_requires_project",
-                }
-            entry.task_id = task_id
+            # task_id == 0 clears the task (0 is never a valid DB id)
+            if task_id == 0:
+                entry.task_id = None
+            else:
+                # Task can only be set when project_id is set
+                if not entry.project_id:
+                    return {
+                        "success": False,
+                        "message": "Task can only be assigned to project-based time entries",
+                        "error": "task_requires_project",
+                    }
+                entry.task_id = task_id
         if start_time is not None:
             entry.start_time = start_time
         if end_time is not None:
