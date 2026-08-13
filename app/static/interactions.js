@@ -38,6 +38,24 @@
     }
 
     /**
+     * Preserve the clicked submit button's name/value before it is disabled.
+     * HTML form entry lists are built after the submit event; disabled controls
+     * are excluded, so disabling the submitter drops approve/reject (etc.).
+     * Issue #709: attendance correction Approve never reached the server.
+     */
+    function preserveSubmitterValue(form, submitter) {
+        if (!form || !submitter || !submitter.name) return;
+        const existing = form.querySelector('input[data-tt-submitter-preserve="1"]');
+        if (existing) existing.remove();
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = submitter.name;
+        hidden.value = submitter.value != null ? submitter.value : '1';
+        hidden.setAttribute('data-tt-submitter-preserve', '1');
+        form.appendChild(hidden);
+    }
+
+    /**
      * Handle loading states for buttons and forms
      */
     function initLoadingStates() {
@@ -46,10 +64,14 @@
         
         forms.forEach(form => {
             form.addEventListener('submit', function(e) {
-                const submitBtn = form.querySelector('button[type="submit"]');
+                // Prefer the actual clicked button (e.submitter) over the first
+                // submit button in the form — multi-button forms (Approve/Reject)
+                // must keep the clicked name/value in the POST body.
+                const submitBtn = e.submitter || form.querySelector('button[type="submit"]');
                 if (submitBtn && !submitBtn.classList.contains('btn-loading')) {
                     // Don't add loading state if form validation fails
                     if (form.checkValidity()) {
+                        preserveSubmitterValue(form, submitBtn);
                         addLoadingState(submitBtn);
                     }
                 }
@@ -66,13 +88,17 @@
     }
 
     /**
-     * Add loading state to an element
+     * Add loading state to an element.
+     * Defer disabling so the browser can still include the submitter in the
+     * form entry list if preserveSubmitterValue was not used.
      */
     function addLoadingState(element) {
         const originalText = element.innerHTML;
         element.setAttribute('data-original-text', originalText);
         element.classList.add('btn-loading');
-        element.disabled = true;
+        setTimeout(function() {
+            element.disabled = true;
+        }, 0);
     }
 
     /**
