@@ -139,15 +139,33 @@ class MobileForms {
         document.querySelectorAll('button[data-loading-text]').forEach(btn => {
             const form = btn.closest('form');
             if (form) {
-                form.addEventListener('submit', () => {
+                // Use the submit event's submitter so multi-button forms keep
+                // the clicked name/value (Issue #709 — disabled submitters are
+                // excluded from the form entry list).
+                form.addEventListener('submit', (e) => {
                     if (form.checkValidity && !form.checkValidity()) return;
-                    const original = btn.innerHTML;
-                    btn.dataset.originalHtml = original;
-                    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + btn.dataset.loadingText;
-                    btn.disabled = true;
+                    const submitter = e.submitter || btn;
+                    if (submitter.name) {
+                        const existing = form.querySelector('input[data-tt-submitter-preserve="1"]');
+                        if (existing) existing.remove();
+                        const hidden = document.createElement('input');
+                        hidden.type = 'hidden';
+                        hidden.name = submitter.name;
+                        hidden.value = submitter.value != null ? submitter.value : '1';
+                        hidden.setAttribute('data-tt-submitter-preserve', '1');
+                        form.appendChild(hidden);
+                    }
+                    const original = submitter.innerHTML;
+                    submitter.dataset.originalHtml = original;
+                    if (submitter.dataset.loadingText) {
+                        submitter.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + submitter.dataset.loadingText;
+                    }
                     setTimeout(() => {
-                        btn.disabled = false;
-                        btn.innerHTML = original;
+                        submitter.disabled = true;
+                    }, 0);
+                    setTimeout(() => {
+                        submitter.disabled = false;
+                        submitter.innerHTML = original;
                     }, 15000);
                 });
             }

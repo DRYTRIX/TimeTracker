@@ -1,0 +1,55 @@
+{# Shared inline Create Project modal (Issue #728).
+   Open via button id="openCreateProjectModal" (or data-open-create-project).
+   Target select: data-project-select-id on the open button, or defaults to #project_id / [data-inline-project-select].
+   Optional: pass clients list; falls back to empty select requiring a client id from the page.
+#}
+<div id="createProjectModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+    <div class="absolute inset-0 bg-black/50" data-close-create-project></div>
+    <div class="relative max-w-lg mx-auto mt-10 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-xl">
+        <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+            <h3 class="text-lg font-semibold">{{ _('Create Project') }}</h3>
+            <button type="button" id="closeCreateProjectModal" class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded" aria-label="{{ _('Close') }}">{{ _('Close') }}</button>
+        </div>
+        <div class="p-4">
+            <form id="inlineCreateProjectForm" novalidate
+                  data-create-url="{{ url_for('projects.create_project') }}"
+                  data-creating-text="{{ _('Creating...') }}"
+                  data-created-text="{{ _('Project created') }}"
+                  data-error-text="{{ _('Could not create project. Please try again.') }}"
+                  data-network-error-text="{{ _('Network error while creating project') }}"
+                  data-client-required-text="{{ _('Please select a client first') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="space-y-4">
+                    <div>
+                        <label for="inline_project_name" class="form-label">{{ _('Project Name') }} *</label>
+                        <input type="text" id="inline_project_name" name="name" required class="form-input" placeholder="{{ _('Enter project name') }}">
+                    </div>
+                    <div>
+                        <label for="inline_project_client_id" class="form-label">{{ _('Client') }} *</label>
+                        <select id="inline_project_client_id" name="client_id" required class="form-input">
+                            <option value="">{{ _('Select a client...') }}</option>
+                            {% for client in (inline_project_clients if inline_project_clients is defined else (clients if clients is defined else (active_clients if active_clients is defined else []))) %}
+                            <option value="{{ client.id }}">{{ client.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                            {{ _('Projects must belong to a client. Other details can be filled later.') }}
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="inline_project_billable" name="billable" class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-0" checked>
+                        <label for="inline_project_billable" class="text-sm font-medium">{{ _('Billable') }}</label>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg" id="cancelCreateProject">{{ _('Cancel') }}</button>
+                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg" id="submitCreateProject">{{ _('Create Project') }}</button>
+                </div>
+                <p id="createProjectError" class="text-red-600 dark:text-red-400 text-sm mt-3 hidden"></p>
+            </form>
+        </div>
+    </div>
+    <style>
+        #createProjectModal .loading { opacity: .6; pointer-events: none; }
+    </style>
+</div>

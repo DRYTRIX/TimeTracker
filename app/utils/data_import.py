@@ -118,8 +118,14 @@ def import_csv_time_entries(user_id, csv_content, import_record):
             if end_time:
                 time_entry.calculate_duration()
             elif "duration_hours" in row:
+                from app.utils.time_rounding import apply_user_rounding
+
                 duration_hours = float(row["duration_hours"])
-                time_entry.duration_seconds = int(duration_hours * 3600)
+                raw_seconds = int(duration_hours * 3600)
+                rounding_user = db.session.get(User, user_id)
+                time_entry.duration_seconds = (
+                    apply_user_rounding(raw_seconds, rounding_user) if rounding_user else raw_seconds
+                )
                 if not end_time and start_time:
                     time_entry.end_time = start_time + timedelta(seconds=time_entry.duration_seconds)
 
@@ -252,6 +258,16 @@ def import_from_toggl(user_id, api_token, workspace_id, start_date, end_date, im
             elif duration_seconds > 0:
                 end_time = start_time + timedelta(seconds=duration_seconds)
 
+            # Apply per-user rounding when storing an explicit Toggl duration override
+            rounded_duration = None
+            if duration_seconds > 0:
+                from app.utils.time_rounding import apply_user_rounding
+
+                rounding_user = db.session.get(User, user_id)
+                rounded_duration = (
+                    apply_user_rounding(duration_seconds, rounding_user) if rounding_user else duration_seconds
+                )
+
             # Create time entry
             time_entry = TimeEntry(
                 user_id=user_id,
@@ -262,7 +278,7 @@ def import_from_toggl(user_id, api_token, workspace_id, start_date, end_date, im
                 tags=",".join(entry.get("tags", [])),
                 billable=entry.get("billable", True),
                 source="toggl",
-                duration_seconds=duration_seconds if duration_seconds > 0 else None,
+                duration_seconds=rounded_duration,
             )
 
             if end_time and not time_entry.duration_seconds:
@@ -432,8 +448,13 @@ def import_from_harvest(user_id, account_id, api_token, start_date, end_date, im
 
             # Create start/end times (use midday as default start time)
             start_time = spent_date.replace(hour=12, minute=0, second=0)
-            duration_seconds = int(hours * 3600)
-            end_time = start_time + timedelta(seconds=duration_seconds)
+            raw_seconds = int(hours * 3600)
+            end_time = start_time + timedelta(seconds=raw_seconds)
+
+            from app.utils.time_rounding import apply_user_rounding
+
+            rounding_user = db.session.get(User, user_id)
+            duration_seconds = apply_user_rounding(raw_seconds, rounding_user) if rounding_user else raw_seconds
 
             # Create time entry
             time_entry = TimeEntry(

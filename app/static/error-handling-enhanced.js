@@ -58,6 +58,12 @@ class EnhancedErrorHandler {
             if (document.visibilityState === 'visible') {
                 this.startHealthProbeInterval();
                 this.checkOnlineStatus({ quiet: true, onResume: true });
+                // Second probe to sweep up errors from resuming background requests
+                setTimeout(() => {
+                    if (document.visibilityState === 'visible') {
+                        this.checkOnlineStatus({ quiet: true, onResume: true });
+                    }
+                }, 1500);
             } else {
                 this.stopHealthProbeInterval();
             }

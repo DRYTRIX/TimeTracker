@@ -52,6 +52,8 @@ let activeTimer = null;
 let tickHandle = null;
 /** Keep service worker alive while the popup is open (MV3). */
 let keepAlivePort = null;
+/** Monotonic counter so concurrent loadTasksForProject calls don't duplicate options (#700). */
+let loadTasksGeneration = 0;
 
 function showMessage(text, kind = 'error') {
   els.message.textContent = text;
@@ -185,18 +187,29 @@ function fillProjectSelects(selectedId = null) {
 }
 
 async function loadTasksForProject(projectId, selectedTaskId = null) {
-  els.taskSelect.innerHTML = '<option value="">— No task —</option>';
-  if (!client || !projectId) return;
+  // Generation counter discards stale responses from concurrent loads
+  // (project filter fires on every keystroke — Issue #700 duplicates).
+  const gen = ++loadTasksGeneration;
+  if (!client || !projectId) {
+    els.taskSelect.innerHTML = '<option value="">— No task —</option>';
+    return;
+  }
   try {
     const data = await client.getTasks({
       project_id: projectId,
       status: 'open',
       per_page: 200,
     });
-    const tasks = (data?.tasks || [])
-      .filter((t) => t.status && !CLOSED_TASK_STATUSES.has(t.status))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    if (gen !== loadTasksGeneration) return; // stale
+    const byId = new Map();
+    for (const t of data?.tasks || []) {
+      if (!t || t.id == null) continue;
+      if (!t.status || CLOSED_TASK_STATUSES.has(t.status)) continue;
+      if (!byId.has(t.id)) byId.set(t.id, t);
+    }
+    const tasks = Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name));
     const selectedId = selectedTaskId != null ? String(selectedTaskId) : '';
+    els.taskSelect.innerHTML = '<option value="">— No task —</option>';
     for (const t of tasks) {
       const opt = document.createElement('option');
       opt.value = String(t.id);
@@ -205,8 +218,10 @@ async function loadTasksForProject(projectId, selectedTaskId = null) {
       els.taskSelect.appendChild(opt);
     }
   } catch (error) {
+    if (gen !== loadTasksGeneration) return;
     // Non-fatal: timer can start without a task list, but surface the failure.
     console.warn('Failed to load tasks', error);
+    els.taskSelect.innerHTML = '<option value="">— No task —</option>';
     const opt = document.createElement('option');
     opt.value = '';
     opt.textContent = 'Could not load tasks';

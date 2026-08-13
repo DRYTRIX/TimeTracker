@@ -321,6 +321,9 @@ class SmartNotificationManager {
 
     async pollServerSmartNotifications() {
         try {
+            if (typeof document !== 'undefined' && document.hidden) {
+                return;
+            }
             if (typeof navigator !== 'undefined' && navigator.onLine === false) {
                 return;
             }
@@ -330,7 +333,8 @@ class SmartNotificationManager {
             const res = await fetch('/api/notifications', {
                 method: 'GET',
                 credentials: 'same-origin',
-                headers: { Accept: 'application/json' }
+                headers: { Accept: 'application/json' },
+                __ttQuiet: true
             });
             if (!res.ok) {
                 return;

@@ -817,17 +817,33 @@
                     {% endif %}
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
+                            <label for="startTimerClient" class="form-label">{{ _('Client') }}</label>
+                            {{ client_select('client_id', active_clients, required=False, only_one_client=only_one_client|default(false), single_client=single_client, id='startTimerClient', searchable=True, can_create=(current_user.is_admin or current_user.has_permission('create_clients'))) }}
+                            {% if current_user.is_admin or current_user.has_permission('create_clients') %}
+                            <p class="text-xs mt-1">
+                                <button type="button" id="openCreateClientModal" data-client-select-id="startTimerClient" class="text-primary hover:underline">{{ _('Create new client') }}</button>
+                            </p>
+                            {% endif %}
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                                {{ _('Select a client first, then optionally a project') }}
+                            </p>
+                        </div>
+                        <div>
                             <label for="startTimerProject" class="form-label">{{ _('Project') }}</label>
-                            <select id="startTimerProject" name="project_id" class="form-input">
+                            <select id="startTimerProject" name="project_id" class="form-input" data-inline-project-select
+                                    data-searchable-select="project"
+                                    {% if current_user.is_admin or current_user.has_permission('create_projects') %}data-can-create="1"{% endif %}
+                                    data-search-placeholder="{{ _('Type to search projects…') }}">
                                 <option value="">{{ _('Select a project (optional)') }}</option>
                                 {% for project in active_projects %}
                                 <option value="{{ project.id }}">{{ project.name }}</option>
                                 {% endfor %}
                             </select>
-                        </div>
-                        <div>
-                            <label for="startTimerClient" class="form-label">{{ _('Client') }}</label>
-                            {{ client_select('client_id', active_clients, required=False, only_one_client=only_one_client|default(false), single_client=single_client, id='startTimerClient') }}
+                            {% if current_user.is_admin or current_user.has_permission('create_projects') %}
+                            <p class="text-xs mt-1">
+                                <button type="button" id="openCreateProjectModal" data-project-select-id="startTimerProject" class="text-primary hover:underline">{{ _('Create new project') }}</button>
+                            </p>
+                            {% endif %}
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
                                 {{ _('Select either a project or a client') }}
                             </p>
@@ -878,12 +894,17 @@
         <button type="button" class="btn btn-primary" data-create-task-confirm>{{ _('Create') }}</button>
     {% endset %}
     {{ modal('createTaskModal', _('Create task'), create_task_modal_content, create_task_modal_footer, 'sm') }}
+    {% include 'components/inline_create_client_modal.html' %}
+    {% include 'components/inline_create_project_modal.html' %}
     {% include 'workday/_overnight_clock_out_modal.html' %}
     {% include 'workday/_auto_closed_clock_out_modal.html' %}
 {% endblock %}
 
 
 {% block scripts_extra %}
+<script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
+<script src="{{ url_for('static', filename='inline-create-client.js') }}"></script>
+<script src="{{ url_for('static', filename='inline-create-project.js') }}"></script>
 <script nonce="{{ csp_nonce() }}">
     document.addEventListener('DOMContentLoaded', function() {
         // Single adjust-time form: buttons set delta and submit

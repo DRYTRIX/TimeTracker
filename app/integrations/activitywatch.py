@@ -279,6 +279,8 @@ class ActivityWatchConnector(BaseConnector):
                         skipped += 1
                         continue
 
+                    # Omit duration_seconds so calculate_duration() runs and applies
+                    # per-user rounding (start/end already encode the ActivityWatch duration).
                     entry = TimeEntry(
                         user_id=self.integration.user_id,
                         project_id=default_project_id,
@@ -286,7 +288,6 @@ class ActivityWatchConnector(BaseConnector):
                         task_id=None,
                         start_time=start_local,
                         end_time=end_local,
-                        duration_seconds=dur_sec,
                         notes=notes[:5000] if notes else None,
                         tags=None,
                         source="auto",

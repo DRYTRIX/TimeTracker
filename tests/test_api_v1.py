@@ -485,6 +485,81 @@ class TestTimer:
         assert data["time_entry"]["duration_seconds"] is not None
         assert 25 * 60 <= data["time_entry"]["duration_seconds"] <= 35 * 60
 
+    def test_timer_heartbeat(self, client, api_token, test_user, test_project, app):
+        """Heartbeat updates last_heartbeat_at and clears idle_notified_at."""
+        from datetime import timedelta
+
+        from app.models.time_entry import local_now
+
+        start = local_now() - timedelta(hours=1)
+        timer = TimeEntry(
+            user_id=int(test_user),
+            project_id=test_project.id,
+            start_time=start,
+            end_time=None,
+            source="api",
+            billable=True,
+        )
+        timer.last_heartbeat_at = start
+        timer.idle_notified_at = local_now() - timedelta(minutes=2)
+        db.session.add(timer)
+        db.session.commit()
+        timer_id = timer.id
+
+        headers = {"Authorization": f"Bearer {api_token}"}
+        response = client.post("/api/v1/timer/heartbeat", headers=headers)
+        assert response.status_code == 204
+
+        refreshed = db.session.get(TimeEntry, timer_id)
+        assert refreshed.last_heartbeat_at is not None
+        assert refreshed.last_heartbeat_at > start
+        assert refreshed.idle_notified_at is None
+
+    def test_timer_heartbeat_no_active(self, client, api_token):
+        headers = {"Authorization": f"Bearer {api_token}"}
+        response = client.post("/api/v1/timer/heartbeat", headers=headers)
+        assert response.status_code == 400
+
+    def test_check_idle_timers_notifies_then_stops(self, client, api_token, test_user, test_project, app):
+        """Server idle job notifies on first pass and auto-stops after grace."""
+        from datetime import timedelta
+
+        from app.models import Settings
+        from app.models.time_entry import local_now
+        from app.utils.scheduled_tasks import check_idle_timers
+
+        settings = Settings.get_settings()
+        settings.idle_timeout_minutes = 30
+        db.session.commit()
+
+        start = local_now() - timedelta(hours=2)
+        timer = TimeEntry(
+            user_id=int(test_user),
+            project_id=test_project.id,
+            start_time=start,
+            end_time=None,
+            source="api",
+            billable=True,
+        )
+        timer.last_heartbeat_at = local_now() - timedelta(hours=1)
+        db.session.add(timer)
+        db.session.commit()
+        timer_id = timer.id
+
+        # First pass: notify
+        check_idle_timers()
+        refreshed = db.session.get(TimeEntry, timer_id)
+        assert refreshed.end_time is None
+        assert refreshed.idle_notified_at is not None
+
+        # Second pass after grace: auto-stop
+        refreshed.idle_notified_at = local_now() - timedelta(minutes=6)
+        db.session.commit()
+        check_idle_timers()
+        stopped = db.session.get(TimeEntry, timer_id)
+        assert stopped.end_time is not None
+        assert stopped.idle_notified_at is None
+
 
 class TestTasks:
     """Test task endpoints"""
@@ -670,6 +745,16 @@ class TestClients:
         data = json.loads(response.data)
         assert "client" in data
         assert data["client"]["name"] == "New Client"
+
+    def test_get_client_by_id(self, client, api_token, test_client_model):
+        """Issue #716: GET /api/v1/clients/<id> must not 500 on dynamic projects."""
+        headers = {"Authorization": f"Bearer {api_token}"}
+        response = client.get(f"/api/v1/clients/{test_client_model.id}", headers=headers)
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert "client" in data
+        assert data["client"]["id"] == test_client_model.id
+        assert data["client"]["name"] == test_client_model.name
 
 
 class TestReports:

@@ -50,6 +50,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Send timer status to main process (for tray updates)
   sendTimerStatus: (data) => ipcRenderer.send('timer:status-update', data),
+
+  // Idle timeout prompt (main → renderer)
+  onIdlePrompt: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('idle:prompt', handler);
+    return () => ipcRenderer.removeListener('idle:prompt', handler);
+  },
+  onIdleDismissed: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('idle:dismissed', handler);
+    return () => ipcRenderer.removeListener('idle:dismissed', handler);
+  },
+  onIdleTimerStopped: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('idle:timer-stopped', handler);
+    return () => ipcRenderer.removeListener('idle:timer-stopped', handler);
+  },
+  idleStillWorking: () => ipcRenderer.send('idle:still-working'),
+  idleStop: () => ipcRenderer.send('idle:stop'),
   
   // Splash screen
   splashReady: () => ipcRenderer.send('splash:ready'),

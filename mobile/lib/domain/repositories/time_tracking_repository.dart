@@ -36,28 +36,48 @@ class TimeTrackingRepository {
 
   /// Get current timer status
   Future<Timer?> getTimerStatus() async {
+    final detailed = await getTimerStatusDetailed();
+    return detailed.timer;
+  }
+
+  /// Timer status plus idle metadata from `/api/v1/timer/status`.
+  Future<({Timer? timer, int? idleTimeoutMinutes, bool idleNotified})>
+      getTimerStatusDetailed() async {
     if (apiClient == null) {
-      // Return cached timer if offline
-      return await LocalStorage.getTimer();
+      final cached = await LocalStorage.getTimer();
+      return (timer: cached, idleTimeoutMinutes: null, idleNotified: false);
     }
 
     try {
       final isOnline = await _isOnline();
       if (!isOnline) {
-        return await LocalStorage.getTimer();
+        final cached = await LocalStorage.getTimer();
+        return (timer: cached, idleTimeoutMinutes: null, idleNotified: false);
       }
 
       final response = await apiClient!.getTimerStatus();
+      final idleTimeout = (response['idle_timeout_minutes'] as num?)?.toInt();
+      final idleNotified = response['idle_notified'] == true ||
+          (response['timer'] is Map &&
+              (response['timer'] as Map)['idle_notified'] == true);
       if (response['active'] == true && response['timer'] != null) {
         final timer = Timer.fromJson(response['timer'] as Map<String, dynamic>);
         await LocalStorage.saveTimer(timer);
-        return timer;
+        return (
+          timer: timer,
+          idleTimeoutMinutes: idleTimeout,
+          idleNotified: idleNotified,
+        );
       }
       await LocalStorage.clearTimer();
-      return null;
+      return (
+        timer: null,
+        idleTimeoutMinutes: idleTimeout,
+        idleNotified: false,
+      );
     } catch (e) {
-      // Return cached timer on error
-      return await LocalStorage.getTimer();
+      final cached = await LocalStorage.getTimer();
+      return (timer: cached, idleTimeoutMinutes: null, idleNotified: false);
     }
   }
 
@@ -114,14 +134,14 @@ class TimeTrackingRepository {
   }
 
   /// Stop the active timer
-  Future<TimeEntry> stopTimer() async {
+  Future<TimeEntry> stopTimer({DateTime? stopTime}) async {
     if (apiClient == null) {
       throw Exception('Not connected to server');
     }
     try {
       final response = await runMobileSpan(
         'mobile.timer.stop',
-        () => apiClient!.stopTimer(),
+        () => apiClient!.stopTimer(stopTime: stopTime),
       );
       final entry = TimeEntry.fromJson(response['time_entry'] as Map<String, dynamic>);
       await LocalStorage.clearTimer();
@@ -142,6 +162,18 @@ class TimeTrackingRepository {
       rethrow;
     } catch (e) {
       throw Exception('Failed to stop timer: $e');
+    }
+  }
+
+  /// Record activity so the server idle enforcer does not auto-stop the timer.
+  Future<void> sendHeartbeat() async {
+    if (apiClient == null) return;
+    try {
+      final isOnline = await _isOnline();
+      if (!isOnline) return;
+      await apiClient!.sendHeartbeat();
+    } catch (_) {
+      // Heartbeat failures must not break the UI.
     }
   }
 

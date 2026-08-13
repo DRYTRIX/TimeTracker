@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.11.4
+
+**Patch (5.11.4):** **Boundary rounding & minimum duration (#725)** — start/end boundary rounding, per-user minimum billable time, and admin interval fallback; rounding applied on remaining write paths. **Searchable client/project combobox (#728)** — filterable selects with inline create; client-only edits preserved. **Idle heartbeats (#722)** — server-side auto-stop and “Still working?” across web, extension, mobile, and desktop. **Fixes** — Approve button submit (#709), extension picker races (#700), idle-tab 503 toasts (#703), client API joinedload (#716). See [CHANGELOG.md](CHANGELOG.md#5114---2026-08-13).
+
 ### ✨ Highlights of v5.11.3
 
 **Patch (5.11.3):** **Manual-entry rounding (#725)** — replaced deprecated `User.query.get` with `db.session.get` when resolving the rounding user, silencing the SQLAlchemy 2.x deprecation warning. Added integration tests for the start-timer 409 payload (#700), `calculate_duration` rounding, and explicit manual-entry duration rounding. See [CHANGELOG.md](CHANGELOG.md#5113---2026-08-11).

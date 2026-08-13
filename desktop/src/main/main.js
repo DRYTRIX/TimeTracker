@@ -1,9 +1,11 @@
 const { app, BrowserWindow, ipcMain, globalShortcut, powerMonitor } = require('electron');
 const { createWindow } = require('./window');
 const { createTray, destroyTray } = require('./tray');
+const { createIdleMonitor } = require('./idle');
 const Store = require('electron-store');
 
 let store = null;
+let idleMonitor = null;
 
 // Parse command line arguments for server URL
 function parseCommandLineArgs(args = process.argv.slice(1)) {
@@ -173,9 +175,17 @@ app.whenReady().then(() => {
   createMainWindow({ showSplash: true });
   registerGlobalShortcuts();
 
+  idleMonitor = createIdleMonitor({
+    store,
+    sendToMainWindow,
+    focusMainWindow,
+  });
+  idleMonitor.start();
+
   try {
     powerMonitor.on('resume', () => {
       notifyAppResume('power-resume');
+      if (idleMonitor) idleMonitor.confirmStillWorking();
     });
   } catch (e) {
     console.warn('TimeTracker: could not register powerMonitor resume:', e.message);
@@ -183,6 +193,7 @@ app.whenReady().then(() => {
   
   // Listen for timer status updates from renderer (via IPC)
   ipcMain.on('timer:status-update', (event, data) => {
+    if (idleMonitor) idleMonitor.onTimerStatusUpdate(data);
     const active = Boolean(data && data.active);
     const paused = Boolean(data && data.paused);
     if (global.updateTrayMenu) {
@@ -200,6 +211,14 @@ app.whenReady().then(() => {
     } else if (updateTrayTooltip) {
       updateTrayTooltip('TimeTracker');
     }
+  });
+
+  ipcMain.on('idle:still-working', () => {
+    if (idleMonitor) idleMonitor.confirmStillWorking();
+  });
+
+  ipcMain.on('idle:stop', () => {
+    if (idleMonitor) idleMonitor.confirmStop();
   });
   
   app.on('activate', () => {
@@ -221,6 +240,7 @@ app.on('second-instance', (event, argv) => {
 app.on('before-quit', () => {
   app.isQuitting = true;
   unregisterGlobalShortcuts();
+  if (idleMonitor) idleMonitor.stop();
 });
 
 app.on('window-all-closed', () => {

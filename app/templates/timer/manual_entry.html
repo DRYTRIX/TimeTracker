@@ -105,19 +105,31 @@
                 <div class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
+                            <label for="client_id" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Client') }}</label>
+                            {{ client_select('client_id', clients, selected_id=selected_client_id, required=False, only_one_client=false, single_client=none, searchable=True, can_create=can_create_clients|default(false)) }}
+                            {% if can_create_clients|default(false) %}
+                            <p class="text-xs mt-1">
+                                <button type="button" id="openCreateClientModal" data-client-select-id="client_id" class="text-primary hover:underline">{{ _('Create new client') }}</button>
+                            </p>
+                            {% endif %}
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select either a project or a client') }}</p>
+                        </div>
+                        <div>
                             <label for="project_id" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Project') }}</label>
-                            <select name="project_id" id="project_id" class="form-input">
+                            <select name="project_id" id="project_id" class="form-input" data-inline-project-select
+                                    data-searchable-select="project"
+                                    {% if can_create_projects|default(false) %}data-can-create="1"{% endif %}
+                                    data-search-placeholder="{{ _('Type to search projects…') }}">
                                 <option value="">{{ _('Select a project (optional)') }}</option>
                                 {% for project in projects %}
                                 <option value="{{ project.id }}" {% if selected_project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
                                 {% endfor %}
                             </select>
-                        </div>
-                        <div>
-                            <label for="client_id" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Client') }}</label>
-                            {# Single client: show as normal dropdown, pre-select only when client_id is in URL (parameter) #}
-                            {{ client_select('client_id', clients, selected_id=selected_client_id, required=False, only_one_client=false, single_client=none) }}
-                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select either a project or a client') }}</p>
+                            {% if can_create_projects|default(false) %}
+                            <p class="text-xs mt-1">
+                                <button type="button" id="openCreateProjectModal" data-project-select-id="project_id" class="text-primary hover:underline">{{ _('Create new project') }}</button>
+                            </p>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -209,6 +221,11 @@
         </div>
     </form>
 </div>
+{% include 'components/inline_create_client_modal.html' %}
+{% include 'components/inline_create_project_modal.html' %}
+<script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
+<script src="{{ url_for('static', filename='inline-create-client.js') }}"></script>
+<script src="{{ url_for('static', filename='inline-create-project.js') }}"></script>
 <script nonce="{{ csp_nonce() }}">
 (function() {
     // Issue #557: avoid loading Toast UI Editor on mobile to prevent browser freeze

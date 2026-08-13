@@ -241,6 +241,10 @@ export class ApiClient {
     return this.request('POST', '/api/v1/timer/stop', Object.keys(body).length ? body : undefined);
   }
 
+  sendHeartbeat() {
+    return this.request('POST', '/api/v1/timer/heartbeat');
+  }
+
   getProjects(params = {}) {
     const qs = new URLSearchParams();
     if (params.status) qs.set('status', params.status);
@@ -255,15 +259,19 @@ export class ApiClient {
   async getAllProjects(params = {}) {
     const perPage = params.per_page || 100;
     let page = 1;
-    const all = [];
+    const byId = new Map();
     while (true) {
       const resp = await this.getProjects({ ...params, per_page: perPage, page });
-      all.push(...(resp?.projects || []));
+      for (const p of resp?.projects || []) {
+        if (p && p.id != null && !byId.has(p.id)) {
+          byId.set(p.id, p);
+        }
+      }
       const pages = resp?.pagination?.pages ?? 1;
       if (page >= pages) break;
       page += 1;
     }
-    return { projects: all };
+    return { projects: Array.from(byId.values()) };
   }
 
   createProject({ name, clientId = null, description }) {

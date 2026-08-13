@@ -82,12 +82,31 @@ class ApiClient {
     return Map<String, dynamic>.from(res.data ?? {});
   }
 
-  Future<Map<String, dynamic>> stopTimer() async {
-    final res = await _dio.post<Map<String, dynamic>>('/api/v1/timer/stop');
+  Future<Map<String, dynamic>> stopTimer({DateTime? stopTime}) async {
+    final body = <String, dynamic>{
+      if (stopTime != null) 'stop_time': stopTime.toUtc().toIso8601String(),
+    };
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/timer/stop',
+      data: body.isEmpty ? null : body,
+    );
     final code = res.statusCode ?? 0;
     if (code >= 200 && code < 300) {
       return Map<String, dynamic>.from(res.data ?? {});
     }
+    throw DioException(
+      requestOptions: res.requestOptions,
+      response: res,
+      type: DioExceptionType.badResponse,
+    );
+  }
+
+  /// Record activity for idle timeout enforcement. Returns true on 2xx (incl. 204).
+  Future<bool> sendHeartbeat() async {
+    final res = await _dio.post<dynamic>('/api/v1/timer/heartbeat');
+    final code = res.statusCode ?? 0;
+    if (code >= 200 && code < 300) return true;
+    if (code == 400) return false;
     throw DioException(
       requestOptions: res.requestOptions,
       response: res,

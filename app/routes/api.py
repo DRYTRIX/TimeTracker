@@ -327,15 +327,39 @@ def timer_status():
             "active": True,
             "timer": {
                 "id": active_timer.id,
-                "project_name": active_timer.project.name,
+                "project_name": active_timer.project.name if active_timer.project else None,
                 "project_id": active_timer.project_id,
                 "task_id": active_timer.task_id,
                 "start_time": active_timer.start_time.isoformat(),
                 "current_duration": active_timer.current_duration_seconds,
                 "duration_formatted": active_timer.duration_formatted,
+                "idle_notified": bool(active_timer.idle_notified_at),
+                "last_heartbeat_at": (
+                    active_timer.last_heartbeat_at.isoformat() if active_timer.last_heartbeat_at else None
+                ),
             },
         }
     )
+
+
+@api_bp.route("/api/timer/heartbeat", methods=["POST"])
+@login_required
+@deprecated_session_api("/api/v1/timer/heartbeat")
+def api_timer_heartbeat():
+    """Record activity for the active timer (idle timeout safety net)."""
+    active_timer = current_user.active_timer
+    if not active_timer:
+        return jsonify({"error": "No active timer"}), 400
+
+    try:
+        active_timer.record_heartbeat()
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.warning("Timer heartbeat failed: %s", e)
+        return jsonify({"error": "Failed to record heartbeat"}), 500
+
+    return ("", 204)
 
 
 @api_bp.route("/api/tags")

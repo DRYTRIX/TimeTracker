@@ -42,7 +42,7 @@
                         </select>
                         {% endif %}
                         <p class="text-xs mt-1">
-                            <button type="button" id="openCreateClientModal" class="text-primary hover:underline">{{ _('Create new client') }}</button>
+                            <button type="button" id="openCreateClientModal" data-client-select-id="client_id" class="text-primary hover:underline">{{ _('Create new client') }}</button>
                         </p>
                     </div>
                 </div>
@@ -258,69 +258,14 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/pickr/themes/classic.min.css') }}">
 {% endblock %}
 
-<!-- Create Client Modal (Tailwind, no external framework) -->
-<div id="createClientModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
-    <div class="absolute inset-0 bg-black/50"></div>
-    <div class="relative max-w-2xl mx-auto mt-10 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-xl">
-        <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
-            <h3 class="text-lg font-semibold">{{ _('Create Client') }}</h3>
-            <button type="button" id="closeCreateClientModal" class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded" aria-label="Close">{{ _('Close') }}</button>
-        </div>
-        <div class="p-4">
-            <form id="inlineCreateClientForm" novalidate>
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="client_name" class="form-label">{{ _('Client Name') }} *</label>
-                        <input type="text" id="client_name" name="name" required class="form-input" placeholder="{{ _('Enter client name') }}">
-                    </div>
-                    <div>
-                        <label for="client_default_hourly_rate" class="form-label">{{ _('Default Hourly Rate') }}</label>
-                        <input type="number" step="0.01" min="0" id="client_default_hourly_rate" name="default_hourly_rate" class="form-input" placeholder="{{ _('e.g. 75.00') }}">
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <label for="client_description" class="form-label">{{ _('Description') }}</label>
-                    <textarea id="client_description" name="description" rows="4" class="form-input" placeholder="{{ _('Brief description of the client or project scope') }}"></textarea>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div>
-                        <label for="client_contact_person" class="form-label">{{ _('Contact Person') }}</label>
-                        <input type="text" id="client_contact_person" name="contact_person" class="form-input" placeholder="{{ _('Primary contact name') }}">
-                    </div>
-                    <div>
-                        <label for="client_email" class="form-label">{{ _('Email') }}</label>
-                        <input type="email" id="client_email" name="email" class="form-input" placeholder="{{ _('contact@client.com') }}">
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div>
-                        <label for="client_phone" class="form-label">{{ _('Phone') }}</label>
-                        <input type="text" id="client_phone" name="phone" class="form-input" placeholder="+1 (555) 123-4567">
-                    </div>
-                    <div>
-                        <label for="client_address" class="form-label">{{ _('Address') }}</label>
-                        <input type="text" id="client_address" name="address" class="form-input" placeholder="123 Business St, City">
-                    </div>
-                </div>
-                <div class="mt-6 flex justify-end gap-3">
-                    <button type="button" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg" id="cancelCreateClient">{{ _('Cancel') }}</button>
-                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg" id="submitCreateClient">{{ _('Create Client') }}</button>
-                </div>
-                <p id="createClientError" class="text-red-600 dark:text-red-400 text-sm mt-3 hidden"></p>
-            </form>
-        </div>
-    </div>
-    <style>
-        #createClientModal .loading { opacity: .6; pointer-events: none; }
-    </style>
-</div>
+{% include 'components/inline_create_client_modal.html' %}
 {% endblock %}
 
 {% block scripts_extra %}
 <script src="{{ url_for('static', filename='vendor/pickr/pickr.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/gantt-color-picker.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/toastui/toastui-editor.js') }}"></script>
+<script src="{{ url_for('static', filename='inline-create-client.js') }}"></script>
 <script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     const clientSelect = document.getElementById('client_id');
@@ -468,95 +413,6 @@ document.addEventListener('DOMContentLoaded', function() {
         hourlyRateInput.classList.add('text-muted');
     }
 });
-</script>
-<script nonce="{{ csp_nonce() }}">
-(function(){
-    const modal = document.getElementById('createClientModal');
-    const openBtn = document.getElementById('openCreateClientModal');
-    const closeBtn = document.getElementById('closeCreateClientModal');
-    const cancelBtn = document.getElementById('cancelCreateClient');
-    const form = document.getElementById('inlineCreateClientForm');
-    const errorEl = document.getElementById('createClientError');
-    const clientSelect = document.getElementById('client_id');
-    const hourlyRateInput = document.getElementById('hourly_rate');
-
-    function showModal(){ modal.classList.remove('hidden'); setTimeout(()=>{ document.getElementById('client_name')?.focus(); }, 0); }
-    function hideModal(){ modal.classList.add('hidden'); errorEl.classList.add('hidden'); errorEl.textContent=''; form.reset(); }
-
-    openBtn?.addEventListener('click', (e)=>{ e.preventDefault(); showModal(); });
-    closeBtn?.addEventListener('click', hideModal);
-    cancelBtn?.addEventListener('click', hideModal);
-    modal.addEventListener('click', (e)=>{ if (e.target === modal) hideModal(); });
-    document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape' && !modal.classList.contains('hidden')) hideModal(); });
-
-    form?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        errorEl.classList.add('hidden');
-        errorEl.textContent = '';
-        const submitBtn = document.getElementById('submitCreateClient');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>{{ _('Creating...') }}';
-        submitBtn.disabled = true;
-        form.classList.add('loading');
-
-        try {
-            const formData = new FormData(form);
-            const tokenMeta = document.querySelector('meta[name="csrf-token"]');
-            const csrfToken = tokenMeta ? tokenMeta.getAttribute('content') : '';
-            const resp = await fetch('{{ url_for('clients.create_client') }}', {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-Token': csrfToken
-                },
-                body: formData,
-                credentials: 'same-origin'
-            });
-
-            if (!resp.ok) {
-                let msg = '{{ _('Could not create client. Please try again.') }}';
-                try { const data = await resp.json(); if (data && (data.message || (data.messages && data.messages[0]))) { msg = data.message || data.messages[0]; } } catch(_){ }
-                errorEl.textContent = msg;
-                errorEl.classList.remove('hidden');
-            } else {
-                const data = await resp.json();
-                if (clientSelect.tagName === 'INPUT' && clientSelect.type === 'hidden') {
-                    hideModal();
-                    if (window.toastManager) {
-                        window.toastManager.success('{{ _('Client created') }}');
-                    }
-                    window.location.reload();
-                    return;
-                }
-                const opt = document.createElement('option');
-                opt.value = String(data.id);
-                opt.textContent = data.name;
-                if (typeof data.default_hourly_rate !== 'undefined' && data.default_hourly_rate !== null) {
-                    opt.setAttribute('data-default-rate', String(data.default_hourly_rate));
-                }
-                clientSelect.appendChild(opt);
-                clientSelect.value = String(data.id);
-
-                if ((!hourlyRateInput.value || hourlyRateInput.value === '') && data.default_hourly_rate !== null && typeof data.default_hourly_rate !== 'undefined') {
-                    try { hourlyRateInput.value = String(data.default_hourly_rate); } catch(_){ }
-                }
-
-                hideModal();
-
-                if (window.toastManager) {
-                    window.toastManager.success('{{ _('Client created') }}');
-                }
-            }
-        } catch (err) {
-            errorEl.textContent = '{{ _('Network error while creating client') }}';
-            errorEl.classList.remove('hidden');
-        } finally {
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-            form.classList.remove('loading');
-        }
-    });
-})();
 </script>
 {% endblock %}
 

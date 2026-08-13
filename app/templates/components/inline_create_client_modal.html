@@ -1,0 +1,55 @@
+{# Shared inline Create Client modal (Issue #728).
+   Open via button id="openCreateClientModal" (or data-open-create-client).
+   Target select: set data-client-select-id on the open button, or defaults to #client_id / first [data-inline-client-select].
+#}
+<div id="createClientModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+    <div class="absolute inset-0 bg-black/50" data-close-create-client></div>
+    <div class="relative max-w-2xl mx-auto mt-10 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-xl">
+        <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+            <h3 class="text-lg font-semibold">{{ _('Create Client') }}</h3>
+            <button type="button" id="closeCreateClientModal" class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded" aria-label="{{ _('Close') }}">{{ _('Close') }}</button>
+        </div>
+        <div class="p-4">
+            <form id="inlineCreateClientForm" novalidate
+                  data-create-url="{{ url_for('clients.create_client') }}"
+                  data-creating-text="{{ _('Creating...') }}"
+                  data-created-text="{{ _('Client created') }}"
+                  data-error-text="{{ _('Could not create client. Please try again.') }}"
+                  data-network-error-text="{{ _('Network error while creating client') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="inline_client_name" class="form-label">{{ _('Client Name') }} *</label>
+                        <input type="text" id="inline_client_name" name="name" required class="form-input" placeholder="{{ _('Enter client name') }}">
+                    </div>
+                    <div>
+                        <label for="inline_client_default_hourly_rate" class="form-label">{{ _('Default Hourly Rate') }}</label>
+                        <input type="number" step="0.01" min="0" id="inline_client_default_hourly_rate" name="default_hourly_rate" class="form-input" placeholder="{{ _('e.g. 75.00') }}">
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label for="inline_client_description" class="form-label">{{ _('Description') }}</label>
+                    <textarea id="inline_client_description" name="description" rows="3" class="form-input" placeholder="{{ _('Brief description of the client or project scope') }}"></textarea>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label for="inline_client_contact_person" class="form-label">{{ _('Contact Person') }}</label>
+                        <input type="text" id="inline_client_contact_person" name="contact_person" class="form-input" placeholder="{{ _('Primary contact name') }}">
+                    </div>
+                    <div>
+                        <label for="inline_client_email" class="form-label">{{ _('Email') }}</label>
+                        <input type="email" id="inline_client_email" name="email" class="form-input" placeholder="{{ _('contact@client.com') }}">
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg" id="cancelCreateClient">{{ _('Cancel') }}</button>
+                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg" id="submitCreateClient">{{ _('Create Client') }}</button>
+                </div>
+                <p id="createClientError" class="text-red-600 dark:text-red-400 text-sm mt-3 hidden"></p>
+            </form>
+        </div>
+    </div>
+    <style>
+        #createClientModal .loading { opacity: .6; pointer-events: none; }
+    </style>
+</div>
