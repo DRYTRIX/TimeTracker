@@ -103,7 +103,8 @@ class PomodoroService:
             time_entry = TimeEntry.query.get(session.time_entry_id)
             if time_entry and not time_entry.end_time:
                 time_entry.end_time = datetime.utcnow()
-                time_entry.duration_seconds = int((time_entry.end_time - time_entry.start_time).total_seconds())
+                # Use calculate_duration so per-user rounding (and break deduction) apply
+                time_entry.calculate_duration()
 
                 # Add note about Pomodoro session
                 if notes:

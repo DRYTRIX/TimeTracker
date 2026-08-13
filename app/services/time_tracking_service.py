@@ -344,6 +344,15 @@ class TimeTrackingService:
             if duration_seconds <= 0:
                 return {"success": False, "message": "Duration must be positive", "error": "invalid_duration"}
 
+            # Apply per-user rounding so all callers (UI, API, integrations) are covered.
+            # Idempotent when the UI already rounded (values on an interval stay put).
+            from app.models import User
+            from app.utils.time_rounding import apply_user_rounding
+
+            rounding_user = db.session.get(User, user_id)
+            if rounding_user is not None:
+                duration_seconds = apply_user_rounding(duration_seconds, rounding_user)
+
         # Create entry (duration_seconds is net; break_seconds is stored and subtracted when computing from start/end)
         if break_seconds is not None:
             break_seconds = max(0, int(break_seconds))
