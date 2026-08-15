@@ -103,37 +103,83 @@ def apply_minimum_duration(duration_seconds: int, minimum_minutes: int) -> int:
     return max(duration_seconds, minimum_seconds)
 
 
-def get_user_rounding_settings(user) -> dict:
-    """
-    Get the time rounding settings for a user.
+_VALID_METHODS = ("nearest", "up", "down", "boundary")
 
-    When the user has the default "no rounding" interval (1 minute), fall back
-    to the global Settings.rounding_minutes so the admin setting actually applies
-    (Issue #725).
+
+def _normalize_method(method) -> str:
+    if method not in _VALID_METHODS:
+        return "nearest"
+    return method
+
+
+def get_global_rounding_policy() -> dict:
     """
+    Return the installation-wide rounding policy from Settings, with Config fallback.
+
+    ``enabled`` is always True at the global level; ``minutes <= 1`` is a no-op.
+    """
+    minutes = 1
+    method = "nearest"
+    minimum_minutes = 0
+    enforced = False
+    try:
+        from app.models.settings import Settings
+
+        settings = Settings.get_settings()
+        minutes = int(getattr(settings, "rounding_minutes", 1) or 1)
+        method = _normalize_method(getattr(settings, "rounding_method", "nearest"))
+        minimum_minutes = int(getattr(settings, "rounding_minimum_minutes", 0) or 0)
+        enforced = bool(getattr(settings, "rounding_enforce_global", False))
+    except Exception:
+        from app.config import Config
+
+        minutes = int(getattr(Config, "ROUNDING_MINUTES", 1) or 1)
+        method = _normalize_method(getattr(Config, "ROUNDING_METHOD", "nearest"))
+        minimum_minutes = int(getattr(Config, "ROUNDING_MINIMUM_MINUTES", 0) or 0)
+        enforced = bool(getattr(Config, "ROUNDING_ENFORCE_GLOBAL", False))
+
+    return {
+        "enabled": True,
+        "minutes": minutes,
+        "method": method,
+        "minimum_minutes": minimum_minutes,
+        "enforced": enforced,
+    }
+
+
+def get_user_rounding_settings(user=None) -> dict:
+    """
+    Resolve the effective rounding settings for a user (or the global policy).
+
+    When ``Settings.rounding_enforce_global`` is True, the admin policy is used
+    verbatim and per-user fields are ignored.
+
+    Otherwise each field falls back to the global value when the user is still
+    at the default (interval 1, method ``nearest``, minimum 0).
+
+    ``user=None`` returns the global policy.
+    """
+    global_policy = get_global_rounding_policy()
+
+    if user is None or global_policy["enforced"]:
+        return {
+            "enabled": global_policy["enabled"],
+            "minutes": global_policy["minutes"],
+            "method": global_policy["method"],
+            "minimum_minutes": global_policy["minimum_minutes"],
+        }
+
     enabled = getattr(user, "time_rounding_enabled", True)
     minutes = getattr(user, "time_rounding_minutes", 1)
-    method = getattr(user, "time_rounding_method", "nearest")
+    method = _normalize_method(getattr(user, "time_rounding_method", "nearest"))
     minimum = getattr(user, "time_rounding_minimum_minutes", 0) or 0
 
-    # Fall back to global admin setting when user has not customised the interval
     if enabled and minutes <= 1:
-        try:
-            from app.models.settings import Settings
-
-            settings = Settings.get_settings()
-            global_minutes = int(getattr(settings, "rounding_minutes", 1) or 1)
-            if global_minutes > 1:
-                minutes = global_minutes
-                # Prefer user method if they set one other than nearest; else nearest
-                if method not in ("nearest", "up", "down", "boundary"):
-                    method = "nearest"
-        except Exception:
-            from app.config import Config
-
-            global_minutes = int(getattr(Config, "ROUNDING_MINUTES", 1) or 1)
-            if global_minutes > 1:
-                minutes = global_minutes
+        minutes = global_policy["minutes"]
+    if method == "nearest":
+        method = global_policy["method"]
+    if not minimum:
+        minimum = global_policy["minimum_minutes"]
 
     return {
         "enabled": enabled,

@@ -50,13 +50,16 @@ class TimeTrackingService:
     def start_timer(
         self,
         user_id: int,
-        project_id: int,
+        project_id: Optional[int] = None,
         task_id: Optional[int] = None,
         notes: Optional[str] = None,
         template_id: Optional[int] = None,
+        client_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
         Start a new timer for a user.
+
+        Requires project_id or client_id (project takes precedence when both are set).
 
         Returns:
             dict with 'success', 'message', and 'timer' keys
@@ -76,7 +79,7 @@ class TimeTrackingService:
                 "error": "timer_already_running",
             }
 
-        # Resolve template defaults before project validation
+        # Resolve template defaults before project/client validation
         if template_id:
             from app.models import TimeEntryTemplate
 
@@ -90,60 +93,94 @@ class TimeTrackingService:
                     notes = template.default_notes
                 template.record_usage()
 
-        # Validate project
-        project = self.project_repo.get_by_id(project_id)
-        if not project:
-            return {"success": False, "message": "Invalid project selected", "error": "invalid_project"}
-
-        # Check project status
-        if project.status == "archived":
+        if not project_id and not client_id:
             return {
                 "success": False,
-                "message": "Cannot start timer for an archived project. Please unarchive the project first.",
-                "error": "project_archived",
+                "message": "Either project or client must be selected",
+                "error": "missing_project_or_client",
             }
 
-        if project.status != "active":
-            return {
-                "success": False,
-                "message": "Cannot start timer for an inactive project",
-                "error": "project_inactive",
-            }
+        # Project takes precedence (storage stays project XOR client)
+        if project_id:
+            client_id = None
 
-        # Validate task if provided
-        if task_id:
-            task = Task.query.filter_by(id=task_id, project_id=project_id).first()
-            if not task:
+        if project_id:
+            project = self.project_repo.get_by_id(project_id)
+            if not project:
+                return {"success": False, "message": "Invalid project selected", "error": "invalid_project"}
+
+            if project.status == "archived":
                 return {
                     "success": False,
-                    "message": "Selected task is invalid for the chosen project",
-                    "error": "invalid_task",
+                    "message": "Cannot start timer for an archived project. Please unarchive the project first.",
+                    "error": "project_archived",
+                }
+
+            if project.status != "active":
+                return {
+                    "success": False,
+                    "message": "Cannot start timer for an inactive project",
+                    "error": "project_inactive",
+                }
+
+            if task_id:
+                task = Task.query.filter_by(id=task_id, project_id=project_id).first()
+                if not task:
+                    return {
+                        "success": False,
+                        "message": "Selected task is invalid for the chosen project",
+                        "error": "invalid_task",
+                    }
+        else:
+            # Client-only timer
+            from app.repositories import ClientRepository
+
+            client = ClientRepository().get_by_id(client_id)
+            if not client or client.status != "active":
+                return {"success": False, "message": "Invalid client selected", "error": "invalid_client"}
+
+            if task_id:
+                return {
+                    "success": False,
+                    "message": "Tasks can only be selected for project-based timers",
+                    "error": "task_not_allowed",
                 }
 
         # Validate time entry requirements (task, description)
         settings = Settings.get_settings()
         err = validate_time_entry_requirements(
-            settings, project_id=project_id, client_id=None, task_id=task_id, notes=notes
+            settings, project_id=project_id, client_id=client_id, task_id=task_id, notes=notes
         )
         if err:
             return err
 
-        # Create timer
         timer = self.time_entry_repo.create_timer(
-            user_id=user_id, project_id=project_id, task_id=task_id, notes=notes, source=TimeEntrySource.AUTO.value
+            user_id=user_id,
+            project_id=project_id,
+            client_id=client_id,
+            task_id=task_id,
+            notes=notes,
+            source=TimeEntrySource.AUTO.value,
         )
 
-        if not safe_commit("start_timer", {"user_id": user_id, "project_id": project_id}):
+        commit_data = {"user_id": user_id}
+        if project_id:
+            commit_data["project_id"] = project_id
+        if client_id:
+            commit_data["client_id"] = client_id
+        if not safe_commit("start_timer", commit_data):
             return {
                 "success": False,
                 "message": "Could not start timer due to a database error",
                 "error": "database_error",
             }
 
-        # Emit domain event
-        emit_event(
-            WebhookEvent.TIME_ENTRY_CREATED.value, {"entry_id": timer.id, "user_id": user_id, "project_id": project_id}
-        )
+        event_payload = {"entry_id": timer.id, "user_id": user_id}
+        if project_id:
+            event_payload["project_id"] = project_id
+        if client_id:
+            event_payload["client_id"] = client_id
+        emit_event(WebhookEvent.TIME_ENTRY_CREATED.value, event_payload)
 
         return {"success": True, "message": "Timer started successfully", "timer": timer}
 
@@ -265,6 +302,10 @@ class TimeTrackingService:
                 "error": "missing_project_or_client",
             }
 
+        # Project takes precedence over client (UI may send both for hierarchy; storage stays project XOR client)
+        if project_id:
+            client_id = None
+
         # Validate project if provided
         if project_id:
             project = self.project_repo.get_by_id(project_id)
@@ -346,12 +387,26 @@ class TimeTrackingService:
 
             # Apply per-user rounding so all callers (UI, API, integrations) are covered.
             # Idempotent when the UI already rounded (values on an interval stay put).
+            # For boundary mode, adjust timestamps and clear the override so duration
+            # is derived from rounded start/end (apply_user_rounding alone would leave
+            # raw timestamps).
             from app.models import User
-            from app.utils.time_rounding import apply_user_rounding
+            from app.utils.time_rounding import (
+                apply_user_rounding,
+                get_user_rounding_settings,
+                round_entry_boundaries,
+            )
 
             rounding_user = db.session.get(User, user_id)
             if rounding_user is not None:
-                duration_seconds = apply_user_rounding(duration_seconds, rounding_user)
+                settings = get_user_rounding_settings(rounding_user)
+                if settings["enabled"] and settings["method"] == "boundary" and settings["minutes"] > 1:
+                    start_time, end_time = round_entry_boundaries(
+                        start_time, end_time, settings["minutes"]
+                    )
+                    duration_seconds = None
+                else:
+                    duration_seconds = apply_user_rounding(duration_seconds, rounding_user)
 
         # Create entry (duration_seconds is net; break_seconds is stored and subtracted when computing from start/end)
         if break_seconds is not None:

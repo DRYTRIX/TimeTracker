@@ -52,6 +52,28 @@ from app.utils.timezone import get_available_timezones
 
 admin_bp = Blueprint("admin", __name__)
 
+_VALID_ROUNDING_MINUTES = {1, 5, 10, 15, 30, 60}
+_VALID_ROUNDING_METHODS = {"nearest", "up", "down", "boundary"}
+_VALID_ROUNDING_MINIMUMS = {0, 5, 10, 15, 30, 60}
+
+
+def _admin_settings_template_kwargs(
+    settings_obj, timezones, kiosk_settings, peppol_env_enabled, ai_config, system_instance_id
+):
+    """Shared context for every render of admin/settings.html."""
+    from app.utils.time_rounding import get_available_minimum_durations, get_available_rounding_methods
+
+    return dict(
+        settings=settings_obj,
+        timezones=timezones,
+        kiosk_settings=kiosk_settings,
+        peppol_env_enabled=peppol_env_enabled,
+        ai_config=ai_config,
+        system_instance_id=system_instance_id,
+        rounding_methods=get_available_rounding_methods(),
+        rounding_minimums=get_available_minimum_durations(),
+    )
+
 
 def _ldap_admin_display():
     """Read-only LDAP config summary for admin settings (from env / app config)."""
@@ -1350,16 +1372,20 @@ def settings():
             system_instance_id = Settings.get_system_instance_id()
             return render_template(
                 "admin/settings.html",
-                settings=settings_obj,
-                timezones=timezones,
-                kiosk_settings=kiosk_settings,
-                peppol_env_enabled=peppol_env_enabled,
-                ai_config=ai_config,
-                system_instance_id=system_instance_id,
+                **_admin_settings_template_kwargs(
+                    settings_obj,
+                    timezones,
+                    kiosk_settings,
+                    peppol_env_enabled,
+                    ai_config,
+                    system_instance_id,
+                ),
             )
 
         # Update basic settings
         settings_obj.timezone = timezone
+        settings_obj.app_base_url = request.form.get("app_base_url", "").strip()
+        current_app.config["APP_BASE_URL"] = settings_obj.app_base_url or ""
 
         # Validate and update date/time format
         date_fmt = request.form.get("date_format", "YYYY-MM-DD")
@@ -1370,7 +1396,22 @@ def settings():
             settings_obj.time_format = time_fmt
 
         settings_obj.currency = request.form.get("currency", "EUR")
-        settings_obj.rounding_minutes = int(request.form.get("rounding_minutes", 1))
+        try:
+            rounding_minutes = int(request.form.get("rounding_minutes", 1))
+        except (TypeError, ValueError):
+            rounding_minutes = settings_obj.rounding_minutes or 1
+        if rounding_minutes in _VALID_ROUNDING_MINUTES:
+            settings_obj.rounding_minutes = rounding_minutes
+        rounding_method = request.form.get("rounding_method", "nearest")
+        if rounding_method in _VALID_ROUNDING_METHODS:
+            settings_obj.rounding_method = rounding_method
+        try:
+            rounding_minimum = int(request.form.get("rounding_minimum_minutes", 0))
+        except (TypeError, ValueError):
+            rounding_minimum = getattr(settings_obj, "rounding_minimum_minutes", 0) or 0
+        if rounding_minimum in _VALID_ROUNDING_MINIMUMS:
+            settings_obj.rounding_minimum_minutes = rounding_minimum
+        settings_obj.rounding_enforce_global = request.form.get("rounding_enforce_global") == "on"
         settings_obj.single_active_timer = request.form.get("single_active_timer") == "on"
         settings_obj.allow_self_register = request.form.get("allow_self_register") == "on"
         settings_obj.idle_timeout_minutes = int(request.form.get("idle_timeout_minutes", 30))
@@ -1397,12 +1438,14 @@ def settings():
             system_instance_id = Settings.get_system_instance_id()
             return render_template(
                 "admin/settings.html",
-                settings=settings_obj,
-                timezones=timezones,
-                kiosk_settings=kiosk_settings,
-                peppol_env_enabled=peppol_env_enabled,
-                ai_config=ai_config,
-                system_instance_id=system_instance_id,
+                **_admin_settings_template_kwargs(
+                    settings_obj,
+                    timezones,
+                    kiosk_settings,
+                    peppol_env_enabled,
+                    ai_config,
+                    system_instance_id,
+                ),
             )
         # #region agent log
         try:
@@ -1445,12 +1488,14 @@ def settings():
             system_instance_id = Settings.get_system_instance_id()
             return render_template(
                 "admin/settings.html",
-                settings=settings_obj,
-                timezones=timezones,
-                kiosk_settings=kiosk_settings,
-                peppol_env_enabled=peppol_env_enabled,
-                ai_config=ai_config,
-                system_instance_id=system_instance_id,
+                **_admin_settings_template_kwargs(
+                    settings_obj,
+                    timezones,
+                    kiosk_settings,
+                    peppol_env_enabled,
+                    ai_config,
+                    system_instance_id,
+                ),
             )
         settings_obj.quote_prefix = quote_prefix_form
         settings_obj.quote_number_pattern = quote_number_pattern_form
@@ -1640,12 +1685,14 @@ def settings():
             system_instance_id = Settings.get_system_instance_id()
             return render_template(
                 "admin/settings.html",
-                settings=settings_obj,
-                timezones=timezones,
-                kiosk_settings=kiosk_settings,
-                peppol_env_enabled=peppol_env_enabled,
-                ai_config=ai_config,
-                system_instance_id=system_instance_id,
+                **_admin_settings_template_kwargs(
+                    settings_obj,
+                    timezones,
+                    kiosk_settings,
+                    peppol_env_enabled,
+                    ai_config,
+                    system_instance_id,
+                ),
             )
         # #region agent log
         try:
@@ -1687,12 +1734,14 @@ def settings():
     ai_config = settings_obj.get_ai_config()
     return render_template(
         "admin/settings.html",
-        settings=settings_obj,
-        timezones=timezones,
-        kiosk_settings=kiosk_settings,
-        peppol_env_enabled=peppol_env_enabled,
-        ai_config=ai_config,
-        system_instance_id=system_instance_id,
+        **_admin_settings_template_kwargs(
+            settings_obj,
+            timezones,
+            kiosk_settings,
+            peppol_env_enabled,
+            ai_config,
+            system_instance_id,
+        ),
     )
 
 

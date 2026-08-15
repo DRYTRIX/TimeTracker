@@ -66,7 +66,7 @@ class TimeEntryCard extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          project?.name ?? 'Unknown Project',
+                          project?.name ?? entry.displayLabel,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         if (task != null) ...[

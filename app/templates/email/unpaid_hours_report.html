@@ -173,11 +173,13 @@
         
         <p style="margin-top: 20px;">Please review these entries and create invoices as needed.</p>
         
+        {% if reports_url %}
         <center>
-            <a href="{{ url_for('reports.reports', _external=True) }}" class="button">
+            <a href="{{ reports_url }}" class="button">
                 View Reports in TimeTracker
             </a>
         </center>
+        {% endif %}
     </div>
     
     <div class="footer">

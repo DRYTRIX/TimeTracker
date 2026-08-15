@@ -518,12 +518,14 @@ def kiosk_stop_timer():
         return jsonify({"error": "No active timer"}), 400
 
     try:
-        from app.models.time_entry import local_now
+        # Use the shared stop path so duration_seconds is computed (and rounded)
+        # the same way as web/API stops — setting end_time alone left duration NULL.
+        result = TimeTrackingService().stop_timer(user_id=current_user.id, entry_id=active_timer.id)
+        if not result.get("success"):
+            return jsonify({"error": result.get("message", _("Could not stop timer"))}), 400
 
-        active_timer.end_time = local_now()
-        db.session.commit()
-
-        log_event("timer.stopped", user_id=current_user.id, timer_id=active_timer.id)
+        entry = result["entry"]
+        log_event("timer.stopped", user_id=current_user.id, timer_id=entry.id)
 
         return jsonify({"success": True, "message": _("Timer stopped successfully")})
     except Exception as e:

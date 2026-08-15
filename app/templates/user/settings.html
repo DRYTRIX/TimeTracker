@@ -311,13 +311,22 @@
             </summary>
             <div class="px-6 pb-6">
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                {% if rounding_enforced %}
+                {{ _('Your administrator sets the rounding policy for everyone. These values are shown for reference and cannot be changed here.') }}
+                {% else %}
                 {{ _('Configure how your time entries are rounded. Interval "No rounding / use system default" inherits the admin Rounding (Minutes) setting. Boundary mode rounds start down and end up to interval markers.') }}
+                {% endif %}
             </p>
+            {% if rounding_enforced %}
+            <div class="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100">
+                <i class="fas fa-lock mr-1"></i>{{ _('Rounding is enforced by your administrator. Personal preferences are preserved and will apply again if the policy is unlocked.') }}
+            </div>
+            {% endif %}
             
             <div class="space-y-4">
-                <label for="time_rounding_enabled" class="flex items-center min-h-[44px] cursor-pointer rounded-lg px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <label for="time_rounding_enabled" class="flex items-center min-h-[44px] {% if rounding_enforced %}cursor-not-allowed opacity-70{% else %}cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50{% endif %} rounded-lg px-2 -mx-2">
                     <input type="checkbox" id="time_rounding_enabled" name="time_rounding_enabled" 
-                           {% if user.time_rounding_enabled %}checked{% endif %}
+                           {% if rounding_enforced %}{% if rounding_policy.enabled %}checked{% endif %} disabled{% elif user.time_rounding_enabled %}checked{% endif %}
                            class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0"
                            onchange="toggleRoundingOptions()">
                     <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
@@ -332,9 +341,10 @@
                             {{ _('Rounding Interval') }}
                         </label>
                         <select id="time_rounding_minutes" name="time_rounding_minutes"
+                                {% if rounding_enforced %}disabled{% endif %}
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                             {% for minutes, label in rounding_intervals %}
-                            <option value="{{ minutes }}" {% if user.time_rounding_minutes == minutes %}selected{% endif %}>{{ label }}</option>
+                            <option value="{{ minutes }}" {% if (rounding_policy.minutes if rounding_enforced else user.time_rounding_minutes) == minutes %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
                         </select>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Time entries will be rounded to this interval') }}</p>
@@ -345,10 +355,11 @@
                             {{ _('Rounding Method') }}
                         </label>
                         <select id="time_rounding_method" name="time_rounding_method"
+                                {% if rounding_enforced %}disabled{% endif %}
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                 onchange="updateRoundingMethodDescription()">
                             {% for method, label, description in rounding_methods %}
-                            <option value="{{ method }}" data-description="{{ description }}" {% if user.time_rounding_method == method %}selected{% endif %}>{{ label }}</option>
+                            <option value="{{ method }}" data-description="{{ description }}" {% if (rounding_policy.method if rounding_enforced else user.time_rounding_method) == method %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
                         </select>
                         <p id="rounding-method-description" class="text-xs text-gray-500 dark:text-gray-400 mt-1"></p>
@@ -359,10 +370,11 @@
                             {{ _('Minimum Entry Duration') }}
                         </label>
                         <select id="time_rounding_minimum_minutes" name="time_rounding_minimum_minutes"
+                                {% if rounding_enforced %}disabled{% endif %}
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                 onchange="updateRoundingExample()">
                             {% for minutes, label in rounding_minimums %}
-                            <option value="{{ minutes }}" {% if (user.time_rounding_minimum_minutes or 0) == minutes %}selected{% endif %}>{{ label }}</option>
+                            <option value="{{ minutes }}" {% if (rounding_policy.minimum_minutes if rounding_enforced else (user.time_rounding_minimum_minutes or 0)) == minutes %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
                         </select>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Short entries are raised to this billable minimum after rounding') }}</p>
@@ -644,13 +656,18 @@ document.getElementById('email_notifications').addEventListener('change', functi
 });
 
 // Toggle rounding options visibility
+const roundingEnforced = {{ rounding_enforced|default(false)|tojson }};
+
 function toggleRoundingOptions() {
-    const enabled = document.getElementById('time_rounding_enabled').checked;
+    const enabledEl = document.getElementById('time_rounding_enabled');
+    const enabled = roundingEnforced ? true : enabledEl.checked;
     const options = document.getElementById('rounding-options');
     
     if (enabled) {
         options.style.opacity = '1';
-        options.querySelectorAll('select').forEach(select => select.disabled = false);
+        options.querySelectorAll('select').forEach(select => {
+            select.disabled = roundingEnforced;
+        });
     } else {
         options.style.opacity = '0.5';
         options.querySelectorAll('select').forEach(select => select.disabled = true);

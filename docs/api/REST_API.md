@@ -195,7 +195,7 @@ Returns API version and available endpoints. No authentication required.
 ```json
 {
   "api_version": "v1",
-  "app_version": "5.10.1",
+  "app_version": "5.11.5",
   "setup_required": false,
   "enabled_modules": ["projects", "timer", "tasks", "invoices", "calendar"],
   "documentation_url": "/api/docs",
@@ -672,11 +672,17 @@ POST /api/v1/timer/start
 
 **Required Scope:** `write:time_entries`
 
-**Request Body:**
+**Request Body:** Provide `project_id` and/or `client_id` (at least one required). Client-only timers omit `project_id`; `task_id` is only valid with a project.
 ```json
 {
   "project_id": 1,
   "task_id": 5
+}
+```
+```json
+{
+  "client_id": 3,
+  "notes": "General client work"
 }
 ```
 

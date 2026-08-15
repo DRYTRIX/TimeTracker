@@ -49,17 +49,20 @@ class _TimerWidgetState extends ConsumerState<TimerWidget> {
     Project? project;
     Task? task;
     if (timerState.timer != null) {
-      try {
-        project = projectsState.projects.firstWhere(
-          (p) => p.id == timerState.timer!.projectId,
-        );
-      } catch (e) {
-        project = null;
+      final t = timerState.timer!;
+      if (t.projectId != null) {
+        try {
+          project = projectsState.projects.firstWhere(
+            (p) => p.id == t.projectId,
+          );
+        } catch (e) {
+          project = null;
+        }
       }
-      if (timerState.timer!.taskId != null) {
+      if (t.taskId != null) {
         try {
           task = tasksState.tasks.firstWhere(
-            (t) => t.id == timerState.timer!.taskId,
+            (tk) => tk.id == t.taskId,
           );
         } catch (e) {
           task = null;
@@ -72,7 +75,12 @@ class _TimerWidgetState extends ConsumerState<TimerWidget> {
 
     final isActive = timerState.isActive && timerState.timer != null;
     final elapsedText = isActive ? timerState.timer!.formattedElapsed : '00:00:00';
-    final projectName = project?.name ?? 'Unknown project';
+    final label = isActive
+        ? (project?.name ?? timerState.timer!.displayLabel)
+        : 'Unknown project';
+    final showClientChip = isActive &&
+        project == null &&
+        timerState.timer!.clientId != null;
 
     return Card(
       child: Padding(
@@ -116,8 +124,11 @@ class _TimerWidgetState extends ConsumerState<TimerWidget> {
                           runSpacing: AppSpacing.xs,
                           children: [
                             Chip(
-                              avatar: const Icon(Icons.folder_outlined, size: 18),
-                              label: Text(projectName),
+                              avatar: Icon(
+                                showClientChip ? Icons.business_outlined : Icons.folder_outlined,
+                                size: 18,
+                              ),
+                              label: Text(label),
                             ),
                             if (task != null)
                               Chip(

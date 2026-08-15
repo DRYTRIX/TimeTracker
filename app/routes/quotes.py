@@ -1384,7 +1384,14 @@ def request_approval(quote_id):
     admins = [u for u in User.query.filter_by(is_active=True).all() if u.is_admin]
     for admin in admins:
         if admin.email:
-            send_quote_approval_request_notification(quote, admin)
+            try:
+                send_quote_approval_request_notification(quote, admin)
+            except Exception:
+                current_app.logger.exception(
+                    "Failed to send quote approval request email to %s for quote %s",
+                    admin.email,
+                    quote.id,
+                )
 
     log_event("quote.approval.requested", user_id=current_user.id, quote_id=quote.id, quote_title=quote.title)
     track_event(current_user.id, "quote.approval.requested", {"quote_id": quote.id, "quote_title": quote.title})
@@ -1424,7 +1431,13 @@ def approve_quote(quote_id):
     from app.utils.email import send_quote_approved_notification
 
     if quote.creator and quote.creator.email:
-        send_quote_approved_notification(quote, quote.creator)
+        try:
+            send_quote_approved_notification(quote, quote.creator)
+        except Exception:
+            current_app.logger.exception(
+                "Failed to send quote approved email for quote %s",
+                quote.id,
+            )
 
     log_event("quote.approved", user_id=current_user.id, quote_id=quote.id, quote_title=quote.title)
     track_event(current_user.id, "quote.approved", {"quote_id": quote.id, "quote_title": quote.title})
@@ -1467,7 +1480,13 @@ def reject_approval(quote_id):
     from app.utils.email import send_quote_approval_rejected_notification
 
     if quote.creator and quote.creator.email:
-        send_quote_approval_rejected_notification(quote, quote.creator)
+        try:
+            send_quote_approval_rejected_notification(quote, quote.creator)
+        except Exception:
+            current_app.logger.exception(
+                "Failed to send quote approval rejected email for quote %s",
+                quote.id,
+            )
 
     log_event("quote.approval.rejected", user_id=current_user.id, quote_id=quote.id, quote_title=quote.title)
     track_event(current_user.id, "quote.approval.rejected", {"quote_id": quote.id, "quote_title": quote.title})

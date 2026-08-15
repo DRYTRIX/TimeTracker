@@ -398,6 +398,32 @@ class TestTimer:
         assert "timer" in data
         assert data["timer"]["project_id"] == test_project.id
 
+    def test_start_timer_client_only(self, client, api_token, test_client_model):
+        """Start a timer with client_id and no project_id."""
+        headers = {"Authorization": f"Bearer {api_token}", "Content-Type": "application/json"}
+        response = client.post(
+            "/api/v1/timer/start",
+            json={"client_id": test_client_model.id, "notes": "Client-only work"},
+            headers=headers,
+        )
+
+        assert response.status_code == 201
+        data = json.loads(response.data)
+        assert data["timer"]["client_id"] == test_client_model.id
+        assert data["timer"]["project_id"] is None
+        assert data["timer"]["task_id"] is None
+
+    def test_start_timer_client_only_rejects_task_id(self, client, api_token, test_client_model):
+        """task_id is not allowed for client-only timer starts."""
+        headers = {"Authorization": f"Bearer {api_token}", "Content-Type": "application/json"}
+        response = client.post(
+            "/api/v1/timer/start",
+            json={"client_id": test_client_model.id, "task_id": 1},
+            headers=headers,
+        )
+
+        assert response.status_code == 400
+
     def test_start_timer_conflict_includes_active_timer(self, client, api_token, test_user, test_project):
         """Starting while a timer is running returns 409 with the active timer embedded."""
         active = TimeEntry(

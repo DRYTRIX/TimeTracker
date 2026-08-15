@@ -1,8 +1,8 @@
 {% extends "base.html" %}
+{% from "components/client_select.html" import client_select %}
 
 {% block title %}{{ _('Bulk Time Entry') }} - {{ app_name }}{% endblock %}
 
-{% block content %}
 {% block extra_css %}
 <style>
 /* Bulk Entry alignment tweaks (light/dark consistent) */
@@ -62,6 +62,8 @@
 }
 </style>
 {% endblock %}
+
+{% block content %}
 <div class="container-fluid bulk-entry">
     {% from "components/ui.html" import page_header %}
     <div class="row g-3">
@@ -112,31 +114,52 @@
                         </div>
                         {% endif %}
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="client_id" class="form-label fw-semibold">
+                                        <i class="fas fa-building me-1"></i>{{ _('Client') }}
+                                    </label>
+                                    {{ client_select('client_id', clients|default([]), selected_id=selected_client_id|default(none), required=False, only_one_client=only_one_client|default(false), single_client=single_client|default(none), searchable=True, can_create=can_create_clients|default(false)) }}
+                                    <div class="form-text">{{ _('Select a client first to filter projects. Type to search or create.') }}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
                                 <div class="mb-3">
                                     <label for="project_id" class="form-label fw-semibold">
                                         <i class="fas fa-project-diagram me-1"></i>{{ _('Project') }} *
                                     </label>
-                                    <select class="form-select" id="project_id" name="project_id" required>
-                                        <option value=""></option>
-                                        {% set selected_project_id = (request.form.get('project_id') or selected_project_id or '')|int %}
+                                    {% set selected_project_id = (request.form.get('project_id') or selected_project_id or '') %}
+                                    <select class="form-select" id="project_id" name="project_id" required
+                                            data-inline-project-select
+                                            data-searchable-select="project"
+                                            data-filter-by="client_id"
+                                            {% if can_create_projects|default(false) %}data-can-create="1"{% endif %}
+                                            data-search-placeholder="{{ _('Type to search projects…') }}">
+                                        <option value="">{{ _('Select a project') }}</option>
                                         {% for project in projects %}
-                                            <option value="{{ project.id }}" {% if project.id == selected_project_id %}selected{% endif %}>{{ project.name }}</option>
+                                            <option value="{{ project.id }}" data-client-id="{{ project.client_id }}" data-parent-id="{{ project.client_id }}" {% if selected_project_id and (selected_project_id|string) == (project.id|string) %}selected{% endif %}>{{ project.name }}</option>
                                         {% endfor %}
                                     </select>
-                                    <div class="form-text">{{ _('Select the project to log time for') }}</div>
+                                    <div class="form-text">{{ _('Filtered by client. Required for bulk entries.') }}</div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 {% set preselected_task_id = request.form.get('task_id') or selected_task_id %}
                                 <div class="mb-3">
                                     <label for="task_id" class="form-label fw-semibold">
                                         <i class="fas fa-tasks me-1"></i>{{ _('Task (optional)') }}
                                     </label>
-                                    <select class="form-select" id="task_id" name="task_id" data-selected-task-id="{{ preselected_task_id or '' }}" disabled>
-                                        <option value=""></option>
+                                    <select class="form-select" id="task_id" name="task_id"
+                                            data-selected-task-id="{{ preselected_task_id or '' }}"
+                                            data-searchable-select="task"
+                                            data-inline-task-select
+                                            data-filter-by="project_id"
+                                            data-can-create="1"
+                                            data-search-placeholder="{{ _('Type to search tasks…') }}"
+                                            disabled>
+                                        <option value="">{{ _('No task') }}</option>
                                     </select>
-                                    <div class="form-text">{{ _('Tasks load after selecting a project') }}</div>
+                                    <div class="form-text">{{ _('Select a project first. Type to search or create.') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -291,6 +314,8 @@
     </div>
 </div>
 
+{% include 'components/inline_create_modals.html' %}
+
 <style>
 .form-floating > label {
     background-color: transparent;
@@ -403,8 +428,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Dynamic task loading based on project selection
+    // Dynamic task loading based on project selection (Issue #728 searchable cascade)
     const projectSelect = document.getElementById('project_id');
+    const clientSelect = document.getElementById('client_id');
     const taskSelect = document.getElementById('task_id');
 
     const L = { 
@@ -416,6 +442,10 @@ document.addEventListener('DOMContentLoaded', function() {
         entriesFor: i18nTimerBulk.entries_for || 'Entries will be created for'
     };
 
+    function enhanceSearchable() {
+        if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
+    }
+
     const tasksApiUrlTemplate = {{ url_for('api.list_tasks_for_project', project_id=0)|tojson }};
     function buildTasksUrl(projectId) {
         const pid = String(projectId || '').trim();
@@ -423,13 +453,15 @@ document.addEventListener('DOMContentLoaded', function() {
         return String(tasksApiUrlTemplate).replace(/project_id=0/, 'project_id=' + encodeURIComponent(pid));
     }
     async function loadTasksForProject(projectId) {
+        if (!taskSelect) return;
         if (!projectId) {
             taskSelect.innerHTML = '<option value="">' + L.noTask + '</option>';
             taskSelect.disabled = true;
+            enhanceSearchable();
             return;
         }
         try {
-            const resp = await fetch(buildTasksUrl(projectId));
+            const resp = await fetch(buildTasksUrl(projectId), { credentials: 'same-origin' });
             if (!resp.ok) throw new Error(L.failedLoad);
             const data = await resp.json();
             const tasks = Array.isArray(data.tasks) ? data.tasks : [];
@@ -438,6 +470,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const opt = document.createElement('option');
                 opt.value = String(t.id);
                 opt.textContent = t.name;
+                opt.setAttribute('data-parent-id', String(projectId));
                 taskSelect.appendChild(opt);
             });
             // Preselect if provided
@@ -449,25 +482,58 @@ document.addEventListener('DOMContentLoaded', function() {
                 taskSelect.setAttribute('data-selected-task-id', '');
             }
             taskSelect.disabled = false;
+            enhanceSearchable();
         } catch (e) {
             // On error, keep disabled
             taskSelect.innerHTML = '<option value="">' + L.noTask + '</option>';
             taskSelect.disabled = true;
+            enhanceSearchable();
+        }
+    }
+
+    function syncClientFromProject() {
+        if (!projectSelect || !clientSelect || clientSelect.tagName !== 'SELECT') return;
+        const pid = projectSelect.value;
+        if (!pid) return;
+        const opt = projectSelect.options[projectSelect.selectedIndex];
+        const cid = opt ? (opt.getAttribute('data-client-id') || '') : '';
+        if (cid && clientSelect.value !== cid) {
+            clientSelect.value = cid;
+            try { clientSelect.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
         }
     }
 
     // Initial load if project is already selected (from query/form)
     if (projectSelect && projectSelect.value) {
+        syncClientFromProject();
         loadTasksForProject(projectSelect.value);
     }
 
     // Reload tasks when project changes
-    projectSelect.addEventListener('change', function() {
-        // Clear any previous selection
-        taskSelect.value = '';
-        taskSelect.setAttribute('data-selected-task-id', '');
-        loadTasksForProject(this.value);
-    });
+    if (projectSelect) {
+        projectSelect.addEventListener('change', function() {
+            syncClientFromProject();
+            // Clear any previous selection
+            if (taskSelect) {
+                taskSelect.value = '';
+                taskSelect.setAttribute('data-selected-task-id', '');
+            }
+            loadTasksForProject(this.value);
+        });
+    }
+
+    if (clientSelect && projectSelect) {
+        clientSelect.addEventListener('change', function() {
+            const cid = String(clientSelect.value || '');
+            if (!cid) return;
+            const opt = projectSelect.options[projectSelect.selectedIndex];
+            const pid = opt ? (opt.getAttribute('data-client-id') || '') : '';
+            if (projectSelect.value && pid && pid !== cid) {
+                projectSelect.value = '';
+                try { projectSelect.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+            }
+        });
+    }
 
     // Date range preview functionality
     const startDateInput = document.getElementById('start_date');

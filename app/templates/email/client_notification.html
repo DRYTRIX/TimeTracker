@@ -13,9 +13,9 @@
     <div style="background-color: #fff; padding: 20px; border-radius: 5px; border: 1px solid #ddd;">
         <p>{{ notification.message }}</p>
         
-        {% if notification.link_url %}
+        {% if absolute_link_url or notification.link_url %}
         <div style="margin-top: 20px;">
-            <a href="{{ notification.link_url }}" 
+            <a href="{{ absolute_link_url or notification.link_url }}" 
                style="display: inline-block; background-color: #3498db; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
                 {{ notification.link_text or 'View Details' }}
             </a>

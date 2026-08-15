@@ -47,7 +47,7 @@ If you create a token manually, include at least:
 | `read:projects` | Project list + favorites |
 | `write:projects` | Quick-create project |
 | `read:tasks` / `write:tasks` | Task list + quick-create |
-| `read:clients` | Client picker for new projects |
+| `read:clients` / `write:clients` | Client filter + inline create |
 | `read:users` | Preferred for `GET /api/v1/users/me` session check |
 
 ## How it works

@@ -516,6 +516,17 @@ def create_app(config=None):
 
         g.csp_nonce = secrets.token_urlsafe(16)
 
+    # Remember the public base URL from real requests so background jobs can build
+    # absolute links without SERVER_NAME (see app.utils.urls).
+    @app.before_request
+    def _remember_app_base_url():
+        try:
+            from app.utils.urls import remember_request_base_url
+
+            remember_request_base_url()
+        except Exception:
+            pass
+
     # Registered as a Jinja *global*, not a context processor: macro files such as
     # components/multi_select.html contain inline <script> blocks and are imported with
     # `{% from "..." import ... %}` (i.e. without context), which does not receive

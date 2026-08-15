@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timetracker_mobile/core/constants/app_constants.dart';
+import 'package:timetracker_mobile/core/services/idle_detection_service.dart';
 import 'package:timetracker_mobile/core/services/notification_service.dart';
 import 'package:timetracker_mobile/core/telemetry/mobile_otel.dart';
 import 'package:timetracker_mobile/core/theme/app_theme.dart';
@@ -39,6 +40,13 @@ class TimeTrackerApp extends ConsumerWidget {
         AppConstants.routeSplash: (context) => const SplashScreen(),
         AppConstants.routeLogin: (context) => const LoginScreen(),
         AppConstants.routeHome: (context) => const HomeScreen(),
+      },
+      builder: (context, child) {
+        return Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) => IdleDetectionService.instance.markActive(),
+          child: child ?? const SizedBox.shrink(),
+        );
       },
     );
   }

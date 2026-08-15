@@ -1,0 +1,51 @@
+{# Shared inline Create Task modal (Issue #728).
+   Open via button id="openCreateTaskModal" (or data-open-create-task), or
+   window.ttInlineCreate.open('task', { targetSelect, name, projectId }).
+   Posts JSON to /api/tasks/create (api.create_task_inline).
+#}
+<div id="createTaskInlineModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+    <div class="absolute inset-0 bg-black/50" data-close-create-task></div>
+    <div class="relative max-w-lg mx-auto mt-10 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-xl">
+        <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+            <h3 class="text-lg font-semibold">{{ _('Create Task') }}</h3>
+            <button type="button" id="closeCreateTaskInlineModal" class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded" aria-label="{{ _('Close') }}">{{ _('Close') }}</button>
+        </div>
+        <div class="p-4">
+            <form id="inlineCreateTaskForm" novalidate
+                  data-create-url="{{ url_for('api.create_task_inline') }}"
+                  data-creating-text="{{ _('Creating...') }}"
+                  data-created-text="{{ _('Task created') }}"
+                  data-error-text="{{ _('Could not create task. Please try again.') }}"
+                  data-network-error-text="{{ _('Network error while creating task') }}"
+                  data-project-required-text="{{ _('Select a project and enter a task name') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="space-y-4">
+                    <div>
+                        <label for="inline_task_name" class="form-label">{{ _('Task Name') }} *</label>
+                        <input type="text" id="inline_task_name" name="name" required class="form-input" placeholder="{{ _('Enter task name') }}">
+                    </div>
+                    <div>
+                        <label for="inline_task_project_id" class="form-label">{{ _('Project') }} *</label>
+                        <select id="inline_task_project_id" name="project_id" required class="form-input">
+                            <option value="">{{ _('Select a project...') }}</option>
+                            {% for project in (inline_task_projects if inline_task_projects is defined else (projects if projects is defined else (active_projects if active_projects is defined else []))) %}
+                            <option value="{{ project.id }}">{{ project.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                            {{ _('Tasks belong to a project. Other details can be filled later.') }}
+                        </p>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg" id="cancelCreateTaskInline">{{ _('Cancel') }}</button>
+                    <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg" id="submitCreateTaskInline">{{ _('Create Task') }}</button>
+                </div>
+                <p id="createTaskInlineError" class="text-red-600 dark:text-red-400 text-sm mt-3 hidden"></p>
+            </form>
+        </div>
+    </div>
+    <style>
+        #createTaskInlineModal .loading { opacity: .6; pointer-events: none; }
+    </style>
+</div>

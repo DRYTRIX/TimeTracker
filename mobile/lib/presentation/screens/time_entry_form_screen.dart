@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:timetracker_mobile/core/theme/app_tokens.dart';
+import 'package:timetracker_mobile/data/models/project.dart';
+import 'package:timetracker_mobile/presentation/providers/api_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/projects_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/tasks_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/time_entries_provider.dart';
@@ -21,6 +22,7 @@ class TimeEntryFormScreen extends ConsumerStatefulWidget {
 
 class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
   final _formKey = GlobalKey<FormState>();
+  int? _selectedClientId;
   int? _selectedProjectId;
   int? _selectedTaskId;
   DateTime _startDate = DateTime.now();
@@ -31,16 +33,33 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
   final _tagsController = TextEditingController();
   bool _billable = true;
   bool _isLoading = false;
+  List<Map<String, dynamic>> _clients = [];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(projectsProvider.notifier).loadProjects();
+      _loadClients();
       if (widget.entryId != null) {
         _loadEntry();
       }
     });
+  }
+
+  Future<void> _loadClients() async {
+    final api = ref.read(apiClientProvider).valueOrNull;
+    if (api == null) return;
+    try {
+      final res = await api.getClients(status: 'active', perPage: 100);
+      final list = (res['clients'] as List<dynamic>? ?? [])
+          .whereType<Map>()
+          .map((c) => Map<String, dynamic>.from(c))
+          .toList();
+      if (mounted) setState(() => _clients = list);
+    } catch (_) {
+      // Keep form usable without clients list
+    }
   }
 
   Future<void> _loadEntry() async {
@@ -63,6 +82,7 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
       final startTime = entry.startTime ?? DateTime.now();
       final endTime = entry.endTime;
 
+      _selectedClientId = entry.clientId;
       _selectedProjectId = entry.projectId;
       _selectedTaskId = entry.taskId;
       _startDate = DateTime(startTime.year, startTime.month, startTime.day);
@@ -80,6 +100,11 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
 
       if (_selectedProjectId != null) {
         await _loadTasks(_selectedProjectId!);
+        final projects = ref.read(projectsProvider).projects;
+        final match = projects.where((p) => p.id == _selectedProjectId);
+        if (match.isNotEmpty && match.first.clientId != null) {
+          _selectedClientId ??= match.first.clientId;
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -105,6 +130,13 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
 
   Future<void> _loadTasks(int projectId) async {
     await ref.read(tasksProvider.notifier).loadTasks(projectId: projectId);
+  }
+
+  List<Project> _filteredProjects(List<Project> projects) {
+    if (_selectedClientId == null) return projects;
+    return projects
+        .where((p) => p.clientId == null || p.clientId == _selectedClientId)
+        .toList();
   }
 
   Future<void> _selectDateTime(
@@ -143,15 +175,17 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
       return;
     }
 
-    if (_selectedProjectId == null) {
+    if (_selectedProjectId == null && _selectedClientId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a project')),
+        const SnackBar(content: Text('Please select a client or project')),
       );
       return;
     }
 
     final requirements = await ref.read(timeEntryRequirementsProvider.future);
-    if (requirements.requireTask && _selectedTaskId == null) {
+    if (_selectedProjectId != null &&
+        requirements.requireTask &&
+        _selectedTaskId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('A task must be selected when logging time for a project')),
       );
@@ -206,6 +240,7 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
         await ref.read(timeEntriesProvider.notifier).updateEntry(
               widget.entryId!,
               projectId: _selectedProjectId,
+              clientId: _selectedProjectId == null ? _selectedClientId : null,
               taskId: _selectedTaskId,
               startTime: startDateTime.toIso8601String(),
               endTime: endDateTimeStr,
@@ -217,7 +252,8 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
             );
       } else {
         await ref.read(timeEntriesProvider.notifier).createEntry(
-              projectId: _selectedProjectId!,
+              projectId: _selectedProjectId,
+              clientId: _selectedProjectId == null ? _selectedClientId : null,
               taskId: _selectedTaskId,
               startTime: startDateTime.toIso8601String(),
               endTime: endDateTimeStr,
@@ -252,6 +288,7 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
     final projectsState = ref.watch(projectsProvider);
     final tasksState = ref.watch(tasksProvider);
     final requirementsAsync = ref.watch(timeEntryRequirementsProvider);
+    final filteredProjects = _filteredProjects(projectsState.projects);
 
     return Scaffold(
       appBar: AppBar(
@@ -264,34 +301,91 @@ class _TimeEntryFormScreenState extends ConsumerState<TimeEntryFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Project selection
               DropdownButtonFormField<int>(
+                key: ValueKey('client_$_selectedClientId'),
                 decoration: const InputDecoration(
-                  labelText: 'Project *',
-                  prefixIcon: Icon(Icons.folder),
+                  labelText: 'Client (optional)',
+                  prefixIcon: Icon(Icons.business),
+                ),
+                initialValue: _selectedClientId != null &&
+                        _clients.any((c) => (c['id'] as num?)?.toInt() == _selectedClientId)
+                    ? _selectedClientId
+                    : null,
+                items: [
+                  const DropdownMenuItem<int>(
+                    value: null,
+                    child: Text('Any client'),
+                  ),
+                  ..._clients.map((c) {
+                    final id = (c['id'] as num).toInt();
+                    return DropdownMenuItem<int>(
+                      value: id,
+                      child: Text(c['name']?.toString() ?? 'Client #$id'),
+                    );
+                  }),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedClientId = value;
+                    if (_selectedProjectId != null) {
+                      final project = projectsState.projects
+                          .where((p) => p.id == _selectedProjectId)
+                          .toList();
+                      final ok = project.isNotEmpty &&
+                          (value == null ||
+                              project.first.clientId == null ||
+                              project.first.clientId == value);
+                      if (!ok) {
+                        _selectedProjectId = null;
+                        _selectedTaskId = null;
+                      }
+                    }
+                  });
+                },
+              ),
+              const SizedBox(height: AppSpacing.md),
+              // Project selection (optional when client is set)
+              DropdownButtonFormField<int>(
+                key: ValueKey('project_${_selectedClientId}_$_selectedProjectId'),
+                decoration: InputDecoration(
+                  labelText: _selectedClientId != null
+                      ? 'Project (optional)'
+                      : 'Project *',
+                  prefixIcon: const Icon(Icons.folder),
                 ),
                 initialValue: _selectedProjectId != null &&
-                        projectsState.projects.any((p) => p.id == _selectedProjectId)
+                        filteredProjects.any((p) => p.id == _selectedProjectId)
                     ? _selectedProjectId
                     : null,
-                items: projectsState.projects
-                    .map((p) => DropdownMenuItem(
-                          value: p.id,
-                          child: Text(p.name),
-                        ))
-                    .toList(),
+                items: [
+                  const DropdownMenuItem<int>(
+                    value: null,
+                    child: Text('No project'),
+                  ),
+                  ...filteredProjects.map((p) => DropdownMenuItem(
+                        value: p.id,
+                        child: Text(p.name),
+                      )),
+                ],
                 onChanged: (value) {
                   setState(() {
                     _selectedProjectId = value;
                     _selectedTaskId = null;
+                    if (value != null) {
+                      final match =
+                          projectsState.projects.where((p) => p.id == value);
+                      if (match.isNotEmpty && match.first.clientId != null) {
+                        _selectedClientId = match.first.clientId;
+                      }
+                    }
                   });
                   if (value != null) {
                     _loadTasks(value);
                   }
                 },
                 validator: (value) {
-                  if (value == null) {
-                    return 'Please select a project';
+                  if (value == null && _selectedClientId == null) {
+                    return 'Select a client or project';
                   }
                   return null;
                 },

@@ -7,7 +7,7 @@ from flask import Blueprint, g, jsonify, request
 from marshmallow import ValidationError
 
 from app.routes.api_v1_common import _parse_date_range, paginate_query
-from app.schemas.time_entry_schema import TimeEntryCreateSchema, TimeEntryUpdateSchema
+from app.schemas.time_entry_schema import TimeEntryCreateSchema, TimeEntryUpdateSchema, TimerStartSchema
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import (
     error_response,
@@ -431,29 +431,33 @@ def timer_heartbeat():
 @api_v1_time_entries_bp.route("/timer/start", methods=["POST"])
 @require_api_token("write:time_entries")
 def start_timer():
-    """Start a new timer."""
+    """Start a new timer (project-based or client-only)."""
     from app.services import TimeTrackingService
+    from app.utils.scope_filter import user_can_access_client, user_can_access_project
 
     data = request.get_json() or {}
-    project_id = data.get("project_id")
-    if not project_id:
-        return validation_error_response(
-            errors={"project_id": ["project_id is required"]},
-            message="project_id is required",
-        )
+    schema = TimerStartSchema()
+    try:
+        validated = schema.load(data)
+    except ValidationError as err:
+        return handle_validation_error(err)
 
-    from app.utils.scope_filter import user_can_access_project
+    project_id = validated.get("project_id")
+    client_id = validated.get("client_id")
 
-    if not user_can_access_project(g.api_user, project_id):
+    if project_id and not user_can_access_project(g.api_user, project_id):
         return forbidden_response("You do not have access to this project")
+    if client_id and not project_id and not user_can_access_client(g.api_user, client_id):
+        return forbidden_response("You do not have access to this client")
 
     time_tracking_service = TimeTrackingService()
     result = time_tracking_service.start_timer(
         user_id=g.api_user.id,
         project_id=project_id,
-        task_id=data.get("task_id"),
-        notes=data.get("notes"),
-        template_id=data.get("template_id"),
+        client_id=client_id,
+        task_id=validated.get("task_id"),
+        notes=validated.get("notes"),
+        template_id=validated.get("template_id"),
     )
     if not result.get("success"):
         if result.get("error") == "timer_already_running":

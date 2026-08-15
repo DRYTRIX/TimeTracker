@@ -4,6 +4,13 @@
  *
  * The native <select> stays in the DOM (hidden) so form posts and existing
  * change listeners keep working. Inline-create modals remain the create path.
+ *
+ * Optional attributes:
+ *   data-searchable-select="client|project|task"
+ *   data-can-create="1"
+ *   data-filter-by="<parent select id>"  — only show options whose
+ *     data-parent-id / data-client-id matches the parent value
+ *   data-search-placeholder="…"
  */
 (function () {
   'use strict';
@@ -11,6 +18,7 @@
   var CREATE_LABEL = {
     client: 'Create client',
     project: 'Create project',
+    task: 'Create task',
   };
 
   function getCreatePermission(select) {
@@ -21,14 +29,42 @@
     return select.getAttribute('data-searchable-select') || 'option';
   }
 
+  function getParentSelect(select) {
+    var parentId = select.getAttribute('data-filter-by');
+    if (!parentId) return null;
+    return document.getElementById(parentId);
+  }
+
+  function optionParentId(opt) {
+    return (
+      opt.getAttribute('data-parent-id') ||
+      opt.getAttribute('data-client-id') ||
+      ''
+    );
+  }
+
   function readOptions(select) {
+    var parent = getParentSelect(select);
+    var parentValue = parent ? String(parent.value || '') : null;
     var opts = [];
     Array.prototype.forEach.call(select.options, function (opt) {
+      // Empty placeholder is always included
+      var isEmpty = !opt.value;
+      if (!isEmpty && parentValue !== null) {
+        // When a parent is selected, only show options matching that parent
+        // (or options with no parent id — treated as "any"/global placeholders).
+        // When parent is empty, show all options so the user can pick freely.
+        if (parentValue) {
+          var pid = optionParentId(opt);
+          if (pid && pid !== parentValue) return;
+        }
+      }
       opts.push({
         value: opt.value,
         label: (opt.textContent || '').trim(),
         selected: opt.selected,
         disabled: opt.disabled,
+        parentId: optionParentId(opt),
       });
     });
     return opts;
@@ -40,27 +76,57 @@
   }
 
   function openCreateModal(kind, select, typedName) {
+    var parent = getParentSelect(select);
+    var opts = {
+      targetSelect: select,
+      name: typedName || '',
+    };
+    if (kind === 'project') {
+      // Prefer page client select, then parent filter
+      var clientSelect =
+        document.querySelector('[data-inline-client-select]') ||
+        document.getElementById('client_id') ||
+        document.getElementById('startTimerClient') ||
+        document.getElementById('editTimerClient') ||
+        parent;
+      if (clientSelect && clientSelect.value) {
+        opts.clientId = clientSelect.value;
+      }
+    }
+    if (kind === 'task') {
+      var projectSelect =
+        parent ||
+        document.querySelector('[data-inline-project-select]') ||
+        document.getElementById('project_id') ||
+        document.getElementById('startTimerProject');
+      if (projectSelect && projectSelect.value) {
+        opts.projectId = projectSelect.value;
+      }
+    }
+
+    if (window.ttInlineCreate && typeof window.ttInlineCreate.open === 'function') {
+      window.ttInlineCreate.open(kind, opts);
+      return;
+    }
+
+    // Fallback: click legacy trigger / open modal DOM directly
     var triggerSelector =
       kind === 'client'
         ? '#openCreateClientModal, [data-open-create-client]'
-        : '#openCreateProjectModal, [data-open-create-project]';
+        : kind === 'project'
+          ? '#openCreateProjectModal, [data-open-create-project]'
+          : '#openCreateTaskModal, [data-open-create-task]';
     var trigger = document.querySelector(triggerSelector);
-    var nameInputId = kind === 'client' ? 'inline_client_name' : 'inline_project_name';
-    // Prefer a trigger that targets this select
-    var scoped =
+    var nameInputId =
       kind === 'client'
-        ? document.querySelector(
-            '[data-open-create-client][data-client-select-id="' + select.id + '"], #openCreateClientModal[data-client-select-id="' + select.id + '"]'
-          )
-        : document.querySelector(
-            '[data-open-create-project][data-project-select-id="' + select.id + '"], #openCreateProjectModal[data-project-select-id="' + select.id + '"]'
-          );
-    if (scoped) trigger = scoped;
+        ? 'inline_client_name'
+        : kind === 'project'
+          ? 'inline_project_name'
+          : 'inline_task_name';
 
     if (typedName) {
-      // Prefill after modal opens (modal resets on show, so delay slightly)
       setTimeout(function () {
-        var input = document.getElementById(nameInputId) || document.getElementById('client_name');
+        var input = document.getElementById(nameInputId);
         if (input) {
           input.value = typedName;
           try {
@@ -75,8 +141,12 @@
       return;
     }
 
-    // Fallback: open modal element directly
-    var modalId = kind === 'client' ? 'createClientModal' : 'createProjectModal';
+    var modalId =
+      kind === 'client'
+        ? 'createClientModal'
+        : kind === 'project'
+          ? 'createProjectModal'
+          : 'createTaskInlineModal';
     var modal = document.getElementById(modalId);
     if (modal) {
       modal.classList.remove('hidden');
@@ -84,9 +154,32 @@
     }
   }
 
+  function ensureSelectId(select) {
+    if (select.id) return select.id;
+    var kind = getKind(select);
+    var generated =
+      'tt-searchable-' +
+      kind +
+      '-' +
+      Math.random().toString(36).slice(2, 9);
+    select.id = generated;
+    return generated;
+  }
+
+  function optionDomId(listId, opt) {
+    var raw = opt.value === '' ? 'empty' : String(opt.value);
+    var safe = raw.replace(/[^a-zA-Z0-9_-]/g, '_');
+    return listId + '-opt-' + safe;
+  }
+
   function enhanceSelect(select) {
     if (!select || select.tagName !== 'SELECT') return;
-    if (select.dataset.searchableEnhanced === '1') return;
+    if (select.dataset.searchableEnhanced === '1') {
+      // Already enhanced: refresh display if options changed
+      var existingInput = select.parentNode && select.parentNode.querySelector('.tt-searchable-input');
+      if (existingInput) existingInput.value = selectedLabel(select);
+      return;
+    }
     // Skip locked/hidden auto-client inputs (macro renders INPUT, not SELECT)
     if (select.disabled && select.options.length <= 1) return;
 
@@ -97,6 +190,8 @@
 
     var kind = getKind(select);
     var canCreate = getCreatePermission(select);
+    var selectId = ensureSelectId(select);
+    var listId = selectId + '-searchable-list';
     var wrapper = document.createElement('div');
     wrapper.className = 'tt-searchable-select relative';
     wrapper.setAttribute('data-searchable-kind', kind);
@@ -107,12 +202,13 @@
     input.setAttribute('autocomplete', 'off');
     input.setAttribute('role', 'combobox');
     input.setAttribute('aria-expanded', 'false');
-    input.setAttribute('aria-controls', select.id + '-searchable-list');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-controls', listId);
     input.placeholder = select.getAttribute('data-search-placeholder') || 'Type to search…';
     input.value = selectedLabel(select);
 
     var list = document.createElement('ul');
-    list.id = select.id + '-searchable-list';
+    list.id = listId;
     list.className =
       'tt-searchable-list hidden absolute z-40 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg py-1';
     list.setAttribute('role', 'listbox');
@@ -126,10 +222,19 @@
     var activeIndex = -1;
     var filtered = [];
 
+    function clearActiveDescendant() {
+      input.removeAttribute('aria-activedescendant');
+      activeIndex = -1;
+      list.querySelectorAll('[role="option"]').forEach(function (el) {
+        el.setAttribute('aria-selected', 'false');
+        el.classList.remove('bg-blue-100', 'dark:bg-blue-800');
+      });
+    }
+
     function closeList() {
       list.classList.add('hidden');
       input.setAttribute('aria-expanded', 'false');
-      activeIndex = -1;
+      clearActiveDescendant();
     }
 
     function openList() {
@@ -155,7 +260,7 @@
       });
 
       list.innerHTML = '';
-      activeIndex = -1;
+      clearActiveDescendant();
 
       if (filtered.length === 0 && !(canCreate && q)) {
         var empty = document.createElement('li');
@@ -166,9 +271,11 @@
 
       filtered.forEach(function (o, idx) {
         var li = document.createElement('li');
+        li.id = optionDomId(listId, o);
         li.className =
           'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 text-gray-900 dark:text-gray-100';
         li.setAttribute('role', 'option');
+        li.setAttribute('aria-selected', o.value === select.value ? 'true' : 'false');
         li.setAttribute('data-index', String(idx));
         li.setAttribute('data-value', o.value);
         li.textContent = o.label || '(empty)';
@@ -186,11 +293,20 @@
         var exact = options.some(function (o) {
           return (o.label || '').toLowerCase() === q;
         });
-        if (!exact) {
+        // For task/project create, require a parent when filter-by is set
+        var parent = getParentSelect(select);
+        var parentOk = !parent || !!parent.value || kind === 'client';
+        // Project can be created with client from page even without filter-by parent
+        if (kind === 'project') parentOk = true;
+        if (kind === 'task' && parent && !parent.value) parentOk = false;
+
+        if (!exact && parentOk) {
           var createLi = document.createElement('li');
+          createLi.id = listId + '-opt-create';
           createLi.className =
             'px-3 py-2 text-sm cursor-pointer border-t border-gray-100 dark:border-gray-700 text-primary hover:bg-blue-50 dark:hover:bg-blue-900/30 font-medium';
           createLi.setAttribute('role', 'option');
+          createLi.setAttribute('aria-selected', 'false');
           createLi.setAttribute('data-create', '1');
           var createPrefix = CREATE_LABEL[kind] || 'Create';
           createLi.innerHTML =
@@ -215,10 +331,18 @@
       if (!items.length) return;
       activeIndex = (activeIndex + delta + items.length) % items.length;
       items.forEach(function (el, i) {
-        el.classList.toggle('bg-blue-100', i === activeIndex);
-        el.classList.toggle('dark:bg-blue-800', i === activeIndex);
+        var isActive = i === activeIndex;
+        el.classList.toggle('bg-blue-100', isActive);
+        el.classList.toggle('dark:bg-blue-800', isActive);
+        el.setAttribute('aria-selected', isActive ? 'true' : 'false');
       });
-      items[activeIndex].scrollIntoView({ block: 'nearest' });
+      var active = items[activeIndex];
+      if (active && active.id) {
+        input.setAttribute('aria-activedescendant', active.id);
+      } else {
+        input.removeAttribute('aria-activedescendant');
+      }
+      active.scrollIntoView({ block: 'nearest' });
     }
 
     input.addEventListener('focus', function () {
@@ -267,6 +391,26 @@
       input.value = selectedLabel(select);
     });
     mo.observe(select, { childList: true, subtree: true, attributes: true });
+
+    // When parent select changes, clear invalid selection and refresh display
+    var parentSelect = getParentSelect(select);
+    if (parentSelect) {
+      parentSelect.addEventListener('change', function () {
+        var current = select.options[select.selectedIndex];
+        if (current && current.value) {
+          var pid = optionParentId(current);
+          var parentVal = String(parentSelect.value || '');
+          if (parentVal && pid && pid !== parentVal) {
+            select.value = '';
+            input.value = selectedLabel(select);
+            try {
+              select.dispatchEvent(new Event('change', { bubbles: true }));
+            } catch (_) {}
+          }
+        }
+        input.value = selectedLabel(select);
+      });
+    }
   }
 
   function initAll() {
@@ -279,6 +423,6 @@
     initAll();
   }
 
-  // Expose for dynamically injected selects
+  // Expose for dynamically injected selects / after task option refresh
   window.ttEnhanceSearchableSelects = initAll;
 })();

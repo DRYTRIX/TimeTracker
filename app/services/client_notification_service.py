@@ -4,6 +4,7 @@ Handles notifications for client portal users
 """
 
 import logging
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -224,6 +225,9 @@ class ClientNotificationService:
         if not contacts:
             return
 
+        # Resolve relative portal paths to absolute URLs for mail clients
+        absolute_link_url = self._absolutize_link(notification.link_url)
+
         # Send email to all active contacts
         for contact in contacts:
             if contact.email:
@@ -234,9 +238,24 @@ class ClientNotificationService:
                         template="email/client_notification.html",
                         notification=notification,
                         contact=contact,
+                        absolute_link_url=absolute_link_url,
                     )
                 except Exception as e:
                     logger.error(f"Failed to send notification email to {contact.email}: {e}", exc_info=True)
+
+    @staticmethod
+    def _absolutize_link(link_url: Optional[str]) -> Optional[str]:
+        """Turn a portal-relative path into an absolute URL for outbound email."""
+        if not link_url:
+            return None
+        if re.match(r"^https?://", link_url, re.IGNORECASE):
+            return link_url
+        from app.utils.urls import get_app_base_url
+
+        base = get_app_base_url() or ""
+        if not base:
+            return link_url
+        return base.rstrip("/") + "/" + link_url.lstrip("/")
 
     def mark_as_read(self, notification_id: int, client_id: int) -> bool:
         """Mark a notification as read"""

@@ -164,7 +164,15 @@ export class ApiClient {
 
   getUsersMe() { return this.unwrap(this.client.get('/api/v1/users/me')); }
   getTimerStatus() { return this.unwrap(this.client.get('/api/v1/timer/status')); }
-  startTimer(data) { return this.unwrap(this.client.post('/api/v1/timer/start', { project_id: data.projectId, task_id: data.taskId || null, notes: data.notes || '' })); }
+  startTimer(data) {
+    const body = {
+      notes: data.notes || '',
+    };
+    if (data.projectId) body.project_id = Number(data.projectId);
+    if (data.clientId) body.client_id = Number(data.clientId);
+    if (data.taskId) body.task_id = Number(data.taskId);
+    return this.unwrap(this.client.post('/api/v1/timer/start', body));
+  }
   stopTimer({ stopTime = null } = {}) {
     const body = {};
     if (stopTime) body.stop_time = stopTime;
@@ -196,6 +204,8 @@ export class ApiClient {
   getExpenses(params = {}) { return this.unwrap(this.client.get('/api/v1/expenses', { params })); }
   createExpense(data) { return this.unwrap(this.client.post('/api/v1/expenses', data)); }
   getClients(params = {}) { return this.unwrap(this.client.get('/api/v1/clients', { params })); }
+  createClient(data) { return this.unwrap(this.client.post('/api/v1/clients', data)); }
+  createProject(data) { return this.unwrap(this.client.post('/api/v1/projects', data)); }
   getUsers(params = {}) { return this.unwrap(this.client.get('/api/v1/users', { params })); }
   getReportSummary(params = {}) { return this.unwrap(this.client.get('/api/v1/reports/summary', { params })); }
   unwrapReportSummary(payload) {

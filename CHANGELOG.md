@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.11.5] - 2026-08-15
+
+### Added
+
+- **API client-only timer start (#728)** — `POST /api/v1/timer/start` accepts `client_id` without `project_id` (parity with the web timer), rejects `task_id` on client-only starts, and documents the request body in OpenAPI / REST docs.
+- **Native client-only timers (#728)** — Extension, mobile, and desktop can start timers against a client without a project; cascading client→project pickers and corrected running-timer labels for client-only sessions.
+- **Global time rounding policy (#725)** — Admin Settings can set interval, method, and minimum billable duration for the whole installation, with an **Enforce for all users** toggle that locks personal overrides so everyone tracks time the same way.
+
+### Changed
+
+- **Searchable timer pickers on remaining pages (#728)** — Timer page, bulk entry, and kiosk timer forms use the shared searchable client/project/task combobox stack; scripts load from `base.html` / kiosk base so pages need not re-include them.
+- When enforcement is off, unset per-user method and minimum now inherit the admin defaults (interval already did).
+- **Client versions** — Synced Electron (`desktop/package.json`), Flutter (`mobile/pubspec.yaml`), and Chromium extension (`browser-extension/manifest.json` / `package.json`) to **5.11.5** with the webapp (`setup.py`).
+
+### Fixed
+
+- **Inline create CSRF header mismatch (#728)** — Client and project inline creates send `X-CSRFToken` (same as task create and the rest of the app).
+- **Searchable combobox a11y (#728)** — Combobox inputs expose `aria-autocomplete`, stable option ids, `aria-activedescendant`, and `aria-selected` while navigating the list.
+- **Boundary rounding skipped on duration overrides (#725)** — Paths that pass `duration_seconds` (model init, manual-entry service/repo, CSV/Toggl/Harvest imports) now adjust start/end via `round_entry_boundaries` when the method is `boundary`, instead of leaving raw timestamps with a separately stored duration.
+- **Email absolute links / APP_BASE_URL admin setting (#730 follow-up)** — Notification emails build links via `safe_external_url_for` and prefer pre-built URL context vars; admins can set the public app base URL in Settings so background email buttons stay absolute.
+- **Kiosk stop left duration NULL** — Stopping a timer from the kiosk now goes through `TimeTrackingService.stop_timer`, so `duration_seconds` is computed and rounded like every other stop path (entries no longer vanish from reports and invoices).
+- **Quote approval emails raised ImportError** — Implemented `send_quote_approval_request_notification`, `send_quote_approved_notification`, and `send_quote_approval_rejected_notification` so request/approve/reject no longer 500 after a successful commit.
+- **Client portal quote accept/reject emails never sent** — Switched the broken `send_email(to=..., template=...)` calls to `send_template_email`, so admins are notified when a client accepts or rejects a quote.
+- **Client notification email buttons were relative** — Outbound client portal emails now absolutize `link_url` with `APP_BASE_URL`; overdue invoice checks also create client portal notifications.
+- **Dead Jinja blocks (analytics/kanban/tasks)** — Added `extra_head` to `base.html` and renamed `head_extra` overrides so i18n bootstrap and cache-control meta tags actually render; un-nested mis-placed `extra_css` blocks.
+- **Desktop React manual entry posted invalid payload** — New time entry dialog now sends `start_time`/`end_time` (API schema) instead of `duration_minutes`/`date`.
+- **Extension ignored server idle_notified** — Status poll now enters the same “Still working?” grace window when the server has already marked the timer idle.
+- **Android Timer crash under R8 (#731)** — Keep Gson TypeToken signatures for `flutter_local_notifications` in release builds, disable R8 full mode, and make idle notification show/cancel non-fatal so a plugin failure cannot blank the Timer screen.
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.11.5** (single source of truth for the application version).
+- **Time rounding** — Documented admin global policy and **Enforce for all users** in `docs/TIME_ROUNDING_PREFERENCES.md`.
+
 ## [5.11.4] - 2026-08-13
 
 ### Added

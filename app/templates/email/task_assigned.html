@@ -112,11 +112,13 @@
         </div>
         {% endif %}
         
+        {% if task_url %}
         <center>
-            <a href="{{ url_for('tasks.edit_task', task_id=task.id, _external=True) }}" class="button">
+            <a href="{{ task_url }}" class="button">
                 {{ _('View Task') }}
             </a>
         </center>
+        {% endif %}
     </div>
     
     <div class="footer">

@@ -13,19 +13,28 @@ import 'package:timetracker_mobile/presentation/providers/timer_provider.dart';
 Future<void> showStartTimerSheet(
   BuildContext context, {
   int? initialProjectId,
+  int? initialClientId,
 }) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (context) => StartTimerSheet(initialProjectId: initialProjectId),
+    builder: (context) => StartTimerSheet(
+      initialProjectId: initialProjectId,
+      initialClientId: initialClientId,
+    ),
   );
 }
 
 class StartTimerSheet extends ConsumerStatefulWidget {
   final int? initialProjectId;
+  final int? initialClientId;
 
-  const StartTimerSheet({super.key, this.initialProjectId});
+  const StartTimerSheet({
+    super.key,
+    this.initialProjectId,
+    this.initialClientId,
+  });
 
   @override
   ConsumerState<StartTimerSheet> createState() => _StartTimerSheetState();
@@ -35,15 +44,21 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
   final _notesController = TextEditingController();
   final SearchController _projectSearchController = SearchController();
 
+  int? _selectedClientId;
+  String? _selectedClientName;
   int? _selectedProjectId;
   int? _selectedTaskId;
+  List<Map<String, dynamic>> _clients = [];
+  bool _clientsLoading = false;
 
   @override
   void initState() {
     super.initState();
+    _selectedClientId = widget.initialClientId;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(projectsProvider.notifier).loadProjects();
+      _loadClients();
       _tryApplyInitialProject(ref.read(projectsProvider).projects);
     });
 
@@ -60,6 +75,32 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
     super.dispose();
   }
 
+  Future<void> _loadClients() async {
+    final api = ref.read(apiClientProvider).valueOrNull;
+    if (api == null) return;
+    setState(() => _clientsLoading = true);
+    try {
+      final res = await api.getClients(status: 'active', perPage: 100);
+      final list = (res['clients'] as List<dynamic>? ?? [])
+          .whereType<Map>()
+          .map((c) => Map<String, dynamic>.from(c))
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        _clients = list;
+        _clientsLoading = false;
+        if (_selectedClientId != null) {
+          final match = list.where((c) => (c['id'] as num?)?.toInt() == _selectedClientId);
+          if (match.isNotEmpty) {
+            _selectedClientName = match.first['name']?.toString();
+          }
+        }
+      });
+    } catch (_) {
+      if (mounted) setState(() => _clientsLoading = false);
+    }
+  }
+
   void _tryApplyInitialProject(List<Project> projects) {
     if (_selectedProjectId != null) return;
     final initialId = widget.initialProjectId;
@@ -71,25 +112,48 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
     _selectProject(match.first);
   }
 
+  Future<void> _selectClient(int? clientId, {String? name}) async {
+    setState(() {
+      _selectedClientId = clientId;
+      _selectedClientName = name;
+      _selectedProjectId = null;
+      _selectedTaskId = null;
+      _projectSearchController.text = '';
+    });
+  }
+
   Future<void> _selectProject(Project project) async {
     setState(() {
       _selectedProjectId = project.id;
       _selectedTaskId = null;
       _projectSearchController.text = project.name;
+      if (project.clientId != null) {
+        _selectedClientId = project.clientId;
+        _selectedClientName = project.client;
+      }
     });
     await ref.read(tasksProvider.notifier).loadTasks(projectId: project.id);
   }
 
+  List<Project> _filteredProjects(List<Project> projects) {
+    if (_selectedClientId == null) return projects;
+    return projects
+        .where((p) => p.clientId == null || p.clientId == _selectedClientId)
+        .toList();
+  }
+
   Future<void> _handleStart() async {
-    if (_selectedProjectId == null) {
+    if (_selectedProjectId == null && _selectedClientId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a project')),
+        const SnackBar(content: Text('Please select a client or project')),
       );
       return;
     }
 
     final requirements = await ref.read(timeEntryRequirementsProvider.future);
-    if (requirements.requireTask && _selectedTaskId == null) {
+    if (_selectedProjectId != null &&
+        requirements.requireTask &&
+        _selectedTaskId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('A task must be selected when logging time for a project')),
       );
@@ -116,7 +180,8 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
     }
 
     await ref.read(timerProvider.notifier).startTimer(
-          projectId: _selectedProjectId!,
+          projectId: _selectedProjectId,
+          clientId: _selectedProjectId == null ? _selectedClientId : null,
           taskId: _selectedTaskId,
           notes: notes.isEmpty ? null : notes,
         );
@@ -153,6 +218,7 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
     final maxHeight = MediaQuery.of(context).size.height * 0.9;
 
     final canStart = isApiReady && !isApiLoading && !timerState.isLoading;
+    final filteredProjects = _filteredProjects(projectsState.projects);
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: maxHeight),
@@ -197,6 +263,39 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
                 ),
               ),
             const SizedBox(height: AppSpacing.md),
+            DropdownButtonFormField<int>(
+              key: ValueKey('client_$_selectedClientId'),
+              decoration: const InputDecoration(
+                labelText: 'Client (optional)',
+                prefixIcon: Icon(Icons.business_outlined),
+              ),
+              initialValue: _selectedClientId,
+              items: [
+                const DropdownMenuItem<int>(value: null, child: Text('Any client')),
+                ..._clients.map((c) {
+                  final id = (c['id'] as num).toInt();
+                  return DropdownMenuItem<int>(
+                    value: id,
+                    child: Text(c['name']?.toString() ?? 'Client #$id'),
+                  );
+                }),
+              ],
+              onChanged: _clientsLoading
+                  ? null
+                  : (value) {
+                      String? name;
+                      if (value != null) {
+                        for (final c in _clients) {
+                          if ((c['id'] as num?)?.toInt() == value) {
+                            name = c['name']?.toString();
+                            break;
+                          }
+                        }
+                      }
+                      _selectClient(value, name: name ?? _selectedClientName);
+                    },
+            ),
+            const SizedBox(height: AppSpacing.md),
             SearchAnchor(
               searchController: _projectSearchController,
               viewHintText: 'Search projects',
@@ -206,7 +305,9 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
                   onTap: controller.openView,
                   onChanged: (_) => controller.openView(),
                   leading: const Icon(Icons.folder_outlined),
-                  hintText: 'Select project',
+                  hintText: _selectedClientId != null
+                      ? 'Project (optional for this client)'
+                      : 'Select project',
                   trailing: [
                     if (_selectedProjectId != null)
                       IconButton(
@@ -225,7 +326,7 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
               },
               suggestionsBuilder: (context, controller) {
                 final query = controller.text.trim().toLowerCase();
-                final projects = projectsState.projects;
+                final projects = filteredProjects;
                 final matches = query.isEmpty
                     ? projects
                     : projects.where((p) {
@@ -251,7 +352,15 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
                 }
 
                 if (matches.isEmpty) {
-                  return const [ListTile(title: Text('No matching projects'))];
+                  return [
+                    ListTile(
+                      title: Text(
+                        _selectedClientId != null
+                            ? 'No projects for this client — start client-only'
+                            : 'No matching projects',
+                      ),
+                    ),
+                  ];
                 }
 
                 return matches.map((p) {
@@ -353,4 +462,3 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
     );
   }
 }
-

@@ -2,6 +2,7 @@ class TimeEntry {
   final int id;
   final int userId;
   final int? projectId;
+  final int? clientId;
   final int? taskId;
   final DateTime? startTime;
   final DateTime? endTime;
@@ -13,11 +14,16 @@ class TimeEntry {
   final bool paid;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  /// Denormalized project name from API.
+  final String? project;
+  /// Denormalized client name from API.
+  final String? client;
 
   const TimeEntry({
     required this.id,
     this.userId = 0,
     this.projectId,
+    this.clientId,
     this.taskId,
     this.startTime,
     this.endTime,
@@ -29,13 +35,25 @@ class TimeEntry {
     this.paid = false,
     this.createdAt,
     this.updatedAt,
+    this.project,
+    this.client,
   });
+
+  /// Display label: project name, else client name, else a fallback.
+  String get displayLabel {
+    if (project != null && project!.isNotEmpty) return project!;
+    if (client != null && client!.isNotEmpty) return client!;
+    if (projectId != null) return 'Project #$projectId';
+    if (clientId != null) return 'Client #$clientId';
+    return 'Time entry';
+  }
 
   factory TimeEntry.fromJson(Map<String, dynamic> json) {
     return TimeEntry(
       id: (json['id'] as num).toInt(),
       userId: (json['user_id'] as num?)?.toInt() ?? 0,
       projectId: (json['project_id'] as num?)?.toInt(),
+      clientId: (json['client_id'] as num?)?.toInt(),
       taskId: (json['task_id'] as num?)?.toInt(),
       startTime: _parseDt(json['start_time']),
       endTime: _parseDt(json['end_time']),
@@ -47,6 +65,8 @@ class TimeEntry {
       paid: json['paid'] == true,
       createdAt: _parseDt(json['created_at']),
       updatedAt: _parseDt(json['updated_at']),
+      project: json['project']?.toString(),
+      client: json['client']?.toString(),
     );
   }
 
@@ -54,6 +74,7 @@ class TimeEntry {
         'id': id,
         'user_id': userId,
         'project_id': projectId,
+        'client_id': clientId,
         'task_id': taskId,
         'start_time': startTime?.toIso8601String(),
         'end_time': endTime?.toIso8601String(),
@@ -65,6 +86,8 @@ class TimeEntry {
         'paid': paid,
         'created_at': createdAt?.toIso8601String(),
         'updated_at': updatedAt?.toIso8601String(),
+        'project': project,
+        'client': client,
       };
 
   String get formattedDuration {

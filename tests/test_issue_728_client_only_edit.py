@@ -1,11 +1,17 @@
-"""Issue #728: client-only time entry edit must not force a project."""
+"""Issue #728 follow-up: searchable hierarchy, scripts served, template block guard."""
 
 from datetime import datetime
+from pathlib import Path
+import re
 
 import pytest
 
 from app import db
 from app.models import Client, Permission, Role, TimeEntry, User
+from app.services.time_tracking_service import TimeTrackingService
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _ensure_edit_own_permission(user_id):
@@ -40,7 +46,6 @@ def test_edit_client_only_entry_keeps_project_null(app, authenticated_client, us
         client.status = "active"
         db.session.add(client)
         db.session.flush()
-        # Ensure at least one project exists (would previously be auto-selected)
         assert project.id is not None
         entry = TimeEntry(
             user_id=user.id,
@@ -56,17 +61,18 @@ def test_edit_client_only_entry_keeps_project_null(app, authenticated_client, us
         eid = entry.id
         cid = client.id
 
-    # GET edit page: must offer empty project option and not auto-select first project
     response = authenticated_client.get(f"/timer/edit/{eid}")
     assert response.status_code == 200
     html = response.get_data(as_text=True)
     assert "No project (client only)" in html
     assert 'data-searchable-select="project"' in html
-    # Malformed bug was value="">selected>… — selected must be an attribute
+    assert 'data-searchable-select="task"' in html
+    # Scripts must actually be served (extra_js block was previously discarded by base.html)
+    assert "searchable-select.js" in html
+    assert "inline-create.js" in html
     assert 'value="">selected>' not in html
     assert 'value="" selected>' in html or 'value=""\n selected>' in html or 'value="" selected >' in html
 
-    # POST without project_id (empty) keeps client-only
     response = authenticated_client.post(
         f"/timer/edit/{eid}",
         data={
@@ -91,12 +97,176 @@ def test_edit_client_only_entry_keeps_project_null(app, authenticated_client, us
         assert refreshed.client_id == cid
 
 
+@pytest.mark.integration
+@pytest.mark.routes
+def test_edit_page_project_options_carry_data_client_id(app, authenticated_client, user, project):
+    with app.app_context():
+        _ensure_edit_own_permission(user.id)
+        client = Client(name="Hierarchy Client", email="hierarchy@example.com", created_by=user.id)
+        client.status = "active"
+        db.session.add(client)
+        db.session.flush()
+        entry = TimeEntry(
+            user_id=user.id,
+            client_id=client.id,
+            project_id=None,
+            start_time=datetime(2026, 8, 12, 11, 0, 0),
+            end_time=datetime(2026, 8, 12, 12, 0, 0),
+            source="manual",
+            notes="for hierarchy markup",
+        )
+        db.session.add(entry)
+        db.session.commit()
+        eid = entry.id
+        expected_attr = f'data-client-id="{project.client_id}"'
+
+    response = authenticated_client.get(f"/timer/edit/{eid}")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert expected_attr in html
+    assert 'data-filter-by="editTimerClient"' in html
+    assert 'data-searchable-select="task"' in html
+
+
+@pytest.mark.integration
+@pytest.mark.routes
+def test_manual_entry_and_dashboard_emit_data_client_id(app, authenticated_client, project):
+    with app.app_context():
+        client_id = project.client_id
+
+    manual = authenticated_client.get("/timer/manual")
+    assert manual.status_code == 200
+    manual_html = manual.get_data(as_text=True)
+    assert f'data-client-id="{client_id}"' in manual_html
+    assert "searchable-select.js" in manual_html
+    assert "inline-create.js" in manual_html
+    assert 'data-searchable-select="task"' in manual_html
+
+    dash = authenticated_client.get("/")
+    assert dash.status_code == 200
+    dash_html = dash.get_data(as_text=True)
+    assert f'data-client-id="{client_id}"' in dash_html
+    assert 'data-filter-by="startTimerClient"' in dash_html
+    assert "inline-create.js" in dash_html
+
+
+@pytest.mark.integration
+@pytest.mark.routes
+def test_project_entry_stores_client_id_null_even_when_client_posted(
+    app, authenticated_client, user, project
+):
+    """UI hierarchy may post both fields; storage must keep client_id NULL for project entries."""
+    with app.app_context():
+        _ensure_edit_own_permission(user.id)
+        pid = project.id
+        cid = project.client_id
+        entry = TimeEntry(
+            user_id=user.id,
+            project_id=pid,
+            client_id=None,
+            start_time=datetime(2026, 8, 12, 13, 0, 0),
+            end_time=datetime(2026, 8, 12, 14, 0, 0),
+            source="manual",
+            notes="project based",
+        )
+        db.session.add(entry)
+        db.session.commit()
+        eid = entry.id
+
+    response = authenticated_client.post(
+        f"/timer/edit/{eid}",
+        data={
+            "client_id": str(cid),
+            "project_id": str(pid),
+            "task_id": "",
+            "start_date": "2026-08-12",
+            "start_time": "13:00",
+            "end_date": "2026-08-12",
+            "end_time": "14:00",
+            "notes": "still project based",
+            "billable": "on",
+        },
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+
+    with app.app_context():
+        refreshed = TimeEntry.query.get(eid)
+        assert refreshed is not None
+        assert refreshed.project_id == pid
+        assert refreshed.client_id is None
+
+
+@pytest.mark.unit
+def test_create_manual_entry_project_clears_client(app, user, project):
+    with app.app_context():
+        service = TimeTrackingService()
+        result = service.create_manual_entry(
+            user_id=user.id,
+            project_id=project.id,
+            client_id=project.client_id,  # both posted (UI hierarchy)
+            start_time=datetime(2026, 8, 12, 15, 0, 0),
+            end_time=datetime(2026, 8, 12, 16, 0, 0),
+            notes="hierarchy both fields",
+            billable=True,
+            skip_entry_requirements=True,
+        )
+        assert result["success"], result.get("message")
+        entry = result["entry"]
+        assert entry.project_id == project.id
+        assert entry.client_id is None
+
+
 @pytest.mark.unit
 def test_searchable_select_source_present():
-    from pathlib import Path
-
-    root = Path(__file__).resolve().parents[1]
-    content = (root / "app" / "static" / "searchable-select.js").read_text(encoding="utf-8")
+    content = (ROOT / "app" / "static" / "searchable-select.js").read_text(encoding="utf-8")
     assert "data-searchable-select" in content
     assert "data-create" in content
-    assert "Create client" in content or "openCreateModal" in content
+    assert "Create task" in content
+    assert "data-filter-by" in content
+    assert "ttInlineCreate" in content
+
+
+@pytest.mark.unit
+def test_inline_create_unified_source_present():
+    content = (ROOT / "app" / "static" / "inline-create.js").read_text(encoding="utf-8")
+    assert "ttInlineCreate" in content
+    assert "createTaskInlineModal" in content
+    assert "showProjectModal" in content or "open: function" in content
+
+
+@pytest.mark.unit
+def test_base_template_defines_extra_js_block():
+    base = (ROOT / "app" / "templates" / "base.html").read_text(encoding="utf-8")
+    assert "{% block extra_js %}" in base
+    assert "{% block scripts_extra %}" in base
+
+
+@pytest.mark.unit
+def test_child_template_blocks_exist_in_base():
+    """Every {% block name %} used by templates that extend base.html must exist in base.
+
+    Prevents silent discard of script blocks (the edit_timer extra_js bug).
+    """
+    base = (ROOT / "app" / "templates" / "base.html").read_text(encoding="utf-8")
+    base_blocks = set(re.findall(r"\{%-?\s*block\s+(\w+)", base))
+
+    # Blocks that are intentionally only in nested/layout parents (not base)
+    allowed_missing = set()
+
+    child_blocks = set()
+    templates_dir = ROOT / "app" / "templates"
+    for path in templates_dir.rglob("*.html"):
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if not re.search(r"\{%-?\s*extends\s+", text):
+            continue
+        # Only care about script-related blocks that caused the regression
+        for name in re.findall(r"\{%-?\s*block\s+(\w+)", text):
+            if name in ("extra_js", "scripts_extra", "extra_css", "content", "title"):
+                child_blocks.add(name)
+
+    missing = (child_blocks - base_blocks) - allowed_missing
+    assert not missing, f"Child templates use blocks missing from base.html: {sorted(missing)}"
+    # Explicitly assert the regression that shipped broken
+    assert "extra_js" in base_blocks
+    assert "scripts_extra" in base_blocks

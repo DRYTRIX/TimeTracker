@@ -124,11 +124,13 @@
         
         <p style="margin-top: 20px;">Keep up the great work! 🎉</p>
         
+        {% if reports_url %}
         <center>
-            <a href="{{ url_for('reports.reports', _external=True) }}" class="button">
+            <a href="{{ reports_url }}" class="button">
                 View Detailed Reports
             </a>
         </center>
+        {% endif %}
     </div>
     
     <div class="footer">

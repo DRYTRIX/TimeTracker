@@ -216,7 +216,9 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
             invoice_number=invoice_number,
             source=TimeEntrySource.MANUAL.value,
         )
-        if duration_seconds is None:
+        # No override, or boundary mode (override path skips timestamp adjustment):
+        # recompute so start/end and duration stay consistent.
+        if duration_seconds is None or entry._uses_boundary_rounding():
             entry.calculate_duration()
         db.session.add(entry)
         return entry

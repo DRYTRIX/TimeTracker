@@ -83,7 +83,8 @@ class TimeTrackingRepository {
 
   /// Start a timer
   Future<Timer> startTimer({
-    required int projectId,
+    int? projectId,
+    int? clientId,
     int? taskId,
     String? notes,
     int? templateId,
@@ -91,11 +92,17 @@ class TimeTrackingRepository {
     if (apiClient == null) {
       throw Exception('Not connected to server');
     }
+    if (projectId == null && clientId == null) {
+      throw Exception('Either projectId or clientId is required');
+    }
 
     try {
       final isOnline = await _isOnline();
       if (!isOnline) {
-        // Queue for sync
+        // Queue for sync (project-backed offline path; client-only needs connectivity)
+        if (projectId == null) {
+          throw Exception('Client-only timers require a network connection');
+        }
         await SyncService.queueCreateTimeEntry(
           projectId: projectId,
           taskId: taskId,
@@ -107,6 +114,7 @@ class TimeTrackingRepository {
           id: DateTime.now().millisecondsSinceEpoch,
           userId: 0, // Will be set by server
           projectId: projectId,
+          clientId: clientId,
           taskId: taskId,
           startTime: DateTime.now(),
           notes: notes,
@@ -119,11 +127,15 @@ class TimeTrackingRepository {
         'mobile.timer.start',
         () => apiClient!.startTimer(
           projectId: projectId,
+          clientId: clientId,
           taskId: taskId,
           notes: notes,
           templateId: templateId,
         ),
-        attributes: {'project_id': '$projectId'},
+        attributes: {
+          if (projectId != null) 'project_id': '$projectId',
+          if (clientId != null) 'client_id': '$clientId',
+        },
       );
       final timer = Timer.fromJson(response['timer'] as Map<String, dynamic>);
       await LocalStorage.saveTimer(timer);
@@ -294,7 +306,8 @@ class TimeTrackingRepository {
 
   /// Create a manual time entry
   Future<TimeEntry> createTimeEntry({
-    required int projectId,
+    int? projectId,
+    int? clientId,
     int? taskId,
     required String startTime,
     String? endTime,
@@ -305,10 +318,16 @@ class TimeTrackingRepository {
     if (apiClient == null) {
       throw Exception('Not connected to server');
     }
+    if (projectId == null && clientId == null) {
+      throw Exception('Either projectId or clientId is required');
+    }
 
     try {
       final isOnline = await _isOnline();
       if (!isOnline) {
+        if (projectId == null) {
+          throw Exception('Client-only entries require a network connection');
+        }
         // Queue for sync
         await SyncService.queueCreateTimeEntry(
           projectId: projectId,
@@ -324,6 +343,7 @@ class TimeTrackingRepository {
           id: DateTime.now().millisecondsSinceEpoch,
           userId: 0,
           projectId: projectId,
+          clientId: clientId,
           taskId: taskId,
           startTime: DateTime.parse(startTime),
           endTime: endTime != null ? DateTime.parse(endTime) : null,
@@ -341,6 +361,7 @@ class TimeTrackingRepository {
 
       final response = await apiClient!.createTimeEntry(
         projectId: projectId,
+        clientId: clientId,
         taskId: taskId,
         startTime: startTime,
         endTime: endTime,
@@ -360,6 +381,7 @@ class TimeTrackingRepository {
   Future<TimeEntry> updateTimeEntry(
     int entryId, {
     int? projectId,
+    int? clientId,
     int? taskId,
     String? startTime,
     String? endTime,
@@ -374,6 +396,7 @@ class TimeTrackingRepository {
       final response = await apiClient!.updateTimeEntry(
         entryId,
         projectId: projectId,
+        clientId: clientId,
         taskId: taskId,
         startTime: startTime,
         endTime: endTime,

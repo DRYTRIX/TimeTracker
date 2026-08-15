@@ -37,7 +37,18 @@ class Config:
     # Application settings
     TZ = os.getenv("TZ", "Europe/Rome")
     CURRENCY = os.getenv("CURRENCY", "EUR")
+    # Public base URL of this instance, e.g. https://time.example.com
+    # Used for absolute links in emails sent from background jobs (no HTTP request
+    # in flight). Do NOT set Flask SERVER_NAME for this: SERVER_NAME makes Flask
+    # host-match every request and 404 Host headers that differ (common behind
+    # reverse proxies). Prefer APP_BASE_URL; otherwise the app learns the host
+    # from live requests (see app.utils.urls.remember_request_base_url).
+    APP_BASE_URL = os.getenv("APP_BASE_URL", "").strip()
+    PREFERRED_URL_SCHEME = os.getenv("PREFERRED_URL_SCHEME", "http")
     ROUNDING_MINUTES = int(os.getenv("ROUNDING_MINUTES", 1))
+    ROUNDING_METHOD = os.getenv("ROUNDING_METHOD", "nearest")
+    ROUNDING_MINIMUM_MINUTES = int(os.getenv("ROUNDING_MINIMUM_MINUTES", 0))
+    ROUNDING_ENFORCE_GLOBAL = os.getenv("ROUNDING_ENFORCE_GLOBAL", "false").lower() == "true"
     SINGLE_ACTIVE_TIMER = os.getenv("SINGLE_ACTIVE_TIMER", "true").lower() == "true"
     IDLE_TIMEOUT_MINUTES = int(os.getenv("IDLE_TIMEOUT_MINUTES", 30))
 

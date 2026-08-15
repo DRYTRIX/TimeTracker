@@ -107,38 +107,37 @@
                         <div>
                             <label for="client_id" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Client') }}</label>
                             {{ client_select('client_id', clients, selected_id=selected_client_id, required=False, only_one_client=false, single_client=none, searchable=True, can_create=can_create_clients|default(false)) }}
-                            {% if can_create_clients|default(false) %}
-                            <p class="text-xs mt-1">
-                                <button type="button" id="openCreateClientModal" data-client-select-id="client_id" class="text-primary hover:underline">{{ _('Create new client') }}</button>
-                            </p>
-                            {% endif %}
-                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select either a project or a client') }}</p>
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select a client first, then optionally a project. Type to search or create.') }}</p>
                         </div>
                         <div>
                             <label for="project_id" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Project') }}</label>
                             <select name="project_id" id="project_id" class="form-input" data-inline-project-select
                                     data-searchable-select="project"
+                                    data-filter-by="client_id"
                                     {% if can_create_projects|default(false) %}data-can-create="1"{% endif %}
                                     data-search-placeholder="{{ _('Type to search projects…') }}">
                                 <option value="">{{ _('Select a project (optional)') }}</option>
                                 {% for project in projects %}
-                                <option value="{{ project.id }}" {% if selected_project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
+                                <option value="{{ project.id }}" data-client-id="{{ project.client_id }}" data-parent-id="{{ project.client_id }}" {% if selected_project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
                                 {% endfor %}
                             </select>
-                            {% if can_create_projects|default(false) %}
-                            <p class="text-xs mt-1">
-                                <button type="button" id="openCreateProjectModal" data-project-select-id="project_id" class="text-primary hover:underline">{{ _('Create new project') }}</button>
-                            </p>
-                            {% endif %}
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Filtered by client. Leave empty for a client-only entry.') }}</p>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label for="task_id" class="block text-sm font-medium text-text-light dark:text-text-dark">{% if getattr(settings, 'time_entry_require_task', false) %}{{ _('Task') }} *{% else %}{{ _('Task (optional)') }}{% endif %}</label>
-                            <select name="task_id" id="task_id" class="form-input" data-selected-task-id="{{ selected_task_id or '' }}" {% if not selected_project_id %}disabled{% endif %}>
+                            <select name="task_id" id="task_id" class="form-input"
+                                    data-selected-task-id="{{ selected_task_id or '' }}"
+                                    data-searchable-select="task"
+                                    data-inline-task-select
+                                    data-filter-by="project_id"
+                                    data-can-create="1"
+                                    data-search-placeholder="{{ _('Type to search tasks…') }}"
+                                    {% if not selected_project_id %}disabled{% endif %}>
                                 <option value="">{{ _('No task') }}</option>
                             </select>
-                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Tasks load after selecting a project') }}</p>
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select a project first. Type to search or create.') }}</p>
                         </div>
                     </div>
                 </div>
@@ -221,11 +220,7 @@
         </div>
     </form>
 </div>
-{% include 'components/inline_create_client_modal.html' %}
-{% include 'components/inline_create_project_modal.html' %}
-<script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
-<script src="{{ url_for('static', filename='inline-create-client.js') }}"></script>
-<script src="{{ url_for('static', filename='inline-create-project.js') }}"></script>
+{% include 'components/inline_create_modals.html' %}
 <script nonce="{{ csp_nonce() }}">
 (function() {
     // Issue #557: avoid loading Toast UI Editor on mobile to prevent browser freeze
@@ -412,23 +407,34 @@ document.addEventListener('DOMContentLoaded', async function(){
     const failedToLoadTasksText = {{ _('Failed to load tasks')|tojson }};
     const scriptRoot = {{ request.script_root|default('')|tojson }};
 
-    // Task loading: when project is selected, clear client (mutual exclusivity) and load tasks
+    // Hierarchy: project auto-fills client; client clears mismatched project
     if (projectSelect && taskSelect) {
         projectSelect.addEventListener('change', function() {
             const projectId = this.value;
-            if (clientSelect) clientSelect.value = '';
+            if (projectId && clientSelect && clientSelect.tagName === 'SELECT') {
+                const opt = this.options[this.selectedIndex];
+                const cid = opt ? (opt.getAttribute('data-client-id') || '') : '';
+                if (cid && clientSelect.value !== cid) {
+                    clientSelect.value = cid;
+                }
+            }
             loadTasks(projectId);
         });
     }
 
-    // Client/project mutual exclusivity (when client select exists)
-    if (clientSelect) {
+    if (clientSelect && clientSelect.tagName === 'SELECT') {
         clientSelect.addEventListener('change', function() {
-            if (this.value) {
-                if (projectSelect) projectSelect.value = '';
-                if (taskSelect) {
-                    taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
-                    taskSelect.disabled = true;
+            const cid = this.value;
+            if (projectSelect && projectSelect.value) {
+                const opt = projectSelect.options[projectSelect.selectedIndex];
+                const projectClientId = opt ? (opt.getAttribute('data-client-id') || '') : '';
+                if (cid && projectClientId && projectClientId !== cid) {
+                    projectSelect.value = '';
+                    if (taskSelect) {
+                        taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+                        taskSelect.disabled = true;
+                        if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
+                    }
                 }
             }
         });
@@ -445,6 +451,7 @@ document.addEventListener('DOMContentLoaded', async function(){
         if (!projectId){
             taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
             taskSelect.disabled = true;
+            if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
             return;
         }
         const url = buildTasksUrl(projectId);
@@ -467,6 +474,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                 }
                 taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
                 taskSelect.disabled = true;
+                if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                 return;
             }
             if (!resp.ok) {
@@ -479,6 +487,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                     }
                     taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
                     taskSelect.disabled = true;
+                    if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                     return;
                 }
                 throw new Error(failedToLoadTasksText + ' (HTTP ' + resp.status + ')');
@@ -490,6 +499,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                 const opt = document.createElement('option');
                 opt.value = String(t.id);
                 opt.textContent = t.name;
+                opt.setAttribute('data-parent-id', String(projectId));
                 taskSelect.appendChild(opt);
             });
             const pre = taskSelect.getAttribute('data-selected-task-id');
@@ -499,9 +509,11 @@ document.addEventListener('DOMContentLoaded', async function(){
                 taskSelect.setAttribute('data-selected-task-id','');
             }
             taskSelect.disabled = false;
+            if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
         }catch(e){
             taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
             taskSelect.disabled = true;
+            if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
             try {
                 const msg = e && e.message ? e.message : (failedToLoadTasksText || 'Failed to load tasks');
                 if (window.toastManager && typeof window.toastManager.error === 'function') {
@@ -750,12 +762,12 @@ document.addEventListener('DOMContentLoaded', async function(){
                 // Preselect project and task
                 if (tpl.project_id && projectSelect) {
                     projectSelect.value = String(tpl.project_id);
-                    if (clientSelect) clientSelect.value = '';
                     // Preselect task after load
                     if (taskSelect) {
                         taskSelect.setAttribute('data-selected-task-id', tpl.task_id ? String(tpl.task_id) : '');
                     }
                     await loadTasks(projectSelect.value);
+                    try { projectSelect.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
                 }
 
             // Notes, tags, billable

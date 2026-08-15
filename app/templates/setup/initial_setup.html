@@ -203,12 +203,37 @@
                             <div>
                                 <label for="rounding_minutes" class="block text-sm font-medium mb-1">{{ _('Time rounding (minutes)') }}</label>
                                 <select name="rounding_minutes" id="rounding_minutes" class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent">
-                                    <option value="1" {% if not settings or settings.rounding_minutes == 1 %}selected{% endif %}>1</option>
-                                    <option value="5" {% if settings and settings.rounding_minutes == 5 %}selected{% endif %}>5</option>
-                                    <option value="15" {% if settings and settings.rounding_minutes == 15 %}selected{% endif %}>15</option>
-                                    <option value="30" {% if settings and settings.rounding_minutes == 30 %}selected{% endif %}>30</option>
+                                    <option value="1" {% if not settings or settings.rounding_minutes == 1 %}selected{% endif %}>{{ _('No rounding (exact time)') }}</option>
+                                    <option value="5" {% if settings and settings.rounding_minutes == 5 %}selected{% endif %}>{{ _('5 minutes') }}</option>
+                                    <option value="10" {% if settings and settings.rounding_minutes == 10 %}selected{% endif %}>{{ _('10 minutes') }}</option>
+                                    <option value="15" {% if settings and settings.rounding_minutes == 15 %}selected{% endif %}>{{ _('15 minutes') }}</option>
+                                    <option value="30" {% if settings and settings.rounding_minutes == 30 %}selected{% endif %}>{{ _('30 minutes') }}</option>
+                                    <option value="60" {% if settings and settings.rounding_minutes == 60 %}selected{% endif %}>{{ _('1 hour') }}</option>
                                 </select>
-                                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Round time entries to the nearest N minutes.') }}</p>
+                                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Default interval. Users can override this unless you enforce the policy below.') }}</p>
+                            </div>
+                            <div>
+                                <label for="rounding_method" class="block text-sm font-medium mb-1">{{ _('Rounding method') }}</label>
+                                <select name="rounding_method" id="rounding_method" class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    {% for method, label, description in rounding_methods %}
+                                    <option value="{{ method }}" {% if settings and (settings.rounding_method or 'nearest') == method %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label for="rounding_minimum_minutes" class="block text-sm font-medium mb-1">{{ _('Minimum entry duration') }}</label>
+                                <select name="rounding_minimum_minutes" id="rounding_minimum_minutes" class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    {% for minutes, label in rounding_minimums %}
+                                    <option value="{{ minutes }}" {% if settings and (settings.rounding_minimum_minutes or 0) == minutes %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="flex items-start">
+                                <input type="checkbox" name="rounding_enforce_global" id="rounding_enforce_global" {% if settings and settings.rounding_enforce_global %}checked{% endif %} class="mt-1 h-4 w-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary">
+                                <label for="rounding_enforce_global" class="ml-3 text-sm">
+                                    <span class="font-medium">{{ _('Enforce for all users') }}</span>
+                                    <span class="block text-text-muted-light dark:text-text-muted-dark mt-0.5">{{ _('Everyone tracks time with this policy; personal rounding settings are locked.') }}</span>
+                                </label>
                             </div>
                             <div class="flex items-start">
                                 <input type="checkbox" name="single_active_timer" id="single_active_timer" {% if not settings or settings.single_active_timer %}checked{% endif %} class="mt-1 h-4 w-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary">

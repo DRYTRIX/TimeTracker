@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.11.5
+
+**Patch (5.11.5):** **Global rounding policy (#725)** — admin interval, method, and minimum with enforce-for-all; unset personal fields inherit defaults. **Client-only timers (#728)** — API, extension, mobile, and desktop can start against a client without a project; remaining timer pages use searchable comboboxes. **Fixes** — boundary rounding on duration overrides, email absolute links / `APP_BASE_URL`, kiosk stop duration, quote approval and client-portal quote emails, dead Jinja blocks, desktop manual-entry payload, extension idle notifications, Android Timer crash under R8 (#731). See [CHANGELOG.md](CHANGELOG.md#5115---2026-08-15).
+
 ### ✨ Highlights of v5.11.4
 
 **Patch (5.11.4):** **Boundary rounding & minimum duration (#725)** — start/end boundary rounding, per-user minimum billable time, and admin interval fallback; rounding applied on remaining write paths. **Searchable client/project combobox (#728)** — filterable selects with inline create; client-only edits preserved. **Idle heartbeats (#722)** — server-side auto-stop and “Still working?” across web, extension, mobile, and desktop. **Fixes** — Approve button submit (#709), extension picker races (#700), idle-tab 503 toasts (#703), client API joinedload (#716). See [CHANGELOG.md](CHANGELOG.md#5114---2026-08-13).

@@ -25,6 +25,7 @@ const INCLUDE = [
   'options.html',
   'options.js',
   'lib/api.js',
+  'lib/picker.js',
   'icons',
 ];
 

@@ -4,11 +4,12 @@ import os
 from datetime import datetime, timedelta
 from threading import Thread
 
-from flask import current_app, render_template, url_for
+from flask import current_app, render_template
 from flask_mail import Mail, Message
 
 from app import db
 from app.utils.safe_template_render import render_sandboxed_string
+from app.utils.urls import safe_external_url_for
 
 mail = Mail()
 
@@ -134,7 +135,7 @@ def send_client_portal_password_setup_email(client, token):
             return False
 
         # Generate password setup URL
-        setup_url = url_for("client_portal.set_password", token=token, _external=True)
+        setup_url = safe_external_url_for("client_portal.set_password", token=token)
 
         # Render email template
         html_body = render_template(
@@ -273,6 +274,9 @@ def send_overdue_invoice_notification(invoice, user):
 
     subject = f"Invoice {invoice.invoice_number} is {days_overdue} days overdue"
 
+    invoice_url = safe_external_url_for("invoices.view_invoice", invoice_id=invoice.id)
+    view_line = f"\nView invoice: {invoice_url}\n" if invoice_url else "\n"
+
     text_body = f"""
 Hello {user.display_name},
 
@@ -286,14 +290,18 @@ Invoice Details:
 - Days Overdue: {days_overdue}
 
 Please follow up with the client or update the invoice status.
-
-View invoice: {url_for('invoices.view_invoice', invoice_id=invoice.id, _external=True)}
-
+{view_line}
 ---
 TimeTracker - Time Tracking & Project Management
     """
 
-    html_body = render_template("email/overdue_invoice.html", user=user, invoice=invoice, days_overdue=days_overdue)
+    html_body = render_template(
+        "email/overdue_invoice.html",
+        user=user,
+        invoice=invoice,
+        days_overdue=days_overdue,
+        invoice_url=invoice_url,
+    )
 
     send_email(subject, user.email, text_body, html_body)
 
@@ -311,6 +319,9 @@ def send_task_assigned_notification(task, user, assigned_by):
 
     subject = f"You've been assigned to task: {task.name}"
 
+    task_url = safe_external_url_for("tasks.edit_task", task_id=task.id)
+    view_line = f"\nView task: {task_url}\n" if task_url else "\n"
+
     text_body = f"""
 Hello {user.display_name},
 
@@ -325,14 +336,14 @@ Task Details:
 
 Description:
 {task.description or 'No description provided'}
-
-View task: {url_for('tasks.edit_task', task_id=task.id, _external=True)}
-
+{view_line}
 ---
 TimeTracker - Time Tracking & Project Management
     """
 
-    html_body = render_template("email/task_assigned.html", user=user, task=task, assigned_by=assigned_by)
+    html_body = render_template(
+        "email/task_assigned.html", user=user, task=task, assigned_by=assigned_by, task_url=task_url
+    )
 
     send_email(subject, user.email, text_body, html_body)
 
@@ -355,6 +366,9 @@ def send_weekly_summary(user, start_date, end_date, hours_worked, projects_data)
     # Build project summary text
     project_summary = "\n".join([f"- {p['name']}: {p['hours']:.1f} hours" for p in projects_data])
 
+    reports_url = safe_external_url_for("reports.reports")
+    reports_line = f"\nView detailed reports: {reports_url}\n" if reports_url else "\n"
+
     text_body = f"""
 Hello {user.display_name},
 
@@ -366,9 +380,7 @@ Hours by Project:
 {project_summary}
 
 Keep up the great work!
-
-View detailed reports: {url_for('reports.reports', _external=True)}
-
+{reports_line}
 ---
 TimeTracker - Time Tracking & Project Management
     """
@@ -380,6 +392,7 @@ TimeTracker - Time Tracking & Project Management
         end_date=end_date,
         hours_worked=hours_worked,
         projects_data=projects_data,
+        reports_url=reports_url,
     )
 
     send_email(subject, user.email, text_body, html_body)
@@ -394,7 +407,12 @@ def send_working_time_limit_exceeded_email(user, violation):
 
     period_label = "daily" if violation.period_type == WorkingTimeViolation.PERIOD_DAILY else "weekly"
     subject = f"Working time limit exceeded ({period_label})"
-    justify_url = url_for("workday.violation_justify", violation_id=violation.id, _external=True)
+    justify_url = safe_external_url_for("workday.violation_justify", violation_id=violation.id)
+    justify_block = (
+        f"\nPlease provide a brief justification in TimeTracker:\n{justify_url}\n"
+        if justify_url
+        else "\nPlease provide a brief justification in TimeTracker.\n"
+    )
 
     text_body = f"""Hello {user.display_name},
 
@@ -404,10 +422,7 @@ Period: {violation.period_start} to {violation.period_end}
 Limit: {violation.limit_hours:.1f} hours
 Actual: {violation.actual_hours:.1f} hours
 Over by: {violation.hours_over:.1f} hours
-
-Please provide a brief justification in TimeTracker:
-{justify_url}
-
+{justify_block}
 ---
 TimeTracker
 """
@@ -436,19 +451,19 @@ def send_remind_to_log_email(user):
     if not user.email or not user.email_notifications or not getattr(user, "notification_remind_to_log", False):
         return
     subject = "Reminder: log your time today"
-    dashboard_url = url_for("main.dashboard", _external=True)
+    dashboard_url = safe_external_url_for("main.dashboard")
+    dashboard_text = f"\nDashboard: {dashboard_url}\n" if dashboard_url else "\n"
+    dashboard_html = f'<p><a href="{dashboard_url}">Open Dashboard</a></p>' if dashboard_url else ""
     text_body = f"""Hello {getattr(user, 'full_name', None) or user.username},
 
 You haven't logged any time today yet. Don't forget to log your work in TimeTracker.
-
-Dashboard: {dashboard_url}
-
+{dashboard_text}
 ---
 TimeTracker
 """
     html_body = f"""<p>Hello {getattr(user, 'full_name', None) or user.username},</p>
 <p>You haven't logged any time today yet. Don't forget to log your work in TimeTracker.</p>
-<p><a href="{dashboard_url}">Open Dashboard</a></p>
+{dashboard_html}
 <p style="color:#64748b;font-size:0.875rem;">— TimeTracker</p>"""
     send_email(subject, user.email, text_body, html_body)
 
@@ -458,22 +473,31 @@ def send_missed_clock_in_email(user):
     if not user.email or not user.email_notifications or not getattr(user, "notification_missed_clock_in", False):
         return
     subject = "Reminder: start your workday"
-    dashboard_url = url_for("main.dashboard", _external=True)
-    history_url = url_for("workday.workday_history", _external=True)
+    dashboard_url = safe_external_url_for("main.dashboard")
+    history_url = safe_external_url_for("workday.workday_history")
     display = getattr(user, "full_name", None) or user.username
+    link_lines = []
+    if dashboard_url:
+        link_lines.append(f"Dashboard: {dashboard_url}")
+    if history_url:
+        link_lines.append(f"Attendance history (request a correction if needed): {history_url}")
+    links_text = ("\n" + "\n".join(link_lines) + "\n") if link_lines else "\n"
+    html_links = []
+    if dashboard_url:
+        html_links.append(f'<a href="{dashboard_url}">Open Dashboard</a>')
+    if history_url:
+        html_links.append(f'<a href="{history_url}">Attendance history</a>')
+    html_links_block = f"<p>{' · '.join(html_links)}</p>" if html_links else ""
     text_body = f"""Hello {display},
 
 You have not started your workday yet. Press Start Workday when you begin working.
-
-Dashboard: {dashboard_url}
-Attendance history (request a correction if needed): {history_url}
-
+{links_text}
 ---
 TimeTracker
 """
     html_body = f"""<p>Hello {display},</p>
 <p>You have not started your workday yet. Press <strong>Start Workday</strong> when you begin working.</p>
-<p><a href="{dashboard_url}">Open Dashboard</a> · <a href="{history_url}">Attendance history</a></p>
+{html_links_block}
 <p style="color:#64748b;font-size:0.875rem;">— TimeTracker</p>"""
     send_email(subject, user.email, text_body, html_body)
 
@@ -492,6 +516,9 @@ def send_comment_notification(comment, task, mentioned_users):
 
         subject = f"You were mentioned in a comment on: {task.name}"
 
+        task_url = safe_external_url_for("tasks.edit_task", task_id=task.id)
+        view_line = f"\nView task: {task_url}\n" if task_url else "\n"
+
         text_body = f"""
 Hello {user.display_name},
 
@@ -502,14 +529,14 @@ Comment:
 
 Task: {task.name}
 Project: {task.project.name if task.project else 'N/A'}
-
-View task: {url_for('tasks.edit_task', task_id=task.id, _external=True)}
-
+{view_line}
 ---
 TimeTracker - Time Tracking & Project Management
         """
 
-        html_body = render_template("email/comment_mention.html", user=user, comment=comment, task=task)
+        html_body = render_template(
+            "email/comment_mention.html", user=user, comment=comment, task=task, task_url=task_url
+        )
 
         send_email(subject, user.email, text_body, html_body)
 
@@ -1005,6 +1032,9 @@ def send_quote_sent_notification(quote, user):
 
     subject = f"Quote {quote.quote_number} has been sent to {quote.client.name if quote.client else 'client'}"
 
+    quote_url = safe_external_url_for("quotes.view_quote", quote_id=quote.id)
+    view_line = f"\nView quote: {quote_url}\n" if quote_url else "\n"
+
     text_body = f"""
 Hello {user.display_name or user.username},
 
@@ -1016,14 +1046,12 @@ Quote Details:
 - Client: {quote.client.name if quote.client else 'N/A'}
 - Total Amount: {quote.currency_code} {quote.total_amount}
 - Sent At: {quote.sent_at.strftime('%Y-%m-%d %H:%M') if quote.sent_at else 'N/A'}
-
-View quote: {url_for('quotes.view_quote', quote_id=quote.id, _external=True)}
-
+{view_line}
 ---
 TimeTracker - Time Tracking & Project Management
     """
 
-    html_body = render_template("email/quote_sent.html", user=user, quote=quote)
+    html_body = render_template("email/quote_sent.html", user=user, quote=quote, quote_url=quote_url)
 
     send_email(subject, user.email, text_body, html_body)
 
@@ -1040,6 +1068,9 @@ def send_quote_accepted_notification(quote, user):
 
     subject = f"Quote {quote.quote_number} has been accepted"
 
+    quote_url = safe_external_url_for("quotes.view_quote", quote_id=quote.id)
+    view_line = f"\nView quote: {quote_url}\n" if quote_url else "\n"
+
     text_body = f"""
 Hello {user.display_name or user.username},
 
@@ -1052,14 +1083,12 @@ Quote Details:
 - Total Amount: {quote.currency_code} {quote.total_amount}
 - Accepted At: {quote.accepted_at.strftime('%Y-%m-%d %H:%M') if quote.accepted_at else 'N/A'}
 - Project: {'Created' if quote.has_project else 'Not yet created'}
-
-View quote: {url_for('quotes.view_quote', quote_id=quote.id, _external=True)}
-
+{view_line}
 ---
 TimeTracker - Time Tracking & Project Management
     """
 
-    html_body = render_template("email/quote_accepted.html", user=user, quote=quote)
+    html_body = render_template("email/quote_accepted.html", user=user, quote=quote, quote_url=quote_url)
 
     send_email(subject, user.email, text_body, html_body)
 
@@ -1076,6 +1105,9 @@ def send_quote_rejected_notification(quote, user):
 
     subject = f"Quote {quote.quote_number} has been rejected"
 
+    quote_url = safe_external_url_for("quotes.view_quote", quote_id=quote.id)
+    view_line = f"\nView quote: {quote_url}\n" if quote_url else "\n"
+
     text_body = f"""
 Hello {user.display_name or user.username},
 
@@ -1087,14 +1119,12 @@ Quote Details:
 - Client: {quote.client.name if quote.client else 'N/A'}
 - Total Amount: {quote.currency_code} {quote.total_amount}
 - Rejected At: {quote.rejected_at.strftime('%Y-%m-%d %H:%M') if quote.rejected_at else 'N/A'}
-
-View quote: {url_for('quotes.view_quote', quote_id=quote.id, _external=True)}
-
+{view_line}
 ---
 TimeTracker - Time Tracking & Project Management
     """
 
-    html_body = render_template("email/quote_rejected.html", user=user, quote=quote)
+    html_body = render_template("email/quote_rejected.html", user=user, quote=quote, quote_url=quote_url)
 
     send_email(subject, user.email, text_body, html_body)
 
@@ -1111,6 +1141,9 @@ def send_quote_expired_notification(quote, user):
 
     subject = f"Quote {quote.quote_number} has expired"
 
+    quote_url = safe_external_url_for("quotes.view_quote", quote_id=quote.id)
+    view_line = f"\nView quote: {quote_url}\n" if quote_url else "\n"
+
     text_body = f"""
 Hello {user.display_name or user.username},
 
@@ -1124,15 +1157,182 @@ Quote Details:
 - Valid Until: {quote.valid_until.strftime('%Y-%m-%d') if quote.valid_until else 'N/A'}
 
 You may want to follow up with the client or create a new quote.
-
-View quote: {url_for('quotes.view_quote', quote_id=quote.id, _external=True)}
-
+{view_line}
 ---
 TimeTracker - Time Tracking & Project Management
     """
 
-    html_body = render_template("email/quote_expired.html", user=user, quote=quote)
+    html_body = render_template("email/quote_expired.html", user=user, quote=quote, quote_url=quote_url)
 
+    send_email(subject, user.email, text_body, html_body)
+
+
+def send_quote_expiring_reminder(quote, user, days_remaining):
+    """Remind a user that a quote is about to expire.
+
+    Args:
+        quote: Quote object
+        user: User object (quote creator or admin)
+        days_remaining: Days until ``quote.valid_until``
+    """
+    if not user.email or not user.email_notifications:
+        return
+
+    day_label = "day" if days_remaining == 1 else "days"
+    subject = f"Quote {quote.quote_number} expires in {days_remaining} {day_label}"
+
+    quote_url = safe_external_url_for("quotes.view_quote", quote_id=quote.id)
+    view_line = f"\nView quote: {quote_url}\n" if quote_url else "\n"
+
+    text_body = f"""
+Hello {user.display_name or user.username},
+
+Quote {quote.quote_number} will expire in {days_remaining} {day_label}.
+
+Quote Details:
+- Quote Number: {quote.quote_number}
+- Title: {quote.title}
+- Client: {quote.client.name if quote.client else 'N/A'}
+- Total Amount: {quote.currency_code} {quote.total_amount}
+- Valid Until: {quote.valid_until.strftime('%Y-%m-%d') if quote.valid_until else 'N/A'}
+- Days Remaining: {days_remaining}
+
+You may want to follow up with the client before the quote expires.
+{view_line}
+---
+TimeTracker - Time Tracking & Project Management
+    """
+
+    html_body = render_template(
+        "email/quote_expiring.html",
+        user=user,
+        quote=quote,
+        days_remaining=days_remaining,
+        quote_url=quote_url,
+    )
+
+    send_email(subject, user.email, text_body, html_body)
+
+
+def send_quote_approval_request_notification(quote, user):
+    """Notify an approver that a quote needs approval.
+
+    Args:
+        quote: Quote object
+        user: Approver (admin) User object
+    """
+    if not user.email or not user.email_notifications:
+        return
+
+    subject = f"Approval requested: Quote {quote.quote_number}"
+    quote_url = safe_external_url_for("quotes.view_quote", quote_id=quote.id)
+    view_line = f"\nReview quote: {quote_url}\n" if quote_url else "\n"
+    requester = quote.creator.display_name or quote.creator.username if quote.creator else "N/A"
+
+    text_body = f"""
+Hello {user.display_name or user.username},
+
+A quote requires your approval.
+
+Quote Details:
+- Quote Number: {quote.quote_number}
+- Title: {quote.title}
+- Client: {quote.client.name if quote.client else 'N/A'}
+- Total Amount: {quote.currency_code} {quote.total_amount}
+- Requested By: {requester}
+{view_line}
+---
+TimeTracker - Time Tracking & Project Management
+    """
+
+    html_body = render_template(
+        "email/quote_approval_request.html",
+        user=user,
+        quote=quote,
+        quote_url=quote_url,
+    )
+    send_email(subject, user.email, text_body, html_body)
+
+
+def send_quote_approved_notification(quote, user):
+    """Notify the quote creator that their quote was approved.
+
+    Args:
+        quote: Quote object
+        user: Quote creator User object
+    """
+    if not user.email or not user.email_notifications:
+        return
+
+    subject = f"Quote {quote.quote_number} has been approved"
+    quote_url = safe_external_url_for("quotes.view_quote", quote_id=quote.id)
+    view_line = f"\nView quote: {quote_url}\n" if quote_url else "\n"
+    approver = quote.approver.display_name or quote.approver.username if quote.approver else "N/A"
+
+    text_body = f"""
+Hello {user.display_name or user.username},
+
+Great news! Your quote has been approved and is ready to be sent.
+
+Quote Details:
+- Quote Number: {quote.quote_number}
+- Title: {quote.title}
+- Client: {quote.client.name if quote.client else 'N/A'}
+- Total Amount: {quote.currency_code} {quote.total_amount}
+- Approved By: {approver}
+{view_line}
+---
+TimeTracker - Time Tracking & Project Management
+    """
+
+    html_body = render_template(
+        "email/quote_approved.html",
+        user=user,
+        quote=quote,
+        quote_url=quote_url,
+    )
+    send_email(subject, user.email, text_body, html_body)
+
+
+def send_quote_approval_rejected_notification(quote, user):
+    """Notify the quote creator that approval was rejected.
+
+    Args:
+        quote: Quote object
+        user: Quote creator User object
+    """
+    if not user.email or not user.email_notifications:
+        return
+
+    subject = f"Quote {quote.quote_number} approval rejected"
+    quote_url = safe_external_url_for("quotes.view_quote", quote_id=quote.id)
+    view_line = f"\nView quote: {quote_url}\n" if quote_url else "\n"
+    rejecter = quote.rejecter.display_name or quote.rejecter.username if quote.rejecter else "N/A"
+    reason = quote.rejection_reason or "N/A"
+
+    text_body = f"""
+Hello {user.display_name or user.username},
+
+Your quote approval request has been rejected.
+
+Quote Details:
+- Quote Number: {quote.quote_number}
+- Title: {quote.title}
+- Client: {quote.client.name if quote.client else 'N/A'}
+- Total Amount: {quote.currency_code} {quote.total_amount}
+- Rejected By: {rejecter}
+- Reason: {reason}
+{view_line}
+---
+TimeTracker - Time Tracking & Project Management
+    """
+
+    html_body = render_template(
+        "email/quote_approval_rejected.html",
+        user=user,
+        quote=quote,
+        quote_url=quote_url,
+    )
     send_email(subject, user.email, text_body, html_body)
 
 
