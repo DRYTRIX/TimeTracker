@@ -4,7 +4,7 @@ Schemas for time entry serialization and validation.
 
 from datetime import datetime
 
-from marshmallow import Schema, ValidationError, fields, validate, validates
+from marshmallow import Schema, ValidationError, fields, validate, validates, validates_schema
 
 from app.constants import TimeEntrySource
 
@@ -111,12 +111,20 @@ class TimeEntryUpdateSchema(Schema):
 
 
 class TimerStartSchema(Schema):
-    """Schema for starting a timer"""
+    """Schema for starting a timer (project or client; at least one required)."""
 
-    project_id = fields.Int(required=True)  # Timers are project-only for now
+    project_id = fields.Int(allow_none=True)
+    client_id = fields.Int(allow_none=True)
     task_id = fields.Int(allow_none=True)
     notes = fields.Str(allow_none=True, validate=validate.Length(max=5000))
     template_id = fields.Int(allow_none=True)
+
+    @validates_schema
+    def validate_project_or_client(self, data, **kwargs):
+        if not data.get("project_id") and not data.get("client_id"):
+            raise ValidationError("Either project_id or client_id must be provided")
+        if data.get("task_id") and not data.get("project_id"):
+            raise ValidationError({"task_id": ["task_id can only be set when project_id is provided"]})
 
 
 class TimerStopSchema(Schema):

@@ -672,11 +672,17 @@ POST /api/v1/timer/start
 
 **Required Scope:** `write:time_entries`
 
-**Request Body:**
+**Request Body:** Provide `project_id` and/or `client_id` (at least one required). Client-only timers omit `project_id`; `task_id` is only valid with a project.
 ```json
 {
   "project_id": 1,
   "task_id": 5
+}
+```
+```json
+{
+  "client_id": 3,
+  "notes": "General client work"
 }
 ```
 

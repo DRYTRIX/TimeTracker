@@ -561,15 +561,24 @@ Example: `2024-01-15T14:30:00Z`
                 "post": {
                     "tags": ["Timer"],
                     "summary": "Start timer",
-                    "description": "Start a new timer for the authenticated user",
+                    "description": (
+                        "Start a new timer for the authenticated user. "
+                        "Provide project_id and/or client_id (at least one required). "
+                        "Client-only timers omit project_id; task_id requires project_id."
+                    ),
                     "requestBody": {
                         "required": True,
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "type": "object",
-                                    "required": ["project_id"],
-                                    "properties": {"project_id": {"type": "integer"}, "task_id": {"type": "integer"}},
+                                    "properties": {
+                                        "project_id": {"type": "integer"},
+                                        "client_id": {"type": "integer"},
+                                        "task_id": {"type": "integer"},
+                                        "notes": {"type": "string"},
+                                        "template_id": {"type": "integer"},
+                                    },
                                 }
                             }
                         },
