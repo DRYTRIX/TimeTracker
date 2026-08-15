@@ -220,11 +220,7 @@
         </div>
     </form>
 </div>
-{% include 'components/inline_create_client_modal.html' %}
-{% include 'components/inline_create_project_modal.html' %}
-{% include 'components/inline_create_task_modal.html' %}
-<script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
-<script src="{{ url_for('static', filename='inline-create.js') }}"></script>
+{% include 'components/inline_create_modals.html' %}
 <script nonce="{{ csp_nonce() }}">
 (function() {
     // Issue #557: avoid loading Toast UI Editor on mobile to prevent browser freeze

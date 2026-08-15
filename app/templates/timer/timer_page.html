@@ -168,23 +168,30 @@
                 <div class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
+                            <label for="timerPageClient" class="form-label">
+                                {{ _('Client') }}
+                            </label>
+                            {{ client_select('client_id', clients, required=False, only_one_client=only_one_client|default(false), single_client=single_client, id='timerPageClient', searchable=True, can_create=(current_user.is_admin or current_user.has_permission('create_clients'))) }}
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                                {{ _('Select a client first, then optionally a project. Type to search or create.') }}
+                            </p>
+                        </div>
+                        <div>
                             <label for="project_id" class="form-label">
                                 {{ _('Project') }}
                             </label>
-                            <select name="project_id" id="project_id" class="form-input w-full">
+                            <select name="project_id" id="project_id" class="form-input w-full" data-inline-project-select
+                                    data-searchable-select="project"
+                                    data-filter-by="timerPageClient"
+                                    {% if current_user.is_admin or current_user.has_permission('create_projects') %}data-can-create="1"{% endif %}
+                                    data-search-placeholder="{{ _('Type to search projects…') }}">
                                 <option value="">{{ _('Select a project (optional)') }}</option>
                                 {% for project in projects %}
-                                <option value="{{ project.id }}">{{ project.name }}</option>
+                                <option value="{{ project.id }}" data-client-id="{{ project.client_id }}" data-parent-id="{{ project.client_id }}">{{ project.name }}</option>
                                 {% endfor %}
                             </select>
-                        </div>
-                        <div>
-                            <label for="client_id" class="form-label">
-                                {{ _('Client') }}
-                            </label>
-                            {{ client_select('client_id', clients, required=False, only_one_client=only_one_client|default(false), single_client=single_client) }}
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
-                                {{ _('Select either a project or a client') }}
+                                {{ _('Filtered by client. Leave empty for a client-only entry.') }}
                             </p>
                         </div>
                     </div>
@@ -193,9 +200,17 @@
                         <label for="task_id" class="form-label">
                             {{ _('Task') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('Optional') }})</span>
                         </label>
-                        <select name="task_id" id="task_id" class="form-input w-full">
+                        <select name="task_id" id="task_id" class="form-input w-full"
+                                data-searchable-select="task"
+                                data-inline-task-select
+                                data-filter-by="project_id"
+                                data-can-create="1"
+                                data-search-placeholder="{{ _('Type to search tasks…') }}">
                             <option value="">{{ _('No task') }}</option>
                         </select>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                            {{ _('Select a project first to load tasks. Type to search or create.') }}
+                        </p>
                     </div>
                     
                     <div>
@@ -287,16 +302,18 @@
 </div>
 {% include 'workday/_overnight_clock_out_modal.html' %}
 {% include 'workday/_auto_closed_clock_out_modal.html' %}
+{% include 'components/inline_create_modals.html' %}
 {% endblock %}
 
 {% block scripts_extra %}
 <script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
-// Load tasks when project is selected and sync with client selection
+// Load tasks when project is selected; keep client→project→task cascade (Issue #728)
 const projectSelectEl = document.getElementById('project_id');
-const clientSelectEl = document.getElementById('client_id');
+const clientSelectEl = document.getElementById('timerPageClient') || document.getElementById('client_id');
 const taskSelectEl = document.getElementById('task_id');
 const noTaskText = {{ _('No task')|tojson }};
+const loadingTasksText = {{ _('Loading tasks…')|tojson }};
 const failedToLoadTasksText = {{ _('Failed to load tasks')|tojson }};
 const scriptRoot = {{ request.script_root|default('')|tojson }};
 
@@ -306,69 +323,93 @@ function buildTasksUrl(projectId) {
     return (scriptRoot || '') + '/api/projects/' + encodeURIComponent(pid) + '/tasks';
 }
 
-async function loadTasksForProject(projectId) {
+function enhanceSearchable() {
+    if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
+}
+
+async function loadTasksForProject(projectId, preserveTaskId) {
     if (!taskSelectEl) return;
     if (!projectId) {
         taskSelectEl.innerHTML = `<option value="">${noTaskText}</option>`;
         taskSelectEl.disabled = false;
+        enhanceSearchable();
         return;
     }
 
     try {
+        taskSelectEl.innerHTML = `<option value="">${loadingTasksText}</option>`;
+        taskSelectEl.disabled = true;
         const response = await fetch(buildTasksUrl(projectId), { credentials: 'same-origin' });
         if (!response.ok) throw new Error(failedToLoadTasksText);
         const data = await response.json();
         const tasks = Array.isArray(data?.tasks) ? data.tasks : [];
 
-        taskSelectEl.innerHTML = `<option value="">${noTaskText}</option>`;
+        const frag = document.createDocumentFragment();
+        const empty = document.createElement('option');
+        empty.value = '';
+        empty.textContent = noTaskText;
+        frag.appendChild(empty);
         tasks.forEach(task => {
             const option = document.createElement('option');
             option.value = task.id;
             option.textContent = task.name;
-            taskSelectEl.appendChild(option);
+            option.setAttribute('data-parent-id', String(projectId));
+            frag.appendChild(option);
         });
+        taskSelectEl.innerHTML = '';
+        taskSelectEl.appendChild(frag);
+        if (preserveTaskId) {
+            const found = Array.from(taskSelectEl.options).some(o => o.value === String(preserveTaskId));
+            if (found) taskSelectEl.value = String(preserveTaskId);
+        }
         taskSelectEl.disabled = false;
+        enhanceSearchable();
     } catch (error) {
         console.error('Error loading tasks:', error);
         taskSelectEl.innerHTML = `<option value="">${noTaskText}</option>`;
-        taskSelectEl.disabled = true;
+        taskSelectEl.disabled = false;
+        enhanceSearchable();
     }
 }
 
 const onlyOneClient = {{ 'true' if only_one_client|default(false) else 'false' }};
 const singleClientId = {{ ('"' ~ single_client.id ~ '"') if single_client else 'null' }};
 
-// Task loading: attach when project and task selects exist (independent of client)
+function syncClientFromProject() {
+    if (!projectSelectEl || !clientSelectEl || clientSelectEl.tagName !== 'SELECT') return;
+    const pid = projectSelectEl.value;
+    if (!pid) {
+        if (onlyOneClient && singleClientId) clientSelectEl.value = singleClientId;
+        return;
+    }
+    const opt = projectSelectEl.options[projectSelectEl.selectedIndex];
+    const cid = opt ? (opt.getAttribute('data-client-id') || '') : '';
+    if (cid && clientSelectEl.value !== cid) {
+        clientSelectEl.value = cid;
+        try { clientSelectEl.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+    }
+}
+
 if (projectSelectEl && taskSelectEl) {
     projectSelectEl.addEventListener('change', () => {
-        const pid = projectSelectEl.value;
-        if (pid && clientSelectEl) {
-            clientSelectEl.value = '';
-        } else if (onlyOneClient && singleClientId) {
-            clientSelectEl.value = singleClientId;
-        }
-        loadTasksForProject(pid);
+        syncClientFromProject();
+        loadTasksForProject(projectSelectEl.value);
     });
-    // Initial load when project is pre-selected
     if (projectSelectEl.value) {
+        syncClientFromProject();
         loadTasksForProject(projectSelectEl.value);
     }
 }
 
-// Client/project mutual exclusivity (when client select exists)
-if (clientSelectEl) {
+if (clientSelectEl && projectSelectEl) {
     clientSelectEl.addEventListener('change', () => {
-        const cid = clientSelectEl.value;
-        if (cid) {
-            if (projectSelectEl) {
-                projectSelectEl.value = '';
-            }
-            if (taskSelectEl) {
-                taskSelectEl.innerHTML = `<option value="">${noTaskText}</option>`;
-                taskSelectEl.disabled = true;
-            }
-        } else if (taskSelectEl) {
-            taskSelectEl.disabled = false;
+        const cid = String(clientSelectEl.value || '');
+        if (!cid) return;
+        const opt = projectSelectEl.options[projectSelectEl.selectedIndex];
+        const pid = opt ? (opt.getAttribute('data-client-id') || '') : '';
+        if (projectSelectEl.value && pid && pid !== cid) {
+            projectSelectEl.value = '';
+            try { projectSelectEl.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
         }
     });
 }
@@ -376,47 +417,41 @@ if (clientSelectEl) {
 // Form validation: ensure either project or client is selected
 const timerStartForm = document.getElementById('timer-start-form');
 if (timerStartForm) {
-    // Store original button state to restore if needed
     const submitBtn = timerStartForm.querySelector('button[type="submit"]');
     let originalButtonHTML = submitBtn ? submitBtn.innerHTML : null;
     
     timerStartForm.addEventListener('submit', function(e) {
-        // Validate project or client selection
         const projectVal = projectSelectEl ? projectSelectEl.value : '';
         const clientVal = clientSelectEl ? clientSelectEl.value : '';
         if (!projectVal && !clientVal) {
             e.preventDefault();
-            e.stopImmediatePropagation(); // Stop other handlers from running
+            e.stopImmediatePropagation();
             
-            // Ensure button state is preserved
             if (submitBtn && originalButtonHTML) {
                 submitBtn.innerHTML = originalButtonHTML;
                 submitBtn.disabled = false;
             }
             
-            // Show error message using toast notification
             const errorMsg = '{{ _("Please select either a project or a client") }}';
             if (window.toastManager && typeof window.toastManager.error === 'function') {
                 window.toastManager.error(errorMsg, '{{ _("Error") }}', 5000);
             } else {
                 alert(errorMsg);
             }
-            // After showing error, ensure button is still in correct state
             if (submitBtn && originalButtonHTML) {
                 submitBtn.innerHTML = originalButtonHTML;
                 submitBtn.disabled = false;
             }
             return false;
         }
-    }, true); // Use capture phase to run before other handlers
+    }, true);
 }
 
-// Select recent project (exposed for onclick handlers)
 window.selectRecentProject = function(projectId, projectName) {
     const projectSelect = document.getElementById('project_id');
     if (projectSelect) {
         projectSelect.value = projectId;
-        projectSelect.dispatchEvent(new Event('change'));
+        projectSelect.dispatchEvent(new Event('change', { bubbles: true }));
     }
 };
 
@@ -504,6 +539,7 @@ window.applyTemplate = async function(templateId) {
         
         // Get form elements
         const projectSelect = document.getElementById('project_id');
+        const clientSelect = document.getElementById('timerPageClient') || document.getElementById('client_id');
         const taskSelect = document.getElementById('task_id');
         const notesField = document.getElementById('notes');
         
@@ -512,15 +548,20 @@ window.applyTemplate = async function(templateId) {
         }
         
         // Apply template values to form
+        if (template.client_id && clientSelect) {
+            clientSelect.value = String(template.client_id);
+            try { clientSelect.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+        }
         if (template.project_id) {
             projectSelect.value = template.project_id;
-            // Trigger change event to load tasks
-            projectSelect.dispatchEvent(new Event('change'));
+            // Trigger change event to load tasks / sync client
+            projectSelect.dispatchEvent(new Event('change', { bubbles: true }));
             
             // Wait a bit for tasks to load, then select task
             setTimeout(() => {
                 if (template.task_id) {
                     taskSelect.value = template.task_id;
+                    try { taskSelect.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
                 }
             }, 300);
         }

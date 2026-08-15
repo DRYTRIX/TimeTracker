@@ -171,40 +171,24 @@ async function updateTimerDisplay(useCache = false) {
                         timerControls.innerHTML = `
                             <form id="timer-form" class="space-y-6">
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Project <span class="text-red-500">*</span></label>
-                                    <div class="relative">
-                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <i class="fas fa-project-diagram text-gray-400"></i>
-                                        </div>
-                                        <select id="timer-project" class="w-full pl-10 bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-lg text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all appearance-none cursor-pointer" required>
-                                            <option value="">Select project...</option>
-                                            ${projectOptions}
-                                        </select>
-                                        ${projects.length === 0 ? '<p class="text-xs text-yellow-600 dark:text-yellow-400 mt-1.5 flex items-center gap-1"><i class="fas fa-exclamation-triangle"></i>No active projects found. Please create a project first.</p>' : ''}
-                                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                            <i class="fas fa-chevron-down text-gray-400"></i>
-                                        </div>
-                                    </div>
+                                    <label for="timer-project" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Project <span class="text-red-500">*</span></label>
+                                    <select id="timer-project" class="form-input w-full text-lg" data-searchable-select="project" data-search-placeholder="Type to search projects…" required>
+                                        <option value="">Select project...</option>
+                                        ${projectOptions}
+                                    </select>
+                                    ${projects.length === 0 ? '<p class="text-xs text-yellow-600 dark:text-yellow-400 mt-1.5 flex items-center gap-1"><i class="fas fa-exclamation-triangle"></i>No active projects found. Please create a project first.</p>' : ''}
                                 </div>
                                 
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Task <span class="text-gray-500 dark:text-gray-400 font-normal">(Optional)</span></label>
-                                    <div class="relative">
-                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <i class="fas fa-tasks text-gray-400"></i>
-                                        </div>
-                                        <select id="timer-task" class="w-full pl-10 bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-lg text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all appearance-none cursor-pointer" disabled>
-                                            <option value="">No task</option>
-                                        </select>
-                                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                            <i class="fas fa-chevron-down text-gray-400"></i>
-                                        </div>
-                                    </div>
+                                    <label for="timer-task" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Task <span class="text-gray-500 dark:text-gray-400 font-normal">(Optional)</span></label>
+                                    <select id="timer-task" class="form-input w-full text-lg" data-searchable-select="task" data-filter-by="timer-project" data-search-placeholder="Type to search tasks…" disabled>
+                                        <option value="">No task</option>
+                                    </select>
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5">Tasks will load after selecting a project</p>
                                 </div>
                                 
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Notes <span class="text-gray-500 dark:text-gray-400 font-normal">(Optional)</span></label>
+                                    <label for="timer-notes" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Notes <span class="text-gray-500 dark:text-gray-400 font-normal">(Optional)</span></label>
                                     <textarea id="timer-notes" class="w-full bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all resize-none" rows="4" placeholder="What are you working on?"></textarea>
                                 </div>
                                 
@@ -214,6 +198,8 @@ async function updateTimerDisplay(useCache = false) {
                                 </button>
                             </form>
                         `;
+
+                        if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                         
                         // Re-attach form handler
                         const newTimerForm = document.getElementById('timer-form');
@@ -234,6 +220,7 @@ async function updateTimerDisplay(useCache = false) {
                                     // Reset task select
                                     taskSelect.innerHTML = '<option value="">No task</option>';
                                     taskSelect.disabled = true;
+                                    if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                                     
                                     if (!projectId) {
                                         return;
@@ -246,20 +233,21 @@ async function updateTimerDisplay(useCache = false) {
                                     .then(response => response.json())
                                     .then(data => {
                                         if (data.tasks && data.tasks.length > 0) {
-                                            taskSelect.disabled = false;
                                             data.tasks.forEach(task => {
                                                 const option = document.createElement('option');
                                                 option.value = task.id;
                                                 option.textContent = task.name;
+                                                option.setAttribute('data-parent-id', String(projectId));
                                                 taskSelect.appendChild(option);
                                             });
-                                        } else {
-                                            taskSelect.disabled = false;
                                         }
+                                        taskSelect.disabled = false;
+                                        if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                                     })
                                     .catch(error => {
                                         console.error('Error loading tasks:', error);
                                         taskSelect.disabled = false;
+                                        if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                                     });
                                 });
                             }

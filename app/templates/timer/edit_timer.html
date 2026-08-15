@@ -9,8 +9,6 @@
 
 {% block extra_js %}
 {% if can_edit_schedule %}
-<script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
-<script src="{{ url_for('static', filename='inline-create.js') }}"></script>
 <script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     const projectSelect = document.getElementById('project_id');
@@ -665,9 +663,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 {% if can_edit_schedule %}
-{% include 'components/inline_create_client_modal.html' %}
-{% include 'components/inline_create_project_modal.html' %}
-{% include 'components/inline_create_task_modal.html' %}
+{% include 'components/inline_create_modals.html' %}
 {% endif %}
 
 <script nonce="{{ csp_nonce() }}">

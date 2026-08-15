@@ -878,17 +878,13 @@
         </div>
     </div>
 
-    {% include 'components/inline_create_client_modal.html' %}
-    {% include 'components/inline_create_project_modal.html' %}
-    {% include 'components/inline_create_task_modal.html' %}
+    {% include 'components/inline_create_modals.html' %}
     {% include 'workday/_overnight_clock_out_modal.html' %}
     {% include 'workday/_auto_closed_clock_out_modal.html' %}
 {% endblock %}
 
 
 {% block scripts_extra %}
-<script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
-<script src="{{ url_for('static', filename='inline-create.js') }}"></script>
 <script nonce="{{ csp_nonce() }}">
     document.addEventListener('DOMContentLoaded', function() {
         // Single adjust-time form: buttons set delta and submit

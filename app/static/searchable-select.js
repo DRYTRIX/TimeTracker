@@ -154,6 +154,24 @@
     }
   }
 
+  function ensureSelectId(select) {
+    if (select.id) return select.id;
+    var kind = getKind(select);
+    var generated =
+      'tt-searchable-' +
+      kind +
+      '-' +
+      Math.random().toString(36).slice(2, 9);
+    select.id = generated;
+    return generated;
+  }
+
+  function optionDomId(listId, opt) {
+    var raw = opt.value === '' ? 'empty' : String(opt.value);
+    var safe = raw.replace(/[^a-zA-Z0-9_-]/g, '_');
+    return listId + '-opt-' + safe;
+  }
+
   function enhanceSelect(select) {
     if (!select || select.tagName !== 'SELECT') return;
     if (select.dataset.searchableEnhanced === '1') {
@@ -172,6 +190,8 @@
 
     var kind = getKind(select);
     var canCreate = getCreatePermission(select);
+    var selectId = ensureSelectId(select);
+    var listId = selectId + '-searchable-list';
     var wrapper = document.createElement('div');
     wrapper.className = 'tt-searchable-select relative';
     wrapper.setAttribute('data-searchable-kind', kind);
@@ -182,12 +202,13 @@
     input.setAttribute('autocomplete', 'off');
     input.setAttribute('role', 'combobox');
     input.setAttribute('aria-expanded', 'false');
-    input.setAttribute('aria-controls', select.id + '-searchable-list');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-controls', listId);
     input.placeholder = select.getAttribute('data-search-placeholder') || 'Type to search…';
     input.value = selectedLabel(select);
 
     var list = document.createElement('ul');
-    list.id = select.id + '-searchable-list';
+    list.id = listId;
     list.className =
       'tt-searchable-list hidden absolute z-40 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg py-1';
     list.setAttribute('role', 'listbox');
@@ -201,10 +222,19 @@
     var activeIndex = -1;
     var filtered = [];
 
+    function clearActiveDescendant() {
+      input.removeAttribute('aria-activedescendant');
+      activeIndex = -1;
+      list.querySelectorAll('[role="option"]').forEach(function (el) {
+        el.setAttribute('aria-selected', 'false');
+        el.classList.remove('bg-blue-100', 'dark:bg-blue-800');
+      });
+    }
+
     function closeList() {
       list.classList.add('hidden');
       input.setAttribute('aria-expanded', 'false');
-      activeIndex = -1;
+      clearActiveDescendant();
     }
 
     function openList() {
@@ -230,7 +260,7 @@
       });
 
       list.innerHTML = '';
-      activeIndex = -1;
+      clearActiveDescendant();
 
       if (filtered.length === 0 && !(canCreate && q)) {
         var empty = document.createElement('li');
@@ -241,9 +271,11 @@
 
       filtered.forEach(function (o, idx) {
         var li = document.createElement('li');
+        li.id = optionDomId(listId, o);
         li.className =
           'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 text-gray-900 dark:text-gray-100';
         li.setAttribute('role', 'option');
+        li.setAttribute('aria-selected', o.value === select.value ? 'true' : 'false');
         li.setAttribute('data-index', String(idx));
         li.setAttribute('data-value', o.value);
         li.textContent = o.label || '(empty)';
@@ -270,9 +302,11 @@
 
         if (!exact && parentOk) {
           var createLi = document.createElement('li');
+          createLi.id = listId + '-opt-create';
           createLi.className =
             'px-3 py-2 text-sm cursor-pointer border-t border-gray-100 dark:border-gray-700 text-primary hover:bg-blue-50 dark:hover:bg-blue-900/30 font-medium';
           createLi.setAttribute('role', 'option');
+          createLi.setAttribute('aria-selected', 'false');
           createLi.setAttribute('data-create', '1');
           var createPrefix = CREATE_LABEL[kind] || 'Create';
           createLi.innerHTML =
@@ -297,10 +331,18 @@
       if (!items.length) return;
       activeIndex = (activeIndex + delta + items.length) % items.length;
       items.forEach(function (el, i) {
-        el.classList.toggle('bg-blue-100', i === activeIndex);
-        el.classList.toggle('dark:bg-blue-800', i === activeIndex);
+        var isActive = i === activeIndex;
+        el.classList.toggle('bg-blue-100', isActive);
+        el.classList.toggle('dark:bg-blue-800', isActive);
+        el.setAttribute('aria-selected', isActive ? 'true' : 'false');
       });
-      items[activeIndex].scrollIntoView({ block: 'nearest' });
+      var active = items[activeIndex];
+      if (active && active.id) {
+        input.setAttribute('aria-activedescendant', active.id);
+      } else {
+        input.removeAttribute('aria-activedescendant');
+      }
+      active.scrollIntoView({ block: 'nearest' });
     }
 
     input.addEventListener('focus', function () {

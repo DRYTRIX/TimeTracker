@@ -278,7 +278,7 @@
           method: 'POST',
           headers: {
             'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-Token': getCsrfToken(),
+            'X-CSRFToken': getCsrfToken(),
           },
           body: formData,
           credentials: 'same-origin',
@@ -367,7 +367,7 @@
           method: 'POST',
           headers: {
             'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-Token': getCsrfToken(),
+            'X-CSRFToken': getCsrfToken(),
             Accept: 'application/json',
           },
           body: formData,
