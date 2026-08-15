@@ -191,6 +191,18 @@ async function refreshTimerStatus({ force = false } = {}) {
 
     if (active) {
       setRunningUi(status.timer);
+      // Server already marked this timer idle (#722) — enter the same grace
+      // window the local chrome.idle path uses, even if OS idle has not fired.
+      const idleNotified = Boolean(
+        status?.idle_notified || status?.timer?.idle_notified
+      );
+      if (idleNotified) {
+        const minutes = clampIdleTimeoutMinutes(
+          status?.idle_timeout_minutes ?? idleTimeoutMinutes
+        );
+        const stopAtMs = Date.now() - minutes * 60 * 1000;
+        await beginIdleGrace(stopAtMs);
+      }
       // Only refresh server heartbeat while the OS reports the user as active.
       // Heartbeating during idle/locked would defeat the server-side safety net.
       const { idle_grace_active } = await chrome.storage.local.get('idle_grace_active');
