@@ -81,6 +81,22 @@ def check_overdue_invoices():
                     except Exception as e:
                         logger.error(f"Failed to send notification to {user.username}: {e}")
 
+            # Also notify the client via the portal notification channel
+            if invoice.client_id:
+                try:
+                    from app.services.client_notification_service import ClientNotificationService
+
+                    days_overdue = (today - invoice.due_date).days if invoice.due_date else 0
+                    ClientNotificationService().notify_invoice_overdue(
+                        invoice_id=invoice.id,
+                        client_id=invoice.client_id,
+                        days_overdue=max(days_overdue, 0),
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Failed to send client portal overdue notification for invoice {invoice.invoice_number}: {e}"
+                    )
+
         logger.info(f"Sent {notifications_sent} overdue invoice notifications")
         return notifications_sent
 
@@ -382,6 +398,8 @@ def send_monthly_unpaid_hours_reports():
             }
 
             try:
+                from app.utils.urls import safe_external_url_for
+
                 send_template_email(
                     to=email,
                     subject=f"Monthly Unpaid Hours Report - {salesman_initial} ({last_month_start.strftime('%Y-%m-%d')} to {last_month_end.strftime('%Y-%m-%d')})",
@@ -390,6 +408,7 @@ def send_monthly_unpaid_hours_reports():
                     report_data=formatted_data,
                     start_date=last_month_start.strftime("%Y-%m-%d"),
                     end_date=last_month_end.strftime("%Y-%m-%d"),
+                    reports_url=safe_external_url_for("reports.reports"),
                 )
                 sent_count += 1
                 logger.info(f"Sent monthly unpaid hours report to {email} for {salesman_initial}")

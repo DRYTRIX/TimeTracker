@@ -66,6 +66,13 @@
                         </p>
                     </div>
                     <div>
+                        <label for="app_base_url" class="form-label">{{ _('App base URL') }}</label>
+                        <input type="url" name="app_base_url" id="app_base_url" value="{{ settings.app_base_url or '' }}" placeholder="https://time.example.com" class="form-input">
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('Public URL used for absolute links in emails and background notifications (e.g. invoice and quote buttons). Leave blank to use APP_BASE_URL from the environment or the host detected from requests.') }}
+                        </p>
+                    </div>
+                    <div>
                         <label for="currency" class="form-label">Currency</label>
                         <input type="text" name="currency" id="currency" value="{{ settings.currency }}" required class="form-input">
                     </div>

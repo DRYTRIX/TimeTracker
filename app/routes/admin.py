@@ -1384,6 +1384,8 @@ def settings():
 
         # Update basic settings
         settings_obj.timezone = timezone
+        settings_obj.app_base_url = request.form.get("app_base_url", "").strip()
+        current_app.config["APP_BASE_URL"] = settings_obj.app_base_url or ""
 
         # Validate and update date/time format
         date_fmt = request.form.get("date_format", "YYYY-MM-DD")

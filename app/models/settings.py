@@ -60,6 +60,7 @@ class Settings(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     timezone = db.Column(db.String(50), default="Europe/Rome", nullable=False)
+    app_base_url = db.Column(db.String(500), default="", nullable=True)
     date_format = db.Column(
         db.String(20), default="YYYY-MM-DD", nullable=False
     )  # YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY, DD.MM.YYYY
@@ -259,6 +260,7 @@ class Settings(db.Model):
     def __init__(self, **kwargs):
         # Set defaults from config
         self.timezone = kwargs.get("timezone", Config.TZ)
+        self.app_base_url = kwargs.get("app_base_url", "")
         self.date_format = kwargs.get("date_format", "YYYY-MM-DD")
         self.time_format = kwargs.get("time_format", "24h")
         self.currency = kwargs.get("currency", Config.CURRENCY)
@@ -574,6 +576,7 @@ class Settings(db.Model):
         return {
             "id": self.id,
             "timezone": self.timezone,
+            "app_base_url": getattr(self, "app_base_url", "") or "",
             "date_format": self.date_format,
             "time_format": self.time_format,
             "currency": self.currency,
@@ -910,6 +913,7 @@ class Settings(db.Model):
         # Map environment variable names to Settings model attributes
         env_mapping = {
             "TZ": "timezone",
+            "APP_BASE_URL": "app_base_url",
             "DATE_FORMAT": "date_format",
             "TIME_FORMAT": "time_format",
             "CURRENCY": "currency",

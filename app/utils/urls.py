@@ -67,12 +67,23 @@ def _is_health_path(path: str) -> bool:
 def get_app_base_url(app=None) -> Optional[str]:
     """Resolve the public base URL for this instance.
 
-    Order: ``APP_BASE_URL`` config, then ``SERVER_NAME`` + ``PREFERRED_URL_SCHEME``
-    if an operator set them, then auto-detected value from a real request, else
-    ``None``.
+    Order: Settings ``app_base_url`` (if set), then ``APP_BASE_URL`` config,
+    then ``SERVER_NAME`` + ``PREFERRED_URL_SCHEME`` if an operator set them,
+    then auto-detected value from a real request, else ``None``.
     """
     if app is None:
         app = current_app._get_current_object()
+
+    try:
+        from app.models import Settings
+
+        settings = Settings.get_settings()
+        from_settings = _normalize_base_url(getattr(settings, "app_base_url", "") or "")
+        if from_settings:
+            return from_settings
+    except Exception:
+        # DB may be unavailable during early boot or in some tests
+        pass
 
     configured = _normalize_base_url(app.config.get("APP_BASE_URL") or "")
     if configured:
@@ -103,6 +114,14 @@ def remember_request_base_url() -> None:
     app = current_app._get_current_object()
     if _normalize_base_url(app.config.get("APP_BASE_URL") or ""):
         return
+
+    try:
+        from app.models import Settings
+
+        if _normalize_base_url(getattr(Settings.get_settings(), "app_base_url", "") or ""):
+            return
+    except Exception:
+        pass
 
     try:
         path = request.path or "/"
