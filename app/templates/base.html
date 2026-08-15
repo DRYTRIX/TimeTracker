@@ -23,6 +23,7 @@
     <meta name="twitter:image" content="{% block twitter_image %}{{ url_for('static', filename='images/og-image.png', _external=True) }}{% endblock %}">
     {% include 'partials/_head.html' %}
     {% block extra_css %}{% endblock %}
+    {% block extra_head %}{% endblock %}
 </head>
 <body class="font-sans antialiased bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark{% if is_admin_user %} fab-dock-admin{% endif %}">
     <script nonce="{{ csp_nonce() }}">
@@ -1275,6 +1276,9 @@ function trackBannerImpression(source) {
         }
     </script>
     
+    {# Issue #728: searchable combobox + inline create (available on all authenticated pages) #}
+    <script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
+    <script src="{{ url_for('static', filename='inline-create.js') }}"></script>
     {% block scripts_extra %}{% endblock %}
     {% block extra_js %}{% endblock %}
     {% include 'partials/_bottom_nav.html' %}
