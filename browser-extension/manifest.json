@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TimeTracker Timer",
-  "version": "1.1.0",
+  "version": "5.11.4",
   "description": "Start and stop TimeTracker timers from your browser toolbar.",
   "permissions": ["storage", "alarms", "idle", "notifications"],
   "optional_host_permissions": ["http://*/*", "https://*/*"],
