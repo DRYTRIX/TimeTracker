@@ -43,16 +43,18 @@
       <div id="idle-view" class="hidden">
         <div class="card">
           <div class="field">
-            <label for="project-filter">Project</label>
-            <input type="search" id="project-filter" placeholder="Search projects…" autocomplete="off" />
+            <label for="client-select">Client (optional filter)</label>
+            <select id="client-select" data-searchable-select="client" data-can-create="1" data-search-placeholder="Type to search clients…"></select>
+            <p class="hint">Filters projects. Type to create a new client.</p>
           </div>
           <div class="field">
-            <label for="project-select">Select</label>
-            <select id="project-select" size="6"></select>
+            <label for="project-select">Project</label>
+            <select id="project-select" data-searchable-select="project" data-can-create="1" data-search-placeholder="Type to search projects…"></select>
+            <p class="hint">Required to start a timer. Type to create.</p>
           </div>
           <div class="field">
             <label for="task-select">Task (optional)</label>
-            <select id="task-select">
+            <select id="task-select" data-searchable-select="task" data-can-create="1" data-search-placeholder="Type to search tasks…">
               <option value="">— No task —</option>
             </select>
           </div>
@@ -61,36 +63,6 @@
             <input type="text" id="notes" placeholder="What are you working on?" maxlength="500" />
           </div>
           <button type="button" class="btn btn-primary btn-block" id="start-btn">Start timer</button>
-        </div>
-
-        <div class="section-title">Quick create</div>
-        <div class="tabs" role="tablist">
-          <button type="button" class="active" data-create-tab="task" id="tab-task">Task</button>
-          <button type="button" data-create-tab="project" id="tab-project">Project</button>
-        </div>
-
-        <div id="create-task" class="card">
-          <div class="field">
-            <label for="new-task-name">Task name</label>
-            <input type="text" id="new-task-name" placeholder="New task" maxlength="200" />
-          </div>
-          <div class="field">
-            <label for="new-task-project">Project</label>
-            <select id="new-task-project"></select>
-          </div>
-          <button type="button" class="btn btn-secondary btn-block" id="create-task-btn">Create task</button>
-        </div>
-
-        <div id="create-project" class="card hidden">
-          <div class="field">
-            <label for="new-project-name">Project name</label>
-            <input type="text" id="new-project-name" placeholder="New project" maxlength="200" />
-          </div>
-          <div class="field">
-            <label for="new-project-client">Client</label>
-            <select id="new-project-client"></select>
-          </div>
-          <button type="button" class="btn btn-secondary btn-block" id="create-project-btn">Create project</button>
         </div>
       </div>
     </div>

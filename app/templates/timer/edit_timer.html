@@ -10,8 +10,7 @@
 {% block extra_js %}
 {% if can_edit_schedule %}
 <script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
-<script src="{{ url_for('static', filename='inline-create-client.js') }}"></script>
-<script src="{{ url_for('static', filename='inline-create-project.js') }}"></script>
+<script src="{{ url_for('static', filename='inline-create.js') }}"></script>
 <script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     const projectSelect = document.getElementById('project_id');
@@ -36,14 +35,21 @@ document.addEventListener('DOMContentLoaded', function() {
         projectWarning.classList.toggle('hidden', !show);
     }
 
+    function syncClientFromProject() {
+        if (!projectSelect || !clientSelect || clientSelect.tagName !== 'SELECT') return;
+        const projectId = projectSelect.value;
+        if (!projectId) return;
+        const opt = projectSelect.options[projectSelect.selectedIndex];
+        const cid = opt ? (opt.getAttribute('data-client-id') || '') : '';
+        if (cid && clientSelect.value !== cid) {
+            clientSelect.value = cid;
+        }
+    }
+
     if (projectSelect && taskSelect) {
         projectSelect.addEventListener('change', function() {
             const projectId = this.value;
-
-            // Mutual exclusivity: project clears client
-            if (projectId && clientSelect && clientSelect.tagName === 'SELECT') {
-                clientSelect.value = '';
-            }
+            syncClientFromProject();
 
             // Clear current tasks
             taskSelect.innerHTML = '<option value="">{{ _("No Task") }}</option>';
@@ -58,13 +64,18 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const option = document.createElement('option');
                                 option.value = task.id;
                                 option.textContent = task.name;
+                                option.setAttribute('data-parent-id', String(projectId));
                                 taskSelect.appendChild(option);
                             });
                         }
+                        if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                     })
                     .catch(error => {
                         console.error('Error fetching tasks:', error);
+                        if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                     });
+            } else if (window.ttEnhanceSearchableSelects) {
+                window.ttEnhanceSearchableSelects();
             }
             updateProjectWarning();
         });
@@ -73,17 +84,24 @@ document.addEventListener('DOMContentLoaded', function() {
     if (clientSelect && clientSelect.tagName === 'SELECT') {
         clientSelect.addEventListener('change', function() {
             const cid = this.value;
-            if (cid && projectSelect) {
-                projectSelect.value = '';
-                if (taskSelect) {
-                    taskSelect.innerHTML = '<option value="">{{ _("No Task") }}</option>';
-                    taskSelect.disabled = true;
+            if (projectSelect && projectSelect.value) {
+                const opt = projectSelect.options[projectSelect.selectedIndex];
+                const projectClientId = opt ? (opt.getAttribute('data-client-id') || '') : '';
+                if (cid && projectClientId && projectClientId !== cid) {
+                    projectSelect.value = '';
+                    if (taskSelect) {
+                        taskSelect.innerHTML = '<option value="">{{ _("No Task") }}</option>';
+                        taskSelect.disabled = true;
+                        if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
+                    }
                 }
             }
             updateProjectWarning();
         });
     }
 
+    // Prefill client from project on load (UI hierarchy; storage still clears client_id for project entries)
+    syncClientFromProject();
     updateProjectWarning();
 
     // Add form submission confirmation for admin users
@@ -286,19 +304,14 @@ document.addEventListener('DOMContentLoaded', function() {
             <form method="POST" action="{{ url_for('timer.edit_timer', timer_id=timer.id) }}" data-edit-timer-form>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 
-                <!-- Client and Project Selection (Issue #728: client first, optional project) -->
+                <!-- Client and Project Selection (Issue #728: client first, then project, then task) -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <label for="editTimerClient" class="form-label">
                             <i class="fas fa-building mr-1"></i>{{ _('Client') }}
                         </label>
-                        {{ client_select('client_id', clients, selected_id=timer.client_id, required=False, id='editTimerClient', searchable=True, can_create=can_create_clients) }}
-                        {% if can_create_clients %}
-                        <p class="text-xs mt-1">
-                            <button type="button" id="openCreateClientModal" data-client-select-id="editTimerClient" class="text-primary hover:underline">{{ _('Create new client') }}</button>
-                        </p>
-                        {% endif %}
-                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select a client, or leave empty when a project is selected') }}</p>
+                        {{ client_select('client_id', clients, selected_id=timer.client_id or (timer.project.client_id if timer.project else none), required=False, id='editTimerClient', searchable=True, can_create=can_create_clients) }}
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select a client first, then optionally a project. Type to search or create.') }}</p>
                     </div>
                     <div>
                         <label for="project_id" class="form-label">
@@ -306,21 +319,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         </label>
                         <select class="form-input" id="project_id" name="project_id" data-inline-project-select
                                 data-searchable-select="project"
+                                data-filter-by="editTimerClient"
                                 {% if can_create_projects %}data-can-create="1"{% endif %}
                                 data-search-placeholder="{{ _('Type to search projects…') }}">
                             <option value="" {% if not timer.project_id %}selected{% endif %}>{{ _('No project (client only)') }}</option>
                             {% for project in projects %}
-                            <option value="{{ project.id }}" {% if project.id == timer.project_id %}selected{% endif %}>
+                            <option value="{{ project.id }}" data-client-id="{{ project.client_id }}" data-parent-id="{{ project.client_id }}" {% if project.id == timer.project_id %}selected{% endif %}>
                                 {{ project.name }}
                             </option>
                             {% endfor %}
                         </select>
-                        {% if can_create_projects %}
-                        <p class="text-xs mt-1">
-                            <button type="button" id="openCreateProjectModal" data-project-select-id="project_id" class="text-primary hover:underline">{{ _('Create new project') }}</button>
-                        </p>
-                        {% endif %}
-                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional — leave empty to keep this entry on the client only') }}</p>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Filtered by client. Leave empty to keep this entry on the client only') }}</p>
                     </div>
                 </div>
                 <div id="editTimerProjectChanged" class="hidden mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800 dark:text-amber-200">
@@ -331,15 +340,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     <label for="task_id" class="form-label">
                         <i class="fas fa-tasks mr-1"></i>{{ _('Task (Optional)') }}
                     </label>
-                    <select class="form-input" id="task_id" name="task_id" {% if not timer.project_id %}disabled{% endif %}>
+                    <select class="form-input" id="task_id" name="task_id"
+                            data-searchable-select="task"
+                            data-inline-task-select
+                            data-filter-by="project_id"
+                            data-can-create="1"
+                            data-search-placeholder="{{ _('Type to search tasks…') }}"
+                            {% if not timer.project_id %}disabled{% endif %}>
                         <option value="">{{ _('No Task') }}</option>
                         {% for task in tasks %}
-                        <option value="{{ task.id }}" {% if task.id == timer.task_id %}selected{% endif %}>
+                        <option value="{{ task.id }}" data-parent-id="{{ timer.project_id }}" {% if task.id == timer.task_id %}selected{% endif %}>
                             {{ task.name }}
                         </option>
                         {% endfor %}
                     </select>
-                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select a specific task within the project') }}</p>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select a project first. Type to search or create.') }}</p>
                 </div>
 
                 <!-- Start Date/Time -->
@@ -652,6 +667,7 @@ document.addEventListener('DOMContentLoaded', function() {
 {% if can_edit_schedule %}
 {% include 'components/inline_create_client_modal.html' %}
 {% include 'components/inline_create_project_modal.html' %}
+{% include 'components/inline_create_task_modal.html' %}
 {% endif %}
 
 <script nonce="{{ csp_nonce() }}">

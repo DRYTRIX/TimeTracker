@@ -1276,6 +1276,7 @@ function trackBannerImpression(source) {
     </script>
     
     {% block scripts_extra %}{% endblock %}
+    {% block extra_js %}{% endblock %}
     {% include 'partials/_bottom_nav.html' %}
     <script nonce="{{ csp_nonce() }}">
         if ('serviceWorker' in navigator) {

@@ -305,6 +305,13 @@ export class ApiClient {
     return this.request('GET', `/api/v1/clients${q ? `?${q}` : ''}`);
   }
 
+  createClient({ name, email, company }) {
+    const body = { name };
+    if (email) body.email = email;
+    if (company) body.company = company;
+    return this.request('POST', '/api/v1/clients', body);
+  }
+
   getFavoriteProjects() {
     return this.request('GET', '/api/v1/users/me/favorites/projects');
   }

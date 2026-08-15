@@ -819,44 +819,40 @@
                         <div>
                             <label for="startTimerClient" class="form-label">{{ _('Client') }}</label>
                             {{ client_select('client_id', active_clients, required=False, only_one_client=only_one_client|default(false), single_client=single_client, id='startTimerClient', searchable=True, can_create=(current_user.is_admin or current_user.has_permission('create_clients'))) }}
-                            {% if current_user.is_admin or current_user.has_permission('create_clients') %}
-                            <p class="text-xs mt-1">
-                                <button type="button" id="openCreateClientModal" data-client-select-id="startTimerClient" class="text-primary hover:underline">{{ _('Create new client') }}</button>
-                            </p>
-                            {% endif %}
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
-                                {{ _('Select a client first, then optionally a project') }}
+                                {{ _('Select a client first, then optionally a project. Type to search or create.') }}
                             </p>
                         </div>
                         <div>
                             <label for="startTimerProject" class="form-label">{{ _('Project') }}</label>
                             <select id="startTimerProject" name="project_id" class="form-input" data-inline-project-select
                                     data-searchable-select="project"
+                                    data-filter-by="startTimerClient"
                                     {% if current_user.is_admin or current_user.has_permission('create_projects') %}data-can-create="1"{% endif %}
                                     data-search-placeholder="{{ _('Type to search projects…') }}">
                                 <option value="">{{ _('Select a project (optional)') }}</option>
                                 {% for project in active_projects %}
-                                <option value="{{ project.id }}">{{ project.name }}</option>
+                                <option value="{{ project.id }}" data-client-id="{{ project.client_id }}" data-parent-id="{{ project.client_id }}">{{ project.name }}</option>
                                 {% endfor %}
                             </select>
-                            {% if current_user.is_admin or current_user.has_permission('create_projects') %}
-                            <p class="text-xs mt-1">
-                                <button type="button" id="openCreateProjectModal" data-project-select-id="startTimerProject" class="text-primary hover:underline">{{ _('Create new project') }}</button>
-                            </p>
-                            {% endif %}
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
-                                {{ _('Select either a project or a client') }}
+                                {{ _('Filtered by client. Leave empty for a client-only entry.') }}
                             </p>
                         </div>
                     </div>
                     <div>
                         <label for="startTimerTask" class="form-label">{% if getattr(settings, 'time_entry_require_task', false) %}{{ _('Task') }} *{% else %}{{ _('Task (optional)') }}{% endif %}</label>
-                        <select id="startTimerTask" name="task_id" class="form-input w-full">
+                        <select id="startTimerTask" name="task_id" class="form-input w-full"
+                                data-searchable-select="task"
+                                data-inline-task-select
+                                data-filter-by="startTimerProject"
+                                data-can-create="1"
+                                data-search-placeholder="{{ _('Type to search tasks…') }}">
                             <option value="">{{ _('No task') }}</option>
                             <!-- Options populated dynamically when project is selected -->
                         </select>
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
-                            {{ _('Select a project first to load tasks, or choose "Create new task..." to add one') }}
+                            {{ _('Select a project first to load tasks. Type to search or create.') }}
                         </p>
                     </div>
                     <div>
@@ -882,20 +878,9 @@
         </div>
     </div>
 
-    {% set create_task_modal_content %}
-    <div class="space-y-3">
-        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Enter a name for the new task.') }}</p>
-        <input type="text" id="createTaskNameInput" class="form-input w-full" placeholder="{{ _('Task name') }}">
-        <p id="createTaskError" class="text-sm text-red-600 hidden"></p>
-    </div>
-    {% endset %}
-    {% set create_task_modal_footer %}
-        <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" data-create-task-cancel>{{ _('Cancel') }}</button>
-        <button type="button" class="btn btn-primary" data-create-task-confirm>{{ _('Create') }}</button>
-    {% endset %}
-    {{ modal('createTaskModal', _('Create task'), create_task_modal_content, create_task_modal_footer, 'sm') }}
     {% include 'components/inline_create_client_modal.html' %}
     {% include 'components/inline_create_project_modal.html' %}
+    {% include 'components/inline_create_task_modal.html' %}
     {% include 'workday/_overnight_clock_out_modal.html' %}
     {% include 'workday/_auto_closed_clock_out_modal.html' %}
 {% endblock %}
@@ -903,8 +888,7 @@
 
 {% block scripts_extra %}
 <script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
-<script src="{{ url_for('static', filename='inline-create-client.js') }}"></script>
-<script src="{{ url_for('static', filename='inline-create-project.js') }}"></script>
+<script src="{{ url_for('static', filename='inline-create.js') }}"></script>
 <script nonce="{{ csp_nonce() }}">
     document.addEventListener('DOMContentLoaded', function() {
         // Single adjust-time form: buttons set delta and submit
@@ -1018,140 +1002,13 @@
                 modal.setAttribute('aria-hidden', 'false');
                 try {
                     const projectSelect = document.getElementById('startTimerProject');
-                    if (projectSelect && projectSelect.value) {
-                        loadTasksForProject(projectSelect.value);
-                    }
-                } catch (_) {}
-                try { document.dispatchEvent(new CustomEvent('timer-modal-opened')); } catch (_) {}
-            }
-        }
-        document.querySelectorAll('.js-open-start-timer').forEach(function(openBtn) {
-            if (openBtn && modal) openBtn.addEventListener('click', openStartTimerModal);
-        });
-        if (modal) {
-            const closeBtn = modal.querySelector('[data-close]');
-            if (closeBtn) {
-                closeBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    modal.classList.add('hidden');
-                    modal.setAttribute('aria-hidden', 'true');
-                });
-            }
-            // Close on overlay click
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal || e.target.hasAttribute('data-overlay')) {
-                    modal.classList.add('hidden');
-                    modal.setAttribute('aria-hidden', 'true');
-                }
-            });
-            const modalContent = modal.querySelector('[data-modal-content]');
-            if (modalContent) {
-                modalContent.addEventListener('click', (e) => {
-                    // Close button: handle here since stopPropagation would block modal handler
-                    if (e.target.closest('[data-close]')) {
-                        modal.classList.add('hidden');
-                        modal.setAttribute('aria-hidden', 'true');
-                        e.preventDefault();
-                        return;
-                    }
-                    e.stopPropagation(); // Prevent overlay-close when clicking card
-                });
-            }
-
-            const projectSelect = document.getElementById('startTimerProject');
             const clientSelect = document.getElementById('startTimerClient');
             const taskSelect = document.getElementById('startTimerTask');
-            const createNewTaskValue = '__new__';
             const tasksApiUrlTemplate = modal?.dataset?.tasksApiUrl || '';
-            const createTaskUrl = modal?.dataset?.createTaskUrl || '';
             const noTaskText = modal?.dataset?.noTask || 'No task';
-            const createNewTaskText = modal?.dataset?.createNewTask || 'Create new task...';
             const loadingTasksText = modal?.dataset?.loadingTasks || 'Loading tasks...';
-            const newTaskPromptText = modal?.dataset?.newTaskPrompt || 'Enter new task name:';
-            const taskCreateFailedText = modal?.dataset?.taskCreateFailed || 'Failed to create task: ';
             const selectProjectOrClientText = modal?.dataset?.selectProjectClient || 'Please select either a project or a client';
-            const completeTaskCreationText = modal?.dataset?.completeTaskCreate || 'Please complete creating the task or select an existing task';
             const errorTitleText = modal?.dataset?.errorTitle || 'Error';
-            const taskNameRequiredText = '{{ _("Task name is required.") }}';
-
-            const createTaskModal = document.getElementById('createTaskModal');
-            const createTaskNameInput = document.getElementById('createTaskNameInput');
-            const createTaskError = document.getElementById('createTaskError');
-            const createTaskConfirmBtn = createTaskModal ? createTaskModal.querySelector('[data-create-task-confirm]') : null;
-            const createTaskCancelBtn = createTaskModal ? createTaskModal.querySelector('[data-create-task-cancel]') : null;
-            let createTaskModalResolver = null;
-
-            function closeCreateTaskModal(result) {
-                if (!createTaskModal) return;
-                createTaskModal.classList.add('hidden');
-                createTaskModal.setAttribute('aria-hidden', 'true');
-                if (createTaskModalResolver) {
-                    createTaskModalResolver(result);
-                    createTaskModalResolver = null;
-                }
-            }
-
-            function openCreateTaskModal() {
-                if (!createTaskModal || !createTaskNameInput) {
-                    return Promise.resolve(null);
-                }
-                if (createTaskError) {
-                    createTaskError.textContent = '';
-                    createTaskError.classList.add('hidden');
-                }
-                createTaskNameInput.value = '';
-                createTaskModal.classList.remove('hidden');
-                createTaskModal.setAttribute('aria-hidden', 'false');
-                setTimeout(() => createTaskNameInput.focus(), 0);
-                return new Promise((resolve) => {
-                    createTaskModalResolver = resolve;
-                });
-            }
-
-            if (createTaskConfirmBtn && createTaskNameInput) {
-                createTaskConfirmBtn.addEventListener('click', () => {
-                    const name = createTaskNameInput.value.trim();
-                    if (!name) {
-                        if (createTaskError) {
-                            createTaskError.textContent = taskNameRequiredText;
-                            createTaskError.classList.remove('hidden');
-                        }
-                        return;
-                    }
-                    closeCreateTaskModal(name);
-                });
-            }
-
-            if (createTaskCancelBtn) {
-                createTaskCancelBtn.addEventListener('click', () => closeCreateTaskModal(null));
-            }
-
-            if (createTaskModal) {
-                createTaskModal.addEventListener('click', (e) => {
-                    if (e.target === createTaskModal) {
-                        closeCreateTaskModal(null);
-                    }
-                });
-            }
-
-            if (createTaskNameInput) {
-                createTaskNameInput.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (createTaskConfirmBtn) createTaskConfirmBtn.click();
-                    } else if (e.key === 'Escape') {
-                        e.preventDefault();
-                        closeCreateTaskModal(null);
-                    }
-                });
-            }
-
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && createTaskModal && !createTaskModal.classList.contains('hidden')) {
-                    closeCreateTaskModal(null);
-                }
-            });
 
             function buildTasksUrl(projectId) {
                 const pid = String(projectId || '').trim();
@@ -1161,37 +1018,33 @@
 
             async function loadTasksForProject(pid, preserveTaskId = null) {
                 if (!taskSelect) return;
-                
+
                 if (!pid) {
                     taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
                     taskSelect.disabled = false;
+                    if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                     return;
                 }
-                
+
                 taskSelect.innerHTML = '<option value="">' + loadingTasksText + '</option>';
                 taskSelect.disabled = true;
                 try {
                     const res = await fetch(buildTasksUrl(pid), { credentials: 'same-origin' });
                     const data = await res.json();
-                    var opts = [];
+                    var frag = document.createDocumentFragment();
                     var o0 = document.createElement('option');
                     o0.value = '';
                     o0.textContent = noTaskText;
-                    opts.push(o0);
+                    frag.appendChild(o0);
                     if (data && data.tasks) {
                         data.tasks.forEach(function(t) {
                             var o = document.createElement('option');
                             o.value = t.id;
                             o.textContent = t.name || '';
-                            opts.push(o);
+                            o.setAttribute('data-parent-id', String(pid));
+                            frag.appendChild(o);
                         });
                     }
-                    var oNew = document.createElement('option');
-                    oNew.value = createNewTaskValue;
-                    oNew.textContent = createNewTaskText;
-                    opts.push(oNew);
-                    var frag = document.createDocumentFragment();
-                    opts.forEach(function(o) { frag.appendChild(o); });
                     taskSelect.innerHTML = '';
                     taskSelect.appendChild(frag);
                     if (preserveTaskId) {
@@ -1199,58 +1052,32 @@
                         if (found) taskSelect.value = String(preserveTaskId);
                     }
                     taskSelect.disabled = false;
+                    if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                 } catch (err) {
                     console.error('Failed to load tasks', err);
                     taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
                     taskSelect.disabled = false;
+                    if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                 }
-            }
-
-            // Handle "Create new task..." selection
-            if (taskSelect) {
-                taskSelect.addEventListener('change', async function() {
-                    if (this.value !== createNewTaskValue) return;
-                    const pid = projectSelect ? projectSelect.value : '';
-                    if (!pid) {
-                        this.value = '';
-                        return;
-                    }
-                    let taskName = await openCreateTaskModal();
-                    if (taskName === null && !createTaskModal) {
-                        taskName = prompt(newTaskPromptText);
-                    }
-                    if (!taskName || !taskName.trim()) {
-                        this.value = '';
-                        return;
-                    }
-                    try {
-                        const csrfToken = modal ? modal.querySelector('input[name="csrf_token"]')?.value : '';
-                        const res = await fetch(createTaskUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken || '' },
-                            credentials: 'same-origin',
-                            body: JSON.stringify({ name: taskName.trim(), project_id: parseInt(pid) })
-                        });
-                        if (!res.ok) {
-                            const errData = await res.json().catch(() => ({}));
-                            throw new Error(errData.error || 'Failed to create task');
-                        }
-                        const taskData = await res.json();
-                        if (taskData && taskData.id) {
-                            await loadTasksForProject(pid, taskData.id);
-                        } else {
-                            this.value = '';
-                        }
-                    } catch (err) {
-                        console.error('Failed to create task:', err);
-                        alert(taskCreateFailedText + (err.message || err));
-                        this.value = '';
-                    }
-                });
             }
 
             const onlyOneClient = (modal?.dataset?.onlyOneClient || 'false') === 'true';
             const singleClientId = (modal?.dataset?.singleClientId || '') || null;
+
+            function syncClientFromProject() {
+                if (!projectSelect || !clientSelect || clientSelect.tagName !== 'SELECT') return;
+                const pid = projectSelect.value;
+                if (!pid) {
+                    if (onlyOneClient && singleClientId) clientSelect.value = singleClientId;
+                    return;
+                }
+                const opt = projectSelect.options[projectSelect.selectedIndex];
+                const cid = opt ? (opt.getAttribute('data-client-id') || '') : '';
+                if (cid && clientSelect.value !== cid) {
+                    clientSelect.value = cid;
+                    try { clientSelect.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+                }
+            }
 
             // Repeat last: pre-fill modal from last_timer_context and open
             document.querySelectorAll('.js-repeat-last-timer').forEach(function(btn) {
@@ -1264,13 +1091,15 @@
                         openStartTimerModal(e);
                         return;
                     }
+                    if (clientSelect && ctx.client_id) clientSelect.value = ctx.client_id || '';
                     if (projectSelect) projectSelect.value = ctx.project_id || '';
-                    if (clientSelect) clientSelect.value = ctx.client_id || '';
+                    if (ctx.project_id) syncClientFromProject();
                     if (ctx.project_id && typeof loadTasksForProject === 'function') {
                         await loadTasksForProject(ctx.project_id, ctx.task_id || null);
                     } else if (taskSelect) {
                         taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
                         taskSelect.disabled = false;
+                        if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                     }
                     var notesEl = document.getElementById('startTimerNotes');
                     if (notesEl) notesEl.value = ctx.notes || '';
@@ -1284,30 +1113,29 @@
                 });
             });
 
-            // Task loading: attach when project and task elements exist (independent of client)
+            // Hierarchy: project auto-fills client; client clears mismatched project
             if (projectSelect && taskSelect) {
                 projectSelect.addEventListener('change', () => {
-                    const pid = projectSelect.value;
-                    if (pid && clientSelect) {
-                        clientSelect.value = '';
-                    } else if (onlyOneClient && singleClientId) {
-                        clientSelect.value = singleClientId;
-                    }
-                    loadTasksForProject(pid);
+                    syncClientFromProject();
+                    loadTasksForProject(projectSelect.value);
                 });
             }
 
-            // Client/project mutual exclusivity (when client select exists)
-            if (clientSelect && taskSelect) {
+            if (clientSelect && clientSelect.tagName === 'SELECT') {
                 clientSelect.addEventListener('change', function() {
                     var cid = clientSelect.value;
-                    if (cid) {
-                        if (projectSelect) projectSelect.value = '';
-                        taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
-                        taskSelect.disabled = true;
-                    } else {
-                        // Only enable task select if no project selected (otherwise loadTasksForProject will handle it)
-                        if (!projectSelect || !projectSelect.value) taskSelect.disabled = false;
+                    if (projectSelect && projectSelect.value) {
+                        var opt = projectSelect.options[projectSelect.selectedIndex];
+                        var projectClientId = opt ? (opt.getAttribute('data-client-id') || '') : '';
+                        if (cid && projectClientId && projectClientId !== cid) {
+                            projectSelect.value = '';
+                            try { projectSelect.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+                            if (taskSelect) {
+                                taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+                                taskSelect.disabled = true;
+                                if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
+                            }
+                        }
                     }
                 });
             }
@@ -1315,14 +1143,12 @@
             // Form validation: ensure either project or client is selected
             const startTimerForm = modal ? modal.querySelector('form') : null;
             if (startTimerForm) {
-                // Store original button state to restore if needed
                 const submitBtn = modal.querySelector('#startTimerSubmitBtn');
                 let originalButtonHTML = submitBtn ? submitBtn.innerHTML : null;
                 
                 startTimerForm.addEventListener('submit', async function(e) {
                     e.preventDefault();
                     
-                    // Validate project or client selection
                     const projectVal = projectSelect ? projectSelect.value : '';
                     const clientVal = clientSelect ? clientSelect.value : '';
                     if (!projectVal && !clientVal) {
@@ -1334,23 +1160,12 @@
                         }
                         return false;
                     }
-                    
-                    // Prevent submit if "Create new task..." is still selected (incomplete flow)
-                    const taskVal = taskSelect ? taskSelect.value : '';
-                    if (taskVal === createNewTaskValue) {
-                        if (window.toastManager && typeof window.toastManager.error === 'function') {
-                            window.toastManager.error(completeTaskCreationText, errorTitleText, 5000);
-                        } else {
-                            alert(completeTaskCreationText);
-                        }
-                        return false;
-                    }
 
-                    // Validate time entry requirements (task, description)
                     const notesEl = document.getElementById('startTimerNotes');
                     const requireTask = modal && modal.dataset.requireTask === 'true';
                     const requireDescription = modal && modal.dataset.requireDescription === 'true';
                     const descMinLen = modal ? parseInt(modal.dataset.descriptionMinLength || '20', 10) : 20;
+                    const taskVal = taskSelect ? taskSelect.value : '';
                     if (projectVal && requireTask && !taskVal) {
                         const msg = modal?.dataset.taskRequiredMsg || 'A task must be selected when logging time for a project';
                         if (window.toastManager && typeof window.toastManager.error === 'function') {
@@ -1386,7 +1201,6 @@
                         }
                     }
                     
-                    // Sync Toast UI Editor notes into hidden textarea (programmatic submit does not fire submit event)
                     if (notesEl && window.dashboardNotesEditor && typeof window.dashboardNotesEditor.getMarkdown === 'function') {
                         try {
                             notesEl.value = window.dashboardNotesEditor.getMarkdown();
@@ -1395,9 +1209,8 @@
                         }
                     }
                     
-                    // Now submit the form normally
                     startTimerForm.submit();
-                }, true); // Use capture phase to run before other handlers
+                }, true);
             }
 
             if (window.location.hash === '#start-timer') {
@@ -1802,8 +1615,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (projectSelect && s.project_id) {
             projectSelect.value = String(s.project_id);
-            if (clientSelect) clientSelect.value = '';
             try { projectSelect.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+        } else if (clientSelect && s.client_id) {
+            clientSelect.value = String(s.client_id);
+            try { clientSelect.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
         }
 
         if (s.task_id && taskSelect) {

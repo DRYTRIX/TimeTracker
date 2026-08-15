@@ -310,3 +310,89 @@ hr.sep {
   border-top: 1px solid var(--border);
   margin: 16px 0;
 }
+
+/* Searchable picker (Issue #728) */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.tt-picker {
+  position: relative;
+}
+
+.tt-picker-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 9px;
+  font: inherit;
+  background: #fff;
+  color: var(--text);
+}
+
+.tt-picker-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-color: var(--accent);
+}
+
+.tt-picker-list {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  margin: 4px 0 0;
+  padding: 4px 0;
+  max-height: 180px;
+  overflow: auto;
+  list-style: none;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+}
+
+.tt-picker-list.hidden {
+  display: none;
+}
+
+.tt-picker-option,
+.tt-picker-create,
+.tt-picker-empty {
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.tt-picker-option:hover,
+.tt-picker-create:hover {
+  background: #f0fdfa;
+}
+
+.tt-picker-option.is-selected {
+  background: #ccfbf1;
+  font-weight: 600;
+}
+
+.tt-picker-create {
+  border-top: 1px solid var(--border);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.tt-picker-empty {
+  color: var(--muted);
+  cursor: default;
+}
+
+.hint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}

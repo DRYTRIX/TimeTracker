@@ -265,6 +265,10 @@ class TimeTrackingService:
                 "error": "missing_project_or_client",
             }
 
+        # Project takes precedence over client (UI may send both for hierarchy; storage stays project XOR client)
+        if project_id:
+            client_id = None
+
         # Validate project if provided
         if project_id:
             project = self.project_repo.get_by_id(project_id)

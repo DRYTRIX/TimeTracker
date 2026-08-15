@@ -1,5 +1,6 @@
 /**
- * Popup: running timer view, project/task picker, quick-create.
+ * Popup: running timer view + cascading client → project → task pickers
+ * with inline create (Issue #728 follow-up).
  */
 
 import {
@@ -7,6 +8,7 @@ import {
   elapsedSecondsFromTimer,
   formatElapsedHhMm,
 } from './lib/api.js';
+import { enhanceSelect } from './lib/picker.js';
 
 const els = {
   message: document.getElementById('message'),
@@ -23,21 +25,11 @@ const els = {
   pauseBtn: document.getElementById('pause-btn'),
   resumeBtn: document.getElementById('resume-btn'),
   stopBtn: document.getElementById('stop-btn'),
-  projectFilter: document.getElementById('project-filter'),
+  clientSelect: document.getElementById('client-select'),
   projectSelect: document.getElementById('project-select'),
   taskSelect: document.getElementById('task-select'),
   notes: document.getElementById('notes'),
   startBtn: document.getElementById('start-btn'),
-  tabTask: document.getElementById('tab-task'),
-  tabProject: document.getElementById('tab-project'),
-  createTask: document.getElementById('create-task'),
-  createProject: document.getElementById('create-project'),
-  newTaskName: document.getElementById('new-task-name'),
-  newTaskProject: document.getElementById('new-task-project'),
-  createTaskBtn: document.getElementById('create-task-btn'),
-  newProjectName: document.getElementById('new-project-name'),
-  newProjectClient: document.getElementById('new-project-client'),
-  createProjectBtn: document.getElementById('create-project-btn'),
 };
 
 /** Closed statuses — matches Task.is_active (anything else is selectable). */
@@ -45,8 +37,10 @@ const CLOSED_TASK_STATUSES = new Set(['done', 'cancelled']);
 
 /** @type {ApiClient|null} */
 let client = null;
-/** @type {Array<{id:number,name:string,favorite?:boolean}>} */
+/** @type {Array<{id:number,name:string,client_id?:number|null,favorite?:boolean}>} */
 let projects = [];
+/** @type {Array<{id:number,name:string}>} */
+let clients = [];
 /** @type {object|null} */
 let activeTimer = null;
 let tickHandle = null;
@@ -54,6 +48,10 @@ let tickHandle = null;
 let keepAlivePort = null;
 /** Monotonic counter so concurrent loadTasksForProject calls don't duplicate options (#700). */
 let loadTasksGeneration = 0;
+
+let clientPicker = null;
+let projectPicker = null;
+let taskPicker = null;
 
 function showMessage(text, kind = 'error') {
   els.message.textContent = text;
@@ -75,17 +73,6 @@ els.openOptions.addEventListener('click', (event) => {
   event.preventDefault();
   openSettings();
 });
-
-function setCreateTab(which) {
-  const isTask = which === 'task';
-  els.tabTask.classList.toggle('active', isTask);
-  els.tabProject.classList.toggle('active', !isTask);
-  els.createTask.classList.toggle('hidden', !isTask);
-  els.createProject.classList.toggle('hidden', isTask);
-}
-
-els.tabTask.addEventListener('click', () => setCreateTab('task'));
-els.tabProject.addEventListener('click', () => setCreateTab('project'));
 
 function stopTick() {
   if (tickHandle) {
@@ -143,55 +130,68 @@ function showSetup() {
   els.needSetup.classList.remove('hidden');
 }
 
-function filteredProjects() {
-  const q = els.projectFilter.value.trim().toLowerCase();
-  if (!q) return projects;
-  return projects.filter((p) => p.name.toLowerCase().includes(q));
+function fillClientSelect(selectedId = null) {
+  const current =
+    selectedId != null
+      ? String(selectedId)
+      : els.clientSelect.value || '';
+  els.clientSelect.innerHTML = '';
+  const none = document.createElement('option');
+  none.value = '';
+  none.textContent = '— All clients —';
+  els.clientSelect.appendChild(none);
+  for (const c of clients) {
+    const opt = document.createElement('option');
+    opt.value = String(c.id);
+    opt.textContent = c.name;
+    if (String(c.id) === current) opt.selected = true;
+    els.clientSelect.appendChild(opt);
+  }
+  if (clientPicker) clientPicker.refresh();
 }
 
-function fillProjectSelects(selectedId = null) {
-  const list = filteredProjects();
+function fillProjectSelect(selectedId = null) {
+  const clientId = els.clientSelect.value ? Number(els.clientSelect.value) : null;
+  let list = projects;
+  if (clientId) {
+    list = projects.filter((p) => !p.client_id || Number(p.client_id) === clientId);
+  }
   const current =
     selectedId != null
       ? String(selectedId)
       : els.projectSelect.value || (list[0] ? String(list[0].id) : '');
 
   els.projectSelect.innerHTML = '';
-  els.newTaskProject.innerHTML = '';
-
   if (!list.length) {
     const opt = document.createElement('option');
     opt.value = '';
-    opt.textContent = 'No projects found';
+    opt.textContent = clientId ? 'No projects for this client' : 'No projects found';
     els.projectSelect.appendChild(opt);
   } else {
+    const empty = document.createElement('option');
+    empty.value = '';
+    empty.textContent = '— Select a project —';
+    els.projectSelect.appendChild(empty);
     for (const p of list) {
       const opt = document.createElement('option');
       opt.value = String(p.id);
       opt.textContent = p.favorite ? `★ ${p.name}` : p.name;
+      if (p.client_id) {
+        opt.setAttribute('data-client-id', String(p.client_id));
+        opt.setAttribute('data-parent-id', String(p.client_id));
+      }
       if (String(p.id) === current) opt.selected = true;
       els.projectSelect.appendChild(opt);
     }
   }
-
-  for (const p of projects) {
-    const opt = document.createElement('option');
-    opt.value = String(p.id);
-    opt.textContent = p.name;
-    els.newTaskProject.appendChild(opt);
-  }
-
-  if (els.newTaskProject.options.length && current) {
-    els.newTaskProject.value = current;
-  }
+  if (projectPicker) projectPicker.refresh();
 }
 
 async function loadTasksForProject(projectId, selectedTaskId = null) {
-  // Generation counter discards stale responses from concurrent loads
-  // (project filter fires on every keystroke — Issue #700 duplicates).
   const gen = ++loadTasksGeneration;
   if (!client || !projectId) {
     els.taskSelect.innerHTML = '<option value="">— No task —</option>';
+    if (taskPicker) taskPicker.refresh();
     return;
   }
   try {
@@ -200,7 +200,7 @@ async function loadTasksForProject(projectId, selectedTaskId = null) {
       status: 'open',
       per_page: 200,
     });
-    if (gen !== loadTasksGeneration) return; // stale
+    if (gen !== loadTasksGeneration) return;
     const byId = new Map();
     for (const t of data?.tasks || []) {
       if (!t || t.id == null) continue;
@@ -214,66 +214,66 @@ async function loadTasksForProject(projectId, selectedTaskId = null) {
       const opt = document.createElement('option');
       opt.value = String(t.id);
       opt.textContent = t.status && t.status !== 'todo' ? `${t.name} (${t.status})` : t.name;
+      opt.setAttribute('data-parent-id', String(projectId));
       if (selectedId && String(t.id) === selectedId) opt.selected = true;
       els.taskSelect.appendChild(opt);
     }
+    if (taskPicker) taskPicker.refresh();
   } catch (error) {
     if (gen !== loadTasksGeneration) return;
-    // Non-fatal: timer can start without a task list, but surface the failure.
     console.warn('Failed to load tasks', error);
     els.taskSelect.innerHTML = '<option value="">— No task —</option>';
     const opt = document.createElement('option');
     opt.value = '';
     opt.textContent = 'Could not load tasks';
     els.taskSelect.appendChild(opt);
+    if (taskPicker) taskPicker.refresh();
     showMessage(error.message || 'Could not load tasks.');
   }
 }
 
-async function loadProjects() {
+async function loadProjects(preferredProjectId = null) {
   if (!client) return;
+  const clientId = els.clientSelect.value ? Number(els.clientSelect.value) : null;
+  const params = { status: 'active', per_page: 100 };
+  // Always load all projects so switching client filter is instant; filter client-side.
+  // (API also supports client_id — used as a hint when creating.)
   const [projectsResp, favResp] = await Promise.all([
-    client.getAllProjects({ status: 'active', per_page: 100 }),
+    client.getAllProjects(params),
     client.getFavoriteProjects().catch(() => ({ favorites: [] })),
   ]);
 
   const favIds = new Set((favResp?.favorites || []).map((f) => f.project_id));
   const raw = projectsResp?.projects || [];
   projects = raw
-    .map((p) => ({ id: p.id, name: p.name, favorite: favIds.has(p.id) }))
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      client_id: p.client_id ?? null,
+      favorite: favIds.has(p.id),
+    }))
     .sort((a, b) => {
       if (a.favorite !== b.favorite) return a.favorite ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
 
-  fillProjectSelects();
+  fillProjectSelect(preferredProjectId);
   const selected = Number(els.projectSelect.value);
   if (selected) await loadTasksForProject(selected);
+  else await loadTasksForProject(null);
+  void clientId;
 }
 
-async function loadClients() {
+async function loadClients(preferredClientId = null) {
   if (!client) return;
-  els.newProjectClient.innerHTML = '';
   try {
     const data = await client.getClients({ per_page: 100 });
-    const clients = data?.clients || [];
-    const none = document.createElement('option');
-    none.value = '';
-    none.textContent = clients.length ? '— No client —' : 'No clients (optional)';
-    els.newProjectClient.appendChild(none);
-    for (const c of clients) {
-      const opt = document.createElement('option');
-      opt.value = String(c.id);
-      opt.textContent = c.name;
-      els.newProjectClient.appendChild(opt);
-    }
+    clients = (data?.clients || []).map((c) => ({ id: c.id, name: c.name }));
   } catch (error) {
-    const opt = document.createElement('option');
-    opt.value = '';
-    opt.textContent = '— No client —';
-    els.newProjectClient.appendChild(opt);
+    clients = [];
     console.warn(error);
   }
+  fillClientSelect(preferredClientId);
 }
 
 async function notifyBackground() {
@@ -308,16 +308,93 @@ async function syncToActiveTimerOnConflict() {
   return false;
 }
 
-els.projectFilter.addEventListener('input', () => {
-  fillProjectSelects(els.projectSelect.value || null);
+async function createClientInline(name) {
+  clearMessage();
+  try {
+    const result = await client.createClient({ name });
+    const created = result?.client || result;
+    showMessage('Client created.', 'success');
+    await loadClients(created?.id);
+    fillProjectSelect(els.projectSelect.value || null);
+  } catch (error) {
+    showMessage(error.message || 'Could not create client.');
+  }
+}
+
+async function createProjectInline(name) {
+  clearMessage();
+  const clientId = els.clientSelect.value ? Number(els.clientSelect.value) : null;
+  try {
+    const result = await client.createProject({ name, clientId });
+    const created = result?.project || result;
+    showMessage('Project created.', 'success');
+    if (created?.client_id && !els.clientSelect.value) {
+      await loadClients(created.client_id);
+    }
+    await loadProjects(created?.id);
+    if (created?.id) await loadTasksForProject(created.id);
+  } catch (error) {
+    showMessage(error.message || 'Could not create project.');
+  }
+}
+
+async function createTaskInline(name) {
+  clearMessage();
+  const projectId = Number(els.projectSelect.value);
+  if (!projectId) {
+    showMessage('Select a project before creating a task.');
+    return;
+  }
+  try {
+    const result = await client.createTask({ name, projectId });
+    const taskId = result?.task?.id || result?.id;
+    showMessage('Task created.', 'success');
+    await loadTasksForProject(projectId, taskId);
+  } catch (error) {
+    showMessage(error.message || 'Could not create task.');
+  }
+}
+
+function initPickers() {
+  clientPicker = enhanceSelect(els.clientSelect, {
+    kind: 'client',
+    canCreate: true,
+    placeholder: 'Type to search clients…',
+    onCreate: createClientInline,
+  });
+  projectPicker = enhanceSelect(els.projectSelect, {
+    kind: 'project',
+    canCreate: true,
+    placeholder: 'Type to search projects…',
+    onCreate: createProjectInline,
+  });
+  taskPicker = enhanceSelect(els.taskSelect, {
+    kind: 'task',
+    canCreate: true,
+    placeholder: 'Type to search tasks…',
+    onCreate: createTaskInline,
+  });
+}
+
+els.clientSelect.addEventListener('change', () => {
+  fillProjectSelect(null);
   const id = Number(els.projectSelect.value);
   loadTasksForProject(id || null);
 });
 
 els.projectSelect.addEventListener('change', () => {
   const id = Number(els.projectSelect.value);
-  loadTasksForProject(id);
-  if (id) els.newTaskProject.value = String(id);
+  if (id) {
+    const opt = els.projectSelect.options[els.projectSelect.selectedIndex];
+    const cid = opt?.getAttribute('data-client-id') || '';
+    if (cid && els.clientSelect.value !== cid) {
+      els.clientSelect.value = cid;
+      if (clientPicker) clientPicker.refresh();
+      // Re-filter project list but keep selection
+      fillProjectSelect(id);
+    }
+  }
+  loadTasksForProject(id || null);
 });
 
 els.startBtn.addEventListener('click', async () => {
@@ -342,7 +419,6 @@ els.startBtn.addEventListener('click', async () => {
       error.code === 'CONFLICT' ||
       error.code === 'timer_already_running';
     if (isConflict) {
-      // Prefer timer from error payload when present; otherwise refetch status.
       if (error.data?.timer) {
         showRunning(error.data.timer);
         await notifyBackground();
@@ -396,7 +472,7 @@ els.stopBtn.addEventListener('click', async () => {
   try {
     await client.stopTimer();
     showIdle();
-    await Promise.all([loadProjects(), loadClients()]);
+    await Promise.all([loadClients(), loadProjects()]);
     await notifyBackground();
   } catch (error) {
     showMessage(error.message || 'Could not stop timer.');
@@ -405,56 +481,10 @@ els.stopBtn.addEventListener('click', async () => {
   }
 });
 
-els.createTaskBtn.addEventListener('click', async () => {
-  clearMessage();
-  const name = els.newTaskName.value.trim();
-  const projectId = Number(els.newTaskProject.value);
-  if (!name || !projectId) {
-    showMessage('Task name and project are required.');
-    return;
-  }
-  els.createTaskBtn.disabled = true;
-  try {
-    const result = await client.createTask({ name, projectId });
-    els.newTaskName.value = '';
-    showMessage('Task created.', 'success');
-    fillProjectSelects(projectId);
-    await loadTasksForProject(projectId, result?.task?.id);
-  } catch (error) {
-    showMessage(error.message || 'Could not create task.');
-  } finally {
-    els.createTaskBtn.disabled = false;
-  }
-});
-
-els.createProjectBtn.addEventListener('click', async () => {
-  clearMessage();
-  const name = els.newProjectName.value.trim();
-  const clientId = els.newProjectClient.value ? Number(els.newProjectClient.value) : null;
-  if (!name) {
-    showMessage('Project name is required.');
-    return;
-  }
-  els.createProjectBtn.disabled = true;
-  try {
-    const result = await client.createProject({ name, clientId });
-    els.newProjectName.value = '';
-    showMessage('Project created.', 'success');
-    await loadProjects();
-    if (result?.project?.id) {
-      fillProjectSelects(result.project.id);
-      await loadTasksForProject(result.project.id);
-    }
-  } catch (error) {
-    showMessage(error.message || 'Could not create project.');
-  } finally {
-    els.createProjectBtn.disabled = false;
-  }
-});
-
 async function bootstrap() {
   clearMessage();
   connectKeepAlive();
+  initPickers();
 
   const { server_url, api_token, logged_out, last_timer_status } = await chrome.storage.local.get([
     'server_url',
@@ -477,7 +507,8 @@ async function bootstrap() {
       showRunning(status.timer);
     } else {
       showIdle();
-      await Promise.all([loadProjects(), loadClients()]);
+      await loadClients();
+      await loadProjects();
     }
     await notifyBackground();
   } catch (error) {
@@ -487,7 +518,6 @@ async function bootstrap() {
       showMessage('Session expired. Sign in again in Settings.');
       return;
     }
-    // Fall back to cached status if poll fails
     if (last_timer_status?.active && last_timer_status?.timer) {
       showRunning(last_timer_status.timer);
       showMessage(error.message || 'Could not refresh timer; showing last known state.');
@@ -495,7 +525,8 @@ async function bootstrap() {
       showIdle();
       showMessage(error.message || 'Could not reach TimeTracker.');
       try {
-        await Promise.all([loadProjects(), loadClients()]);
+        await loadClients();
+        await loadProjects();
       } catch {
         /* ignore */
       }
