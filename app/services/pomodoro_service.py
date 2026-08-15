@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 from app import db
 from app.models import Project, Task, TimeEntry
 from app.models.focus_session import FocusSession
+from app.models.time_entry import local_now
 from app.services.time_approval_service import TimeApprovalService
 
 logger = logging.getLogger(__name__)
@@ -56,7 +57,7 @@ class PomodoroService:
                 user_id=user_id,
                 project_id=project_id,
                 task_id=task_id,
-                start_time=datetime.utcnow(),
+                start_time=local_now(),
                 source="pomodoro",
                 billable=True,
             )
@@ -102,7 +103,7 @@ class PomodoroService:
         if session.time_entry_id:
             time_entry = TimeEntry.query.get(session.time_entry_id)
             if time_entry and not time_entry.end_time:
-                time_entry.end_time = datetime.utcnow()
+                time_entry.end_time = local_now()
                 # Use calculate_duration so per-user rounding (and break deduction) apply
                 time_entry.calculate_duration()
 

@@ -1485,14 +1485,7 @@ def manual_entry():
             flash(_("End time must be after start time"), "error")
             return render_template("timer/manual_entry.html", **_manual_ctx(**prefill_kwargs))
 
-        # Apply user's rounding preference to manually-entered duration
-        if duration_seconds_override is not None:
-            from app.utils.time_rounding import apply_user_rounding
-
-            rounding_user = current_user
-            if target_user_id != current_user.id:
-                rounding_user = db.session.get(User, target_user_id) or current_user
-            duration_seconds_override = apply_user_rounding(duration_seconds_override, rounding_user)
+        # Rounding is applied once in TimeTrackingService.create_manual_entry
 
         # Use service to create entry (handles validation)
         time_tracking_service = TimeTrackingService()
@@ -1650,18 +1643,34 @@ def manual_entry_for_project(project_id):
 @login_required
 def bulk_entry():
     """Create bulk time entries for multiple days"""
-    # Get active projects for dropdown
+    # Get active projects/clients for dropdown
     active_projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    active_clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+    only_one_client = len(active_clients) == 1
+    single_client = active_clients[0] if only_one_client else None
     users = _active_users_for_admin()
     selected_user_id = current_user.id
 
     def _bulk_ctx(**extra):
+        selected_client_id = extra.pop("selected_client_id", None)
+        if selected_client_id is None and project_id:
+            proj = next((p for p in active_projects if p.id == project_id), None)
+            if proj is None:
+                proj = Project.query.get(project_id)
+            if proj is not None:
+                selected_client_id = proj.client_id
         ctx = {
             "projects": active_projects,
+            "clients": active_clients,
+            "only_one_client": only_one_client,
+            "single_client": single_client,
             "users": users,
             "selected_user_id": selected_user_id,
             "selected_project_id": project_id,
             "selected_task_id": task_id,
+            "selected_client_id": selected_client_id,
+            "can_create_clients": current_user.is_admin or current_user.has_permission("create_clients"),
+            "can_create_projects": current_user.is_admin or current_user.has_permission("create_projects"),
         }
         ctx.update(extra)
         return ctx
@@ -1969,16 +1978,25 @@ def bulk_entry_for_project(project_id):
         flash("Invalid project selected", "error")
         return redirect(url_for("main.dashboard"))
 
-    # Get active projects for dropdown
+    # Get active projects/clients for dropdown
     active_projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    active_clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+    only_one_client = len(active_clients) == 1
+    single_client = active_clients[0] if only_one_client else None
 
     return render_template(
         "timer/bulk_entry.html",
         projects=active_projects,
+        clients=active_clients,
+        only_one_client=only_one_client,
+        single_client=single_client,
         users=_active_users_for_admin(),
         selected_user_id=current_user.id,
         selected_project_id=project_id,
         selected_task_id=task_id,
+        selected_client_id=project.client_id,
+        can_create_clients=current_user.is_admin or current_user.has_permission("create_clients"),
+        can_create_projects=current_user.is_admin or current_user.has_permission("create_projects"),
     )
 
 

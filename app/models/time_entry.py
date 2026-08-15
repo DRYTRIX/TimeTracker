@@ -113,9 +113,14 @@ class TimeEntry(db.Model):
         self.paid = paid
         self.invoice_number = invoice_number.strip() if invoice_number else None
 
-        # Allow manual duration override
+        # Allow manual duration override. For boundary rounding, adjust start/end
+        # via calculate_duration() instead of storing the override as-is (otherwise
+        # timestamps stay raw while duration is treated as already-final).
         if duration_seconds is not None:
-            self.duration_seconds = duration_seconds
+            if self.start_time and self.end_time and self._uses_boundary_rounding():
+                self.calculate_duration()
+            else:
+                self.duration_seconds = duration_seconds
         # Otherwise, calculate duration if end time is provided
         elif self.end_time:
             self.calculate_duration()
@@ -208,6 +213,26 @@ class TimeEntry(db.Model):
         tz = get_timezone_obj()
         return dt.astimezone(tz).replace(tzinfo=None)
 
+    def _resolve_rounding_user(self):
+        """Resolve the user for rounding prefs (works on transient instances)."""
+        user = None
+        try:
+            user = self.user
+        except Exception:
+            user = None
+        if user is None and self.user_id:
+            from app.models.user import User
+
+            user = db.session.get(User, self.user_id)
+        return user
+
+    def _uses_boundary_rounding(self) -> bool:
+        """True when effective rounding method is boundary with an interval > 1."""
+        from app.utils.time_rounding import get_user_rounding_settings
+
+        settings = get_user_rounding_settings(self._resolve_rounding_user())
+        return bool(settings["enabled"] and settings["method"] == "boundary" and settings["minutes"] > 1)
+
     def calculate_duration(self):
         """Calculate and set duration in seconds with rounding.
 
@@ -227,15 +252,7 @@ class TimeEntry(db.Model):
         # Resolve user for per-user rounding preferences.
         # On transient instances (not yet in session), self.user may be None or raise —
         # look up by user_id so rounding still applies.
-        user = None
-        try:
-            user = self.user
-        except Exception:
-            user = None
-        if user is None and self.user_id:
-            from app.models.user import User
-
-            user = db.session.get(User, self.user_id)
+        user = self._resolve_rounding_user()
 
         from app.utils.time_rounding import (
             apply_user_rounding,

@@ -320,6 +320,77 @@ class TestBoundaryRounding:
             assert entry.end_time == datetime(2026, 8, 12, 9, 55, 0)
             assert entry.duration_seconds == 600
 
+    def test_duration_seconds_override_adjusts_boundaries(self, app, user, project):
+        """Creating with duration_seconds override under boundary method still adjusts start/end."""
+        from app import db
+        from app.models import TimeEntry, User
+
+        with app.app_context():
+            user_id = user.id
+            project_id = project.id
+            db.session.query(User).filter_by(id=user_id).update(
+                {
+                    "time_rounding_enabled": True,
+                    "time_rounding_minutes": 5,
+                    "time_rounding_method": "boundary",
+                    "time_rounding_minimum_minutes": 0,
+                },
+                synchronize_session=False,
+            )
+            db.session.commit()
+
+            # Explicit duration matches raw span (8 min); without the fix, start/end
+            # would stay at 09:46–09:54 while duration stayed 480.
+            entry = TimeEntry(
+                user_id=user_id,
+                project_id=project_id,
+                start_time=datetime(2026, 8, 12, 9, 46, 0),
+                end_time=datetime(2026, 8, 12, 9, 54, 0),
+                duration_seconds=480,
+                source="manual",
+                billable=True,
+            )
+            db.session.add(entry)
+            db.session.commit()
+
+            assert entry.start_time == datetime(2026, 8, 12, 9, 45, 0)
+            assert entry.end_time == datetime(2026, 8, 12, 9, 55, 0)
+            assert entry.duration_seconds == 600
+
+    def test_create_manual_entry_duration_override_boundary(self, app, user, project):
+        """Service/repo path with duration override under boundary adjusts timestamps."""
+        from app import db
+        from app.models import User
+        from app.services.time_tracking_service import TimeTrackingService
+
+        with app.app_context():
+            user_id = user.id
+            project_id = project.id
+            db.session.query(User).filter_by(id=user_id).update(
+                {
+                    "time_rounding_enabled": True,
+                    "time_rounding_minutes": 5,
+                    "time_rounding_method": "boundary",
+                    "time_rounding_minimum_minutes": 0,
+                },
+                synchronize_session=False,
+            )
+            db.session.commit()
+
+            result = TimeTrackingService().create_manual_entry(
+                user_id=user_id,
+                project_id=project_id,
+                start_time=datetime(2026, 8, 12, 9, 46, 0),
+                end_time=datetime(2026, 8, 12, 9, 54, 0),
+                duration_seconds=480,
+                billable=True,
+            )
+            assert result["success"] is True
+            entry = result["entry"]
+            assert entry.start_time == datetime(2026, 8, 12, 9, 45, 0)
+            assert entry.end_time == datetime(2026, 8, 12, 9, 55, 0)
+            assert entry.duration_seconds == 600
+
 
 class TestMinimumDuration:
     """Issue #725: minimum billable duration floor."""
