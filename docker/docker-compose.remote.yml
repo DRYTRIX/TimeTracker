@@ -57,6 +57,7 @@ services:
       - CSRF_COOKIE_SAMESITE=${CSRF_COOKIE_SAMESITE:-Lax}
       - CSRF_COOKIE_NAME=${CSRF_COOKIE_NAME:-XSRF-TOKEN}
       - PREFERRED_URL_SCHEME=${PREFERRED_URL_SCHEME:-https}
+      - APP_BASE_URL=${APP_BASE_URL:-}
     # Expose only internally; nginx publishes ports
     ports: []
     volumes:

@@ -127,6 +127,7 @@ All environment variables can be provided via `.env` and are consumed by the `ap
 - WTF_CSRF_SSL_STRICT: Require HTTPS for CSRF referer checks. Default: `true` for production via compose; set `false` for HTTP.
 - WTF_CSRF_TRUSTED_ORIGINS: Comma-separated allowed origins (scheme://host). Default: `https://localhost`.
 - PREFERRED_URL_SCHEME: `http` or `https`. Default: `https` in production setups; set `http` for local.
+- APP_BASE_URL: Public base URL of this instance (e.g. `https://time.example.com`). Used to build absolute links in emails sent by background jobs (working-time limit notices, weekly summaries, overdue invoices, etc.). If unset, the app learns the host from live browser requests after the first real visit; set it explicitly for correct links right after deploy. Do **not** set Flask `SERVER_NAME` for this purpose — it can break reverse-proxy Host headers.
 - SESSION_COOKIE_SECURE: Send cookies only over HTTPS. Default: `true` (prod) / `false` (local test).
 - SESSION_COOKIE_HTTPONLY: Default: `true`.
 - SESSION_COOKIE_SAMESITE: `Lax` | `Strict` | `None`. Default: `Lax`.

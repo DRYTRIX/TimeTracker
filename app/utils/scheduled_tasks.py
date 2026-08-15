@@ -27,6 +27,7 @@ from app.utils.email import (
     send_remind_to_log_email,
     send_weekly_summary,
 )
+from app.utils.urls import external_url_context
 
 logger = logging.getLogger(__name__)
 
@@ -36,55 +37,56 @@ def check_overdue_invoices():
 
     This task should be run daily to check for invoices that are past their due date
     and send notifications to users who have overdue invoice notifications enabled.
+
+    Note: Call within an app/external URL context (see register_scheduled_tasks wrappers).
     """
-    with current_app.app_context():
-        try:
-            logger.info("Checking for overdue invoices...")
+    try:
+        logger.info("Checking for overdue invoices...")
 
-            # Get all invoices that are overdue and not paid/cancelled
-            today = datetime.utcnow().date()
-            overdue_invoices = Invoice.query.filter(
-                Invoice.due_date < today, Invoice.status.in_(["draft", "sent"])
-            ).all()
+        # Get all invoices that are overdue and not paid/cancelled
+        today = datetime.utcnow().date()
+        overdue_invoices = Invoice.query.filter(
+            Invoice.due_date < today, Invoice.status.in_(["draft", "sent"])
+        ).all()
 
-            logger.info(f"Found {len(overdue_invoices)} overdue invoices")
+        logger.info(f"Found {len(overdue_invoices)} overdue invoices")
 
-            notifications_sent = 0
-            for invoice in overdue_invoices:
-                # Update invoice status to overdue if it's not already
-                if invoice.status != "overdue":
-                    invoice.status = "overdue"
-                    db.session.commit()
+        notifications_sent = 0
+        for invoice in overdue_invoices:
+            # Update invoice status to overdue if it's not already
+            if invoice.status != "overdue":
+                invoice.status = "overdue"
+                db.session.commit()
 
-                # Get users to notify (creator and admins)
-                users_to_notify = set()
+            # Get users to notify (creator and admins)
+            users_to_notify = set()
 
-                # Add the invoice creator
-                if invoice.creator:
-                    users_to_notify.add(invoice.creator)
+            # Add the invoice creator
+            if invoice.creator:
+                users_to_notify.add(invoice.creator)
 
-                # Add all admins
-                admins = User.query.filter_by(role="admin", is_active=True).all()
-                users_to_notify.update(admins)
+            # Add all admins
+            admins = User.query.filter_by(role="admin", is_active=True).all()
+            users_to_notify.update(admins)
 
-                # Send notifications
-                for user in users_to_notify:
-                    if user.email and user.email_notifications and user.notification_overdue_invoices:
-                        try:
-                            send_overdue_invoice_notification(invoice, user)
-                            notifications_sent += 1
-                            logger.info(
-                                f"Sent overdue notification for invoice {invoice.invoice_number} to {user.username}"
-                            )
-                        except Exception as e:
-                            logger.error(f"Failed to send notification to {user.username}: {e}")
+            # Send notifications
+            for user in users_to_notify:
+                if user.email and user.email_notifications and user.notification_overdue_invoices:
+                    try:
+                        send_overdue_invoice_notification(invoice, user)
+                        notifications_sent += 1
+                        logger.info(
+                            f"Sent overdue notification for invoice {invoice.invoice_number} to {user.username}"
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to send notification to {user.username}: {e}")
 
-            logger.info(f"Sent {notifications_sent} overdue invoice notifications")
-            return notifications_sent
+        logger.info(f"Sent {notifications_sent} overdue invoice notifications")
+        return notifications_sent
 
-        except Exception as e:
-            logger.error(f"Error checking overdue invoices: {e}")
-            return 0
+    except Exception as e:
+        logger.error(f"Error checking overdue invoices: {e}")
+        return 0
 
 
 def send_weekly_summaries():
@@ -92,75 +94,76 @@ def send_weekly_summaries():
 
     This task should be run weekly (e.g., Sunday evening or Monday morning)
     to send time tracking summaries to users who have opted in.
+
+    Note: Call within an app/external URL context (see register_scheduled_tasks wrappers).
     """
-    with current_app.app_context():
-        try:
-            logger.info("Sending weekly summaries...")
+    try:
+        logger.info("Sending weekly summaries...")
 
-            # Get users who want weekly summaries
-            users = User.query.filter_by(
-                is_active=True, email_notifications=True, notification_weekly_summary=True
-            ).all()
+        # Get users who want weekly summaries
+        users = User.query.filter_by(
+            is_active=True, email_notifications=True, notification_weekly_summary=True
+        ).all()
 
-            logger.info(f"Found {len(users)} users with weekly summaries enabled")
+        logger.info(f"Found {len(users)} users with weekly summaries enabled")
 
-            # Calculate date range (last 7 days)
-            end_date = datetime.utcnow().date()
-            start_date = end_date - timedelta(days=7)
+        # Calculate date range (last 7 days)
+        end_date = datetime.utcnow().date()
+        start_date = end_date - timedelta(days=7)
 
-            summaries_sent = 0
-            for user in users:
-                if not user.email:
+        summaries_sent = 0
+        for user in users:
+            if not user.email:
+                continue
+
+            try:
+                # Get time entries for this user in the past week
+                entries = TimeEntry.query.filter(
+                    TimeEntry.user_id == user.id,
+                    TimeEntry.start_time >= datetime.combine(start_date, datetime.min.time()),
+                    TimeEntry.start_time < datetime.combine(end_date + timedelta(days=1), datetime.min.time()),
+                    TimeEntry.end_time.isnot(None),
+                ).all()
+
+                if not entries:
+                    logger.info(f"No entries for {user.username}, skipping")
                     continue
 
-                try:
-                    # Get time entries for this user in the past week
-                    entries = TimeEntry.query.filter(
-                        TimeEntry.user_id == user.id,
-                        TimeEntry.start_time >= datetime.combine(start_date, datetime.min.time()),
-                        TimeEntry.start_time < datetime.combine(end_date + timedelta(days=1), datetime.min.time()),
-                        TimeEntry.end_time.isnot(None),
-                    ).all()
+                # Calculate hours worked
+                hours_worked = sum(e.duration_hours for e in entries)
 
-                    if not entries:
-                        logger.info(f"No entries for {user.username}, skipping")
-                        continue
+                # Group by project
+                projects_map = {}
+                for entry in entries:
+                    if entry.project:
+                        project_name = entry.project.name
+                        if project_name not in projects_map:
+                            projects_map[project_name] = {"name": project_name, "hours": 0}
+                        projects_map[project_name]["hours"] += entry.duration_hours
 
-                    # Calculate hours worked
-                    hours_worked = sum(e.duration_hours for e in entries)
+                projects_data = sorted(projects_map.values(), key=lambda x: x["hours"], reverse=True)
 
-                    # Group by project
-                    projects_map = {}
-                    for entry in entries:
-                        if entry.project:
-                            project_name = entry.project.name
-                            if project_name not in projects_map:
-                                projects_map[project_name] = {"name": project_name, "hours": 0}
-                            projects_map[project_name]["hours"] += entry.duration_hours
+                # Send email
+                send_weekly_summary(
+                    user=user,
+                    start_date=start_date.strftime("%Y-%m-%d"),
+                    end_date=end_date.strftime("%Y-%m-%d"),
+                    hours_worked=hours_worked,
+                    projects_data=projects_data,
+                )
 
-                    projects_data = sorted(projects_map.values(), key=lambda x: x["hours"], reverse=True)
+                summaries_sent += 1
+                logger.info(f"Sent weekly summary to {user.username}")
 
-                    # Send email
-                    send_weekly_summary(
-                        user=user,
-                        start_date=start_date.strftime("%Y-%m-%d"),
-                        end_date=end_date.strftime("%Y-%m-%d"),
-                        hours_worked=hours_worked,
-                        projects_data=projects_data,
-                    )
+            except Exception as e:
+                logger.error(f"Failed to send weekly summary to {user.username}: {e}")
 
-                    summaries_sent += 1
-                    logger.info(f"Sent weekly summary to {user.username}")
+        logger.info(f"Sent {summaries_sent} weekly summaries")
+        return summaries_sent
 
-                except Exception as e:
-                    logger.error(f"Failed to send weekly summary to {user.username}: {e}")
-
-            logger.info(f"Sent {summaries_sent} weekly summaries")
-            return summaries_sent
-
-        except Exception as e:
-            logger.error(f"Error sending weekly summaries: {e}")
-            return 0
+    except Exception as e:
+        logger.error(f"Error sending weekly summaries: {e}")
+        return 0
 
 
 def check_project_budget_alerts():
@@ -216,27 +219,29 @@ def check_project_budget_alerts():
 
 
 def check_task_deadline_approaching():
-    """Notify workflow rules for tasks due tomorrow."""
+    """Notify workflow rules for tasks due tomorrow.
+
+    Note: Call within an app/external URL context (see register_scheduled_tasks wrappers).
+    """
     from datetime import date, timedelta
 
     from app.models import Task
     from app.utils.workflow_bridge import fire_deadline_approaching_workflow
 
-    with current_app.app_context():
-        try:
-            target_date = date.today() + timedelta(days=1)
-            tasks = Task.query.filter(
-                Task.due_date == target_date,
-                Task.status.notin_(["done", "cancelled"]),
-            ).all()
-            for task in tasks:
-                user_id = task.assigned_to or task.created_by
-                if user_id:
-                    fire_deadline_approaching_workflow(task, user_id)
-            return len(tasks)
-        except Exception as e:
-            logger.error(f"Error checking task deadlines: {e}")
-            return 0
+    try:
+        target_date = date.today() + timedelta(days=1)
+        tasks = Task.query.filter(
+            Task.due_date == target_date,
+            Task.status.notin_(["done", "cancelled"]),
+        ).all()
+        for task in tasks:
+            user_id = task.assigned_to or task.created_by
+            if user_id:
+                fire_deadline_approaching_workflow(task, user_id)
+        return len(tasks)
+    except Exception as e:
+        logger.error(f"Error checking task deadlines: {e}")
+        return 0
 
 
 def generate_recurring_invoices():
@@ -307,95 +312,96 @@ def send_monthly_unpaid_hours_reports():
 
     This task runs on the first day of each month and generates
     unpaid hours reports for each salesman based on their client assignments.
+
+    Note: Call within an app/external URL context (see register_scheduled_tasks wrappers).
     """
-    with current_app.app_context():
-        try:
-            logger.info("Sending monthly unpaid hours reports by salesman...")
+    try:
+        logger.info("Sending monthly unpaid hours reports by salesman...")
 
-            from datetime import datetime, timedelta
+        from datetime import datetime, timedelta
 
-            from app.models import SalesmanEmailMapping
-            from app.services.unpaid_hours_service import UnpaidHoursService
-            from app.utils.email import send_email
+        from app.models import SalesmanEmailMapping
+        from app.services.unpaid_hours_service import UnpaidHoursService
+        from app.utils.email import send_template_email
 
-            # Get last month's date range
-            now = datetime.now()
-            if now.month == 1:
-                last_month_start = datetime(now.year - 1, 12, 1)
-                last_month_end = datetime(now.year, 1, 1) - timedelta(seconds=1)
-            else:
-                last_month_start = datetime(now.year, now.month - 1, 1)
-                last_month_end = datetime(now.year, now.month, 1) - timedelta(seconds=1)
+        # Get last month's date range
+        now = datetime.now()
+        if now.month == 1:
+            last_month_start = datetime(now.year - 1, 12, 1)
+            last_month_end = datetime(now.year, 1, 1) - timedelta(seconds=1)
+        else:
+            last_month_start = datetime(now.year, now.month - 1, 1)
+            last_month_end = datetime(now.year, now.month, 1) - timedelta(seconds=1)
 
-            # Get unpaid hours grouped by salesman
-            unpaid_service = UnpaidHoursService()
-            salesman_reports = unpaid_service.get_unpaid_hours_by_salesman(
-                start_date=last_month_start,
-                end_date=last_month_end,
-                salesman_field_name="salesman",
-            )
+        # Get unpaid hours grouped by salesman
+        unpaid_service = UnpaidHoursService()
+        salesman_reports = unpaid_service.get_unpaid_hours_by_salesman(
+            start_date=last_month_start,
+            end_date=last_month_end,
+            salesman_field_name="salesman",
+        )
 
-            sent_count = 0
-            for salesman_initial, report_data in salesman_reports.items():
-                if salesman_initial == "_UNASSIGNED_":
-                    continue
+        sent_count = 0
+        for salesman_initial, report_data in salesman_reports.items():
+            if salesman_initial == "_UNASSIGNED_":
+                continue
 
-                # Get email for this salesman
-                email = SalesmanEmailMapping.get_email_for_initial(salesman_initial)
-                if not email:
-                    logger.warning(f"No email mapping for salesman {salesman_initial}, skipping")
-                    continue
+            # Get email for this salesman
+            email = SalesmanEmailMapping.get_email_for_initial(salesman_initial)
+            if not email:
+                logger.warning(f"No email mapping for salesman {salesman_initial}, skipping")
+                continue
 
-                # Format report data
-                formatted_data = {
-                    "salesman_initial": salesman_initial,
-                    "total_hours": report_data["total_hours"],
-                    "total_entries": report_data["total_entries"],
-                    "clients": report_data["clients"],
-                    "projects": report_data["projects"],
-                    "entries": [
-                        {
-                            "id": e.id,
-                            "date": e.start_time.strftime("%Y-%m-%d") if e.start_time else "",
-                            "project": e.project.name if e.project else "",
-                            # Project.client is a string property; relationship is Project.client_obj
-                            "client": (
-                                (
-                                    e.project.client_obj.name
-                                    if (e.project and getattr(e.project, "client_obj", None))
-                                    else (e.project.client if e.project else "")
-                                )
-                                or (e.client.name if e.client else "Unknown")
-                            ),
-                            "user": e.user.username if e.user else "",
-                            "duration": e.duration_hours,
-                            "notes": e.notes or "",
-                        }
-                        for e in report_data["entries"]
-                    ],
-                }
+            # Format report data
+            formatted_data = {
+                "salesman_initial": salesman_initial,
+                "total_hours": report_data["total_hours"],
+                "total_entries": report_data["total_entries"],
+                "clients": report_data["clients"],
+                "projects": report_data["projects"],
+                "entries": [
+                    {
+                        "id": e.id,
+                        "date": e.start_time.strftime("%Y-%m-%d") if e.start_time else "",
+                        "project": e.project.name if e.project else "",
+                        # Project.client is a string property; relationship is Project.client_obj
+                        "client": (
+                            (
+                                e.project.client_obj.name
+                                if (e.project and getattr(e.project, "client_obj", None))
+                                else (e.project.client if e.project else "")
+                            )
+                            or (e.client.name if e.client else "Unknown")
+                        ),
+                        "user": e.user.username if e.user else "",
+                        "duration": e.duration_hours,
+                        "notes": e.notes or "",
+                    }
+                    for e in report_data["entries"]
+                ],
+            }
 
-                try:
-                    send_email(
-                        to=email,
-                        subject=f"Monthly Unpaid Hours Report - {salesman_initial} ({last_month_start.strftime('%Y-%m-%d')} to {last_month_end.strftime('%Y-%m-%d')})",
-                        template="email/unpaid_hours_report.html",
-                        salesman_initial=salesman_initial,
-                        report_data=formatted_data,
-                        start_date=last_month_start.strftime("%Y-%m-%d"),
-                        end_date=last_month_end.strftime("%Y-%m-%d"),
-                    )
-                    sent_count += 1
-                    logger.info(f"Sent monthly unpaid hours report to {email} for {salesman_initial}")
-                except Exception as e:
-                    logger.error(f"Error sending report to {email} ({salesman_initial}): {e}")
+            try:
+                send_template_email(
+                    to=email,
+                    subject=f"Monthly Unpaid Hours Report - {salesman_initial} ({last_month_start.strftime('%Y-%m-%d')} to {last_month_end.strftime('%Y-%m-%d')})",
+                    template="email/unpaid_hours_report.html",
+                    salesman_initial=salesman_initial,
+                    report_data=formatted_data,
+                    start_date=last_month_start.strftime("%Y-%m-%d"),
+                    end_date=last_month_end.strftime("%Y-%m-%d"),
+                )
+                sent_count += 1
+                logger.info(f"Sent monthly unpaid hours report to {email} for {salesman_initial}")
+            except Exception as e:
+                logger.error(f"Error sending report to {email} ({salesman_initial}): {e}")
 
-            logger.info(f"Sent {sent_count} monthly unpaid hours reports")
-            return sent_count
+        logger.info(f"Sent {sent_count} monthly unpaid hours reports")
+        return sent_count
 
-        except Exception as e:
-            logger.error(f"Error sending monthly unpaid hours reports: {e}")
-            return 0
+    except Exception as e:
+        logger.error(f"Error sending monthly unpaid hours reports: {e}")
+        return 0
 
 
 def register_scheduled_tasks(scheduler, app=None):
@@ -407,8 +413,19 @@ def register_scheduled_tasks(scheduler, app=None):
     """
     try:
         # Check overdue invoices daily at 9 AM
+        def check_overdue_invoices_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for overdue invoices check")
+                    return
+            with external_url_context(app_instance):
+                return check_overdue_invoices()
+
         scheduler.add_job(
-            func=check_overdue_invoices,
+            func=check_overdue_invoices_with_app,
             trigger="cron",
             hour=9,
             minute=0,
@@ -419,8 +436,19 @@ def register_scheduled_tasks(scheduler, app=None):
         logger.info("Registered overdue invoices check task")
 
         # Send weekly summaries every Monday at 8 AM
+        def send_weekly_summaries_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for weekly summaries")
+                    return
+            with external_url_context(app_instance):
+                return send_weekly_summaries()
+
         scheduler.add_job(
-            func=send_weekly_summaries,
+            func=send_weekly_summaries_with_app,
             trigger="cron",
             day_of_week="mon",
             hour=8,
@@ -442,7 +470,7 @@ def register_scheduled_tasks(scheduler, app=None):
                     logger.error("No app instance available for budget alerts check")
                     return
 
-            with app_instance.app_context():
+            with external_url_context(app_instance):
                 return check_project_budget_alerts()
 
         scheduler.add_job(
@@ -456,8 +484,19 @@ def register_scheduled_tasks(scheduler, app=None):
         )
         logger.info("Registered budget alerts check task")
 
+        def check_task_deadline_approaching_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for task deadline check")
+                    return
+            with external_url_context(app_instance):
+                return check_task_deadline_approaching()
+
         scheduler.add_job(
-            func=check_task_deadline_approaching,
+            func=check_task_deadline_approaching_with_app,
             trigger="cron",
             hour=8,
             minute=30,
@@ -479,7 +518,7 @@ def register_scheduled_tasks(scheduler, app=None):
                     logger.error("No app instance available for recurring invoices generation")
                     return
 
-            with app_instance.app_context():
+            with external_url_context(app_instance):
                 generate_recurring_invoices()
 
         scheduler.add_job(
@@ -504,7 +543,7 @@ def register_scheduled_tasks(scheduler, app=None):
                 except RuntimeError:
                     logger.error("No app instance available for monthly unpaid hours reports")
                     return
-            with app_instance.app_context():
+            with external_url_context(app_instance):
                 send_monthly_unpaid_hours_reports()
 
         scheduler.add_job(
@@ -538,7 +577,7 @@ def register_scheduled_tasks(scheduler, app=None):
                     logger.error("No app instance available for webhook retry")
                     return
 
-            with app_instance.app_context():
+            with external_url_context(app_instance):
                 retry_failed_webhooks()
 
         scheduler.add_job(
@@ -563,7 +602,7 @@ def register_scheduled_tasks(scheduler, app=None):
                     logger.error("No app instance available for expiring quotes check")
                     return
 
-            with app_instance.app_context():
+            with external_url_context(app_instance):
                 check_expiring_quotes()
 
         scheduler.add_job(
@@ -588,7 +627,7 @@ def register_scheduled_tasks(scheduler, app=None):
                     logger.error("No app instance available for integration sync")
                     return
 
-            with app_instance.app_context():
+            with external_url_context(app_instance):
                 sync_integrations()
 
         scheduler.add_job(
@@ -613,7 +652,7 @@ def register_scheduled_tasks(scheduler, app=None):
                     logger.error("No app instance available for scheduled reports processing")
                     return
 
-            with app_instance.app_context():
+            with external_url_context(app_instance):
                 process_scheduled_reports()
 
         scheduler.add_job(
@@ -635,7 +674,7 @@ def register_scheduled_tasks(scheduler, app=None):
                 except RuntimeError:
                     logger.error("No app instance available for remind-to-log processing")
                     return
-            with app_instance.app_context():
+            with external_url_context(app_instance):
                 process_remind_to_log()
 
         scheduler.add_job(
@@ -656,7 +695,7 @@ def register_scheduled_tasks(scheduler, app=None):
                 except RuntimeError:
                     logger.error("No app instance available for missed clock-in processing")
                     return
-            with app_instance.app_context():
+            with external_url_context(app_instance):
                 process_missed_clock_in()
 
         scheduler.add_job(
@@ -678,7 +717,7 @@ def register_scheduled_tasks(scheduler, app=None):
                 except RuntimeError:
                     logger.error("No app instance available for smart reminder push")
                     return
-            with app_instance.app_context():
+            with external_url_context(app_instance):
                 try:
                     send_smart_reminder_push_notifications()
                 except Exception as e:
@@ -703,7 +742,7 @@ def register_scheduled_tasks(scheduler, app=None):
                 except RuntimeError:
                     logger.error("No app instance available for idle timer check")
                     return
-            with app_instance.app_context():
+            with external_url_context(app_instance):
                 try:
                     check_idle_timers()
                 except Exception as e:
@@ -727,7 +766,7 @@ def register_scheduled_tasks(scheduler, app=None):
                 except RuntimeError:
                     logger.error("No app instance available for working time limits check")
                     return
-            with app_instance.app_context():
+            with external_url_context(app_instance):
                 check_working_time_limits()
 
         scheduler.add_job(
@@ -748,7 +787,7 @@ def register_scheduled_tasks(scheduler, app=None):
                     app_instance = current_app._get_current_object()
                 except RuntimeError:
                     return
-            with app_instance.app_context():
+            with external_url_context(app_instance):
                 try:
                     from app.telemetry.service import send_base_heartbeat
 
@@ -777,7 +816,7 @@ def register_scheduled_tasks(scheduler, app=None):
                 except RuntimeError:
                     logger.error("No app instance available for Google Calendar connector sync")
                     return
-            with app_instance.app_context():
+            with external_url_context(app_instance):
                 sync_google_calendar_for_all_users()
 
         scheduler.add_job(
@@ -800,7 +839,7 @@ def register_scheduled_tasks(scheduler, app=None):
                 except RuntimeError:
                     logger.error("No app instance available for Slack daily summaries")
                     return
-            with app_instance.app_context():
+            with external_url_context(app_instance):
                 post_slack_daily_summaries()
 
         scheduler.add_job(
@@ -1017,66 +1056,67 @@ def send_smart_reminder_push_notifications():
     see right now and push any actionable ``info``/``warning`` entries to their
     registered push subscriptions. Degrades silently if the push_notifications
     blueprint is absent or pywebpush is not installed.
+
+    Note: Call within an app/external URL context (see register_scheduled_tasks wrappers).
     """
-    with current_app.app_context():
-        try:
-            from app.routes import push_notifications as _push_bp_mod  # noqa: F401
-        except Exception:
-            logger.debug("push_notifications blueprint not available; skipping smart reminder push job")
-            return 0
+    try:
+        from app.routes import push_notifications as _push_bp_mod  # noqa: F401
+    except Exception:
+        logger.debug("push_notifications blueprint not available; skipping smart reminder push job")
+        return 0
 
-        try:
-            from app.models import PushSubscription
-        except Exception:
-            logger.debug("PushSubscription model not available; skipping smart reminder push job")
-            return 0
+    try:
+        from app.models import PushSubscription
+    except Exception:
+        logger.debug("PushSubscription model not available; skipping smart reminder push job")
+        return 0
 
-        try:
-            from app.services.notification_service import NotificationService
-        except Exception:
-            logger.debug("NotificationService not available; skipping smart reminder push job")
-            return 0
+    try:
+        from app.services.notification_service import NotificationService
+    except Exception:
+        logger.debug("NotificationService not available; skipping smart reminder push job")
+        return 0
 
+    try:
+        users = User.query.filter(
+            User.is_active == True,
+            User.smart_notifications_enabled == True,
+            db.or_(
+                User.smart_notify_break_reminder == True,
+                User.smart_notify_end_of_day == True,
+                User.smart_notify_no_tracking == True,
+                User.smart_notify_missed_clock_in == True,
+            ),
+        ).all()
+    except Exception as e:
+        logger.warning("Could not query users for smart reminder push: %s", e)
+        return 0
+
+    if not users:
+        return 0
+
+    sent = 0
+    for user in users:
         try:
-            users = User.query.filter(
-                User.is_active == True,
-                User.smart_notifications_enabled == True,
-                db.or_(
-                    User.smart_notify_break_reminder == True,
-                    User.smart_notify_end_of_day == True,
-                    User.smart_notify_no_tracking == True,
-                    User.smart_notify_missed_clock_in == True,
-                ),
-            ).all()
+            payload = NotificationService.build_for_user(user)
+            notifications = (payload or {}).get("notifications") or []
+            if not notifications:
+                continue
+            subscriptions = PushSubscription.get_user_subscriptions(user.id)
+            if not subscriptions:
+                logger.debug("User %s has no push subscriptions; skipping", user.username)
+                continue
+            for note in notifications:
+                ntype = (note.get("type") or "").lower()
+                if ntype not in ("warning", "info"):
+                    continue
+                _delivered = _deliver_push_to_subscriptions(user, subscriptions, note)
+                if _delivered:
+                    sent += _delivered
+            logger.debug("Smart reminder push processed for %s", user.username)
         except Exception as e:
-            logger.warning("Could not query users for smart reminder push: %s", e)
-            return 0
-
-        if not users:
-            return 0
-
-        sent = 0
-        for user in users:
-            try:
-                payload = NotificationService.build_for_user(user)
-                notifications = (payload or {}).get("notifications") or []
-                if not notifications:
-                    continue
-                subscriptions = PushSubscription.get_user_subscriptions(user.id)
-                if not subscriptions:
-                    logger.debug("User %s has no push subscriptions; skipping", user.username)
-                    continue
-                for note in notifications:
-                    ntype = (note.get("type") or "").lower()
-                    if ntype not in ("warning", "info"):
-                        continue
-                    _delivered = _deliver_push_to_subscriptions(user, subscriptions, note)
-                    if _delivered:
-                        sent += _delivered
-                logger.debug("Smart reminder push processed for %s", user.username)
-            except Exception as e:
-                logger.warning("Smart reminder push failed for user %s: %s", getattr(user, "username", user.id), e)
-        return sent
+            logger.warning("Smart reminder push failed for user %s: %s", getattr(user, "username", user.id), e)
+    return sent
 
 
 def _deliver_push_to_subscriptions(user, subscriptions, note) -> int:
