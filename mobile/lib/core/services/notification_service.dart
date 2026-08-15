@@ -276,64 +276,79 @@ class NotificationService {
   }
 
   /// "Still working?" idle prompt with Yes / No actions.
+  ///
+  /// Failures are swallowed so a plugin/R8 regression cannot blank the Timer
+  /// screen (see GitHub issue #731).
   Future<void> showIdlePrompt({int graceMinutes = 5}) async {
-    if (!_initialized) {
-      await initialize();
+    try {
+      if (!_initialized) {
+        await initialize();
+      }
+
+      const title = 'Still working?';
+      final body =
+          'Your timer will stop in $graceMinutes minutes if you do not answer.';
+
+      final details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          AppConstants.idleReminderChannelId,
+          AppConstants.idleReminderChannelName,
+          channelDescription: AppConstants.idleReminderChannelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+          category: AndroidNotificationCategory.alarm,
+          ongoing: true,
+          autoCancel: false,
+          actions: const <AndroidNotificationAction>[
+            AndroidNotificationAction(
+              'idle_yes',
+              'Yes, still working',
+              showsUserInterface: true,
+            ),
+            AndroidNotificationAction(
+              'idle_no',
+              'No, stop timer',
+              showsUserInterface: true,
+            ),
+          ],
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          interruptionLevel: InterruptionLevel.timeSensitive,
+          categoryIdentifier: 'idle_prompt',
+        ),
+      );
+
+      await _localNotifications.show(
+        AppConstants.notificationIdleReminder,
+        title,
+        body,
+        details,
+        payload: 'idle_prompt',
+      );
+      _idlePromptShowing = true;
+    } catch (e, st) {
+      debugPrint('NotificationService.showIdlePrompt failed: $e\n$st');
     }
-
-    const title = 'Still working?';
-    final body =
-        'Your timer will stop in $graceMinutes minutes if you do not answer.';
-
-    final details = NotificationDetails(
-      android: AndroidNotificationDetails(
-        AppConstants.idleReminderChannelId,
-        AppConstants.idleReminderChannelName,
-        channelDescription: AppConstants.idleReminderChannelDescription,
-        importance: Importance.high,
-        priority: Priority.high,
-        category: AndroidNotificationCategory.alarm,
-        ongoing: true,
-        autoCancel: false,
-        actions: const <AndroidNotificationAction>[
-          AndroidNotificationAction(
-            'idle_yes',
-            'Yes, still working',
-            showsUserInterface: true,
-          ),
-          AndroidNotificationAction(
-            'idle_no',
-            'No, stop timer',
-            showsUserInterface: true,
-          ),
-        ],
-      ),
-      iOS: const DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-        interruptionLevel: InterruptionLevel.timeSensitive,
-        categoryIdentifier: 'idle_prompt',
-      ),
-    );
-
-    await _localNotifications.show(
-      AppConstants.notificationIdleReminder,
-      title,
-      body,
-      details,
-      payload: 'idle_prompt',
-    );
-    _idlePromptShowing = true;
   }
 
+  /// Cancel the idle prompt if one is showing.
+  ///
+  /// No-ops when nothing is showing (avoids a redundant plugin cancel that can
+  /// throw under R8 full mode — GitHub issue #731). Failures are swallowed.
   Future<void> cancelIdlePrompt() async {
     if (!_idlePromptShowing) {
-      await _localNotifications.cancel(AppConstants.notificationIdleReminder);
       return;
     }
-    await _localNotifications.cancel(AppConstants.notificationIdleReminder);
-    _idlePromptShowing = false;
+    try {
+      await _localNotifications.cancel(AppConstants.notificationIdleReminder);
+    } catch (e, st) {
+      debugPrint('NotificationService.cancelIdlePrompt failed: $e\n$st');
+    } finally {
+      _idlePromptShowing = false;
+    }
   }
 
   /// Update elapsed text (mainly used on platforms that do not tick via FGS).
