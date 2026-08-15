@@ -101,11 +101,13 @@
         
         <p><strong>Recommended Action:</strong> Please follow up with the client or update the invoice status if payment has been received.</p>
         
+        {% if invoice_url %}
         <center>
-            <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id, _external=True) }}" class="button">
+            <a href="{{ invoice_url }}" class="button">
                 {{ _('View Invoice') }}
             </a>
         </center>
+        {% endif %}
     </div>
     
     <div class="footer">

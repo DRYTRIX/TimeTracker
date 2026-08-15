@@ -1081,18 +1081,19 @@ def accept_quote(quote_id):
 
     # Notify admin users
     from app.models import User as UserModel
-    from app.utils.email import send_email
+    from app.utils.email import send_template_email
 
-    admins = UserModel.query.filter_by(role="admin", is_active=True).all()
+    admins = [u for u in UserModel.query.filter_by(is_active=True).all() if u.is_admin]
     for admin in admins:
         if admin.email:
             try:
-                send_email(
+                send_template_email(
                     to=admin.email,
                     subject=f"Quote {quote.quote_number} Accepted by Client",
                     template="email/quote_accepted.html",
                     quote=quote,
                     client=client,
+                    user=admin,
                 )
             except Exception as e:
                 current_app.logger.error(f"Error sending quote acceptance email: {e}")
@@ -1128,19 +1129,20 @@ def reject_quote(quote_id):
 
     # Notify admin users
     from app.models import User as UserModel
-    from app.utils.email import send_email
+    from app.utils.email import send_template_email
 
-    admins = UserModel.query.filter_by(role="admin", is_active=True).all()
+    admins = [u for u in UserModel.query.filter_by(is_active=True).all() if u.is_admin]
     for admin in admins:
         if admin.email:
             try:
-                send_email(
+                send_template_email(
                     to=admin.email,
                     subject=f"Quote {quote.quote_number} Rejected by Client",
                     template="email/quote_rejected.html",
                     quote=quote,
                     client=client,
                     reason=reason,
+                    user=admin,
                 )
             except Exception as e:
                 current_app.logger.error(f"Error sending quote rejection email: {e}")
