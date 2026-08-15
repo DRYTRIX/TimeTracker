@@ -40,7 +40,7 @@ export function DashboardView({
           <h2>{active ? formatDuration(seconds) : 'No timer running'}</h2>
           <p>
             {active
-              ? `${paused ? 'Paused · ' : ''}${data.timer?.timer?.project_name || 'Tracking time'}`
+              ? `${paused ? 'Paused · ' : ''}${data.timer?.timer?.project || data.timer?.timer?.client || data.timer?.timer?.project_name || 'Tracking time'}`
               : 'Start a focused session when you are ready.'}
           </p>
         </div>

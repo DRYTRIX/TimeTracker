@@ -167,12 +167,13 @@ function App() {
     if (!apiClient) return;
     setLoading((s) => ({ ...s, core: true }));
     try {
-      const [user, timer, projects, tasks, entries] = await Promise.all([
+      const [user, timer, projects, tasks, entries, clients] = await Promise.all([
         apiClient.getUsersMe().catch(() => ({ user: null })),
         apiClient.getTimerStatus().catch(() => ({ active: false })),
         apiClient.getProjects().catch(() => ({ projects: [] })),
         apiClient.getTasks().catch(() => ({ tasks: [] })),
         apiClient.getTimeEntries({ perPage: 25 }).catch(() => ({ time_entries: [] })),
+        apiClient.getClients({ perPage: 100 }).catch(() => ({ clients: [] })),
       ]);
       setData((current) => ({
         ...current,
@@ -181,6 +182,7 @@ function App() {
         projects: projects.projects || projects.items || [],
         tasks: tasks.tasks || tasks.items || [],
         entries: entries.time_entries || entries.entries || entries.items || [],
+        clients: clients.clients || clients.items || [],
       }));
       syncEngineRef.current?.cacheReadData({
         projects: projects.projects || projects.items || [],
@@ -477,16 +479,16 @@ function App() {
     loadView(view);
   };
 
-  const startTimer = async ({ projectId, taskId, notes }) => {
+  const startTimer = async ({ projectId, clientId, taskId, notes }) => {
     if (!apiClient) return;
     try {
       if (!navigator.onLine) {
-        await syncEngineRef.current?.queueOperation('timer_start', { projectId, taskId, notes });
+        await syncEngineRef.current?.queueOperation('timer_start', { projectId, clientId, taskId, notes });
         showToast('Offline: timer start queued for sync', 'info');
         setStartTimerOpen(false);
         return;
       }
-      await apiClient.startTimer({ projectId, taskId, notes });
+      await apiClient.startTimer({ projectId, clientId, taskId, notes });
       setStartTimerOpen(false);
       await refreshCoreData();
       showToast('Timer started', 'success');
@@ -820,6 +822,7 @@ function App() {
         <StartTimerDialog
           projects={data.projects}
           tasks={data.tasks}
+          clients={data.clients}
           onClose={() => setStartTimerOpen(false)}
           onSubmit={startTimer}
         />
@@ -828,6 +831,7 @@ function App() {
         <TimeEntryDialog
           projects={data.projects}
           tasks={data.tasks}
+          clients={data.clients}
           onClose={() => setNewEntryOpen(false)}
           onSubmit={createTimeEntry}
         />
