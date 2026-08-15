@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.11.5] - 2026-08-15
+
 ### Added
 
 - **API client-only timer start (#728)** — `POST /api/v1/timer/start` accepts `client_id` without `project_id` (parity with the web timer), rejects `task_id` on client-only starts, and documents the request body in OpenAPI / REST docs.
@@ -16,8 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Searchable timer pickers on remaining pages (#728)** — Timer page, bulk entry, and kiosk timer forms use the shared searchable client/project/task combobox stack; scripts load from `base.html` / kiosk base so pages need not re-include them.
-- **Browser extension version** — Synced `manifest.json` / `package.json` to **5.11.4** with the webapp (`setup.py`).
 - When enforcement is off, unset per-user method and minimum now inherit the admin defaults (interval already did).
+- **Client versions** — Synced Electron (`desktop/package.json`), Flutter (`mobile/pubspec.yaml`), and Chromium extension (`browser-extension/manifest.json` / `package.json`) to **5.11.5** with the webapp (`setup.py`).
 
 ### Fixed
 
@@ -32,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dead Jinja blocks (analytics/kanban/tasks)** — Added `extra_head` to `base.html` and renamed `head_extra` overrides so i18n bootstrap and cache-control meta tags actually render; un-nested mis-placed `extra_css` blocks.
 - **Desktop React manual entry posted invalid payload** — New time entry dialog now sends `start_time`/`end_time` (API schema) instead of `duration_minutes`/`date`.
 - **Extension ignored server idle_notified** — Status poll now enters the same “Still working?” grace window when the server has already marked the timer idle.
+- **Android Timer crash under R8 (#731)** — Keep Gson TypeToken signatures for `flutter_local_notifications` in release builds, disable R8 full mode, and make idle notification show/cancel non-fatal so a plugin failure cannot blank the Timer screen.
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.11.5** (single source of truth for the application version).
+- **Time rounding** — Documented admin global policy and **Enforce for all users** in `docs/TIME_ROUNDING_PREFERENCES.md`.
 
 ## [5.11.4] - 2026-08-13
 

@@ -407,7 +407,7 @@ For issues or questions:
 
 ## Changelog
 
-### Version 1.2 (2026-08-14)
+### Version 1.2 (2026-08-14) — app 5.11.5
 
 - Admin global policy: interval, method, minimum, and **Enforce for all users**
 - Per-field fallback for method and minimum when not enforced
