@@ -314,6 +314,43 @@ class TestUserSettingsUpdate:
             db.session.refresh(user)
             assert user.time_rounding_method == method
 
+    def test_rounding_post_ignored_when_global_policy_enforced(self, client, user, app):
+        """Personal rounding POST must not change stored prefs while admin enforces the policy."""
+        from app.models import Settings
+
+        with app.app_context():
+            settings_obj = Settings.get_settings()
+            settings_obj.rounding_enforce_global = True
+            db.session.commit()
+
+            original_minutes = user.time_rounding_minutes
+            original_method = user.time_rounding_method
+            original_minimum = user.time_rounding_minimum_minutes or 0
+            original_enabled = user.time_rounding_enabled
+
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(user.id)
+
+        response = client.post(
+            "/settings",
+            data={
+                "time_rounding_enabled": "on",
+                "time_rounding_minutes": "30",
+                "time_rounding_method": "up",
+                "time_rounding_minimum_minutes": "15",
+            },
+            follow_redirects=True,
+        )
+
+        assert response.status_code == 200
+        db.session.refresh(user)
+        assert user.time_rounding_minutes == original_minutes
+        assert user.time_rounding_method == original_method
+        assert (user.time_rounding_minimum_minutes or 0) == original_minimum
+        assert user.time_rounding_enabled == original_enabled
+        html = response.get_data(as_text=True)
+        assert "administrator" in html.lower() or "enforced" in html.lower() or "lock" in html.lower()
+
     def test_update_standard_hours_per_day(self, client, user):
         """Test updating standard hours per day for overtime calculation"""
         with client.session_transaction() as sess:

@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
 from app import db
-from app.config import Config
 from app.utils.timezone import local_to_utc, utc_to_local
 
 
@@ -242,43 +241,21 @@ class TimeEntry(db.Model):
             apply_user_rounding,
             get_user_rounding_settings,
             round_entry_boundaries,
-            round_time_duration,
         )
 
-        if user and hasattr(user, "time_rounding_enabled"):
-            settings = get_user_rounding_settings(user)
-            if settings["enabled"] and settings["method"] == "boundary" and settings["minutes"] > 1:
-                rounded_start, rounded_end = round_entry_boundaries(start, end, settings["minutes"])
-                self.start_time = rounded_start
-                self.end_time = rounded_end
-                start = rounded_start
-                end = rounded_end
+        settings = get_user_rounding_settings(user)
+        if settings["enabled"] and settings["method"] == "boundary" and settings["minutes"] > 1:
+            rounded_start, rounded_end = round_entry_boundaries(start, end, settings["minutes"])
+            self.start_time = rounded_start
+            self.end_time = rounded_end
+            start = rounded_start
+            end = rounded_end
 
-            duration = end - start
-            raw_seconds = int(duration.total_seconds())
-            break_sec = self.break_seconds or 0
-            raw_seconds = max(0, raw_seconds - break_sec)
-            self.duration_seconds = apply_user_rounding(raw_seconds, user)
-        else:
-            # Fallback to global Settings.rounding_minutes (admin), then env Config
-            rounding_minutes = Config.ROUNDING_MINUTES
-            try:
-                from app.models.settings import Settings
-
-                settings_obj = Settings.get_settings()
-                rounding_minutes = int(getattr(settings_obj, "rounding_minutes", None) or rounding_minutes)
-            except Exception:
-                pass
-
-            duration = end - start
-            raw_seconds = int(duration.total_seconds())
-            break_sec = self.break_seconds or 0
-            raw_seconds = max(0, raw_seconds - break_sec)
-
-            if rounding_minutes > 1:
-                self.duration_seconds = round_time_duration(raw_seconds, rounding_minutes, "nearest")
-            else:
-                self.duration_seconds = raw_seconds
+        duration = end - start
+        raw_seconds = int(duration.total_seconds())
+        break_sec = self.break_seconds or 0
+        raw_seconds = max(0, raw_seconds - break_sec)
+        self.duration_seconds = apply_user_rounding(raw_seconds, user)
 
     def record_heartbeat(self, at=None):
         """Record client activity for idle timeout enforcement.

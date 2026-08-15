@@ -344,3 +344,148 @@ class TestMinimumDuration:
     def test_boundary_in_available_methods(self):
         methods = [m[0] for m in get_available_rounding_methods()]
         assert "boundary" in methods
+
+
+class TestGlobalRoundingPolicy:
+    """Issue #725 follow-up: admin global policy and enforce-all-users."""
+
+    def test_enforced_policy_overrides_customised_user(self, monkeypatch):
+        monkeypatch.setattr(
+            "app.utils.time_rounding.get_global_rounding_policy",
+            lambda: {
+                "enabled": True,
+                "minutes": 5,
+                "method": "boundary",
+                "minimum_minutes": 10,
+                "enforced": True,
+            },
+        )
+
+        class MockUser:
+            time_rounding_enabled = False
+            time_rounding_minutes = 15
+            time_rounding_method = "up"
+            time_rounding_minimum_minutes = 30
+
+        settings = get_user_rounding_settings(MockUser())
+        assert settings["enabled"] is True
+        assert settings["minutes"] == 5
+        assert settings["method"] == "boundary"
+        assert settings["minimum_minutes"] == 10
+
+    def test_none_user_returns_global_policy(self, monkeypatch):
+        monkeypatch.setattr(
+            "app.utils.time_rounding.get_global_rounding_policy",
+            lambda: {
+                "enabled": True,
+                "minutes": 15,
+                "method": "up",
+                "minimum_minutes": 5,
+                "enforced": False,
+            },
+        )
+        settings = get_user_rounding_settings(None)
+        assert settings["minutes"] == 15
+        assert settings["method"] == "up"
+        assert settings["minimum_minutes"] == 5
+
+    def test_per_field_fallback_when_not_enforced(self, monkeypatch):
+        monkeypatch.setattr(
+            "app.utils.time_rounding.get_global_rounding_policy",
+            lambda: {
+                "enabled": True,
+                "minutes": 10,
+                "method": "up",
+                "minimum_minutes": 15,
+                "enforced": False,
+            },
+        )
+
+        class DefaultUser:
+            time_rounding_enabled = True
+            time_rounding_minutes = 1
+            time_rounding_method = "nearest"
+            time_rounding_minimum_minutes = 0
+
+        inherited = get_user_rounding_settings(DefaultUser())
+        assert inherited["minutes"] == 10
+        assert inherited["method"] == "up"
+        assert inherited["minimum_minutes"] == 15
+
+        class CustomUser:
+            time_rounding_enabled = True
+            time_rounding_minutes = 30
+            time_rounding_method = "down"
+            time_rounding_minimum_minutes = 5
+
+        custom = get_user_rounding_settings(CustomUser())
+        assert custom["minutes"] == 30
+        assert custom["method"] == "down"
+        assert custom["minimum_minutes"] == 5
+
+    def test_calculate_duration_uses_enforced_global_boundary(self, app, user, project):
+        from app import db
+        from app.models import Settings, TimeEntry, User
+
+        with app.app_context():
+            settings_obj = Settings.get_settings()
+            settings_obj.rounding_minutes = 5
+            settings_obj.rounding_method = "boundary"
+            settings_obj.rounding_minimum_minutes = 0
+            settings_obj.rounding_enforce_global = True
+            db.session.commit()
+
+            user_id = user.id
+            project_id = project.id
+            db.session.query(User).filter_by(id=user_id).update(
+                {
+                    "time_rounding_enabled": True,
+                    "time_rounding_minutes": 15,
+                    "time_rounding_method": "nearest",
+                    "time_rounding_minimum_minutes": 0,
+                },
+                synchronize_session=False,
+            )
+            db.session.commit()
+
+            entry = TimeEntry(
+                user_id=user_id,
+                project_id=project_id,
+                start_time=datetime(2026, 8, 12, 9, 46, 0),
+                end_time=datetime(2026, 8, 12, 9, 54, 0),
+                source="manual",
+                billable=True,
+            )
+            db.session.add(entry)
+            db.session.flush()
+            entry.calculate_duration()
+            db.session.commit()
+
+            assert entry.start_time == datetime(2026, 8, 12, 9, 45, 0)
+            assert entry.end_time == datetime(2026, 8, 12, 9, 55, 0)
+            assert entry.duration_seconds == 600
+
+    def test_calculate_duration_applies_global_minimum_without_user(self, app, project):
+        from app import db
+        from app.models import Settings, TimeEntry
+
+        with app.app_context():
+            settings_obj = Settings.get_settings()
+            settings_obj.rounding_minutes = 5
+            settings_obj.rounding_method = "nearest"
+            settings_obj.rounding_minimum_minutes = 15
+            settings_obj.rounding_enforce_global = False
+            db.session.commit()
+
+            entry = TimeEntry(
+                user_id=0,
+                project_id=project.id,
+                start_time=datetime(2026, 8, 12, 9, 0, 0),
+                end_time=datetime(2026, 8, 12, 9, 1, 0),
+                source="manual",
+                billable=True,
+            )
+            # user_id 0 does not resolve a User, so calculate_duration uses the global policy
+            entry.calculate_duration()
+            # 1 min nearest 5 → 0, then minimum 15 → 900
+            assert entry.duration_seconds == 900

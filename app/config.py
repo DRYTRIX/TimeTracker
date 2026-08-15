@@ -38,6 +38,9 @@ class Config:
     TZ = os.getenv("TZ", "Europe/Rome")
     CURRENCY = os.getenv("CURRENCY", "EUR")
     ROUNDING_MINUTES = int(os.getenv("ROUNDING_MINUTES", 1))
+    ROUNDING_METHOD = os.getenv("ROUNDING_METHOD", "nearest")
+    ROUNDING_MINIMUM_MINUTES = int(os.getenv("ROUNDING_MINIMUM_MINUTES", 0))
+    ROUNDING_ENFORCE_GLOBAL = os.getenv("ROUNDING_ENFORCE_GLOBAL", "false").lower() == "true"
     SINGLE_ACTIVE_TIMER = os.getenv("SINGLE_ACTIVE_TIMER", "true").lower() == "true"
     IDLE_TIMEOUT_MINUTES = int(os.getenv("IDLE_TIMEOUT_MINUTES", 30))
 

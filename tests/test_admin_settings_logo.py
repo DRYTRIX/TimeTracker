@@ -137,6 +137,47 @@ def test_admin_settings_page_accessible(admin_authenticated_client):
     # Check for Company Logo text (may be translated)
     html = response.get_data(as_text=True)
     assert "Company Logo" in html or "logo" in html.lower()
+    assert "rounding_enforce_global" in html
+    assert "rounding_method" in html
+    assert "rounding_minimum_minutes" in html
+
+
+@pytest.mark.routes
+def test_admin_settings_persists_global_rounding_policy(admin_authenticated_client, app):
+    """Admin settings POST saves interval, method, minimum, and enforce flag."""
+    with app.app_context():
+        settings = Settings.get_settings()
+        data = {
+            "timezone": settings.timezone or "UTC",
+            "date_format": settings.date_format or "YYYY-MM-DD",
+            "time_format": settings.time_format or "24h",
+            "currency": settings.currency or "EUR",
+            "rounding_minutes": "5",
+            "rounding_method": "boundary",
+            "rounding_minimum_minutes": "10",
+            "rounding_enforce_global": "on",
+            "idle_timeout_minutes": str(settings.idle_timeout_minutes or 30),
+            "backup_retention_days": str(settings.backup_retention_days or 30),
+            "backup_time": settings.backup_time or "02:00",
+            "export_delimiter": settings.export_delimiter or ",",
+            "company_name": settings.company_name or "Test Co",
+            "invoice_prefix": settings.invoice_prefix or "INV",
+            "invoice_number_pattern": settings.invoice_number_pattern or "{PREFIX}-{SEQ}",
+            "invoice_start_number": str(settings.invoice_start_number or 1000),
+            "quote_prefix": getattr(settings, "quote_prefix", None) or "QUO",
+            "quote_number_pattern": getattr(settings, "quote_number_pattern", None) or "{PREFIX}-{SEQ}",
+            "quote_start_number": str(getattr(settings, "quote_start_number", None) or 1),
+        }
+
+    response = admin_authenticated_client.post("/admin/settings", data=data, follow_redirects=True)
+    assert response.status_code == 200
+
+    with app.app_context():
+        settings = Settings.get_settings()
+        assert settings.rounding_minutes == 5
+        assert settings.rounding_method == "boundary"
+        assert settings.rounding_minimum_minutes == 10
+        assert settings.rounding_enforce_global is True
 
 
 @pytest.mark.routes

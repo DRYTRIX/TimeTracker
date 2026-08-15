@@ -97,6 +97,16 @@ def initial_setup():
         # System
         settings.allow_self_register = request.form.get("allow_self_register") == "on"
         settings.rounding_minutes = rounding
+        rounding_method = request.form.get("rounding_method", "nearest")
+        if rounding_method in ("nearest", "up", "down", "boundary"):
+            settings.rounding_method = rounding_method
+        try:
+            rounding_minimum = int(request.form.get("rounding_minimum_minutes", 0))
+        except (TypeError, ValueError):
+            rounding_minimum = 0
+        if rounding_minimum in (0, 5, 10, 15, 30, 60):
+            settings.rounding_minimum_minutes = rounding_minimum
+        settings.rounding_enforce_global = request.form.get("rounding_enforce_global") == "on"
         settings.single_active_timer = request.form.get("single_active_timer") == "on"
         settings.idle_timeout_minutes = idle_timeout
 
@@ -185,10 +195,14 @@ def _module_preset_choices():
 
 def _render_setup(settings, timezones):
     """Render the setup template with settings and timezones."""
+    from app.utils.time_rounding import get_available_minimum_durations, get_available_rounding_methods
+
     return render_template(
         "setup/initial_setup.html",
         settings=settings,
         timezones=timezones,
         module_presets=_module_preset_choices(),
         default_module_preset=ModulePreset.TEAM.value,
+        rounding_methods=get_available_rounding_methods(),
+        rounding_minimums=get_available_minimum_durations(),
     )

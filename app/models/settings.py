@@ -66,6 +66,9 @@ class Settings(db.Model):
     time_format = db.Column(db.String(10), default="24h", nullable=False)  # 24h or 12h
     currency = db.Column(db.String(3), default="EUR", nullable=False)
     rounding_minutes = db.Column(db.Integer, default=1, nullable=False)
+    rounding_method = db.Column(db.String(10), default="nearest", nullable=False)
+    rounding_minimum_minutes = db.Column(db.Integer, default=0, nullable=False)
+    rounding_enforce_global = db.Column(db.Boolean, default=False, nullable=False)
     single_active_timer = db.Column(db.Boolean, default=True, nullable=False)
     allow_self_register = db.Column(db.Boolean, default=True, nullable=False)
     idle_timeout_minutes = db.Column(db.Integer, default=30, nullable=False)
@@ -260,6 +263,13 @@ class Settings(db.Model):
         self.time_format = kwargs.get("time_format", "24h")
         self.currency = kwargs.get("currency", Config.CURRENCY)
         self.rounding_minutes = kwargs.get("rounding_minutes", Config.ROUNDING_MINUTES)
+        self.rounding_method = kwargs.get("rounding_method", getattr(Config, "ROUNDING_METHOD", "nearest"))
+        self.rounding_minimum_minutes = kwargs.get(
+            "rounding_minimum_minutes", getattr(Config, "ROUNDING_MINIMUM_MINUTES", 0)
+        )
+        self.rounding_enforce_global = kwargs.get(
+            "rounding_enforce_global", getattr(Config, "ROUNDING_ENFORCE_GLOBAL", False)
+        )
         self.single_active_timer = kwargs.get("single_active_timer", Config.SINGLE_ACTIVE_TIMER)
         self.allow_self_register = kwargs.get("allow_self_register", Config.ALLOW_SELF_REGISTER)
         self.idle_timeout_minutes = kwargs.get("idle_timeout_minutes", Config.IDLE_TIMEOUT_MINUTES)
@@ -568,6 +578,9 @@ class Settings(db.Model):
             "time_format": self.time_format,
             "currency": self.currency,
             "rounding_minutes": self.rounding_minutes,
+            "rounding_method": getattr(self, "rounding_method", "nearest"),
+            "rounding_minimum_minutes": getattr(self, "rounding_minimum_minutes", 0),
+            "rounding_enforce_global": getattr(self, "rounding_enforce_global", False),
             "single_active_timer": self.single_active_timer,
             "allow_self_register": self.allow_self_register,
             "idle_timeout_minutes": self.idle_timeout_minutes,
@@ -901,6 +914,9 @@ class Settings(db.Model):
             "TIME_FORMAT": "time_format",
             "CURRENCY": "currency",
             "ROUNDING_MINUTES": "rounding_minutes",
+            "ROUNDING_METHOD": "rounding_method",
+            "ROUNDING_MINIMUM_MINUTES": "rounding_minimum_minutes",
+            "ROUNDING_ENFORCE_GLOBAL": "rounding_enforce_global",
             "SINGLE_ACTIVE_TIMER": "single_active_timer",
             "ALLOW_SELF_REGISTER": "allow_self_register",
             "IDLE_TIMEOUT_MINUTES": "idle_timeout_minutes",

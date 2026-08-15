@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Global time rounding policy (#725)** — Admin Settings can set interval, method, and minimum billable duration for the whole installation, with an **Enforce for all users** toggle that locks personal overrides so everyone tracks time the same way.
+
+### Changed
+
+- When enforcement is off, unset per-user method and minimum now inherit the admin defaults (interval already did).
+
 ## [5.11.4] - 2026-08-13
 
 ### Added
