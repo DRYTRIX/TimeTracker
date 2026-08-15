@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timetracker_mobile/data/models/project.dart';
+import 'package:timetracker_mobile/data/models/time_entry.dart';
 import 'package:timetracker_mobile/core/theme/app_tokens.dart';
 import '../providers/attendance_provider.dart';
 import '../providers/timer_provider.dart';
@@ -140,14 +141,15 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
     super.dispose();
   }
 
-  String _projectName(int? projectId, List<Project> projects) {
-    if (projectId == null) return 'Unknown project';
-    try {
-      final p = projects.firstWhere((p) => p.id == projectId);
-      return p.name;
-    } catch (_) {
-      return 'Unknown project';
+  String _entryLabel(TimeEntry entry, List<Project> projects) {
+    if (entry.projectId != null) {
+      try {
+        return projects.firstWhere((p) => p.id == entry.projectId).name;
+      } catch (_) {
+        /* fall through */
+      }
     }
+    return entry.displayLabel == 'Time entry' ? 'Unknown project' : entry.displayLabel;
   }
 
   @override
@@ -279,7 +281,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
               )
             else
               ...entriesState.entries.take(5).map((entry) {
-                final projectName = _projectName(entry.projectId, projectsState.projects);
+                final projectName = _entryLabel(entry, projectsState.projects);
                 final subtitle = (entry.notes != null && entry.notes!.trim().isNotEmpty)
                     ? entry.notes!.trim()
                     : formatDateRange(

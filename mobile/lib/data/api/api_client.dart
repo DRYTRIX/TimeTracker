@@ -66,13 +66,15 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> startTimer({
-    required int projectId,
+    int? projectId,
+    int? clientId,
     int? taskId,
     String? notes,
     int? templateId,
   }) async {
     final body = <String, dynamic>{
-      'project_id': projectId,
+      if (projectId != null) 'project_id': projectId,
+      if (clientId != null) 'client_id': clientId,
       if (taskId != null) 'task_id': taskId,
       if (notes != null) 'notes': notes,
       if (templateId != null) 'template_id': templateId,
@@ -156,7 +158,8 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> createTimeEntry({
-    required int projectId,
+    int? projectId,
+    int? clientId,
     int? taskId,
     required String startTime,
     String? endTime,
@@ -166,7 +169,8 @@ class ApiClient {
     String? idempotencyKey,
   }) async {
     final body = <String, dynamic>{
-      'project_id': projectId,
+      if (projectId != null) 'project_id': projectId,
+      if (clientId != null) 'client_id': clientId,
       'start_time': startTime,
       if (taskId != null) 'task_id': taskId,
       if (endTime != null) 'end_time': endTime,
@@ -188,6 +192,7 @@ class ApiClient {
   Future<Map<String, dynamic>> updateTimeEntry(
     int entryId, {
     int? projectId,
+    int? clientId,
     int? taskId,
     String? startTime,
     String? endTime,
@@ -198,6 +203,7 @@ class ApiClient {
   }) async {
     final body = <String, dynamic>{
       if (projectId != null) 'project_id': projectId,
+      if (clientId != null) 'client_id': clientId,
       if (taskId != null) 'task_id': taskId,
       if (startTime != null) 'start_time': startTime,
       if (endTime != null) 'end_time': endTime,
@@ -741,6 +747,27 @@ class ApiClient {
         if (phone != null) 'phone': phone,
         if (address != null) 'address': address,
         if (status != null) 'status': status,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> createProject({
+    required String name,
+    int? clientId,
+    String? description,
+    String? status,
+    bool? billable,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/projects',
+      data: <String, dynamic>{
+        'name': name,
+        if (clientId != null) 'client_id': clientId,
+        if (description != null) 'description': description,
+        if (status != null) 'status': status,
+        if (billable != null) 'billable': billable,
       },
     );
     _throwIfError(res);

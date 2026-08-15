@@ -99,7 +99,11 @@ function showRunning(timer) {
   els.needSetup.classList.add('hidden');
   els.idleView.classList.add('hidden');
   els.runningView.classList.remove('hidden');
-  els.runningProject.textContent = timer.project || `Project #${timer.project_id}`;
+  els.runningProject.textContent =
+    timer.project ||
+    timer.client ||
+    (timer.project_id ? `Project #${timer.project_id}` : null) ||
+    (timer.client_id ? `Client #${timer.client_id}` : 'Timer');
   if (timer.task) {
     els.runningTask.textContent = timer.task;
     els.runningTaskWrap.classList.remove('hidden');
@@ -399,16 +403,17 @@ els.projectSelect.addEventListener('change', () => {
 
 els.startBtn.addEventListener('click', async () => {
   clearMessage();
-  const projectId = Number(els.projectSelect.value);
-  if (!projectId) {
-    showMessage('Select a project first.');
+  const projectId = els.projectSelect.value ? Number(els.projectSelect.value) : null;
+  const clientId = els.clientSelect.value ? Number(els.clientSelect.value) : null;
+  if (!projectId && !clientId) {
+    showMessage('Select a client or project first.');
     return;
   }
-  const taskId = els.taskSelect.value ? Number(els.taskSelect.value) : null;
+  const taskId = projectId && els.taskSelect.value ? Number(els.taskSelect.value) : null;
   const notes = els.notes.value.trim();
   els.startBtn.disabled = true;
   try {
-    const result = await client.startTimer({ projectId, taskId, notes });
+    const result = await client.startTimer({ projectId, clientId, taskId, notes });
     const timer = result?.timer;
     if (timer) showRunning(timer);
     else await bootstrap();

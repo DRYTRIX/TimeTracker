@@ -220,8 +220,10 @@ export class ApiClient {
     return this.request('GET', '/api/v1/timer/status');
   }
 
-  startTimer({ projectId, taskId = null, notes = '' }) {
-    const body = { project_id: projectId };
+  startTimer({ projectId = null, clientId = null, taskId = null, notes = '' }) {
+    const body = {};
+    if (projectId) body.project_id = projectId;
+    if (clientId) body.client_id = clientId;
     if (taskId) body.task_id = taskId;
     if (notes) body.notes = notes;
     return this.request('POST', '/api/v1/timer/start', body);

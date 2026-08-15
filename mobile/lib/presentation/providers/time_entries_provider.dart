@@ -121,7 +121,8 @@ class TimeEntriesNotifier extends StateNotifier<TimeEntriesState> {
   }
 
   Future<void> createEntry({
-    required int projectId,
+    int? projectId,
+    int? clientId,
     int? taskId,
     required String startTime,
     String? endTime,
@@ -138,6 +139,7 @@ class TimeEntriesNotifier extends StateNotifier<TimeEntriesState> {
       state = state.copyWith(isLoading: true, error: null);
       await repository!.createTimeEntry(
         projectId: projectId,
+        clientId: clientId,
         taskId: taskId,
         startTime: startTime,
         endTime: endTime,
@@ -154,6 +156,7 @@ class TimeEntriesNotifier extends StateNotifier<TimeEntriesState> {
   Future<void> updateEntry(
     int entryId, {
     int? projectId,
+    int? clientId,
     int? taskId,
     String? startTime,
     String? endTime,
@@ -171,6 +174,7 @@ class TimeEntriesNotifier extends StateNotifier<TimeEntriesState> {
       await repository!.updateTimeEntry(
         entryId,
         projectId: projectId,
+        clientId: clientId,
         taskId: taskId,
         startTime: startTime,
         endTime: endTime,

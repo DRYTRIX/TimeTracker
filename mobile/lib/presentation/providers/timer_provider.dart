@@ -109,7 +109,8 @@ class TimerNotifier extends StateNotifier<TimerState> {
   }
 
   Future<void> startTimer({
-    required int projectId,
+    int? projectId,
+    int? clientId,
     int? taskId,
     String? notes,
   }) async {
@@ -117,11 +118,16 @@ class TimerNotifier extends StateNotifier<TimerState> {
       state = state.copyWith(error: 'Not connected to server');
       return;
     }
+    if (projectId == null && clientId == null) {
+      state = state.copyWith(error: 'Select a client or project');
+      return;
+    }
 
     try {
       state = state.copyWith(isLoading: true, clearError: true);
       final timer = await repository!.startTimer(
         projectId: projectId,
+        clientId: clientId,
         taskId: taskId,
         notes: notes,
       );
