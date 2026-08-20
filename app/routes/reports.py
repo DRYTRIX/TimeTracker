@@ -2034,3 +2034,83 @@ def export_unpaid_hours_excel():
         as_attachment=True,
         download_name=filename,
     )
+
+
+@reports_bp.route("/reports/utilization")
+@login_required
+@module_enabled("reports")
+def utilization_report():
+    """Billable utilization by user or project."""
+    from datetime import datetime, timedelta
+
+    from app.services.utilization_service import UtilizationService
+
+    end_str = request.args.get("end_date")
+    start_str = request.args.get("start_date")
+    group_by = request.args.get("group_by", "user")
+    if group_by not in ("user", "project"):
+        group_by = "user"
+    today = datetime.now().replace(hour=23, minute=59, second=59, microsecond=0)
+    if end_str:
+        try:
+            end_date = datetime.strptime(end_str, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+        except ValueError:
+            end_date = today
+    else:
+        end_date = today
+    if start_str:
+        try:
+            start_date = datetime.strptime(start_str, "%Y-%m-%d")
+        except ValueError:
+            start_date = end_date - timedelta(days=30)
+    else:
+        start_date = end_date - timedelta(days=30)
+
+    user_ids = request.args.getlist("user_id", type=int)
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
+    if not can_view_all:
+        user_ids = [current_user.id]
+    elif not user_ids:
+        user_ids = None
+
+    rows = UtilizationService._aggregate(start_date, end_date, user_ids=user_ids, group_by=group_by)
+    total_hours = round(sum(r["total_hours"] for r in rows), 2)
+    billable_hours = round(sum(r["billable_hours"] for r in rows), 2)
+    non_billable = round(total_hours - billable_hours, 2)
+    avg_rate = round((billable_hours / total_hours) * 100, 1) if total_hours else 0.0
+
+    if request.args.get("export") == "csv":
+        import csv
+        import io
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["Name", "Billable Hours", "Non-billable Hours", "Total Hours", "Utilization %"])
+        for row in rows:
+            writer.writerow(
+                [row["name"], row["billable_hours"], row["non_billable_hours"], row["total_hours"], row["utilization_rate"]]
+            )
+        return current_app.response_class(
+            output.getvalue(),
+            mimetype="text/csv",
+            headers={"Content-Disposition": "attachment; filename=utilization.csv"},
+        )
+
+    users = User.query.filter_by(is_active=True).order_by(User.username).all() if can_view_all else [current_user]
+    record_report_generation_for_current_user()
+    log_event("report.viewed", user_id=current_user.id, report_type="utilization")
+    return render_template(
+        "reports/utilization.html",
+        rows=rows,
+        start_date=start_date.strftime("%Y-%m-%d"),
+        end_date=end_date.strftime("%Y-%m-%d"),
+        group_by=group_by,
+        users=users,
+        selected_user_ids=user_ids or [],
+        avg_rate=avg_rate,
+        total_hours=total_hours,
+        billable_hours=billable_hours,
+        non_billable_hours=non_billable,
+        can_view_all=can_view_all,
+    )
+

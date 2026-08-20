@@ -98,6 +98,7 @@ def dashboard():
     today_hours = stats["time_tracking"]["today_hours"]
     week_hours = stats["time_tracking"]["week_hours"]
     month_hours = stats["time_tracking"]["month_hours"]
+    utilization = stats.get("utilization") or {"rate": 0.0, "billable_hours": 0.0, "total_hours": 0.0}
     workday_today_hours = stats.get("workday_hours", {}).get("today", 0.0)
     workday_week_hours = stats.get("workday_hours", {}).get("week", 0.0)
     workday_month_hours = stats.get("workday_hours", {}).get("month", 0.0)
@@ -304,6 +305,7 @@ def dashboard():
         "today_hours": today_hours,
         "week_hours": week_hours,
         "month_hours": month_hours,
+        "utilization": utilization,
         "standard_hours_per_day": standard_hours_per_day,
         "today_regular_hours": today_overtime["regular_hours"],
         "today_overtime_hours": today_overtime["overtime_hours"],

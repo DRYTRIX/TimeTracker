@@ -87,6 +87,20 @@ class AnalyticsService:
                 "overdue_count": len(overdue_invoices),
                 "overdue_amount": sum(float(inv.total_amount - (inv.amount_paid or 0)) for inv in overdue_invoices),
             },
+            "utilization": AnalyticsService._month_utilization(user_id, month_start),
+        }
+
+    @staticmethod
+    def _month_utilization(user_id, month_start):
+        if not user_id:
+            return {"rate": 0.0, "billable_hours": 0.0, "total_hours": 0.0}
+        from app.services.utilization_service import UtilizationService
+
+        data = UtilizationService.for_user_period(user_id, month_start, datetime.now())
+        return {
+            "rate": data.get("utilization_rate", 0.0),
+            "billable_hours": data.get("billable_hours", 0.0),
+            "total_hours": data.get("total_hours", 0.0),
         }
 
     def get_dashboard_top_projects(self, user_id: int, days: int = 30, limit: int = 5) -> List[Dict[str, Any]]:

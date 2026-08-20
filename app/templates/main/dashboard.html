@@ -239,7 +239,7 @@
 </div>
 
 <!-- Key Stats with Sparklines -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
     <!-- Today's Hours Card -->
     <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800 p-6 rounded-xl shadow-sm dashboard-widget" id="todayHours">
         <div class="flex items-center justify-between mb-4">
@@ -307,6 +307,23 @@
         </div>
         <div class="sparkline-container" data-sparkline='[0,0,0,0,0,0,0]' data-sparkline-id="month" data-color="#8b5cf6" id="sparkline-month" aria-label="{{ _('Loading...') }}"></div>
     </div>
+    {% if utilization is defined %}
+    <div class="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20 border border-teal-200 dark:border-teal-800 p-6 rounded-xl shadow-sm dashboard-widget">
+        <div class="flex items-center justify-between mb-2">
+            <div>
+                <p class="text-sm font-medium text-teal-600 dark:text-teal-400 mb-1">{{ _('Utilization this month') }}</p>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-2xl lg:text-3xl font-bold text-teal-900 dark:text-teal-100">{{ "%.1f"|format(utilization.rate) }}%</span>
+                </div>
+                <p class="mt-1 text-xs text-teal-700 dark:text-teal-300">{{ "%.1f"|format(utilization.billable_hours) }}h {{ _('billable') }} / {{ "%.1f"|format(utilization.total_hours) }}h</p>
+            </div>
+            <div class="bg-teal-500/10 dark:bg-teal-400/10 p-4 rounded-full">
+                <i class="fas fa-percentage text-teal-600 dark:text-teal-400 text-2xl"></i>
+            </div>
+        </div>
+        <a href="{{ url_for('reports.utilization_report') }}" class="text-xs text-teal-700 dark:text-teal-300 hover:underline">{{ _('Open report') }}</a>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Value Dashboard: productivity insights (filled via /api/stats/value-dashboard) -->
