@@ -195,7 +195,7 @@ Returns API version and available endpoints. No authentication required.
 ```json
 {
   "api_version": "v1",
-  "app_version": "5.11.5",
+  "app_version": "5.12.0",
   "setup_required": false,
   "enabled_modules": ["projects", "timer", "tasks", "invoices", "calendar"],
   "documentation_url": "/api/docs",

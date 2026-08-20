@@ -6,9 +6,9 @@ Living checklist for bringing the Electron desktop client up to speed with the F
 
 | Component | Version | Source |
 |-----------|---------|--------|
-| Web / backend | 5.11.5 | `setup.py` |
-| Desktop | 5.11.5 | `desktop/package.json` |
-| Mobile | 5.11.5 | `mobile/pubspec.yaml` |
+| Web / backend | 5.12.0 | `setup.py` |
+| Desktop | 5.12.0 | `desktop/package.json` |
+| Mobile | 5.12.0 | `mobile/pubspec.yaml` |
 
 ## What desktop has
 
