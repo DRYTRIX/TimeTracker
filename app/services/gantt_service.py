@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from app import db
-from app.models import Project, Task
+from app.models import Project, Task, TaskDependency
 from app.repositories import TimeEntryRepository
 
 
@@ -74,6 +74,12 @@ class GanttService:
         tasks_by_project = defaultdict(list)
         for t in all_tasks:
             tasks_by_project[t.project_id].append(t)
+
+        deps_by_task: Dict[int, List[str]] = defaultdict(list)
+        if all_tasks:
+            task_ids = [t.id for t in all_tasks]
+            for dep in TaskDependency.query.filter(TaskDependency.task_id.in_(task_ids)).all():
+                deps_by_task[dep.task_id].append(f"task-{dep.depends_on_id}")
 
         gantt_data: List[Dict[str, Any]] = []
         for project in projects:
@@ -143,7 +149,7 @@ class GanttService:
                         "task_id": task.id,
                         "project_id": project.id,
                         "parent": f"project-{project.id}",
-                        "dependencies": [],
+                        "dependencies": deps_by_task.get(task.id, []),
                         "status": task.status,
                         "color": task_color,
                     }

@@ -97,6 +97,59 @@
         </div>
 
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Dependencies') }}</h2>
+            {% if task.is_blocked %}
+            <p class="mb-3 text-sm text-amber-700 dark:text-amber-300">
+                <i class="fas fa-ban mr-1"></i>{{ _('This task is blocked until its dependencies are completed.') }}
+            </p>
+            {% endif %}
+            <div class="mb-4">
+                <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Blocked by') }}</h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for link in task.blocking_links %}
+                    <span class="inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium {% if link.depends_on.status in ['done', 'cancelled'] %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% else %}bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200{% endif %}">
+                        <a href="{{ url_for('tasks.view_task', task_id=link.depends_on_id) }}" class="hover:underline">{{ link.depends_on.name }}</a>
+                        <span class="opacity-70">{{ link.depends_on.status_display }}</span>
+                        {% if current_user.is_admin or task.created_by == current_user.id or task.assigned_to == current_user.id %}
+                        <form method="POST" action="{{ url_for('tasks.delete_task_dependency', task_id=task.id, dep_id=link.id) }}" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-red-600 hover:text-red-800" title="{{ _('Remove') }}" aria-label="{{ _('Remove dependency') }}"><i class="fas fa-times"></i></button>
+                        </form>
+                        {% endif %}
+                    </span>
+                    {% else %}
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('None') }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="mb-4">
+                <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Blocks') }}</h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for link in task.dependent_links %}
+                    <a href="{{ url_for('tasks.view_task', task_id=link.task_id) }}" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200 hover:underline">{{ link.task.name }}</a>
+                    {% else %}
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('None') }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% if (current_user.is_admin or task.created_by == current_user.id or task.assigned_to == current_user.id) and sibling_tasks %}
+            <form method="POST" action="{{ url_for('tasks.add_task_dependency', task_id=task.id) }}" class="flex flex-wrap items-end gap-2 mt-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="flex-1 min-w-[12rem]">
+                    <label for="depends_on_id" class="form-label">{{ _('Add blocker') }}</label>
+                    <select name="depends_on_id" id="depends_on_id" class="form-input" required>
+                        <option value="">{{ _('Select a task…') }}</option>
+                        {% for sibling in sibling_tasks %}
+                        <option value="{{ sibling.id }}">{{ sibling.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-secondary"><i class="fas fa-plus mr-1"></i>{{ _('Add') }}</button>
+            </form>
+            {% endif %}
+        </div>
+
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">Time Entries</h2>
             <div class="overflow-x-auto">
                 <table class="w-full text-left responsive-cards">
@@ -153,7 +206,7 @@
             <div class="space-y-4">
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Status</h3>
-                    <p>{{ task.status_display }}</p>
+                    <p>{{ task.status_display }}{% if task.is_blocked %} <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">{{ _('Blocked') }}</span>{% endif %}</p>
                 </div>
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Priority</h3>
@@ -188,6 +241,12 @@
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Due Date</h3>
                     <p class="{{ 'text-red-500' if task.is_overdue else '' }}">{{ task.due_date|format_date }}</p>
+                </div>
+                {% endif %}
+                {% if task.milestone %}
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Milestone') }}</h3>
+                    <p><a class="text-primary hover:underline" href="{{ url_for('milestones.list_project_milestones', project_id=task.project_id) }}">{{ task.milestone.name }}</a></p>
                 </div>
                 {% endif %}
                 <div>
