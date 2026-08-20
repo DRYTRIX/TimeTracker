@@ -1103,6 +1103,61 @@ def accept_quote(quote_id):
     return redirect(url_for("client_portal.view_quote", quote_id=quote_id))
 
 
+@client_portal_bp.route("/client-portal/quotes/<int:quote_id>/sign", methods=["POST"])
+def sign_quote(quote_id):
+    """Sign and accept a quote from the client portal."""
+    result = check_client_portal_access()
+    if not isinstance(result, Client):
+        return result
+    client = result
+
+    quote = Quote.query.get_or_404(quote_id)
+    if quote.client_id != client.id or not quote.visible_to_client:
+        flash(_("Quote not found."), "error")
+        abort(404)
+
+    if quote.status not in ["draft", "sent"] or quote.is_expired:
+        flash(_("This quote cannot be signed."), "error")
+        return redirect(url_for("client_portal.view_quote", quote_id=quote_id))
+
+    signature_data = (request.form.get("signature_data") or "").strip()
+    if not signature_data.startswith("data:image/png;base64,"):
+        flash(_("A signature is required to accept this quote."), "error")
+        return redirect(url_for("client_portal.view_quote", quote_id=quote_id))
+
+    try:
+        quote.apply_signature(
+            signature_data=signature_data,
+            signed_by_name=request.form.get("signed_by_name") or client.name,
+            signed_by_email=request.form.get("signed_by_email") or client.email,
+            signed_ip=request.remote_addr,
+        )
+        from app.utils.db import safe_commit
+
+        if not safe_commit("portal_sign_quote", {"quote_id": quote.id}):
+            flash(_("Could not save signature."), "error")
+            return redirect(url_for("client_portal.view_quote", quote_id=quote_id))
+        flash(_("Quote signed and accepted."), "success")
+        from app.models import User as UserModel
+        from app.utils.email import send_template_email
+
+        try:
+            admins = UserModel.query.filter_by(role="admin", is_active=True).all()
+            for admin in admins:
+                if admin.email:
+                    send_template_email(
+                        to=admin.email,
+                        subject=f"Quote {quote.quote_number} Signed by Client",
+                        template="email/quote_accepted.html",
+                        quote=quote,
+                    )
+        except Exception as e:
+            current_app.logger.error(f"Error sending quote signature email: {e}")
+    except ValueError as e:
+        flash(str(e), "error")
+    return redirect(url_for("client_portal.view_quote", quote_id=quote_id))
+
+
 @client_portal_bp.route("/client-portal/quotes/<int:quote_id>/reject", methods=["POST"])
 def reject_quote(quote_id):
     """Reject a quote"""

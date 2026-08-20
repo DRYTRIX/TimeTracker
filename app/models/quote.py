@@ -86,6 +86,13 @@ class Quote(db.Model):
         db.String(100), nullable=True
     )  # e.g., "Net 30", "Net 60", "Due on Receipt", "2/10 Net 30"
 
+    # Client digital signature (portal sign-and-accept)
+    signature_data = db.Column(db.Text, nullable=True)
+    signed_at = db.Column(db.DateTime, nullable=True)
+    signed_by_name = db.Column(db.String(200), nullable=True)
+    signed_by_email = db.Column(db.String(200), nullable=True)
+    signed_ip = db.Column(db.String(50), nullable=True)
+
     # Relationships
     client = db.relationship("Client", backref="quotes")
     project = db.relationship(
@@ -339,6 +346,19 @@ class Quote(db.Model):
             self.status = "expired"
             self.updated_at = local_now()
 
+    def apply_signature(self, signature_data, signed_by_name=None, signed_by_email=None, signed_ip=None):
+        """Store a client signature and accept the quote."""
+        if self.status not in ["draft", "sent"]:
+            raise ValueError("Quote cannot be signed in its current state")
+        self.signature_data = signature_data
+        self.signed_at = local_now()
+        self.signed_by_name = (signed_by_name or "").strip() or None
+        self.signed_by_email = (signed_by_email or "").strip() or None
+        self.signed_ip = signed_ip
+        self.status = "accepted"
+        self.accepted_at = local_now()
+        self.updated_at = local_now()
+
     def to_dict(self):
         """Convert quote to dictionary for API responses"""
         self.calculate_totals()  # Ensure totals are up to date
@@ -372,6 +392,10 @@ class Quote(db.Model):
             "notes": self.notes,
             "terms": self.terms,
             "visible_to_client": self.visible_to_client,
+            "signed_at": self.signed_at.isoformat() if self.signed_at else None,
+            "signed_by_name": self.signed_by_name,
+            "signed_by_email": self.signed_by_email,
+            "is_signed": bool(self.signed_at),
             "template_id": self.template_id,
             "is_draft": self.is_draft,
             "is_sent": self.is_sent,
