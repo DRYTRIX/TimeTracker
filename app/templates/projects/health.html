@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+{% from "components/cards.html" import info_card %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Projects'), 'url': url_for('projects.list_projects')},
+    {'text': project.name, 'url': url_for('projects.view_project', project_id=project.id)},
+    {'text': _('Health')}
+] %}
+{{ page_header('fas fa-heartbeat', _('Project health'), subtitle_text=project.name, breadcrumbs=breadcrumbs) }}
+
+<div class="mb-4">
+    {% if health.status == 'green' %}
+    <span class="px-3 py-1 rounded-full text-sm bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{{ _('Healthy') }}</span>
+    {% elif health.status == 'amber' %}
+    <span class="px-3 py-1 rounded-full text-sm bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">{{ _('At risk') }}</span>
+    {% else %}
+    <span class="px-3 py-1 rounded-full text-sm bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">{{ _('Critical') }}</span>
+    {% endif %}
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    {{ info_card(_("Budget burn"), "%.1f%%"|format(health.budget.burn_percent), _("Consumed vs budget")) }}
+    {{ info_card(_("Task completion"), "%.1f%%"|format(health.tasks.completion_percent), _("%(done)s of %(total)s done", done=health.tasks.done, total=health.tasks.total)) }}
+    {{ info_card(_("Hours remaining"), ("%.1f"|format(health.hours.remaining) if health.hours.remaining is not none else '—'), _("Budgeted vs tracked")) }}
+    {{ info_card(_("Milestones"), _("%(upcoming)s upcoming / %(missed)s missed", upcoming=health.milestones.upcoming, missed=health.milestones.missed), _("%(completed)s completed", completed=health.milestones.completed)) }}
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <h2 class="text-lg font-semibold mb-4">{{ _('Weekly spend') }}</h2>
+        <canvas id="burnChart" height="120"></canvas>
+    </div>
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <h2 class="text-lg font-semibold mb-4">{{ _('Overdue tasks') }}</h2>
+        <ul class="space-y-2">
+            {% for task in health.overdue_tasks %}
+            <li><a class="text-primary hover:underline" href="{{ url_for('tasks.view_task', task_id=task.id) }}">{{ task.name }}</a>
+                <span class="text-xs text-red-600">{{ task.due_date }}</span></li>
+            {% else %}
+            <li class="text-text-muted-light dark:text-text-muted-dark">{{ _('None') }}</li>
+            {% endfor %}
+        </ul>
+        <h2 class="text-lg font-semibold mt-6 mb-4">{{ _('Top contributors this month') }}</h2>
+        <ul class="space-y-2">
+            {% for person in health.contributors %}
+            <li class="flex justify-between"><span>{{ person.name }}</span><span>{{ "%.1f"|format(person.hours) }}h</span></li>
+            {% else %}
+            <li class="text-text-muted-light dark:text-text-muted-dark">{{ _('No time logged this month.') }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const ctx = document.getElementById('burnChart');
+    if (!ctx || typeof Chart === 'undefined') return;
+    const weekly = {{ health.weekly_spend|tojson }};
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: weekly.map(w => w.week),
+            datasets: [
+                { label: {{ _('Weekly spend')|tojson }}, data: weekly.map(w => w.amount), borderColor: '#0d9488', tension: 0.2 },
+                { label: {{ _('Budget')|tojson }}, data: weekly.map(() => {{ health.budget.amount|tojson }}), borderColor: '#94a3b8', borderDash: [6, 4], pointRadius: 0 }
+            ]
+        },
+        options: { plugins: { legend: { display: true } }, scales: { y: { beginAtZero: true } } }
+    });
+})();
+</script>
+{% endblock %}

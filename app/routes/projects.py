@@ -603,7 +603,7 @@ def view_project(project_id):
     # Get custom field definitions and link templates
     from sqlalchemy.exc import ProgrammingError
 
-    from app.models import CustomFieldDefinition, LinkTemplate
+    from app.models import CustomFieldDefinition, LinkTemplate, Milestone
 
     custom_field_definitions_by_key = {}
     try:
@@ -676,6 +676,7 @@ def view_project(project_id):
         link_templates_by_field=link_templates_by_field,
         attachments=attachments,
         budget_status=budget_status,
+        milestones=Milestone.query.filter_by(project_id=project.id).order_by(Milestone.due_date.asc().nullslast(), Milestone.name).all(),
     )
     resp = make_response(response)
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
@@ -2258,3 +2259,18 @@ def delete_project_attachment(attachment_id):
 
     flash(_("Attachment deleted successfully"), "success")
     return redirect(url_for("projects.view_project", project_id=project_id))
+
+
+@projects_bp.route("/projects/<int:project_id>/health")
+@login_required
+def project_health(project_id):
+    from flask import abort
+
+    from app.services.project_health_service import ProjectHealthService
+    from app.utils.scope_filter import user_can_access_project
+
+    if not user_can_access_project(current_user, project_id):
+        abort(403)
+    project = Project.query.get_or_404(project_id)
+    health = ProjectHealthService.get_health(project)
+    return render_template("projects/health.html", project=project, health=health)
