@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Projects'), 'url': url_for('projects.list_projects')},
+    {'text': project.name, 'url': url_for('projects.view_project', project_id=project.id)},
+    {'text': _('Milestones'), 'url': url_for('milestones.list_project_milestones', project_id=project.id)},
+    {'text': _('Edit') if milestone else _('New')}
+] %}
+{{ page_header('fas fa-flag', _('Edit Milestone') if milestone else _('New Milestone'), breadcrumbs=breadcrumbs) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm max-w-2xl">
+    <form method="POST" class="space-y-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div>
+            <label for="name" class="form-label">{{ _('Name') }} <span class="text-red-500">*</span></label>
+            <input type="text" id="name" name="name" class="form-input" required maxlength="200" value="{{ milestone.name if milestone else '' }}">
+        </div>
+        <div>
+            <label for="description" class="form-label">{{ _('Description') }}</label>
+            <textarea id="description" name="description" rows="3" class="form-input">{{ milestone.description if milestone and milestone.description else '' }}</textarea>
+        </div>
+        <div>
+            <label for="due_date" class="form-label">{{ _('Due Date') }}</label>
+            <input type="date" id="due_date" name="due_date" class="form-input" value="{{ milestone.due_date.strftime('%Y-%m-%d') if milestone and milestone.due_date else '' }}">
+        </div>
+        <div>
+            <label for="status" class="form-label">{{ _('Status') }}</label>
+            <select id="status" name="status" class="form-input">
+                {% set current = milestone.status if milestone else 'upcoming' %}
+                {% for value, label in [('upcoming', _('Upcoming')), ('in_progress', _('In Progress')), ('completed', _('Completed')), ('missed', _('Missed'))] %}
+                <option value="{{ value }}" {% if current == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex gap-2">
+            <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+            <a href="{{ url_for('milestones.list_project_milestones', project_id=project.id) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

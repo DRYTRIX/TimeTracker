@@ -158,3 +158,73 @@ def delete_project(project_id):
         return error_response(result.get("message", "Could not archive project"), status_code=404)
 
     return jsonify({"message": "Project archived successfully"})
+
+
+@api_v1_projects_bp.route("/projects/<int:project_id>/health", methods=["GET"])
+@require_api_token("read:projects")
+def get_project_health(project_id):
+    from app.models import Project
+    from app.services.project_health_service import ProjectHealthService
+    from app.utils.scope_filter import user_can_access_project
+
+    project = Project.query.get(project_id)
+    if not project:
+        return not_found_response("Project", project_id)
+    if not user_can_access_project(g.api_user, project_id):
+        return forbidden_response("You do not have access to this project")
+    return jsonify({"health": ProjectHealthService.get_health(project)})
+
+
+@api_v1_projects_bp.route("/projects/<int:project_id>/milestones", methods=["GET"])
+@require_api_token("read:projects")
+def list_project_milestones(project_id):
+    from app.models import Milestone
+    from app.utils.scope_filter import user_can_access_project
+
+    if not user_can_access_project(g.api_user, project_id):
+        return forbidden_response("You do not have access to this project")
+    milestones = (
+        Milestone.query.filter_by(project_id=project_id)
+        .order_by(Milestone.due_date.asc().nullslast(), Milestone.name)
+        .all()
+    )
+    return jsonify({"milestones": [m.to_dict() for m in milestones]})
+
+
+@api_v1_projects_bp.route("/projects/<int:project_id>/milestones", methods=["POST"])
+@require_api_token("write:projects")
+def create_project_milestone(project_id):
+    from datetime import datetime
+
+    from app import db
+    from app.models import Milestone, Project
+    from app.utils.db import safe_commit
+    from app.utils.scope_filter import user_can_access_project
+
+    if not user_can_access_project(g.api_user, project_id):
+        return forbidden_response("You do not have access to this project")
+    project = Project.query.get(project_id)
+    if not project:
+        return not_found_response("Project", project_id)
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return validation_error_response(errors={"name": ["Name is required"]}, message="Validation failed")
+    due_date = None
+    if data.get("due_date"):
+        try:
+            due_date = datetime.strptime(data["due_date"], "%Y-%m-%d").date()
+        except ValueError:
+            return validation_error_response(errors={"due_date": ["Invalid date"]}, message="Validation failed")
+    milestone = Milestone(
+        project_id=project.id,
+        name=name,
+        created_by=g.api_user.id,
+        description=(data.get("description") or "").strip() or None,
+        due_date=due_date,
+        status=data.get("status") or "upcoming",
+    )
+    db.session.add(milestone)
+    if not safe_commit("api_create_milestone", {"project_id": project.id}):
+        return error_response("Could not create milestone", status_code=500)
+    return jsonify({"milestone": milestone.to_dict()}), 201

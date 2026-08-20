@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+{% from "components/cards.html" import info_card %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Reports'), 'url': url_for('reports.reports')},
+    {'text': _('Utilization')}
+] %}
+{{ page_header('fas fa-percentage', _('Utilization Report'), subtitle_text=_('Billable hours as a share of time tracked'), breadcrumbs=breadcrumbs) }}
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    {{ info_card(_("Avg utilization"), "%.1f%%"|format(avg_rate), _("Selected period")) }}
+    {{ info_card(_("Billable hours"), "%.2f"|format(billable_hours), _("Selected period")) }}
+    {{ info_card(_("Non-billable hours"), "%.2f"|format(non_billable_hours), _("Selected period")) }}
+    {{ info_card(_("Total hours"), "%.2f"|format(total_hours), _("Selected period")) }}
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+            <label for="start_date" class="form-label">{{ _('Start Date') }}</label>
+            <input type="date" name="start_date" id="start_date" value="{{ start_date }}" class="form-input">
+        </div>
+        <div>
+            <label for="end_date" class="form-label">{{ _('End Date') }}</label>
+            <input type="date" name="end_date" id="end_date" value="{{ end_date }}" class="form-input">
+        </div>
+        <div>
+            <label for="group_by" class="form-label">{{ _('Group by') }}</label>
+            <select name="group_by" id="group_by" class="form-input">
+                <option value="user" {% if group_by == 'user' %}selected{% endif %}>{{ _('User') }}</option>
+                <option value="project" {% if group_by == 'project' %}selected{% endif %}>{{ _('Project') }}</option>
+            </select>
+        </div>
+        {% if can_view_all %}
+        <div>
+            <label for="user_id" class="form-label">{{ _('Users') }}</label>
+            <select name="user_id" id="user_id" class="form-input" multiple size="4">
+                {% for user in users %}
+                <option value="{{ user.id }}" {% if user.id in selected_user_ids %}selected{% endif %}>{{ user.display_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        <div class="flex items-end gap-2">
+            <button type="submit" class="btn btn-primary">{{ _('Apply') }}</button>
+            <a href="{{ url_for('reports.utilization_report', start_date=start_date, end_date=end_date, group_by=group_by, export='csv') }}" class="btn btn-secondary">{{ _('Export CSV') }}</a>
+        </div>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+    <canvas id="utilizationChart" height="80"></canvas>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+    <table class="w-full text-left">
+        <thead class="border-b border-border-light dark:border-border-dark">
+            <tr>
+                <th class="p-3">{{ _('Name') }}</th>
+                <th class="p-3">{{ _('Billable') }}</th>
+                <th class="p-3">{{ _('Non-billable') }}</th>
+                <th class="p-3">{{ _('Total') }}</th>
+                <th class="p-3">{{ _('Utilization') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr class="border-b border-border-light dark:border-border-dark">
+                <td class="p-3">{{ row.name }}</td>
+                <td class="p-3">{{ "%.2f"|format(row.billable_hours) }}</td>
+                <td class="p-3">{{ "%.2f"|format(row.non_billable_hours) }}</td>
+                <td class="p-3">{{ "%.2f"|format(row.total_hours) }}</td>
+                <td class="p-3">
+                    <div class="flex items-center gap-2">
+                        <div class="flex-1 bg-background-light dark:bg-background-dark rounded-full h-2 overflow-hidden">
+                            <div class="bg-primary h-2" style="width: {{ row.utilization_rate }}%"></div>
+                        </div>
+                        <span class="text-sm w-14 text-right">{{ "%.1f"|format(row.utilization_rate) }}%</span>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="p-4 text-center text-text-muted-light dark:text-text-muted-dark">{{ _('No time entries in this period.') }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const ctx = document.getElementById('utilizationChart');
+    if (!ctx || typeof Chart === 'undefined') return;
+    const labels = {{ rows|map(attribute='name')|list|tojson }};
+    const rates = {{ rows|map(attribute='utilization_rate')|list|tojson }};
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{ label: {{ _('Utilization %')|tojson }}, data: rates, backgroundColor: '#3b82f6' }]
+        },
+        options: { scales: { y: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
+    });
+})();
+</script>
+{% endblock %}

@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.12.0] - 2026-08-20
+
+### Added
+
+- **Task dependencies** — Model blockers between tasks so work cannot start out of order; dependency arrows appear on the Gantt chart (migration **179**).
+- **Project milestones** — Named due-date checkpoints with task grouping and a timeline on the project page (migration **180**).
+- **Billable utilization report** — Report and dashboard widget for billable vs total hours by user or project.
+- **Expense approval queue** — Dedicated manager review flow with reject, bulk-approve, and a pending badge in the UI.
+- **Quote digital signatures** — Clients can sign and accept quotes in the portal; the captured signature embeds on the quote PDF (migration **181**).
+- **Resource scheduling** — Weekly swimlane view of planned tasks and capacity per person to spot over-allocation early.
+- **Project health dashboard** — Aggregate budget burn, task completion, milestones, and overdue work into one status view (and API).
+
+### Fixed
+
+- **Dashboard Start Timer modal (#734)** — Restored click handlers after the picker refactor so the dashboard button, FAB, and shortcut callers open the modal again.
+- **Approvals PostgreSQL enum case** — Recreate the `approvalstatus` type with lowercase labels so `/approvals` no longer 500s when querying `status='pending'`.
+
+### Changed
+
+- **Client versions** — Synced Electron (`desktop/package.json`), Flutter (`mobile/pubspec.yaml`), and Chromium extension (`browser-extension/manifest.json` / `package.json`) to **5.12.0** with the webapp (`setup.py`).
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.12.0** (single source of truth for the application version).
+
 ## [5.11.5] - 2026-08-15
 
 ### Added

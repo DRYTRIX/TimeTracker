@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.12.0
+
+**Minor (5.12.0):** **Task dependencies & Gantt links** — blockers between tasks with arrows on the chart. **Milestones** — named due-date checkpoints and project timeline. **Utilization report** — billable vs total hours by user or project. **Expense approvals** — manager queue with bulk-approve and pending badge. **Quote signatures** — in-portal sign/accept with PDF embed. **Resource scheduling** — weekly capacity swimlanes. **Project health** — budget burn, completion, milestones, and overdue work in one view. **Fixes** — dashboard Start Timer modal (#734), PostgreSQL approval status enum case. See [CHANGELOG.md](CHANGELOG.md#5120---2026-08-20).
+
 ### ✨ Highlights of v5.11.5
 
 **Patch (5.11.5):** **Global rounding policy (#725)** — admin interval, method, and minimum with enforce-for-all; unset personal fields inherit defaults. **Client-only timers (#728)** — API, extension, mobile, and desktop can start against a client without a project; remaining timer pages use searchable comboboxes. **Fixes** — boundary rounding on duration overrides, email absolute links / `APP_BASE_URL`, kiosk stop duration, quote approval and client-portal quote emails, dead Jinja blocks, desktop manual-entry payload, extension idle notifications, Android Timer crash under R8 (#731). See [CHANGELOG.md](CHANGELOG.md#5115---2026-08-15).

@@ -327,6 +327,20 @@ def register_context_processors(app):
             pass
         return {"keyboard_shortcuts_config": None}
 
+    @app.context_processor
+    def inject_pending_expense_approvals():
+        count = 0
+        try:
+            if getattr(current_user, "is_authenticated", False) and (
+                current_user.is_admin or current_user.has_permission("view_all_time_entries")
+            ):
+                from app.models import Expense
+
+                count = Expense.query.filter_by(status="pending").count()
+        except Exception:
+            count = 0
+        return {"pending_expense_approvals": count}
+
     @app.before_request
     def before_request():
         """Set up request-specific data"""

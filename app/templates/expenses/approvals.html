@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Expenses'), 'url': url_for('expenses.list_expenses')},
+    {'text': _('Approvals')}
+] %}
+{{ page_header('fas fa-clipboard-check', _('Expense Approvals'), subtitle_text=_('Review pending expense submissions'), breadcrumbs=breadcrumbs) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+            <label for="user_id" class="form-label">{{ _('Submitter') }}</label>
+            <select name="user_id" id="user_id" class="form-input">
+                <option value="">{{ _('All') }}</option>
+                {% for user in users %}
+                <option value="{{ user.id }}" {% if selected_user == user.id %}selected{% endif %}>{{ user.display_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="category" class="form-label">{{ _('Category') }}</label>
+            <select name="category" id="category" class="form-input">
+                <option value="">{{ _('All') }}</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat|replace('_',' ')|title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="start_date" class="form-label">{{ _('From') }}</label>
+            <input type="date" name="start_date" id="start_date" value="{{ start_date or '' }}" class="form-input">
+        </div>
+        <div>
+            <label for="end_date" class="form-label">{{ _('To') }}</label>
+            <input type="date" name="end_date" id="end_date" value="{{ end_date or '' }}" class="form-input">
+        </div>
+        <div class="md:col-span-4">
+            <button type="submit" class="btn btn-primary">{{ _('Filter') }}</button>
+        </div>
+    </form>
+</div>
+
+<form method="POST" action="{{ url_for('expenses.bulk_approve_expenses') }}" id="approvalsForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="flex justify-end mb-3">
+        <button type="submit" class="btn btn-primary">{{ _('Approve selected') }}</button>
+    </div>
+    <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="border-b border-border-light dark:border-border-dark">
+                <tr>
+                    <th class="p-3"><input type="checkbox" id="selectAllApprovals"></th>
+                    <th class="p-3">{{ _('Date') }}</th>
+                    <th class="p-3">{{ _('Submitter') }}</th>
+                    <th class="p-3">{{ _('Title') }}</th>
+                    <th class="p-3">{{ _('Category') }}</th>
+                    <th class="p-3">{{ _('Amount') }}</th>
+                    <th class="p-3">{{ _('Receipt') }}</th>
+                    <th class="p-3">{{ _('Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in expenses %}
+                <tr class="border-b border-border-light dark:border-border-dark">
+                    <td class="p-3"><input type="checkbox" name="expense_ids[]" value="{{ expense.id }}" class="approval-check"></td>
+                    <td class="p-3">{{ expense.expense_date|format_date }}</td>
+                    <td class="p-3">{{ expense.user.display_name if expense.user else expense.user_id }}</td>
+                    <td class="p-3"><a class="text-primary hover:underline" href="{{ url_for('expenses.view_expense', expense_id=expense.id) }}">{{ expense.title }}</a></td>
+                    <td class="p-3">{{ expense.category }}</td>
+                    <td class="p-3">{{ expense.total_amount }} {{ expense.currency_code }}</td>
+                    <td class="p-3">
+                        {% if expense.receipt_path %}
+                        <a href="{{ url_for('expenses.view_expense', expense_id=expense.id) }}" class="text-primary">{{ _('View') }}</a>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="p-3">
+                        <div class="flex gap-2">
+                            <form method="POST" action="{{ url_for('expenses.approve_expense', expense_id=expense.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="next" value="approvals">
+                                <button type="submit" class="text-green-600 hover:text-green-800" title="{{ _('Approve') }}"><i class="fas fa-check"></i></button>
+                            </form>
+                            <button type="button" class="text-red-600 hover:text-red-800" title="{{ _('Reject') }}" onclick="openReject({{ expense.id }})"><i class="fas fa-times"></i></button>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="p-4 text-center text-text-muted-light dark:text-text-muted-dark">{{ _('No pending expenses.') }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</form>
+
+<div id="rejectModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-xl p-6 max-w-md w-full">
+        <h3 class="text-lg font-semibold mb-3">{{ _('Reject expense') }}</h3>
+        <form method="POST" id="rejectForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="next" value="approvals">
+            <label for="rejection_reason" class="form-label">{{ _('Reason') }}</label>
+            <textarea id="rejection_reason" name="rejection_reason" rows="3" required class="form-input mb-4"></textarea>
+            <div class="flex justify-end gap-2">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('rejectModal').classList.add('hidden')">{{ _('Cancel') }}</button>
+                <button type="submit" class="btn btn-danger">{{ _('Reject') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('selectAllApprovals')?.addEventListener('change', function() {
+    document.querySelectorAll('.approval-check').forEach(cb => { cb.checked = this.checked; });
+});
+function openReject(id) {
+    const form = document.getElementById('rejectForm');
+    form.action = '/expenses/' + id + '/reject';
+    document.getElementById('rejectModal').classList.remove('hidden');
+}
+</script>
+{% endblock %}

@@ -124,31 +124,68 @@
     </div>
     {% endif %}
     
+    {% if quote.signed_at and quote.signature_data %}
+    <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
+        <h3 class="text-lg font-semibold mb-2">{{ _('Signed') }}</h3>
+        <p class="text-sm mb-2">{{ quote.signed_by_name or '' }} · {{ quote.signed_at|user_date }}</p>
+        <img src="{{ quote.signature_data }}" alt="{{ _('Signature') }}" class="max-h-24 border border-border-light dark:border-border-dark rounded bg-white">
+    </div>
+    {% endif %}
+
     {% if quote.status in ['draft', 'sent'] and not quote.is_expired %}
     <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
-        <h3 class="text-lg font-semibold mb-4">{{ _('Actions') }}</h3>
-        <div class="flex flex-col sm:flex-row gap-4">
-            <form method="POST" action="{{ url_for('client_portal.accept_quote', quote_id=quote.id) }}" class="inline">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" 
-                        class="inline-flex items-center justify-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors w-full sm:w-auto"
-                        onclick="return confirm('{{ _('Are you sure you want to accept this quote?') }}');">
-                    <i class="fas fa-check-circle mr-2"></i>
-                    {{ _('Accept Quote') }}
+        <h3 class="text-lg font-semibold mb-4">{{ _('Sign & Accept') }}</h3>
+        <form method="POST" action="{{ url_for('client_portal.sign_quote', quote_id=quote.id) }}" id="signQuoteForm" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="signature_data" id="signature_data">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="signed_by_name" class="form-label">{{ _('Full name') }}</label>
+                    <input type="text" name="signed_by_name" id="signed_by_name" class="form-input" value="{{ client.name or '' }}" required>
+                </div>
+                <div>
+                    <label for="signed_by_email" class="form-label">{{ _('Email') }}</label>
+                    <input type="email" name="signed_by_email" id="signed_by_email" class="form-input" value="{{ client.email or '' }}">
+                </div>
+            </div>
+            <div>
+                <label class="form-label">{{ _('Signature') }}</label>
+                <canvas id="signaturePad" class="w-full h-40 border border-border-light dark:border-border-dark rounded-lg bg-white cursor-crosshair"></canvas>
+                <button type="button" class="mt-2 text-sm text-primary hover:underline" id="clearSignature">{{ _('Clear') }}</button>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button type="submit" class="inline-flex items-center justify-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg">
+                    <i class="fas fa-pen-nib mr-2"></i>{{ _('Sign & Accept') }}
                 </button>
-            </form>
-            <button type="button" 
-                    onclick="document.getElementById('rejectModal').classList.remove('hidden')"
-                    class="inline-flex items-center justify-center px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors w-full sm:w-auto">
-                <i class="fas fa-times-circle mr-2"></i>
-                {{ _('Reject Quote') }}
-            </button>
-            <a href="{{ url_for('client_portal.quotes') }}" 
-               class="inline-flex items-center justify-center px-6 py-3 bg-secondary-200 hover:bg-secondary-300 dark:bg-secondary-700 dark:hover:bg-secondary-600 text-secondary-900 dark:text-secondary-100 font-medium rounded-lg transition-colors w-full sm:w-auto">
-                {{ _('Back to Quotes') }}
-            </a>
-        </div>
-        
+                <button type="button"
+                        onclick="document.getElementById('rejectModal').classList.remove('hidden')"
+                        class="inline-flex items-center justify-center px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg">
+                    <i class="fas fa-times-circle mr-2"></i>{{ _('Reject Quote') }}
+                </button>
+                <a href="{{ url_for('client_portal.quotes') }}"
+                   class="inline-flex items-center justify-center px-6 py-3 bg-secondary-200 hover:bg-secondary-300 dark:bg-secondary-700 dark:hover:bg-secondary-600 text-secondary-900 dark:text-secondary-100 font-medium rounded-lg">
+                    {{ _('Back to Quotes') }}
+                </a>
+            </div>
+        </form>
+        <script src="{{ url_for('static', filename='js/signature_pad.js') }}"></script>
+        <script>
+        (function() {
+            const canvas = document.getElementById('signaturePad');
+            if (!canvas || typeof SignaturePad === 'undefined') return;
+            const pad = new SignaturePad(canvas);
+            document.getElementById('clearSignature').addEventListener('click', function() { pad.clear(); });
+            document.getElementById('signQuoteForm').addEventListener('submit', function(e) {
+                if (pad.isEmpty()) {
+                    e.preventDefault();
+                    alert({{ _('Please sign before accepting.')|tojson }});
+                    return;
+                }
+                document.getElementById('signature_data').value = pad.toDataURL();
+            });
+        })();
+        </script>
+ 
         <!-- Reject Quote Modal -->
         <div id="rejectModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-xl max-w-md w-full mx-4">

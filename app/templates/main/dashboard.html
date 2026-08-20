@@ -239,7 +239,7 @@
 </div>
 
 <!-- Key Stats with Sparklines -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
     <!-- Today's Hours Card -->
     <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800 p-6 rounded-xl shadow-sm dashboard-widget" id="todayHours">
         <div class="flex items-center justify-between mb-4">
@@ -307,6 +307,23 @@
         </div>
         <div class="sparkline-container" data-sparkline='[0,0,0,0,0,0,0]' data-sparkline-id="month" data-color="#8b5cf6" id="sparkline-month" aria-label="{{ _('Loading...') }}"></div>
     </div>
+    {% if utilization is defined %}
+    <div class="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20 border border-teal-200 dark:border-teal-800 p-6 rounded-xl shadow-sm dashboard-widget">
+        <div class="flex items-center justify-between mb-2">
+            <div>
+                <p class="text-sm font-medium text-teal-600 dark:text-teal-400 mb-1">{{ _('Utilization this month') }}</p>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-2xl lg:text-3xl font-bold text-teal-900 dark:text-teal-100">{{ "%.1f"|format(utilization.rate) }}%</span>
+                </div>
+                <p class="mt-1 text-xs text-teal-700 dark:text-teal-300">{{ "%.1f"|format(utilization.billable_hours) }}h {{ _('billable') }} / {{ "%.1f"|format(utilization.total_hours) }}h</p>
+            </div>
+            <div class="bg-teal-500/10 dark:bg-teal-400/10 p-4 rounded-full">
+                <i class="fas fa-percentage text-teal-600 dark:text-teal-400 text-2xl"></i>
+            </div>
+        </div>
+        <a href="{{ url_for('reports.utilization_report') }}" class="text-xs text-teal-700 dark:text-teal-300 hover:underline">{{ _('Open report') }}</a>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Value Dashboard: productivity insights (filled via /api/stats/value-dashboard) -->
@@ -990,21 +1007,26 @@
         } catch(e) { /* no-op if animation lib missing */ }
 
         const modal = document.getElementById('startTimerModal');
-        // Open modal: direct binding (reliable) and delegation (backup)
-        function openStartTimerModal(e) {
-            if (e) e.preventDefault();
-            if (modal) {
-                modal.classList.remove('hidden');
-                modal.setAttribute('aria-hidden', 'false');
-                try {
-                    const projectSelect = document.getElementById('startTimerProject');
+        let _startTimerModalInitialized = false;
+
+        function closeStartTimerModal() {
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        function _initStartTimerModal() {
+            if (_startTimerModalInitialized || !modal) return;
+            _startTimerModalInitialized = true;
+
+            const projectSelect = document.getElementById('startTimerProject');
             const clientSelect = document.getElementById('startTimerClient');
             const taskSelect = document.getElementById('startTimerTask');
-            const tasksApiUrlTemplate = modal?.dataset?.tasksApiUrl || '';
-            const noTaskText = modal?.dataset?.noTask || 'No task';
-            const loadingTasksText = modal?.dataset?.loadingTasks || 'Loading tasks...';
-            const selectProjectOrClientText = modal?.dataset?.selectProjectClient || 'Please select either a project or a client';
-            const errorTitleText = modal?.dataset?.errorTitle || 'Error';
+            const tasksApiUrlTemplate = modal.dataset.tasksApiUrl || '';
+            const noTaskText = modal.dataset.noTask || 'No task';
+            const loadingTasksText = modal.dataset.loadingTasks || 'Loading tasks...';
+            const selectProjectOrClientText = modal.dataset.selectProjectClient || 'Please select either a project or a client';
+            const errorTitleText = modal.dataset.errorTitle || 'Error';
 
             function buildTasksUrl(projectId) {
                 const pid = String(projectId || '').trim();
@@ -1057,8 +1079,8 @@
                 }
             }
 
-            const onlyOneClient = (modal?.dataset?.onlyOneClient || 'false') === 'true';
-            const singleClientId = (modal?.dataset?.singleClientId || '') || null;
+            const onlyOneClient = (modal.dataset.onlyOneClient || 'false') === 'true';
+            const singleClientId = (modal.dataset.singleClientId || '') || null;
 
             function syncClientFromProject() {
                 if (!projectSelect || !clientSelect || clientSelect.tagName !== 'SELECT') return;
@@ -1087,6 +1109,7 @@
                         openStartTimerModal(e);
                         return;
                     }
+                    _initStartTimerModal();
                     if (clientSelect && ctx.client_id) clientSelect.value = ctx.client_id || '';
                     if (projectSelect) projectSelect.value = ctx.project_id || '';
                     if (ctx.project_id) syncClientFromProject();
@@ -1135,16 +1158,13 @@
                     }
                 });
             }
-            
+
             // Form validation: ensure either project or client is selected
-            const startTimerForm = modal ? modal.querySelector('form') : null;
+            const startTimerForm = modal.querySelector('form');
             if (startTimerForm) {
-                const submitBtn = modal.querySelector('#startTimerSubmitBtn');
-                let originalButtonHTML = submitBtn ? submitBtn.innerHTML : null;
-                
                 startTimerForm.addEventListener('submit', async function(e) {
                     e.preventDefault();
-                    
+
                     const projectVal = projectSelect ? projectSelect.value : '';
                     const clientVal = clientSelect ? clientSelect.value : '';
                     if (!projectVal && !clientVal) {
@@ -1158,12 +1178,12 @@
                     }
 
                     const notesEl = document.getElementById('startTimerNotes');
-                    const requireTask = modal && modal.dataset.requireTask === 'true';
-                    const requireDescription = modal && modal.dataset.requireDescription === 'true';
-                    const descMinLen = modal ? parseInt(modal.dataset.descriptionMinLength || '20', 10) : 20;
+                    const requireTask = modal.dataset.requireTask === 'true';
+                    const requireDescription = modal.dataset.requireDescription === 'true';
+                    const descMinLen = parseInt(modal.dataset.descriptionMinLength || '20', 10);
                     const taskVal = taskSelect ? taskSelect.value : '';
                     if (projectVal && requireTask && !taskVal) {
-                        const msg = modal?.dataset.taskRequiredMsg || 'A task must be selected when logging time for a project';
+                        const msg = modal.dataset.taskRequiredMsg || 'A task must be selected when logging time for a project';
                         if (window.toastManager && typeof window.toastManager.error === 'function') {
                             window.toastManager.error(msg, errorTitleText, 5000);
                         } else {
@@ -1174,11 +1194,11 @@
                     if (requireDescription) {
                         let notesVal = notesEl ? notesEl.value : '';
                         if (window.dashboardNotesEditor && typeof window.dashboardNotesEditor.getMarkdown === 'function') {
-                            try { notesVal = window.dashboardNotesEditor.getMarkdown(); } catch (e) {}
+                            try { notesVal = window.dashboardNotesEditor.getMarkdown(); } catch (err) {}
                         }
                         const notesTrimmed = (notesVal || '').trim();
                         if (!notesTrimmed) {
-                            const msg = modal?.dataset.descriptionRequiredMsg || 'A description is required when logging time';
+                            const msg = modal.dataset.descriptionRequiredMsg || 'A description is required when logging time';
                             if (window.toastManager && typeof window.toastManager.error === 'function') {
                                 window.toastManager.error(msg, errorTitleText, 5000);
                             } else {
@@ -1187,7 +1207,7 @@
                             return false;
                         }
                         if (notesTrimmed.length < descMinLen) {
-                            const msg = (modal?.dataset.descriptionMinMsg || 'Description must be at least ' + descMinLen + ' characters').replace(/\d+/, String(descMinLen));
+                            const msg = (modal.dataset.descriptionMinMsg || 'Description must be at least ' + descMinLen + ' characters').replace(/\d+/, String(descMinLen));
                             if (window.toastManager && typeof window.toastManager.error === 'function') {
                                 window.toastManager.error(msg, errorTitleText, 5000);
                             } else {
@@ -1196,7 +1216,7 @@
                             return false;
                         }
                     }
-                    
+
                     if (notesEl && window.dashboardNotesEditor && typeof window.dashboardNotesEditor.getMarkdown === 'function') {
                         try {
                             notesEl.value = window.dashboardNotesEditor.getMarkdown();
@@ -1204,19 +1224,51 @@
                             console.error('Failed to sync markdown editor:', err);
                         }
                     }
-                    
+
                     startTimerForm.submit();
                 }, true);
             }
 
-            if (window.location.hash === '#start-timer') {
-                openStartTimerModal();
-                try {
-                    history.replaceState(null, '', window.location.pathname + window.location.search);
-                } catch (err) { /* ignore */ }
+            const closeBtn = modal.querySelector('[data-close]');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function() {
+                    closeStartTimerModal();
+                });
             }
+            modal.addEventListener('click', function(e) {
+                if (e.target && e.target.hasAttribute('data-overlay')) {
+                    closeStartTimerModal();
+                }
+            });
         }
-        
+
+        function openStartTimerModal(e) {
+            if (e) e.preventDefault();
+            if (!modal) return;
+            _initStartTimerModal();
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+        }
+
+        document.querySelectorAll('.js-open-start-timer').forEach(function(btn) {
+            if (btn) btn.addEventListener('click', openStartTimerModal);
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+                closeStartTimerModal();
+            }
+        });
+
+        _initStartTimerModal();
+
+        if (window.location.hash === '#start-timer') {
+            openStartTimerModal();
+            try {
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+            } catch (err) { /* ignore */ }
+        }
+
         // Template application function
         window.applyTemplate = async function(templateId) {
             try {

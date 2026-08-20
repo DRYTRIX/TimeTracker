@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Team'), 'url': url_for('resource_scheduling.team_schedule')},
+    {'text': _('Schedule')}
+] %}
+{% set nav %}
+<div class="flex gap-2">
+    <a class="btn btn-secondary" href="{{ url_for('resource_scheduling.team_schedule', week_of=prev_week.isoformat()) }}">&larr; {{ _('Previous') }}</a>
+    <a class="btn btn-secondary" href="{{ url_for('resource_scheduling.team_schedule') }}">{{ _('This week') }}</a>
+    <a class="btn btn-secondary" href="{{ url_for('resource_scheduling.team_schedule', week_of=next_week.isoformat()) }}">{{ _('Next') }} &rarr;</a>
+</div>
+{% endset %}
+{{ page_header('fas fa-calendar-alt', _('Team schedule'), subtitle_text=_('Week of %(date)s', date=week_start|format_date), breadcrumbs=breadcrumbs, actions_html=nav) }}
+
+<form method="GET" class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6 flex flex-wrap gap-3 items-end">
+    <input type="hidden" name="week_of" value="{{ week_start.isoformat() }}">
+    <div>
+        <label for="user_id" class="form-label">{{ _('People') }}</label>
+        <select name="user_id" id="user_id" multiple size="4" class="form-input min-w-[16rem]">
+            {% for user in users %}
+            <option value="{{ user.id }}" {% if user.id in selected_user_ids %}selected{% endif %}>{{ user.display_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">{{ _('Filter') }}</button>
+</form>
+
+<div class="overflow-x-auto bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    <table class="w-full text-sm min-w-[800px]">
+        <thead class="border-b border-border-light dark:border-border-dark">
+            <tr>
+                <th class="p-3 text-left sticky left-0 bg-card-light dark:bg-card-dark">{{ _('Person') }}</th>
+                {% for day in days %}
+                <th class="p-3 text-left">{{ day.strftime('%a') }}<br><span class="text-xs font-normal text-text-muted-light dark:text-text-muted-dark">{{ day|format_date }}</span></th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for lane in lanes %}
+            <tr class="border-b border-border-light dark:border-border-dark align-top">
+                <td class="p-3 font-medium sticky left-0 bg-card-light dark:bg-card-dark">{{ lane.user.display_name }}</td>
+                {% for cell in lane.cells %}
+                <td class="p-2 {% if cell.over_capacity %}bg-red-50 dark:bg-red-900/20{% endif %}">
+                    <div class="text-xs mb-1 {% if cell.over_capacity %}text-red-600{% else %}text-text-muted-light dark:text-text-muted-dark{% endif %}">
+                        {{ "%.1f"|format(cell.planned_hours) }}h / {{ "%.0f"|format(cell.capacity) }}h
+                        {% if cell.actual_hours %}<span class="ml-1">({{ "%.1f"|format(cell.actual_hours) }}h {{ _('logged') }})</span>{% endif %}
+                    </div>
+                    <div class="space-y-1">
+                        {% for task in cell.tasks %}
+                        <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="block rounded px-2 py-1 text-xs text-white" style="background: {{ task.project.color or '#3b82f6' }}">
+                            {{ task.name }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </td>
+                {% endfor %}
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="p-4 text-center text-text-muted-light dark:text-text-muted-dark">{{ _('No people to show.') }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

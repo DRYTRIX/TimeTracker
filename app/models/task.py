@@ -35,6 +35,7 @@ class Task(db.Model):
     # integrations (e.g. "github_issue_42"). Indexed so connectors can
     # cheaply de-duplicate when syncing.
     external_ref = db.Column(db.String(200), nullable=True, index=True)
+    milestone_id = db.Column(db.Integer, db.ForeignKey("milestones.id", ondelete="SET NULL"), nullable=True, index=True)
 
     # Relationships
     # project relationship is defined via backref in Project model
@@ -197,10 +198,30 @@ class Task(db.Model):
             return []
         return [t.strip() for t in self.tags.split(",") if t.strip()]
 
+    @property
+    def is_blocked(self):
+        """True if any unfinished blocker task exists."""
+        for link in self.blocking_links:
+            blocker = link.depends_on
+            if blocker and blocker.status not in ["done", "cancelled"]:
+                return True
+        return False
+
+    @property
+    def blocker_tasks(self):
+        return [link.depends_on for link in self.blocking_links if link.depends_on]
+
+    @property
+    def dependent_tasks(self):
+        return [link.task for link in self.dependent_links if link.task]
+
     def start_task(self):
         """Mark task as in progress"""
         if self.status == "done":
             raise ValueError("Cannot start a completed task")
+        if self.is_blocked:
+            names = ", ".join(t.name for t in self.blocker_tasks if t.status not in ["done", "cancelled"])
+            raise ValueError(f"Cannot start a blocked task. Waiting on: {names}")
 
         self.status = "in_progress"
         self.started_at = now_in_app_timezone()
@@ -295,6 +316,10 @@ class Task(db.Model):
             "is_overdue": self.is_overdue,
             "tags": self.tags,
             "tag_list": self.tag_list,
+            "milestone_id": self.milestone_id,
+            "is_blocked": self.is_blocked,
+            "blocker_ids": [link.depends_on_id for link in self.blocking_links],
+            "dependent_ids": [link.task_id for link in self.dependent_links],
         }
 
     @classmethod

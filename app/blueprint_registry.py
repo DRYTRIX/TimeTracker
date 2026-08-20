@@ -99,6 +99,8 @@ def register_all_blueprints(app, logger=None):
     from app.routes.permissions import permissions_bp
     from app.routes.projects import projects_bp
     from app.routes.quotes import quotes_bp
+    from app.routes.milestones import milestones_bp
+    from app.routes.resource_scheduling import resource_scheduling_bp
     from app.routes.recurring_invoices import recurring_invoices_bp
     from app.routes.reports import reports_bp
     from app.routes.salesman_reports import salesman_reports_bp
@@ -157,6 +159,8 @@ def register_all_blueprints(app, logger=None):
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(projects_bp)
+    app.register_blueprint(milestones_bp)
+    app.register_blueprint(resource_scheduling_bp)
     app.register_blueprint(timer_bp)
     app.register_blueprint(workday_bp)
     app.register_blueprint(reports_bp)

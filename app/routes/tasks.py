@@ -21,7 +21,7 @@ from flask_login import current_user, login_required
 
 import app as app_module
 from app import db
-from app.models import Activity, KanbanColumn, Project, Task, TaskActivity, TaskChecklistItem, TimeEntry, User
+from app.models import Activity, KanbanColumn, Milestone, Project, Task, TaskActivity, TaskChecklistItem, TaskDependency, TimeEntry, User
 from app.utils.db import safe_commit
 from app.utils.pagination import get_pagination_params
 from app.utils.timezone import convert_app_datetime_to_user, now_in_app_timezone
@@ -76,6 +76,7 @@ def list_tasks():
     tags = request.args.get("tags", "").strip()
     overdue_param = request.args.get("overdue", "").strip().lower()
     overdue = overdue_param in ["1", "true", "on", "yes"]
+    milestone_id = request.args.get("milestone_id", type=int)
 
     # Check if this is an AJAX request first (before loading filter data)
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
@@ -102,6 +103,7 @@ def list_tasks():
         has_view_all_tasks=has_view_all_tasks,
         page=page,
         per_page=per_page,
+        milestone_id=milestone_id,
     )
 
     # Check if this is an AJAX request
@@ -122,6 +124,7 @@ def list_tasks():
                 search=search,
                 tags=tags,
                 overdue=overdue,
+                milestone_id=milestone_id,
             )
         )
         response.headers["Content-Type"] = "text/html; charset=utf-8"
@@ -136,6 +139,9 @@ def list_tasks():
     # Kanban columns are already loaded in TaskService, but we need them for the template
     # This is a lightweight query, so it's acceptable
     kanban_columns = KanbanColumn.get_active_columns(project_id=None) if KanbanColumn else []
+    milestones = []
+    if len(project_ids) == 1:
+        milestones = Milestone.query.filter_by(project_id=project_ids[0]).order_by(Milestone.due_date.asc().nullslast(), Milestone.name).all()
 
     # Pre-calculate task counts by status for summary cards (avoid template iteration)
     task_counts = (
@@ -166,6 +172,8 @@ def list_tasks():
         tags=tags,
         overdue=overdue,
         task_counts=task_counts,
+        milestone_id=milestone_id,
+        milestones=milestones,
     )
     resp = make_response(response)
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
@@ -413,9 +421,19 @@ def view_task(task_id):
     # The replies relationship is now eagerly loaded for direct replies
     # Nested replies beyond the first level will be loaded lazily, but the template depth limit prevents issues
     comments = [c for c in all_comments if c.parent_id is None]
+    sibling_tasks = (
+        Task.query.filter(Task.project_id == task.project_id, Task.id != task.id)
+        .order_by(Task.name)
+        .all()
+    )
 
     return render_template(
-        "tasks/view.html", task=task, time_entries=time_entries, activities=activities, comments=comments
+        "tasks/view.html",
+        task=task,
+        time_entries=time_entries,
+        activities=activities,
+        comments=comments,
+        sibling_tasks=sibling_tasks,
     )
 
 
@@ -557,6 +575,12 @@ def edit_task(task_id):
         # Tags (comma-separated, max 500 chars)
         tags_val = request.form.get("tags", "").strip()[:500]
         task.tags = tags_val or None
+        milestone_id = request.form.get("milestone_id", type=int)
+        if milestone_id:
+            milestone = Milestone.query.filter_by(id=milestone_id, project_id=task.project_id).first()
+            task.milestone_id = milestone.id if milestone else None
+        else:
+            task.milestone_id = None
         # Gantt color (hex e.g. #3b82f6)
         color_val = request.form.get("color", "").strip()
         if color_val and re.match(r"^#[0-9A-Fa-f]{6}$", color_val):
@@ -597,7 +621,20 @@ def edit_task(task_id):
                             kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id),
                         )
                     else:
-                        task.start_task()
+                        try:
+                            task.start_task()
+                        except ValueError as e:
+                            flash(str(e), "error")
+                            return render_template(
+                                "tasks/edit.html",
+                                task=task,
+                                projects=projects,
+                                users=users,
+                                kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id),
+                                milestones=Milestone.query.filter_by(project_id=task.project_id)
+                                .order_by(Milestone.due_date.asc().nullslast(), Milestone.name)
+                                .all(),
+                            )
                         db.session.add(
                             TaskActivity(
                                 task_id=task.id,
@@ -706,6 +743,7 @@ def edit_task(task_id):
         projects=projects,
         users=users,
         kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id),
+        milestones=Milestone.query.filter_by(project_id=task.project_id).order_by(Milestone.due_date.asc().nullslast(), Milestone.name).all(),
     )
 
 
@@ -749,7 +787,11 @@ def update_task_status(task_id):
                     return redirect(url_for("tasks.view_task", task_id=task.id))
             else:
                 previous_status = task.status
-                task.start_task()
+                try:
+                    task.start_task()
+                except ValueError as e:
+                    flash(str(e), "error")
+                    return redirect(url_for("tasks.view_task", task_id=task.id))
                 db.session.add(
                     TaskActivity(
                         task_id=task.id,
@@ -1635,7 +1677,10 @@ def api_update_status(task_id):
                 ):
                     return jsonify({"error": "Database error while updating status"}), 500
             else:
-                task.start_task()
+                try:
+                    task.start_task()
+                except ValueError as e:
+                    return jsonify({"error": str(e)}), 400
         elif new_status == "done":
             task.complete_task()
         elif new_status == "cancelled":
@@ -1775,3 +1820,62 @@ def reorder_checklist_items(task_id):
         return jsonify({"error": "Could not reorder checklist due to a database error"}), 500
 
     return jsonify({"success": True, "checklist": _checklist_state(task)})
+
+
+def _can_edit_task_deps(task):
+    return current_user.is_admin or task.created_by == current_user.id or task.assigned_to == current_user.id
+
+
+@tasks_bp.route("/tasks/<int:task_id>/dependencies", methods=["POST"])
+@login_required
+def add_task_dependency(task_id):
+    """Add a blocker that this task depends on."""
+    task = Task.query.get_or_404(task_id)
+    if not _can_edit_task_deps(task):
+        flash(_("You do not have permission to update this task"), "error")
+        return redirect(url_for("tasks.view_task", task_id=task.id))
+
+    depends_on_id = request.form.get("depends_on_id", type=int)
+    dependency_type = request.form.get("dependency_type", "finish_to_start").strip() or "finish_to_start"
+    if not depends_on_id:
+        flash(_("Select a task this one depends on"), "error")
+        return redirect(url_for("tasks.view_task", task_id=task.id))
+
+    blocker = Task.query.get(depends_on_id)
+    if not blocker or blocker.project_id != task.project_id:
+        flash(_("Dependency must be another task in the same project"), "error")
+        return redirect(url_for("tasks.view_task", task_id=task.id))
+    if depends_on_id == task.id:
+        flash(_("A task cannot depend on itself"), "error")
+        return redirect(url_for("tasks.view_task", task_id=task.id))
+    if TaskDependency.query.filter_by(task_id=task.id, depends_on_id=depends_on_id).first():
+        flash(_("That dependency already exists"), "error")
+        return redirect(url_for("tasks.view_task", task_id=task.id))
+    if TaskDependency.would_create_cycle(task.id, depends_on_id):
+        flash(_("That dependency would create a cycle"), "error")
+        return redirect(url_for("tasks.view_task", task_id=task.id))
+
+    db.session.add(TaskDependency(task_id=task.id, depends_on_id=depends_on_id, dependency_type=dependency_type))
+    if not safe_commit("add_task_dependency", {"task_id": task.id, "depends_on_id": depends_on_id}):
+        flash(_("Could not add dependency"), "error")
+    else:
+        flash(_("Dependency added"), "success")
+    return redirect(url_for("tasks.view_task", task_id=task.id))
+
+
+@tasks_bp.route("/tasks/<int:task_id>/dependencies/<int:dep_id>/delete", methods=["POST"])
+@login_required
+def delete_task_dependency(task_id, dep_id):
+    """Remove a dependency from a task."""
+    task = Task.query.get_or_404(task_id)
+    if not _can_edit_task_deps(task):
+        flash(_("You do not have permission to update this task"), "error")
+        return redirect(url_for("tasks.view_task", task_id=task.id))
+
+    dep = TaskDependency.query.filter_by(id=dep_id, task_id=task.id).first_or_404()
+    db.session.delete(dep)
+    if not safe_commit("delete_task_dependency", {"task_id": task.id, "dep_id": dep_id}):
+        flash(_("Could not remove dependency"), "error")
+    else:
+        flash(_("Dependency removed"), "success")
+    return redirect(url_for("tasks.view_task", task_id=task.id))
