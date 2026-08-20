@@ -212,6 +212,7 @@ class TaskService:
         per_page: int = 20,
         project_ids: Optional[list] = None,
         assigned_to_ids: Optional[list] = None,
+        milestone_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
         List tasks with filtering and pagination.
@@ -268,6 +269,9 @@ class TaskService:
             query = query.filter(Task.assigned_to.in_(assigned_to_ids))
         elif assigned_to:
             query = query.filter(Task.assigned_to == assigned_to)
+
+        if milestone_id:
+            query = query.filter(Task.milestone_id == milestone_id)
 
         if search:
             like = f"%{search}%"

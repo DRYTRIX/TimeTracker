@@ -35,6 +35,14 @@
         {{ _('Dashboard') }}
     </a>
     {% endif %}
+    <a href="{{ url_for('projects.project_health', project_id=project.id) }}" class="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition">
+        <i class="fas fa-heartbeat"></i>
+        {{ _('Health') }}
+    </a>
+    <a href="{{ url_for('milestones.list_project_milestones', project_id=project.id) }}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition">
+        <i class="fas fa-flag"></i>
+        {{ _('Milestones') }}
+    </a>
     {% if project.budget_amount and (current_user.is_admin or has_any_permission('edit_projects', 'archive_projects')) %}
     <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}" class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition shadow-lg">
         <i class="fas fa-wallet"></i>
@@ -93,6 +101,26 @@
         </div>
     </div>
 </div>
+
+{% if milestones %}
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">{{ _('Milestone timeline') }}</h2>
+        <a href="{{ url_for('milestones.list_project_milestones', project_id=project.id) }}" class="text-sm text-primary hover:underline">{{ _('View all') }}</a>
+    </div>
+    <ol class="relative border-s border-border-light dark:border-border-dark ml-3 space-y-4">
+        {% for milestone in milestones %}
+        <li class="ms-6">
+            <span class="absolute -start-1.5 mt-1.5 h-3 w-3 rounded-full {% if milestone.status == 'completed' %}bg-green-500{% elif milestone.is_overdue %}bg-red-500{% else %}bg-primary{% endif %}"></span>
+            <p class="font-medium">{{ milestone.name }}</p>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark">
+                {% if milestone.due_date %}{{ milestone.due_date|format_date }} · {% endif %}{{ milestone.status.replace('_', ' ')|title }} · {{ milestone.progress_percentage }}%
+            </p>
+        </li>
+        {% endfor %}
+    </ol>
+</div>
+{% endif %}
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Left Column: Project Details -->

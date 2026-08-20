@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Projects'), 'url': url_for('projects.list_projects')},
+    {'text': project.name, 'url': url_for('projects.view_project', project_id=project.id)},
+    {'text': _('Milestones')}
+] %}
+{% set actions %}
+{% if current_user.is_admin or has_permission('edit_projects') %}
+<a href="{{ url_for('milestones.create_milestone', project_id=project.id) }}" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>{{ _('New Milestone') }}</a>
+{% endif %}
+{% endset %}
+{{ page_header('fas fa-flag', _('Milestones'), subtitle_text=project.name, breadcrumbs=breadcrumbs, actions_html=actions) }}
+
+<div class="space-y-4">
+    {% for milestone in milestones %}
+    <div class="bg-card-light dark:bg-card-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-semibold">{{ milestone.name }}</h2>
+                {% if milestone.description %}<p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ milestone.description }}</p>{% endif %}
+                <p class="text-sm mt-2">
+                    {% if milestone.due_date %}
+                    <span class="{{ 'text-red-600' if milestone.is_overdue else '' }}">{{ milestone.due_date|format_date }}</span>
+                    {% else %}
+                    <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('No due date') }}</span>
+                    {% endif %}
+                    <span class="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-gray-200 dark:bg-gray-700">{{ milestone.status.replace('_', ' ')|title }}</span>
+                </p>
+            </div>
+            <div class="flex gap-2">
+                <a href="{{ url_for('tasks.list_tasks', project_id=project.id, milestone_id=milestone.id) }}" class="btn btn-secondary text-sm">{{ _('Tasks') }}</a>
+                {% if current_user.is_admin or has_permission('edit_projects') %}
+                <a href="{{ url_for('milestones.edit_milestone', milestone_id=milestone.id) }}" class="btn btn-secondary text-sm">{{ _('Edit') }}</a>
+                <form method="POST" action="{{ url_for('milestones.delete_milestone', milestone_id=milestone.id) }}" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Delete this milestone?') }}', { title: '{{ _('Delete Milestone') }}', confirmText: '{{ _('Delete') }}' }).then(function(ok){ if(ok) this.submit(); }.bind(this));">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger text-sm">{{ _('Delete') }}</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        <div class="mt-3">
+            <div class="flex justify-between text-xs text-text-muted-light dark:text-text-muted-dark mb-1">
+                <span>{{ milestone.completed_task_count }} / {{ milestone.task_count }} {{ _('tasks') }}</span>
+                <span>{{ milestone.progress_percentage }}%</span>
+            </div>
+            <div class="w-full bg-background-light dark:bg-background-dark rounded-full h-2 overflow-hidden">
+                <div class="bg-primary h-2 rounded-full" style="width: {{ milestone.progress_percentage }}%"></div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No milestones yet.') }}</p>
+    {% endfor %}
+</div>
+{% endblock %}

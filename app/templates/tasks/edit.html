@@ -118,6 +118,17 @@
                             </select>
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Assign this task to a team member') }}</p>
                         </div>
+                        {% if milestones %}
+                        <div class="mb-4">
+                            <label for="milestone_id" class="form-label">{{ _('Milestone') }}</label>
+                            <select id="milestone_id" name="milestone_id" class="form-input">
+                                <option value="">{{ _('None') }}</option>
+                                {% for milestone in milestones %}
+                                <option value="{{ milestone.id }}" {% if task.milestone_id == milestone.id %}selected{% endif %}>{{ milestone.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
 
                         <!-- Tags -->
                         <div class="mb-4">

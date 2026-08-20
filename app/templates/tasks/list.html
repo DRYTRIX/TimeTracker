@@ -96,6 +96,17 @@
             <input type="checkbox" name="overdue" id="overdue" value="1" {% if overdue %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
             <label for="overdue" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">Overdue only</label>
         </div>
+        {% if milestones %}
+        <div>
+            <label for="milestone_id" class="form-label">{{ _('Milestone') }}</label>
+            <select name="milestone_id" id="milestone_id" class="form-input">
+                <option value="">{{ _('All milestones') }}</option>
+                {% for milestone in milestones %}
+                <option value="{{ milestone.id }}" {% if milestone_id == milestone.id %}selected{% endif %}>{{ milestone.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
     </form>
     </div>
 </div>
