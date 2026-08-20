@@ -35,6 +35,39 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "pdf"}
 UPLOAD_FOLDER = "uploads/receipts"
 
 
+def _can_approve_expenses(user):
+    return bool(user and (user.is_admin or user.has_permission("view_all_time_entries")))
+
+
+def _notify_expense_approvers(expense):
+    try:
+        from app.utils.notification_service import NotificationService
+
+        admins = User.query.filter(User.is_active.is_(True), User.role == "admin").all()
+        extra = [u for u in User.query.filter_by(is_active=True).all() if u.is_admin]
+        seen = set()
+        service = NotificationService()
+        for admin in list(admins) + extra:
+            if admin.id in seen or admin.id == expense.user_id:
+                continue
+            seen.add(admin.id)
+            service.send_notification(
+                user_id=admin.id,
+                title="Expense pending approval",
+                message=f"{expense.title} ({expense.amount} {expense.currency_code}) needs review",
+                type="info",
+                priority="normal",
+            )
+    except Exception:
+        current_app.logger.debug("Could not notify expense approvers", exc_info=True)
+
+
+def _expense_next_redirect(expense_id):
+    if request.form.get("next") == "approvals":
+        return redirect(url_for("expenses.expense_approvals"))
+    return redirect(url_for("expenses.view_expense", expense_id=expense_id))
+
+
 def allowed_file(filename):
     """Check if file extension is allowed"""
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -402,6 +435,7 @@ def create_expense():
         if safe_commit(db):
             flash(_("Expense created successfully"), "success")
             log_event("expense_created", user_id=current_user.id, expense_id=expense.id)
+            _notify_expense_approvers(expense)
             track_event(
                 current_user.id,
                 "expense.created",
@@ -764,6 +798,71 @@ def bulk_delete_expenses():
     return redirect(url_for("expenses.list_expenses"))
 
 
+@expenses_bp.route("/expenses/approvals")
+@login_required
+@module_enabled("expenses")
+def expense_approvals():
+    if not _can_approve_expenses(current_user):
+        flash(_("Only administrators can review expense approvals"), "error")
+        return redirect(url_for("expenses.list_expenses"))
+
+    user_id = request.args.get("user_id", type=int)
+    category = request.args.get("category", "").strip()
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+    query = Expense.query.filter_by(status="pending")
+    if user_id:
+        query = query.filter_by(user_id=user_id)
+    if category:
+        query = query.filter_by(category=category)
+    if start_date:
+        try:
+            query = query.filter(Expense.expense_date >= datetime.strptime(start_date, "%Y-%m-%d").date())
+        except ValueError:
+            start_date = None
+    if end_date:
+        try:
+            query = query.filter(Expense.expense_date <= datetime.strptime(end_date, "%Y-%m-%d").date())
+        except ValueError:
+            end_date = None
+    expenses = query.order_by(Expense.expense_date.desc()).all()
+    users = User.query.filter_by(is_active=True).order_by(User.username).all()
+    return render_template(
+        "expenses/approvals.html",
+        expenses=expenses,
+        users=users,
+        categories=Expense.get_expense_categories(),
+        selected_user=user_id,
+        selected_category=category,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
+@expenses_bp.route("/expenses/bulk-approve", methods=["POST"])
+@login_required
+@module_enabled("expenses")
+def bulk_approve_expenses():
+    if not _can_approve_expenses(current_user):
+        flash(_("Only administrators can approve expenses"), "error")
+        return redirect(url_for("expenses.list_expenses"))
+    expense_ids = request.form.getlist("expense_ids[]")
+    updated = 0
+    for expense_id_str in expense_ids:
+        try:
+            expense = Expense.query.get(int(expense_id_str))
+        except (TypeError, ValueError):
+            continue
+        if expense and expense.status == "pending":
+            expense.approve(current_user.id)
+            updated += 1
+    if updated and not safe_commit(db):
+        flash(_("Could not approve expenses"), "error")
+        return redirect(url_for("expenses.expense_approvals"))
+    flash(_("%(count)d expense(s) approved", count=updated), "success")
+    return redirect(url_for("expenses.expense_approvals"))
+
+
 @expenses_bp.route("/expenses/bulk-status", methods=["POST"])
 @login_required
 def bulk_update_status():
@@ -832,7 +931,7 @@ def bulk_update_status():
 @login_required
 def approve_expense(expense_id):
     """Approve an expense"""
-    if not current_user.is_admin:
+    if not _can_approve_expenses(current_user):
         flash(_("Only administrators can approve expenses"), "error")
         return redirect(url_for("expenses.view_expense", expense_id=expense_id))
 
@@ -863,14 +962,14 @@ def approve_expense(expense_id):
         current_app.logger.error(f"Error approving expense: {e}")
         flash(_("Error approving expense"), "error")
 
-    return redirect(url_for("expenses.view_expense", expense_id=expense_id))
+    return _expense_next_redirect(expense_id)
 
 
 @expenses_bp.route("/expenses/<int:expense_id>/reject", methods=["POST"])
 @login_required
 def reject_expense(expense_id):
     """Reject an expense"""
-    if not current_user.is_admin:
+    if not _can_approve_expenses(current_user):
         flash(_("Only administrators can reject expenses"), "error")
         return redirect(url_for("expenses.view_expense", expense_id=expense_id))
 
@@ -899,7 +998,7 @@ def reject_expense(expense_id):
         current_app.logger.error(f"Error rejecting expense: {e}")
         flash(_("Error rejecting expense"), "error")
 
-    return redirect(url_for("expenses.view_expense", expense_id=expense_id))
+    return _expense_next_redirect(expense_id)
 
 
 @expenses_bp.route("/expenses/<int:expense_id>/reimburse", methods=["POST"])
@@ -1439,6 +1538,7 @@ def create_expense_from_scan():
 
             flash(_("Expense created successfully from scanned receipt"), "success")
             log_event("expense_created_from_scan", user_id=current_user.id, expense_id=expense.id)
+            _notify_expense_approvers(expense)
             track_event(
                 current_user.id,
                 "expense.created_from_scan",

@@ -16,6 +16,7 @@
         +   '<a href="' + url_for("expenses.create_expense") + '" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>New Expense</a>'
         +   '<a href="' + url_for("mileage.create_mileage") + '" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-car mr-2"></i>New Mileage</a>'
         +   '<a href="' + url_for("per_diem.create_per_diem") + '" class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors"><i class="fas fa-money-bill-alt mr-2"></i>New Per Diem</a>'
+        +   ('<a href="' + url_for("expenses.expense_approvals") + '" class="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors"><i class="fas fa-clipboard-check mr-2"></i>' + _('Approvals') + '</a>' if current_user.is_admin else '')
         + '</div>'
 ) }}
 
