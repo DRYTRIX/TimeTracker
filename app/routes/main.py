@@ -16,10 +16,11 @@ from flask import (
 )
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
-from sqlalchemy import text
+from sqlalchemy import or_, text
+from sqlalchemy.orm import joinedload
 
 from app import csrf, db, limiter, track_event, track_page_view
-from app.models import Activity, Client, Project, Settings, TimeEntry, TimeEntryTemplate, User, WeeklyTimeGoal
+from app.models import Activity, Client, Project, Settings, Task, TimeEntry, TimeEntryTemplate, User, WeeklyTimeGoal
 from app.models.time_entry import local_now
 from app.utils.license_utils import is_license_activated
 from app.utils.posthog_segmentation import update_user_segments_if_needed
@@ -261,6 +262,23 @@ def dashboard():
     )
     is_past_midday = local_now().hour >= 12
 
+    # Tasks due today or overdue (assigned to or created by current user)
+    today_date = local_now().date()
+    tasks_due_query = (
+        Task.query.options(joinedload(Task.project))
+        .filter(
+            Task.due_date.isnot(None),
+            Task.due_date <= today_date,
+            Task.status.notin_(["done", "cancelled"]),
+        )
+        .order_by(Task.due_date.asc(), Task.priority.desc())
+    )
+    if not current_user.is_admin:
+        tasks_due_query = tasks_due_query.filter(
+            or_(Task.assigned_to == current_user.id, Task.created_by == current_user.id)
+        )
+    tasks_due_today = tasks_due_query.limit(5).all()
+
     # Post-timer toast data (show "Logged Xh on Project" + link to time entries)
     timer_stopped_toast = session.pop("timer_stopped_toast", None)
     if timer_stopped_toast:
@@ -391,6 +409,8 @@ def dashboard():
         "week_utilization": week_utilization,
         "is_past_midday": is_past_midday,
         "recent_tags": recent_tags,
+        "tasks_due_today": tasks_due_today,
+        "today_date": today_date,
         "user_stats": user_stats,  # For smart banner
         "time_entries_count": time_entries_count,  # For donation widget
         "total_hours": total_hours,  # For donation widget
