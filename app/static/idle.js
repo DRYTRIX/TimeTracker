@@ -82,6 +82,23 @@
     } catch(e) {}
   }
 
+  async function stopNow(){
+    clearGraceTimers();
+    promptShown = false;
+    try {
+      const r = await fetch('/api/timer/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, __ttQuiet: true });
+      if (r.ok){
+        const msg = window.i18n?.messages?.timerStopped || 'Timer stopped';
+        if (window.toastManager && window.toastManager.success) {
+          window.toastManager.success(msg, '', 5000);
+        } else if (window.toastManager && window.toastManager.show) {
+          window.toastManager.show({ message: msg, type: 'success', duration: 5000 });
+        }
+        await refreshTimerUiAfterStop();
+      }
+    } catch(e) {}
+  }
+
   async function stopAt(ts){
     clearGraceTimers();
     promptShown = false;
@@ -116,6 +133,7 @@
 
     const yesLabel = window.i18n?.messages?.stillWorkingYes || 'Yes, still working';
     const noLabel = window.i18n?.messages?.stillWorkingNo || 'No, stop timer';
+    const trimLabel = window.i18n?.messages?.stillWorkingTrim || 'Keep until idle';
     const baseMsg = window.i18n?.messages?.stillWorkingPrompt ||
       ('Still working? You seem inactive since ' + formatTime(new Date(stopTs)) +
        '. Timer will stop automatically if you do not answer.');
@@ -129,8 +147,10 @@
     function attachHandlers(toastEl, countdownEl){
       const yesBtn = toastEl.querySelector('[data-act="yes"]');
       const noBtn = toastEl.querySelector('[data-act="no"]');
+      const trimBtn = toastEl.querySelector('[data-act="trim"]');
       if (yesBtn) yesBtn.addEventListener('click', function(){ snoozeIdlePrompt(toastEl); });
-      if (noBtn) noBtn.addEventListener('click', function(){ try { toastEl.remove(); } catch(e){}; stopAt(stopTs); });
+      if (noBtn) noBtn.addEventListener('click', function(){ try { toastEl.remove(); } catch(e){}; stopNow(); });
+      if (trimBtn) trimBtn.addEventListener('click', function(){ try { toastEl.remove(); } catch(e){}; stopAt(stopTs); });
 
       countdownIntervalId = setInterval(function(){
         if (countdownEl) countdownEl.textContent = buildMessage();
@@ -148,8 +168,9 @@
       toastEl.className = 'flex items-center gap-3 p-4 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded-lg shadow-lg pointer-events-auto';
       toastEl.innerHTML =
         '<div class="flex-1 text-sm text-amber-900 dark:text-amber-100" data-countdown>' + buildMessage() + '</div>' +
-        '<div class="flex gap-2">' +
+        '<div class="flex gap-2 flex-wrap justify-end">' +
           '<button class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-sm font-medium" data-act="yes">' + yesLabel + '</button>' +
+          '<button class="px-3 py-1.5 bg-amber-200 dark:bg-amber-800 hover:bg-amber-300 dark:hover:bg-amber-700 text-amber-900 dark:text-amber-100 rounded text-sm font-medium" data-act="trim">' + trimLabel + '</button>' +
           '<button class="px-3 py-1.5 bg-amber-200 dark:bg-amber-800 hover:bg-amber-300 dark:hover:bg-amber-700 text-amber-900 dark:text-amber-100 rounded text-sm font-medium" data-act="no">' + noLabel + '</button>' +
         '</div>';
       const container = document.getElementById('toast-notification-container') || document.getElementById('flash-messages-container') || document.body;
@@ -165,6 +186,7 @@
         '<div class="toast-body" data-countdown>' + buildMessage() + '</div>' +
         '<div class="d-flex gap-2 align-items-center me-2">' +
           '<button class="btn btn-sm btn-light" data-act="yes">' + yesLabel + '</button>' +
+          '<button class="btn btn-sm btn-outline-light" data-act="trim">' + trimLabel + '</button>' +
           '<button class="btn btn-sm btn-outline-light" data-act="no">' + noLabel + '</button>' +
         '</div>' +
       '</div>';

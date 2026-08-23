@@ -95,7 +95,18 @@
                     </td>
                     <td class="p-3" data-label="{{ _('Next Run') }}">
                         {% if task.next_run_date %}
+                        {% set days_left = task.next_run_date|days_until %}
                         <span class="text-sm">{{ task.next_run_date|local_date }}</span>
+                        <div class="mt-1">
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium
+                                {% if days_left is not none and days_left < 0 %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300
+                                {% elif days_left == 0 %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300
+                                {% elif days_left == 1 %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
+                                {% elif days_left is not none and days_left <= 3 %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
+                                {% else %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300{% endif %}">
+                                {{ task.next_run_date|relative_due_label }}
+                            </span>
+                        </div>
                         {% else %}
                         <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Not scheduled') }}</span>
                         {% endif %}

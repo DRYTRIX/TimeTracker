@@ -38,6 +38,18 @@
 </div>
 {% endif %}
 
+{% if overdue_invoices_summary %}
+<div class="mb-6 rounded-xl border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 p-4" role="alert">
+    <p class="font-semibold text-red-900 dark:text-red-100 mb-1">
+        <i class="fas fa-file-invoice-dollar mr-2"></i>{{ _('Overdue invoices') }}
+    </p>
+    <p class="text-sm text-red-800 dark:text-red-200 mb-2">
+        {{ _('%(count)s invoice(s) overdue — %(total)s outstanding', count=overdue_invoices_summary.count, total=overdue_invoices_summary.total|format_currency) }}
+    </p>
+    <a href="{{ overdue_invoices_summary.url }}" class="btn btn-primary btn-sm">{{ _('Review invoices') }}</a>
+</div>
+{% endif %}
+
 <!-- Workday clock-in/out (separate from project timer) -->
 <div class="{% if active_workday_session %}bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-800{% else %}bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark{% endif %} p-6 rounded-xl shadow-sm dashboard-widget animated-card mb-6" {% if active_workday_session %}data-workday-start="{{ active_workday_session.start_time.isoformat() }}"{% endif %}>
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4 min-w-0">
@@ -736,6 +748,41 @@
                             <span class="{% if task.is_overdue %}text-red-600 dark:text-red-400 font-medium{% endif %}">
                                 {% if task.is_overdue %}{{ _('Overdue') }} · {% endif %}{{ task.due_date|local_date }}
                             </span>
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Upcoming deadlines (next 7 days) -->
+        {% if is_module_enabled('tasks') and upcoming_deadlines %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="bg-indigo-500/10 dark:bg-indigo-400/10 p-3 rounded-lg">
+                        <i class="fas fa-calendar-day text-indigo-600 dark:text-indigo-400 text-xl"></i>
+                    </div>
+                    <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Upcoming deadlines') }}</h2>
+                </div>
+                <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Next 7 days') }}</span>
+            </div>
+            <ul class="space-y-2">
+                {% for item in upcoming_deadlines %}
+                {% set days_left = item.due_date|days_until %}
+                <li class="flex items-center gap-3 p-3 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+                    <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                        {% if days_left <= 1 %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300
+                        {% elif days_left <= 2 %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
+                        {% else %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300{% endif %}">
+                        {{ item.due_date|relative_due_label }}
+                    </span>
+                    <div class="flex-1 min-w-0">
+                        <a href="{{ item.url }}" class="font-medium text-text-light dark:text-text-dark hover:text-primary truncate block">{{ item.name }}</a>
+                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark flex flex-wrap gap-2 mt-0.5">
+                            {% if item.project_name %}<span><i class="fas fa-folder mr-1"></i>{{ item.project_name }}</span>{% endif %}
+                            <span>{% if item.kind == 'milestone' %}{{ _('Milestone') }}{% else %}{{ _('Task') }}{% endif %} · {{ item.due_date|local_date }}</span>
                         </div>
                     </div>
                 </li>

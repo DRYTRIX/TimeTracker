@@ -51,6 +51,7 @@
                              data-daily-target-hours="{{ current_user.standard_hours_per_day or 8 }}"
                              data-dashboard-url="{{ url_for('main.dashboard') }}"
                              data-manual-url="{{ url_for('timer.manual_entry') }}"
+                             data-switch-label="{{ _('Switch project') }}"
                              aria-label="{{ _('Timer') }}"></div>
                         {% endif %}
                         <a href="{{ url_for('main.help') }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50" aria-label="{{ _('Help') }}" title="{{ _('Help') }}">

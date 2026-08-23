@@ -26,6 +26,9 @@
             this.stopLabel = 'Stop';
             this.pauseLabel = 'Pause';
             this.resumeLabel = 'Resume';
+            this.switchLabel = 'Switch project';
+            this.projectsCache = null;
+            this.switchPopover = null;
             this.init();
         }
 
@@ -36,10 +39,115 @@
             this.stopLabel = this.bar.dataset.stopLabel || 'Stop';
             this.pauseLabel = this.bar.dataset.pauseLabel || 'Pause';
             this.resumeLabel = this.bar.dataset.resumeLabel || 'Resume';
+            this.switchLabel = this.bar.dataset.switchLabel || 'Switch project';
+            this.ensureSwitchPopover();
             this.render();
             this.fetchStatus();
             this.pollTimer = setInterval(() => this.fetchStatus(), POLL_INTERVAL_MS);
             window.addEventListener('focus', () => this.fetchStatus());
+            document.addEventListener('click', (evt) => {
+                if (!this.switchPopover || this.switchPopover.classList.contains('hidden')) return;
+                if (this.switchPopover.contains(evt.target)) return;
+                if (this.bar && this.bar.contains(evt.target)) return;
+                this.hideSwitchPopover();
+            });
+        }
+
+        ensureSwitchPopover() {
+            if (this.switchPopover) return;
+            var pop = document.createElement('div');
+            pop.id = 'floatingTimerSwitchPopover';
+            pop.className = 'hidden fixed z-[70] w-72 max-w-[calc(100vw-1rem)] rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-xl p-3';
+            pop.innerHTML =
+                '<p class="text-sm font-semibold text-text-light dark:text-text-dark mb-2">' + escapeHtml(this.switchLabel) + '</p>' +
+                '<select class="form-input w-full text-sm mb-2" data-switch-project-select aria-label="' + escapeHtml(this.switchLabel) + '"></select>' +
+                '<div class="flex justify-end gap-2">' +
+                    '<button type="button" class="btn btn-secondary btn-sm" data-switch-cancel>Cancel</button>' +
+                    '<button type="button" class="btn btn-primary btn-sm" data-switch-apply>Apply</button>' +
+                '</div>';
+            document.body.appendChild(pop);
+            pop.querySelector('[data-switch-cancel]').addEventListener('click', () => this.hideSwitchPopover());
+            pop.querySelector('[data-switch-apply]').addEventListener('click', () => this.applySwitchProject());
+            this.switchPopover = pop;
+        }
+
+        hideSwitchPopover() {
+            if (this.switchPopover) this.switchPopover.classList.add('hidden');
+        }
+
+        positionSwitchPopover() {
+            if (!this.switchPopover || !this.bar) return;
+            var rect = this.bar.getBoundingClientRect();
+            var top = Math.max(8, rect.bottom + 8);
+            var left = Math.min(window.innerWidth - this.switchPopover.offsetWidth - 8, Math.max(8, rect.right - this.switchPopover.offsetWidth));
+            this.switchPopover.style.top = top + 'px';
+            this.switchPopover.style.left = left + 'px';
+        }
+
+        async loadProjects() {
+            if (this.projectsCache) return this.projectsCache;
+            try {
+                const res = await fetch('/timer/projects', { credentials: 'same-origin' });
+                const data = await res.json();
+                this.projectsCache = Array.isArray(data.projects) ? data.projects : [];
+            } catch (e) {
+                this.projectsCache = [];
+            }
+            return this.projectsCache;
+        }
+
+        async openSwitchPopover() {
+            this.ensureSwitchPopover();
+            const select = this.switchPopover.querySelector('[data-switch-project-select]');
+            select.innerHTML = '<option value="">Loading…</option>';
+            this.switchPopover.classList.remove('hidden');
+            this.positionSwitchPopover();
+
+            const projects = await this.loadProjects();
+            select.innerHTML = '';
+            projects.forEach((p) => {
+                const opt = document.createElement('option');
+                opt.value = String(p.id);
+                opt.textContent = p.name;
+                if (this.timerData && this.timerData.project_id === p.id) {
+                    opt.selected = true;
+                }
+                select.appendChild(opt);
+            });
+            if (!projects.length) {
+                select.innerHTML = '<option value="">' + escapeHtml('No projects') + '</option>';
+            }
+        }
+
+        async applySwitchProject() {
+            const select = this.switchPopover.querySelector('[data-switch-project-select]');
+            const projectId = select ? parseInt(select.value, 10) : NaN;
+            if (!projectId) return;
+            const token = this.getCsrfToken();
+            try {
+                const res = await fetch('/timer/switch-project', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': token,
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ project_id: projectId }),
+                    credentials: 'same-origin',
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || 'switch_failed');
+                }
+                this.hideSwitchPopover();
+                await this.fetchStatus();
+                this.refreshDashboardTimerWidget();
+            } catch (e) {
+                console.error('Switch project failed', e);
+                if (window.toastManager) {
+                    window.toastManager.error('Could not switch project', 'Error', 3000);
+                }
+            }
         }
 
         async fetchStatus() {
@@ -55,6 +163,7 @@
                     this.timerData = null;
                     this.startTime = null;
                     this.stopElapsedUpdater();
+                    this.hideSwitchPopover();
                     this.render();
                 }
                 syncFabDesktopHide(this.timerData);
@@ -191,6 +300,9 @@
                     <div class="relative flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 border border-border-light dark:border-border-dark" title="${label}${isPaused ? ' (Paused)' : ''}">
                         <span class="absolute top-0.5 left-2 w-2 h-2 rounded-full ${pulseClass}" aria-hidden="true"></span>
                         <span class="floating-timer-bar__elapsed font-mono text-xs font-semibold tabular-nums text-text-light dark:text-text-dark pl-3 min-w-[4.5rem]" data-timer-elapsed>${elapsed}</span>
+                        <button type="button" class="${roundBtn}" data-switch-project-btn title="${escapeHtml(this.switchLabel)}" aria-label="${escapeHtml(this.switchLabel)}">
+                            <i class="fas fa-right-left text-xs"></i>
+                        </button>
                         <button type="button" class="${roundBtn}" onclick="window.floatingTimerBar.${pauseResumeAction}()" title="${escapeHtml(pauseResumeLabel)}" aria-label="${escapeHtml(pauseResumeLabel)}">
                             <i class="fas fa-${pauseResumeIcon} text-xs"></i>
                         </button>
@@ -202,6 +314,13 @@
                         </div>
                     </div>
                 `;
+                const switchBtn = this.bar.querySelector('[data-switch-project-btn]');
+                if (switchBtn) {
+                    switchBtn.addEventListener('click', (evt) => {
+                        evt.stopPropagation();
+                        this.openSwitchPopover();
+                    });
+                }
                 this.startElapsedUpdater();
             } else {
                 this.bar.className = 'flex shrink-0 items-center justify-center';
@@ -217,6 +336,10 @@
         destroy() {
             this.stopElapsedUpdater();
             if (this.pollTimer) clearInterval(this.pollTimer);
+            if (this.switchPopover) {
+                this.switchPopover.remove();
+                this.switchPopover = null;
+            }
         }
     }
 
@@ -229,7 +352,7 @@
     const style = document.createElement('style');
     style.textContent = `
         .floating-timer-bar__round { cursor: pointer; }
-        .floating-timer-bar--active { max-width: 11rem; }
+        .floating-timer-bar--active { max-width: 13rem; }
         @media (prefers-reduced-motion: reduce) {
             .floating-timer-bar__round .animate-pulse { animation: none; }
         }
