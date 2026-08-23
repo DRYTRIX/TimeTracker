@@ -1,21 +1,21 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import page_header %}
 
-{% block title %}{{ _('Recurring Task') }} - {{ app_name }}{% endblock %}
+{% block title %}{{ _('Edit Recurring Task') }} - {{ app_name }}{% endblock %}
 
 {% block content %}
 {% set breadcrumbs = [
     {'text': _('Recurring Tasks'), 'url': url_for('recurring_tasks.list_recurring_tasks')},
-    {'text': _('Create Recurring Task') if not recurring_task else _('Edit Recurring Task')}
+    {'text': recurring_task.name, 'url': url_for('recurring_tasks.view_recurring_task', task_id=recurring_task.id)},
+    {'text': _('Edit')}
 ] %}
 
 {{ page_header(
     icon_class='fas fa-redo',
-    title_text=_('Create Recurring Task') if not recurring_task else _('Edit Recurring Task'),
-    subtitle_text=_('Set up automated task creation'),
+    title_text=_('Edit Recurring Task'),
+    subtitle_text=recurring_task.name,
     breadcrumbs=breadcrumbs
 ) }}
 
 {% include "recurring_tasks/_form_fields.html" %}
 {% endblock %}
-

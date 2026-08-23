@@ -39,7 +39,7 @@
                 {% for task in recurring_tasks %}
                 <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
                     <td class="p-3" data-label="{{ _('Name') }}">
-                        <div class="font-medium">{{ task.name }}</div>
+                        <a href="{{ url_for('recurring_tasks.view_recurring_task', task_id=task.id) }}" class="font-medium text-primary hover:underline">{{ task.name }}</a>
                         {% if task.description %}
                         <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ task.description[:50] }}{% if task.description|length > 50 %}...{% endif %}</div>
                         {% endif %}
