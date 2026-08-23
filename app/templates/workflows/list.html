@@ -71,11 +71,14 @@
     </div>
 </div>
 {% else %}
+{% set workflow_create_action %}
+<a href="{{ url_for('workflows.create_workflow') }}" class="btn btn-primary mt-4"><i class="fas fa-plus mr-2"></i>{{ _('Create Workflow') }}</a>
+{% endset %}
 {{ empty_state(
-    icon_class='fas fa-sitemap',
-    title=_('No workflows yet'),
-    message=_('Create automation rules or start from a template.'),
-    action_html='<a href="' + url_for("workflows.create_workflow") + '" class="btn btn-primary mt-4"><i class="fas fa-plus mr-2"></i>' + _('Create Workflow') + '</a>'
+    'fas fa-sitemap',
+    'No workflows yet',
+    'Create automation rules or start from a template.',
+    workflow_create_action
 ) }}
 {% endif %}
 {% endblock %}

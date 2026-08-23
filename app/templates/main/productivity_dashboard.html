@@ -292,6 +292,12 @@
         return h.toFixed(2).replace(/\.?0+$/, '') + 'h';
     }
 
+    function addClasses(el, classNames) {
+        (classNames || '').split(/\s+/).filter(Boolean).forEach(function (cls) {
+            el.classList.add(cls);
+        });
+    }
+
     function fmtMinutes(mins) {
         mins = Math.max(0, Math.round(Number(mins) || 0));
         if (mins < 60) { return mins + 'm'; }
@@ -641,10 +647,10 @@
                 cell.style.height = '12px';
                 if (!entry) {
                     cell.classList.add('opacity-30');
-                    cell.classList.add(cellClasses[0]);
+                    addClasses(cell, cellClasses[0]);
                 } else {
                     var lvl = Math.max(0, Math.min(4, entry.level || 0));
-                    cell.classList.add(cellClasses[lvl]);
+                    addClasses(cell, cellClasses[lvl]);
                     cell.title = entry.date + ': ' + fmtHours(entry.hours);
                 }
                 colWrap.appendChild(cell);
