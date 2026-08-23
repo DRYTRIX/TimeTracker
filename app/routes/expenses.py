@@ -953,8 +953,13 @@ def approve_expense(expense_id):
                 from app.utils.integration_sync_hooks import trigger_expense_sync
 
                 trigger_expense_sync(expense)
-            except Exception:
-                pass
+            except Exception as sync_error:
+                current_app.logger.warning(
+                    "Expense approved but integration sync failed for expense %s: %s",
+                    expense_id,
+                    sync_error,
+                    exc_info=True,
+                )
         else:
             flash(_("Error approving expense"), "error")
 

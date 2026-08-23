@@ -279,8 +279,15 @@ class InvoiceService:
             from app.utils.support_invoice_sent import queue_first_invoice_support_prompt
 
             queue_first_invoice_support_prompt(invoice.created_by, first_send=was_first_send)
-        except Exception:
-            pass
+        except Exception as exc:
+            from flask import current_app
+
+            current_app.logger.warning(
+                "Invoice marked sent but support prompt queue failed for invoice %s: %s",
+                invoice.id,
+                exc,
+                exc_info=True,
+            )
 
         return {"success": True, "message": message, "invoice": invoice}
 
@@ -861,8 +868,15 @@ class InvoiceService:
             primary = Contact.get_primary_contact(client_id)
             if primary and primary.email:
                 client_email = primary.email
-        except Exception:
-            pass
+        except Exception as exc:
+            from flask import current_app
+
+            current_app.logger.warning(
+                "Could not resolve primary contact email for client %s: %s",
+                client_id,
+                exc,
+                exc_info=True,
+            )
 
         tax_rate = Decimal("0")
         notes = settings.invoice_notes if settings and settings.invoice_notes else None

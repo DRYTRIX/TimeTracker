@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, send_file, url_for
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
 from sqlalchemy import and_, func, or_
@@ -272,7 +272,16 @@ def create_payment():
                                     update_stock=True,
                                 )
                             except Exception as e:
-                                pass  # Don't fail payment creation on stock errors
+                                current_app.logger.warning(
+                                    "Payment saved but inventory stock update failed for invoice %s: %s",
+                                    invoice.id,
+                                    e,
+                                    exc_info=True,
+                                )
+                                flash(
+                                    _("Payment saved, but inventory could not be updated. Please verify stock levels."),
+                                    "warning",
+                                )
 
         if not safe_commit("create_payment", {"invoice_id": invoice_id, "amount": float(amount)}):
             flash(_("Could not create payment due to a database error. Please check server logs."), "error")

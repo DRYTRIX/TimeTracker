@@ -130,8 +130,15 @@ def _deliver_web_push(user, note):
         subscriptions = PushSubscription.get_user_subscriptions(user.id)
         if subscriptions:
             _deliver_push_to_subscriptions(user, subscriptions, note)
-    except Exception:
-        pass
+    except Exception as exc:
+        from flask import current_app
+
+        current_app.logger.warning(
+            "Failed to deliver mention web push to user %s: %s",
+            user.id,
+            exc,
+            exc_info=True,
+        )
 
 
 def _emit_socket(user, note):
@@ -140,5 +147,12 @@ def _emit_socket(user, note):
         from app import socketio
 
         socketio.emit("user_mentioned", note, room=f"user_{user.id}")
-    except Exception:
-        pass
+    except Exception as exc:
+        from flask import current_app
+
+        current_app.logger.warning(
+            "Failed to emit mention socket event to user %s: %s",
+            user.id,
+            exc,
+            exc_info=True,
+        )
