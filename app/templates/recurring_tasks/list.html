@@ -15,8 +15,30 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="mb-4 flex justify-end">
-    <a href="{{ url_for('recurring_tasks.create_recurring_task') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">
+<div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <form method="GET" action="{{ url_for('recurring_tasks.list_recurring_tasks') }}" class="flex flex-wrap items-end gap-3">
+        <div>
+            <label for="statusFilter" class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Status') }}</label>
+            <select id="statusFilter" name="status" class="form-input text-sm py-1.5" onchange="this.form.submit()">
+                <option value="all" {% if status_filter == 'all' %}selected{% endif %}>{{ _('All') }}</option>
+                <option value="active" {% if status_filter == 'active' %}selected{% endif %}>{{ _('Active') }}</option>
+                <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>{{ _('Inactive') }}</option>
+            </select>
+        </div>
+        <div>
+            <label for="projectFilter" class="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Project') }}</label>
+            <select id="projectFilter" name="project_id" class="form-input text-sm py-1.5" onchange="this.form.submit()">
+                <option value="">{{ _('All projects') }}</option>
+                {% for project in projects %}
+                <option value="{{ project.id }}" {% if project_filter == project.id %}selected{% endif %}>{{ project.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if status_filter != 'all' or project_filter %}
+        <a href="{{ url_for('recurring_tasks.list_recurring_tasks') }}" class="text-sm text-primary hover:underline py-1.5">{{ _('Clear filters') }}</a>
+        {% endif %}
+    </form>
+    <a href="{{ url_for('recurring_tasks.create_recurring_task') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors shrink-0">
         <i class="fas fa-plus mr-1"></i>{{ _('Create Recurring Task') }}
     </a>
 </div>
@@ -27,17 +49,27 @@
         <table class="w-full enhanced-table responsive-cards">
             <thead class="bg-background-light dark:bg-background-dark">
                 <tr class="border-b border-border-light dark:border-border-dark">
+                    <th class="text-left px-3 py-3 text-sm font-semibold">{{ _('Active') }}</th>
                     <th class="text-left px-3 py-3 text-sm font-semibold">{{ _('Name') }}</th>
                     <th class="text-left px-3 py-3 text-sm font-semibold">{{ _('Project') }}</th>
                     <th class="text-left px-3 py-3 text-sm font-semibold">{{ _('Frequency') }}</th>
                     <th class="text-left px-3 py-3 text-sm font-semibold">{{ _('Next Run') }}</th>
+                    <th class="text-left px-3 py-3 text-sm font-semibold">{{ _('Last Run') }}</th>
                     <th class="text-left px-3 py-3 text-sm font-semibold">{{ _('Status') }}</th>
                     <th class="text-left px-3 py-3 text-sm font-semibold">{{ _('Actions') }}</th>
                 </tr>
             </thead>
             <tbody>
                 {% for task in recurring_tasks %}
-                <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
+                <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark" data-recurring-task-id="{{ task.id }}">
+                    <td class="p-3" data-label="{{ _('Active') }}">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only recurring-task-toggle" data-task-id="{{ task.id }}" {% if task.is_active %}checked{% endif %} aria-label="{{ _('Toggle active status for %(name)s', name=task.name) }}">
+                            <span class="w-10 h-5 rounded-full transition-colors {% if task.is_active %}bg-green-500{% else %}bg-gray-300 dark:bg-gray-600{% endif %} relative">
+                                <span class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform {% if task.is_active %}translate-x-5{% endif %}"></span>
+                            </span>
+                        </label>
+                    </td>
                     <td class="p-3" data-label="{{ _('Name') }}">
                         <a href="{{ url_for('recurring_tasks.view_recurring_task', task_id=task.id) }}" class="font-medium text-primary hover:underline">{{ task.name }}</a>
                         {% if task.description %}
@@ -68,8 +100,17 @@
                         <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Not scheduled') }}</span>
                         {% endif %}
                     </td>
+                    <td class="p-3" data-label="{{ _('Last Run') }}">
+                        <span class="text-sm last-run-cell" data-task-id="{{ task.id }}">
+                            {% if task.last_created_at %}
+                            {{ task.last_created_at|user_datetime }}
+                            {% else %}
+                            <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Never') }}</span>
+                            {% endif %}
+                        </span>
+                    </td>
                     <td class="p-3" data-label="{{ _('Status') }}">
-                        <span class="px-2 py-1 rounded text-xs font-medium
+                        <span class="status-badge px-2 py-1 rounded text-xs font-medium
                             {% if task.is_active %}bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200
                             {% else %}bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200
                             {% endif %}">
@@ -77,13 +118,16 @@
                         </span>
                     </td>
                     <td class="p-3" data-label="{{ _('Actions') }}">
-                        <div class="flex gap-2">
-                            <a href="{{ url_for('recurring_tasks.edit_recurring_task', task_id=task.id) }}" class="text-primary hover:text-primary-dark">
+                        <div class="flex gap-2 items-center">
+                            <button type="button" class="recurring-run-now {% if task.is_active %}text-green-600 hover:text-green-700{% else %}text-gray-400 cursor-not-allowed{% endif %}" data-task-id="{{ task.id }}" title="{{ _('Run now') }}" aria-label="{{ _('Run now') }}" {% if not task.is_active %}disabled{% endif %}>
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <a href="{{ url_for('recurring_tasks.edit_recurring_task', task_id=task.id) }}" class="text-primary hover:text-primary-dark" title="{{ _('Edit') }}">
                                 <i class="fas fa-edit"></i>
                             </a>
                             <form method="POST" action="{{ url_for('recurring_tasks.delete_recurring_task', task_id=task.id) }}" class="inline" onsubmit="return confirm('{{ _('Are you sure you want to delete this recurring task?') }}');">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="text-red-600 hover:text-red-700">
+                                <button type="submit" class="text-red-600 hover:text-red-700" title="{{ _('Delete') }}">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </form>
@@ -97,10 +141,99 @@
 </div>
 {% else %}
 {{ empty_state(
-    icon='fas fa-redo',
-    title=_('No recurring tasks'),
-    message=_('Create recurring task templates to automatically generate tasks on a schedule.')
+    'fas fa-redo',
+    'No recurring tasks',
+    'Create recurring task templates to automatically generate tasks on a schedule.'
 ) }}
 {% endif %}
 {% endblock %}
 
+{% block scripts_extra %}
+<script nonce="{{ csp_nonce() }}">
+document.addEventListener('DOMContentLoaded', function() {
+    var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+    function updateToggleUi(checkbox, isActive) {
+        checkbox.checked = isActive;
+        var track = checkbox.nextElementSibling;
+        var knob = track?.querySelector('span');
+        if (track) {
+            track.classList.toggle('bg-green-500', isActive);
+            track.classList.toggle('bg-gray-300', !isActive);
+            track.classList.toggle('dark:bg-gray-600', !isActive);
+        }
+        if (knob) knob.classList.toggle('translate-x-5', isActive);
+        var row = checkbox.closest('tr');
+        var badge = row?.querySelector('.status-badge');
+        if (badge) {
+            badge.textContent = isActive ? {{ _('Active')|tojson }} : {{ _('Inactive')|tojson }};
+            badge.className = 'status-badge px-2 py-1 rounded text-xs font-medium ' + (isActive
+                ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200');
+        }
+        var runBtn = row?.querySelector('.recurring-run-now');
+        if (runBtn) runBtn.disabled = !isActive;
+    }
+
+    document.querySelectorAll('.recurring-task-toggle').forEach(function(checkbox) {
+        checkbox.addEventListener('change', async function() {
+            var taskId = this.getAttribute('data-task-id');
+            var previous = !this.checked;
+            try {
+                var res = await fetch('/recurring-tasks/' + taskId + '/toggle', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                });
+                var data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Toggle failed');
+                updateToggleUi(this, data.is_active);
+            } catch (e) {
+                updateToggleUi(this, previous);
+                if (window.toastManager?.error) {
+                    window.toastManager.error({{ _('Could not update status')|tojson }}, '', 3000);
+                }
+            }
+        });
+    });
+
+    document.querySelectorAll('.recurring-run-now').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+            if (this.disabled) return;
+            var taskId = this.getAttribute('data-task-id');
+            this.disabled = true;
+            try {
+                var res = await fetch('/recurring-tasks/' + taskId + '/run-now', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                });
+                var data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Run failed');
+                var lastCell = document.querySelector('.last-run-cell[data-task-id="' + taskId + '"]');
+                if (lastCell && data.last_created_at) {
+                    lastCell.textContent = new Date(data.last_created_at).toLocaleString();
+                }
+                if (window.toastManager?.success) {
+                    window.toastManager.success({{ _('Task created successfully')|tojson }}, '', 3000);
+                }
+            } catch (e) {
+                if (window.toastManager?.error) {
+                    window.toastManager.error(e.message || {{ _('Could not run recurring task')|tojson }}, '', 4000);
+                }
+            } finally {
+                this.disabled = false;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

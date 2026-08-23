@@ -71,14 +71,32 @@ def _apply_recurring_task_fields(recurring_task, fields):
 @module_enabled("recurring_tasks")
 def list_recurring_tasks():
     """List all recurring tasks"""
-    if current_user.is_admin:
-        recurring_tasks = RecurringTask.query.order_by(RecurringTask.next_run_date.asc()).all()
-    else:
-        recurring_tasks = (
-            RecurringTask.query.filter_by(created_by=current_user.id).order_by(RecurringTask.next_run_date.asc()).all()
-        )
+    status_filter = request.args.get("status", "all")
+    project_filter = request.args.get("project_id", type=int)
 
-    return render_template("recurring_tasks/list.html", recurring_tasks=recurring_tasks)
+    if current_user.is_admin:
+        query = RecurringTask.query
+    else:
+        query = RecurringTask.query.filter_by(created_by=current_user.id)
+
+    if status_filter == "active":
+        query = query.filter_by(is_active=True)
+    elif status_filter == "inactive":
+        query = query.filter_by(is_active=False)
+
+    if project_filter:
+        query = query.filter_by(project_id=project_filter)
+
+    recurring_tasks = query.order_by(RecurringTask.next_run_date.asc()).all()
+    projects = _active_projects()
+
+    return render_template(
+        "recurring_tasks/list.html",
+        recurring_tasks=recurring_tasks,
+        projects=projects,
+        status_filter=status_filter,
+        project_filter=project_filter,
+    )
 
 
 @recurring_tasks_bp.route("/recurring-tasks/create", methods=["GET", "POST"])
@@ -213,10 +231,42 @@ def toggle_recurring_task(task_id):
     """Toggle recurring task active status"""
     recurring_task = RecurringTask.query.get_or_404(task_id)
 
-    if recurring_task.created_by != current_user.id and not current_user.is_admin:
+    if not _can_manage_recurring_task(recurring_task):
         return jsonify({"error": "Access denied"}), 403
 
     recurring_task.is_active = not recurring_task.is_active
-    db.session.commit()
+    if not safe_commit("toggle_recurring_task", {"task_id": task_id}):
+        return jsonify({"error": "Database error"}), 500
 
     return jsonify({"success": True, "is_active": recurring_task.is_active})
+
+
+@recurring_tasks_bp.route("/recurring-tasks/<int:task_id>/run-now", methods=["POST"])
+@login_required
+@module_enabled("recurring_tasks")
+def run_recurring_task_now(task_id):
+    """Immediately create a task from this recurring template"""
+    recurring_task = RecurringTask.query.get_or_404(task_id)
+
+    if not _can_manage_recurring_task(recurring_task):
+        return jsonify({"error": "Access denied"}), 403
+
+    if not recurring_task.is_active:
+        return jsonify({"error": _("Recurring task is inactive")}), 400
+
+    if recurring_task.end_date and recurring_task.next_run_date > recurring_task.end_date:
+        return jsonify({"error": _("Recurring task has passed its end date")}), 400
+
+    try:
+        task = recurring_task.create_task()
+        return jsonify(
+            {
+                "success": True,
+                "task": task.to_dict() if hasattr(task, "to_dict") else {"id": task.id, "name": task.name},
+                "last_created_at": recurring_task.last_created_at.isoformat() if recurring_task.last_created_at else None,
+                "next_run_date": recurring_task.next_run_date.isoformat() if recurring_task.next_run_date else None,
+            }
+        )
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": _("Could not create task")}), 500
