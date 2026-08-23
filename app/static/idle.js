@@ -164,6 +164,48 @@
     attachHandlers(t, t.querySelector('[data-countdown]'));
   }
 
+  let longEntryNudgeShown = false;
+  let lastLongEntryTimerId = null;
+
+  function getLongEntryThresholdMs(){
+    const meta = document.querySelector('meta[name="long-entry-threshold-hours"]');
+    const hours = meta ? parseFloat(meta.getAttribute('content'), 10) : 8;
+    return (isNaN(hours) || hours < 1 ? 8 : Math.min(24, hours)) * 60 * 60 * 1000;
+  }
+
+  async function checkLongRunningTimer(active){
+    if (!active || !active.start_time) return;
+    if (active.id !== lastLongEntryTimerId) {
+      lastLongEntryTimerId = active.id;
+      longEntryNudgeShown = false;
+    }
+    if (longEntryNudgeShown || activeReminderToast) return;
+    const started = new Date(active.start_time).getTime();
+    if (isNaN(started)) return;
+    const runningMs = Date.now() - started;
+    if (runningMs < getLongEntryThresholdMs()) return;
+    longEntryNudgeShown = true;
+    const hours = (runningMs / (60 * 60 * 1000)).toFixed(1);
+    const msg = 'Your timer has been running for ' + hours + ' hours. Did you forget to stop it?';
+    buildReminderToast(
+      'amber',
+      escapeHtml(msg),
+      [
+        {
+          label: (window.i18n?.messages?.timerStopped || 'Stop timer'),
+          style: 'primary',
+          onClick: function(){ window.floatingTimerBar && window.floatingTimerBar.stopTimer(); }
+        },
+        {
+          label: (window.i18n?.messages?.dismiss || 'Dismiss'),
+          style: 'link',
+          onClick: function(){ longEntryNudgeShown = true; }
+        }
+      ],
+      0
+    );
+  }
+
   async function tick(){
     const active = await getTimer();
     hasActiveTimer = !!active;
@@ -176,6 +218,7 @@
       const stopTs = Date.now() - idleFor;
       showIdlePrompt(stopTs);
     }
+    try { await checkLongRunningTimer(active); } catch(e) {}
     // Break reminder follows the active timer state; check on every tick.
     try { checkBreakNudge(active); } catch(e) {}
   }

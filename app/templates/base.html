@@ -119,6 +119,7 @@
 
         {% if current_user.is_authenticated %}
         <meta name="idle-timeout-minutes" content="{{ settings.idle_timeout_minutes if settings else 30 }}">
+        <meta name="long-entry-threshold-hours" content="8">
         {% endif %}
 
         {% if is_admin_user %}

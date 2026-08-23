@@ -76,6 +76,8 @@
                 const formatted = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
                 const el = this.bar.querySelector('[data-timer-elapsed]');
                 if (el) el.textContent = formatted;
+                const progressEl = this.bar.querySelector('[data-timer-progress]');
+                if (progressEl) progressEl.style.width = this.getProgressPercent(elapsedSec) + '%';
                 const btn = this.bar.querySelector('button');
                 const label = this.timerData.paused ? (this.bar.dataset.resumeLabel || 'Resume') : (this.stopLabel || 'Stop');
                 if (btn) btn.title = (this.getLabel() || 'Timer') + (this.timerData.paused ? ' (Paused) – ' : ' – ') + formatted + ' – ' + label;
@@ -155,6 +157,19 @@
             return this.timerData.project_name || this.timerData.client_name || 'Timer';
         }
 
+        getDailyTargetSeconds() {
+            const raw = this.bar && this.bar.dataset.dailyTargetHours;
+            const hours = raw ? parseFloat(raw, 10) : 8;
+            const safeHours = isNaN(hours) || hours <= 0 ? 8 : hours;
+            return Math.round(safeHours * 3600);
+        }
+
+        getProgressPercent(elapsedSec) {
+            const target = this.getDailyTargetSeconds();
+            if (!target) return 0;
+            return Math.min(100, Math.round((elapsedSec / target) * 100));
+        }
+
         render() {
             if (!this.bar) return;
 
@@ -168,12 +183,21 @@
                 const isPaused = this.timerData.paused;
                 const pulseClass = isPaused ? 'bg-amber-500' : 'bg-green-500 animate-pulse';
                 const clickHandler = isPaused ? 'window.floatingTimerBar.resumeTimer()' : 'window.floatingTimerBar.stopTimer()';
+                const elapsedSec = this.timerData.current_duration != null
+                    ? this.timerData.current_duration
+                    : (this.startTime ? Math.floor((Date.now() - this.startTime) / 1000) : 0);
+                const progressPct = this.getProgressPercent(elapsedSec);
                 this.bar.innerHTML = `
-                    <button type="button" class="${baseClass} relative" onclick="${clickHandler}" title="${title}" aria-label="${escapeHtml(actionLabel)} – ${escapeHtml(this.getLabel())}">
-                        <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${pulseClass}" aria-hidden="true"></span>
-                        <i class="fas fa-${isPaused ? 'pause' : 'stopwatch'} text-base"></i>
-                        <span class="floating-timer-bar__elapsed sr-only" data-timer-elapsed>${this.timerData.duration_formatted || '00:00:00'}</span>
-                    </button>
+                    <div class="relative flex flex-col items-center justify-center w-10">
+                        <button type="button" class="${baseClass} relative" onclick="${clickHandler}" title="${title}" aria-label="${escapeHtml(actionLabel)} – ${escapeHtml(this.getLabel())}">
+                            <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${pulseClass}" aria-hidden="true"></span>
+                            <i class="fas fa-${isPaused ? 'pause' : 'stopwatch'} text-base"></i>
+                            <span class="floating-timer-bar__elapsed sr-only" data-timer-elapsed>${this.timerData.duration_formatted || '00:00:00'}</span>
+                        </button>
+                        <div class="absolute -bottom-1 left-1 right-1 h-1 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden" aria-hidden="true">
+                            <div class="h-full bg-primary transition-all duration-1000" data-timer-progress style="width: ${progressPct}%;"></div>
+                        </div>
+                    </div>
                 `;
                 this.startElapsedUpdater();
             } else {
