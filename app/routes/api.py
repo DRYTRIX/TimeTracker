@@ -342,6 +342,40 @@ def timer_status():
     )
 
 
+@api_bp.route("/api/timer/notes-suggestions")
+@login_required
+def timer_notes_suggestions():
+    """Recent time-entry notes for description autocomplete, optionally scoped to a project."""
+    project_id = request.args.get("project_id", type=int)
+    q = (
+        db.session.query(TimeEntry.notes)
+        .filter(
+            TimeEntry.user_id == current_user.id,
+            TimeEntry.notes.isnot(None),
+            TimeEntry.notes != "",
+        )
+    )
+    if project_id:
+        q = q.filter(TimeEntry.project_id == project_id)
+    rows = q.order_by(TimeEntry.updated_at.desc()).limit(150).all()
+
+    seen = set()
+    suggestions = []
+    for (notes,) in rows:
+        text = (notes or "").strip()
+        if not text:
+            continue
+        key = text.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        suggestions.append(text[:200])
+        if len(suggestions) >= 20:
+            break
+
+    return jsonify({"ok": True, "suggestions": suggestions})
+
+
 @api_bp.route("/api/timer/heartbeat", methods=["POST"])
 @login_required
 @deprecated_session_api("/api/v1/timer/heartbeat")
@@ -2491,6 +2525,7 @@ def productivity_stats():
 
         summary = ProductivityService.get_summary(current_user)
         daily_breakdown = ProductivityService.get_daily_breakdown(current_user, days=14)
+        daily_project_breakdown = ProductivityService.get_daily_project_breakdown(current_user, days=14)
         streak = ProductivityService.get_streak(current_user)
         focus = ProductivityService.get_focus_stats(current_user, days=period)
         projects = ProductivityService.get_project_breakdown(current_user, days=period)
@@ -2502,6 +2537,7 @@ def productivity_stats():
             "period": period,
             "summary": summary,
             "daily_breakdown": daily_breakdown,
+            "daily_project_breakdown": daily_project_breakdown,
             "streak": streak,
             "focus": focus,
             "projects": projects,
