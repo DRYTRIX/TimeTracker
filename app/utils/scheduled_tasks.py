@@ -955,7 +955,7 @@ def check_idle_timers():
                     if getattr(notified_at, "tzinfo", None) is not None:
                         notified_at = notified_at.replace(tzinfo=None)
                     if (now - notified_at) >= grace:
-                        stop_at = entry.last_heartbeat_at or entry.start_time
+                        stop_at = entry.last_heartbeat_at or (now - threshold)
                         if getattr(stop_at, "tzinfo", None) is not None:
                             stop_at = stop_at.replace(tzinfo=None)
                         if stop_at and stop_at > now:

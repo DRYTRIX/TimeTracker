@@ -168,6 +168,8 @@
     const active = await getTimer();
     hasActiveTimer = !!active;
     if (!active) return;
+    // Send periodic heartbeat while tab is open (throttled to HEARTBEAT_THROTTLE_MS)
+    if (!promptShown) sendHeartbeat();
     const threshold = getIdleThresholdMs();
     const idleFor = Date.now() - lastActivity;
     if (idleFor >= threshold){
