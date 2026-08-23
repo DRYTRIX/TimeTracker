@@ -989,10 +989,27 @@ def send_invoice_email(invoice, recipient_email, sender_user=None, custom_messag
         db.session.add(invoice_email)
 
         # Update invoice status to 'sent' if it's still 'draft'
-        if invoice.status == "draft":
+        was_first_send = invoice.status == "draft"
+        if was_first_send:
             invoice.status = "sent"
 
         db.session.commit()
+
+        if was_first_send:
+            try:
+                from app.models import Invoice
+
+                sent_statuses = ("sent", "paid", "overdue", "issued")
+                sent_count = (
+                    Invoice.query.filter(
+                        Invoice.created_by == sender_id, Invoice.status.in_(sent_statuses)
+                    ).count()
+                )
+                from app.utils.support_invoice_sent import queue_first_invoice_support_prompt
+
+                queue_first_invoice_support_prompt(sender_id, first_send=sent_count == 1)
+            except Exception:
+                pass
 
         return True, invoice_email, f"Invoice email sent successfully to {recipient_email}"
 

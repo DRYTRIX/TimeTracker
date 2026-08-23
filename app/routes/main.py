@@ -264,22 +264,44 @@ def dashboard():
         today_hours=float(today_hours or 0),
     )
     if support_dashboard_prompt:
-        SupportPromptService.mark_prompt_shown(session, support_dashboard_prompt["variant"])
         v = support_dashboard_prompt.get("variant")
+        if v == SupportPromptService.VARIANT_HOURS_MILESTONE:
+            SupportPromptService.mark_hours_milestone_shown(
+                session, int(support_dashboard_prompt.get("milestone") or 0)
+            )
+        else:
+            SupportPromptService.mark_prompt_shown(session, v)
         if v == SupportPromptService.VARIANT_SEVEN_DAY:
             support_dashboard_prompt = {
                 **support_dashboard_prompt,
                 "message": _(
-                    "You have been using TimeTracker for a week or more. If it fits your workflow, "
-                    "consider supporting continued development."
+                    "A week in — glad you're here. TimeTracker is built by one person, "
+                    "and every bit of support helps."
+                ),
+            }
+        elif v == SupportPromptService.VARIANT_ANNIVERSARY_30D:
+            support_dashboard_prompt = {
+                **support_dashboard_prompt,
+                "message": _(
+                    "You've been using TimeTracker for a month — thank you for being part of the community. "
+                    "If the app helps your work, consider supporting its development."
+                ),
+            }
+        elif v == SupportPromptService.VARIANT_HOURS_MILESTONE:
+            milestone = int(support_dashboard_prompt.get("milestone") or 0)
+            support_dashboard_prompt = {
+                **support_dashboard_prompt,
+                "message": _(
+                    "You've tracked %(hours)s hours with TimeTracker. That's reliable data for your clients "
+                    "and your business — consider supporting continued development.",
+                    hours=milestone,
                 ),
             }
         elif v == SupportPromptService.VARIANT_ACTIVE_TODAY:
             support_dashboard_prompt = {
                 **support_dashboard_prompt,
                 "message": _(
-                    "You have tracked a solid amount of time today. If TimeTracker makes your day easier, "
-                    "you can support the project in a click."
+                    "You've been tracking for a while today. TimeTracker is free because of supporters like you."
                 ),
             }
 

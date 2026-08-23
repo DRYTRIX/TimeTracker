@@ -242,6 +242,20 @@ class InvoiceService:
 
     def mark_as_sent(self, invoice_id: int) -> Dict[str, Any]:
         """Mark an invoice as sent and mark associated time entries as paid"""
+        from app.models import Invoice
+
+        invoice_before = self.invoice_repo.get_by_id(invoice_id)
+        sent_statuses = ("sent", "paid", "overdue", "issued")
+        was_first_send = bool(
+            invoice_before
+            and invoice_before.status == "draft"
+            and Invoice.query.filter(
+                Invoice.created_by == invoice_before.created_by,
+                Invoice.status.in_(sent_statuses),
+            ).count()
+            == 0
+        )
+
         invoice = self.invoice_repo.mark_as_sent(invoice_id)
 
         if not invoice:
@@ -260,6 +274,13 @@ class InvoiceService:
         message = "Invoice marked as sent"
         if marked_count > 0:
             message += f" ({marked_count} time entr{'y' if marked_count == 1 else 'ies'} marked as paid)"
+
+        try:
+            from app.utils.support_invoice_sent import queue_first_invoice_support_prompt
+
+            queue_first_invoice_support_prompt(invoice.created_by, first_send=was_first_send)
+        except Exception:
+            pass
 
         return {"success": True, "message": message, "invoice": invoice}
 

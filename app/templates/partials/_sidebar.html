@@ -751,7 +751,14 @@
                             <span class="ml-3 sidebar-label">{{ _('Help') }}</span>
                         </a>
                     </li>
-                    {% if current_user.is_authenticated and current_user.ui_show_donate and not is_license_activated %}
+                    {% if is_license_activated %}
+                    <li class="mt-2">
+                        <div class="sidebar-nav-item flex items-center p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20" title="{{ _('Supporter') }}">
+                            <i class="fas fa-star w-6 text-center text-emerald-600 dark:text-emerald-400" aria-hidden="true"></i>
+                            <span class="ml-3 sidebar-label text-sm font-medium text-emerald-700 dark:text-emerald-300">{{ _('Supporter') }}</span>
+                        </div>
+                    </li>
+                    {% elif current_user.is_authenticated and current_user.ui_show_donate %}
                     <li class="mt-2">
                         <button type="button" class="sidebar-nav-item w-full text-left flex items-center p-2 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:from-amber-500/20 hover:to-orange-500/20 hover:border-amber-500/30 transition-all duration-200 group js-open-support-modal" title="{{ _('Open support options') }}">
                             <i class="fas fa-heart w-6 text-center group-hover:scale-110 transition-transform" aria-hidden="true"></i>

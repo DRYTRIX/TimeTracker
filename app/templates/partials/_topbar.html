@@ -102,7 +102,7 @@
                                 {% endif %}
                                 <span class="hidden md:inline text-text-light dark:text-text-dark font-medium">{{ current_user.display_name }}</span>
                                 {% if is_license_activated %}
-                                <span class="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 border border-emerald-200/80 dark:border-emerald-700/60" title="{{ _('Supporter') }}">{{ _('Supporter') }}</span>
+                                <span class="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 border border-emerald-200/80 dark:border-emerald-700/60" title="{{ _('Supporter') }}"><i class="fas fa-star" aria-hidden="true"></i>{{ _('Supporter') }}</span>
                                 {% endif %}
                             {% else %}
                                 <div class="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center">

@@ -17,7 +17,7 @@
             <h1 class="text-2xl sm:text-4xl font-bold mb-4">{{ _('Support TimeTracker Development') }}</h1>
             <p class="text-xl opacity-90 mb-6">
                 {% if (support_ab_variant|default('control')) == 'cta_alt' %}
-                {{ _('Donate to support development — or get a key to remove prompts') }}
+                {{ _('Donate to support development — or become a Supporter to show your badge') }}
                 {% else %}
                 {{ _('Support updates and keep TimeTracker free for everyone') }}
                 {% endif %}
@@ -26,7 +26,7 @@
                 {% if (support_ab_variant|default('control')) == 'key_first' %}
                 <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" onclick="trackDonationClick('donate_page_key')"
                    class="px-6 py-3 bg-white text-amber-600 rounded-lg font-semibold hover:bg-amber-50 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                    <i class="fas fa-key mr-2"></i>{{ _('Remove prompts with key') }}
+                    <i class="fas fa-star mr-2"></i>{{ _('Become a Supporter') }}
                     <i class="fas fa-external-link-alt ml-2 text-xs"></i>
                 </a>
                 <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=donate_page_hero&utm_campaign=support" target="_blank" rel="noopener noreferrer" onclick="trackDonationClick('donate_page_hero')"
@@ -46,8 +46,27 @@
                 {% endif %}
             </div>
             <p class="mt-4 text-sm opacity-80">
-                {{ _('Remove prompts with a one-time key.') }}
-                <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" onclick="trackDonationClick('donate_page_key')" class="underline hover:no-underline">{{ _('Get key') }}</a>
+                {{ _('Supporters get a visible badge and fewer prompts — no features are locked.') }}
+                <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" onclick="trackDonationClick('donate_page_key')" class="underline hover:no-underline">{{ _('Become a Supporter') }}</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- A note from the developer -->
+    <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+        <h2 class="text-xl sm:text-2xl font-semibold mb-4">
+            <i class="fas fa-pen-nib text-primary mr-2"></i>
+            {{ _('A note from the developer') }}
+        </h2>
+        <div class="space-y-4 text-text-light dark:text-text-dark">
+            <p>
+                {{ _('I built TimeTracker because I needed simple, reliable time tracking for my own work — without subscriptions, vendor lock-in, or features hidden behind a paywall.') }}
+            </p>
+            <p>
+                {{ _('Keeping it running means real costs: hosting, databases, domains, and the time to fix bugs, ship improvements, and answer community questions. When you donate or become a Supporter, that money goes directly toward those costs — not a corporation, just one independent developer trying to build something useful.') }}
+            </p>
+            <p class="text-text-muted-light dark:text-text-muted-dark">
+                {{ _('Thank you for using TimeTracker. Whether you contribute financially, star the repo, or spread the word — it genuinely helps.') }}
             </p>
         </div>
     </div>
@@ -56,20 +75,40 @@
     <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
         <h2 class="text-xl sm:text-2xl font-semibold mb-4">
             <i class="fas fa-heart text-rose-500 mr-2"></i>
-            {{ _('Why Your Support Matters') }}
+            {{ _('Where your support goes') }}
         </h2>
         <div class="space-y-4 text-text-light dark:text-text-dark">
             <p class="text-lg">
-                {{ _('TimeTracker is a free, open-source project built with passion and dedication. Your donations directly support:') }}
+                {{ _('Real numbers — every contribution, no matter the size, makes a difference:') }}
             </p>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                 <div class="flex items-start gap-3">
+                    <i class="fas fa-mug-saucer text-amber-500 mt-1"></i>
+                    <div>
+                        <h3 class="font-semibold mb-1">{{ _('€5 — a coffee') }}</h3>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('Covers roughly a month of basic hosting for the project website and documentation') }}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="flex items-start gap-3">
                     <i class="fas fa-server text-primary mt-1"></i>
                     <div>
-                        <h3 class="font-semibold mb-1">{{ _('Server Infrastructure') }}</h3>
+                        <h3 class="font-semibold mb-1">{{ _('€10 — infrastructure') }}</h3>
                         <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                            {{ _('Hosting, databases, and CDN costs to keep TimeTracker fast and reliable') }}
+                            {{ _('Helps pay for server resources, CDN, and database costs that keep releases and downloads available') }}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-star text-emerald-500 mt-1"></i>
+                    <div>
+                        <h3 class="font-semibold mb-1">{{ _('€25 — become a Supporter') }}</h3>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('Covers about a quarter of server and domain costs, plus shows a Supporter badge in the app — no features locked') }}
                         </p>
                     </div>
                 </div>
@@ -77,29 +116,9 @@
                 <div class="flex items-start gap-3">
                     <i class="fas fa-code text-primary mt-1"></i>
                     <div>
-                        <h3 class="font-semibold mb-1">{{ _('Feature Development') }}</h3>
+                        <h3 class="font-semibold mb-1">{{ _('Any amount — development time') }}</h3>
                         <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                            {{ _('New features, improvements, and bug fixes based on your feedback') }}
-                        </p>
-                    </div>
-                </div>
-                
-                <div class="flex items-start gap-3">
-                    <i class="fas fa-shield-alt text-primary mt-1"></i>
-                    <div>
-                        <h3 class="font-semibold mb-1">{{ _('Security & Maintenance') }}</h3>
-                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                            {{ _('Regular security updates, dependency maintenance, and performance optimization') }}
-                        </p>
-                    </div>
-                </div>
-                
-                <div class="flex items-start gap-3">
-                    <i class="fas fa-globe text-primary mt-1"></i>
-                    <div>
-                        <h3 class="font-semibold mb-1">{{ _('Internationalization') }}</h3>
-                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                            {{ _('Translation support, localization, and making TimeTracker accessible worldwide') }}
+                            {{ _('Funds bug fixes, new features, translations, and keeping TimeTracker free for everyone') }}
                         </p>
                     </div>
                 </div>
@@ -107,14 +126,14 @@
         </div>
     </div>
 
-    <!-- Remove prompts with key: 3-step flow -->
+    <!-- Become a Supporter: 3-step flow -->
     <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6 border-l-4 border-l-blue-500">
         <h2 class="text-xl sm:text-2xl font-semibold mb-4">
-            <i class="fas fa-key text-blue-500 mr-2"></i>
-            {{ _('Remove prompts with key') }}
+            <i class="fas fa-star text-blue-500 mr-2"></i>
+            {{ _('Become a Supporter') }}
         </h2>
         <p class="mb-4 text-text-light dark:text-text-dark">
-            {{ _('One key per instance; key sent by email after payment (€25 one-time). No subscription.') }}
+            {{ _('One-time €25 contribution per instance. You receive a key by email. Supporters get a visible badge; support prompts are minimized as a side effect. No subscription.') }}
         </p>
         <ol class="list-decimal list-inside space-y-3 mb-6 text-text-light dark:text-text-dark">
             <li class="flex items-start gap-2">
@@ -135,7 +154,7 @@
            rel="noopener noreferrer"
            onclick="trackDonationClick('donate_page_key')"
            class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg">
-            <i class="fas fa-key mr-2"></i>{{ _('Get key') }}
+            <i class="fas fa-star mr-2"></i>{{ _('Support TimeTracker (€25)') }}
             <i class="fas fa-external-link-alt text-sm"></i>
         </a>
     </div>
@@ -247,6 +266,19 @@
                class="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-lg hover:bg-background-hover-light dark:hover:bg-background-hover-dark transition-colors">
                 <i class="fab fa-github text-2xl text-text-light dark:text-text-dark"></i>
                 <div>
+                    <div class="font-semibold">{{ _('Star on GitHub') }}</div>
+                    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                        {{ _('Free way to help — stars increase visibility and bring more users to the project') }}
+                    </div>
+                </div>
+            </a>
+
+            <a href="https://github.com/drytrix/TimeTracker" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               class="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-lg hover:bg-background-hover-light dark:hover:bg-background-hover-dark transition-colors">
+                <i class="fab fa-github text-2xl text-text-light dark:text-text-dark"></i>
+                <div>
                     <div class="font-semibold">{{ _('Contribute on GitHub') }}</div>
                     <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
                         {{ _('Report bugs, suggest features, or submit code') }}
@@ -270,11 +302,11 @@
                rel="noopener noreferrer"
                onclick="trackDonationClick('donate_page_key')"
                class="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-lg hover:bg-background-hover-light dark:hover:bg-background-hover-dark transition-colors">
-                <i class="fas fa-key text-2xl text-text-light dark:text-text-dark"></i>
+                <i class="fas fa-star text-2xl text-amber-500"></i>
                 <div>
-                    <div class="font-semibold">{{ _('Remove prompts with key') }}</div>
+                    <div class="font-semibold">{{ _('Become a Supporter') }}</div>
                     <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                        {{ _('One-time key per instance; no subscription') }}
+                        {{ _('One-time €25 — visible badge, fewer prompts, no subscription') }}
                     </div>
                 </div>
             </a>
