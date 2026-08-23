@@ -22,6 +22,61 @@ class InvoiceService:
         self.invoice_repo = InvoiceRepository()
         self.project_repo = ProjectRepository()
 
+    @staticmethod
+    def _resolve_currency_for_project(project) -> str:
+        """Resolve invoice currency: client custom field → system settings → EUR."""
+        from app.models import Settings
+
+        client = getattr(project, "client_obj", None)
+        if client and getattr(client, "custom_fields", None):
+            currency = (client.custom_fields or {}).get("currency")
+            if currency:
+                return str(currency).upper()[:3]
+        settings = Settings.get_settings()
+        if settings and getattr(settings, "currency", None):
+            return settings.currency
+        return "EUR"
+
+    @staticmethod
+    def _resolve_tax_rate_for_project(project, issue_date: Optional[date] = None) -> Decimal:
+        """Resolve tax rate: TaxRule (project → client) → project custom field → client custom field → 0."""
+        from app.models import Settings
+        from app.models.tax_rule import TaxRule
+
+        today = issue_date or date.today()
+        query = TaxRule.query.filter(TaxRule.active == True)
+        query = query.filter(
+            (TaxRule.start_date.is_(None) | (TaxRule.start_date <= today)),
+            (TaxRule.end_date.is_(None) | (TaxRule.end_date >= today)),
+        )
+        candidates = []
+        if project and getattr(project, "id", None):
+            candidates = query.filter(TaxRule.project_id == project.id).all()
+        if not candidates and project and getattr(project, "client_id", None):
+            candidates = query.filter(TaxRule.client_id == project.client_id).all()
+        if candidates:
+            candidates.sort(key=lambda r: float(r.rate_percent), reverse=True)
+            return Decimal(str(candidates[0].rate_percent))
+
+        if project and getattr(project, "custom_fields", None):
+            project_tax = (project.custom_fields or {}).get("tax_rate")
+            if project_tax is not None and str(project_tax).strip() != "":
+                return Decimal(str(project_tax))
+
+        client = getattr(project, "client_obj", None) if project else None
+        if client and getattr(client, "custom_fields", None):
+            client_tax = (client.custom_fields or {}).get("default_tax_rate") or (client.custom_fields or {}).get(
+                "tax_rate"
+            )
+            if client_tax is not None and str(client_tax).strip() != "":
+                return Decimal(str(client_tax))
+
+        settings = Settings.get_settings()
+        if settings and getattr(settings, "company_tax_id", None):
+            # No default tax rate on settings model; fall through to zero.
+            pass
+        return Decimal("0.00")
+
     def create_invoice_from_time_entries(
         self,
         project_id: int,
@@ -62,8 +117,10 @@ class InvoiceService:
                 rate = project.hourly_rate or Decimal("0.00")
                 subtotal += hours * rate
 
-        # Get tax rate (from project or default)
-        tax_rate = Decimal("0.00")  # Should come from project/client settings
+        # Resolve tax rate and currency from project/client/settings
+        resolved_issue_date = issue_date or date.today()
+        tax_rate = self._resolve_tax_rate_for_project(project, resolved_issue_date)
+        currency_code = self._resolve_currency_for_project(project)
         tax_amount = subtotal * (tax_rate / 100)
         total_amount = subtotal + tax_amount
 
@@ -74,14 +131,14 @@ class InvoiceService:
             client_id=project.client_id,
             # Project.client is a string property; relationship is Project.client_obj
             client_name=(project.client_obj.name if getattr(project, "client_obj", None) else project.client) or "",
-            issue_date=issue_date or date.today(),
+            issue_date=resolved_issue_date,
             due_date=due_date or date.today(),
             status=InvoiceStatus.DRAFT.value,
             subtotal=subtotal,
             tax_rate=tax_rate,
             tax_amount=tax_amount,
             total_amount=total_amount,
-            currency_code="EUR",  # Should come from project/client
+            currency_code=currency_code,
             created_by=created_by,
         )
 
@@ -108,6 +165,13 @@ class InvoiceService:
             db.session.add(item)
 
         grouped_entries = items  # for telemetry line_item_count
+
+        if include_expenses:
+            from app.models import Expense
+
+            uninvoiced_expenses = Expense.get_uninvoiced_expenses(project_id=project_id)
+            for expense in uninvoiced_expenses:
+                expense.mark_as_invoiced(invoice.id)
 
         # Derive subtotal/tax/total from the persisted line items. Invoice.__init__
         # ignores subtotal/tax_amount/total_amount kwargs, so the values passed to
