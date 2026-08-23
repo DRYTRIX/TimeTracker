@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.13.0] - 2026-08-23
+
+### Added
+
+- **Dashboard daily progress widget** — Compact strip showing today's tracked hours vs target with a quick-start timer button directly on the dashboard.
+- **Dashboard quick-log & tasks due today** — One-click time log form and a "Tasks due today" widget surface the most time-sensitive work without leaving the home screen.
+- **Backend dashboard alerts & productivity breakdown** — Server-side alert rules for overdue timers, approaching daily targets, and idle sessions; new productivity breakdown API for the dashboard.
+- **Timer long-run warning** — Active timers exceeding a configurable threshold display an in-page warning and show workday progress against the daily goal.
+
+### Changed
+
+- **Dashboard & list UX polish** — Consolidated dashboard alert banners, list-view sort/filter controls, and empty-state illustrations unified across all entity lists.
+- **Navigation declutter** — Sidebar collapsed-mode tooltips and mobile "More" drawer reorganised; key destinations (Reports, CRM, Finance) promoted to top-level slots.
+- **Recurring tasks list** — Added status filter chips, column-level toggles (pause/resume/run now), and an inline "Run now" action without leaving the list.
+- **Floating timer bar & idle-stop** — Redesigned compact bar with project/task labels, elapsed counter, and a smoother idle-boundary stop flow.
+- **Client versions** — Synced Electron (`desktop/package.json`), Flutter (`mobile/pubspec.yaml`), and Chromium extension (`browser-extension/manifest.json` / `package.json`) to **5.13.0** with the webapp (`setup.py`).
+
+### Fixed
+
+- **Productivity heatmap** — Corrected heatmap data aggregation and resolved `empty_state` template render error.
+- **Invoice tax rate & currency** — Tax rate and currency now resolve correctly from the linked project and client settings when generating an invoice.
+- **Swallowed errors (#736)** — Previously silent exceptions now log at the appropriate level; actionable failures surface feedback toasts to the user.
+- **Timer heartbeats (#736)** — Heartbeat pings stay alive through network interruptions and the timer stops cleanly at the idle boundary.
+- **Client portal admin template** — Added the missing customisation admin template that caused a 500 on the portal settings page.
+- **Recurring tasks CRUD** — Completed create/edit/delete flow and restored sidebar navigation link for recurring tasks.
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.13.0** (single source of truth for the application version).
+
 ## [5.12.0] - 2026-08-20
 
 ### Added

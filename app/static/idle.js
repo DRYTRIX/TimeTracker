@@ -73,6 +73,32 @@
     if (countdownIntervalId) { clearInterval(countdownIntervalId); countdownIntervalId = null; }
   }
 
+  async function refreshTimerUiAfterStop(){
+    try {
+      if (window.floatingTimerBar && typeof window.floatingTimerBar.fetchStatus === 'function') {
+        await window.floatingTimerBar.fetchStatus();
+      }
+      document.dispatchEvent(new CustomEvent('tt:timer-status-changed'));
+    } catch(e) {}
+  }
+
+  async function stopNow(){
+    clearGraceTimers();
+    promptShown = false;
+    try {
+      const r = await fetch('/api/timer/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, __ttQuiet: true });
+      if (r.ok){
+        const msg = window.i18n?.messages?.timerStopped || 'Timer stopped';
+        if (window.toastManager && window.toastManager.success) {
+          window.toastManager.success(msg, '', 5000);
+        } else if (window.toastManager && window.toastManager.show) {
+          window.toastManager.show({ message: msg, type: 'success', duration: 5000 });
+        }
+        await refreshTimerUiAfterStop();
+      }
+    } catch(e) {}
+  }
+
   async function stopAt(ts){
     clearGraceTimers();
     promptShown = false;
@@ -87,7 +113,7 @@
         } else {
           alert(msg);
         }
-        location.reload();
+        await refreshTimerUiAfterStop();
       }
     } catch(e) {}
   }
@@ -107,6 +133,7 @@
 
     const yesLabel = window.i18n?.messages?.stillWorkingYes || 'Yes, still working';
     const noLabel = window.i18n?.messages?.stillWorkingNo || 'No, stop timer';
+    const trimLabel = window.i18n?.messages?.stillWorkingTrim || 'Keep until idle';
     const baseMsg = window.i18n?.messages?.stillWorkingPrompt ||
       ('Still working? You seem inactive since ' + formatTime(new Date(stopTs)) +
        '. Timer will stop automatically if you do not answer.');
@@ -120,8 +147,10 @@
     function attachHandlers(toastEl, countdownEl){
       const yesBtn = toastEl.querySelector('[data-act="yes"]');
       const noBtn = toastEl.querySelector('[data-act="no"]');
+      const trimBtn = toastEl.querySelector('[data-act="trim"]');
       if (yesBtn) yesBtn.addEventListener('click', function(){ snoozeIdlePrompt(toastEl); });
-      if (noBtn) noBtn.addEventListener('click', function(){ try { toastEl.remove(); } catch(e){}; stopAt(stopTs); });
+      if (noBtn) noBtn.addEventListener('click', function(){ try { toastEl.remove(); } catch(e){}; stopNow(); });
+      if (trimBtn) trimBtn.addEventListener('click', function(){ try { toastEl.remove(); } catch(e){}; stopAt(stopTs); });
 
       countdownIntervalId = setInterval(function(){
         if (countdownEl) countdownEl.textContent = buildMessage();
@@ -139,8 +168,9 @@
       toastEl.className = 'flex items-center gap-3 p-4 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded-lg shadow-lg pointer-events-auto';
       toastEl.innerHTML =
         '<div class="flex-1 text-sm text-amber-900 dark:text-amber-100" data-countdown>' + buildMessage() + '</div>' +
-        '<div class="flex gap-2">' +
+        '<div class="flex gap-2 flex-wrap justify-end">' +
           '<button class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-sm font-medium" data-act="yes">' + yesLabel + '</button>' +
+          '<button class="px-3 py-1.5 bg-amber-200 dark:bg-amber-800 hover:bg-amber-300 dark:hover:bg-amber-700 text-amber-900 dark:text-amber-100 rounded text-sm font-medium" data-act="trim">' + trimLabel + '</button>' +
           '<button class="px-3 py-1.5 bg-amber-200 dark:bg-amber-800 hover:bg-amber-300 dark:hover:bg-amber-700 text-amber-900 dark:text-amber-100 rounded text-sm font-medium" data-act="no">' + noLabel + '</button>' +
         '</div>';
       const container = document.getElementById('toast-notification-container') || document.getElementById('flash-messages-container') || document.body;
@@ -156,6 +186,7 @@
         '<div class="toast-body" data-countdown>' + buildMessage() + '</div>' +
         '<div class="d-flex gap-2 align-items-center me-2">' +
           '<button class="btn btn-sm btn-light" data-act="yes">' + yesLabel + '</button>' +
+          '<button class="btn btn-sm btn-outline-light" data-act="trim">' + trimLabel + '</button>' +
           '<button class="btn btn-sm btn-outline-light" data-act="no">' + noLabel + '</button>' +
         '</div>' +
       '</div>';
@@ -164,16 +195,61 @@
     attachHandlers(t, t.querySelector('[data-countdown]'));
   }
 
+  let longEntryNudgeShown = false;
+  let lastLongEntryTimerId = null;
+
+  function getLongEntryThresholdMs(){
+    const meta = document.querySelector('meta[name="long-entry-threshold-hours"]');
+    const hours = meta ? parseFloat(meta.getAttribute('content'), 10) : 8;
+    return (isNaN(hours) || hours < 1 ? 8 : Math.min(24, hours)) * 60 * 60 * 1000;
+  }
+
+  async function checkLongRunningTimer(active){
+    if (!active || !active.start_time) return;
+    if (active.id !== lastLongEntryTimerId) {
+      lastLongEntryTimerId = active.id;
+      longEntryNudgeShown = false;
+    }
+    if (longEntryNudgeShown || activeReminderToast) return;
+    const started = new Date(active.start_time).getTime();
+    if (isNaN(started)) return;
+    const runningMs = Date.now() - started;
+    if (runningMs < getLongEntryThresholdMs()) return;
+    longEntryNudgeShown = true;
+    const hours = (runningMs / (60 * 60 * 1000)).toFixed(1);
+    const msg = 'Your timer has been running for ' + hours + ' hours. Did you forget to stop it?';
+    buildReminderToast(
+      'amber',
+      escapeHtml(msg),
+      [
+        {
+          label: (window.i18n?.messages?.timerStopped || 'Stop timer'),
+          style: 'primary',
+          onClick: function(){ window.floatingTimerBar && window.floatingTimerBar.stopTimer(); }
+        },
+        {
+          label: (window.i18n?.messages?.dismiss || 'Dismiss'),
+          style: 'link',
+          onClick: function(){ longEntryNudgeShown = true; }
+        }
+      ],
+      0
+    );
+  }
+
   async function tick(){
     const active = await getTimer();
     hasActiveTimer = !!active;
     if (!active) return;
+    // Send periodic heartbeat while tab is open (throttled to HEARTBEAT_THROTTLE_MS)
+    if (!promptShown) sendHeartbeat();
     const threshold = getIdleThresholdMs();
     const idleFor = Date.now() - lastActivity;
     if (idleFor >= threshold){
       const stopTs = Date.now() - idleFor;
       showIdlePrompt(stopTs);
     }
+    try { await checkLongRunningTimer(active); } catch(e) {}
     // Break reminder follows the active timer state; check on every tick.
     try { checkBreakNudge(active); } catch(e) {}
   }
@@ -382,8 +458,10 @@
           label: (window.i18n?.messages?.pauseTimer || 'Pause timer'),
           style: 'primary',
           onClick: async function(){
-            try { await fetch('/timer/pause', { method: 'POST' }); } catch(e){}
-            location.reload();
+            try {
+              await fetch('/timer/pause', { method: 'POST', redirect: 'manual', credentials: 'same-origin' });
+              await refreshTimerUiAfterStop();
+            } catch(e){}
           }
         },
         {

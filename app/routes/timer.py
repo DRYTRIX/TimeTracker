@@ -794,6 +794,7 @@ def timer_status():
             "timer": {
                 "id": active_timer.id,
                 "project_name": active_timer.project.name if active_timer.project else None,
+                "project_id": active_timer.project_id,
                 "client_name": active_timer.client.name if active_timer.client else None,
                 "start_time": active_timer.start_time.isoformat(),
                 "current_duration": active_timer.current_duration_seconds,
@@ -803,6 +804,84 @@ def timer_status():
                 "break_seconds": getattr(active_timer, "break_seconds", None) or 0,
                 "break_formatted": getattr(active_timer, "break_formatted", "00:00:00"),
             },
+        }
+    )
+
+
+@timer_bp.route("/timer/switch-project", methods=["POST"])
+@login_required
+def switch_timer_project():
+    """Switch the active timer to a different project without stopping."""
+    active_timer = current_user.active_timer
+    if not active_timer:
+        if request.headers.get("Accept", "").find("application/json") >= 0 or request.is_json:
+            return jsonify({"success": False, "error": "no_active_timer"}), 400
+        flash(_("No active timer to switch"), "error")
+        return redirect(url_for("main.dashboard"))
+
+    payload = request.get_json(silent=True) or {}
+    new_project_id = _parse_optional_int(payload.get("project_id") or request.form.get("project_id"))
+    if not new_project_id:
+        return jsonify({"success": False, "error": "missing_project_id"}), 400
+
+    if new_project_id == active_timer.project_id:
+        return jsonify({"success": True, "timer": {"project_id": new_project_id}})
+
+    from app.utils.scope_filter import user_can_access_project
+
+    if not user_can_access_project(current_user, new_project_id):
+        return jsonify({"success": False, "error": "access_denied"}), 403
+
+    new_project = Project.query.filter_by(id=new_project_id, status="active").first()
+    if not new_project:
+        return jsonify({"success": False, "error": "invalid_project"}), 400
+
+    from app.services import TimeTrackingService
+
+    result = TimeTrackingService().update_entry(
+        entry_id=active_timer.id,
+        user_id=current_user.id,
+        is_admin=current_user.is_admin,
+        project_id=new_project_id,
+        task_id=None,
+        reason="Switched project from floating timer",
+    )
+    if not result.get("success"):
+        return jsonify({"success": False, "error": result.get("error", "update_failed")}), 400
+
+    try:
+        from app.utils.cache import invalidate_dashboard_for_user
+
+        invalidate_dashboard_for_user(current_user.id)
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Dashboard cache invalidation failed: %s", e)
+
+    return jsonify(
+        {
+            "success": True,
+            "timer": {
+                "id": active_timer.id,
+                "project_id": new_project_id,
+                "project_name": new_project.name,
+            },
+        }
+    )
+
+
+@timer_bp.route("/timer/projects")
+@login_required
+def timer_projects():
+    """Active projects for quick timer switch UI."""
+    from app.utils.scope_filter import apply_project_scope_to_model
+
+    projects_query = Project.query.filter_by(status="active").order_by(Project.name)
+    scope_p = apply_project_scope_to_model(Project, current_user)
+    if scope_p is not None:
+        projects_query = projects_query.filter(scope_p)
+    projects = projects_query.all()
+    return jsonify(
+        {
+            "projects": [{"id": p.id, "name": p.name} for p in projects],
         }
     )
 

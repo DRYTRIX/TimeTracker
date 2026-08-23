@@ -70,14 +70,14 @@
                                 {{ _('Enjoying TimeTracker?') }}
                             </p>
                             <p class="text-xs text-amber-700 dark:text-amber-300" id="bannerMessage">
-                                {{ _('Support independent development — licenses are supporter badges, not paywalls.') }}
+                                {{ _('Become a Supporter or buy a coffee — every contribution helps keep TimeTracker free for everyone.') }}
                             </p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 flex-wrap">
                         <a href="{{ url_for('main.donate') }}" 
                            class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors">
-                            {{ _('Support / Get key') }}
+                            {{ _('Become a Supporter') }}
                         </a>
                         <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=banner&utm_campaign=support" 
                            target="_blank" 
@@ -94,7 +94,7 @@
                             <i class="fab fa-paypal mr-1"></i>{{ _('PayPal') }}
                         </a>
                         <button type="button" class="text-xs text-amber-700 dark:text-amber-300 hover:underline self-center js-open-support-modal">
-                            {{ _('Support / License') }}
+                            {{ _('Support options') }}
                         </button>
                         <button onclick="dismissSupportBanner()" 
                                 class="p-1.5 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded transition-colors"
@@ -119,6 +119,7 @@
 
         {% if current_user.is_authenticated %}
         <meta name="idle-timeout-minutes" content="{{ settings.idle_timeout_minutes if settings else 30 }}">
+        <meta name="long-entry-threshold-hours" content="8">
         {% endif %}
 
         {% if is_admin_user %}

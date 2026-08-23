@@ -10,21 +10,26 @@
 
     <details class="bg-card-light dark:bg-card-dark rounded-lg shadow-md group mb-6" open>
         <summary class="flex items-center justify-between p-6 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
-            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
-                <i class="fas fa-heart mr-2 text-amber-600 dark:text-amber-400" aria-hidden="true"></i>{{ _('Support & Community') }}
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center flex-wrap gap-2">
+                <span><i class="fas fa-heart mr-2 text-amber-600 dark:text-amber-400" aria-hidden="true"></i>{{ _('Support & Community') }}</span>
+                {% if is_license_activated %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 border border-emerald-200/80 dark:border-emerald-700/60">
+                    <i class="fas fa-star" aria-hidden="true"></i>{{ _('Supporter') }}
+                </span>
+                {% endif %}
             </h2>
             <i class="fas fa-chevron-down text-gray-400 transition-transform group-open:rotate-180 md:hidden"></i>
         </summary>
         <div class="px-6 pb-6 space-y-4 text-sm text-text-light dark:text-text-dark">
             <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('TimeTracker is free and open source. Funding comes from optional donations and supporter licenses — never from locking features.') }}</p>
             {% if is_license_activated %}
-            <p>{{ _('This instance already has a supporter license. Thank you — you can still donate or share the app anytime.') }}</p>
+            <p>{{ _('Thank you for being a TimeTracker Supporter. Your badge shows across the app — you can still donate or share anytime.') }}</p>
             {% else %}
-            <p>{{ _('If the app saves you time, you can donate or buy a supporter license (€25). A license shows a Supporter badge; it does not change what you can use.') }}</p>
+            <p>{{ _('If the app saves you time, become a Supporter with a one-time €25 contribution. You keep full access either way — supporters get a visible badge and fewer prompts.') }}</p>
             {% endif %}
             <div class="flex flex-wrap gap-2">
                 <button type="button" class="btn btn-primary js-open-support-modal">{{ _('Support TimeTracker') }}</button>
-                <a href="{{ url_for('user.license') }}" class="btn btn-secondary inline-flex items-center gap-2"><i class="fas fa-key" aria-hidden="true"></i>{{ _('License & supporter key') }}</a>
+                <a href="{{ url_for('user.license') }}" class="btn btn-secondary inline-flex items-center gap-2"><i class="fas fa-star" aria-hidden="true"></i>{{ _('Become a Supporter') }}</a>
                 <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">{{ _('Checkout on timetracker.drytrix.com') }} <i class="fas fa-external-link-alt text-xs" aria-hidden="true"></i></a>
             </div>
         </div>
@@ -607,9 +612,9 @@
         </details>
 
         <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-            {{ _('Support visibility (hiding donate/support UI) is configured system-wide by administrators in Admin → Settings.') }}
-            {{ _('Administrators can purchase a key to hide these prompts:') }}
-            <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">{{ _('Support & Purchase Key') }}</a>.
+            {{ _('Supporter status is configured instance-wide by administrators in Admin → Settings.') }}
+            {{ _('Anyone can become a Supporter:') }}
+            <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">{{ _('Support TimeTracker') }}</a>.
         </p>
 
         <!-- Save Button - Sticky on mobile -->

@@ -51,7 +51,25 @@
                         <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ _('Disabled') }}</span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 text-sm">{{ workflow.execution_count or 0 }}</td>
+                    <td class="px-6 py-4 text-sm">
+                        {{ workflow.execution_count or 0 }}
+                        {% set last_exec = last_executions.get(workflow.id) if last_executions is defined else none %}
+                        {% if last_exec %}
+                        <a href="{{ url_for('workflows.view_workflow', workflow_id=workflow.id) }}#executions"
+                           class="ml-2 inline-flex items-center"
+                           title="{% if last_exec.success %}{{ _('Last run succeeded') }}{% else %}{{ _('Last run failed') }}{% endif %}">
+                            {% if last_exec.success %}
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                <i class="fas fa-check mr-1"></i>{{ _('OK') }}
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                <i class="fas fa-times mr-1"></i>{{ _('Failed') }}
+                            </span>
+                            {% endif %}
+                        </a>
+                        {% endif %}
+                    </td>
                     <td class="px-6 py-4 text-right space-x-2">
                         <a href="{{ url_for('workflows.edit_workflow', workflow_id=workflow.id) }}" class="text-gray-500 hover:text-blue-600" title="{{ _('Edit') }}">
                             <i class="fas fa-edit"></i>
@@ -71,11 +89,14 @@
     </div>
 </div>
 {% else %}
+{% set workflow_create_action %}
+<a href="{{ url_for('workflows.create_workflow') }}" class="btn btn-primary mt-4"><i class="fas fa-plus mr-2"></i>{{ _('Create Workflow') }}</a>
+{% endset %}
 {{ empty_state(
-    icon_class='fas fa-sitemap',
-    title=_('No workflows yet'),
-    message=_('Create automation rules or start from a template.'),
-    action_html='<a href="' + url_for("workflows.create_workflow") + '" class="btn btn-primary mt-4"><i class="fas fa-plus mr-2"></i>' + _('Create Workflow') + '</a>'
+    'fas fa-sitemap',
+    'No workflows yet',
+    'Create automation rules or start from a template.',
+    workflow_create_action
 ) }}
 {% endif %}
 {% endblock %}

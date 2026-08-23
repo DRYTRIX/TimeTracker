@@ -217,7 +217,8 @@
                         <label for="notes" class="form-label">
                             {{ _('Notes') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('Optional') }})</span>
                         </label>
-                        <textarea name="notes" id="notes" rows="3" class="form-input w-full" placeholder="{{ _('Add notes about what you\'re working on...') }}"></textarea>
+                        <textarea name="notes" id="notes" rows="3" class="form-input w-full" placeholder="{{ _('Add notes about what you\'re working on...') }}" list="notesSuggestions"></textarea>
+                        <datalist id="notesSuggestions"></datalist>
                     </div>
                     
                     {% if templates %}
@@ -306,6 +307,7 @@
 {% endblock %}
 
 {% block scripts_extra %}
+<script src="{{ url_for('static', filename='notes-autocomplete.js') }}" defer></script>
 <script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
 // Load tasks when project is selected; keep client→project→task cascade (Issue #728)

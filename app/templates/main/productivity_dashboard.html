@@ -132,6 +132,20 @@
         <p id="productivityDailyEmpty" class="hidden text-center text-sm text-text-muted-light dark:text-text-muted-dark mt-3">{{ _('No time tracked in the last 14 days.') }}</p>
     </div>
 
+    {# ---------- Row 2b — Daily breakdown by project (stacked) ---------- #}
+    <div class="bg-card-light dark:bg-card-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+            <div>
+                <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Daily breakdown by project') }}</h2>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Last 14 days — where your time went each day') }}</p>
+            </div>
+        </div>
+        <div style="height: 240px;">
+            <canvas id="productivityDailyProjectChart" aria-label="{{ _('Daily project breakdown chart') }}"></canvas>
+        </div>
+        <p id="productivityDailyProjectEmpty" class="hidden text-center text-sm text-text-muted-light dark:text-text-muted-dark mt-3">{{ _('No time tracked in the last 14 days.') }}</p>
+    </div>
+
     {# ---------- Row 3 — projects + focus ---------- #}
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
         {# Project breakdown doughnut (60%) #}
@@ -242,6 +256,7 @@
 {{ {
     'summary': summary,
     'daily_breakdown': daily_breakdown,
+    'daily_project_breakdown': daily_project_breakdown,
     'streak': streak,
     'focus': focus,
     'projects': projects,
@@ -269,6 +284,7 @@
     var state = {
         data: null,
         dailyChart: null,
+        dailyProjectChart: null,
         projectChart: null,
         sparkChart: null,
         refreshTimer: null,
@@ -290,6 +306,12 @@
         if (h >= 100) { return Math.round(h) + 'h'; }
         if (h >= 10) { return h.toFixed(1) + 'h'; }
         return h.toFixed(2).replace(/\.?0+$/, '') + 'h';
+    }
+
+    function addClasses(el, classNames) {
+        (classNames || '').split(/\s+/).filter(Boolean).forEach(function (cls) {
+            el.classList.add(cls);
+        });
     }
 
     function fmtMinutes(mins) {
@@ -413,6 +435,88 @@
             },
         });
         state.dailyChart._tooltipMeta = { dates: dates, billable: billable, counts: counts };
+    }
+
+    // --------------- Chart 1b: Daily stacked bars by project ---------------
+    function renderDailyProjectStackedChart() {
+        var breakdown = (state.data && state.data.daily_project_breakdown) || {};
+        var dates = breakdown.dates || [];
+        var projects = breakdown.projects || [];
+        var hoursByDay = breakdown.hours_by_day_project || {};
+        var ctxEl = document.getElementById('productivityDailyProjectChart');
+        var emptyEl = document.getElementById('productivityDailyProjectEmpty');
+        if (!ctxEl) { return; }
+
+        var labels = dates.map(fmtDateLabel);
+        var datasets = projects.map(function (p) {
+            var pid = String(p.id == null ? 0 : p.id);
+            return {
+                label: p.name,
+                data: dates.map(function (day) {
+                    var dayMap = hoursByDay[day] || {};
+                    return Number(dayMap[pid] || 0);
+                }),
+                backgroundColor: p.color || '#3b82f6',
+                borderRadius: 4,
+                borderSkipped: false,
+                stack: 'daily',
+            };
+        });
+
+        var hasData = datasets.some(function (ds) {
+            return (ds.data || []).some(function (v) { return v > 0; });
+        });
+        if (emptyEl) { emptyEl.classList.toggle('hidden', hasData); }
+
+        if (state.dailyProjectChart) {
+            state.dailyProjectChart.data.labels = labels;
+            state.dailyProjectChart.data.datasets = datasets;
+            state.dailyProjectChart.update();
+            return;
+        }
+
+        var ctx = ctxEl.getContext('2d');
+        state.dailyProjectChart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: labels, datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: projects.length > 0,
+                        position: 'bottom',
+                        labels: { color: tickColor(), boxWidth: 12 },
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function (items) {
+                                if (!items.length) { return ''; }
+                                var idx = items[0].dataIndex;
+                                return dates[idx] ? fmtFullDate(dates[idx]) : items[0].label;
+                            },
+                            label: function (item) {
+                                if (!item.parsed.y) { return null; }
+                                return item.dataset.label + ': ' + fmtHours(item.parsed.y);
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: { color: gridColor() },
+                        ticks: { color: tickColor() },
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        grid: { color: gridColor() },
+                        ticks: { color: tickColor() },
+                    },
+                },
+            },
+        });
     }
 
     // --------------- Chart 2: Project doughnut ---------------
@@ -641,10 +745,10 @@
                 cell.style.height = '12px';
                 if (!entry) {
                     cell.classList.add('opacity-30');
-                    cell.classList.add(cellClasses[0]);
+                    addClasses(cell, cellClasses[0]);
                 } else {
                     var lvl = Math.max(0, Math.min(4, entry.level || 0));
-                    cell.classList.add(cellClasses[lvl]);
+                    addClasses(cell, cellClasses[lvl]);
                     cell.title = entry.date + ': ' + fmtHours(entry.hours);
                 }
                 colWrap.appendChild(cell);
@@ -768,6 +872,7 @@
         renderSummary();
         renderInsights();
         renderDailyChart();
+        renderDailyProjectStackedChart();
         renderProjectChart();
         renderSparkline();
         renderHeatmap();

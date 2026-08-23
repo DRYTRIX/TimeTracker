@@ -38,6 +38,18 @@
 </div>
 {% endif %}
 
+{% if overdue_invoices_summary %}
+<div class="mb-6 rounded-xl border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 p-4" role="alert">
+    <p class="font-semibold text-red-900 dark:text-red-100 mb-1">
+        <i class="fas fa-file-invoice-dollar mr-2"></i>{{ _('Overdue invoices') }}
+    </p>
+    <p class="text-sm text-red-800 dark:text-red-200 mb-2">
+        {{ _('%(count)s invoice(s) overdue — %(total)s outstanding', count=overdue_invoices_summary.count, total=overdue_invoices_summary.total|format_currency) }}
+    </p>
+    <a href="{{ overdue_invoices_summary.url }}" class="btn btn-primary btn-sm">{{ _('Review invoices') }}</a>
+</div>
+{% endif %}
+
 <!-- Workday clock-in/out (separate from project timer) -->
 <div class="{% if active_workday_session %}bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-800{% else %}bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark{% endif %} p-6 rounded-xl shadow-sm dashboard-widget animated-card mb-6" {% if active_workday_session %}data-workday-start="{{ active_workday_session.start_time.isoformat() }}"{% endif %}>
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4 min-w-0">
@@ -238,6 +250,82 @@
     {% endif %}
 </div>
 
+{% set progress_pct = (today_seconds / daily_target_seconds * 100) if daily_target_seconds and daily_target_seconds > 0 else 0 %}
+{% set progress_pct_display = [progress_pct, 100]|min %}
+{% if progress_pct >= 100 %}
+    {% set progress_color = 'emerald' %}
+{% elif progress_pct >= 50 or not is_past_midday %}
+    {% set progress_color = 'amber' %}
+{% else %}
+    {% set progress_color = 'red' %}
+{% endif %}
+{% set today_h = today_seconds // 3600 %}
+{% set today_m = (today_seconds % 3600) // 60 %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div class="lg:col-span-2 bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm dashboard-widget">
+        <div class="flex items-center justify-between gap-4 mb-4">
+            <div>
+                <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _("Today's progress") }}</h2>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Track toward your daily target') }}</p>
+            </div>
+            {% if active_timer %}
+            <span class="inline-flex items-center gap-2 text-xs font-medium text-blue-600 dark:text-blue-400">
+                <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>{{ _('Timer running') }}
+            </span>
+            {% endif %}
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="relative w-20 h-20 shrink-0">
+                <svg viewBox="0 0 36 36" class="w-20 h-20 -rotate-90">
+                    <circle cx="18" cy="18" r="15.9155" fill="none" class="stroke-gray-200 dark:stroke-gray-700" stroke-width="3"></circle>
+                    <circle cx="18" cy="18" r="15.9155" fill="none"
+                            class="{% if progress_color == 'emerald' %}stroke-emerald-500{% elif progress_color == 'amber' %}stroke-amber-500{% else %}stroke-red-500{% endif %}"
+                            stroke-width="3" stroke-linecap="round"
+                            stroke-dasharray="100"
+                            stroke-dashoffset="{{ 100 - progress_pct_display }}"></circle>
+                </svg>
+            </div>
+            <div class="min-w-0 flex-1">
+                <p class="text-2xl font-bold text-text-light dark:text-text-dark">
+                    {{ today_h }}h {{ '%02d'|format(today_m) }}m
+                    <span class="text-base font-medium text-text-muted-light dark:text-text-muted-dark">/ {{ '%.0f'|format(standard_hours_per_day) }}h</span>
+                </p>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
+                    {{ '%.0f'|format(progress_pct) }}% {{ _('of daily target') }}
+                </p>
+                {% if week_utilization is defined %}
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-2">
+                    {{ _('This week:') }} {{ '%.1f'|format(week_utilization.billable_hours or 0) }}h {{ _('billable') }} / {{ '%.1f'|format(week_utilization.total_hours or 0) }}h
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if recent_combos %}
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm dashboard-widget">
+        <h2 class="text-lg font-semibold text-text-light dark:text-text-dark mb-3">{{ _('Quick start') }}</h2>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Start the timer for a recent project') }}</p>
+        <div class="flex flex-col gap-2">
+            {% for combo in recent_combos %}
+            <form method="POST" action="{{ url_for('timer.start_timer') }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="project_id" value="{{ combo.project_id }}">
+                {% if combo.task_id %}<input type="hidden" name="task_id" value="{{ combo.task_id }}">{% endif %}
+                <button type="submit" class="w-full text-left px-3 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+                    <span class="font-medium text-text-light dark:text-text-dark">{{ combo.project_name }}</span>
+                    {% if combo.task_name %}
+                    <span class="text-xs text-text-muted-light dark:text-text-muted-dark block">{{ combo.task_name }}</span>
+                    {% endif %}
+                </button>
+            </form>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
 <!-- Key Stats with Sparklines -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
     <!-- Today's Hours Card -->
@@ -277,6 +365,11 @@
                 {% if standard_hours_per_day is defined and week_overtime_hours is defined %}
                 <div id="weekOvertimeLine" class="mt-1 text-xs text-green-700 dark:text-green-300" {% if week_overtime_hours <= 0 %}style="display: none;"{% endif %}>
                     {% if week_overtime_hours > 0 %}<span class="font-medium">+ {{ "%.2f"|format(week_overtime_hours) }}h {{ _('overtime') }}</span>{% endif %}
+                </div>
+                {% endif %}
+                {% if week_utilization is defined and week_utilization.total_hours %}
+                <div class="mt-2 text-xs text-green-700 dark:text-green-300">
+                    {{ '%.1f'|format(week_utilization.billable_hours or 0) }}h {{ _('billable') }} / {{ '%.1f'|format(week_utilization.total_hours or 0) }}h {{ _('this week') }}
                 </div>
                 {% endif %}
             </div>
@@ -419,8 +512,67 @@
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-    <!-- Left Column: Recent Entries -->
-    <div class="lg:col-span-2">
+    <!-- Left Column: Quick Log + Recent Entries -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Quick Log Time -->
+        <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-lg border border-border-light dark:border-border-dark dashboard-widget animated-card">
+            <button type="button" id="quickLogToggle" class="w-full flex items-center justify-between p-4 text-left hover:bg-background-light dark:hover:bg-background-dark rounded-xl transition-colors" aria-expanded="false" aria-controls="quickLogPanel">
+                <div class="flex items-center gap-3">
+                    <div class="bg-primary/10 dark:bg-primary/20 p-3 rounded-lg">
+                        <i class="fas fa-plus-circle text-primary text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Log Time') }}</h2>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Record past hours without starting a timer') }}</p>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-down text-text-muted-light dark:text-text-muted-dark transition-transform" id="quickLogChevron"></i>
+            </button>
+            <div id="quickLogPanel" class="hidden px-4 pb-4 border-t border-border-light dark:border-border-dark">
+                <form id="quickLogForm" class="pt-4 space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="quickLogDuration" class="form-label">{{ _('Duration') }} *</label>
+                            <input type="text" id="quickLogDuration" name="duration" class="form-input w-full" placeholder="{{ _('e.g. 2h 30m or 2.5') }}" required autocomplete="off">
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Hours and minutes, or decimal hours') }}</p>
+                        </div>
+                        <div>
+                            <label for="quickLogDate" class="form-label">{{ _('Date') }}</label>
+                            <input type="date" id="quickLogDate" name="date" class="form-input w-full" value="{{ today_date.strftime('%Y-%m-%d') }}">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="quickLogProject" class="form-label">{{ _('Project') }} *</label>
+                            <select id="quickLogProject" name="project_id" class="form-input w-full" required>
+                                <option value="">{{ _('Select a project') }}</option>
+                                {% for project in active_projects %}
+                                <option value="{{ project.id }}">{{ project.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="quickLogTask" class="form-label">{{ _('Task (optional)') }}</label>
+                            <select id="quickLogTask" name="task_id" class="form-input w-full">
+                                <option value="">{{ _('No task') }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="quickLogNotes" class="form-label">{{ _('Notes (optional)') }}</label>
+                        <textarea id="quickLogNotes" name="notes" class="form-input w-full" rows="2" placeholder="{{ _('What did you work on?') }}"></textarea>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" id="quickLogCancel" class="btn btn-secondary btn-sm">{{ _('Cancel') }}</button>
+                        <button type="submit" id="quickLogSubmit" class="btn btn-primary btn-sm">
+                            <i class="fas fa-save mr-1"></i>{{ _('Log Time') }}
+                        </button>
+                    </div>
+                    <p id="quickLogError" class="hidden text-sm text-red-600 dark:text-red-400"></p>
+                </form>
+            </div>
+        </div>
+
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
@@ -571,6 +723,72 @@
                 </div>
             </div>
             {% endif %}
+        {% endif %}
+
+        <!-- Tasks Due Today -->
+        {% if is_module_enabled('tasks') and tasks_due_today %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="bg-amber-500/10 dark:bg-amber-400/10 p-3 rounded-lg">
+                        <i class="fas fa-tasks text-amber-600 dark:text-amber-400 text-xl"></i>
+                    </div>
+                    <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Tasks Due Today') }}</h2>
+                </div>
+                <a href="{{ url_for('tasks.list_tasks') }}" class="text-sm font-medium text-primary hover:text-primary-dark hover:underline">{{ _('View all') }}</a>
+            </div>
+            <ul class="space-y-2" id="tasksDueTodayList">
+                {% for task in tasks_due_today %}
+                <li class="flex items-center gap-3 p-3 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors" data-task-id="{{ task.id }}">
+                    <input type="checkbox" class="task-due-complete w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer" aria-label="{{ _('Mark complete') }}: {{ task.name }}" data-task-id="{{ task.id }}">
+                    <div class="flex-1 min-w-0">
+                        <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="font-medium text-text-light dark:text-text-dark hover:text-primary truncate block">{{ task.name }}</a>
+                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark flex flex-wrap gap-2 mt-0.5">
+                            {% if task.project %}<span><i class="fas fa-folder mr-1"></i>{{ task.project.name }}</span>{% endif %}
+                            <span class="{% if task.is_overdue %}text-red-600 dark:text-red-400 font-medium{% endif %}">
+                                {% if task.is_overdue %}{{ _('Overdue') }} · {% endif %}{{ task.due_date|local_date }}
+                            </span>
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Upcoming deadlines (next 7 days) -->
+        {% if is_module_enabled('tasks') and upcoming_deadlines %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 dashboard-widget animated-card">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="bg-indigo-500/10 dark:bg-indigo-400/10 p-3 rounded-lg">
+                        <i class="fas fa-calendar-day text-indigo-600 dark:text-indigo-400 text-xl"></i>
+                    </div>
+                    <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _('Upcoming deadlines') }}</h2>
+                </div>
+                <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Next 7 days') }}</span>
+            </div>
+            <ul class="space-y-2">
+                {% for item in upcoming_deadlines %}
+                {% set days_left = item.due_date|days_until %}
+                <li class="flex items-center gap-3 p-3 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+                    <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                        {% if days_left <= 1 %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300
+                        {% elif days_left <= 2 %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
+                        {% else %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300{% endif %}">
+                        {{ item.due_date|relative_due_label }}
+                    </span>
+                    <div class="flex-1 min-w-0">
+                        <a href="{{ item.url }}" class="font-medium text-text-light dark:text-text-dark hover:text-primary truncate block">{{ item.name }}</a>
+                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark flex flex-wrap gap-2 mt-0.5">
+                            {% if item.project_name %}<span><i class="fas fa-folder mr-1"></i>{{ item.project_name }}</span>{% endif %}
+                            <span>{% if item.kind == 'milestone' %}{{ _('Milestone') }}{% else %}{{ _('Task') }}{% endif %} · {{ item.due_date|local_date }}</span>
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
         {% endif %}
 
         <!-- Time by project (last 7 days) chart -->
@@ -919,6 +1137,189 @@
                 });
             });
         })();
+
+        // Quick Log Time card
+        (function initQuickLogTime() {
+            var toggle = document.getElementById('quickLogToggle');
+            var panel = document.getElementById('quickLogPanel');
+            var chevron = document.getElementById('quickLogChevron');
+            var form = document.getElementById('quickLogForm');
+            var projectSelect = document.getElementById('quickLogProject');
+            var taskSelect = document.getElementById('quickLogTask');
+            var cancelBtn = document.getElementById('quickLogCancel');
+            var errorEl = document.getElementById('quickLogError');
+            if (!toggle || !panel || !form) return;
+
+            var tasksApiTemplate = {{ url_for('api.get_project_tasks', project_id=0)|tojson }};
+
+            function setPanelOpen(open) {
+                panel.classList.toggle('hidden', !open);
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                if (chevron) chevron.classList.toggle('rotate-180', open);
+            }
+
+            toggle.addEventListener('click', function() {
+                setPanelOpen(panel.classList.contains('hidden'));
+            });
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', function() { setPanelOpen(false); });
+            }
+
+            function parseDuration(input) {
+                var raw = (input || '').trim().toLowerCase();
+                if (!raw) return null;
+                var decimal = parseFloat(raw.replace(',', '.'));
+                if (!isNaN(decimal) && /^\d+([.,]\d+)?$/.test(raw)) {
+                    return Math.round(decimal * 3600);
+                }
+                var totalSec = 0;
+                var hMatch = raw.match(/(\d+(?:[.,]\d+)?)\s*h/);
+                var mMatch = raw.match(/(\d+(?:[.,]\d+)?)\s*m/);
+                if (hMatch) totalSec += Math.round(parseFloat(hMatch[1].replace(',', '.')) * 3600);
+                if (mMatch) totalSec += Math.round(parseFloat(mMatch[1].replace(',', '.')) * 60);
+                if (!hMatch && !mMatch) {
+                    var parts = raw.split(':');
+                    if (parts.length === 2) {
+                        totalSec = (parseInt(parts[0], 10) || 0) * 3600 + (parseInt(parts[1], 10) || 0) * 60;
+                    } else if (parts.length === 3) {
+                        totalSec = (parseInt(parts[0], 10) || 0) * 3600 + (parseInt(parts[1], 10) || 0) * 60 + (parseInt(parts[2], 10) || 0);
+                    }
+                }
+                return totalSec > 0 ? totalSec : null;
+            }
+
+            async function loadTasks(projectId) {
+                if (!taskSelect) return;
+                taskSelect.innerHTML = '<option value="">{{ _("No task")|e }}</option>';
+                if (!projectId) return;
+                try {
+                    var url = tasksApiTemplate.replace('/0/', '/' + projectId + '/');
+                    var res = await fetch(url, { credentials: 'same-origin' });
+                    if (!res.ok) return;
+                    var data = await res.json();
+                    (data.tasks || []).forEach(function(task) {
+                        var opt = document.createElement('option');
+                        opt.value = task.id;
+                        opt.textContent = task.name;
+                        taskSelect.appendChild(opt);
+                    });
+                } catch (e) { /* ignore */ }
+            }
+
+            if (projectSelect) {
+                projectSelect.addEventListener('change', function() {
+                    loadTasks(this.value);
+                });
+            }
+
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                if (errorEl) { errorEl.classList.add('hidden'); errorEl.textContent = ''; }
+                var durationSec = parseDuration(document.getElementById('quickLogDuration').value);
+                if (!durationSec) {
+                    if (errorEl) {
+                        errorEl.textContent = {{ _('Enter a valid duration (e.g. 2h 30m or 2.5)')|tojson }};
+                        errorEl.classList.remove('hidden');
+                    }
+                    return;
+                }
+                var dateVal = document.getElementById('quickLogDate').value;
+                var projectId = projectSelect ? projectSelect.value : '';
+                if (!projectId) {
+                    if (errorEl) {
+                        errorEl.textContent = {{ _('Please select a project')|tojson }};
+                        errorEl.classList.remove('hidden');
+                    }
+                    return;
+                }
+                var endDt = new Date(dateVal + 'T12:00:00');
+                var startDt = new Date(endDt.getTime() - durationSec * 1000);
+                var payload = {
+                    project_id: parseInt(projectId, 10),
+                    task_id: taskSelect && taskSelect.value ? parseInt(taskSelect.value, 10) : null,
+                    start_time: startDt.toISOString(),
+                    end_time: endDt.toISOString(),
+                    notes: (document.getElementById('quickLogNotes').value || '').trim() || null,
+                    billable: true
+                };
+                var submitBtn = document.getElementById('quickLogSubmit');
+                if (submitBtn) submitBtn.disabled = true;
+                try {
+                    var res = await fetch('/api/entries', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        credentials: 'same-origin',
+                        body: JSON.stringify(payload)
+                    });
+                    var body = await res.json().catch(function() { return {}; });
+                    if (!res.ok) {
+                        throw new Error(body.error || body.message || 'Request failed');
+                    }
+                    if (window.toastManager && window.toastManager.success) {
+                        window.toastManager.success({{ _('Time logged successfully')|tojson }}, '', 3000);
+                    }
+                    form.reset();
+                    if (document.getElementById('quickLogDate')) {
+                        document.getElementById('quickLogDate').value = dateVal;
+                    }
+                    setPanelOpen(false);
+                    window.location.reload();
+                } catch (err) {
+                    if (errorEl) {
+                        errorEl.textContent = err.message || {{ _('Could not log time')|tojson }};
+                        errorEl.classList.remove('hidden');
+                    }
+                } finally {
+                    if (submitBtn) submitBtn.disabled = false;
+                }
+            });
+        })();
+
+        // Tasks due today: inline complete
+        (function initTasksDueToday() {
+            document.querySelectorAll('.task-due-complete').forEach(function(checkbox) {
+                checkbox.addEventListener('change', async function() {
+                    if (!this.checked) return;
+                    var taskId = this.getAttribute('data-task-id');
+                    var row = this.closest('[data-task-id]');
+                    this.disabled = true;
+                    try {
+                        var res = await fetch('/api/tasks/' + taskId + '/status', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            credentials: 'same-origin',
+                            body: JSON.stringify({ status: 'done' })
+                        });
+                        if (!res.ok) throw new Error('Failed');
+                        if (row) {
+                            row.style.opacity = '0.5';
+                            row.querySelector('a').classList.add('line-through');
+                        }
+                        if (window.toastManager && window.toastManager.success) {
+                            window.toastManager.success({{ _('Task completed')|tojson }}, '', 2000);
+                        }
+                    } catch (e) {
+                        this.checked = false;
+                        this.disabled = false;
+                        if (window.toastManager && window.toastManager.error) {
+                            window.toastManager.error({{ _('Could not complete task')|tojson }}, '', 3000);
+                        }
+                    }
+                });
+            });
+        })();
+
+        // Soft refresh dashboard timer hero when timer stops externally (idle detection, floating bar)
+        document.addEventListener('tt:timer-status-changed', async function() {
+            try {
+                var res = await fetch('/timer/status', { credentials: 'same-origin' });
+                var data = await res.json();
+                var hero = document.querySelector('[data-timer-start]');
+                if (!data.active && hero) {
+                    window.location.reload();
+                }
+            } catch (e) { /* ignore */ }
+        });
 
         // Live timer: update elapsed every second when a timer is running; also live Today/Week/Month hours
         (function initLiveTimer() {

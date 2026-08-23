@@ -16,10 +16,11 @@ from flask import (
 )
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
-from sqlalchemy import text
+from sqlalchemy import or_, text
+from sqlalchemy.orm import joinedload
 
 from app import csrf, db, limiter, track_event, track_page_view
-from app.models import Activity, Client, Project, Settings, TimeEntry, TimeEntryTemplate, User, WeeklyTimeGoal
+from app.models import Activity, Client, Invoice, Milestone, Project, Settings, Task, TimeEntry, TimeEntryTemplate, User, WeeklyTimeGoal
 from app.models.time_entry import local_now
 from app.utils.license_utils import is_license_activated
 from app.utils.posthog_segmentation import update_user_segments_if_needed
@@ -219,6 +220,153 @@ def dashboard():
             "client_name": last_entry.client.name if last_entry.client else None,
         }
 
+    # Recent project+task combos for quick-start strip (last 5 unique pairs)
+    recent_combos = []
+    combo_seen = set()
+    combo_entries = (
+        TimeEntry.query.options(joinedload(TimeEntry.project), joinedload(TimeEntry.task))
+        .filter(
+            TimeEntry.user_id == current_user.id,
+            TimeEntry.end_time.isnot(None),
+            TimeEntry.project_id.isnot(None),
+        )
+        .order_by(TimeEntry.end_time.desc())
+        .limit(50)
+        .all()
+    )
+    for combo_entry in combo_entries:
+        combo_key = (combo_entry.project_id, combo_entry.task_id)
+        if combo_key in combo_seen:
+            continue
+        combo_seen.add(combo_key)
+        recent_combos.append(
+            {
+                "project_id": combo_entry.project_id,
+                "task_id": combo_entry.task_id,
+                "project_name": combo_entry.project.name if combo_entry.project else None,
+                "task_name": combo_entry.task.name if combo_entry.task else None,
+            }
+        )
+        if len(recent_combos) >= 5:
+            break
+
+    today_seconds = int(round(today_hours * 3600))
+    daily_target_seconds = int(round(standard_hours_per_day * 3600))
+
+    from app.services.utilization_service import UtilizationService
+
+    week_utilization = UtilizationService.for_user_period(
+        current_user.id,
+        datetime.combine(week_start_dt, datetime.min.time()),
+        datetime.combine(today_dt, datetime.max.time()),
+    )
+    is_past_midday = local_now().hour >= 12
+
+    # Tasks due today or overdue (assigned to or created by current user)
+    today_date = local_now().date()
+    tasks_due_query = (
+        Task.query.options(joinedload(Task.project))
+        .filter(
+            Task.due_date.isnot(None),
+            Task.due_date <= today_date,
+            Task.status.notin_(["done", "cancelled"]),
+        )
+        .order_by(Task.due_date.asc(), Task.priority.desc())
+    )
+    if not current_user.is_admin:
+        tasks_due_query = tasks_due_query.filter(
+            or_(Task.assigned_to == current_user.id, Task.created_by == current_user.id)
+        )
+    tasks_due_today = tasks_due_query.limit(5).all()
+
+    # Tasks and milestones due in the next 7 days (excluding today/overdue)
+    upcoming_deadline_end = today_date + timedelta(days=7)
+    upcoming_tasks_query = (
+        Task.query.options(joinedload(Task.project))
+        .filter(
+            Task.due_date.isnot(None),
+            Task.due_date > today_date,
+            Task.due_date <= upcoming_deadline_end,
+            Task.status.notin_(["done", "cancelled"]),
+        )
+        .order_by(Task.due_date.asc(), Task.priority.desc())
+    )
+    if not current_user.is_admin:
+        upcoming_tasks_query = upcoming_tasks_query.filter(
+            or_(Task.assigned_to == current_user.id, Task.created_by == current_user.id)
+        )
+    upcoming_tasks = upcoming_tasks_query.limit(8).all()
+
+    from app.utils.scope_filter import get_allowed_project_ids
+
+    scope_project_ids = get_allowed_project_ids(current_user)
+    upcoming_milestones_query = (
+        Milestone.query.options(joinedload(Milestone.project))
+        .filter(
+            Milestone.due_date.isnot(None),
+            Milestone.due_date > today_date,
+            Milestone.due_date <= upcoming_deadline_end,
+            Milestone.status != "completed",
+        )
+        .order_by(Milestone.due_date.asc())
+    )
+    if scope_project_ids is not None:
+        upcoming_milestones_query = upcoming_milestones_query.filter(Milestone.project_id.in_(scope_project_ids))
+    upcoming_milestones = upcoming_milestones_query.limit(8).all()
+
+    upcoming_deadlines = []
+    for task in upcoming_tasks:
+        upcoming_deadlines.append(
+            {
+                "kind": "task",
+                "name": task.name,
+                "due_date": task.due_date,
+                "project_name": task.project.name if task.project else None,
+                "url": url_for("tasks.view_task", task_id=task.id),
+            }
+        )
+    for milestone in upcoming_milestones:
+        upcoming_deadlines.append(
+            {
+                "kind": "milestone",
+                "name": milestone.name,
+                "due_date": milestone.due_date,
+                "project_name": milestone.project.name if milestone.project else None,
+                "url": url_for("projects.view_project", project_id=milestone.project_id),
+            }
+        )
+    upcoming_deadlines.sort(key=lambda item: item["due_date"])
+    upcoming_deadlines = upcoming_deadlines[:10]
+
+    # Overdue invoice summary for billing users
+    overdue_invoices_summary = None
+    from app.utils.module_helpers import is_module_enabled
+
+    if is_module_enabled("invoices") and (
+        current_user.is_admin or current_user.has_permission("create_invoices")
+    ):
+        overdue_rows = (
+            Invoice.query.filter(
+                Invoice.status.in_(["sent", "overdue", "partially_paid"]),
+                Invoice.due_date < today_date,
+            )
+            .order_by(Invoice.due_date.asc())
+            .all()
+        )
+        overdue_total = 0.0
+        overdue_count = 0
+        for inv in overdue_rows:
+            outstanding = float(inv.outstanding_amount or 0)
+            if outstanding > 0:
+                overdue_count += 1
+                overdue_total += outstanding
+        if overdue_count:
+            overdue_invoices_summary = {
+                "count": overdue_count,
+                "total": round(overdue_total, 2),
+                "url": url_for("invoices.list_invoices", status="overdue"),
+            }
+
     # Post-timer toast data (show "Logged Xh on Project" + link to time entries)
     timer_stopped_toast = session.pop("timer_stopped_toast", None)
     if timer_stopped_toast:
@@ -264,22 +412,44 @@ def dashboard():
         today_hours=float(today_hours or 0),
     )
     if support_dashboard_prompt:
-        SupportPromptService.mark_prompt_shown(session, support_dashboard_prompt["variant"])
         v = support_dashboard_prompt.get("variant")
+        if v == SupportPromptService.VARIANT_HOURS_MILESTONE:
+            SupportPromptService.mark_hours_milestone_shown(
+                session, int(support_dashboard_prompt.get("milestone") or 0)
+            )
+        else:
+            SupportPromptService.mark_prompt_shown(session, v)
         if v == SupportPromptService.VARIANT_SEVEN_DAY:
             support_dashboard_prompt = {
                 **support_dashboard_prompt,
                 "message": _(
-                    "You have been using TimeTracker for a week or more. If it fits your workflow, "
-                    "consider supporting continued development."
+                    "A week in — glad you're here. TimeTracker is built by one person, "
+                    "and every bit of support helps."
+                ),
+            }
+        elif v == SupportPromptService.VARIANT_ANNIVERSARY_30D:
+            support_dashboard_prompt = {
+                **support_dashboard_prompt,
+                "message": _(
+                    "You've been using TimeTracker for a month — thank you for being part of the community. "
+                    "If the app helps your work, consider supporting its development."
+                ),
+            }
+        elif v == SupportPromptService.VARIANT_HOURS_MILESTONE:
+            milestone = int(support_dashboard_prompt.get("milestone") or 0)
+            support_dashboard_prompt = {
+                **support_dashboard_prompt,
+                "message": _(
+                    "You've tracked %(hours)s hours with TimeTracker. That's reliable data for your clients "
+                    "and your business — consider supporting continued development.",
+                    hours=milestone,
                 ),
             }
         elif v == SupportPromptService.VARIANT_ACTIVE_TODAY:
             support_dashboard_prompt = {
                 **support_dashboard_prompt,
                 "message": _(
-                    "You have tracked a solid amount of time today. If TimeTracker makes your day easier, "
-                    "you can support the project in a click."
+                    "You've been tracking for a while today. TimeTracker is free because of supporters like you."
                 ),
             }
 
@@ -321,7 +491,16 @@ def dashboard():
         "templates": templates,
         "recent_activities": recent_activities,
         "last_timer_context": last_timer_context,
+        "recent_combos": recent_combos,
+        "today_seconds": today_seconds,
+        "daily_target_seconds": daily_target_seconds,
+        "week_utilization": week_utilization,
+        "is_past_midday": is_past_midday,
         "recent_tags": recent_tags,
+        "tasks_due_today": tasks_due_today,
+        "upcoming_deadlines": upcoming_deadlines,
+        "overdue_invoices_summary": overdue_invoices_summary,
+        "today_date": today_date,
         "user_stats": user_stats,  # For smart banner
         "time_entries_count": time_entries_count,  # For donation widget
         "total_hours": total_hours,  # For donation widget
@@ -344,6 +523,7 @@ def productivity_dashboard():
 
     summary = ProductivityService.get_summary(current_user)
     daily_breakdown = ProductivityService.get_daily_breakdown(current_user, days=14)
+    daily_project_breakdown = ProductivityService.get_daily_project_breakdown(current_user, days=14)
     streak = ProductivityService.get_streak(current_user)
     focus = ProductivityService.get_focus_stats(current_user, days=30)
     projects = ProductivityService.get_project_breakdown(current_user, days=30)
@@ -356,6 +536,7 @@ def productivity_dashboard():
         "main/productivity_dashboard.html",
         summary=summary,
         daily_breakdown=daily_breakdown,
+        daily_project_breakdown=daily_project_breakdown,
         streak=streak,
         focus=focus,
         projects=projects,

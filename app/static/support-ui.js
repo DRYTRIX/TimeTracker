@@ -148,7 +148,7 @@
                     if (!data || !data.show) return;
                     var msg =
                         (cfg.i18n && cfg.i18n.longSessionToast) ||
-                        'If TimeTracker helps your day, consider supporting its development.';
+                        "You've been tracking for a while today. TimeTracker is free because of supporters like you.";
                     var act = (cfg.i18n && cfg.i18n.supportAction) || 'Support';
                     if (window.toastManager && typeof window.toastManager.show === 'function') {
                         window.toastManager.show({

@@ -229,8 +229,12 @@ def register_context_processors(app):
                     v = layout_support_prompt.get("variant")
                     if v == SupportPromptService.VARIANT_AFTER_REPORT:
                         lp_message = _(
-                            "That report was quick to generate. If TimeTracker saves you time, "
-                            "consider supporting its development."
+                            "Report exported — if TimeTracker saves you time, a coffee goes a long way."
+                        )
+                    elif v == SupportPromptService.VARIANT_FIRST_INVOICE:
+                        lp_message = _(
+                            "You just sent your first invoice with TimeTracker — if the app is helping your "
+                            "business, consider supporting its development."
                         )
 
                 support_ui_json = json.dumps(
@@ -259,8 +263,8 @@ def register_context_processors(app):
                             "shareFail": _("Could not copy link"),
                             "supportAction": _("Support"),
                             "longSessionToast": _(
-                                "You have been using TimeTracker actively for a while. "
-                                "If it helps your work, consider supporting its development."
+                                "You've been tracking for a while today. TimeTracker is free because of "
+                                "supporters like you."
                             ),
                         },
                     },

@@ -12,11 +12,19 @@ class SupportPromptService:
     SESSION_PROMPT_TRIGGER = "support_prompt_trigger"
     SESSION_SEVEN_DAY_OFFERED = "support_prompt_7d_offered"
     SESSION_ACTIVE_DAY_OFFERED = "support_prompt_active_day_offered"
+    SESSION_ANNIVERSARY_30D_OFFERED = "support_prompt_30d_offered"
+    SESSION_HOURS_MILESTONE_OFFERED = "support_prompt_hours_milestone_offered"
 
     VARIANT_AFTER_REPORT = "after_report"
+    VARIANT_FIRST_INVOICE = "first_invoice"
     VARIANT_SEVEN_DAY = "seven_day"
+    VARIANT_ANNIVERSARY_30D = "anniversary_30d"
+    VARIANT_HOURS_MILESTONE = "hours_milestone"
     VARIANT_ACTIVE_TODAY = "active_today"
     VARIANT_LONG_SESSION = "long_session"
+
+    LAYOUT_TRIGGER_VARIANTS = frozenset({VARIANT_AFTER_REPORT, VARIANT_FIRST_INVOICE})
+    HOURS_MILESTONES = (1000, 500, 100)
 
     @staticmethod
     def _base_eligible(
@@ -56,11 +64,12 @@ class SupportPromptService:
         ):
             return None
         trigger = session.get(SupportPromptService.SESSION_PROMPT_TRIGGER)
-        if trigger != SupportPromptService.VARIANT_AFTER_REPORT:
+        if trigger not in SupportPromptService.LAYOUT_TRIGGER_VARIANTS:
             return None
         session.pop(SupportPromptService.SESSION_PROMPT_TRIGGER, None)
         session[SupportPromptService.SESSION_SOFT_PROMPT_CONSUMED] = True
-        return {"variant": SupportPromptService.VARIANT_AFTER_REPORT, "source": "after_report"}
+        source = "after_report" if trigger == SupportPromptService.VARIANT_AFTER_REPORT else "first_invoice"
+        return {"variant": trigger, "source": source}
 
     @staticmethod
     def pick_dashboard_prompt(
@@ -83,11 +92,24 @@ class SupportPromptService:
             support_banner_suppressed=support_banner_suppressed,
         ):
             return None
-        # After-report takes priority; leave trigger for layout pass
-        if session.get(SupportPromptService.SESSION_PROMPT_TRIGGER) == SupportPromptService.VARIANT_AFTER_REPORT:
+        # Layout triggers take priority; leave trigger for layout pass
+        if session.get(SupportPromptService.SESSION_PROMPT_TRIGGER) in SupportPromptService.LAYOUT_TRIGGER_VARIANTS:
             return None
 
+        total_hours = float(user_stats.get("total_hours") or 0)
+        offered_milestone = int(session.get(SupportPromptService.SESSION_HOURS_MILESTONE_OFFERED) or 0)
+        for milestone in SupportPromptService.HOURS_MILESTONES:
+            if total_hours >= milestone and offered_milestone < milestone:
+                return {
+                    "variant": SupportPromptService.VARIANT_HOURS_MILESTONE,
+                    "source": "dashboard",
+                    "milestone": milestone,
+                }
+
         days = int(user_stats.get("days_since_signup") or 0)
+        if days >= 30 and not session.get(SupportPromptService.SESSION_ANNIVERSARY_30D_OFFERED):
+            return {"variant": SupportPromptService.VARIANT_ANNIVERSARY_30D, "source": "dashboard"}
+
         if days >= 7 and not session.get(SupportPromptService.SESSION_SEVEN_DAY_OFFERED):
             return {"variant": SupportPromptService.VARIANT_SEVEN_DAY, "source": "dashboard"}
 
@@ -101,10 +123,17 @@ class SupportPromptService:
         session[SupportPromptService.SESSION_SOFT_PROMPT_CONSUMED] = True
         if variant == SupportPromptService.VARIANT_SEVEN_DAY:
             session[SupportPromptService.SESSION_SEVEN_DAY_OFFERED] = True
+        elif variant == SupportPromptService.VARIANT_ANNIVERSARY_30D:
+            session[SupportPromptService.SESSION_ANNIVERSARY_30D_OFFERED] = True
         elif variant == SupportPromptService.VARIANT_ACTIVE_TODAY:
             session[SupportPromptService.SESSION_ACTIVE_DAY_OFFERED] = True
         elif variant == SupportPromptService.VARIANT_LONG_SESSION:
             pass
+
+    @staticmethod
+    def mark_hours_milestone_shown(session: Dict[str, Any], milestone: int) -> None:
+        session[SupportPromptService.SESSION_SOFT_PROMPT_CONSUMED] = True
+        session[SupportPromptService.SESSION_HOURS_MILESTONE_OFFERED] = int(milestone)
 
     @staticmethod
     def long_session_prompt_allowed(
@@ -122,6 +151,13 @@ class SupportPromptService:
             support_banner_suppressed=support_banner_suppressed,
         ):
             return False
-        if session.get(SupportPromptService.SESSION_PROMPT_TRIGGER) == SupportPromptService.VARIANT_AFTER_REPORT:
+        if session.get(SupportPromptService.SESSION_PROMPT_TRIGGER) in SupportPromptService.LAYOUT_TRIGGER_VARIANTS:
             return False
         return True
+
+    @staticmethod
+    def queue_first_invoice_prompt(session: Dict[str, Any], user_id: int, *, first_send: bool = False) -> None:
+        """Queue a one-shot support prompt after the user's first invoice is sent."""
+        if not first_send:
+            return
+        session[SupportPromptService.SESSION_PROMPT_TRIGGER] = SupportPromptService.VARIANT_FIRST_INVOICE

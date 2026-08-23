@@ -5,6 +5,7 @@ Workflow automation routes
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
+from sqlalchemy import func
 
 from app import db
 from app.models.workflow import WorkflowExecution, WorkflowRule, WorkflowTemplate
@@ -39,7 +40,34 @@ def list_workflows():
         .all()
     )
 
-    return render_template("workflows/list.html", workflows=workflows)
+    workflow_ids = [w.id for w in workflows]
+    last_executions = {}
+    if workflow_ids:
+        subq = (
+            db.session.query(
+                WorkflowExecution.rule_id,
+                func.max(WorkflowExecution.executed_at).label("max_executed_at"),
+            )
+            .filter(WorkflowExecution.rule_id.in_(workflow_ids))
+            .group_by(WorkflowExecution.rule_id)
+            .subquery()
+        )
+        rows = (
+            db.session.query(WorkflowExecution)
+            .join(
+                subq,
+                (WorkflowExecution.rule_id == subq.c.rule_id)
+                & (WorkflowExecution.executed_at == subq.c.max_executed_at),
+            )
+            .all()
+        )
+        last_executions = {row.rule_id: row for row in rows}
+
+    return render_template(
+        "workflows/list.html",
+        workflows=workflows,
+        last_executions=last_executions,
+    )
 
 
 @workflows_bp.route("/workflows/create", methods=["GET", "POST"])

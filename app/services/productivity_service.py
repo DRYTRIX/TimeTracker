@@ -338,6 +338,94 @@ class ProductivityService:
             logger.exception("ProductivityService.get_daily_breakdown failed for user %s", uid)
             return []
 
+    @classmethod
+    def get_daily_project_breakdown(cls, user, days: int = 14) -> Dict[str, Any]:
+        """Stacked daily hours by project for charting (last N days, oldest first)."""
+        empty: Dict[str, Any] = {"dates": [], "projects": [], "hours_by_day_project": {}}
+        try:
+            days = max(1, min(int(days), 90))
+        except (TypeError, ValueError):
+            days = 14
+
+        uid = _safe_user_id(user)
+        if uid is None:
+            return empty
+
+        try:
+            today = _user_today(user)
+            start_day = today - timedelta(days=days - 1)
+            start_dt, end_dt = _user_period_bounds_app_naive(user, start_day, today)
+            user_tz = get_timezone_for_user(user)
+            app_tz = get_timezone_obj()
+
+            rows = (
+                db.session.query(
+                    TimeEntry.start_time,
+                    TimeEntry.duration_seconds,
+                    TimeEntry.project_id,
+                    Project.name,
+                )
+                .outerjoin(Project, TimeEntry.project_id == Project.id)
+                .filter(
+                    TimeEntry.user_id == uid,
+                    TimeEntry.end_time.isnot(None),
+                    TimeEntry.start_time >= start_dt,
+                    TimeEntry.start_time < end_dt,
+                )
+                .all()
+            )
+
+            by_day_project: Dict[str, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
+            project_meta: Dict[str, Dict[str, Any]] = {}
+
+            for start_time, duration_seconds, project_id, project_name in rows:
+                local_dt = _to_user_local(start_time, user_tz, app_tz)
+                if local_dt is None:
+                    continue
+                day_key = local_dt.date().isoformat()
+                pid = str(project_id or 0)
+                label = (project_name or "No project").strip()
+                hours = (int(duration_seconds or 0)) / 3600.0
+                by_day_project[day_key][pid] += hours
+                if pid not in project_meta:
+                    palette_idx = (int(project_id or 0)) % len(_PROJECT_PALETTE)
+                    project_meta[pid] = {
+                        "id": project_id,
+                        "name": label,
+                        "color": _PROJECT_PALETTE[palette_idx],
+                    }
+
+            dates: List[str] = []
+            hours_by_day_project: Dict[str, Dict[str, float]] = {}
+            cur = start_day
+            while cur <= today:
+                day_key = cur.isoformat()
+                dates.append(day_key)
+                day_map = by_day_project.get(day_key, {})
+                hours_by_day_project[day_key] = {
+                    pid: round(h, 2) for pid, h in day_map.items() if h > 0
+                }
+                cur += timedelta(days=1)
+
+            # Top projects by total hours in window (limit legend/chart clutter)
+            totals: Dict[str, float] = defaultdict(float)
+            for day_map in hours_by_day_project.values():
+                for pid, h in day_map.items():
+                    totals[pid] += h
+            top_pids = [
+                pid for pid, _ in sorted(totals.items(), key=lambda item: item[1], reverse=True)[:8]
+            ]
+            projects = [project_meta[pid] for pid in top_pids if pid in project_meta]
+
+            return {
+                "dates": dates,
+                "projects": projects,
+                "hours_by_day_project": hours_by_day_project,
+            }
+        except Exception:
+            logger.exception("ProductivityService.get_daily_project_breakdown failed for user %s", uid)
+            return empty
+
     # ---------------------------------------------------------------- streak
 
     @classmethod

@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.13.0
+
+**Minor (5.13.0):** **Daily progress widget** — compact strip on the dashboard with today's hours vs target and a quick-start timer. **Quick-log & tasks due today** — one-click log form and due-today task widget without leaving home. **Timer long-run warning** — alert when a timer exceeds the configurable threshold, with workday progress. **Navigation declutter** — sidebar and mobile More drawer reorganised with key destinations promoted. **Recurring tasks list** — status filters, pause/resume/run-now inline actions. **Floating timer bar & idle-stop** — redesigned compact bar and smoother idle boundary. **Fixes** — productivity heatmap, invoice tax rate/currency resolution, swallowed errors (#736), timer heartbeats (#736), portal admin template, recurring tasks CRUD. See [CHANGELOG.md](CHANGELOG.md#5130---2026-08-23).
+
 ### ✨ Highlights of v5.12.0
 
 **Minor (5.12.0):** **Task dependencies & Gantt links** — blockers between tasks with arrows on the chart. **Milestones** — named due-date checkpoints and project timeline. **Utilization report** — billable vs total hours by user or project. **Expense approvals** — manager queue with bulk-approve and pending badge. **Quote signatures** — in-portal sign/accept with PDF embed. **Resource scheduling** — weekly capacity swimlanes. **Project health** — budget burn, completion, milestones, and overdue work in one view. **Fixes** — dashboard Start Timer modal (#734), PostgreSQL approval status enum case. See [CHANGELOG.md](CHANGELOG.md#5120---2026-08-20).

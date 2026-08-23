@@ -427,6 +427,38 @@ def register_template_filters(app):
         symbol = currency_symbols.get((currency_code or "").upper(), currency_code or "EUR")
         return f"{symbol} {num_str}"
 
+    @app.template_filter("days_until")
+    def days_until_filter(d):
+        """Return signed day count from today to date d (negative = overdue)."""
+        if d is None:
+            return None
+        from datetime import date
+
+        if hasattr(d, "date"):
+            d = d.date()
+        return (d - date.today()).days
+
+    @app.template_filter("relative_due_label")
+    def relative_due_label_filter(d):
+        """Human-friendly due date label: Today, Tomorrow, In 3 days, Overdue."""
+        if d is None:
+            return ""
+        from datetime import date
+
+        if hasattr(d, "date"):
+            d = d.date()
+        delta = (d - date.today()).days
+        if delta < 0:
+            days = abs(delta)
+            return f"Overdue ({days} day{'s' if days != 1 else ''})"
+        if delta == 0:
+            return "Today"
+        if delta == 1:
+            return "Tomorrow"
+        if delta <= 7:
+            return f"In {delta} days"
+        return d.strftime("%Y-%m-%d")
+
     @app.template_filter("timeago")
     def timeago_filter(dt):
         """Convert a datetime to a 'time ago' string (e.g., '2 hours ago')"""

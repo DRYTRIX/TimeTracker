@@ -1,54 +1,63 @@
 {% extends "base.html" %}
-{% block title %}{{ _('License') }} - {{ _('Settings') }}{% endblock %}
+{% block title %}{{ _('Become a Supporter') }} - {{ _('Settings') }}{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8 max-w-2xl">
     <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ _('License') }}</h1>
-        <p class="text-gray-600 dark:text-gray-400 mt-2">{{ _('Supporter badge: confirm your key and thank you for funding development.') }}</p>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ _('Become a Supporter') }}</h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-2">{{ _('Support TimeTracker development and show your Supporter badge across the app.') }}</p>
     </div>
 
     <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg shadow-md p-6 mb-6">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">{{ _('License status') }}</h2>
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">{{ _('Supporter status') }}</h2>
         {% if is_license_activated %}
+        <div class="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-4 mb-4">
+            <p class="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 font-medium">
+                <i class="fas fa-star" aria-hidden="true"></i>
+                {{ _('Thank you for being a Supporter!') }}
+            </p>
+            <p class="text-sm text-emerald-800 dark:text-emerald-200 mt-2">
+                {{ _('Your contribution helps keep TimeTracker free and actively maintained. You will see your Supporter badge in the app, and support prompts are minimized for everyone on this instance.') }}
+            </p>
+        </div>
         <p class="flex items-center gap-2 text-green-600 dark:text-green-400">
             <i class="fas fa-check-circle" aria-hidden="true"></i>
             {{ _('Supporter license active') }}
         </p>
-        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">{{ _('Thank you for supporting TimeTracker. Your badge confirms this instance as a supporter — no features are locked.') }}</p>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">{{ _('No features are locked — this is a thank-you badge, not a paywall.') }}</p>
         {% else %}
         <p class="flex items-center gap-2 text-text-muted-light dark:text-text-muted-dark">
             <i class="fas fa-circle-info" aria-hidden="true"></i>
-            {{ _('Not activated') }}
+            {{ _('Not yet a Supporter') }}
         </p>
         <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
-            {{ _('Purchase a supporter license (€25) to unlock the supporter badge for this instance. The app stays fully free either way.') }}
+            {{ _('Become a Supporter with a one-time €25 contribution. You keep full access either way — supporters get a visible badge and fewer prompts.') }}
         </p>
         <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-md text-sm font-medium transition">
-            {{ _('Buy license (€25)') }} <i class="fas fa-external-link-alt text-xs" aria-hidden="true"></i>
+            <i class="fas fa-star" aria-hidden="true"></i>{{ _('Support TimeTracker (€25)') }} <i class="fas fa-external-link-alt text-xs" aria-hidden="true"></i>
         </a>
         {% endif %}
     </div>
 
     {% if not is_license_activated %}
     <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg shadow-md p-6">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">{{ _('Enter license key') }}</h2>
-        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Paste the license key you received by email after purchase.') }}</p>
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">{{ _('Enter supporter key') }}</h2>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Already purchased? Paste the key you received by email. As a side effect, support prompts are minimized for this instance.') }}</p>
         <form method="POST" action="{{ url_for('user.license') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="mb-4">
-                <label for="license_key" class="form-label">{{ _('License key') }}</label>
+                <label for="license_key" class="form-label">{{ _('Supporter key') }}</label>
                 <input type="text" id="license_key" name="license_key" autocomplete="off"
                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 dark:text-white focus:ring-primary focus:border-primary"
                        placeholder="{{ _('Paste your key here') }}">
             </div>
             <button type="submit" class="btn btn-primary">
-                <i class="fas fa-check mr-2" aria-hidden="true"></i>{{ _('Validate') }}
+                <i class="fas fa-check mr-2" aria-hidden="true"></i>{{ _('Activate Supporter badge') }}
             </button>
         </form>
         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-4">
             {{ _('Need a key?') }}
-            <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">{{ _('Purchase a license key') }}</a>
+            <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">{{ _('Become a Supporter') }}</a>
         </p>
     </div>
     {% endif %}

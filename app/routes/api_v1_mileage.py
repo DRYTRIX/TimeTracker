@@ -153,12 +153,21 @@ def update_mileage(entry_id):
         parsed = _parse_date(data["trip_date"])
         if parsed:
             entry.trip_date = parsed
+    invalid_numeric_fields = []
     for numfield in ("distance_km", "rate_per_km", "start_odometer", "end_odometer"):
         if numfield in data:
             try:
                 setattr(entry, numfield, Decimal(str(data[numfield])))
             except Exception:
-                pass
+                invalid_numeric_fields.append(numfield)
+    if invalid_numeric_fields:
+        return jsonify(
+            {
+                "error": "Invalid numeric value",
+                "fields": invalid_numeric_fields,
+                "message": f"Invalid value for: {', '.join(invalid_numeric_fields)}",
+            }
+        ), 400
     if "is_round_trip" in data:
         entry.is_round_trip = bool(data["is_round_trip"])
     if "distance_km" in data or "rate_per_km" in data:
