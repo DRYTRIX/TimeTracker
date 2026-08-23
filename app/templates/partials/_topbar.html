@@ -46,8 +46,10 @@
                         <div id="floatingTimerBar" class="flex shrink-0 items-center justify-center w-9 h-9"
                              data-start-label="{{ _('Start Timer') }}"
                              data-stop-label="{{ _('Stop') }}"
+                             data-pause-label="{{ _('Pause') }}"
                              data-resume-label="{{ _('Resume') }}"
                              data-daily-target-hours="{{ current_user.standard_hours_per_day or 8 }}"
+                             data-dashboard-url="{{ url_for('main.dashboard') }}"
                              data-manual-url="{{ url_for('timer.manual_entry') }}"
                              aria-label="{{ _('Timer') }}"></div>
                         {% endif %}

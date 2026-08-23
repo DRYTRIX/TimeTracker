@@ -1,6 +1,6 @@
 /**
  * Floating Timer Bar - Persistent mini-timer visible on all pages
- * One-click start/stop without navigating to dashboard
+ * One-click start/stop without navigating away from the current page when possible
  */
 (function () {
     'use strict';
@@ -24,6 +24,8 @@
             this.startTime = null;
             this.startLabel = 'Start Timer';
             this.stopLabel = 'Stop';
+            this.pauseLabel = 'Pause';
+            this.resumeLabel = 'Resume';
             this.init();
         }
 
@@ -32,6 +34,8 @@
             this.bar = document.getElementById('floatingTimerBar');
             this.startLabel = this.bar.dataset.startLabel || 'Start Timer';
             this.stopLabel = this.bar.dataset.stopLabel || 'Stop';
+            this.pauseLabel = this.bar.dataset.pauseLabel || 'Pause';
+            this.resumeLabel = this.bar.dataset.resumeLabel || 'Resume';
             this.render();
             this.fetchStatus();
             this.pollTimer = setInterval(() => this.fetchStatus(), POLL_INTERVAL_MS);
@@ -53,6 +57,7 @@
                     this.stopElapsedUpdater();
                     this.render();
                 }
+                syncFabDesktopHide(this.timerData);
             } catch (e) {
                 console.warn('FloatingTimerBar: fetch status failed', e);
             }
@@ -78,9 +83,6 @@
                 if (el) el.textContent = formatted;
                 const progressEl = this.bar.querySelector('[data-timer-progress]');
                 if (progressEl) progressEl.style.width = this.getProgressPercent(elapsedSec) + '%';
-                const btn = this.bar.querySelector('button');
-                const label = this.timerData.paused ? (this.bar.dataset.resumeLabel || 'Resume') : (this.stopLabel || 'Stop');
-                if (btn) btn.title = (this.getLabel() || 'Timer') + (this.timerData.paused ? ' (Paused) – ' : ' – ') + formatted + ' – ' + label;
             };
             update();
             this.elapsedInterval = setInterval(update, 1000);
@@ -97,54 +99,50 @@
             const startBtn = document.querySelector('#openStartTimer');
             if (startBtn) {
                 startBtn.click();
-            } else {
-                const url = this.bar?.dataset?.manualUrl || '/timer/manual';
-                window.location.href = url;
+                return;
+            }
+            const dashboardUrl = this.bar?.dataset?.dashboardUrl || '/';
+            window.location.href = dashboardUrl + (dashboardUrl.indexOf('#') >= 0 ? '' : '#start-timer');
+        }
+
+        async postTimerAction(url) {
+            const token = this.getCsrfToken();
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': token,
+                        'Accept': 'application/json',
+                    },
+                    body: 'csrf_token=' + encodeURIComponent(token),
+                    credentials: 'same-origin',
+                    redirect: 'manual',
+                });
+                await this.fetchStatus();
+                this.refreshDashboardTimerWidget();
+            } catch (e) {
+                console.error('Timer action failed:', url, e);
+                if (window.toastManager) {
+                    window.toastManager.error('Timer action failed', 'Error', 3000);
+                }
             }
         }
 
-        async stopTimer() {
-            const token = this.getCsrfToken();
-            try {
-                const res = await fetch('/timer/stop', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': token },
-                    body: 'csrf_token=' + encodeURIComponent(token),
-                    credentials: 'same-origin'
-                });
-                if (res.redirected) {
-                    window.location.href = res.url;
-                } else {
-                    await this.fetchStatus();
-                }
-            } catch (e) {
-                console.error('Stop timer failed', e);
-                if (window.toastManager) {
-                    window.toastManager.error('Failed to stop timer', 'Error', 3000);
-                }
-            }
+        stopTimer() {
+            return this.postTimerAction('/timer/stop');
         }
 
-        async resumeTimer() {
-            const token = this.getCsrfToken();
-            try {
-                const res = await fetch('/timer/resume', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': token },
-                    body: 'csrf_token=' + encodeURIComponent(token),
-                    credentials: 'same-origin'
-                });
-                if (res.redirected) {
-                    window.location.href = res.url;
-                } else {
-                    await this.fetchStatus();
-                }
-            } catch (e) {
-                console.error('Resume timer failed', e);
-                if (window.toastManager) {
-                    window.toastManager.error('Failed to resume timer', 'Error', 3000);
-                }
-            }
+        pauseTimer() {
+            return this.postTimerAction('/timer/pause');
+        }
+
+        resumeTimer() {
+            return this.postTimerAction('/timer/resume');
+        }
+
+        refreshDashboardTimerWidget() {
+            document.dispatchEvent(new CustomEvent('tt:timer-status-changed'));
         }
 
         getCsrfToken() {
@@ -173,36 +171,42 @@
         render() {
             if (!this.bar) return;
 
-            const baseClass = 'floating-timer-bar__round flex items-center justify-center w-10 h-10 rounded-full text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 text-sm transition-colors';
-            const actionLabel = this.timerData && this.timerData.paused ? (this.bar.dataset.resumeLabel || 'Resume') : (this.stopLabel || 'Stop');
-            const title = this.timerData
-                ? (escapeHtml(this.getLabel()) + (this.timerData.paused ? ' (Paused) – ' : ' – ') + (this.timerData.duration_formatted || '00:00:00') + ' – ' + escapeHtml(actionLabel))
-                : escapeHtml(this.startLabel);
+            const roundBtn = 'floating-timer-bar__round flex items-center justify-center w-8 h-8 rounded-full text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm transition-colors shrink-0';
 
             if (this.timerData) {
                 const isPaused = this.timerData.paused;
                 const pulseClass = isPaused ? 'bg-amber-500' : 'bg-green-500 animate-pulse';
-                const clickHandler = isPaused ? 'window.floatingTimerBar.resumeTimer()' : 'window.floatingTimerBar.stopTimer()';
                 const elapsedSec = this.timerData.current_duration != null
                     ? this.timerData.current_duration
                     : (this.startTime ? Math.floor((Date.now() - this.startTime) / 1000) : 0);
                 const progressPct = this.getProgressPercent(elapsedSec);
+                const label = escapeHtml(this.getLabel());
+                const elapsed = this.timerData.duration_formatted || '00:00:00';
+                const pauseResumeLabel = isPaused ? this.resumeLabel : this.pauseLabel;
+                const pauseResumeIcon = isPaused ? 'play' : 'pause';
+                const pauseResumeAction = isPaused ? 'resumeTimer' : 'pauseTimer';
+
+                this.bar.className = 'flex shrink-0 items-center gap-1 floating-timer-bar--active';
                 this.bar.innerHTML = `
-                    <div class="relative flex flex-col items-center justify-center w-10">
-                        <button type="button" class="${baseClass} relative" onclick="${clickHandler}" title="${title}" aria-label="${escapeHtml(actionLabel)} – ${escapeHtml(this.getLabel())}">
-                            <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${pulseClass}" aria-hidden="true"></span>
-                            <i class="fas fa-${isPaused ? 'pause' : 'stopwatch'} text-base"></i>
-                            <span class="floating-timer-bar__elapsed sr-only" data-timer-elapsed>${this.timerData.duration_formatted || '00:00:00'}</span>
+                    <div class="relative flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 border border-border-light dark:border-border-dark" title="${label}${isPaused ? ' (Paused)' : ''}">
+                        <span class="absolute top-0.5 left-2 w-2 h-2 rounded-full ${pulseClass}" aria-hidden="true"></span>
+                        <span class="floating-timer-bar__elapsed font-mono text-xs font-semibold tabular-nums text-text-light dark:text-text-dark pl-3 min-w-[4.5rem]" data-timer-elapsed>${elapsed}</span>
+                        <button type="button" class="${roundBtn}" onclick="window.floatingTimerBar.${pauseResumeAction}()" title="${escapeHtml(pauseResumeLabel)}" aria-label="${escapeHtml(pauseResumeLabel)}">
+                            <i class="fas fa-${pauseResumeIcon} text-xs"></i>
                         </button>
-                        <div class="absolute -bottom-1 left-1 right-1 h-1 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden" aria-hidden="true">
+                        <button type="button" class="${roundBtn}" onclick="window.floatingTimerBar.stopTimer()" title="${escapeHtml(this.stopLabel)}" aria-label="${escapeHtml(this.stopLabel)}">
+                            <i class="fas fa-stop text-xs"></i>
+                        </button>
+                        <div class="absolute -bottom-0.5 left-2 right-2 h-0.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden" aria-hidden="true">
                             <div class="h-full bg-primary transition-all duration-1000" data-timer-progress style="width: ${progressPct}%;"></div>
                         </div>
                     </div>
                 `;
                 this.startElapsedUpdater();
             } else {
+                this.bar.className = 'flex shrink-0 items-center justify-center';
                 this.bar.innerHTML = `
-                    <button type="button" class="${baseClass}" onclick="window.floatingTimerBar.startTimer()" title="${title}" aria-label="${escapeHtml(this.startLabel)}">
+                    <button type="button" class="${roundBtn} w-9 h-9" onclick="window.floatingTimerBar.startTimer()" title="${escapeHtml(this.startLabel)}" aria-label="${escapeHtml(this.startLabel)}">
                         <i class="fas fa-play text-base"></i>
                     </button>
                 `;
@@ -225,6 +229,7 @@
     const style = document.createElement('style');
     style.textContent = `
         .floating-timer-bar__round { cursor: pointer; }
+        .floating-timer-bar--active { max-width: 11rem; }
         @media (prefers-reduced-motion: reduce) {
             .floating-timer-bar__round .animate-pulse { animation: none; }
         }

@@ -73,6 +73,15 @@
     if (countdownIntervalId) { clearInterval(countdownIntervalId); countdownIntervalId = null; }
   }
 
+  async function refreshTimerUiAfterStop(){
+    try {
+      if (window.floatingTimerBar && typeof window.floatingTimerBar.fetchStatus === 'function') {
+        await window.floatingTimerBar.fetchStatus();
+      }
+      document.dispatchEvent(new CustomEvent('tt:timer-status-changed'));
+    } catch(e) {}
+  }
+
   async function stopAt(ts){
     clearGraceTimers();
     promptShown = false;
@@ -87,7 +96,7 @@
         } else {
           alert(msg);
         }
-        location.reload();
+        await refreshTimerUiAfterStop();
       }
     } catch(e) {}
   }
@@ -427,8 +436,10 @@
           label: (window.i18n?.messages?.pauseTimer || 'Pause timer'),
           style: 'primary',
           onClick: async function(){
-            try { await fetch('/timer/pause', { method: 'POST' }); } catch(e){}
-            location.reload();
+            try {
+              await fetch('/timer/pause', { method: 'POST', redirect: 'manual', credentials: 'same-origin' });
+              await refreshTimerUiAfterStop();
+            } catch(e){}
           }
         },
         {
