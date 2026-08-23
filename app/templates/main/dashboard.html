@@ -238,6 +238,82 @@
     {% endif %}
 </div>
 
+{% set progress_pct = (today_seconds / daily_target_seconds * 100) if daily_target_seconds and daily_target_seconds > 0 else 0 %}
+{% set progress_pct_display = [progress_pct, 100]|min %}
+{% if progress_pct >= 100 %}
+    {% set progress_color = 'emerald' %}
+{% elif progress_pct >= 50 or not is_past_midday %}
+    {% set progress_color = 'amber' %}
+{% else %}
+    {% set progress_color = 'red' %}
+{% endif %}
+{% set today_h = today_seconds // 3600 %}
+{% set today_m = (today_seconds % 3600) // 60 %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div class="lg:col-span-2 bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm dashboard-widget">
+        <div class="flex items-center justify-between gap-4 mb-4">
+            <div>
+                <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ _("Today's progress") }}</h2>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Track toward your daily target') }}</p>
+            </div>
+            {% if active_timer %}
+            <span class="inline-flex items-center gap-2 text-xs font-medium text-blue-600 dark:text-blue-400">
+                <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>{{ _('Timer running') }}
+            </span>
+            {% endif %}
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="relative w-20 h-20 shrink-0">
+                <svg viewBox="0 0 36 36" class="w-20 h-20 -rotate-90">
+                    <circle cx="18" cy="18" r="15.9155" fill="none" class="stroke-gray-200 dark:stroke-gray-700" stroke-width="3"></circle>
+                    <circle cx="18" cy="18" r="15.9155" fill="none"
+                            class="{% if progress_color == 'emerald' %}stroke-emerald-500{% elif progress_color == 'amber' %}stroke-amber-500{% else %}stroke-red-500{% endif %}"
+                            stroke-width="3" stroke-linecap="round"
+                            stroke-dasharray="100"
+                            stroke-dashoffset="{{ 100 - progress_pct_display }}"></circle>
+                </svg>
+            </div>
+            <div class="min-w-0 flex-1">
+                <p class="text-2xl font-bold text-text-light dark:text-text-dark">
+                    {{ today_h }}h {{ '%02d'|format(today_m) }}m
+                    <span class="text-base font-medium text-text-muted-light dark:text-text-muted-dark">/ {{ '%.0f'|format(standard_hours_per_day) }}h</span>
+                </p>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
+                    {{ '%.0f'|format(progress_pct) }}% {{ _('of daily target') }}
+                </p>
+                {% if week_utilization is defined %}
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-2">
+                    {{ _('This week:') }} {{ '%.1f'|format(week_utilization.billable_hours or 0) }}h {{ _('billable') }} / {{ '%.1f'|format(week_utilization.total_hours or 0) }}h
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if recent_combos %}
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm dashboard-widget">
+        <h2 class="text-lg font-semibold text-text-light dark:text-text-dark mb-3">{{ _('Quick start') }}</h2>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Start the timer for a recent project') }}</p>
+        <div class="flex flex-col gap-2">
+            {% for combo in recent_combos %}
+            <form method="POST" action="{{ url_for('timer.start_timer') }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="project_id" value="{{ combo.project_id }}">
+                {% if combo.task_id %}<input type="hidden" name="task_id" value="{{ combo.task_id }}">{% endif %}
+                <button type="submit" class="w-full text-left px-3 py-2 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+                    <span class="font-medium text-text-light dark:text-text-dark">{{ combo.project_name }}</span>
+                    {% if combo.task_name %}
+                    <span class="text-xs text-text-muted-light dark:text-text-muted-dark block">{{ combo.task_name }}</span>
+                    {% endif %}
+                </button>
+            </form>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
 <!-- Key Stats with Sparklines -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
     <!-- Today's Hours Card -->
@@ -277,6 +353,11 @@
                 {% if standard_hours_per_day is defined and week_overtime_hours is defined %}
                 <div id="weekOvertimeLine" class="mt-1 text-xs text-green-700 dark:text-green-300" {% if week_overtime_hours <= 0 %}style="display: none;"{% endif %}>
                     {% if week_overtime_hours > 0 %}<span class="font-medium">+ {{ "%.2f"|format(week_overtime_hours) }}h {{ _('overtime') }}</span>{% endif %}
+                </div>
+                {% endif %}
+                {% if week_utilization is defined and week_utilization.total_hours %}
+                <div class="mt-2 text-xs text-green-700 dark:text-green-300">
+                    {{ '%.1f'|format(week_utilization.billable_hours or 0) }}h {{ _('billable') }} / {{ '%.1f'|format(week_utilization.total_hours or 0) }}h {{ _('this week') }}
                 </div>
                 {% endif %}
             </div>

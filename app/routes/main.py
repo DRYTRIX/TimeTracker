@@ -219,6 +219,48 @@ def dashboard():
             "client_name": last_entry.client.name if last_entry.client else None,
         }
 
+    # Recent project+task combos for quick-start strip (last 5 unique pairs)
+    recent_combos = []
+    combo_seen = set()
+    combo_entries = (
+        TimeEntry.query.options(joinedload(TimeEntry.project), joinedload(TimeEntry.task))
+        .filter(
+            TimeEntry.user_id == current_user.id,
+            TimeEntry.end_time.isnot(None),
+            TimeEntry.project_id.isnot(None),
+        )
+        .order_by(TimeEntry.end_time.desc())
+        .limit(50)
+        .all()
+    )
+    for combo_entry in combo_entries:
+        combo_key = (combo_entry.project_id, combo_entry.task_id)
+        if combo_key in combo_seen:
+            continue
+        combo_seen.add(combo_key)
+        recent_combos.append(
+            {
+                "project_id": combo_entry.project_id,
+                "task_id": combo_entry.task_id,
+                "project_name": combo_entry.project.name if combo_entry.project else None,
+                "task_name": combo_entry.task.name if combo_entry.task else None,
+            }
+        )
+        if len(recent_combos) >= 5:
+            break
+
+    today_seconds = int(round(today_hours * 3600))
+    daily_target_seconds = int(round(standard_hours_per_day * 3600))
+
+    from app.services.utilization_service import UtilizationService
+
+    week_utilization = UtilizationService.for_user_period(
+        current_user.id,
+        datetime.combine(week_start_dt, datetime.min.time()),
+        datetime.combine(today_dt, datetime.max.time()),
+    )
+    is_past_midday = local_now().hour >= 12
+
     # Post-timer toast data (show "Logged Xh on Project" + link to time entries)
     timer_stopped_toast = session.pop("timer_stopped_toast", None)
     if timer_stopped_toast:
@@ -343,6 +385,11 @@ def dashboard():
         "templates": templates,
         "recent_activities": recent_activities,
         "last_timer_context": last_timer_context,
+        "recent_combos": recent_combos,
+        "today_seconds": today_seconds,
+        "daily_target_seconds": daily_target_seconds,
+        "week_utilization": week_utilization,
+        "is_past_midday": is_past_midday,
         "recent_tags": recent_tags,
         "user_stats": user_stats,  # For smart banner
         "time_entries_count": time_entries_count,  # For donation widget
