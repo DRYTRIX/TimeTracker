@@ -163,7 +163,7 @@ function fillProjectSelect(selectedId = null) {
   const current =
     selectedId != null
       ? String(selectedId)
-      : els.projectSelect.value || (list[0] ? String(list[0].id) : '');
+      : els.projectSelect.value || '';
 
   els.projectSelect.innerHTML = '';
   if (!list.length) {
@@ -328,6 +328,10 @@ async function createClientInline(name) {
 async function createProjectInline(name) {
   clearMessage();
   const clientId = els.clientSelect.value ? Number(els.clientSelect.value) : null;
+  if (!clientId) {
+    showMessage('Select a client before creating a project.');
+    return;
+  }
   try {
     const result = await client.createProject({ name, clientId });
     const created = result?.project || result;
