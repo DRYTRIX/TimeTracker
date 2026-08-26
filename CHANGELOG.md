@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.13.1] - 2026-08-26
+
+### Changed
+
+- **Projects sorted by last used (#738)** — Timers and manual entries stamp `last_used_at` on projects so pickers and API lists surface recent work ahead of alphabetical order (migration **182**).
+- **Client versions** — Synced Electron (`desktop/package.json`), Flutter (`mobile/pubspec.yaml`), and Chromium extension (`browser-extension/manifest.json` / `package.json`) to **5.13.1** with the webapp (`setup.py`).
+- **Chrome extension release zip** — GitHub Releases now attach a ready-to-install Chromium extension zip alongside desktop and mobile artifacts.
+
+### Fixed
+
+- **Idle timeout duration & prompts (#722)** — Auto-stop credits `last_active + idle_timeout` instead of recording 0 minutes; web and extension surface “Still working?” notifications, and mobile polls `idle_notified` while backgrounded.
+- **Searchable picker blur & Create project (#728)** — Comboboxes reset to the committed selection on blur so typed-but-unselected text cannot look like a form change; Create project stays hidden until a client is chosen; no auto-selected project; Create labels are translated.
+- **Extension Create project guard** — Re-applied the client-required guard on the project picker after the last-used sort change so create-without-client stays blocked.
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.13.1** (single source of truth for the application version).
+
 ## [5.13.0] - 2026-08-23
 
 ### Added

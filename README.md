@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.13.1
+
+**Patch (5.13.1):** **Projects by last used (#738)** — pickers and API lists surface recent work first. **Idle timeout (#722)** — auto-stop records the configured duration and surfaces Still working? on web, extension, and mobile. **Picker fixes (#728)** — blur resets typed-but-unselected text, Create project requires a client, translated Create labels. **Extension release zip** — Chromium extension package attached to GitHub Releases. See [CHANGELOG.md](CHANGELOG.md#5131---2026-08-26).
+
 ### ✨ Highlights of v5.13.0
 
 **Minor (5.13.0):** **Daily progress widget** — compact strip on the dashboard with today's hours vs target and a quick-start timer. **Quick-log & tasks due today** — one-click log form and due-today task widget without leaving home. **Timer long-run warning** — alert when a timer exceeds the configurable threshold, with workday progress. **Navigation declutter** — sidebar and mobile More drawer reorganised with key destinations promoted. **Recurring tasks list** — status filters, pause/resume/run-now inline actions. **Floating timer bar & idle-stop** — redesigned compact bar and smoother idle boundary. **Fixes** — productivity heatmap, invoice tax rate/currency resolution, swallowed errors (#736), timer heartbeats (#736), portal admin template, recurring tasks CRUD. See [CHANGELOG.md](CHANGELOG.md#5130---2026-08-23).
