@@ -578,13 +578,23 @@ class TestTimer:
         assert refreshed.end_time is None
         assert refreshed.idle_notified_at is not None
 
-        # Second pass after grace: auto-stop
+        # Second pass after grace: auto-stop at last_heartbeat + idle_timeout
+        last_hb = refreshed.last_heartbeat_at
         refreshed.idle_notified_at = local_now() - timedelta(minutes=6)
         db.session.commit()
         check_idle_timers()
         stopped = db.session.get(TimeEntry, timer_id)
         assert stopped.end_time is not None
         assert stopped.idle_notified_at is None
+        expected_stop = last_hb + timedelta(minutes=30)
+        if getattr(expected_stop, "tzinfo", None) is not None:
+            expected_stop = expected_stop.replace(tzinfo=None)
+        end = stopped.end_time
+        if getattr(end, "tzinfo", None) is not None:
+            end = end.replace(tzinfo=None)
+        assert abs((end - expected_stop).total_seconds()) < 5
+        # At least ~90 min recorded (start was 2h ago, stop at hb+30m)
+        assert (stopped.duration_seconds or 0) >= 85 * 60
 
 
 class TestTasks:

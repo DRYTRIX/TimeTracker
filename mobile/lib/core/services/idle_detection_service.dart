@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timetracker_mobile/core/services/notification_service.dart';
 import 'package:timetracker_mobile/domain/repositories/time_tracking_repository.dart';
@@ -13,6 +14,8 @@ import 'package:timetracker_mobile/domain/repositories/time_tracking_repository.
 /// [idleTimeoutMinutes] of no activity shows a "Still working?" notification
 /// with a 5-minute grace window, then auto-stops the timer.
 ///
+/// When the app is backgrounded, polls the server for ``idle_notified`` (nudged
+/// by the Android foreground task) so the local notification still fires.
 /// When the app is killed, the server-side `check_idle_timers` job is the
 /// safety net (requires heartbeats to have been flowing while the app was open).
 class IdleDetectionService with WidgetsBindingObserver {
@@ -36,6 +39,7 @@ class IdleDetectionService with WidgetsBindingObserver {
   bool _started = false;
   bool _timerActive = false;
   bool _inForeground = true;
+  bool _taskDataCallbackRegistered = false;
   DateTime? _idleStopAt;
 
   bool get isRunning => _started;
@@ -53,12 +57,14 @@ class IdleDetectionService with WidgetsBindingObserver {
         Timer.periodic(heartbeatInterval, (_) => _sendHeartbeat());
     _checkTimer = Timer.periodic(checkInterval, (_) => _tick());
     NotificationService.instance.onIdleAction = respondToIdlePrompt;
+    _registerForegroundTaskCallback();
   }
 
   void stop() {
     if (!_started) return;
     _started = false;
     WidgetsBinding.instance.removeObserver(this);
+    _unregisterForegroundTaskCallback();
     _heartbeatTimer?.cancel();
     _checkTimer?.cancel();
     _graceTimer?.cancel();
@@ -90,9 +96,8 @@ class IdleDetectionService with WidgetsBindingObserver {
       return;
     }
     if (idleNotified && !_promptShown) {
-      _idleStopAt = DateTime.now().subtract(
-        Duration(minutes: _idleTimeoutMinutes),
-      );
+      // Server already waited idle_timeout; credit that window (Issue #722).
+      _idleStopAt = _creditedStopAt(_lastActivity);
       await _showPrompt();
     }
   }
@@ -129,8 +134,7 @@ class IdleDetectionService with WidgetsBindingObserver {
       return;
     }
 
-    final stopAt = _idleStopAt ??
-        DateTime.now().subtract(Duration(minutes: _idleTimeoutMinutes));
+    final stopAt = _idleStopAt ?? _creditedStopAt(_lastActivity);
     _promptShown = false;
     _idleStopAt = null;
     try {
@@ -139,6 +143,41 @@ class IdleDetectionService with WidgetsBindingObserver {
       debugPrint('IdleDetectionService stop failed: $e');
     }
     _timerActive = false;
+  }
+
+  /// last_active + idle_timeout, capped at now (Issue #722 — not 0 min).
+  DateTime _creditedStopAt(DateTime lastActive) {
+    final credited =
+        lastActive.add(Duration(minutes: _idleTimeoutMinutes));
+    final now = DateTime.now();
+    return credited.isAfter(now) ? now : credited;
+  }
+
+  void _registerForegroundTaskCallback() {
+    if (_taskDataCallbackRegistered) return;
+    try {
+      FlutterForegroundTask.addTaskDataCallback(_onForegroundTaskData);
+      _taskDataCallbackRegistered = true;
+    } catch (e) {
+      debugPrint('IdleDetectionService FGS callback register failed: $e');
+    }
+  }
+
+  void _unregisterForegroundTaskCallback() {
+    if (!_taskDataCallbackRegistered) return;
+    try {
+      FlutterForegroundTask.removeTaskDataCallback(_onForegroundTaskData);
+    } catch (e) {
+      debugPrint('IdleDetectionService FGS callback unregister failed: $e');
+    }
+    _taskDataCallbackRegistered = false;
+  }
+
+  void _onForegroundTaskData(Object data) {
+    if (data is Map && data['type'] == 'idle_check') {
+      // Keep idle detection alive while the Android FGS is running (#722).
+      unawaited(_pollServerIdleStatus());
+    }
   }
 
   Future<void> _sendHeartbeat() async {
@@ -161,11 +200,33 @@ class IdleDetectionService with WidgetsBindingObserver {
     if (!_timerActive || _repository == null) return;
     if (_promptShown) return;
 
+    // When backgrounded, rely on server idle_notified (heartbeats stop).
+    if (!_inForeground) {
+      await _pollServerIdleStatus();
+      return;
+    }
+
     final idleFor = DateTime.now().difference(_lastActivity);
     final threshold = Duration(minutes: _idleTimeoutMinutes);
     if (idleFor >= threshold) {
-      _idleStopAt = DateTime.now().subtract(idleFor);
+      _idleStopAt = _creditedStopAt(_lastActivity);
       await _showPrompt();
+    }
+  }
+
+  Future<void> _pollServerIdleStatus() async {
+    if (!_timerActive || _repository == null || _promptShown) return;
+    try {
+      final status = await _repository!.getTimerStatusDetailed();
+      final timer = status.timer;
+      final active = timer != null && !timer.isPaused;
+      await updateFromTimerStatus(
+        active: active,
+        idleTimeoutMinutes: status.idleTimeoutMinutes,
+        idleNotified: status.idleNotified,
+      );
+    } catch (e) {
+      debugPrint('IdleDetectionService background poll failed: $e');
     }
   }
 

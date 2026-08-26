@@ -197,11 +197,9 @@ async function refreshTimerStatus({ force = false } = {}) {
         status?.idle_notified || status?.timer?.idle_notified
       );
       if (idleNotified) {
-        const minutes = clampIdleTimeoutMinutes(
-          status?.idle_timeout_minutes ?? idleTimeoutMinutes
-        );
-        const stopAtMs = Date.now() - minutes * 60 * 1000;
-        await beginIdleGrace(stopAtMs);
+        // Credit the idle window (Issue #722): stop at last_active + threshold ≈ now
+        // when the server just notified, not at last_active alone (0 min).
+        await beginIdleGrace(Date.now());
       }
       // Only refresh server heartbeat while the OS reports the user as active.
       // Heartbeating during idle/locked would defeat the server-side safety net.
@@ -328,19 +326,16 @@ chrome.idle.onStateChanged.addListener(async (newState) => {
     return;
   }
 
-  const { last_timer_status, idle_timeout_minutes } = await chrome.storage.local.get([
+  const { last_timer_status } = await chrome.storage.local.get([
     'last_timer_status',
-    'idle_timeout_minutes',
   ]);
   if (!last_timer_status?.active || !last_timer_status?.timer) {
     return;
   }
 
-  const minutes = clampIdleTimeoutMinutes(idle_timeout_minutes);
-  // When chrome.idle reports idle/locked, the user has already been inactive
-  // for the configured detection interval — stop at that last-active moment.
-  const stopAtMs = Date.now() - minutes * 60 * 1000;
-  await beginIdleGrace(stopAtMs);
+  // chrome.idle already waited the detection interval; credit that window
+  // so auto-stop records idle_timeout minutes of work (Issue #722), not 0.
+  await beginIdleGrace(Date.now());
 });
 
 chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
@@ -348,8 +343,8 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
   if (buttonIndex === 0) {
     await confirmStillWorking();
   } else if (buttonIndex === 1) {
-    const { idle_grace_stop_at } = await chrome.storage.local.get('idle_grace_stop_at');
-    await stopTimerForIdle({ stopAtMs: idle_grace_stop_at });
+    // "No" stops immediately (like web stopNow), not backdated to last activity.
+    await stopTimerForIdle({ stopAtMs: Date.now() });
   }
 });
 

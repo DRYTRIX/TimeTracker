@@ -901,8 +901,9 @@ def check_idle_timers():
     is older than ``settings.idle_timeout_minutes``:
 
     1. First pass: set ``idle_notified_at`` and send a browser push "Still working?".
-    2. Second pass (after 5-minute grace): auto-stop the timer backdated to the
-       last heartbeat (or start time).
+    2. Second pass (after 5-minute grace): auto-stop the timer at
+       ``last_active + idle_timeout`` so a forgotten timer still records at least
+       the configured idle window (Issue #722 — not 0 minutes).
 
     Clients that keep sending heartbeats keep ``last_heartbeat_at`` fresh and
     clear ``idle_notified_at``, so they are never auto-stopped while active.
@@ -955,10 +956,14 @@ def check_idle_timers():
                     if getattr(notified_at, "tzinfo", None) is not None:
                         notified_at = notified_at.replace(tzinfo=None)
                     if (now - notified_at) >= grace:
-                        stop_at = entry.last_heartbeat_at or (now - threshold)
-                        if getattr(stop_at, "tzinfo", None) is not None:
-                            stop_at = stop_at.replace(tzinfo=None)
-                        if stop_at and stop_at > now:
+                        # Credit the configured idle window: stop at last known
+                        # activity + threshold (not last_active alone, which
+                        # recorded 0 min when heartbeats never arrived).
+                        last_active = entry.last_heartbeat_at or entry.start_time
+                        if getattr(last_active, "tzinfo", None) is not None:
+                            last_active = last_active.replace(tzinfo=None)
+                        stop_at = last_active + threshold if last_active else now
+                        if stop_at > now:
                             stop_at = now
                         # stop_timer commits; avoid double-commit issues by calling it last
                         entry_id = entry.id
