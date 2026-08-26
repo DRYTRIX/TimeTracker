@@ -131,6 +131,8 @@ class TimeTrackingService:
                         "message": "Selected task is invalid for the chosen project",
                         "error": "invalid_task",
                     }
+
+            project.touch_last_used()
         else:
             # Client-only timer
             from app.repositories import ClientRepository
@@ -317,6 +319,8 @@ class TimeTrackingService:
                 task = Task.query.filter_by(id=task_id, project_id=project_id).first()
                 if not task:
                     return {"success": False, "message": "Invalid task for selected project", "error": "invalid_task"}
+
+            project.touch_last_used()
 
         # Validate client if provided
         if client_id:

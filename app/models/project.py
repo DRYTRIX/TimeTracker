@@ -27,6 +27,7 @@ class Project(db.Model):
     custom_fields = db.Column(db.JSON, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    last_used_at = db.Column(db.DateTime, nullable=True, index=True)
     # Archiving metadata
     archived_at = db.Column(db.DateTime, nullable=True, index=True)
     archived_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
@@ -315,6 +316,10 @@ class Project(db.Model):
         self.updated_at = datetime.utcnow()
         db.session.commit()
 
+    def touch_last_used(self):
+        """Mark this project as recently used (timer start or manual entry)."""
+        self.last_used_at = datetime.utcnow()
+
     def is_favorited_by(self, user):
         """Check if this project is favorited by a specific user"""
         from .user import User
@@ -391,6 +396,7 @@ class Project(db.Model):
             "budget_threshold_percent": self.budget_threshold_percent,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "last_used_at": self.last_used_at.isoformat() if self.last_used_at else None,
             "total_hours": self.total_hours,
             "total_billable_hours": self.total_billable_hours,
             "estimated_cost": float(self.estimated_cost) if self.estimated_cost else None,
