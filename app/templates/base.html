@@ -1278,6 +1278,13 @@ function trackBannerImpression(source) {
     </script>
     
     {# Issue #728: searchable combobox + inline create (available on all authenticated pages) #}
+    <script nonce="{{ csp_nonce() }}">
+        window.ttCreateLabels = {
+            client: {{ _('Create client')|tojson }},
+            project: {{ _('Create project')|tojson }},
+            task: {{ _('Create task')|tojson }}
+        };
+    </script>
     <script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
     <script src="{{ url_for('static', filename='inline-create.js') }}"></script>
     {% block scripts_extra %}{% endblock %}

@@ -10,6 +10,8 @@
  *   canCreate?: boolean,
  *   placeholder?: string,
  *   onCreate?: (typedName: string) => void | Promise<void>,
+ *   canCreateGuard?: () => boolean,
+ *   canCreateGuardHint?: string,
  * }} options
  */
 export function enhanceSelect(select, options = {}) {
@@ -113,18 +115,27 @@ export function enhanceSelect(select, options = {}) {
     if (canCreate && q) {
       const exact = optionsList.some((o) => (o.label || '').toLowerCase() === q);
       if (!exact) {
-        const createLi = document.createElement('li');
-        createLi.className = 'tt-picker-create';
-        createLi.setAttribute('role', 'option');
-        createLi.textContent = `${createLabels[kind] || 'Create'} “${query.trim()}”`;
-        createLi.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          closeList();
-          if (typeof options.onCreate === 'function') {
-            options.onCreate(query.trim());
-          }
-        });
-        list.appendChild(createLi);
+        const guardOk =
+          typeof options.canCreateGuard !== 'function' || options.canCreateGuard();
+        if (!guardOk) {
+          const hint = document.createElement('li');
+          hint.className = 'tt-picker-hint';
+          hint.textContent = options.canCreateGuardHint || 'Not available';
+          list.appendChild(hint);
+        } else {
+          const createLi = document.createElement('li');
+          createLi.className = 'tt-picker-create';
+          createLi.setAttribute('role', 'option');
+          createLi.textContent = `${createLabels[kind] || 'Create'} “${query.trim()}”`;
+          createLi.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            closeList();
+            if (typeof options.onCreate === 'function') {
+              options.onCreate(query.trim());
+            }
+          });
+          list.appendChild(createLi);
+        }
       }
     }
 
@@ -154,6 +165,14 @@ export function enhanceSelect(select, options = {}) {
         }
       }
     }
+  });
+
+  // Reset visible input when user types but does not commit a selection (Issue #728)
+  input.addEventListener('blur', () => {
+    setTimeout(() => {
+      input.value = selectedLabel();
+      closeList();
+    }, 150);
   });
 
   document.addEventListener('click', (e) => {

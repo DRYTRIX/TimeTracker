@@ -15,11 +15,16 @@
 (function () {
   'use strict';
 
-  var CREATE_LABEL = {
+  var DEFAULT_CREATE_LABEL = {
     client: 'Create client',
     project: 'Create project',
     task: 'Create task',
   };
+
+  function getCreateLabel(kind) {
+    var labels = window.ttCreateLabels || {};
+    return labels[kind] || DEFAULT_CREATE_LABEL[kind] || 'Create';
+  }
 
   function getCreatePermission(select) {
     return select.getAttribute('data-can-create') === '1';
@@ -308,7 +313,7 @@
           createLi.setAttribute('role', 'option');
           createLi.setAttribute('aria-selected', 'false');
           createLi.setAttribute('data-create', '1');
-          var createPrefix = CREATE_LABEL[kind] || 'Create';
+          var createPrefix = getCreateLabel(kind);
           createLi.innerHTML =
             '<i class="fas fa-plus mr-1"></i>' +
             createPrefix +
@@ -377,6 +382,14 @@
         closeList();
         input.value = selectedLabel(select);
       }
+    });
+
+    // Reset visible input when user types but does not commit a selection (Issue #728)
+    input.addEventListener('blur', function () {
+      setTimeout(function () {
+        input.value = selectedLabel(select);
+        closeList();
+      }, 150);
     });
 
     document.addEventListener('click', function (e) {

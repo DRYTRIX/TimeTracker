@@ -17,6 +17,8 @@
   let countdownIntervalId = null;
   let lastHeartbeatSent = 0;
   let hasActiveTimer = false;
+  let notificationPermissionRequested = false;
+  let activeIdleNotification = null;
   const HEARTBEAT_THROTTLE_MS = 60 * 1000;
 
   function sendHeartbeat(){
@@ -32,6 +34,38 @@
         __ttQuiet: true,
       }).catch(function(){});
     } catch(e) {}
+  }
+
+  /** Ask for Notification permission once a timer is running so idle alerts
+   *  can surface when the TimeTracker tab is not focused (Issue #722). */
+  function requestNotificationPermission(){
+    if (notificationPermissionRequested) return;
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission !== 'default') {
+      notificationPermissionRequested = true;
+      return;
+    }
+    notificationPermissionRequested = true;
+    try {
+      Notification.requestPermission().catch(function(){});
+    } catch(e) {}
+  }
+
+  function closeIdleNotification(){
+    try {
+      if (activeIdleNotification) {
+        activeIdleNotification.close();
+        activeIdleNotification = null;
+      }
+    } catch(e) {
+      activeIdleNotification = null;
+    }
+  }
+
+  /** Credit the idle window on auto-stop: last_active + threshold (Issue #722). */
+  function creditedStopTs(lastActiveTs){
+    const credited = (lastActiveTs || Date.now()) + getIdleThresholdMs();
+    return Math.min(credited, Date.now());
   }
 
   function markActive(){
@@ -84,6 +118,7 @@
 
   async function stopNow(){
     clearGraceTimers();
+    closeIdleNotification();
     promptShown = false;
     try {
       const r = await fetch('/api/timer/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, __ttQuiet: true });
@@ -101,6 +136,7 @@
 
   async function stopAt(ts){
     clearGraceTimers();
+    closeIdleNotification();
     promptShown = false;
     try {
       const r = await fetch('/api/timer/stop_at', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stop_time: new Date(ts).toISOString() }) });
@@ -120,11 +156,40 @@
 
   function snoozeIdlePrompt(toastEl){
     clearGraceTimers();
+    closeIdleNotification();
     lastActivity = Date.now();
     promptShown = false;
     lastHeartbeatSent = 0; // force immediate heartbeat so server clears idle_notified_at
     sendHeartbeat();
     try { if (toastEl) toastEl.remove(); } catch(e) {}
+  }
+
+  function showNativeIdleNotification(stopTs, onStillWorking){
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission !== 'granted') return;
+    closeIdleNotification();
+    try {
+      const title = window.i18n?.messages?.stillWorkingTitle || 'Still working?';
+      const body = window.i18n?.messages?.stillWorkingPrompt ||
+        ('You seem inactive since ' + formatTime(new Date(stopTs)) +
+         '. Click to confirm you are still working, or the timer will stop automatically.');
+      const n = new Notification(title, {
+        body: body,
+        tag: 'tt-still-working',
+        requireInteraction: true,
+        renotify: true,
+      });
+      activeIdleNotification = n;
+      n.onclick = function(ev){
+        try { if (ev && ev.preventDefault) ev.preventDefault(); } catch(e) {}
+        try { window.focus(); } catch(e) {}
+        closeIdleNotification();
+        if (typeof onStillWorking === 'function') onStillWorking();
+      };
+      n.onclose = function(){
+        if (activeIdleNotification === n) activeIdleNotification = null;
+      };
+    } catch(e) {}
   }
 
   function showIdlePrompt(stopTs){
@@ -139,6 +204,8 @@
        '. Timer will stop automatically if you do not answer.');
 
     const deadline = Date.now() + GRACE_MS;
+    // Auto-stop credits the idle window (last activity + threshold), not 0 min.
+    const autoStopTs = creditedStopTs(stopTs);
 
     function buildMessage(){
       return baseMsg + ' (' + formatCountdown(deadline - Date.now()) + ')';
@@ -158,13 +225,21 @@
 
       graceTimerId = setTimeout(function(){
         clearGraceTimers();
+        closeIdleNotification();
         try { toastEl.remove(); } catch(e){}
-        stopAt(stopTs);
+        stopAt(autoStopTs);
       }, GRACE_MS);
     }
 
+    // Native OS notification so the prompt is visible from other tabs (#722)
+    showNativeIdleNotification(stopTs, function(){
+      const toastEl = document.querySelector('[data-tt-idle-prompt]');
+      snoozeIdlePrompt(toastEl);
+    });
+
     if (window.toastManager) {
       const toastEl = document.createElement('div');
+      toastEl.setAttribute('data-tt-idle-prompt', '1');
       toastEl.className = 'flex items-center gap-3 p-4 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded-lg shadow-lg pointer-events-auto';
       toastEl.innerHTML =
         '<div class="flex-1 text-sm text-amber-900 dark:text-amber-100" data-countdown>' + buildMessage() + '</div>' +
@@ -180,6 +255,7 @@
     }
 
     const t = document.createElement('div');
+    t.setAttribute('data-tt-idle-prompt', '1');
     t.className = 'toast align-items-center text-white bg-warning border-0 fade show';
     t.innerHTML =
       '<div class="d-flex">' +
@@ -241,6 +317,7 @@
     const active = await getTimer();
     hasActiveTimer = !!active;
     if (!active) return;
+    requestNotificationPermission();
     // Send periodic heartbeat while tab is open (throttled to HEARTBEAT_THROTTLE_MS)
     if (!promptShown) sendHeartbeat();
     const threshold = getIdleThresholdMs();

@@ -34,7 +34,7 @@ class ProjectRepository(BaseRepository[Project]):
         # If user_id provided, filter projects user has access to
         # (This would need permission logic in a real implementation)
 
-        return query.order_by(Project.name).all()
+        return query.order_by(Project.last_used_at.desc().nullslast(), Project.name).all()
 
     def get_by_client(
         self, client_id: int, status: Optional[str] = None, include_relations: bool = False
@@ -48,7 +48,7 @@ class ProjectRepository(BaseRepository[Project]):
         if include_relations:
             query = query.options(joinedload(Project.client_obj))
 
-        return query.order_by(Project.name).all()
+        return query.order_by(Project.last_used_at.desc().nullslast(), Project.name).all()
 
     def get_with_stats(self, project_id: int) -> Optional[Project]:
         """Get project with related statistics (time entries, costs, etc.)"""
@@ -88,4 +88,4 @@ class ProjectRepository(BaseRepository[Project]):
         if client_id:
             query = query.filter_by(client_id=client_id)
 
-        return query.order_by(Project.name).all()
+        return query.order_by(Project.last_used_at.desc().nullslast(), Project.name).all()

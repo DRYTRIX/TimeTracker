@@ -37,7 +37,7 @@ const CLOSED_TASK_STATUSES = new Set(['done', 'cancelled']);
 
 /** @type {ApiClient|null} */
 let client = null;
-/** @type {Array<{id:number,name:string,client_id?:number|null,favorite?:boolean}>} */
+/** @type {Array<{id:number,name:string,client_id?:number|null,favorite?:boolean,last_used_at?:string|null}>} */
 let projects = [];
 /** @type {Array<{id:number,name:string}>} */
 let clients = [];
@@ -163,7 +163,7 @@ function fillProjectSelect(selectedId = null) {
   const current =
     selectedId != null
       ? String(selectedId)
-      : els.projectSelect.value || (list[0] ? String(list[0].id) : '');
+      : els.projectSelect.value || '';
 
   els.projectSelect.innerHTML = '';
   if (!list.length) {
@@ -255,9 +255,13 @@ async function loadProjects(preferredProjectId = null) {
       name: p.name,
       client_id: p.client_id ?? null,
       favorite: favIds.has(p.id),
+      last_used_at: p.last_used_at ?? null,
     }))
     .sort((a, b) => {
       if (a.favorite !== b.favorite) return a.favorite ? -1 : 1;
+      const aUsed = a.last_used_at ? Date.parse(a.last_used_at) : 0;
+      const bUsed = b.last_used_at ? Date.parse(b.last_used_at) : 0;
+      if (aUsed !== bUsed) return bUsed - aUsed;
       return a.name.localeCompare(b.name);
     });
 
@@ -328,6 +332,10 @@ async function createClientInline(name) {
 async function createProjectInline(name) {
   clearMessage();
   const clientId = els.clientSelect.value ? Number(els.clientSelect.value) : null;
+  if (!clientId) {
+    showMessage('Select a client before creating a project.');
+    return;
+  }
   try {
     const result = await client.createProject({ name, clientId });
     const created = result?.project || result;
@@ -371,6 +379,8 @@ function initPickers() {
     canCreate: true,
     placeholder: 'Type to search projects…',
     onCreate: createProjectInline,
+    canCreateGuard: () => !!els.clientSelect.value,
+    canCreateGuardHint: 'Select a client first',
   });
   taskPicker = enhanceSelect(els.taskSelect, {
     kind: 'task',

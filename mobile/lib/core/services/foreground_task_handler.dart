@@ -7,21 +7,40 @@ void timerForegroundStartCallback() {
 }
 
 /// Updates the persistent timer notification every second while the
-/// foreground service is running.
+/// foreground service is running, and periodically nudges the main isolate
+/// to poll server idle status (Issue #722).
 class TimerForegroundTaskHandler extends TaskHandler {
   static const String keyStartTimeMillis = 'timer_start_time_millis';
   static const String keyBreakSeconds = 'timer_break_seconds';
   static const String keyProjectName = 'timer_project_name';
   static const String keyTaskName = 'timer_task_name';
+  static const Duration idleNudgeInterval = Duration(seconds: 30);
+
+  DateTime? _lastIdleNudge;
 
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
     await _updateNotification();
+    _nudgeIdleCheck(timestamp);
   }
 
   @override
   void onRepeatEvent(DateTime timestamp) {
     _updateNotification();
+    _nudgeIdleCheck(timestamp);
+  }
+
+  void _nudgeIdleCheck(DateTime timestamp) {
+    final last = _lastIdleNudge;
+    if (last != null && timestamp.difference(last) < idleNudgeInterval) {
+      return;
+    }
+    _lastIdleNudge = timestamp;
+    try {
+      FlutterForegroundTask.sendDataToMain({'type': 'idle_check'});
+    } catch (_) {
+      // Main isolate may be gone; server check_idle_timers is the safety net.
+    }
   }
 
   @override

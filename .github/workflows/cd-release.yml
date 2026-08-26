@@ -1131,12 +1131,43 @@ jobs:
           retention-days: 90
 
   # ============================================================================
+  # Build Browser Extension
+  # ============================================================================
+  build-browser-extension:
+    name: Build Browser Extension
+    runs-on: ubuntu-latest
+    needs: [determine-version]
+    continue-on-error: true
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Package extension
+        working-directory: browser-extension
+        run: npm run zip
+
+      - name: Upload extension zip
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-extension-${{ needs.determine-version.outputs.version }}
+          path: browser-extension/dist/*.zip
+          retention-days: 90
+
+  # ============================================================================
   # Create GitHub Release
   # ============================================================================
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [build-and-push, determine-version, build-desktop-windows, build-desktop-linux, build-desktop-macos, build-mobile-android, build-mobile-ios]
+    needs: [build-and-push, determine-version, build-desktop-windows, build-desktop-linux, build-desktop-macos, build-mobile-android, build-mobile-ios, build-browser-extension]
     if: github.event_name != 'release'
     permissions:
       contents: write
@@ -1165,6 +1196,13 @@ jobs:
         continue-on-error: true
         with:
           pattern: 'mobile-*'
+          merge-multiple: false
+
+      - name: Download browser extension artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: 'browser-extension-*'
           merge-multiple: false
       
       - name: Prepare release files
@@ -1226,6 +1264,11 @@ jobs:
           if [ -d "mobile-ios-$VERSION" ]; then
             mkdir -p "$MOBILE_DIR/ios"
             cp mobile-ios-$VERSION/* "$MOBILE_DIR/ios/" 2>/dev/null || true
+          fi
+
+          # Browser extension
+          if [ -d "browser-extension-$VERSION" ]; then
+            cp browser-extension-$VERSION/*.zip "$RELEASE_DIR/" 2>/dev/null || true
           fi
           
           # Create file list for release (for debugging)
@@ -1307,6 +1350,7 @@ jobs:
             release-files/k8s-deployment.yml
             release-files/desktop/**/*
             release-files/mobile/**/*
+            release-files/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: false
@@ -1346,7 +1390,7 @@ jobs:
   release-summary:
     name: Release Summary
     runs-on: ubuntu-latest
-    needs: [security-audit, build-and-push, determine-version, create-release, trigger-demo-deploy, build-desktop-windows, build-desktop-linux, build-desktop-macos, build-mobile-android, build-mobile-ios]
+    needs: [security-audit, build-and-push, determine-version, create-release, trigger-demo-deploy, build-desktop-windows, build-desktop-linux, build-desktop-macos, build-mobile-android, build-mobile-ios, build-browser-extension]
     if: always()
     
     steps:
@@ -1389,8 +1433,15 @@ jobs:
             echo "- ⚠️ iOS: ${{ needs.build-mobile-ios.result }}" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Browser Extension" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.build-browser-extension.result }}" == "success" ]; then
+            echo "- ✅ Chrome extension zip: Success" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ Chrome extension zip: ${{ needs.build-browser-extension.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "ℹ️ *Full test suite already ran on PR before merge*" >> $GITHUB_STEP_SUMMARY
-          echo "ℹ️ *Desktop and mobile builds are optional - release continues even if they fail*" >> $GITHUB_STEP_SUMMARY
+          echo "ℹ️ *Desktop, mobile, and browser extension builds are optional - release continues even if they fail*" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔐 Analytics Configuration" >> $GITHUB_STEP_SUMMARY
           echo "Analytics credentials were **successfully injected** from GitHub Secret Store:" >> $GITHUB_STEP_SUMMARY

@@ -336,7 +336,7 @@ class ProjectService:
                 query = query.filter(search_filter)
 
         # Order and paginate
-        query = query.order_by(Project.name)
+        query = query.order_by(Project.last_used_at.desc().nullslast(), Project.name)
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
         projects = pagination.items
 
