@@ -365,7 +365,8 @@ hr.sep {
 
 .tt-picker-option,
 .tt-picker-create,
-.tt-picker-empty {
+.tt-picker-empty,
+.tt-picker-hint {
   padding: 7px 10px;
   cursor: pointer;
 }
@@ -386,7 +387,8 @@ hr.sep {
   font-weight: 600;
 }
 
-.tt-picker-empty {
+.tt-picker-empty,
+.tt-picker-hint {
   color: var(--muted);
   cursor: default;
 }

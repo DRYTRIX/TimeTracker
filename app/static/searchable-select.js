@@ -384,6 +384,14 @@
       }
     });
 
+    // Reset visible input when user types but does not commit a selection (Issue #728)
+    input.addEventListener('blur', function () {
+      setTimeout(function () {
+        input.value = selectedLabel(select);
+        closeList();
+      }, 150);
+    });
+
     document.addEventListener('click', function (e) {
       if (!wrapper.contains(e.target)) closeList();
     });

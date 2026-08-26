@@ -375,6 +375,8 @@ function initPickers() {
     canCreate: true,
     placeholder: 'Type to search projects…',
     onCreate: createProjectInline,
+    canCreateGuard: () => !!els.clientSelect.value,
+    canCreateGuardHint: 'Select a client first',
   });
   taskPicker = enhanceSelect(els.taskSelect, {
     kind: 'task',
