@@ -106,7 +106,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label for="client_id" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Client') }}</label>
-                            {{ client_select('client_id', clients, selected_id=selected_client_id, required=False, only_one_client=false, single_client=none, searchable=True, can_create=can_create_clients|default(false)) }}
+                            {{ client_select('client_id', clients, selected_id=selected_client_id, required=False, only_one_client=false, single_client=none, searchable=True, force_selectable=True, can_create=can_create_clients|default(false)) }}
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select a client first, then optionally a project. Type to search or create.') }}</p>
                         </div>
                         <div>
@@ -115,13 +115,14 @@
                                     data-searchable-select="project"
                                     data-filter-by="client_id"
                                     {% if can_create_projects|default(false) %}data-can-create="1"{% endif %}
-                                    data-search-placeholder="{{ _('Type to search projects…') }}">
+                                    data-search-placeholder="{{ _('Type to search projects…') }}"
+                                    {% if not selected_client_id %}disabled{% endif %}>
                                 <option value="">{{ _('Select a project (optional)') }}</option>
                                 {% for project in projects %}
                                 <option value="{{ project.id }}" data-client-id="{{ project.client_id }}" data-parent-id="{{ project.client_id }}" {% if selected_project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
                                 {% endfor %}
                             </select>
-                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Filtered by client. Leave empty for a client-only entry.') }}</p>
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Pick a client first, then choose one of their projects. Leave empty for a client-only entry.') }}</p>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -423,17 +424,27 @@ document.addEventListener('DOMContentLoaded', async function(){
     }
 
     if (clientSelect && clientSelect.tagName === 'SELECT') {
+        // Pick a client first: the project picker unlocks once a client is chosen
+        if (projectSelect) {
+            const clientVal = clientSelect ? String(clientSelect.value || '') : '';
+            projectSelect.disabled = !clientVal;
+        }
         clientSelect.addEventListener('change', function() {
             const cid = this.value;
-            if (projectSelect && projectSelect.value) {
-                const opt = projectSelect.options[projectSelect.selectedIndex];
-                const projectClientId = opt ? (opt.getAttribute('data-client-id') || '') : '';
-                if (cid && projectClientId && projectClientId !== cid) {
+            if (projectSelect) {
+                if (!cid) {
                     projectSelect.value = '';
-                    if (taskSelect) {
-                        taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
-                        taskSelect.disabled = true;
-                        if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
+                    projectSelect.disabled = true;
+                    try { projectSelect.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+                } else if (projectSelect.disabled) {
+                    projectSelect.disabled = false;
+                }
+                if (projectSelect.value) {
+                    const opt = projectSelect.options[projectSelect.selectedIndex];
+                    const projectClientId = opt ? (opt.getAttribute('data-client-id') || '') : '';
+                    if (cid && projectClientId && projectClientId !== cid) {
+                        projectSelect.value = '';
+                        try { projectSelect.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
                     }
                 }
             }

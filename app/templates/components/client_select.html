@@ -1,19 +1,21 @@
-{# Client select component - when only one client exists, pre-fill and gray out per Issue #467 #}
-{% macro client_select(name, clients, selected_id=None, required=False, only_one_client=False, single_client=None, id=None, searchable=False, can_create=False) %}
+{# Client select component - when only one client exists, pre-fill and gray out per Issue #467.
+   Pass force_selectable=True to keep a real dropdown even with a single client
+   (cascading create flows where the user may pick another client or create one). #}
+{% macro client_select(name, clients, selected_id=None, required=False, only_one_client=False, single_client=None, id=None, searchable=False, can_create=False, force_selectable=False) %}
 {% set input_id = id or name %}
 {% set locked_client = get_locked_client() %}
 {% if locked_client %}
     <input type="hidden" name="{{ name }}" id="{{ input_id }}" value="{{ locked_client.id }}" data-auto-client="true">
     <input type="text" class="form-input bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-75"
            value="{{ locked_client.name }}" disabled readonly aria-label="{{ _('Client (auto-selected)') }}">
-{% elif (not only_one_client) and (single_client is none) and clients and (clients|length == 1) %}
+{% elif (not force_selectable) and (not only_one_client) and (single_client is none) and clients and (clients|length == 1) %}
     {# Fallback: if route didn't pass only_one_client/single_client, infer it from the list #}
     <input type="hidden" name="{{ name }}" id="{{ input_id }}" value="{{ clients[0].id }}" data-auto-client="true">
     <input type="text" class="form-input bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-75"
            value="{{ clients[0].name }}" disabled readonly aria-label="{{ _('Client (auto-selected)') }}">
-{% elif only_one_client and single_client %}
+{% elif (not force_selectable) and only_one_client and single_client %}
     <input type="hidden" name="{{ name }}" id="{{ input_id }}" value="{{ single_client.id }}" data-auto-client="true">
-    <input type="text" class="form-input bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-75" 
+    <input type="text" class="form-input bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-75"
            value="{{ single_client.name }}" disabled readonly aria-label="{{ _('Client (auto-selected)') }}">
 {% else %}
     <select name="{{ name }}" id="{{ input_id }}" class="form-input"
@@ -21,7 +23,7 @@
             {% if searchable %}data-searchable-select="client" data-inline-client-select{% if can_create %} data-can-create="1"{% endif %} data-search-placeholder="{{ _('Type to search clients…') }}"{% endif %}>
         <option value="">{% if required %}{{ _('Select a client...') }}{% else %}{{ _('Select a client (optional)') }}{% endif %}</option>
         {% for client in clients %}
-        <option value="{{ client.id }}" {% if selected_id is not none and selected_id|string == client.id|string %}selected{% endif %}>{{ client.name }}</option>
+        <option value="{{ client.id }}" data-default-rate="{{ client.default_hourly_rate if client.default_hourly_rate is not none else '' }}" {% if selected_id is not none and selected_id|string == client.id|string %}selected{% endif %}>{{ client.name }}</option>
         {% endfor %}
     </select>
 {% endif %}

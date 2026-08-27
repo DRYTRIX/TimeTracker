@@ -270,3 +270,35 @@ def test_child_template_blocks_exist_in_base():
     # Explicitly assert the regression that shipped broken
     assert "extra_js" in base_blocks
     assert "scripts_extra" in base_blocks
+
+
+@pytest.mark.integration
+@pytest.mark.routes
+def test_manual_entry_project_gated_on_client_and_modal_rate(app, authenticated_client, project):
+    """Manual entry follows the client -> project -> task cascade (#728).
+
+    - Project picker is disabled until a client is selected.
+    - Inline create-project modal carries a client default rate and a locked
+      client display so the project attaches to the chosen client.
+    - Client options expose data-default-rate for the JS prefill.
+    """
+    manual = authenticated_client.get("/timer/manual")
+    assert manual.status_code == 200
+    html = manual.get_data(as_text=True)
+
+    # Project select disabled without a selected client (JS re-enables it)
+    project_select = re.search(r'<select[^>]*id="project_id".*?</select>', html, re.S)
+    assert project_select, "project select missing on manual entry"
+    assert "disabled" in project_select.group(0)
+    assert 'data-filter-by="client_id"' in project_select.group(0)
+
+    # Create-project modal: rate field + locked client display
+    assert 'id="inlineProjectRateField"' in html
+    assert 'id="inline_project_hourly_rate"' in html
+    assert 'id="inlineProjectClientDisplay"' in html
+    assert 'id="inline_project_client_id_locked"' in html
+
+    # Client options carry their default rate for the prefill
+    assert re.search(r'<option value="\d+" data-default-rate="', html), (
+        "client options must expose data-default-rate"
+    )

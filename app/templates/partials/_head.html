@@ -43,7 +43,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     {# Inter is self-hosted: @font-face rules in app/static/src/input.css point at
        app/static/vendor/inter (previously an @import from fonts.bunny.net). #}
-    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}?v={{ app_version }}">
+    <link rel="stylesheet" href="{{ static_url('dist/output.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='form-bridge.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='form-validation.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='data-tables-enhanced.css') }}">

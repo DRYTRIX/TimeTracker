@@ -95,6 +95,25 @@ def asset_url(name: str, fallback: Optional[str] = None) -> str:
     return url_for("static", filename=path)
 
 
+def static_url(filename: str) -> str:
+    """Cache-busted URL for source-controlled static files.
+
+    Unlike the hashed dist bundles, files such as searchable-select.js are
+    served unhashed under a stable URL. Appending the file's mtime as a query
+    parameter makes browsers pick up edits without waiting for a release
+    version bump (the failure mode behind the stale dark-mode combobox CSS).
+    """
+    import os
+
+    try:
+        path = os.path.join(current_app.static_folder or "static", filename)
+        version = int(os.stat(path).st_mtime)
+    except OSError:
+        version = 0
+    return url_for("static", filename=filename, v=version)
+
+
 def register_asset_helpers(app) -> None:
-    """Expose ``asset_url`` to templates."""
+    """Expose ``asset_url`` / ``static_url`` to templates."""
     app.jinja_env.globals["asset_url"] = asset_url
+    app.jinja_env.globals["static_url"] = static_url

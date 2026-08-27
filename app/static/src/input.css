@@ -143,6 +143,7 @@
   .form-label {
     @apply block text-sm font-medium text-text-light dark:text-text-dark mb-1.5;
   }
+
   .form-section-title {
     @apply text-sm font-semibold text-text-light dark:text-text-dark uppercase tracking-wide flex items-center gap-2 mb-4;
   }
@@ -679,6 +680,31 @@
   }
 }
 
+/* Searchable combobox dropdown (app/static/searchable-select.js).
+   Component classes instead of inline utilities: Tailwind's content scan
+   does not reliably pick variant classes out of that JS file, which left
+   the dropdown unstyled/white-on-white in dark mode (#728). */
+.tt-searchable-list {
+  @apply absolute z-40 mt-1 max-h-60 w-full overflow-auto rounded-md border shadow-lg py-1 bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-600;
+}
+.tt-searchable-option {
+  @apply px-3 py-2 text-sm cursor-pointer text-gray-900 dark:text-gray-100;
+}
+.tt-searchable-option:hover {
+  @apply bg-blue-50 dark:bg-blue-900/30;
+}
+.tt-searchable-option.is-selected {
+  @apply bg-blue-50 dark:bg-blue-900/40 font-medium;
+}
+.tt-searchable-option.is-active {
+  @apply bg-blue-100 dark:bg-blue-800;
+}
+.tt-searchable-empty {
+  @apply px-3 py-2 text-sm text-gray-500 dark:text-gray-400;
+}
+.tt-searchable-create {
+  @apply border-t border-gray-100 dark:border-gray-700 text-primary;
+}
 /* Focus, skip link, responsive, reduced motion, high contrast (from enhanced-ui / ui-enhancements) */
 :focus-visible { outline: 2px solid #4A90E2; outline-offset: 2px; }
 .skip-link { position: absolute; top: -40px; left: 0; background: #4A90E2; color: white; padding: 8px 16px; z-index: 100; border-radius: 0 0 4px 0; }

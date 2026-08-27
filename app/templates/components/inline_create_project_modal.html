@@ -24,16 +24,28 @@
                         <label for="inline_project_name" class="form-label">{{ _('Project Name') }} *</label>
                         <input type="text" id="inline_project_name" name="name" required class="form-input" placeholder="{{ _('Enter project name') }}">
                     </div>
-                    <div>
+                    <div id="inlineProjectClientField">
                         <label for="inline_project_client_id" class="form-label">{{ _('Client') }} *</label>
                         <select id="inline_project_client_id" name="client_id" required class="form-input">
                             <option value="">{{ _('Select a client...') }}</option>
                             {% for client in (inline_project_clients if inline_project_clients is defined else (clients if clients is defined else (active_clients if active_clients is defined else []))) %}
-                            <option value="{{ client.id }}">{{ client.name }}</option>
+                            <option value="{{ client.id }}" data-default-rate="{{ client.default_hourly_rate if client.default_hourly_rate is not none else '' }}">{{ client.name }}</option>
                             {% endfor %}
                         </select>
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
                             {{ _('Projects must belong to a client. Other details can be filled later.') }}
+                        </p>
+                    </div>
+                    <div id="inlineProjectClientDisplay" class="hidden">
+                        <span class="form-label block">{{ _('Client') }}</span>
+                        <p id="inlineProjectClientName" class="form-input bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-75"></p>
+                        <input type="hidden" id="inline_project_client_id_locked" value="">
+                    </div>
+                    <div id="inlineProjectRateField" class="hidden">
+                        <label for="inline_project_hourly_rate" class="form-label">{{ _('Hourly rate') }}</label>
+                        <input type="number" step="0.01" min="0" id="inline_project_hourly_rate" name="hourly_rate" class="form-input" placeholder="{{ _('Default rate from client') }}">
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                            {{ _('Pre-filled with the client default rate. Change it if this project should use another rate.') }}
                         </p>
                     </div>
                     <div class="flex items-center gap-3">
