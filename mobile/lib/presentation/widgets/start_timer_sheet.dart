@@ -139,9 +139,13 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
   void _selectClient(_ClientItem? client) {
     setState(() {
       _selectedClient = client;
-      // Changing the client invalidates project and task selections.
-      _selectedProject = null;
-      _selectedTask = null;
+      // Changing the client invalidates project and task selections unless
+      // the project belongs to the newly selected client.
+      if (_selectedProject != null &&
+          (client == null || _selectedProject!.clientId != client.id)) {
+        _selectedProject = null;
+        _selectedTask = null;
+      }
     });
   }
 
@@ -149,6 +153,16 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
     setState(() {
       _selectedProject = project;
       _selectedTask = null;
+      // Picking a project directly fills in its client automatically.
+      if (project != null &&
+          project.clientId != null &&
+          _selectedClient?.id != project.clientId) {
+        final match =
+            _clients.where((c) => c.id == project.clientId).toList();
+        _selectedClient = match.isNotEmpty
+            ? match.first
+            : _ClientItem(id: project.clientId!, name: project.client ?? '');
+      }
     });
     if (project != null) {
       ref.read(tasksProvider.notifier).loadTasks(projectId: project.id);
@@ -163,7 +177,6 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
     if (_selectedClient == null) return projects;
     return projects.where((p) => p.clientId == _selectedClient!.id).toList();
   }
-
   // The v1 create endpoints wrap the payload: {"message": ..., "<key>": {...}}.
   Map<String, dynamic> _unwrap(Map<String, dynamic> res, String key) {
     final nested = res[key];
@@ -408,16 +421,15 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
               ),
               const SizedBox(height: AppSpacing.md),
               SearchablePickerField<Project>(
-                key: ValueKey('projects_${_selectedClient?.id}'),
                 label: _selectedClient == null
-                    ? 'Project (select a client first)'
+                    ? 'Project (pick a client or project)'
                     : 'Project (optional for this client)',
                 icon: Icons.folder_outlined,
                 searchHint: 'Search projects',
                 emptyText: _selectedClient == null
-                    ? 'Select a client first'
+                    ? 'No projects found'
                     : 'No projects for this client',
-                enabled: _selectedClient != null && !_creating,
+                enabled: !_creating,
                 isLoading: projectsState.isLoading,
                 error: projectsState.error,
                 onRetry: () => ref.read(projectsProvider.notifier).loadProjects(),
@@ -437,11 +449,12 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
                       ),
                 onSelected: (item) => _selectProject(item.value),
                 onClear: () => _selectProject(null),
+                // Creating a project requires a client (mirrors the web app,
+                // which hides Create project until a client is chosen).
                 onCreate: _selectedClient == null ? null : _createProject,
               ),
               const SizedBox(height: AppSpacing.md),
               SearchablePickerField<task_model.Task>(
-                key: ValueKey('tasks_${_selectedProject?.id}'),
                 label: requirementsAsync.valueOrNull?.requireTask == true
                     ? 'Task *'
                     : 'Task (optional)',
