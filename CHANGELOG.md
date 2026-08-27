@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Mobile start timer flow** — Client, project, and task selection in the start timer sheet now use one consistent searchable picker; picking a client filters the project list to that client and picking a project filters tasks accordingly. Typing an unknown name offers inline "Create …" for clients, projects, and tasks via the existing v1 endpoints. The projects screen is sorted by most recently used (`last_used_at`) so recent work can be restarted with one tap.
+
+### Fixed
+
+- **Mobile start timer crash** — Two `FloatingActionButton`s with the default Hero tag coexisted in the home screen's `IndexedStack`, turning the screen red whenever a route was pushed on top (e.g. the start timer sheet); the Entries tab FAB now has a unique `heroTag`.
+- **Mobile inline creation selection** — The v1 create endpoints wrap the payload (`{"message": …, "<entity>": {…}}`); unwrapping it ensures a newly created client/project/task is selected immediately in the start timer sheet.
+- **Mobile stop/pause flicker** — Background timer polling no longer toggles `isLoading`, which disabled the Stop and Pause buttons for the duration of each 5-second sync; the flag is now reserved for user-initiated actions.
+
 ## [5.13.1] - 2026-08-26
 
 ### Changed
