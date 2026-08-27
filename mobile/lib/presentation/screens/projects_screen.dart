@@ -34,11 +34,28 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
   }
 
   List<Project> _filterProjects(List<Project> projects, String query) {
-    if (query.isEmpty) return projects;
-    return projects.where((project) {
+    if (query.isEmpty) {
+      return _sortByRecent(projects);
+    }
+    return _sortByRecent(projects.where((project) {
       return project.name.toLowerCase().contains(query.toLowerCase()) ||
           (project.client ?? '').toLowerCase().contains(query.toLowerCase());
-    }).toList();
+    }).toList());
+  }
+
+  // Most recently booked projects first so the last project worked on is at
+  // the top and can be restarted with a single tap.
+  List<Project> _sortByRecent(List<Project> projects) {
+    final sorted = [...projects];
+    sorted.sort((a, b) {
+      final aDate = a.lastUsedAt;
+      final bDate = b.lastUsedAt;
+      if (aDate == null && bDate == null) return a.name.compareTo(b.name);
+      if (aDate == null) return 1;
+      if (bDate == null) return -1;
+      return bDate.compareTo(aDate);
+    });
+    return sorted;
   }
 
   Future<void> _startTimerForProject(Project project) async {

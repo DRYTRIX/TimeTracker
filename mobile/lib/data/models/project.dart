@@ -7,6 +7,7 @@ class Project {
   final bool billable;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final DateTime? lastUsedAt;
 
   const Project({
     required this.id,
@@ -17,6 +18,7 @@ class Project {
     this.billable = true,
     this.createdAt,
     this.updatedAt,
+    this.lastUsedAt,
   });
 
   factory Project.fromJson(Map<String, dynamic> json) {
@@ -38,6 +40,7 @@ class Project {
       billable: json['billable'] == true,
       createdAt: _parseDt(json['created_at']),
       updatedAt: _parseDt(json['updated_at']),
+      lastUsedAt: _parseDt(json['last_used_at']),
     );
   }
 
@@ -50,6 +53,7 @@ class Project {
         'billable': billable,
         'created_at': createdAt?.toIso8601String(),
         'updated_at': updatedAt?.toIso8601String(),
+        'last_used_at': lastUsedAt?.toIso8601String(),
       };
 
   static DateTime? _parseDt(dynamic v) {

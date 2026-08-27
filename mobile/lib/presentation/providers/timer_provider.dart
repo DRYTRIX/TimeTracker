@@ -77,17 +77,21 @@ class TimerNotifier extends StateNotifier<TimerState> {
   void _startPolling() {
     Future.delayed(const Duration(seconds: 5), () {
       if (state.isActive && repository != null) {
-        _loadTimerStatus();
+        _loadTimerStatus(silent: true);
         _startPolling();
       }
     });
   }
 
-  Future<void> _loadTimerStatus() async {
+  /// [silent] skips the isLoading flag so background polls don't gray out
+  /// the stop/pause buttons while a timer is running.
+  Future<void> _loadTimerStatus({bool silent = false}) async {
     if (repository == null) return;
 
     try {
-      state = state.copyWith(isLoading: true, clearError: true);
+      if (!silent) {
+        state = state.copyWith(isLoading: true, clearError: true);
+      }
       final status = await repository!.getTimerStatusDetailed();
       final timer = status.timer;
       state = state.copyWith(
@@ -104,7 +108,9 @@ class TimerNotifier extends StateNotifier<TimerState> {
       );
       await _syncNotificationWithState();
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = silent
+          ? state.copyWith(isLoading: false)
+          : state.copyWith(isLoading: false, error: e.toString());
     }
   }
 

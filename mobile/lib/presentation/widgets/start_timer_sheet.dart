@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timetracker_mobile/core/theme/app_tokens.dart';
 import 'package:timetracker_mobile/data/models/project.dart';
+import 'package:timetracker_mobile/data/models/task.dart' as task_model;
 import 'package:timetracker_mobile/presentation/providers/api_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/projects_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/tasks_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/time_entry_requirements_provider.dart';
 import 'package:timetracker_mobile/presentation/providers/timer_provider.dart';
+import 'package:timetracker_mobile/presentation/widgets/searchable_picker_field.dart';
 
 Future<void> showStartTimerSheet(
   BuildContext context, {
@@ -24,6 +26,13 @@ Future<void> showStartTimerSheet(
       initialClientId: initialClientId,
     ),
   );
+}
+
+class _ClientItem {
+  final int id;
+  final String name;
+
+  const _ClientItem({required this.id, required this.name});
 }
 
 class StartTimerSheet extends ConsumerStatefulWidget {
@@ -42,108 +51,227 @@ class StartTimerSheet extends ConsumerStatefulWidget {
 
 class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
   final _notesController = TextEditingController();
-  final SearchController _projectSearchController = SearchController();
 
-  int? _selectedClientId;
-  String? _selectedClientName;
-  int? _selectedProjectId;
-  int? _selectedTaskId;
-  List<Map<String, dynamic>> _clients = [];
+  _ClientItem? _selectedClient;
+  Project? _selectedProject;
+  task_model.Task? _selectedTask;
+  List<_ClientItem> _clients = [];
   bool _clientsLoading = false;
+  String? _clientsError;
+  bool _creating = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedClientId = widget.initialClientId;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(projectsProvider.notifier).loadProjects();
       _loadClients();
       _tryApplyInitialProject(ref.read(projectsProvider).projects);
     });
-
-    ref.listen<ProjectsState>(projectsProvider, (previous, next) {
-      if (!mounted) return;
-      _tryApplyInitialProject(next.projects);
-    });
   }
 
   @override
   void dispose() {
     _notesController.dispose();
-    _projectSearchController.dispose();
     super.dispose();
   }
 
   Future<void> _loadClients() async {
     final api = ref.read(apiClientProvider).valueOrNull;
     if (api == null) return;
-    setState(() => _clientsLoading = true);
+    setState(() {
+      _clientsLoading = true;
+      _clientsError = null;
+    });
     try {
       final res = await api.getClients(status: 'active', perPage: 100);
       final list = (res['clients'] as List<dynamic>? ?? [])
           .whereType<Map>()
-          .map((c) => Map<String, dynamic>.from(c))
+          .map((c) => _ClientItem(
+                id: ((c['id'] as num?) ?? 0).toInt(),
+                name: c['name']?.toString() ?? '',
+              ))
           .toList();
       if (!mounted) return;
       setState(() {
         _clients = list;
         _clientsLoading = false;
-        if (_selectedClientId != null) {
-          final match = list.where((c) => (c['id'] as num?)?.toInt() == _selectedClientId);
-          if (match.isNotEmpty) {
-            _selectedClientName = match.first['name']?.toString();
-          }
+        if (_selectedClient == null && widget.initialClientId != null) {
+          final match = list.where((c) => c.id == widget.initialClientId);
+          if (match.isNotEmpty) _selectedClient = match.first;
         }
       });
-    } catch (_) {
-      if (mounted) setState(() => _clientsLoading = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _clientsLoading = false;
+          _clientsError = e.toString();
+        });
+      }
     }
   }
 
   void _tryApplyInitialProject(List<Project> projects) {
-    if (_selectedProjectId != null) return;
+    if (_selectedProject != null) return;
     final initialId = widget.initialProjectId;
     if (initialId == null) return;
 
     final match = projects.where((p) => p.id == initialId).toList();
     if (match.isEmpty) return;
 
-    _selectProject(match.first);
+    _applyProject(match.first);
   }
 
-  Future<void> _selectClient(int? clientId, {String? name}) async {
-    setState(() {
-      _selectedClientId = clientId;
-      _selectedClientName = name;
-      _selectedProjectId = null;
-      _selectedTaskId = null;
-      _projectSearchController.text = '';
-    });
+  void _applyProject(Project project) {
+    _selectedProject = project;
+    _selectedTask = null;
+    if (project.clientId != null && _selectedClient == null) {
+      final clientMatch =
+          _clients.where((c) => c.id == project.clientId).toList();
+      _selectedClient = clientMatch.isNotEmpty
+          ? clientMatch.first
+          : _ClientItem(id: project.clientId!, name: project.client ?? '');
+    }
+    ref.read(tasksProvider.notifier).loadTasks(projectId: project.id);
   }
 
-  Future<void> _selectProject(Project project) async {
+  void _selectClient(_ClientItem? client) {
     setState(() {
-      _selectedProjectId = project.id;
-      _selectedTaskId = null;
-      _projectSearchController.text = project.name;
-      if (project.clientId != null) {
-        _selectedClientId = project.clientId;
-        _selectedClientName = project.client;
+      _selectedClient = client;
+      // Changing the client invalidates project and task selections unless
+      // the project belongs to the newly selected client.
+      if (_selectedProject != null &&
+          (client == null || _selectedProject!.clientId != client.id)) {
+        _selectedProject = null;
+        _selectedTask = null;
       }
     });
-    await ref.read(tasksProvider.notifier).loadTasks(projectId: project.id);
   }
 
-  List<Project> _filteredProjects(List<Project> projects) {
-    if (_selectedClientId == null) return projects;
-    return projects
-        .where((p) => p.clientId == null || p.clientId == _selectedClientId)
-        .toList();
+  void _selectProject(Project? project) {
+    setState(() {
+      _selectedProject = project;
+      _selectedTask = null;
+      // Picking a project directly fills in its client automatically.
+      if (project != null &&
+          project.clientId != null &&
+          _selectedClient?.id != project.clientId) {
+        final match =
+            _clients.where((c) => c.id == project.clientId).toList();
+        _selectedClient = match.isNotEmpty
+            ? match.first
+            : _ClientItem(id: project.clientId!, name: project.client ?? '');
+      }
+    });
+    if (project != null) {
+      ref.read(tasksProvider.notifier).loadTasks(projectId: project.id);
+    }
+  }
+
+  void _selectTask(task_model.Task? task) {
+    setState(() => _selectedTask = task);
+  }
+
+  List<Project> _clientProjects(List<Project> projects) {
+    if (_selectedClient == null) return projects;
+    return projects.where((p) => p.clientId == _selectedClient!.id).toList();
+  }
+  // The v1 create endpoints wrap the payload: {"message": ..., "<key>": {...}}.
+  Map<String, dynamic> _unwrap(Map<String, dynamic> res, String key) {
+    final nested = res[key];
+    if (nested is Map) return Map<String, dynamic>.from(nested);
+    return res;
+  }
+
+  Future<PickerItem<_ClientItem>?> _createClient(String name) async {
+    final api = ref.read(apiClientProvider).valueOrNull;
+    if (api == null || _creating) return null;
+    setState(() => _creating = true);
+    try {
+      final created = _unwrap(await api.createClient(name: name), 'client');
+      final item = _ClientItem(
+        id: ((created['id'] as num?) ?? 0).toInt(),
+        name: created['name']?.toString() ?? name,
+      );
+      if (!mounted) return null;
+      setState(() {
+        _clients = [..._clients, item];
+        _selectedClient = item;
+        _selectedProject = null;
+        _selectedTask = null;
+        _creating = false;
+      });
+      return PickerItem(value: item, title: item.name);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _creating = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not create client: $e')),
+        );
+      }
+      return null;
+    }
+  }
+
+  Future<PickerItem<Project>?> _createProject(String name) async {
+    final api = ref.read(apiClientProvider).valueOrNull;
+    if (api == null || _creating || _selectedClient == null) return null;
+    setState(() => _creating = true);
+    try {
+      final created =
+          _unwrap(await api.createProject(name: name, clientId: _selectedClient!.id), 'project');
+      final project = Project.fromJson(created);
+      if (!mounted) return null;
+      setState(() {
+        _selectedProject = project;
+        _selectedTask = null;
+        _creating = false;
+      });
+      ref.read(projectsProvider.notifier).refresh();
+      ref.read(tasksProvider.notifier).loadTasks(projectId: project.id);
+      return PickerItem(value: project, title: project.name, subtitle: _selectedClient!.name);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _creating = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not create project: $e')),
+        );
+      }
+      return null;
+    }
+  }
+
+  Future<PickerItem<task_model.Task>?> _createTask(String name) async {
+    final api = ref.read(apiClientProvider).valueOrNull;
+    if (api == null || _creating || _selectedProject == null) return null;
+    setState(() => _creating = true);
+    try {
+      final created = _unwrap(
+        await api.createTask(projectId: _selectedProject!.id, name: name),
+        'task',
+      );
+      final task = task_model.Task.fromJson(created);
+      if (!mounted) return null;
+      setState(() {
+        _selectedTask = task;
+        _creating = false;
+      });
+      ref.read(tasksProvider.notifier).loadTasks(projectId: _selectedProject!.id);
+      return PickerItem(value: task, title: task.name);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _creating = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not create task: $e')),
+        );
+      }
+      return null;
+    }
   }
 
   Future<void> _handleStart() async {
-    if (_selectedProjectId == null && _selectedClientId == null) {
+    if (_selectedProject == null && _selectedClient == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a client or project')),
       );
@@ -151,9 +279,9 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
     }
 
     final requirements = await ref.read(timeEntryRequirementsProvider.future);
-    if (_selectedProjectId != null &&
+    if (_selectedProject != null &&
         requirements.requireTask &&
-        _selectedTaskId == null) {
+        _selectedTask == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('A task must be selected when logging time for a project')),
       );
@@ -180,9 +308,9 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
     }
 
     await ref.read(timerProvider.notifier).startTimer(
-          projectId: _selectedProjectId,
-          clientId: _selectedProjectId == null ? _selectedClientId : null,
-          taskId: _selectedTaskId,
+          projectId: _selectedProject?.id,
+          clientId: _selectedProject == null ? _selectedClient?.id : null,
+          taskId: _selectedTask?.id,
           notes: notes.isEmpty ? null : notes,
         );
 
@@ -198,6 +326,13 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen within build so initial project selection applies as soon as
+    // projects finish loading.
+    ref.listen<ProjectsState>(projectsProvider, (previous, next) {
+      if (!mounted) return;
+      _tryApplyInitialProject(next.projects);
+    });
+
     final apiClientAsync = ref.watch(apiClientProvider);
     final projectsState = ref.watch(projectsProvider);
     final tasksState = ref.watch(tasksProvider);
@@ -217,8 +352,9 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final maxHeight = MediaQuery.of(context).size.height * 0.9;
 
-    final canStart = isApiReady && !isApiLoading && !timerState.isLoading;
-    final filteredProjects = _filteredProjects(projectsState.projects);
+    final canStart =
+        isApiReady && !isApiLoading && !timerState.isLoading && !_creating;
+    final clientProjects = _clientProjects(projectsState.projects);
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: maxHeight),
@@ -229,234 +365,175 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
           top: AppSpacing.sm,
           bottom: math.max(AppSpacing.md, bottomInset),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Text('Start timer', style: theme.textTheme.titleLarge),
-                const Spacer(),
-                IconButton(
-                  onPressed: (timerState.isLoading || isApiLoading) ? null : () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close),
-                  tooltip: 'Close',
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            if (isApiLoading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (!isApiReady)
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: cs.errorContainer,
-                  borderRadius: AppRadii.brMd,
-                ),
-                child: Text(
-                  'Not connected to server. Check settings and try again.',
-                  style: TextStyle(color: cs.onErrorContainer),
-                ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Text('Start timer', style: theme.textTheme.titleLarge),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: (timerState.isLoading || isApiLoading) ? null : () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Close',
+                  ),
+                ],
               ),
-            const SizedBox(height: AppSpacing.md),
-            DropdownButtonFormField<int>(
-              key: ValueKey('client_$_selectedClientId'),
-              decoration: const InputDecoration(
-                labelText: 'Client (optional)',
-                prefixIcon: Icon(Icons.business_outlined),
+              const SizedBox(height: AppSpacing.sm),
+              if (isApiLoading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (!isApiReady)
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: cs.errorContainer,
+                    borderRadius: AppRadii.brMd,
+                  ),
+                  child: Text(
+                    'Not connected to server. Check settings and try again.',
+                    style: TextStyle(color: cs.onErrorContainer),
+                  ),
+                ),
+              const SizedBox(height: AppSpacing.md),
+              SearchablePickerField<_ClientItem>(
+                label: 'Client (optional)',
+                icon: Icons.business_outlined,
+                searchHint: 'Search clients',
+                emptyText: 'No clients found',
+                isLoading: _clientsLoading,
+                error: _clientsError,
+                onRetry: _loadClients,
+                enabled: isApiReady && !_clientsLoading && !_creating,
+                items: _clients
+                    .map((c) => PickerItem(value: c, title: c.name))
+                    .toList(),
+                selected: _selectedClient == null
+                    ? null
+                    : PickerItem(value: _selectedClient!, title: _selectedClient!.name),
+                onSelected: (item) => _selectClient(item.value),
+                onClear: () => _selectClient(null),
+                onCreate: _createClient,
               ),
-              initialValue: _selectedClientId,
-              items: [
-                const DropdownMenuItem<int>(value: null, child: Text('Any client')),
-                ..._clients.map((c) {
-                  final id = (c['id'] as num).toInt();
-                  return DropdownMenuItem<int>(
-                    value: id,
-                    child: Text(c['name']?.toString() ?? 'Client #$id'),
-                  );
-                }),
-              ],
-              onChanged: _clientsLoading
-                  ? null
-                  : (value) {
-                      String? name;
-                      if (value != null) {
-                        for (final c in _clients) {
-                          if ((c['id'] as num?)?.toInt() == value) {
-                            name = c['name']?.toString();
-                            break;
-                          }
-                        }
-                      }
-                      _selectClient(value, name: name ?? _selectedClientName);
-                    },
-            ),
-            const SizedBox(height: AppSpacing.md),
-            SearchAnchor(
-              searchController: _projectSearchController,
-              viewHintText: 'Search projects',
-              builder: (context, controller) {
-                return SearchBar(
-                  controller: controller,
-                  onTap: controller.openView,
-                  onChanged: (_) => controller.openView(),
-                  leading: const Icon(Icons.folder_outlined),
-                  hintText: _selectedClientId != null
-                      ? 'Project (optional for this client)'
-                      : 'Select project',
-                  trailing: [
-                    if (_selectedProjectId != null)
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            _selectedProjectId = null;
-                            _selectedTaskId = null;
-                            _projectSearchController.text = '';
-                          });
-                        },
-                        icon: const Icon(Icons.clear),
-                        tooltip: 'Clear project',
+              const SizedBox(height: AppSpacing.md),
+              SearchablePickerField<Project>(
+                label: _selectedClient == null
+                    ? 'Project (pick a client or project)'
+                    : 'Project (optional for this client)',
+                icon: Icons.folder_outlined,
+                searchHint: 'Search projects',
+                emptyText: _selectedClient == null
+                    ? 'No projects found'
+                    : 'No projects for this client',
+                enabled: !_creating,
+                isLoading: projectsState.isLoading,
+                error: projectsState.error,
+                onRetry: () => ref.read(projectsProvider.notifier).loadProjects(),
+                items: clientProjects
+                    .map((p) => PickerItem(
+                          value: p,
+                          title: p.name,
+                          subtitle: p.client,
+                        ))
+                    .toList(),
+                selected: _selectedProject == null
+                    ? null
+                    : PickerItem(
+                        value: _selectedProject!,
+                        title: _selectedProject!.name,
+                        subtitle: _selectedProject!.client,
                       ),
-                  ],
-                );
-              },
-              suggestionsBuilder: (context, controller) {
-                final query = controller.text.trim().toLowerCase();
-                final projects = filteredProjects;
-                final matches = query.isEmpty
-                    ? projects
-                    : projects.where((p) {
-                        final client = (p.client ?? '').toLowerCase();
-                        return p.name.toLowerCase().contains(query) || client.contains(query);
-                      }).toList();
-
-                if (projectsState.isLoading && projects.isEmpty) {
-                  return const [ListTile(title: Text('Loading projects...'))];
-                }
-
-                if (projectsState.error != null && projects.isEmpty) {
-                  return [
-                    ListTile(
-                      title: const Text('Could not load projects'),
-                      subtitle: Text(projectsState.error!),
-                      trailing: TextButton(
-                        onPressed: () => ref.read(projectsProvider.notifier).loadProjects(),
-                        child: const Text('Retry'),
-                      ),
-                    ),
-                  ];
-                }
-
-                if (matches.isEmpty) {
-                  return [
-                    ListTile(
-                      title: Text(
-                        _selectedClientId != null
-                            ? 'No projects for this client — start client-only'
-                            : 'No matching projects',
-                      ),
-                    ),
-                  ];
-                }
-
-                return matches.map((p) {
-                  return ListTile(
-                    leading: CircleAvatar(
-                      child: Text(
-                        (p.name.isNotEmpty ? p.name[0] : '?').toUpperCase(),
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    title: Text(p.name),
-                    subtitle: (p.client == null || p.client!.isEmpty) ? null : Text(p.client!),
-                    onTap: () async {
-                      controller.closeView(p.name);
-                      await _selectProject(p);
-                    },
-                  );
-                });
-              },
-            ),
-            const SizedBox(height: AppSpacing.md),
-            DropdownButtonFormField<int>(
-              key: ValueKey('task_$_selectedTaskId'),
-              decoration: InputDecoration(
-                labelText: requirementsAsync.valueOrNull?.requireTask == true
+                onSelected: (item) => _selectProject(item.value),
+                onClear: () => _selectProject(null),
+                // Creating a project requires a client (mirrors the web app,
+                // which hides Create project until a client is chosen).
+                onCreate: _selectedClient == null ? null : _createProject,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              SearchablePickerField<task_model.Task>(
+                label: requirementsAsync.valueOrNull?.requireTask == true
                     ? 'Task *'
                     : 'Task (optional)',
-                prefixIcon: const Icon(Icons.task_outlined),
+                icon: Icons.task_outlined,
+                searchHint: 'Search tasks',
+                emptyText: _selectedProject == null
+                    ? 'Select a project first'
+                    : 'No tasks for this project',
+                enabled: _selectedProject != null && !_creating,
+                isLoading: tasksState.isLoading,
+                error: tasksState.error,
+                onRetry: _selectedProject == null
+                    ? null
+                    : () => ref
+                        .read(tasksProvider.notifier)
+                        .loadTasks(projectId: _selectedProject!.id),
+                items: tasksState.tasks
+                    .map((t) => PickerItem(value: t, title: t.name))
+                    .toList(),
+                selected: _selectedTask == null
+                    ? null
+                    : PickerItem(value: _selectedTask!, title: _selectedTask!.name),
+                onSelected: (item) => _selectTask(item.value),
+                onClear: () => _selectTask(null),
+                onCreate: _selectedProject == null ? null : _createTask,
               ),
-              initialValue: _selectedTaskId,
-              items: [
-                const DropdownMenuItem<int>(value: null, child: Text('No task')),
-                ...tasksState.tasks.map(
-                  (t) => DropdownMenuItem<int>(value: t.id, child: Text(t.name)),
+              const SizedBox(height: AppSpacing.md),
+              TextField(
+                controller: _notesController,
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(
+                  labelText: requirementsAsync.valueOrNull?.requireDescription == true
+                      ? 'Notes *'
+                      : 'Notes (optional)',
+                  prefixIcon: const Icon(Icons.note_outlined),
+                ),
+                maxLines: 3,
+              ),
+              if (timerState.error != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: cs.errorContainer,
+                    borderRadius: AppRadii.brMd,
+                  ),
+                  child: Text(
+                    timerState.error!,
+                    style: TextStyle(color: cs.onErrorContainer),
+                  ),
                 ),
               ],
-              onChanged: _selectedProjectId == null
-                  ? null
-                  : (value) {
-                      setState(() {
-                        _selectedTaskId = value;
-                      });
-                    },
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              controller: _notesController,
-              textInputAction: TextInputAction.done,
-              decoration: InputDecoration(
-                labelText: requirementsAsync.valueOrNull?.requireDescription == true
-                    ? 'Notes *'
-                    : 'Notes (optional)',
-                prefixIcon: const Icon(Icons.note_outlined),
-              ),
-              maxLines: 3,
-            ),
-            if (timerState.error != null) ...[
-              const SizedBox(height: AppSpacing.md),
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: cs.errorContainer,
-                  borderRadius: AppRadii.brMd,
-                ),
-                child: Text(
-                  timerState.error!,
-                  style: TextStyle(color: cs.onErrorContainer),
-                ),
+              const SizedBox(height: AppSpacing.lg),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: (timerState.isLoading || isApiLoading) ? null : () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: canStart ? _handleStart : null,
+                      icon: timerState.isLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.play_arrow),
+                      label: const Text('Start'),
+                    ),
+                  ),
+                ],
               ),
             ],
-            const SizedBox(height: AppSpacing.lg),
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: (timerState.isLoading || isApiLoading) ? null : () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: canStart ? _handleStart : null,
-                    icon: timerState.isLoading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.play_arrow),
-                    label: const Text('Start'),
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
