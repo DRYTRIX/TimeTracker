@@ -164,12 +164,19 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
     return projects.where((p) => p.clientId == _selectedClient!.id).toList();
   }
 
+  // The v1 create endpoints wrap the payload: {"message": ..., "<key>": {...}}.
+  Map<String, dynamic> _unwrap(Map<String, dynamic> res, String key) {
+    final nested = res[key];
+    if (nested is Map) return Map<String, dynamic>.from(nested);
+    return res;
+  }
+
   Future<PickerItem<_ClientItem>?> _createClient(String name) async {
     final api = ref.read(apiClientProvider).valueOrNull;
     if (api == null || _creating) return null;
     setState(() => _creating = true);
     try {
-      final created = await api.createClient(name: name);
+      final created = _unwrap(await api.createClient(name: name), 'client');
       final item = _ClientItem(
         id: ((created['id'] as num?) ?? 0).toInt(),
         name: created['name']?.toString() ?? name,
@@ -199,10 +206,8 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
     if (api == null || _creating || _selectedClient == null) return null;
     setState(() => _creating = true);
     try {
-      final created = await api.createProject(
-        name: name,
-        clientId: _selectedClient!.id,
-      );
+      final created =
+          _unwrap(await api.createProject(name: name, clientId: _selectedClient!.id), 'project');
       final project = Project.fromJson(created);
       if (!mounted) return null;
       setState(() {
@@ -229,9 +234,9 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
     if (api == null || _creating || _selectedProject == null) return null;
     setState(() => _creating = true);
     try {
-      final created = await api.createTask(
-        projectId: _selectedProject!.id,
-        name: name,
+      final created = _unwrap(
+        await api.createTask(projectId: _selectedProject!.id, name: name),
+        'task',
       );
       final task = task_model.Task.fromJson(created);
       if (!mounted) return null;
