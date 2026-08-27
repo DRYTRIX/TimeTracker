@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Mobile start timer flow** — Client, project, and task selection in the start timer sheet now use one consistent searchable picker; picking a client filters the project list to that client and picking a project filters tasks accordingly. Typing an unknown name offers inline "Create …" for clients, projects, and tasks via the existing v1 endpoints. The projects screen is sorted by most recently used (`last_used_at`) so recent work can be restarted with one tap.
+- **Mobile start timer flow** — Client, project, and task selection in the start timer sheet now use one consistent searchable picker; picking a client filters the project list to that client and picking a project filters tasks accordingly. Projects can also be picked directly without choosing a client first, which then auto-fills the client. Typing an unknown name offers inline "Create …" for clients, projects, and tasks via the existing v1 endpoints. The projects screen is sorted by most recently used (`last_used_at`) so recent work can be restarted with one tap.
 
 ### Fixed
 
