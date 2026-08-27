@@ -201,6 +201,11 @@ desktop/*.p12
 desktop/*.spc
 desktop/*.pvk
 
+# Android release signing (never commit)
+mobile/android/key.properties
+mobile/android/*.jks
+mobile/android/*.keystore
+
 # Docker Compose overrides (do not ignore auto files, only manually generated)
 # docker-compose.https.yml is now tracked
 

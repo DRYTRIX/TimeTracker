@@ -1547,6 +1547,29 @@ def setup_wizard(provider):
                 flash(result["message"], "error")
                 return redirect(url_for("integrations.setup_wizard", provider=provider))
 
+        # Linear uses a Personal API Key stored as integration credentials
+        if provider == "linear" and integration:
+            linear_api_key = request.form.get("linear_api_key", "").strip()
+            if linear_api_key:
+                key_result = service.save_credentials(
+                    integration_id=integration.id,
+                    access_token=linear_api_key,
+                    refresh_token=None,
+                    expires_at=None,
+                    token_type="Bearer",
+                    scope="read",
+                    extra_data={"auth_type": "api_key"},
+                )
+                if key_result.get("success"):
+                    integration.is_active = True
+                else:
+                    return jsonify(
+                        {
+                            "success": False,
+                            "message": key_result.get("message", _("Could not save API key.")),
+                        }
+                    )
+
         # Update integration config
         integration.config = current_config
         from sqlalchemy.orm.attributes import flag_modified
@@ -1588,6 +1611,7 @@ def setup_wizard(provider):
         "github": [_("OAuth"), _("Repositories"), _("Sync Config"), _("Webhooks"), _("Review")],
         "asana": [_("OAuth"), _("Workspace"), _("Projects"), _("Sync Config"), _("Review")],
         "trello": [_("API Keys"), _("Connection Test"), _("Review")],
+        "linear": [_("API Key"), _("Sync Config"), _("Test & Finish")],
         "outlook_calendar": [_("Tenant ID"), _("OAuth"), _("Review")],
         "microsoft_teams": [_("Tenant ID"), _("OAuth"), _("Review")],
     }
@@ -1597,7 +1621,7 @@ def setup_wizard(provider):
 
     # Get test connection URL if available
     test_connection_url = None
-    if provider in ["jira", "gitlab", "trello"]:
+    if provider in ["jira", "gitlab", "trello", "linear"]:
         test_connection_url = url_for("integrations.test_connection_wizard", provider=provider)
 
     wizard_title = _("%(name)s Setup Wizard", name=display_name)

@@ -1,0 +1,165 @@
+{% extends "integrations/wizard_base.html" %}
+
+{% block wizard_steps %}
+    <!-- Step 1: API Key -->
+    <div class="wizard-step" data-step="1">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 1: API Key') }}</h2>
+        <div class="space-y-4">
+            {% if current_user.is_admin %}
+            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-4">
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    {{ _('Linear uses a Personal API Key (not OAuth). Create one at') }}
+                    <a href="https://linear.app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">linear.app/settings/api</a>.
+                </p>
+            </div>
+
+            <div>
+                <label for="linear_api_key" class="block text-sm font-medium mb-2">
+                    {{ _('Linear API Key') }} <span class="text-red-500">*</span>
+                </label>
+                <input type="password" id="linear_api_key" name="linear_api_key"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="lin_api_..." autocomplete="new-password" required>
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Leave empty only if a key is already saved and you are updating sync settings.') }}
+                </p>
+            </div>
+            {% else %}
+            <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    {{ _('Only administrators can configure the Linear API key.') }}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Step 2: Sync configuration -->
+    <div class="wizard-step hidden" data-step="2">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 2: Sync Configuration') }}</h2>
+        <div class="space-y-4">
+            <div>
+                <label for="linear_team_keys" class="block text-sm font-medium mb-2">
+                    {{ _('Team keys (optional)') }}
+                </label>
+                <input type="text" id="linear_team_keys" name="linear_team_keys"
+                       value="{{ current_config.get('linear_team_keys', '') }}"
+                       class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
+                       placeholder="ENG, PRODUCT">
+                <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Comma-separated Linear team keys to import. Leave empty to import issues from all teams.') }}
+                </p>
+            </div>
+
+            <div class="flex items-center">
+                <input type="checkbox" name="auto_sync" id="auto_sync" value="1"
+                       {% if current_config.get('auto_sync', True) %}checked{% endif %}
+                       class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                <label for="auto_sync" class="ml-2 text-sm text-text-light dark:text-text-dark">
+                    {{ _('Automatic sync') }}
+                </label>
+            </div>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark">
+                {{ _('When enabled, Linear issues can be imported on a schedule or when Sync is triggered.') }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Step 3: Test connection & review -->
+    <div class="wizard-step hidden" data-step="3">
+        <h2 class="text-xl font-semibold mb-4">{{ _('Step 3: Test Connection & Finish') }}</h2>
+        <div class="space-y-4">
+            <div id="connection-test-results" class="mb-4">
+                <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <p class="text-sm text-blue-800 dark:text-blue-200">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        {{ _('Save your API key on the previous steps, then test the connection before finishing. After setup, use Sync on the manage page to import issues as tasks.') }}
+                    </p>
+                </div>
+            </div>
+            <button type="button" id="test-connection-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-vial mr-2"></i>{{ _('Test Connection') }}
+            </button>
+
+            <div class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg mt-4">
+                <h3 class="font-semibold mb-2">{{ _('Review') }}</h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between gap-4">
+                        <span class="font-medium">{{ _('API Key') }}:</span>
+                        <span class="text-text-muted-light dark:text-text-muted-dark">••••••••</span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <span class="font-medium">{{ _('Team keys') }}:</span>
+                        <span id="review-team-keys" class="text-text-muted-light dark:text-text-muted-dark text-right">
+                            {{ current_config.get('linear_team_keys') or _('All teams') }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <span class="font-medium">{{ _('Automatic sync') }}:</span>
+                        <span id="review-auto-sync" class="text-text-muted-light dark:text-text-muted-dark">
+                            {% if current_config.get('auto_sync', True) %}{{ _('Yes') }}{% else %}{{ _('No') }}{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <span class="font-medium">{{ _('Connection') }}:</span>
+                        <span id="review-connection-status" class="text-text-muted-light dark:text-text-muted-dark">{{ _('Not tested') }}</span>
+                    </div>
+                </div>
+            </div>
+            <input type="hidden" name="wizard_final_step" value="true">
+        </div>
+    </div>
+{% endblock %}
+
+{% block wizard_js %}
+<script nonce="{{ csp_nonce() }}">
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof IntegrationWizard === 'undefined') {
+        return;
+    }
+    const wizard = new IntegrationWizard({
+        totalSteps: 3,
+        provider: 'linear',
+        saveUrl: '{{ wizard_save_url }}',
+        testConnectionUrl: '{{ test_connection_url }}',
+        finishText: '{{ _("Finish") }}',
+        onStepChange: function(step) {
+            if (step === 3) {
+                const teamKeys = document.getElementById('linear_team_keys');
+                const autoSync = document.getElementById('auto_sync');
+                const reviewTeams = document.getElementById('review-team-keys');
+                const reviewAuto = document.getElementById('review-auto-sync');
+                if (reviewTeams && teamKeys) {
+                    reviewTeams.textContent = (teamKeys.value || '').trim() || '{{ _("All teams") }}';
+                }
+                if (reviewAuto && autoSync) {
+                    reviewAuto.textContent = autoSync.checked ? '{{ _("Yes") }}' : '{{ _("No") }}';
+                }
+                if (wizard.connectionTestResult) {
+                    const status = wizard.connectionTestResult.success
+                        ? '{{ _("Connected") }}'
+                        : '{{ _("Connection failed") }}';
+                    document.getElementById('review-connection-status').textContent = status;
+                }
+            }
+        }
+    });
+
+    const testBtn = document.getElementById('test-connection-btn');
+    if (testBtn) {
+        testBtn.addEventListener('click', async function() {
+            const result = await wizard.testConnection({});
+            wizard.displayConnectionResults(result);
+            const statusEl = document.getElementById('review-connection-status');
+            if (statusEl && result) {
+                statusEl.textContent = result.success ? '{{ _("Connected") }}' : '{{ _("Connection failed") }}';
+            }
+        });
+    }
+
+    wizard.init();
+});
+</script>
+{% endblock %}
