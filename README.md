@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.13.2
+
+**Patch (5.13.2):** **Linear setup wizard** — guided API-key setup matching other integrations. **Web manual entry (#728)** — cascading client → project → task pickers with inline create and dark-mode comboboxes. **Mobile start timer** — unified searchable pickers, project-first with client auto-fill, crash/selection/flicker fixes. **Android signing** — stable CI keystore for release APKs. See [CHANGELOG.md](CHANGELOG.md#5132---2026-08-27).
+
 ### ✨ Highlights of v5.13.1
 
 **Patch (5.13.1):** **Projects by last used (#738)** — pickers and API lists surface recent work first. **Idle timeout (#722)** — auto-stop records the configured duration and surfaces Still working? on web, extension, and mobile. **Picker fixes (#728)** — blur resets typed-but-unselected text, Create project requires a client, translated Create labels. **Extension release zip** — Chromium extension package attached to GitHub Releases. See [CHANGELOG.md](CHANGELOG.md#5131---2026-08-26).
