@@ -69,11 +69,6 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
       _loadClients();
       _tryApplyInitialProject(ref.read(projectsProvider).projects);
     });
-
-    ref.listen<ProjectsState>(projectsProvider, (previous, next) {
-      if (!mounted) return;
-      _tryApplyInitialProject(next.projects);
-    });
   }
 
   @override
@@ -313,6 +308,13 @@ class _StartTimerSheetState extends ConsumerState<StartTimerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen within build so initial project selection applies as soon as
+    // projects finish loading.
+    ref.listen<ProjectsState>(projectsProvider, (previous, next) {
+      if (!mounted) return;
+      _tryApplyInitialProject(next.projects);
+    });
+
     final apiClientAsync = ref.watch(apiClientProvider);
     final projectsState = ref.watch(projectsProvider);
     final tasksState = ref.watch(tasksProvider);
