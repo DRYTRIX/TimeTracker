@@ -1285,8 +1285,8 @@ function trackBannerImpression(source) {
             task: {{ _('Create task')|tojson }}
         };
     </script>
-    <script src="{{ url_for('static', filename='searchable-select.js') }}"></script>
-    <script src="{{ url_for('static', filename='inline-create.js') }}"></script>
+    <script src="{{ static_url('searchable-select.js') }}"></script>
+    <script src="{{ static_url('inline-create.js') }}"></script>
     {% block scripts_extra %}{% endblock %}
     {% block extra_js %}{% endblock %}
     {% include 'partials/_bottom_nav.html' %}

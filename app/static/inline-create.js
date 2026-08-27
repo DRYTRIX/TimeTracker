@@ -144,6 +144,44 @@
   // ---- Project ----
   var projectState = { targetSelect: null };
 
+  function findClientOption(clientId) {
+    var selects = [
+      document.getElementById('inline_project_client_id'),
+      document.querySelector('[data-inline-client-select]'),
+      document.getElementById('client_id'),
+      document.getElementById('startTimerClient'),
+      document.getElementById('editTimerClient'),
+    ];
+    var found = null;
+    selects.forEach(function (sel) {
+      if (found || !sel || sel.tagName !== 'SELECT') return;
+      Array.prototype.forEach.call(sel.options, function (o) {
+        if (!found && String(o.value) === String(clientId)) found = o;
+      });
+    });
+    return found;
+  }
+
+  function clientDefaultRate(clientId) {
+    var opt = findClientOption(clientId);
+    if (!opt) return '';
+    var rate = opt.getAttribute('data-default-rate');
+    return rate || '';
+  }
+
+  function syncProjectModalRate(clientId) {
+    var rateField = document.getElementById('inlineProjectRateField');
+    var rateInput = document.getElementById('inline_project_hourly_rate');
+    if (!rateField || !rateInput) return;
+    if (clientId) {
+      rateField.classList.remove('hidden');
+      rateInput.value = clientDefaultRate(clientId);
+    } else {
+      rateField.classList.add('hidden');
+      rateInput.value = '';
+    }
+  }
+
   function showProjectModal(opts) {
     var modal = document.getElementById('createProjectModal');
     var form = document.getElementById('inlineCreateProjectForm');
@@ -153,6 +191,10 @@
     var errorEl = document.getElementById('createProjectError');
     var nameInput = document.getElementById('inline_project_name');
     var clientSelect = document.getElementById('inline_project_client_id');
+    var clientField = document.getElementById('inlineProjectClientField');
+    var clientDisplay = document.getElementById('inlineProjectClientDisplay');
+    var clientNameEl = document.getElementById('inlineProjectClientName');
+    var clientLocked = document.getElementById('inline_project_client_id_locked');
     modal.classList.remove('hidden');
     modal.setAttribute('aria-hidden', 'false');
     if (errorEl) {
@@ -160,15 +202,27 @@
       errorEl.textContent = '';
     }
     var preferred = opts.clientId || '';
-    if (clientSelect) {
-      if (preferred) {
+    if (preferred) {
+      // Client already chosen on the page: show it read-only instead of a dropdown
+      var clientOpt = findClientOption(preferred);
+      if (clientLocked) clientLocked.value = String(preferred);
+      if (clientNameEl) clientNameEl.textContent = clientOpt ? clientOpt.textContent : '';
+      if (clientDisplay) clientDisplay.classList.remove('hidden');
+      if (clientField) clientField.classList.add('hidden');
+      if (clientSelect) {
         clientSelect.value = preferred;
         clientSelect.disabled = true;
         clientSelect.setAttribute('data-locked', '1');
-      } else {
+      }
+      syncProjectModalRate(preferred);
+    } else {
+      if (clientDisplay) clientDisplay.classList.add('hidden');
+      if (clientField) clientField.classList.remove('hidden');
+      if (clientSelect) {
         clientSelect.disabled = false;
         clientSelect.removeAttribute('data-locked');
       }
+      syncProjectModalRate('');
     }
     if (nameInput && opts.name) nameInput.value = opts.name;
     setTimeout(function () {
@@ -181,6 +235,10 @@
     var form = document.getElementById('inlineCreateProjectForm');
     var errorEl = document.getElementById('createProjectError');
     var clientSelect = document.getElementById('inline_project_client_id');
+    var clientField = document.getElementById('inlineProjectClientField');
+    var clientDisplay = document.getElementById('inlineProjectClientDisplay');
+    var rateField = document.getElementById('inlineProjectRateField');
+    var rateInput = document.getElementById('inline_project_hourly_rate');
     if (!modal) return;
     modal.classList.add('hidden');
     modal.setAttribute('aria-hidden', 'true');
@@ -195,11 +253,28 @@
       clientSelect.disabled = false;
       clientSelect.removeAttribute('data-locked');
     }
+    if (clientField) clientField.classList.remove('hidden');
+    if (clientDisplay) clientDisplay.classList.add('hidden');
+    if (rateField) rateField.classList.add('hidden');
+    if (rateInput) rateInput.value = '';
     projectState.targetSelect = null;
   }
 
   // ---- Task ----
   var taskState = { targetSelect: null };
+
+  function pageProjectName(projectId) {
+    var projectSelect =
+      document.querySelector('[data-inline-project-select]') ||
+      document.getElementById('project_id') ||
+      document.getElementById('startTimerProject');
+    if (!projectSelect || projectSelect.tagName !== 'SELECT') return '';
+    var opt = projectSelect.options[projectSelect.selectedIndex];
+    if (opt && String(opt.value) === String(projectId)) {
+      return (opt.textContent || '').trim();
+    }
+    return '';
+  }
 
   function showTaskModal(opts) {
     var modal = document.getElementById('createTaskInlineModal');
@@ -217,8 +292,29 @@
       errorEl.textContent = '';
     }
     var preferred = opts.projectId || '';
+    var projectField = document.getElementById('inlineTaskProjectField');
     if (projectSelect && preferred) {
-      projectSelect.value = preferred;
+      // The project is already chosen on the page — the modal only needs its
+      // value, so hide the picker and keep the select as a hidden holder.
+      var has = Array.prototype.some.call(projectSelect.options, function (o) {
+        return String(o.value) === String(preferred);
+      });
+      if (!has) {
+        var opt = document.createElement('option');
+        opt.value = String(preferred);
+        opt.textContent = pageProjectName(preferred) || preferred;
+        projectSelect.appendChild(opt);
+      }
+      projectSelect.value = String(preferred);
+      projectSelect.disabled = true;
+      projectSelect.setAttribute('data-locked', '1');
+      if (projectField) projectField.classList.add('hidden');
+    } else {
+      if (projectSelect) {
+        projectSelect.disabled = false;
+        projectSelect.removeAttribute('data-locked');
+      }
+      if (projectField) projectField.classList.remove('hidden');
     }
     if (nameInput && opts.name) nameInput.value = opts.name;
     setTimeout(function () {
@@ -230,6 +326,7 @@
     var modal = document.getElementById('createTaskInlineModal');
     var form = document.getElementById('inlineCreateTaskForm');
     var errorEl = document.getElementById('createTaskInlineError');
+    var projectSelect = document.getElementById('inline_task_project_id');
     if (!modal) return;
     modal.classList.add('hidden');
     modal.setAttribute('aria-hidden', 'true');
@@ -238,6 +335,12 @@
       errorEl.textContent = '';
     }
     if (form) form.reset();
+    if (projectSelect) {
+      projectSelect.disabled = false;
+      projectSelect.removeAttribute('data-locked');
+    }
+    var projectField = document.getElementById('inlineTaskProjectField');
+    if (projectField) projectField.classList.remove('hidden');
     taskState.targetSelect = null;
   }
 
@@ -354,9 +457,15 @@
         }
         return;
       }
-      setLoading(form, 'submitCreateProject', form.dataset.creatingText, true);
+        setLoading(form, 'submitCreateProject', form.dataset.creatingText, true);
       try {
         var formData = new FormData(form);
+        // When the client dropdown is hidden (locked display), include its value manually
+        var lockedClient = document.getElementById('inline_project_client_id_locked');
+        if (lockedClient && lockedClient.value) {
+          formData.set('client_id', lockedClient.value);
+        }
+        if (!formData.get('hourly_rate')) formData.delete('hourly_rate');
         var billable = document.getElementById('inline_project_billable');
         if (billable && billable.checked) {
           formData.set('billable', 'on');
@@ -392,6 +501,11 @@
             'data-client-id': data.client_id,
             'data-parent-id': data.client_id,
           });
+          // Keep the inline task modal's project list in sync too
+          var taskProjectSelect = document.getElementById('inline_task_project_id');
+          if (taskProjectSelect && taskProjectSelect !== select) {
+            appendOption(taskProjectSelect, data.id, data.name, null);
+          }
           // Auto-select owning client on page client select (UI hierarchy)
           if (data.client_id) {
             var pageClient =
@@ -500,6 +614,58 @@
     });
   }
 
+  // ---- Direct task creation (no modal) ----
+  // Used by the searchable combobox create row: the project is already known,
+  // so clicking "Create task …" creates it immediately.
+  function createTaskDirect(name, projectId, targetSelect) {
+    var form = document.getElementById('inlineCreateTaskForm');
+    var createUrl = (form && form.dataset.createUrl) || '/api/tasks/create';
+    var createdText = (form && form.dataset.createdText) || 'Task created';
+    var errorText = (form && form.dataset.errorText) || 'Could not create task. Please try again.';
+    return fetch(createUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': getCsrfToken(),
+      },
+      body: JSON.stringify({ name: name, project_id: parseInt(projectId, 10) }),
+      credentials: 'same-origin',
+    })
+      .then(function (resp) {
+        if (!resp.ok) {
+          return resp
+            .json()
+            .catch(function () { return {}; })
+            .then(function (d) {
+              throw new Error(d.message || d.error || errorText);
+            });
+        }
+        return resp.json();
+      })
+      .then(function (data) {
+        var taskId = data.id || (data.task && data.task.id);
+        var taskName = data.name || (data.task && data.task.name) || name;
+        var select = targetSelect || taskState.targetSelect || resolveSelect('task', null);
+        if (select) {
+          select.disabled = false;
+          appendOption(select, taskId, taskName, {
+            'data-parent-id': String(projectId),
+          });
+          if (window.ttEnhanceSearchableSelects) {
+            window.ttEnhanceSearchableSelects();
+          }
+        }
+        if (window.toastManager) window.toastManager.success(createdText);
+        return taskId;
+      })
+      .catch(function (err) {
+        var msg = (err && err.message) || errorText;
+        if (window.toastManager) window.toastManager.error(msg);
+        else alert(msg);
+      });
+  }
+
   function init() {
     initClientForm();
     initProjectForm();
@@ -514,6 +680,14 @@
     var cancelProject = document.getElementById('cancelCreateProject');
     if (closeProject) closeProject.addEventListener('click', hideProjectModal);
     if (cancelProject) cancelProject.addEventListener('click', hideProjectModal);
+
+    // When the client is picked manually in the modal, prefill the rate
+    var modalClientSelect = document.getElementById('inline_project_client_id');
+    if (modalClientSelect) {
+      modalClientSelect.addEventListener('change', function () {
+        syncProjectModalRate(this.value);
+      });
+    }
 
     var closeTask = document.getElementById('closeCreateTaskInlineModal');
     var cancelTask = document.getElementById('cancelCreateTaskInline');
@@ -577,6 +751,7 @@
         showTaskModal(opts);
       }
     },
+    createTaskDirect: createTaskDirect,
   };
 
   if (document.readyState === 'loading') {

@@ -107,6 +107,16 @@
       if (projectSelect && projectSelect.value) {
         opts.projectId = projectSelect.value;
       }
+      // The project is already chosen: create the task directly, no modal
+      if (
+        opts.projectId &&
+        opts.name &&
+        window.ttInlineCreate &&
+        typeof window.ttInlineCreate.createTaskDirect === 'function'
+      ) {
+        window.ttInlineCreate.createTaskDirect(opts.name, opts.projectId, select);
+        return;
+      }
     }
 
     if (window.ttInlineCreate && typeof window.ttInlineCreate.open === 'function') {
@@ -211,11 +221,11 @@
     input.setAttribute('aria-controls', listId);
     input.placeholder = select.getAttribute('data-search-placeholder') || 'Type to search…';
     input.value = selectedLabel(select);
+    input.disabled = select.disabled;
 
     var list = document.createElement('ul');
     list.id = listId;
-    list.className =
-      'tt-searchable-list hidden absolute z-40 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg py-1';
+    list.className = 'tt-searchable-list hidden';
     list.setAttribute('role', 'listbox');
 
     select.parentNode.insertBefore(wrapper, select);
@@ -232,7 +242,7 @@
       activeIndex = -1;
       list.querySelectorAll('[role="option"]').forEach(function (el) {
         el.setAttribute('aria-selected', 'false');
-        el.classList.remove('bg-blue-100', 'dark:bg-blue-800');
+        el.classList.remove('is-active');
       });
     }
 
@@ -269,7 +279,7 @@
 
       if (filtered.length === 0 && !(canCreate && q)) {
         var empty = document.createElement('li');
-        empty.className = 'px-3 py-2 text-sm text-gray-500 dark:text-gray-400';
+        empty.className = 'tt-searchable-empty';
         empty.textContent = 'No matches';
         list.appendChild(empty);
       }
@@ -277,16 +287,13 @@
       filtered.forEach(function (o, idx) {
         var li = document.createElement('li');
         li.id = optionDomId(listId, o);
-        li.className =
-          'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 text-gray-900 dark:text-gray-100';
+        li.className = 'tt-searchable-option';
+        if (o.value === select.value) li.classList.add('is-selected');
         li.setAttribute('role', 'option');
         li.setAttribute('aria-selected', o.value === select.value ? 'true' : 'false');
         li.setAttribute('data-index', String(idx));
         li.setAttribute('data-value', o.value);
         li.textContent = o.label || '(empty)';
-        if (o.value === select.value) {
-          li.classList.add('bg-blue-50', 'dark:bg-blue-900/40', 'font-medium');
-        }
         li.addEventListener('mousedown', function (e) {
           e.preventDefault();
           setValue(o.value, o.label);
@@ -301,15 +308,25 @@
         // For task/project create, require a parent when filter-by is set
         var parent = getParentSelect(select);
         var parentOk = !parent || !!parent.value || kind === 'client';
-        // Project can be created with client from page even without filter-by parent
-        if (kind === 'project') parentOk = true;
+        if (kind === 'project') {
+          // Projects belong to a client: only offer creation once a client is
+          // chosen (page client select or filter-by parent). Fall back to the
+          // old permissive behaviour on pages without any client select.
+          var clientSelect =
+            parent ||
+            document.querySelector('[data-inline-client-select]') ||
+            document.getElementById('client_id') ||
+            document.getElementById('startTimerClient') ||
+            document.getElementById('editTimerClient');
+          if (clientSelect) parentOk = !!clientSelect.value;
+          else parentOk = true;
+        }
         if (kind === 'task' && parent && !parent.value) parentOk = false;
 
         if (!exact && parentOk) {
           var createLi = document.createElement('li');
           createLi.id = listId + '-opt-create';
-          createLi.className =
-            'px-3 py-2 text-sm cursor-pointer border-t border-gray-100 dark:border-gray-700 text-primary hover:bg-blue-50 dark:hover:bg-blue-900/30 font-medium';
+          createLi.className = 'tt-searchable-option tt-searchable-create';
           createLi.setAttribute('role', 'option');
           createLi.setAttribute('aria-selected', 'false');
           createLi.setAttribute('data-create', '1');
@@ -337,8 +354,7 @@
       activeIndex = (activeIndex + delta + items.length) % items.length;
       items.forEach(function (el, i) {
         var isActive = i === activeIndex;
-        el.classList.toggle('bg-blue-100', isActive);
-        el.classList.toggle('dark:bg-blue-800', isActive);
+        el.classList.toggle('is-active', isActive);
         el.setAttribute('aria-selected', isActive ? 'true' : 'false');
       });
       var active = items[activeIndex];
@@ -351,6 +367,11 @@
     }
 
     input.addEventListener('focus', function () {
+      // Select-all so typing replaces the committed label/placeholder instead
+      // of appending to it
+      try {
+        input.select();
+      } catch (_) {}
       renderList(input.value === selectedLabel(select) ? '' : input.value);
     });
     input.addEventListener('input', function () {
@@ -402,6 +423,7 @@
     });
     var mo = new MutationObserver(function () {
       input.value = selectedLabel(select);
+      input.disabled = select.disabled;
     });
     mo.observe(select, { childList: true, subtree: true, attributes: true });
 

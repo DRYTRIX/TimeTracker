@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Web manual entry cascade & inline create (#728)** — Manual time logging and the dashboard start-timer modal now follow the mobile start-timer flow: pick a client first (the project picker unlocks only then), then one of that client's projects, then a task of that project. The client field stays a real searchable dropdown even when only one client exists, so another client can be picked or created inline; a newly created client is selected automatically. Inline project creation attaches automatically to the selected client — the client dropdown is replaced by a read-only display with an editable hourly rate pre-filled from the client default — instead of asking for a client again. Inline task creation creates the task immediately from the combobox "Create …" row (no confirmation modal) for the preselected project.
+- **Searchable combobox dark mode & typing (#728)** — Combobox dropdowns build their DOM in JS with utility classes Tailwind purged from the stylesheet, leaving white-on-white rows in dark mode; the dropdown now uses always-emitted component classes (`tt-searchable-*`) with proper dark hover/selected states. Focusing a combobox selects its text so typing replaces the committed label instead of appending to it. Source-controlled assets (`searchable-select.js`, `inline-create.js`, `dist/output.css`) are served with mtime-based version queries via a new `static_url()` helper so edits bust the browser cache without a release bump.
+
 ## [5.13.1] - 2026-08-26
 
 ### Changed
