@@ -66,6 +66,22 @@ void main() {
       expect(project.client, 'Test Client');
       expect(project.status, 'active');
     });
+
+    test('parses last_used_at', () {
+      final project = Project.fromJson({
+        'id': 1,
+        'name': 'Test Project',
+        'last_used_at': '2026-08-27T10:00:00Z',
+      });
+
+      expect(project.lastUsedAt, DateTime.parse('2026-08-27T10:00:00Z'));
+    });
+
+    test('last_used_at defaults to null when absent', () {
+      final project = Project.fromJson({'id': 1, 'name': 'Test Project'});
+
+      expect(project.lastUsedAt, isNull);
+    });
   });
 
   group('Task', () {

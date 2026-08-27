@@ -51,6 +51,10 @@ class _TimeEntriesScreenState extends ConsumerState<TimeEntriesScreen> {
         child: _buildBody(entriesState),
       ),
       floatingActionButton: FloatingActionButton(
+        // Lives inside the home screen's IndexedStack alongside the dashboard
+        // FAB; without a unique tag the two default Hero tags crash any
+        // route pushed on top (e.g. the start timer sheet).
+        heroTag: 'timeEntriesFab',
         onPressed: () => _showAddEntryDialog(),
         child: const Icon(Icons.add),
       ),
