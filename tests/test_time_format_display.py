@@ -134,6 +134,48 @@ def test_date_picker_init_uses_24hr_from_prefs():
     assert "formatDate: formatTimeDate" in src
 
 
+def test_date_picker_init_covers_datetime_local_inputs():
+    """datetime-local inputs must be flatpickr-initialized per user prefs.
+
+    Native datetime-local controls render in the browser locale (12h AM/PM on
+    en-US) and ignore the in-app time format setting — regression test for the
+    "Forgot to end your workday?" modal showing a 12h leave time.
+    """
+    src = Path("app/static/date-picker-init.js").read_text(encoding="utf-8")
+    assert "user-datetime-input" in src
+    assert "initUserDateTimeInputs" in src
+    # Wire format must stay datetime-local compatible (YYYY-MM-DDTHH:MM)
+    assert "'Y-m-dTH:i'" in src
+    # time_24hr must be honoured for the clock part
+    assert "time_24hr: use24hr" in src
+    # Native min/max bounds must move to Flatpickr, not stay on the hidden input
+    assert "removeAttribute('min')" in src
+    assert "removeAttribute('max')" in src
+
+
+def test_workday_modals_use_user_datetime_input():
+    """Both "Forgot to end your workday?" modals must use the prefs-aware picker."""
+    for name in (
+        "app/templates/workday/_auto_closed_clock_out_modal.html",
+        "app/templates/workday/_overnight_clock_out_modal.html",
+    ):
+        src = Path(name).read_text(encoding="utf-8")
+        assert "datetime-local" in src
+        assert "user-datetime-input" in src
+
+
+def test_all_datetime_local_inputs_are_prefs_aware():
+    """Every datetime-local input in the app must carry user-datetime-input."""
+    tag_re = re.compile(r"<input\b[^>]*>", re.S)
+    for path in Path("app/templates").rglob("*.html"):
+        src = path.read_text(encoding="utf-8", errors="ignore")
+        for tag in tag_re.findall(src):
+            if 'type="datetime-local"' in tag.replace("\n", " "):
+                assert "user-datetime-input" in tag.replace("\n", " "), (
+                    f"{path}: datetime-local input without user-datetime-input: {tag!r}"
+                )
+
+
 def _run_parse_user_time_cases():
     """Evaluate __parseUserTimeInput in Node with a minimal DOM stub."""
     js_path = Path("app/static/date-picker-init.js").resolve()

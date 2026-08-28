@@ -18,6 +18,19 @@
         }
     }
 
+    function getDateTimeAltFormat() {
+        return getFlatpickrAltFormat() + ' ' + getTimeAltFormat();
+    }
+
+    /**
+     * Parse a wire datetime-local value ("YYYY-MM-DDTHH:MM") into a Date.
+     */
+    function parseWireDateTime(value) {
+        if (!value) return undefined;
+        var d = new Date(value);
+        return isNaN(d.getTime()) ? undefined : d;
+    }
+
     function getFirstDayOfWeek() {
         if (window.userPrefs && typeof window.userPrefs.weekStartDay === 'number' && window.userPrefs.weekStartDay >= 0 && window.userPrefs.weekStartDay <= 6) {
             return window.userPrefs.weekStartDay;
@@ -194,9 +207,53 @@
         });
     }
 
+    /**
+     * Initialize Flatpickr on datetime-local inputs so they display using the
+     * user's preferred date + time formats while still submitting
+     * YYYY-MM-DDTHH:MM. Native datetime-local controls render in the browser
+     * locale (e.g. 12h AM/PM on en-US), ignoring the in-app preference.
+     */
+    function initUserDateTimeInputs() {
+        if (typeof flatpickr === 'undefined') return;
+        var inputs = document.querySelectorAll('input.user-datetime-input[type="datetime-local"]');
+        var altFormat = getDateTimeAltFormat();
+        var use24hr = timePickerUses24hr();
+        var firstDay = getFirstDayOfWeek();
+        inputs.forEach(function (el) {
+            if (el._flatpickr) return;
+            // Preserve existing classes on the visible alt input (form-input, form-control, sizing).
+            var altClass = (el.className || 'form-input').replace(/\buser-datetime-input\b/g, '').trim() || 'form-input';
+            var minDate = parseWireDateTime(el.getAttribute('min'));
+            var maxDate = parseWireDateTime(el.getAttribute('max'));
+            // Bounds move to Flatpickr; native min/max on the (now hidden) wire
+            // input would still block submission with browser validation.
+            el.removeAttribute('min');
+            el.removeAttribute('max');
+            flatpickr(el, {
+                enableTime: true,
+                dateFormat: 'Y-m-dTH:i',
+                time_24hr: use24hr,
+                altInput: true,
+                altFormat: altFormat,
+                altInputClass: altClass,
+                allowInput: false,
+                minDate: minDate,
+                maxDate: maxDate,
+                locale: { firstDayOfWeek: firstDay },
+                // type=datetime-local fights Flatpickr; hide the native control.
+                onReady: function (_selectedDates, _dateStr, instance) {
+                    if (instance.input) {
+                        instance.input.style.display = 'none';
+                    }
+                }
+            });
+        });
+    }
+
     function initAll() {
         initUserDateInputs();
         initUserTimeInputs();
+        initUserDateTimeInputs();
     }
 
     // Test / debug hooks

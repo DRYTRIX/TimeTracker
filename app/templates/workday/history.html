@@ -18,11 +18,11 @@
         </div>
         <div>
             <label class="block text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Start time') }}</label>
-            <input type="datetime-local" name="start_time" class="form-input w-full" required>
+            <input type="datetime-local" name="start_time" class="form-input w-full user-datetime-input" required>
         </div>
         <div>
             <label class="block text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('End time (optional)') }}</label>
-            <input type="datetime-local" name="end_time" class="form-input w-full">
+            <input type="datetime-local" name="end_time" class="form-input w-full user-datetime-input">
         </div>
         <div>
             <label class="block text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Notes (optional)') }}</label>
@@ -145,8 +145,8 @@
                             <input type="hidden" name="attendance_day_id" value="{{ record.id }}">
                             <input type="hidden" name="entity_type" value="AttendanceWorkPeriod">
                             <input type="hidden" name="entity_id" value="{{ p.id }}">
-                            <input type="datetime-local" name="start_time" class="form-input text-xs w-full" value="{{ p.start_time|user_datetime_local if p.start_time else '' }}">
-                            <input type="datetime-local" name="end_time" class="form-input text-xs w-full" value="{{ p.end_time|user_datetime_local if p.end_time else '' }}">
+                            <input type="datetime-local" name="start_time" class="form-input text-xs w-full user-datetime-input" value="{{ p.start_time|user_datetime_local if p.start_time else '' }}">
+                            <input type="datetime-local" name="end_time" class="form-input text-xs w-full user-datetime-input" value="{{ p.end_time|user_datetime_local if p.end_time else '' }}">
                             <input type="text" name="reason" class="form-input text-xs w-full" required placeholder="{{ _('Reason') }}">
                             <button type="submit" class="btn btn-secondary btn-xs">{{ _('Request change') }}</button>
                         </form>
