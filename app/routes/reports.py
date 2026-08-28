@@ -2113,4 +2113,3 @@ def utilization_report():
         non_billable_hours=non_billable,
         can_view_all=can_view_all,
     )
-

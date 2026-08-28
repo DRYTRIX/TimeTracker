@@ -169,7 +169,7 @@
             </div>
         </form>
         <script src="{{ url_for('static', filename='js/signature_pad.js') }}"></script>
-        <script>
+        <script nonce="{{ csp_nonce() }}">
         (function() {
             const canvas = document.getElementById('signaturePad');
             if (!canvas || typeof SignaturePad === 'undefined') return;

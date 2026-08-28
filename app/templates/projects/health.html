@@ -55,7 +55,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function() {
     const ctx = document.getElementById('burnChart');
     if (!ctx || typeof Chart === 'undefined') return;
