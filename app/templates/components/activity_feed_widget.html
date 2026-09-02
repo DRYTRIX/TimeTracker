@@ -253,7 +253,8 @@ async function loadActivities(append = false) {
             credentials: 'same-origin',
             headers: {
                 'Accept': 'application/json'
-            }
+            },
+            __ttQuiet: true
         });
         if (!response.ok) {
             console.error('API response not OK:', response.status, response.statusText);
@@ -421,8 +422,9 @@ document.addEventListener('DOMContentLoaded', function() {
     updateFilterIndicators('all');
 });
 
-// Auto-refresh activity feed every 30 seconds
+// Auto-refresh activity feed every 30 seconds (skip while tab is hidden — #746)
 setInterval(() => {
+    if (document.hidden) return;
     if (activityPage === 1) {
         refreshActivityFeed();
     }

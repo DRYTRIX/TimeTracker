@@ -64,6 +64,12 @@ class EnhancedErrorHandler {
                         this.checkOnlineStatus({ quiet: true, onResume: true });
                     }
                 }, 1500);
+                // Later sweep: throttled background timers can fire after 1.5s
+                setTimeout(() => {
+                    if (document.visibilityState === 'visible') {
+                        this.checkOnlineStatus({ quiet: true, onResume: true });
+                    }
+                }, 5000);
             } else {
                 this.stopHealthProbeInterval();
             }
@@ -278,9 +284,9 @@ class EnhancedErrorHandler {
             
             .error-retry-btn {
                 padding: 8px 16px;
-                background: rgba(255, 255, 255, 0.2);
-                color: white;
-                border: 1px solid rgba(255, 255, 255, 0.3);
+                background: rgba(148, 163, 184, 0.18);
+                color: inherit;
+                border: 1px solid rgba(148, 163, 184, 0.35);
                 border-radius: 6px;
                 cursor: pointer;
                 font-size: 0.875rem;
@@ -290,7 +296,7 @@ class EnhancedErrorHandler {
             }
             
             .error-retry-btn:hover {
-                background: rgba(255, 255, 255, 0.3);
+                background: rgba(148, 163, 184, 0.28);
             }
             
             .error-retry-btn:disabled {
@@ -311,9 +317,9 @@ class EnhancedErrorHandler {
             
             .error-recovery-btn {
                 padding: 6px 12px;
-                background: rgba(255, 255, 255, 0.15);
-                color: white;
-                border: 1px solid rgba(255, 255, 255, 0.25);
+                background: rgba(148, 163, 184, 0.15);
+                color: inherit;
+                border: 1px solid rgba(148, 163, 184, 0.35);
                 border-radius: 6px;
                 cursor: pointer;
                 font-size: 0.875rem;
@@ -321,7 +327,7 @@ class EnhancedErrorHandler {
             }
             
             .error-recovery-btn:hover {
-                background: rgba(255, 255, 255, 0.25);
+                background: rgba(148, 163, 184, 0.25);
             }
         `;
         document.head.appendChild(style);
@@ -385,12 +391,16 @@ class EnhancedErrorHandler {
     }
 
     async handleFetchException(error, url, options) {
-        // Network error
+        // Network error — Response status must be 200–599; use 503 + marker header.
         if (!this.isOnline) {
             await this.queueForOffline(url, options);
             return new Response(JSON.stringify({ error: 'Offline' }), {
-                status: 0,
-                statusText: 'Offline'
+                status: 503,
+                statusText: 'Offline',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-TT-Network-Error': '1'
+                }
             });
         }
         
@@ -400,8 +410,12 @@ class EnhancedErrorHandler {
         });
         
         return new Response(JSON.stringify({ error: userFriendlyMessage }), {
-            status: 0,
-            statusText: 'Network Error'
+            status: 503,
+            statusText: 'Network Error',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-TT-Network-Error': '1'
+            }
         });
     }
 
@@ -470,6 +484,12 @@ class EnhancedErrorHandler {
      * Show Error with Retry Button
      */
     showErrorWithRetry(message, status, retryCallback) {
+        // Deduplicate burst toasts from parallel failing polls after tab resume
+        if (this.isDuplicateError(message)) {
+            console.warn('Duplicate error suppressed:', message);
+            return null;
+        }
+
         const recoveryOptions = this.getRecoveryOptions(status);
         
         // Create error toast with retry

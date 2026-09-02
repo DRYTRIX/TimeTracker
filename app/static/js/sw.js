@@ -1,4 +1,4 @@
-/* TimeTracker service worker — cache static assets; do not touch /api/v1/* (token auth). */
+/* TimeTracker service worker — cache static assets; never intercept /api/* (session + token auth). */
 const CACHE_NAME = 'timetracker-v1';
 
 const PRECACHE_URLS = [
@@ -59,7 +59,8 @@ async function cacheFirst(request) {
     }
     return response;
   } catch (e) {
-    return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
+    // Real network error (not a fake 503) so callers / reconnect logic can recover.
+    return Response.error();
   }
 }
 
@@ -73,14 +74,6 @@ async function networkFirstDocument(request) {
       '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Offline</title></head><body><p>You are offline.</p></body></html>',
       { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
     );
-  }
-}
-
-async function networkFirstApi(request) {
-  try {
-    return await fetch(request);
-  } catch (_) {
-    return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
   }
 }
 
@@ -101,23 +94,15 @@ self.addEventListener('fetch', (event) => {
 
   const path = url.pathname;
 
-  // Never intercept token-auth API — browser handles the request unchanged.
-  if (path.startsWith('/api/v1/')) {
-    return;
-  }
-
-  // Health probes must hit the network directly (no synthetic 503 on transient fail).
-  if (path === '/api/health' || path === '/_health') {
+  // Never intercept API or health probes — let the browser surface genuine network
+  // failures (stale keep-alive after tab idle) instead of synthesizing 503 Offline.
+  // Covers /api/*, /api/v1/*, /api/health, and /_health.
+  if (path.startsWith('/api/') || path === '/_health') {
     return;
   }
 
   if (path.startsWith('/static/')) {
     event.respondWith(cacheFirst(request));
-    return;
-  }
-
-  if (path.startsWith('/api/')) {
-    event.respondWith(networkFirstApi(request));
     return;
   }
 

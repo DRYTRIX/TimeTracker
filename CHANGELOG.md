@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Spurious "Service temporarily unavailable" after tab idle (#746)** — After leaving the dashboard open in a background tab, stale keep-alive sockets caused the first resume requests to fail; the service worker was turning those into fake `503 Offline` responses (breaking JSON parsing and showing stuck error toasts with invisible Retry/Refresh buttons in light mode). The worker no longer intercepts `/api/*`, remaining background polls (chat widget, activity feed, kanban) are quiet + hidden-gated, error toasts dedupe and use theme-aware button styles, and a later resume health sweep clears leftover connectivity toasts.
 - **Datetime fields ignore the chosen time format** — Native `datetime-local` inputs (the "Forgot to end your workday?" workday modals, workday history corrections, contact/deal/lead activity forms) render in the browser locale — e.g. 12h AM/PM on en-US — no matter what time format the user or system settings chose. They are now initialized as Flatpickr datetime pickers that display in the user's preferred date + time format (24h by default) while still submitting the same wire format; min/max bounds move to the picker. A regression test enforces that every `datetime-local` input stays prefs-aware. The recurring-tasks "last run" cell and the admin version-update published timestamp also now honor the preference instead of the browser locale.
 
 ## [5.13.2] - 2026-08-27

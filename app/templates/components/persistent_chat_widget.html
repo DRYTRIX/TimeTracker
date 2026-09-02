@@ -227,9 +227,15 @@ function loadChatWidgetChannels() {
         method: 'GET',
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
-        }
+        },
+        __ttQuiet: true
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to load channels: ' + response.status);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.channels) {
             chatWidgetState.channels = data.channels.filter(c => c.channel_type !== 'direct');
@@ -318,9 +324,15 @@ function loadChatWidgetMessages(channelId) {
         method: 'GET',
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
-        }
+        },
+        __ttQuiet: true
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to load messages: ' + response.status);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.messages) {
             renderChatWidgetMessages(data.messages);
@@ -427,8 +439,11 @@ if (document.readyState === 'loading') {
     initChatWidget();
 }
 
-// Reload channels periodically
-setInterval(loadChatWidgetChannels, 30000); // Every 30 seconds
+// Reload channels periodically (skip while tab is hidden — #746)
+setInterval(function() {
+    if (document.hidden) return;
+    loadChatWidgetChannels();
+}, 30000); // Every 30 seconds
 
 // Reload channels when page becomes visible (user switches back to tab)
 document.addEventListener('visibilitychange', function() {
