@@ -92,6 +92,11 @@ async function clearIdleGraceState() {
   await chrome.storage.local.remove(['idle_grace_stop_at', 'idle_grace_active']);
 }
 
+/** Record positive user/OS activity so poll heartbeats stay honest when chrome.idle is unreliable. */
+async function markPositiveActivity(atMs = Date.now()) {
+  await chrome.storage.local.set({ last_positive_activity_at: atMs });
+}
+
 async function beginIdleGrace(stopAtMs) {
   const { last_timer_status } = await chrome.storage.local.get('last_timer_status');
   if (!last_timer_status?.active || !last_timer_status?.timer) {
@@ -103,6 +108,8 @@ async function beginIdleGrace(stopAtMs) {
     return;
   }
 
+  // Entering grace must stop heartbeats immediately so the server 5-minute
+  // window can advance (Issue #722 — poll heartbeats otherwise defeat it).
   await chrome.storage.local.set({
     idle_grace_active: true,
     idle_grace_stop_at: stopAtMs,
@@ -147,6 +154,7 @@ async function sendServerHeartbeat() {
 
 async function confirmStillWorking() {
   await clearIdleGraceState();
+  await markPositiveActivity();
   await sendServerHeartbeat();
 }
 
@@ -191,6 +199,20 @@ async function refreshTimerStatus({ force = false } = {}) {
 
     if (active) {
       setRunningUi(status.timer);
+
+      const stored = await chrome.storage.local.get([
+        'idle_grace_active',
+        'last_positive_activity_at',
+        'last_timer_status',
+        'idle_api_trusted',
+      ]);
+      // First time we see an active timer (or timer id change), seed activity.
+      const prevId = stored.last_timer_status?.timer?.id;
+      const curId = status.timer?.id;
+      if (!stored.last_positive_activity_at || prevId !== curId) {
+        await markPositiveActivity();
+      }
+
       // Server already marked this timer idle (#722) — enter the same grace
       // window the local chrome.idle path uses, even if OS idle has not fired.
       const idleNotified = Boolean(
@@ -201,10 +223,19 @@ async function refreshTimerStatus({ force = false } = {}) {
         // when the server just notified, not at last_active alone (0 min).
         await beginIdleGrace(Date.now());
       }
-      // Only refresh server heartbeat while the OS reports the user as active.
-      // Heartbeating during idle/locked would defeat the server-side safety net.
-      const { idle_grace_active } = await chrome.storage.local.get('idle_grace_active');
-      if (!idle_grace_active) {
+
+      const idleThresholdMs = idleTimeoutMinutes * 60 * 1000;
+      const graceActive = Boolean(
+        (await chrome.storage.local.get('idle_grace_active')).idle_grace_active
+      );
+
+      // Heartbeat policy (Issue #722):
+      // - If chrome.idle has proven it can detect idle/locked, trust queryState
+      //   and keep heartbeats flowing while the OS reports active.
+      // - If never proven (common on Linux/Wayland where queryState sticks on
+      //   "active"), only heartbeat within the positive-activity window so the
+      //   server safety net can still fire after idle_timeout.
+      if (!graceActive) {
         try {
           const idleState = await new Promise((resolve) => {
             try {
@@ -214,7 +245,21 @@ async function refreshTimerStatus({ force = false } = {}) {
             }
           });
           if (idleState === 'active') {
-            await client.sendHeartbeat();
+            const { last_positive_activity_at, idle_api_trusted } =
+              await chrome.storage.local.get([
+                'last_positive_activity_at',
+                'idle_api_trusted',
+              ]);
+            const lastActivity = Number(last_positive_activity_at) || 0;
+            const withinWindow = Date.now() - lastActivity < idleThresholdMs;
+            if (idle_api_trusted) {
+              await markPositiveActivity();
+              await client.sendHeartbeat();
+            } else if (withinWindow) {
+              await client.sendHeartbeat();
+            } else {
+              await beginIdleGrace(Date.now());
+            }
           }
         } catch (hbErr) {
           console.debug('[TimeTracker] poll heartbeat failed:', hbErr);
@@ -288,7 +333,9 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'refresh_timer') {
-    refreshTimerStatus({ force: true })
+    // Opening the popup is positive user activity.
+    markPositiveActivity()
+      .then(() => refreshTimerStatus({ force: true }))
       .then((result) => sendResponse({ ok: true, ...result }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;
@@ -319,12 +366,16 @@ chrome.idle.onStateChanged.addListener(async (newState) => {
     // User returned before grace expired — cancel pending auto-stop and
     // tell the server so the server-side grace window also resets.
     await clearIdleGraceState();
+    await markPositiveActivity();
     await sendServerHeartbeat();
     return;
   }
   if (newState !== 'idle' && newState !== 'locked') {
     return;
   }
+
+  // chrome.idle successfully detected idle/locked — trust it for future polls.
+  await chrome.storage.local.set({ idle_api_trusted: true });
 
   const { last_timer_status } = await chrome.storage.local.get([
     'last_timer_status',

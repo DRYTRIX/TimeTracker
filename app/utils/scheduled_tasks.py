@@ -897,8 +897,8 @@ def register_scheduled_tasks(scheduler, app=None):
 def check_idle_timers():
     """Server-side idle timeout safety net.
 
-    For every active timer whose last heartbeat (or start time if never heartbeated)
-    is older than ``settings.idle_timeout_minutes``:
+    For every active (non-paused) timer whose last heartbeat (or start time if never
+    heartbeated) is older than ``settings.idle_timeout_minutes``:
 
     1. First pass: set ``idle_notified_at`` and send a browser push "Still working?".
     2. Second pass (after 5-minute grace): auto-stop the timer at
@@ -907,6 +907,9 @@ def check_idle_timers():
 
     Clients that keep sending heartbeats keep ``last_heartbeat_at`` fresh and
     clear ``idle_notified_at``, so they are never auto-stopped while active.
+
+    Each entry is processed in its own mini-transaction so a failure on one timer
+    cannot roll back ``idle_notified_at`` already committed for others.
     """
     from app.models import Settings
     from app.models.time_entry import local_now
@@ -920,30 +923,40 @@ def check_idle_timers():
         now = local_now()
         cutoff = now - threshold
 
-        stale = (
-            TimeEntry.query.filter(
-                TimeEntry.end_time.is_(None),
-                db.or_(
-                    TimeEntry.last_heartbeat_at < cutoff,
-                    db.and_(
-                        TimeEntry.last_heartbeat_at.is_(None),
-                        TimeEntry.start_time < cutoff,
+        stale_ids = [
+            row[0]
+            for row in (
+                db.session.query(TimeEntry.id)
+                .filter(
+                    TimeEntry.end_time.is_(None),
+                    TimeEntry.paused_at.is_(None),
+                    db.or_(
+                        TimeEntry.last_heartbeat_at < cutoff,
+                        db.and_(
+                            TimeEntry.last_heartbeat_at.is_(None),
+                            TimeEntry.start_time < cutoff,
+                        ),
                     ),
-                ),
+                )
+                .all()
             )
-            .all()
-        )
+        ]
 
-        if not stale:
+        if not stale_ids:
             return 0
 
         notified = 0
         stopped = 0
-        for entry in stale:
+        for entry_id in stale_ids:
             try:
+                entry = db.session.get(TimeEntry, entry_id)
+                if entry is None or entry.end_time is not None or entry.paused_at is not None:
+                    continue
+
                 if entry.idle_notified_at is None:
                     entry.idle_notified_at = now
                     entry.updated_at = now
+                    db.session.commit()
                     _send_idle_push(entry)
                     notified += 1
                     logger.info(
@@ -965,8 +978,6 @@ def check_idle_timers():
                         stop_at = last_active + threshold if last_active else now
                         if stop_at > now:
                             stop_at = now
-                        # stop_timer commits; avoid double-commit issues by calling it last
-                        entry_id = entry.id
                         user_id = entry.user_id
                         entry.stop_timer(end_time=stop_at)
                         stopped += 1
@@ -993,16 +1004,13 @@ def check_idle_timers():
             except Exception as e:
                 logger.warning(
                     "Idle check failed for entry %s: %s",
-                    getattr(entry, "id", None),
+                    entry_id,
                     e,
                 )
-                db.session.rollback()
-
-        try:
-            db.session.commit()
-        except Exception as e:
-            logger.warning("Idle check commit failed: %s", e)
-            db.session.rollback()
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
 
         if notified or stopped:
             logger.info("Idle check: notified=%d stopped=%d", notified, stopped)
@@ -1023,7 +1031,8 @@ def _send_idle_push(entry):
     1. Web PushSubscription (browser)
     2. Socket.IO room ``user_<id>`` so open web/desktop clients show the prompt
        immediately even without a push subscription
-    3. Mobile/desktop pick up ``idle_notified`` from ``GET /api/v1/timer/status``
+    3. FCM device tokens (Android/iOS) when registered
+    4. Mobile/desktop also pick up ``idle_notified`` from ``GET /api/v1/timer/status``
        on their next poll (already wired in IdleDetectionService / desktop idle)
     """
     user = getattr(entry, "user", None)
@@ -1053,7 +1062,7 @@ def _send_idle_push(entry):
     except Exception as e:
         logger.debug("Idle socket emit failed for user %s: %s", getattr(user, "username", user.id), e)
 
-    # Browser Web Push (when VAPID + subscriptions exist)
+    # Browser Web Push + FCM device tokens
     try:
         from app.models import PushSubscription
     except Exception:
@@ -1066,10 +1075,72 @@ def _send_idle_push(entry):
     if not subscriptions:
         return
 
+    web_subs = [s for s in subscriptions if not getattr(s, "device_token", None)]
+    fcm_subs = [s for s in subscriptions if getattr(s, "device_token", None)]
+
+    if web_subs:
+        try:
+            _deliver_push_to_subscriptions(user, web_subs, note)
+        except Exception as e:
+            logger.debug("Idle web push failed for user %s: %s", getattr(user, "username", user.id), e)
+
+    if fcm_subs:
+        try:
+            _deliver_fcm_to_devices(user, fcm_subs, note)
+        except Exception as e:
+            logger.debug("Idle FCM push failed for user %s: %s", getattr(user, "username", user.id), e)
+
+
+def _deliver_fcm_to_devices(user, subscriptions, note) -> int:
+    """Send an FCM data+notification message to registered mobile device tokens."""
     try:
-        _deliver_push_to_subscriptions(user, subscriptions, note)
+        from app.utils.firebase_push import send_fcm_to_tokens
+    except Exception:
+        logger.debug("firebase_push helper unavailable; skipping FCM for %s", getattr(user, "username", user.id))
+        return 0
+
+    tokens = [s.device_token for s in subscriptions if s.device_token]
+    if not tokens:
+        return 0
+
+    data = {
+        "kind": str(note.get("kind") or "idle_timeout"),
+        "title": str(note.get("title") or "Still working?"),
+        "message": str(note.get("message") or ""),
+        "timer_id": str(note.get("timer_id") or ""),
+        "idle_notified_at": str(note.get("idle_notified_at") or ""),
+    }
+    try:
+        delivered, invalid = send_fcm_to_tokens(
+            tokens,
+            title=data["title"],
+            body=data["message"],
+            data=data,
+        )
     except Exception as e:
-        logger.debug("Idle push failed for user %s: %s", getattr(user, "username", user.id), e)
+        logger.debug("FCM send failed for %s: %s", getattr(user, "username", user.id), e)
+        return 0
+
+    if invalid:
+        for sub in subscriptions:
+            if sub.device_token in invalid:
+                try:
+                    db.session.delete(sub)
+                except Exception:
+                    pass
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    for sub in subscriptions:
+        if sub.device_token and sub.device_token not in invalid:
+            try:
+                sub.update_last_used()
+            except Exception:
+                pass
+
+    return delivered
 
 
 def send_smart_reminder_push_notifications():
@@ -1174,6 +1245,9 @@ def _deliver_push_to_subscriptions(user, subscriptions, note) -> int:
     }
     delivered = 0
     for sub in subscriptions:
+        # Skip FCM device rows (handled by _deliver_fcm_to_devices).
+        if getattr(sub, "device_token", None) or str(getattr(sub, "endpoint", "") or "").startswith("fcm://"):
+            continue
         try:
             webpush(
                 subscription_info={"endpoint": sub.endpoint, "keys": sub.keys or {}},

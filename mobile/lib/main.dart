@@ -1,3 +1,5 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timetracker_mobile/core/constants/app_constants.dart';
@@ -15,6 +17,17 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LocalStorage.init();
   await initMobileOpenTelemetry();
+
+  // Optional Firebase — degrade gracefully when google-services.json is absent.
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp();
+    }
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  } catch (_) {
+    // Expected for builds without Firebase config.
+  }
+
   await NotificationService.instance.initialize();
   runApp(
     const ProviderScope(

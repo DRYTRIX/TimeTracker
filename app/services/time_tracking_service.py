@@ -228,6 +228,7 @@ class TimeTrackingService:
 
         # Stop the timer
         entry.end_time = stop_at
+        entry.idle_notified_at = None
         entry.calculate_duration()
 
         if not safe_commit("stop_timer", {"user_id": user_id, "entry_id": entry.id}):

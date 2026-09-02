@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/config/app_config.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/services/notification_service.dart';
+import '../../data/api/api_client.dart';
 import '../../domain/usecases/sync_usecase.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -35,6 +39,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (route == AppConstants.routeHome) {
       // ignore: unawaited_futures
       SyncUseCase.shared.startPeriodicSync();
+      // Re-register FCM token on cold start when already logged in (Issue #722).
+      try {
+        final trusted = await AppConfig.getTrustedInsecureHosts();
+        final client = ApiClient(
+          baseUrl: serverUrl!,
+          trustedInsecureHosts: trusted,
+        );
+        await client.setAuthToken(token!);
+        unawaited(NotificationService.instance.registerDeviceToken(client));
+      } catch (_) {
+        // Non-fatal — idle wake-up still works via server poll / FGS.
+      }
     }
     final elapsed = DateTime.now().difference(start).inMilliseconds;
     const minDisplayMs = 800;

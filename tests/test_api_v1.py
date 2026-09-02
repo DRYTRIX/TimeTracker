@@ -596,6 +596,39 @@ class TestTimer:
         # At least ~90 min recorded (start was 2h ago, stop at hb+30m)
         assert (stopped.duration_seconds or 0) >= 85 * 60
 
+    def test_check_idle_timers_skips_paused(self, client, api_token, test_user, test_project, app):
+        """Paused timers must not be idle-notified or auto-stopped."""
+        from datetime import timedelta
+
+        from app.models import Settings
+        from app.models.time_entry import local_now
+        from app.utils.scheduled_tasks import check_idle_timers
+
+        settings = Settings.get_settings()
+        settings.idle_timeout_minutes = 30
+        db.session.commit()
+
+        start = local_now() - timedelta(hours=2)
+        timer = TimeEntry(
+            user_id=int(test_user),
+            project_id=test_project.id,
+            start_time=start,
+            end_time=None,
+            source="api",
+            billable=True,
+        )
+        timer.last_heartbeat_at = local_now() - timedelta(hours=1)
+        timer.paused_at = local_now() - timedelta(minutes=10)
+        db.session.add(timer)
+        db.session.commit()
+        timer_id = timer.id
+
+        check_idle_timers()
+        refreshed = db.session.get(TimeEntry, timer_id)
+        assert refreshed.end_time is None
+        assert refreshed.idle_notified_at is None
+        assert refreshed.paused_at is not None
+
 
 class TestTasks:
     """Test task endpoints"""

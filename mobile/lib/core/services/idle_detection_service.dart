@@ -16,8 +16,11 @@ import 'package:timetracker_mobile/domain/repositories/time_tracking_repository.
 ///
 /// When the app is backgrounded, polls the server for ``idle_notified`` (nudged
 /// by the Android foreground task) so the local notification still fires.
-/// When the app is killed, the server-side `check_idle_timers` job is the
-/// safety net (requires heartbeats to have been flowing while the app was open).
+/// When Firebase is configured, an FCM ``idle_timeout`` data message wakes the
+/// app and starts the same grace window (Issue #722).
+/// When the app is killed and FCM is unavailable, the server-side
+/// `check_idle_timers` job is the safety net (requires heartbeats to have been
+/// flowing while the app was open).
 class IdleDetectionService with WidgetsBindingObserver {
   IdleDetectionService._();
 
@@ -57,6 +60,7 @@ class IdleDetectionService with WidgetsBindingObserver {
         Timer.periodic(heartbeatInterval, (_) => _sendHeartbeat());
     _checkTimer = Timer.periodic(checkInterval, (_) => _tick());
     NotificationService.instance.onIdleAction = respondToIdlePrompt;
+    NotificationService.instance.onIdlePush = _onIdlePushFromServer;
     _registerForegroundTaskCallback();
   }
 
@@ -73,6 +77,7 @@ class IdleDetectionService with WidgetsBindingObserver {
     _graceTimer = null;
     _promptShown = false;
     NotificationService.instance.onIdleAction = null;
+    NotificationService.instance.onIdlePush = null;
   }
 
   void setRepository(TimeTrackingRepository? repository) {
@@ -105,6 +110,13 @@ class IdleDetectionService with WidgetsBindingObserver {
   void markActive() {
     if (_promptShown) return;
     _lastActivity = DateTime.now();
+  }
+
+  /// Server FCM idle_timeout wake-up (Issue #722): stop heartbeats and start grace.
+  void _onIdlePushFromServer(Map<String, dynamic> data) {
+    if (!_timerActive || _promptShown) return;
+    _idleStopAt = _creditedStopAt(_lastActivity);
+    unawaited(_showPrompt());
   }
 
   @override
