@@ -112,7 +112,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.getElementById('selectAllApprovals')?.addEventListener('change', function() {
     document.querySelectorAll('.approval-check').forEach(cb => { cb.checked = this.checked; });
 });

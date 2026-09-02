@@ -87,10 +87,12 @@
           if (data.published_at) {
             try {
               var d = new Date(data.published_at);
-              published.textContent = d.toLocaleString(undefined, {
-                dateStyle: "medium",
-                timeStyle: "short",
-              });
+              published.textContent = window.formatUserDateTime
+                ? window.formatUserDateTime(d)
+                : d.toLocaleString(undefined, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  });
             } catch (e) {
               published.textContent = data.published_at;
             }

@@ -231,7 +231,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!res.ok) throw new Error(data.error || 'Run failed');
                 var lastCell = document.querySelector('.last-run-cell[data-task-id="' + taskId + '"]');
                 if (lastCell && data.last_created_at) {
-                    lastCell.textContent = new Date(data.last_created_at).toLocaleString();
+                    lastCell.textContent = window.formatUserDateTime
+                        ? window.formatUserDateTime(new Date(data.last_created_at))
+                        : new Date(data.last_created_at).toLocaleString(
                 }
                 if (window.toastManager?.success) {
                     window.toastManager.success({{ _('Task created successfully')|tojson }}, '', 3000);
