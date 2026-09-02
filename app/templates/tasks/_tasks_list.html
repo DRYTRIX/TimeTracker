@@ -34,8 +34,8 @@
                 <th class="px-4 py-3" data-sortable>Status</th>
                 <th class="px-4 py-3 table-number" data-sortable>Due</th>
                 <th class="px-4 py-3 table-number" data-sortable>{{ _('Estimated') }}</th>
+                <th class="px-4 py-3 table-number" data-sortable>{{ _('Tracked') }}</th>
                 <th class="px-4 py-3 table-number" data-sortable>Progress</th>
-                <th class="px-4 py-3">Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -90,14 +90,18 @@
                         <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
                     {% endif %}
                 </td>
+                <td class="p-4 table-number" data-label="{{ _('Tracked') }}">
+                    {% if task.total_hours %}
+                        {{ task.total_hours }} {{ _('h') }}
+                    {% else %}
+                        <span class="text-text-muted-light dark:text-text-muted-dark">—</span>
+                    {% endif %}
+                </td>
                 <td class="p-4 table-number" data-label="{{ _('Progress') }}">
                     {% set pct = task.progress_percentage or 0 %}
                     <div class="w-28 h-2 bg-gray-200 dark:bg-gray-700 rounded">
                         <div class="h-2 rounded {{ 'bg-emerald-500' if pct>=100 else 'bg-primary' }}" style="width: {{ [pct,100]|min }}%"></div>
                     </div>
-                </td>
-                <td class="p-4 mobile-actions" data-label="{{ _('Actions') }}">
-                    <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="text-primary hover:underline">View</a>
                 </td>
             </tr>
             {% else %}

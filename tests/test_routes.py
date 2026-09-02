@@ -595,6 +595,10 @@ def test_tasks_list_page(authenticated_client):
     """Test tasks list page."""
     response = authenticated_client.get("/tasks")
     assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Tracked" in html
+    # Actions column removed in favor of Tracked; task name remains the primary link
+    assert ">Actions</th>" not in html
 
 
 @pytest.mark.integration
@@ -613,6 +617,9 @@ def test_task_detail_page(authenticated_client, task, app):
     with app.app_context():
         response = authenticated_client.get(f"/tasks/{task.id}")
         assert response.status_code == 200
+        html = response.get_data(as_text=True)
+        assert "Tracked" in html
+        assert "Total" in html
 
 
 @pytest.mark.integration
