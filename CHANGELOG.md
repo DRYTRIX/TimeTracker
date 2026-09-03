@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Idle needs-review flow** — When a running timer's idle grace expires while no TimeTracker window can answer (tab closed, machine asleep), the time entry is now flagged **needs review** instead of silently lost. A review banner in the web app, a push notification via the service worker, and scheduled-task detection surface these entries so they can be confirmed or corrected; the behavior is configurable in Admin → Settings. The desktop app and browser extension report the same situation, and the v1 API exposes flag/resolve endpoints. Includes migration `183_add_idle_needs_review`.
+
 ### Fixed
+
+- **"Service temporarily unavailable" after leaving the dashboard open (#746)** — When the backend went down while a page stayed open, the service worker answered `/api/*` requests with a plain-text `Offline` body, so `.json()` parsing threw `SyntaxError` on top of the connection failure; the chat widget re-polled every 30 seconds forever, and identical error toasts stacked up and evicted the ones carrying the Retry/Refresh buttons. Synthetic offline responses are now JSON, chat-widget polling backs off (2 minutes) after a failure and pauses in hidden tabs, repeated error toasts are deduplicated so the Retry/Refresh actions stay reachable, and the offline indicator bar is removed as soon as connectivity is restored instead of lingering until a reload.
+- **Onboarding tour could not be dismissed** — The tour could auto-start twice, stacking a second overlay above its own skip-confirmation dialog, and `!important` z-indexes plus step-transition timers re-raised the tooltip over the "Are you sure you want to skip the tour?" prompt. A double-init guard, non-forced layering, and a pending-skip guard keep the confirmation readable and the tour dismissible.
 
 - **Datetime fields ignore the chosen time format** — Native `datetime-local` inputs (the "Forgot to end your workday?" workday modals, workday history corrections, contact/deal/lead activity forms) render in the browser locale — e.g. 12h AM/PM on en-US — no matter what time format the user or system settings chose. They are now initialized as Flatpickr datetime pickers that display in the user's preferred date + time format (24h by default) while still submitting the same wire format; min/max bounds move to the picker. A regression test enforces that every `datetime-local` input stays prefs-aware. The recurring-tasks "last run" cell and the admin version-update published timestamp also now honor the preference instead of the browser locale.
 
