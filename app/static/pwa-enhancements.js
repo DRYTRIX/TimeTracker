@@ -240,6 +240,39 @@ class PWAEnhancements {
         return Notification.permission;
     }
 
+    /**
+     * Ensure a Web Push subscription exists (permission must already be granted).
+     * Called when a timer starts so idle "Still working?" alerts can arrive
+     * even with the TimeTracker tab closed. Exposed as
+     * window.__ttEnsurePushSubscription (used by idle.js).
+     */
+    async ensurePushSubscription() {
+        try {
+            if (!('Notification' in window) || Notification.permission !== 'granted') return false;
+            if (!this.serviceWorkerRegistration || !this.serviceWorkerRegistration.pushManager) return false;
+            const vapidKey = this.getVapidPublicKey();
+            if (!vapidKey || vapidKey.trim() === '') return false;
+
+            const existing = await this.serviceWorkerRegistration.pushManager.getSubscription();
+            if (existing) {
+                this.pushSubscription = existing;
+                await this.sendSubscriptionToServer(existing);
+                return true;
+            }
+            const applicationServerKey = this.urlBase64ToUint8Array(vapidKey);
+            const subscription = await this.serviceWorkerRegistration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: applicationServerKey,
+            });
+            this.pushSubscription = subscription;
+            await this.sendSubscriptionToServer(subscription);
+            return true;
+        } catch (error) {
+            console.warn('Push subscription failed:', error);
+            return false;
+        }
+    }
+
     urlBase64ToUint8Array(base64String) {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);
         const base64 = (base64String + padding)
@@ -439,8 +472,10 @@ class PWAEnhancements {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         window.pwaEnhancements = new PWAEnhancements();
+        window.__ttEnsurePushSubscription = () => window.pwaEnhancements.ensurePushSubscription();
     });
 } else {
     window.pwaEnhancements = new PWAEnhancements();
+    window.__ttEnsurePushSubscription = () => window.pwaEnhancements.ensurePushSubscription();
 }
 

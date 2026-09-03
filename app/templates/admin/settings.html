@@ -120,6 +120,12 @@
                     <div>
                         <label for="idle_timeout_minutes" class="form-label">Idle Timeout (Minutes)</label>
                         <input type="number" name="idle_timeout_minutes" id="idle_timeout_minutes" value="{{ settings.idle_timeout_minutes }}" required class="form-input">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('After this much inactivity, clients are asked "Still working?" and unanswered timers are flagged for review (they keep running).') }}</p>
+                    </div>
+                    <div>
+                        <label for="idle_auto_stop_hours" class="form-label">{{ _('Idle Safety Cap (Hours)') }}</label>
+                        <input type="number" name="idle_auto_stop_hours" id="idle_auto_stop_hours" value="{{ settings.idle_auto_stop_hours or 0 }}" min="0" max="168" class="form-input">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Auto-stop a flagged timer after this many hours unanswered (credited to last activity, entry stays flagged for review). 0 disables the cap.') }}</p>
                     </div>
                     <div>
                         <label for="rounding_method" class="form-label">{{ _('Rounding Method') }}</label>

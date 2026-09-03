@@ -547,7 +547,8 @@ class TestTimer:
         assert response.status_code == 400
 
     def test_check_idle_timers_notifies_then_stops(self, client, api_token, test_user, test_project, app):
-        """Server idle job notifies on first pass and auto-stops after grace."""
+        """Server idle job notifies on first pass, then flags for review after
+        grace — the timer keeps running so recorded time is never truncated."""
         from datetime import timedelta
 
         from app.models import Settings
@@ -578,23 +579,124 @@ class TestTimer:
         assert refreshed.end_time is None
         assert refreshed.idle_notified_at is not None
 
-        # Second pass after grace: auto-stop at last_heartbeat + idle_timeout
-        last_hb = refreshed.last_heartbeat_at
+        # Second pass after grace: flag for review, timer KEEPS RUNNING
         refreshed.idle_notified_at = local_now() - timedelta(minutes=6)
         db.session.commit()
         check_idle_timers()
+        flagged = db.session.get(TimeEntry, timer_id)
+        assert flagged.end_time is None
+        assert flagged.idle_flagged_at is not None
+
+    def test_check_idle_timers_safety_cap_stops_and_keeps_flag(self, client, api_token, test_user, test_project, app):
+        """With the safety cap enabled, an unanswered flagged timer is stopped
+        credited to last activity but stays flagged for review."""
+        from datetime import timedelta
+
+        from app.models import Settings
+        from app.models.time_entry import local_now
+        from app.utils.scheduled_tasks import check_idle_timers
+
+        settings = Settings.get_settings()
+        settings.idle_timeout_minutes = 30
+        settings.idle_auto_stop_hours = 1
+        db.session.commit()
+
+        start = local_now() - timedelta(hours=4)
+        timer = TimeEntry(
+            user_id=int(test_user),
+            project_id=test_project.id,
+            start_time=start,
+            end_time=None,
+            source="api",
+            billable=True,
+        )
+        timer.last_heartbeat_at = local_now() - timedelta(hours=3)
+        timer.idle_notified_at = local_now() - timedelta(minutes=30)
+        timer.idle_flagged_at = local_now() - timedelta(hours=2)
+        db.session.add(timer)
+        db.session.commit()
+        timer_id = timer.id
+
+        check_idle_timers()
         stopped = db.session.get(TimeEntry, timer_id)
         assert stopped.end_time is not None
-        assert stopped.idle_notified_at is None
-        expected_stop = last_hb + timedelta(minutes=30)
+        # Still flagged so the user reviews/adjusts the entry
+        assert stopped.idle_flagged_at is not None
+
+        expected_stop = timer.last_heartbeat_at + timedelta(minutes=30)
         if getattr(expected_stop, "tzinfo", None) is not None:
             expected_stop = expected_stop.replace(tzinfo=None)
         end = stopped.end_time
         if getattr(end, "tzinfo", None) is not None:
             end = end.replace(tzinfo=None)
         assert abs((end - expected_stop).total_seconds()) < 5
-        # At least ~90 min recorded (start was 2h ago, stop at hb+30m)
-        assert (stopped.duration_seconds or 0) >= 85 * 60
+
+    def test_timer_review_endpoints(self, client, api_token, test_user, test_project, app):
+        """POST /api/v1/timer/review supports trim / keep / continue actions."""
+        import json as _json
+        from datetime import timedelta
+
+        from app.models import Settings
+        from app.models.time_entry import local_now
+
+        settings = Settings.get_settings()
+        settings.idle_timeout_minutes = 30
+        db.session.commit()
+
+        def make_timer():
+            # End any still-running timer so active_timer resolves to the new one
+            active = TimeEntry.query.filter_by(user_id=int(test_user), end_time=None).all()
+            for t in active:
+                t.stop_timer()
+            timer = TimeEntry(
+                user_id=int(test_user),
+                project_id=test_project.id,
+                start_time=local_now() - timedelta(hours=2),
+                end_time=None,
+                source="api",
+                billable=True,
+            )
+            timer.last_heartbeat_at = local_now() - timedelta(hours=1)
+            timer.idle_flagged_at = local_now() - timedelta(minutes=10)
+            db.session.add(timer)
+            db.session.commit()
+            return timer
+
+        headers = {"Authorization": f"Bearer {api_token}", "Content-Type": "application/json"}
+
+        # continue: clears the flag, keeps running
+        timer = make_timer()
+        response = client.post(
+            "/api/v1/timer/review", headers=headers, data=_json.dumps({"action": "continue"})
+        )
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["stopped"] is False
+        refreshed = db.session.get(TimeEntry, timer.id)
+        assert refreshed.end_time is None
+        assert refreshed.idle_flagged_at is None
+
+        # trim: stops credited to last activity + idle timeout
+        timer = make_timer()
+        response = client.post(
+            "/api/v1/timer/review", headers=headers, data=_json.dumps({"action": "trim"})
+        )
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["stopped"] is True
+        trimmed = db.session.get(TimeEntry, timer.id)
+        assert trimmed.end_time is not None
+        assert (trimmed.duration_seconds or 0) >= 85 * 60
+
+        # keep: stops at now
+        timer = make_timer()
+        response = client.post(
+            "/api/v1/timer/review", headers=headers, data=_json.dumps({"action": "keep"})
+        )
+        assert response.status_code == 200
+        kept = db.session.get(TimeEntry, timer.id)
+        assert kept.end_time is not None
+        assert (kept.duration_seconds or 0) >= 115 * 60
 
 
 class TestTasks:

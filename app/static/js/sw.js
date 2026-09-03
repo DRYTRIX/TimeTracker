@@ -136,3 +136,75 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 });
+
+// ---------------------------------------------------------------------------
+// Web Push (idle "Still working?" alerts + smart reminders)
+// ---------------------------------------------------------------------------
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = { title: 'TimeTracker', message: event.data ? event.data.text() : '' };
+  }
+  const isIdle = data.kind === 'idle_timeout' || data.kind === 'idle_needs_review';
+  const title = data.title || 'TimeTracker';
+  const options = {
+    body: data.message || '',
+    tag: 'tt-' + (data.kind || 'note'),
+    requireInteraction: isIdle,
+    renotify: true,
+    data: { url: (data.action && data.action.url) || '/', kind: data.kind || 'note' },
+  };
+  if (isIdle) {
+    options.actions = [
+      { action: 'still-working', title: 'I\'m still working' },
+      { action: 'stop-timer', title: 'Stop timer' },
+    ];
+  }
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const info = event.notification.data || {};
+  const base = info.url || '/';
+
+  const resolveReview = (action) =>
+    fetch('/api/timer/review', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ action }),
+    }).catch(() => {});
+
+  if (info.kind === 'idle_timeout' || info.kind === 'idle_needs_review') {
+    if (event.action === 'still-working') {
+      event.waitUntil(resolveReview('continue'));
+      return;
+    }
+    if (event.action === 'stop-timer') {
+      event.waitUntil(resolveReview('keep'));
+      return;
+    }
+  }
+
+  event.waitUntil(
+    (async () => {
+      const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of clientList) {
+        try {
+          const cUrl = new URL(client.url);
+          if (cUrl.origin === self.location.origin && 'focus' in client) {
+            await client.focus();
+            if ('navigate' in client) {
+              try { await client.navigate(base); } catch (e) {}
+            }
+            return;
+          }
+        } catch (e) {}
+      }
+      await self.clients.openWindow(base);
+    })()
+  );
+});

@@ -3,7 +3,7 @@ API v1 - Time Entries and Timer endpoints.
 Sub-blueprint for /api/v1/time-entries and /api/v1/timer/*.
 """
 
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request
 from marshmallow import ValidationError
 
 from app.routes.api_v1_common import _parse_date_range, paginate_query
@@ -390,6 +390,7 @@ def timer_status():
             "timer": active_timer.to_dict(),
             "idle_timeout_minutes": idle_timeout_minutes,
             "idle_notified": bool(active_timer.idle_notified_at),
+            "needs_review": bool(active_timer.idle_flagged_at),
         }
     )
 
@@ -426,6 +427,74 @@ def timer_heartbeat():
         )
 
     return ("", 204)
+
+
+@api_v1_time_entries_bp.route("/timer/review", methods=["POST"])
+@require_api_token("write:time_entries")
+def timer_review():
+    """Resolve an idle needs-review flag on the active timer.
+
+    Body: {"action": "trim" | "keep" | "continue", "end_time": optional ISO (for "keep")}
+    - trim: stop credited to last activity + idle timeout (the old auto-stop behaviour)
+    - keep: stop at now (or the provided end_time)
+    - continue: clear the flag and keep the timer running (user is actually working)
+    """
+    from datetime import datetime, timedelta
+
+    from app.models import Settings
+    from app.models.time_entry import local_now
+    from app.utils.db import safe_commit
+
+    data = request.get_json(silent=True) or {}
+    action = (data.get("action") or "").strip().lower()
+    if action not in ("trim", "keep", "continue"):
+        return error_response("action must be trim, keep or continue", error_code="invalid_action", status_code=400)
+
+    active_timer = g.api_user.active_timer
+    if not active_timer:
+        return error_response("No active timer", error_code="no_active_timer", status_code=400)
+
+    try:
+        if action == "continue":
+            active_timer.clear_idle_flags()
+            active_timer.last_heartbeat_at = local_now()
+            if not safe_commit("timer_review", {"user_id": g.api_user.id, "entry_id": active_timer.id}):
+                db.session.rollback()
+                return error_response("Failed to resolve review", error_code="database_error", status_code=500)
+            return jsonify({"ok": True, "stopped": False})
+
+        if action == "keep" and data.get("end_time"):
+            try:
+                end_time = datetime.fromisoformat(data["end_time"])
+            except ValueError:
+                return error_response("invalid end_time", error_code="invalid_end_time", status_code=400)
+            if end_time <= active_timer.start_time:
+                return error_response(
+                    "end_time must be after start_time", error_code="invalid_end_time", status_code=400
+                )
+            active_timer.stop_timer(end_time=end_time)
+        elif action == "trim":
+            settings = Settings.get_settings()
+            idle_minutes = max(1, min(480, int(getattr(settings, "idle_timeout_minutes", 30) or 30)))
+            last_active = active_timer.last_heartbeat_at or active_timer.start_time
+            if getattr(last_active, "tzinfo", None) is not None:
+                last_active = last_active.replace(tzinfo=None)
+            stop_at = last_active + timedelta(minutes=idle_minutes)
+            now = local_now()
+            if stop_at > now:
+                stop_at = now
+            active_timer.stop_timer(end_time=stop_at)
+        else:  # keep at now
+            active_timer.stop_timer()
+
+        return jsonify({"ok": True, "stopped": True, "time_entry": active_timer.to_dict()})
+    except ValueError as e:
+        db.session.rollback()
+        return error_response(str(e), error_code="review_failed", status_code=400)
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.warning("Timer review failed for user %s: %s", g.api_user.id, e)
+        return error_response("Failed to resolve review", error_code="database_error", status_code=500)
 
 
 @api_v1_time_entries_bp.route("/timer/start", methods=["POST"])
