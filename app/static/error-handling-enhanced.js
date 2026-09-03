@@ -174,6 +174,12 @@ class EnhancedErrorHandler {
     }
 
     handleOnline() {
+        // Remove offline indicator
+        const indicator = document.getElementById('offline-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+
         // Show online indicator
         this.showOnlineIndicator();
 
@@ -470,6 +476,14 @@ class EnhancedErrorHandler {
      * Show Error with Retry Button
      */
     showErrorWithRetry(message, status, retryCallback) {
+        // Deduplicate: polling loops can hit the same failure repeatedly (e.g. every
+        // 30s while the backend is down). Keep the existing toast — it already has
+        // retry/recovery buttons — instead of stacking identical error cards.
+        if (this.isDuplicateError(message)) {
+            console.warn('Duplicate error suppressed:', message);
+            return null;
+        }
+
         const recoveryOptions = this.getRecoveryOptions(status);
         
         // Create error toast with retry

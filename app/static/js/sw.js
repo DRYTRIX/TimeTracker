@@ -59,8 +59,18 @@ async function cacheFirst(request) {
     }
     return response;
   } catch (e) {
-    return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
+    return offlineJsonResponse();
   }
+}
+
+// Synthetic offline response must be JSON — callers parse .json() and a plain-text
+// body would throw SyntaxError on top of the connectivity failure.
+function offlineJsonResponse() {
+  return new Response(JSON.stringify({ error: 'Offline' }), {
+    status: 503,
+    statusText: 'Service Unavailable',
+    headers: { 'Content-Type': 'application/json' }
+  });
 }
 
 async function networkFirstDocument(request) {
@@ -80,7 +90,7 @@ async function networkFirstApi(request) {
   try {
     return await fetch(request);
   } catch (_) {
-    return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
+    return offlineJsonResponse();
   }
 }
 
