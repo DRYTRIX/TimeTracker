@@ -820,7 +820,8 @@
   async function fetchColumnsNoStore(){
     const resp = await fetch('/api/kanban/columns?_=' + Date.now(), {
       headers: { 'X-Requested-With': 'XMLHttpRequest', 'Cache-Control': 'no-cache' },
-      cache: 'no-store'
+      cache: 'no-store',
+      __ttQuiet: true
     });
     if (!resp.ok) throw new Error('Failed to fetch columns');
     const payload = await resp.json();
@@ -1034,9 +1035,10 @@
 
   // Initial bind of drag/drop now that function exists
   bindDragAndDrop();
-  // Background polling fallback to catch missed events
+  // Background polling fallback to catch missed events (skip while tab is hidden — #746)
   try {
     setInterval(async () => {
+      if (document.hidden) return;
       try {
         const columns = await fetchColumnsNoStore();
         const sig = computeColumnsSignature(columns);

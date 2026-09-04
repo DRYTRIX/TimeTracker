@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.13.3
+
+**Patch (5.13.3):** **Tracked hours on tasks (#745)** — list, detail, and CSV export show aggregated tracked time. **Idle needs-review** — unanswered idle timers are flagged for review (banner, push, API) instead of lost. **Idle timeout (#722)** — extension heartbeats and mobile FCM wake-up keep Still working? reliable. **Graceful offline (#746)** — JSON offline API responses, toast dedupe, and chat backoff when the backend drops. **Onboarding tour** — skip confirmation stays dismissible. **Datetime format** — workday and CRM fields honor the chosen time format via Flatpickr. See [CHANGELOG.md](CHANGELOG.md#5133---2026-09-02).
+
 ### ✨ Highlights of v5.13.2
 
 **Patch (5.13.2):** **Linear setup wizard** — guided API-key setup matching other integrations. **Web manual entry (#728)** — cascading client → project → task pickers with inline create and dark-mode comboboxes. **Mobile start timer** — unified searchable pickers, project-first with client auto-fill, crash/selection/flicker fixes. **Android signing** — stable CI keystore for release APKs. See [CHANGELOG.md](CHANGELOG.md#5132---2026-08-27).

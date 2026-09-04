@@ -150,7 +150,12 @@
         </div>
 
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
-            <h2 class="text-lg font-semibold mb-4">Time Entries</h2>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold">{{ _('Time Entries') }}</h2>
+                <span class="text-sm text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Total') }}: <span class="font-semibold text-text-light dark:text-text-dark">{{ task.total_hours }} {{ _('h') }}</span>
+                </span>
+            </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left responsive-cards">
                     <thead class="border-b border-border-light dark:border-border-dark">
@@ -196,6 +201,11 @@
                     </tbody>
                 </table>
             </div>
+            {% if time_entries|length == 100 %}
+            <p class="mt-4 pt-4 border-t border-border-light dark:border-border-dark text-sm text-text-muted-light dark:text-text-muted-dark">
+                {{ _('Showing last %(count)s entries. Total above includes all time logged on this task.', count=100) }}
+            </p>
+            {% endif %}
         </div>
     </div>
 
@@ -252,6 +262,10 @@
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Estimated') }}</h3>
                     <p>{% if task.estimated_hours %}{{ task.estimated_hours }} {{ _('h') }}{% else %}<span class="text-text-muted-light dark:text-text-muted-dark">—</span>{% endif %}</p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Tracked') }}</h3>
+                    <p>{{ task.total_hours }} {{ _('h') }}{% if task.total_billable_hours %} <span class="text-xs text-text-muted-light dark:text-text-muted-dark">({{ task.total_billable_hours }} {{ _('h') }} {{ _('billable') }})</span>{% endif %}</p>
                 </div>
             </div>
         </div>

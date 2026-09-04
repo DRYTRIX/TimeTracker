@@ -268,6 +268,14 @@ def create_app(config=None):
     socketio.init_app(app, cors_allowed_origins="*")
     oauth.init_app(app)
 
+    # Optional Firebase Admin for FCM mobile idle wake-up (Issue #722). No-op when unset.
+    try:
+        from app.utils.firebase_push import init_firebase_admin
+
+        init_firebase_admin(app)
+    except Exception as e:
+        logger.debug("Firebase Admin init skipped: %s", e)
+
     # Fast-path for migration/bootstrap runs:
     # we only need config + db/migrate + models loaded. Avoid registering routes,
     # background jobs, integrations, etc. to keep migrations as fast and reliable

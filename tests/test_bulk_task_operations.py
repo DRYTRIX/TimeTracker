@@ -547,6 +547,7 @@ def test_export_tasks_csv(authenticated_client, app, tasks_for_bulk):
         assert "Name" in csv_data
         assert "Project" in csv_data
         assert "Status" in csv_data
+        assert "Tracked Hours" in csv_data
 
         # Check that task data is in CSV
         assert tasks_for_bulk[0].name in csv_data

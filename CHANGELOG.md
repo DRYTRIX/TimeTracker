@@ -7,16 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.13.3] - 2026-09-02
+
 ### Added
 
+- **Tracked hours on tasks (#745)** — Task list replaces the redundant Actions column with Tracked hours; task detail surfaces totals; CSV export includes Tracked Hours via a bulk aggregate.
 - **Idle needs-review flow** — When a running timer's idle grace expires while no TimeTracker window can answer (tab closed, machine asleep), the time entry is now flagged **needs review** instead of silently lost. A review banner in the web app, a push notification via the service worker, and scheduled-task detection surface these entries so they can be confirmed or corrected; the behavior is configurable in Admin → Settings. The desktop app and browser extension report the same situation, and the v1 API exposes flag/resolve endpoints. Includes migration `183_add_idle_needs_review`.
+
+### Changed
+
+- **Client versions** — Synced Electron (`desktop/package.json`), Flutter (`mobile/pubspec.yaml`), and Chromium extension (`browser-extension/manifest.json` / `package.json`) to **5.13.3** with the webapp (`setup.py`).
 
 ### Fixed
 
-- **"Service temporarily unavailable" after leaving the dashboard open (#746)** — When the backend went down while a page stayed open, the service worker answered `/api/*` requests with a plain-text `Offline` body, so `.json()` parsing threw `SyntaxError` on top of the connection failure; the chat widget re-polled every 30 seconds forever, and identical error toasts stacked up and evicted the ones carrying the Retry/Refresh buttons. Synthetic offline responses are now JSON, chat-widget polling backs off (2 minutes) after a failure and pauses in hidden tabs, repeated error toasts are deduplicated so the Retry/Refresh actions stay reachable, and the offline indicator bar is removed as soon as connectivity is restored instead of lingering until a reload.
+- **Idle timeout / Still working? across clients (#722)** — Extension heartbeats no longer defeat the server safety net when `chrome.idle` is unreliable; backgrounded mobile gets FCM wake-up; the idle scheduler is hardened so forgotten timers cannot run for hours.
+- **"Service temporarily unavailable" after leaving the dashboard open (#746)** — When the backend went down (or a background tab resumed with stale sockets) while a page stayed open, the service worker answered `/api/*` with a plain-text `Offline` body, so `.json()` parsing threw `SyntaxError`; the chat widget re-polled every 30 seconds forever; and identical error toasts stacked up and evicted the ones carrying Retry/Refresh. Synthetic offline responses are now JSON, remaining background polls (chat, activity feed, kanban) back off after failure and pause in hidden tabs, error toasts dedupe with theme-aware actions, a resume health sweep clears leftover connectivity toasts, and the offline indicator bar is removed as soon as connectivity is restored.
 - **Onboarding tour could not be dismissed** — The tour could auto-start twice, stacking a second overlay above its own skip-confirmation dialog, and `!important` z-indexes plus step-transition timers re-raised the tooltip over the "Are you sure you want to skip the tour?" prompt. A double-init guard, non-forced layering, and a pending-skip guard keep the confirmation readable and the tour dismissible.
-
 - **Datetime fields ignore the chosen time format** — Native `datetime-local` inputs (the "Forgot to end your workday?" workday modals, workday history corrections, contact/deal/lead activity forms) render in the browser locale — e.g. 12h AM/PM on en-US — no matter what time format the user or system settings chose. They are now initialized as Flatpickr datetime pickers that display in the user's preferred date + time format (24h by default) while still submitting the same wire format; min/max bounds move to the picker. A regression test enforces that every `datetime-local` input stays prefs-aware. The recurring-tasks "last run" cell and the admin version-update published timestamp also now honor the preference instead of the browser locale.
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.13.3** (single source of truth for the application version).
 
 ## [5.13.2] - 2026-08-27
 

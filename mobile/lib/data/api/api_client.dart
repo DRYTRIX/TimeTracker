@@ -116,6 +116,27 @@ class ApiClient {
     );
   }
 
+  /// Register this device for FCM idle wake-up (Issue #722).
+  Future<bool> registerDevicePush({
+    required String deviceToken,
+    required String platform,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/push/register-device',
+      data: {
+        'device_token': deviceToken,
+        'platform': platform,
+      },
+    );
+    final code = res.statusCode ?? 0;
+    if (code >= 200 && code < 300) return true;
+    throw DioException(
+      requestOptions: res.requestOptions,
+      response: res,
+      type: DioExceptionType.badResponse,
+    );
+  }
+
   Future<Map<String, dynamic>> pauseTimer() async {
     final res = await _dio.post<Map<String, dynamic>>('/api/v1/timer/pause');
     _throwIfError(res);

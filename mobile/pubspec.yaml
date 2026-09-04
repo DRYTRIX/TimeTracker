@@ -1,7 +1,7 @@
 name: timetracker_mobile
 description: TimeTracker mobile app for Android and iOS
 publish_to: 'none'
-version: 5.13.2+1
+version: 5.13.3+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -31,7 +31,11 @@ dependencies:
   # Notifications
   flutter_local_notifications: ^17.2.1
   permission_handler: ^11.1.0
-  
+  # Optional FCM for idle "Still working?" wake-up (Issue #722). Requires
+  # google-services.json / GoogleService-Info.plist when building with Firebase.
+  firebase_core: ^3.8.1
+  firebase_messaging: ^15.1.6
+
   # UI Components
   intl: ^0.18.1
   table_calendar: ^3.0.9

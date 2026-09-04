@@ -49,6 +49,9 @@ pikepdf>=8.0.0
 # Background tasks
 APScheduler==3.10.4
 
+# Optional: Firebase Cloud Messaging for mobile idle wake-up (Issue #722)
+firebase-admin==6.5.0
+
 # Internationalization
 Flask-Babel==4.0.0
 Babel==2.14.0

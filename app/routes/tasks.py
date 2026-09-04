@@ -1468,6 +1468,20 @@ def export_tasks():
 
     tasks = query.order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc()).all()
 
+    # Bulk-aggregate tracked hours to avoid N+1 queries when reading task.total_hours
+    if tasks:
+        task_ids = [task.id for task in tasks]
+        results = (
+            db.session.query(TimeEntry.task_id, db.func.sum(TimeEntry.duration_seconds).label("total_seconds"))
+            .filter(TimeEntry.task_id.in_(task_ids), TimeEntry.end_time.isnot(None))
+            .group_by(TimeEntry.task_id)
+            .all()
+        )
+        total_hours_map = {task_id: total_seconds for task_id, total_seconds in results}
+        for task in tasks:
+            total_seconds = total_hours_map.get(task.id, 0) or 0
+            task._cached_total_hours = round(total_seconds / 3600, 2) if total_seconds else 0.0
+
     # Create CSV in memory
     output = io.StringIO()
     writer = csv.writer(output)
@@ -1486,6 +1500,7 @@ def export_tasks():
             "Created By",
             "Due Date",
             "Estimated Hours",
+            "Tracked Hours",
             "Created At",
             "Updated At",
         ]
@@ -1506,6 +1521,7 @@ def export_tasks():
                 task.creator.display_name if task.creator else "",
                 task.due_date.strftime("%Y-%m-%d") if task.due_date else "",
                 task.estimated_hours or "",
+                task.total_hours if task.total_hours else "",
                 (
                     convert_app_datetime_to_user(task.created_at, user=current_user).strftime("%Y-%m-%d %H:%M:%S")
                     if task.created_at

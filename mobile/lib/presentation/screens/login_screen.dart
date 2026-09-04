@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:timetracker_mobile/core/config/app_config.dart';
 import 'package:timetracker_mobile/core/constants/app_constants.dart';
+import 'package:timetracker_mobile/core/services/notification_service.dart';
 import 'package:timetracker_mobile/core/telemetry/mobile_otel.dart';
 import 'package:timetracker_mobile/data/api/api_client.dart';
 import 'package:timetracker_mobile/domain/usecases/sync_usecase.dart';
@@ -153,6 +154,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       // Kick off background periodic sync after a successful login.
       unawaited(SyncUseCase.shared.startPeriodicSync());
+
+      // Register FCM device token for idle wake-up when Firebase is configured.
+      unawaited(
+        NotificationService.instance.registerDeviceToken(apiClient),
+      );
 
       if (mounted) {
         Navigator.of(context).pushReplacementNamed(AppConstants.routeHome);
