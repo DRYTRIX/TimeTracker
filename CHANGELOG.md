@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.13.4] - 2026-09-04
+
+### Fixed
+
+- **Alembic multiple heads** — Parallel migrations `183_add_device_token_push_subscription` and `183_add_idle_needs_review` both branched from `182_add_project_last_used_at`, so `flask db upgrade` failed with multiple heads. No-op merge migration `184_merge_183_heads` rejoins them into a single head.
+
+### Changed
+
+- **Client versions** — Synced Electron (`desktop/package.json`), Flutter (`mobile/pubspec.yaml`), and Chromium extension (`browser-extension/manifest.json` / `package.json`) to **5.13.4** with the webapp (`setup.py`).
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.13.4** (single source of truth for the application version).
+
 ## [5.13.3] - 2026-09-02
 
 ### Added

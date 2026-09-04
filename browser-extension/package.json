@@ -1,7 +1,7 @@
 {
   "name": "timetracker-browser-extension",
   "private": true,
-  "version": "5.13.3",
+  "version": "5.13.4",
   "description": "TimeTracker Chromium extension (Manifest V3)",
   "type": "module",
   "scripts": {
