@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.13.4
+
+**Patch (5.13.4):** **Alembic multiple heads** — merge migration `184_merge_183_heads` rejoins the parallel `183` device-token and idle needs-review branches so `flask db upgrade` has a single head. See [CHANGELOG.md](CHANGELOG.md#5134---2026-09-04).
+
 ### ✨ Highlights of v5.13.3
 
 **Patch (5.13.3):** **Tracked hours on tasks (#745)** — list, detail, and CSV export show aggregated tracked time. **Idle needs-review** — unanswered idle timers are flagged for review (banner, push, API) instead of lost. **Idle timeout (#722)** — extension heartbeats and mobile FCM wake-up keep Still working? reliable. **Graceful offline (#746)** — JSON offline API responses, toast dedupe, and chat backoff when the backend drops. **Onboarding tour** — skip confirmation stays dismissible. **Datetime format** — workday and CRM fields honor the chosen time format via Flatpickr. See [CHANGELOG.md](CHANGELOG.md#5133---2026-09-02).
