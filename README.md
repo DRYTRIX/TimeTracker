@@ -107,7 +107,7 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 ### ✨ Highlights of v5.13.3
 
-**Patch (5.13.3):** **Tracked hours on tasks (#745)** — list, detail, and CSV export show aggregated tracked time. **Idle timeout (#722)** — extension heartbeats and mobile FCM wake-up keep Still working? reliable so forgotten timers stop. **PWA idle 503s (#746)** — service worker no longer fakes Offline errors after a background tab resumes. **Datetime format** — workday and CRM datetime fields honor the chosen time format via Flatpickr. See [CHANGELOG.md](CHANGELOG.md#5133---2026-09-02).
+**Patch (5.13.3):** **Tracked hours on tasks (#745)** — list, detail, and CSV export show aggregated tracked time. **Idle needs-review** — unanswered idle timers are flagged for review (banner, push, API) instead of lost. **Idle timeout (#722)** — extension heartbeats and mobile FCM wake-up keep Still working? reliable. **Graceful offline (#746)** — JSON offline API responses, toast dedupe, and chat backoff when the backend drops. **Onboarding tour** — skip confirmation stays dismissible. **Datetime format** — workday and CRM fields honor the chosen time format via Flatpickr. See [CHANGELOG.md](CHANGELOG.md#5133---2026-09-02).
 
 ### ✨ Highlights of v5.13.2
 
