@@ -12,6 +12,7 @@ import {
 const ALARM_NAME = 'tt-timer-poll';
 const IDLE_STOP_ALARM = 'tt-idle-stop';
 const IDLE_NOTIFICATION_ID = 'tt-still-working';
+const NEEDS_REVIEW_NOTIFICATION_ID = 'tt-needs-review';
 const POLL_MINUTES = 0.25; // ~15s
 const GRACE_MINUTES = 5;
 const DEFAULT_IDLE_TIMEOUT_MINUTES = 30;
@@ -92,11 +93,6 @@ async function clearIdleGraceState() {
   await chrome.storage.local.remove(['idle_grace_stop_at', 'idle_grace_active']);
 }
 
-/** Record positive user/OS activity so poll heartbeats stay honest when chrome.idle is unreliable. */
-async function markPositiveActivity(atMs = Date.now()) {
-  await chrome.storage.local.set({ last_positive_activity_at: atMs });
-}
-
 async function beginIdleGrace(stopAtMs) {
   const { last_timer_status } = await chrome.storage.local.get('last_timer_status');
   if (!last_timer_status?.active || !last_timer_status?.timer) {
@@ -108,8 +104,6 @@ async function beginIdleGrace(stopAtMs) {
     return;
   }
 
-  // Entering grace must stop heartbeats immediately so the server 5-minute
-  // window can advance (Issue #722 — poll heartbeats otherwise defeat it).
   await chrome.storage.local.set({
     idle_grace_active: true,
     idle_grace_stop_at: stopAtMs,
@@ -122,7 +116,7 @@ async function beginIdleGrace(stopAtMs) {
       type: 'basic',
       iconUrl: 'icons/running-128.png',
       title: 'Still working?',
-      message: `Your timer will stop in ${GRACE_MINUTES} minutes if you do not answer.`,
+      message: `Answer within ${GRACE_MINUTES} minutes or the timer will be flagged for review (it keeps running).`,
       priority: 2,
       requireInteraction: true,
       buttons: [
@@ -154,8 +148,28 @@ async function sendServerHeartbeat() {
 
 async function confirmStillWorking() {
   await clearIdleGraceState();
-  await markPositiveActivity();
   await sendServerHeartbeat();
+}
+
+/** Idle grace expired unanswered: the timer KEEPS RUNNING server-side and is
+ *  flagged for review. Never silently stop recorded time — just tell the user. */
+async function notifyNeedsReview(timer) {
+  const { needs_review_notified_for } = await chrome.storage.local.get('needs_review_notified_for');
+  if (needs_review_notified_for && needs_review_notified_for === timer?.id) return;
+  await chrome.storage.local.set({ needs_review_notified_for: timer?.id });
+  try {
+    await chrome.notifications.create(NEEDS_REVIEW_NOTIFICATION_ID, {
+      type: 'basic',
+      iconUrl: 'icons/running-128.png',
+      title: 'Timer needs review',
+      message:
+        'You were idle and did not answer. Your timer kept running — open TimeTracker to trim the idle time or stop it.',
+      priority: 2,
+      requireInteraction: true,
+    });
+  } catch (error) {
+    console.debug('[TimeTracker] needs-review notification failed:', error);
+  }
 }
 
 async function stopTimerForIdle({ stopAtMs = null } = {}) {
@@ -199,43 +213,26 @@ async function refreshTimerStatus({ force = false } = {}) {
 
     if (active) {
       setRunningUi(status.timer);
-
-      const stored = await chrome.storage.local.get([
-        'idle_grace_active',
-        'last_positive_activity_at',
-        'last_timer_status',
-        'idle_api_trusted',
-      ]);
-      // First time we see an active timer (or timer id change), seed activity.
-      const prevId = stored.last_timer_status?.timer?.id;
-      const curId = status.timer?.id;
-      if (!stored.last_positive_activity_at || prevId !== curId) {
-        await markPositiveActivity();
-      }
-
       // Server already marked this timer idle (#722) — enter the same grace
       // window the local chrome.idle path uses, even if OS idle has not fired.
       const idleNotified = Boolean(
         status?.idle_notified || status?.timer?.idle_notified
       );
-      if (idleNotified) {
+      const needsReview = Boolean(
+        status?.needs_review || status?.timer?.needs_review
+      );
+      if (idleNotified && !needsReview) {
         // Credit the idle window (Issue #722): stop at last_active + threshold ≈ now
         // when the server just notified, not at last_active alone (0 min).
         await beginIdleGrace(Date.now());
       }
-
-      const idleThresholdMs = idleTimeoutMinutes * 60 * 1000;
-      const graceActive = Boolean(
-        (await chrome.storage.local.get('idle_grace_active')).idle_grace_active
-      );
-
-      // Heartbeat policy (Issue #722):
-      // - If chrome.idle has proven it can detect idle/locked, trust queryState
-      //   and keep heartbeats flowing while the OS reports active.
-      // - If never proven (common on Linux/Wayland where queryState sticks on
-      //   "active"), only heartbeat within the positive-activity window so the
-      //   server safety net can still fire after idle_timeout.
-      if (!graceActive) {
+      if (needsReview) {
+        await notifyNeedsReview(status.timer);
+      }
+      // Only refresh server heartbeat while the OS reports the user as active.
+      // Heartbeating during idle/locked would defeat the server-side safety net.
+      const { idle_grace_active } = await chrome.storage.local.get('idle_grace_active');
+      if (!idle_grace_active) {
         try {
           const idleState = await new Promise((resolve) => {
             try {
@@ -245,21 +242,7 @@ async function refreshTimerStatus({ force = false } = {}) {
             }
           });
           if (idleState === 'active') {
-            const { last_positive_activity_at, idle_api_trusted } =
-              await chrome.storage.local.get([
-                'last_positive_activity_at',
-                'idle_api_trusted',
-              ]);
-            const lastActivity = Number(last_positive_activity_at) || 0;
-            const withinWindow = Date.now() - lastActivity < idleThresholdMs;
-            if (idle_api_trusted) {
-              await markPositiveActivity();
-              await client.sendHeartbeat();
-            } else if (withinWindow) {
-              await client.sendHeartbeat();
-            } else {
-              await beginIdleGrace(Date.now());
-            }
+            await client.sendHeartbeat();
           }
         } catch (hbErr) {
           console.debug('[TimeTracker] poll heartbeat failed:', hbErr);
@@ -314,13 +297,19 @@ chrome.runtime.onStartup.addListener(() => {
   refreshTimerStatus({ force: true });
 });
 
-chrome.alarms.onAlarm.addListener((alarm) => {
+chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === ALARM_NAME) {
     refreshTimerStatus();
     return;
   }
   if (alarm.name === IDLE_STOP_ALARM) {
-    stopTimerForIdle();
+    // Grace expired unanswered: keep the timer running, flag for review.
+    await clearIdleGraceState();
+    const { last_timer_status } = await chrome.storage.local.get('last_timer_status');
+    if (last_timer_status?.active && last_timer_status?.timer) {
+      await notifyNeedsReview(last_timer_status.timer);
+    }
+    return;
   }
 });
 
@@ -333,9 +322,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'refresh_timer') {
-    // Opening the popup is positive user activity.
-    markPositiveActivity()
-      .then(() => refreshTimerStatus({ force: true }))
+    refreshTimerStatus({ force: true })
       .then((result) => sendResponse({ ok: true, ...result }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;
@@ -366,16 +353,13 @@ chrome.idle.onStateChanged.addListener(async (newState) => {
     // User returned before grace expired — cancel pending auto-stop and
     // tell the server so the server-side grace window also resets.
     await clearIdleGraceState();
-    await markPositiveActivity();
+    await chrome.storage.local.remove('needs_review_notified_for');
     await sendServerHeartbeat();
     return;
   }
   if (newState !== 'idle' && newState !== 'locked') {
     return;
   }
-
-  // chrome.idle successfully detected idle/locked — trust it for future polls.
-  await chrome.storage.local.set({ idle_api_trusted: true });
 
   const { last_timer_status } = await chrome.storage.local.get([
     'last_timer_status',
@@ -400,6 +384,17 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
 });
 
 chrome.notifications.onClicked.addListener(async (notificationId) => {
+  if (notificationId === NEEDS_REVIEW_NOTIFICATION_ID) {
+    const { server_url } = await getCredentials();
+    if (server_url) {
+      try {
+        await chrome.tabs.create({ url: server_url });
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    return;
+  }
   if (notificationId !== IDLE_NOTIFICATION_ID) return;
   // Clicking the notification body counts as "still working".
   await confirmStillWorking();

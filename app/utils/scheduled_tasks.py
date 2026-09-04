@@ -897,19 +897,20 @@ def register_scheduled_tasks(scheduler, app=None):
 def check_idle_timers():
     """Server-side idle timeout safety net.
 
-    For every active (non-paused) timer whose last heartbeat (or start time if never
-    heartbeated) is older than ``settings.idle_timeout_minutes``:
+    For every active timer whose last heartbeat (or start time if never heartbeated)
+    is older than ``settings.idle_timeout_minutes``:
 
     1. First pass: set ``idle_notified_at`` and send a browser push "Still working?".
-    2. Second pass (after 5-minute grace): auto-stop the timer at
-       ``last_active + idle_timeout`` so a forgotten timer still records at least
-       the configured idle window (Issue #722 — not 0 minutes).
+    2. Second pass (after 5-minute grace): flag the timer ``needs_review``
+       (``idle_flagged_at``) and KEEP IT RUNNING — a missed notification must never
+       silently truncate recorded time. Users resolve the flag via
+       ``POST /api/v1/timer/review`` (trim / keep / continue).
+    3. Optional safety cap: if ``settings.idle_auto_stop_hours`` > 0 and the timer
+       stays flagged (and running) beyond that many hours, stop it credited to
+       ``last_active + idle_timeout`` and keep the review flag set.
 
     Clients that keep sending heartbeats keep ``last_heartbeat_at`` fresh and
-    clear ``idle_notified_at``, so they are never auto-stopped while active.
-
-    Each entry is processed in its own mini-transaction so a failure on one timer
-    cannot roll back ``idle_notified_at`` already committed for others.
+    clear ``idle_notified_at`` / ``idle_flagged_at``, so active users are never flagged.
     """
     from app.models import Settings
     from app.models.time_entry import local_now
@@ -918,45 +919,38 @@ def check_idle_timers():
         settings = Settings.get_settings()
         idle_minutes = int(getattr(settings, "idle_timeout_minutes", None) or 30)
         idle_minutes = max(1, min(480, idle_minutes))
+        auto_stop_hours = int(getattr(settings, "idle_auto_stop_hours", 0) or 0)
         threshold = timedelta(minutes=idle_minutes)
         grace = timedelta(minutes=5)
+        cap = timedelta(hours=auto_stop_hours) if auto_stop_hours > 0 else None
         now = local_now()
         cutoff = now - threshold
 
-        stale_ids = [
-            row[0]
-            for row in (
-                db.session.query(TimeEntry.id)
-                .filter(
-                    TimeEntry.end_time.is_(None),
-                    TimeEntry.paused_at.is_(None),
-                    db.or_(
-                        TimeEntry.last_heartbeat_at < cutoff,
-                        db.and_(
-                            TimeEntry.last_heartbeat_at.is_(None),
-                            TimeEntry.start_time < cutoff,
-                        ),
+        stale = (
+            TimeEntry.query.filter(
+                TimeEntry.end_time.is_(None),
+                db.or_(
+                    TimeEntry.last_heartbeat_at < cutoff,
+                    db.and_(
+                        TimeEntry.last_heartbeat_at.is_(None),
+                        TimeEntry.start_time < cutoff,
                     ),
-                )
-                .all()
+                ),
             )
-        ]
+            .all()
+        )
 
-        if not stale_ids:
+        if not stale:
             return 0
 
         notified = 0
-        stopped = 0
-        for entry_id in stale_ids:
+        flagged = 0
+        capped_stops = 0
+        for entry in stale:
             try:
-                entry = db.session.get(TimeEntry, entry_id)
-                if entry is None or entry.end_time is not None or entry.paused_at is not None:
-                    continue
-
                 if entry.idle_notified_at is None:
                     entry.idle_notified_at = now
                     entry.updated_at = now
-                    db.session.commit()
                     _send_idle_push(entry)
                     notified += 1
                     logger.info(
@@ -969,52 +963,83 @@ def check_idle_timers():
                     if getattr(notified_at, "tzinfo", None) is not None:
                         notified_at = notified_at.replace(tzinfo=None)
                     if (now - notified_at) >= grace:
-                        # Credit the configured idle window: stop at last known
-                        # activity + threshold (not last_active alone, which
-                        # recorded 0 min when heartbeats never arrived).
-                        last_active = entry.last_heartbeat_at or entry.start_time
-                        if getattr(last_active, "tzinfo", None) is not None:
-                            last_active = last_active.replace(tzinfo=None)
-                        stop_at = last_active + threshold if last_active else now
-                        if stop_at > now:
-                            stop_at = now
-                        user_id = entry.user_id
-                        entry.stop_timer(end_time=stop_at)
-                        stopped += 1
-                        logger.info(
-                            "Idle auto-stop timer %s user=%s at %s",
-                            entry_id,
-                            user_id,
-                            stop_at,
-                        )
-                        try:
-                            from app import socketio
-
-                            socketio.emit(
-                                "timer_stopped",
-                                {
-                                    "user_id": user_id,
-                                    "timer_id": entry_id,
-                                    "duration": entry.duration_formatted,
-                                    "reason": "idle_timeout",
-                                },
+                        if entry.idle_flagged_at is None:
+                            entry.idle_flagged_at = now
+                            entry.updated_at = now
+                            flagged += 1
+                            logger.info(
+                                "Idle needs-review flag set for timer %s user=%s (timer keeps running)",
+                                entry.id,
+                                entry.user_id,
                             )
-                        except Exception as emit_err:
-                            logger.debug("socketio emit after idle stop failed: %s", emit_err)
+                            _emit_timer_event(
+                                "timer_needs_review",
+                                {
+                                    "user_id": entry.user_id,
+                                    "timer_id": entry.id,
+                                    "reason": "idle_needs_review",
+                                    "message": (
+                                        "Your timer kept running while you were idle and now needs review. "
+                                        "Trim it to your last activity or keep the time."
+                                    ),
+                                },
+                                user_id=entry.user_id,
+                            )
+                        elif cap is not None:
+                            flagged_at = entry.idle_flagged_at
+                            if getattr(flagged_at, "tzinfo", None) is not None:
+                                flagged_at = flagged_at.replace(tzinfo=None)
+                            if (now - flagged_at) >= cap:
+                                # Safety cap: credit the configured idle window and stop,
+                                # but keep the review flag so the user can adjust afterwards.
+                                last_active = entry.last_heartbeat_at or entry.start_time
+                                if getattr(last_active, "tzinfo", None) is not None:
+                                    last_active = last_active.replace(tzinfo=None)
+                                stop_at = last_active + threshold if last_active else now
+                                if stop_at > now:
+                                    stop_at = now
+                                entry_id = entry.id
+                                user_id = entry.user_id
+                                entry.stop_timer(end_time=stop_at)
+                                entry.idle_flagged_at = now
+                                entry.updated_at = now
+                                db.session.commit()
+                                capped_stops += 1
+                                logger.info(
+                                    "Idle safety-cap stop for timer %s user=%s at %s (still needs review)",
+                                    entry_id,
+                                    user_id,
+                                    stop_at,
+                                )
+                                _emit_timer_event(
+                                    "timer_stopped",
+                                    {
+                                        "user_id": user_id,
+                                        "timer_id": entry_id,
+                                        "duration": entry.duration_formatted,
+                                        "reason": "idle_auto_stop_cap",
+                                    },
+                                    user_id=user_id,
+                                )
             except Exception as e:
                 logger.warning(
                     "Idle check failed for entry %s: %s",
-                    entry_id,
+                    getattr(entry, "id", None),
                     e,
                 )
-                try:
-                    db.session.rollback()
-                except Exception:
-                    pass
+                db.session.rollback()
 
-        if notified or stopped:
-            logger.info("Idle check: notified=%d stopped=%d", notified, stopped)
-        return notified + stopped
+        try:
+            db.session.commit()
+        except Exception as e:
+            logger.warning("Idle check commit failed: %s", e)
+            db.session.rollback()
+
+        if notified or flagged or capped_stops:
+            logger.info(
+                "Idle check: notified=%d flagged=%d cap_stopped=%d", notified, flagged, capped_stops
+            )
+        return notified + flagged + capped_stops
     except Exception as e:
         logger.error("Error in check_idle_timers: %s", e)
         try:
@@ -1024,6 +1049,20 @@ def check_idle_timers():
         return 0
 
 
+def _emit_timer_event(event, payload, user_id=None):
+    """Emit a Socket.IO event to the user's room (best-effort, in-tab prompt only)."""
+    try:
+        from app import socketio
+
+        room = f"user_{user_id}" if user_id is not None else None
+        if room:
+            socketio.emit(event, payload, room=room)
+        else:
+            socketio.emit(event, payload)
+    except Exception as e:
+        logger.debug("socketio emit %s failed: %s", event, e)
+
+
 def _send_idle_push(entry):
     """Notify the user that their timer is idle ("Still working?").
 
@@ -1031,8 +1070,7 @@ def _send_idle_push(entry):
     1. Web PushSubscription (browser)
     2. Socket.IO room ``user_<id>`` so open web/desktop clients show the prompt
        immediately even without a push subscription
-    3. FCM device tokens (Android/iOS) when registered
-    4. Mobile/desktop also pick up ``idle_notified`` from ``GET /api/v1/timer/status``
+    3. Mobile/desktop pick up ``idle_notified`` from ``GET /api/v1/timer/status``
        on their next poll (already wired in IdleDetectionService / desktop idle)
     """
     user = getattr(entry, "user", None)
@@ -1047,7 +1085,7 @@ def _send_idle_push(entry):
     note = {
         "kind": "idle_timeout",
         "title": "Still working?",
-        "message": "Your timer has been idle. Confirm you are still working or it will stop automatically.",
+        "message": "Your timer has been idle. Confirm you are still working or it will be flagged for review.",
         "type": "warning",
         "action": {"url": "/", "label": "Open TimeTracker"},
         "timer_id": entry.id,
@@ -1062,7 +1100,7 @@ def _send_idle_push(entry):
     except Exception as e:
         logger.debug("Idle socket emit failed for user %s: %s", getattr(user, "username", user.id), e)
 
-    # Browser Web Push + FCM device tokens
+    # Browser Web Push (when VAPID + subscriptions exist)
     try:
         from app.models import PushSubscription
     except Exception:
@@ -1075,72 +1113,10 @@ def _send_idle_push(entry):
     if not subscriptions:
         return
 
-    web_subs = [s for s in subscriptions if not getattr(s, "device_token", None)]
-    fcm_subs = [s for s in subscriptions if getattr(s, "device_token", None)]
-
-    if web_subs:
-        try:
-            _deliver_push_to_subscriptions(user, web_subs, note)
-        except Exception as e:
-            logger.debug("Idle web push failed for user %s: %s", getattr(user, "username", user.id), e)
-
-    if fcm_subs:
-        try:
-            _deliver_fcm_to_devices(user, fcm_subs, note)
-        except Exception as e:
-            logger.debug("Idle FCM push failed for user %s: %s", getattr(user, "username", user.id), e)
-
-
-def _deliver_fcm_to_devices(user, subscriptions, note) -> int:
-    """Send an FCM data+notification message to registered mobile device tokens."""
     try:
-        from app.utils.firebase_push import send_fcm_to_tokens
-    except Exception:
-        logger.debug("firebase_push helper unavailable; skipping FCM for %s", getattr(user, "username", user.id))
-        return 0
-
-    tokens = [s.device_token for s in subscriptions if s.device_token]
-    if not tokens:
-        return 0
-
-    data = {
-        "kind": str(note.get("kind") or "idle_timeout"),
-        "title": str(note.get("title") or "Still working?"),
-        "message": str(note.get("message") or ""),
-        "timer_id": str(note.get("timer_id") or ""),
-        "idle_notified_at": str(note.get("idle_notified_at") or ""),
-    }
-    try:
-        delivered, invalid = send_fcm_to_tokens(
-            tokens,
-            title=data["title"],
-            body=data["message"],
-            data=data,
-        )
+        _deliver_push_to_subscriptions(user, subscriptions, note)
     except Exception as e:
-        logger.debug("FCM send failed for %s: %s", getattr(user, "username", user.id), e)
-        return 0
-
-    if invalid:
-        for sub in subscriptions:
-            if sub.device_token in invalid:
-                try:
-                    db.session.delete(sub)
-                except Exception:
-                    pass
-        try:
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-
-    for sub in subscriptions:
-        if sub.device_token and sub.device_token not in invalid:
-            try:
-                sub.update_last_used()
-            except Exception:
-                pass
-
-    return delivered
+        logger.debug("Idle push failed for user %s: %s", getattr(user, "username", user.id), e)
 
 
 def send_smart_reminder_push_notifications():
@@ -1245,9 +1221,6 @@ def _deliver_push_to_subscriptions(user, subscriptions, note) -> int:
     }
     delivered = 0
     for sub in subscriptions:
-        # Skip FCM device rows (handled by _deliver_fcm_to_devices).
-        if getattr(sub, "device_token", None) or str(getattr(sub, "endpoint", "") or "").startswith("fcm://"):
-            continue
         try:
             webpush(
                 subscription_info={"endpoint": sub.endpoint, "keys": sub.keys or {}},

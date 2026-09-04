@@ -1415,6 +1415,12 @@ def settings():
         settings_obj.single_active_timer = request.form.get("single_active_timer") == "on"
         settings_obj.allow_self_register = request.form.get("allow_self_register") == "on"
         settings_obj.idle_timeout_minutes = int(request.form.get("idle_timeout_minutes", 30))
+        try:
+            settings_obj.idle_auto_stop_hours = max(
+                0, min(168, int(request.form.get("idle_auto_stop_hours", 0) or 0))
+            )
+        except (TypeError, ValueError):
+            settings_obj.idle_auto_stop_hours = getattr(settings_obj, "idle_auto_stop_hours", 0) or 0
         settings_obj.backup_retention_days = int(request.form.get("backup_retention_days", 30))
         settings_obj.backup_time = request.form.get("backup_time", "02:00")
         settings_obj.export_delimiter = request.form.get("export_delimiter", ",")
