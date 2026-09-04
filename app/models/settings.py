@@ -73,6 +73,9 @@ class Settings(db.Model):
     single_active_timer = db.Column(db.Boolean, default=True, nullable=False)
     allow_self_register = db.Column(db.Boolean, default=True, nullable=False)
     idle_timeout_minutes = db.Column(db.Integer, default=30, nullable=False)
+    # Safety cap: auto-stop a running timer flagged for review after N hours
+    # unanswered (credited back to last activity). 0 disables the cap.
+    idle_auto_stop_hours = db.Column(db.Integer, default=0, nullable=False)
     backup_retention_days = db.Column(db.Integer, default=30, nullable=False)
     backup_time = db.Column(db.String(5), default="02:00", nullable=False)  # HH:MM format
     export_delimiter = db.Column(db.String(1), default=",", nullable=False)
@@ -275,6 +278,7 @@ class Settings(db.Model):
         self.single_active_timer = kwargs.get("single_active_timer", Config.SINGLE_ACTIVE_TIMER)
         self.allow_self_register = kwargs.get("allow_self_register", Config.ALLOW_SELF_REGISTER)
         self.idle_timeout_minutes = kwargs.get("idle_timeout_minutes", Config.IDLE_TIMEOUT_MINUTES)
+        self.idle_auto_stop_hours = kwargs.get("idle_auto_stop_hours", 0)
         self.backup_retention_days = kwargs.get("backup_retention_days", Config.BACKUP_RETENTION_DAYS)
         self.backup_time = kwargs.get("backup_time", Config.BACKUP_TIME)
         self.export_delimiter = kwargs.get("export_delimiter", ",")
@@ -587,6 +591,7 @@ class Settings(db.Model):
             "single_active_timer": self.single_active_timer,
             "allow_self_register": self.allow_self_register,
             "idle_timeout_minutes": self.idle_timeout_minutes,
+            "idle_auto_stop_hours": getattr(self, "idle_auto_stop_hours", 0),
             "backup_retention_days": self.backup_retention_days,
             "backup_time": self.backup_time,
             "export_delimiter": self.export_delimiter,
@@ -924,6 +929,7 @@ class Settings(db.Model):
             "SINGLE_ACTIVE_TIMER": "single_active_timer",
             "ALLOW_SELF_REGISTER": "allow_self_register",
             "IDLE_TIMEOUT_MINUTES": "idle_timeout_minutes",
+            "IDLE_AUTO_STOP_HOURS": "idle_auto_stop_hours",
             "BACKUP_RETENTION_DAYS": "backup_retention_days",
             "BACKUP_TIME": "backup_time",
             "DEFAULT_DAILY_WORKING_HOURS": "default_daily_working_hours",

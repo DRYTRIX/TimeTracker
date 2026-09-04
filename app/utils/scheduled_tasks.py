@@ -901,12 +901,16 @@ def check_idle_timers():
     is older than ``settings.idle_timeout_minutes``:
 
     1. First pass: set ``idle_notified_at`` and send a browser push "Still working?".
-    2. Second pass (after 5-minute grace): auto-stop the timer at
-       ``last_active + idle_timeout`` so a forgotten timer still records at least
-       the configured idle window (Issue #722 — not 0 minutes).
+    2. Second pass (after 5-minute grace): flag the timer ``needs_review``
+       (``idle_flagged_at``) and KEEP IT RUNNING — a missed notification must never
+       silently truncate recorded time. Users resolve the flag via
+       ``POST /api/v1/timer/review`` (trim / keep / continue).
+    3. Optional safety cap: if ``settings.idle_auto_stop_hours`` > 0 and the timer
+       stays flagged (and running) beyond that many hours, stop it credited to
+       ``last_active + idle_timeout`` and keep the review flag set.
 
     Clients that keep sending heartbeats keep ``last_heartbeat_at`` fresh and
-    clear ``idle_notified_at``, so they are never auto-stopped while active.
+    clear ``idle_notified_at`` / ``idle_flagged_at``, so active users are never flagged.
     """
     from app.models import Settings
     from app.models.time_entry import local_now
@@ -915,8 +919,10 @@ def check_idle_timers():
         settings = Settings.get_settings()
         idle_minutes = int(getattr(settings, "idle_timeout_minutes", None) or 30)
         idle_minutes = max(1, min(480, idle_minutes))
+        auto_stop_hours = int(getattr(settings, "idle_auto_stop_hours", 0) or 0)
         threshold = timedelta(minutes=idle_minutes)
         grace = timedelta(minutes=5)
+        cap = timedelta(hours=auto_stop_hours) if auto_stop_hours > 0 else None
         now = local_now()
         cutoff = now - threshold
 
@@ -938,7 +944,8 @@ def check_idle_timers():
             return 0
 
         notified = 0
-        stopped = 0
+        flagged = 0
+        capped_stops = 0
         for entry in stale:
             try:
                 if entry.idle_notified_at is None:
@@ -956,40 +963,64 @@ def check_idle_timers():
                     if getattr(notified_at, "tzinfo", None) is not None:
                         notified_at = notified_at.replace(tzinfo=None)
                     if (now - notified_at) >= grace:
-                        # Credit the configured idle window: stop at last known
-                        # activity + threshold (not last_active alone, which
-                        # recorded 0 min when heartbeats never arrived).
-                        last_active = entry.last_heartbeat_at or entry.start_time
-                        if getattr(last_active, "tzinfo", None) is not None:
-                            last_active = last_active.replace(tzinfo=None)
-                        stop_at = last_active + threshold if last_active else now
-                        if stop_at > now:
-                            stop_at = now
-                        # stop_timer commits; avoid double-commit issues by calling it last
-                        entry_id = entry.id
-                        user_id = entry.user_id
-                        entry.stop_timer(end_time=stop_at)
-                        stopped += 1
-                        logger.info(
-                            "Idle auto-stop timer %s user=%s at %s",
-                            entry_id,
-                            user_id,
-                            stop_at,
-                        )
-                        try:
-                            from app import socketio
-
-                            socketio.emit(
-                                "timer_stopped",
-                                {
-                                    "user_id": user_id,
-                                    "timer_id": entry_id,
-                                    "duration": entry.duration_formatted,
-                                    "reason": "idle_timeout",
-                                },
+                        if entry.idle_flagged_at is None:
+                            entry.idle_flagged_at = now
+                            entry.updated_at = now
+                            flagged += 1
+                            logger.info(
+                                "Idle needs-review flag set for timer %s user=%s (timer keeps running)",
+                                entry.id,
+                                entry.user_id,
                             )
-                        except Exception as emit_err:
-                            logger.debug("socketio emit after idle stop failed: %s", emit_err)
+                            _emit_timer_event(
+                                "timer_needs_review",
+                                {
+                                    "user_id": entry.user_id,
+                                    "timer_id": entry.id,
+                                    "reason": "idle_needs_review",
+                                    "message": (
+                                        "Your timer kept running while you were idle and now needs review. "
+                                        "Trim it to your last activity or keep the time."
+                                    ),
+                                },
+                                user_id=entry.user_id,
+                            )
+                        elif cap is not None:
+                            flagged_at = entry.idle_flagged_at
+                            if getattr(flagged_at, "tzinfo", None) is not None:
+                                flagged_at = flagged_at.replace(tzinfo=None)
+                            if (now - flagged_at) >= cap:
+                                # Safety cap: credit the configured idle window and stop,
+                                # but keep the review flag so the user can adjust afterwards.
+                                last_active = entry.last_heartbeat_at or entry.start_time
+                                if getattr(last_active, "tzinfo", None) is not None:
+                                    last_active = last_active.replace(tzinfo=None)
+                                stop_at = last_active + threshold if last_active else now
+                                if stop_at > now:
+                                    stop_at = now
+                                entry_id = entry.id
+                                user_id = entry.user_id
+                                entry.stop_timer(end_time=stop_at)
+                                entry.idle_flagged_at = now
+                                entry.updated_at = now
+                                db.session.commit()
+                                capped_stops += 1
+                                logger.info(
+                                    "Idle safety-cap stop for timer %s user=%s at %s (still needs review)",
+                                    entry_id,
+                                    user_id,
+                                    stop_at,
+                                )
+                                _emit_timer_event(
+                                    "timer_stopped",
+                                    {
+                                        "user_id": user_id,
+                                        "timer_id": entry_id,
+                                        "duration": entry.duration_formatted,
+                                        "reason": "idle_auto_stop_cap",
+                                    },
+                                    user_id=user_id,
+                                )
             except Exception as e:
                 logger.warning(
                     "Idle check failed for entry %s: %s",
@@ -1004,9 +1035,11 @@ def check_idle_timers():
             logger.warning("Idle check commit failed: %s", e)
             db.session.rollback()
 
-        if notified or stopped:
-            logger.info("Idle check: notified=%d stopped=%d", notified, stopped)
-        return notified + stopped
+        if notified or flagged or capped_stops:
+            logger.info(
+                "Idle check: notified=%d flagged=%d cap_stopped=%d", notified, flagged, capped_stops
+            )
+        return notified + flagged + capped_stops
     except Exception as e:
         logger.error("Error in check_idle_timers: %s", e)
         try:
@@ -1014,6 +1047,20 @@ def check_idle_timers():
         except Exception:
             pass
         return 0
+
+
+def _emit_timer_event(event, payload, user_id=None):
+    """Emit a Socket.IO event to the user's room (best-effort, in-tab prompt only)."""
+    try:
+        from app import socketio
+
+        room = f"user_{user_id}" if user_id is not None else None
+        if room:
+            socketio.emit(event, payload, room=room)
+        else:
+            socketio.emit(event, payload)
+    except Exception as e:
+        logger.debug("socketio emit %s failed: %s", event, e)
 
 
 def _send_idle_push(entry):
@@ -1038,7 +1085,7 @@ def _send_idle_push(entry):
     note = {
         "kind": "idle_timeout",
         "title": "Still working?",
-        "message": "Your timer has been idle. Confirm you are still working or it will stop automatically.",
+        "message": "Your timer has been idle. Confirm you are still working or it will be flagged for review.",
         "type": "warning",
         "action": {"url": "/", "label": "Open TimeTracker"},
         "timer_id": entry.id,

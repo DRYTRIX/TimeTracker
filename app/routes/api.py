@@ -334,6 +334,7 @@ def timer_status():
                 "current_duration": active_timer.current_duration_seconds,
                 "duration_formatted": active_timer.duration_formatted,
                 "idle_notified": bool(active_timer.idle_notified_at),
+                "needs_review": bool(active_timer.idle_flagged_at),
                 "last_heartbeat_at": (
                     active_timer.last_heartbeat_at.isoformat() if active_timer.last_heartbeat_at else None
                 ),
@@ -394,6 +395,71 @@ def api_timer_heartbeat():
         return jsonify({"error": "Failed to record heartbeat"}), 500
 
     return ("", 204)
+
+
+@api_bp.route("/api/timer/review", methods=["POST"])
+@login_required
+@deprecated_session_api("/api/v1/timer/review")
+def api_timer_review():
+    """Resolve an idle needs-review flag on the active timer.
+
+    Body: {"action": "trim" | "keep" | "continue", "end_time": optional ISO (for "keep")}
+    - trim: stop credited to last activity + idle timeout (the old auto-stop behaviour)
+    - keep: stop at now (or the provided end_time)
+    - continue: clear the flag and keep the timer running (user is actually working)
+    """
+    from app.models import Settings
+    from app.models.time_entry import local_now
+    from app.utils.db import safe_commit
+
+    data = request.get_json(silent=True) or {}
+    action = (data.get("action") or "").strip().lower()
+    if action not in ("trim", "keep", "continue"):
+        return jsonify({"error": "action must be trim, keep or continue"}), 400
+
+    active_timer = current_user.active_timer
+    if not active_timer:
+        return jsonify({"error": "No active timer"}), 400
+
+    try:
+        if action == "continue":
+            active_timer.clear_idle_flags()
+            active_timer.last_heartbeat_at = local_now()
+            if not safe_commit("timer_review", {"user_id": current_user.id, "entry_id": active_timer.id}):
+                db.session.rollback()
+                return jsonify({"error": "Failed to resolve review"}), 500
+            return jsonify({"ok": True, "stopped": False})
+
+        if action == "keep" and data.get("end_time"):
+            try:
+                end_time = datetime.fromisoformat(data["end_time"])
+            except ValueError:
+                return jsonify({"error": "invalid end_time"}), 400
+            if end_time <= active_timer.start_time:
+                return jsonify({"error": "end_time must be after start_time"}), 400
+            active_timer.stop_timer(end_time=end_time)
+        elif action == "trim":
+            settings = Settings.get_settings()
+            idle_minutes = max(1, min(480, int(getattr(settings, "idle_timeout_minutes", 30) or 30)))
+            last_active = active_timer.last_heartbeat_at or active_timer.start_time
+            if getattr(last_active, "tzinfo", None) is not None:
+                last_active = last_active.replace(tzinfo=None)
+            stop_at = last_active + timedelta(minutes=idle_minutes)
+            now = local_now()
+            if stop_at > now:
+                stop_at = now
+            active_timer.stop_timer(end_time=stop_at)
+        else:  # keep at now
+            active_timer.stop_timer()
+
+        return jsonify({"ok": True, "stopped": True, "time_entry": active_timer.to_dict()})
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.warning("Timer review failed: %s", e)
+        return jsonify({"error": "Failed to resolve review"}), 500
 
 
 @api_bp.route("/api/tags")

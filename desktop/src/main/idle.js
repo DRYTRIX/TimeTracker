@@ -3,8 +3,10 @@
  *
  * Polls powerMonitor.getSystemIdleTime() every 60s. When an active timer is
  * running and the OS idle time exceeds idle_timeout_minutes, shows a
- * "Still working?" notification, notifies the renderer, and after a 5-minute
- * grace window auto-stops the timer via the API (backdated to last activity).
+ * "Still working?" notification and notifies the renderer. If the 5-minute
+ * grace window expires unanswered, the timer KEEPS RUNNING and is flagged
+ * for review (server sets idle_flagged_at) — recorded time is never
+ * silently truncated.
  */
 
 const { powerMonitor, Notification, net } = require('electron');
@@ -26,6 +28,7 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
   let timerActive = false;
   let idleTimeoutMinutes = DEFAULT_IDLE_TIMEOUT_MINUTES;
   let stopAtMs = null;
+  let needsReviewNotifiedFor = null;
 
   function clearGrace() {
     if (graceTimer) {
@@ -90,12 +93,39 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
       if (!Notification.isSupported()) return;
       const notification = new Notification({
         title: 'Still working?',
-        body: `Your timer will stop in 5 minutes if you do not answer.`,
+        body: 'Answer within 5 minutes or the timer will be flagged for review (it keeps running).',
         urgency: 'critical',
       });
       notification.on('click', () => {
         focusMainWindow();
         confirmStillWorking();
+      });
+      notification.show();
+    } catch (e) {
+      console.debug('[IdleMonitor] notification failed:', e.message);
+    }
+  }
+
+  /** Grace expired unanswered: keep the timer running, flag for review. */
+  function flagNeedsReview() {
+    clearGrace();
+    if (!timerActive) return;
+    showNeedsReviewNotification();
+    sendToMainWindow('idle:needs-review', {
+      idleTimeoutMinutes,
+    });
+  }
+
+  function showNeedsReviewNotification() {
+    try {
+      if (!Notification.isSupported()) return;
+      const notification = new Notification({
+        title: 'Timer needs review',
+        body: 'You were idle and did not answer. Your timer kept running — trim the idle time or stop it.',
+        urgency: 'critical',
+      });
+      notification.on('click', () => {
+        focusMainWindow();
       });
       notification.show();
     } catch (e) {
@@ -115,16 +145,8 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
     });
     focusMainWindow();
     graceTimer = setTimeout(() => {
-      autoStop();
+      flagNeedsReview();
     }, GRACE_MS);
-  }
-
-  async function autoStop() {
-    const at = stopAtMs;
-    clearGrace();
-    if (!timerActive) return;
-    timerActive = false;
-    await stopTimerAt(at);
   }
 
   async function confirmStillWorking() {
@@ -148,12 +170,24 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
     }
     if (!active) {
       clearGrace();
+      needsReviewNotifiedFor = null;
       return;
     }
     // Server already marked this timer idle (#722) — show prompt even if OS idle
     // time has not crossed the threshold yet (e.g. after reconnect).
-    if (data && data.idle_notified && !promptShown) {
+    const timer = (data && data.timer) || {};
+    const idleNotified = Boolean(data.idle_notified || timer.idle_notified);
+    const needsReview = Boolean(data.needs_review || timer.needs_review);
+    if (idleNotified && !promptShown && !needsReview) {
       beginGrace();
+    }
+    // Server flagged the timer for review (grace expired elsewhere) — surface it.
+    if (needsReview && needsReviewNotifiedFor !== timer.id) {
+      needsReviewNotifiedFor = timer.id || 'unknown';
+      showNeedsReviewNotification();
+      sendToMainWindow('idle:needs-review', { idleTimeoutMinutes });
+    } else if (!needsReview) {
+      needsReviewNotifiedFor = null;
     }
   }
 

@@ -18,6 +18,7 @@
   let lastHeartbeatSent = 0;
   let hasActiveTimer = false;
   let notificationPermissionRequested = false;
+  let pushEnsureAttempted = false;
   let activeIdleNotification = null;
   const HEARTBEAT_THROTTLE_MS = 60 * 1000;
 
@@ -47,7 +48,11 @@
     }
     notificationPermissionRequested = true;
     try {
-      Notification.requestPermission().catch(function(){});
+      Notification.requestPermission().then(function(permission){
+        if (permission === 'granted' && window.__ttEnsurePushSubscription) {
+          try { window.__ttEnsurePushSubscription(); } catch(e) {}
+        }
+      }).catch(function(){});
     } catch(e) {}
   }
 
@@ -60,12 +65,6 @@
     } catch(e) {
       activeIdleNotification = null;
     }
-  }
-
-  /** Credit the idle window on auto-stop: last_active + threshold (Issue #722). */
-  function creditedStopTs(lastActiveTs){
-    const credited = (lastActiveTs || Date.now()) + getIdleThresholdMs();
-    return Math.min(credited, Date.now());
   }
 
   function markActive(){
@@ -164,6 +163,49 @@
     try { if (toastEl) toastEl.remove(); } catch(e) {}
   }
 
+  // ---------------------------------------------------------------------------
+  // Needs-review banner: idle grace expired unanswered. The timer keeps running
+  // on the server (idle_flagged_at); the user resolves it explicitly.
+  // ---------------------------------------------------------------------------
+  let reviewShownForTimerId = null;
+  let reviewBannerOpen = false;
+
+  async function resolveIdleReview(action){
+    try {
+      const r = await fetch('/api/timer/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: action }),
+        __ttQuiet: true,
+      });
+      if (r.ok){
+        const j = await r.json().catch(function(){ return {}; });
+        const msg = j && j.stopped
+          ? (window.i18n?.messages?.timerStopped || 'Timer stopped')
+          : (window.i18n?.messages?.stillWorkingYes || 'Great — timer continues');
+        if (window.toastManager && window.toastManager.success) window.toastManager.success(msg, '', 5000);
+        await refreshTimerUiAfterStop();
+      }
+    } catch(e) {}
+  }
+
+  function showNeedsReviewBanner(){
+    if (reviewBannerOpen || promptShown) return;
+    reviewBannerOpen = true;
+    const trimLabel = window.i18n?.messages?.stillWorkingTrim || 'Trim idle time';
+    const stopLabel = window.i18n?.messages?.timerStopped || 'Stop timer now';
+    const contLabel = window.i18n?.messages?.stillWorkingYes || 'I am still working';
+    const msg = escapeHtml(
+      window.i18n?.messages?.idleNeedsReview ||
+      'We could not reach you while you were idle. Your timer kept running — trim it back to your last activity, stop it now, or keep working.'
+    );
+    buildReminderToast('blue', msg, [
+      { label: trimLabel, style: 'primary', onClick: function(){ resolveIdleReview('trim'); } },
+      { label: stopLabel, style: 'secondary', onClick: function(){ resolveIdleReview('keep'); } },
+      { label: contLabel, style: 'link', onClick: function(){ resolveIdleReview('continue'); } }
+    ], 0, function(){ reviewBannerOpen = false; });
+  }
+
   function showNativeIdleNotification(stopTs, onStillWorking){
     if (typeof Notification === 'undefined') return;
     if (Notification.permission !== 'granted') return;
@@ -172,7 +214,7 @@
       const title = window.i18n?.messages?.stillWorkingTitle || 'Still working?';
       const body = window.i18n?.messages?.stillWorkingPrompt ||
         ('You seem inactive since ' + formatTime(new Date(stopTs)) +
-         '. Click to confirm you are still working, or the timer will stop automatically.');
+         '. Click to confirm you are still working, or the timer will be flagged for review.');
       const n = new Notification(title, {
         body: body,
         tag: 'tt-still-working',
@@ -201,11 +243,9 @@
     const trimLabel = window.i18n?.messages?.stillWorkingTrim || 'Keep until idle';
     const baseMsg = window.i18n?.messages?.stillWorkingPrompt ||
       ('Still working? You seem inactive since ' + formatTime(new Date(stopTs)) +
-       '. Timer will stop automatically if you do not answer.');
+       '. If you do not answer, the timer keeps running and is flagged for review.');
 
     const deadline = Date.now() + GRACE_MS;
-    // Auto-stop credits the idle window (last activity + threshold), not 0 min.
-    const autoStopTs = creditedStopTs(stopTs);
 
     function buildMessage(){
       return baseMsg + ' (' + formatCountdown(deadline - Date.now()) + ')';
@@ -224,10 +264,13 @@
       }, 1000);
 
       graceTimerId = setTimeout(function(){
+        // Unanswered prompt: the timer KEEPS RUNNING and is flagged for review
+        // (server sets idle_flagged_at). Never silently truncate recorded time.
         clearGraceTimers();
         closeIdleNotification();
+        promptShown = false;
         try { toastEl.remove(); } catch(e){}
-        stopAt(autoStopTs);
+        showNeedsReviewBanner(null);
       }, GRACE_MS);
     }
 
@@ -318,8 +361,25 @@
     hasActiveTimer = !!active;
     if (!active) return;
     requestNotificationPermission();
+    // Make sure a Web Push subscription exists while a timer runs so the server
+    // can reach us with "Still working?" even when this tab is closed/hidden.
+    if (!pushEnsureAttempted && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      pushEnsureAttempted = true;
+      if (typeof window.__ttEnsurePushSubscription === 'function') {
+        try { window.__ttEnsurePushSubscription(); } catch(e) {}
+      }
+    }
     // Send periodic heartbeat while tab is open (throttled to HEARTBEAT_THROTTLE_MS)
     if (!promptShown) sendHeartbeat();
+    // Server flagged this timer for review (idle grace expired elsewhere): show banner.
+    if (active.needs_review){
+      if (reviewShownForTimerId !== active.id){
+        reviewShownForTimerId = active.id;
+        showNeedsReviewBanner();
+      }
+    } else if (reviewShownForTimerId === active.id) {
+      reviewShownForTimerId = null;
+    }
     const threshold = getIdleThresholdMs();
     const idleFor = Date.now() - lastActivity;
     if (idleFor >= threshold){
@@ -563,6 +623,9 @@
   // Allow Socket.IO / other modules to trigger the same prompt (Issue #722)
   window.__ttShowIdlePrompt = function(stopTs){
     showIdlePrompt(stopTs || (Date.now() - getIdleThresholdMs()));
+  };
+  window.__ttShowNeedsReview = function(){
+    showNeedsReviewBanner();
   };
 })();
 

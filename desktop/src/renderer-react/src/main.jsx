@@ -301,7 +301,7 @@ function App() {
 
     const unsubPrompt = window.electronAPI.onIdlePrompt((payload) => {
       const ok = window.confirm(
-        'Still working? Your timer will stop automatically if you do not confirm.\n\nPress OK if you are still working, or Cancel to stop the timer now.',
+        'Still working? If you do not confirm, the timer keeps running and will be flagged for review.\n\nPress OK if you are still working, or Cancel to stop the timer now.',
       );
       if (ok) {
         window.electronAPI.idleStillWorking();
@@ -317,11 +317,16 @@ function App() {
     const unsubDismissed = window.electronAPI.onIdleDismissed?.(() => {
       // no-op; heartbeat already sent from main
     });
+    const unsubNeedsReview = window.electronAPI.onIdleNeedsReview?.(() => {
+      refreshCoreData();
+      showToast('Timer flagged for review — it kept running while you were idle', 'warning');
+    });
 
     return () => {
       if (typeof unsubPrompt === 'function') unsubPrompt();
       if (typeof unsubStopped === 'function') unsubStopped();
       if (typeof unsubDismissed === 'function') unsubDismissed();
+      if (typeof unsubNeedsReview === 'function') unsubNeedsReview();
     };
   }, [apiClient, refreshCoreData, showToast]);
 

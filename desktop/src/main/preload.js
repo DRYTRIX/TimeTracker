@@ -67,6 +67,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('idle:timer-stopped', handler);
     return () => ipcRenderer.removeListener('idle:timer-stopped', handler);
   },
+  onIdleNeedsReview: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('idle:needs-review', handler);
+    return () => ipcRenderer.removeListener('idle:needs-review', handler);
+  },
   idleStillWorking: () => ipcRenderer.send('idle:still-working'),
   idleStop: () => ipcRenderer.send('idle:stop'),
   

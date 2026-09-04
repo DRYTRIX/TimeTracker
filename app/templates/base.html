@@ -119,6 +119,7 @@
 
         {% if current_user.is_authenticated %}
         <meta name="idle-timeout-minutes" content="{{ settings.idle_timeout_minutes if settings else 30 }}">
+        <meta name="vapid-public-key" content="{{ config.VAPID_PUBLIC_KEY if config.VAPID_PUBLIC_KEY else '' }}">
         <meta name="long-entry-threshold-hours" content="8">
         {% endif %}
 
@@ -284,6 +285,11 @@
                             window.toastManager.warning(data.message || 'Still working?', data.title || 'Idle timer');
                         }
                     } catch (e) {}
+                });
+                // Grace expired elsewhere (tab closed): timer keeps running and is
+                // flagged for review — show the review banner in any open tab.
+                socket.on('timer_needs_review', function(data){
+                    try { window.__ttShowNeedsReview && window.__ttShowNeedsReview(); } catch (e) {}
                 });
             } catch (e) {
                 console.error('Mention socket init failed', e);

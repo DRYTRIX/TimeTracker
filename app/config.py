@@ -52,6 +52,12 @@ class Config:
     SINGLE_ACTIVE_TIMER = os.getenv("SINGLE_ACTIVE_TIMER", "true").lower() == "true"
     IDLE_TIMEOUT_MINUTES = int(os.getenv("IDLE_TIMEOUT_MINUTES", 30))
 
+    # Web Push (VAPID) — required for browser push notifications ("Still working?"
+    # idle alerts with the tab closed, smart reminders). Generate e.g. with py_vapid.
+    VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")
+    VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
+    VAPID_CONTACT_EMAIL = os.getenv("VAPID_CONTACT_EMAIL", "")
+
     # User management (default false for production-safe deployments)
     ALLOW_SELF_REGISTER = os.getenv("ALLOW_SELF_REGISTER", "false").lower() == "true"
     ADMIN_USERNAMES = [u.strip() for u in os.getenv("ADMIN_USERNAMES", "admin").split(",") if u.strip()]
