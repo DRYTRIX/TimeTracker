@@ -929,6 +929,10 @@ def check_idle_timers():
         stale = (
             TimeEntry.query.filter(
                 TimeEntry.end_time.is_(None),
+                # A paused timer is intentionally accumulating no time, so the idle
+                # sweep must never notify or auto-stop it. ``paused_at`` was added
+                # with the pause/resume feature but not wired into this query.
+                TimeEntry.paused_at.is_(None),
                 db.or_(
                     TimeEntry.last_heartbeat_at < cutoff,
                     db.and_(
