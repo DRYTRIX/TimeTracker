@@ -106,7 +106,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label for="client_id" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Client') }}</label>
-                            {{ client_select('client_id', clients, selected_id=selected_client_id, required=False, only_one_client=false, single_client=none, searchable=True, force_selectable=True, can_create=can_create_clients|default(false)) }}
+                            {{ client_select('client_id', clients, selected_id=selected_client_id, required=False, only_one_client=false, single_client=none, searchable=True, can_create=can_create_clients|default(false)) }}
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select a client first, then optionally a project. Type to search or create.') }}</p>
                         </div>
                         <div>
