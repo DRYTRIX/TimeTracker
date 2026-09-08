@@ -410,6 +410,10 @@ def format_local_datetime(utc_dt, format_str="%Y-%m-%d %H:%M"):
     if utc_dt is None:
         return ""
 
+    # Plain calendar dates have no time component; timezone conversion does not apply.
+    if isinstance(utc_dt, date) and not isinstance(utc_dt, datetime):
+        return utc_dt.strftime(format_str)
+
     local_dt = utc_to_local(utc_dt)
     return local_dt.strftime(format_str)
 

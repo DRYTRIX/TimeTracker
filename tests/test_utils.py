@@ -62,6 +62,21 @@ def test_local_date_filter(app):
 
 @pytest.mark.unit
 @pytest.mark.utils
+def test_local_date_filter_plain_date(app):
+    """Test local_date filter accepts plain date objects (e.g. Task.due_date)."""
+    register_template_filters(app)
+    with app.app_context():
+        filter_func = app.jinja_env.filters.get("local_date")
+        plain_date = datetime.date(2024, 1, 15)
+        result = filter_func(plain_date)
+        assert result is not None
+        assert isinstance(result, str)
+        assert "2024" in result
+        assert "15" in result or "01" in result
+
+
+@pytest.mark.unit
+@pytest.mark.utils
 def test_local_date_filter_none(app):
     """Test local_date filter with None."""
     register_template_filters(app)

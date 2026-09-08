@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.13.5
+
+**Patch (5.13.5):** **Timezone `local_date`** — date-only values (e.g. task due dates) no longer crash the dashboard filter. **Idle skip paused (#752)** — paused timers are excluded from idle notify / needs-review / auto-stop. **Manual entry single-client (#753)** — restores the readonly pre-filled client lock when the org has one client. See [CHANGELOG.md](CHANGELOG.md#5135---2026-09-08).
+
 ### ✨ Highlights of v5.13.4
 
 **Patch (5.13.4):** **Alembic multiple heads** — merge migration `184_merge_183_heads` rejoins the parallel `183` device-token and idle needs-review branches so `flask db upgrade` has a single head. See [CHANGELOG.md](CHANGELOG.md#5134---2026-09-04).
