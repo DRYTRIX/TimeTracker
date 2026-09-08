@@ -52,6 +52,9 @@ class IdleDetectionService with WidgetsBindingObserver {
 
   bool get isRunning => _started;
 
+  /// True while the grace window of a shown "Still working?" prompt is open.
+  bool get isPromptActive => _promptShown;
+
   Future<void> start(TimeTrackingRepository? repository) async {
     _repository = repository;
     if (_started) return;
@@ -70,6 +73,12 @@ class IdleDetectionService with WidgetsBindingObserver {
     NotificationService.instance.onIdleAction = respondToIdlePrompt;
     NotificationService.instance.onIdlePush = _onIdlePushFromServer;
     _registerForegroundTaskCallback();
+
+    // The app may have been cold-started by an idle prompt action tap.
+    final pending = NotificationService.instance.consumePendingIdleAction();
+    if (pending != null) {
+      await respondToIdlePrompt(pending);
+    }
   }
 
   void stop() {
@@ -86,6 +95,7 @@ class IdleDetectionService with WidgetsBindingObserver {
     _promptShown = false;
     NotificationService.instance.onIdleAction = null;
     NotificationService.instance.onIdlePush = null;
+    NotificationService.instance.onIdlePromptOpened = null;
   }
 
   void setRepository(TimeTrackingRepository? repository) {

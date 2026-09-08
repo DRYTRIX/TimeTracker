@@ -85,6 +85,15 @@ class NotificationService {
   /// Called when an FCM idle_timeout data message arrives (foreground/background open).
   void Function(Map<String, dynamic> data)? onIdlePush;
 
+  /// Callback when the user taps the idle prompt / needs-review notification
+  /// body and the app should surface the prompt UI in-app.
+  void Function()? onIdlePromptOpened;
+
+  // Taps can arrive (via launch details) before the services that register
+  // the callbacks above — buffer them so nothing is lost on a cold start.
+  IdlePromptAction? _pendingIdleAction;
+  bool _pendingPromptOpened = false;
+
   bool get isShowing => _isShowing;
   bool get firebaseReady => _firebaseReady;
 
@@ -103,6 +112,7 @@ class NotificationService {
       await _initLocalNotifications();
       await _requestPermissions();
       await _initFirebaseMessaging();
+      await _handleLaunchNotification();
     } catch (e, st) {
       debugPrint('NotificationService.initialize failed: $e\n$st');
     }
@@ -232,7 +242,7 @@ class NotificationService {
 
     await _localNotifications.initialize(
       settings,
-      onDidReceiveNotificationResponse: _onNotificationTapped,
+      onDidReceiveNotificationResponse: _handleNotificationResponse,
     );
 
     // Ensure the Android channel exists for any local-notification fallback.
@@ -276,23 +286,67 @@ class NotificationService {
     }
   }
 
-  void _onNotificationTapped(NotificationResponse response) {
+  /// If the app was started by tapping the notification (cold start), the
+  /// callbacks are not registered yet — route the response through the normal
+  /// handler, which buffers until [consumePendingIdleAction] /
+  /// [consumePendingPromptOpened] pick it up.
+  Future<void> _handleLaunchNotification() async {
+    try {
+      final details = await _localNotifications.getNotificationAppLaunchDetails();
+      final response = details?.notificationResponse;
+      if (details?.didNotificationLaunchApp == true && response != null) {
+        _handleNotificationResponse(response);
+      }
+    } catch (e, st) {
+      debugPrint('NotificationService.handleLaunchNotification failed: $e\n$st');
+    }
+  }
+
+  void _handleNotificationResponse(NotificationResponse response) {
     debugPrint(
       'Notification tapped: payload=${response.payload} action=${response.actionId}',
     );
     final actionId = response.actionId;
     if (actionId == 'idle_yes') {
-      onIdleAction?.call(IdlePromptAction.stillWorking);
+      _deliverIdleAction(IdlePromptAction.stillWorking);
       return;
     }
     if (actionId == 'idle_no') {
-      onIdleAction?.call(IdlePromptAction.stop);
+      _deliverIdleAction(IdlePromptAction.stop);
       return;
     }
-    if (response.payload == 'idle_prompt') {
-      // Body tap = still working
-      onIdleAction?.call(IdlePromptAction.stillWorking);
+    if (response.payload == 'idle_prompt' ||
+        response.payload == 'idle_needs_review') {
+      // Body tap: open the app so the user can answer in-app.
+      if (onIdlePromptOpened != null) {
+        onIdlePromptOpened!();
+      } else {
+        _pendingPromptOpened = true;
+      }
     }
+  }
+
+  void _deliverIdleAction(IdlePromptAction action) {
+    if (onIdleAction != null) {
+      onIdleAction!(action);
+    } else {
+      _pendingIdleAction = action;
+    }
+  }
+
+  /// Returns and clears a Yes/No action tapped before a listener registered.
+  IdlePromptAction? consumePendingIdleAction() {
+    final action = _pendingIdleAction;
+    _pendingIdleAction = null;
+    return action;
+  }
+
+  /// Returns and clears whether the notification body was tapped before a
+  /// listener registered (app cold start).
+  bool consumePendingPromptOpened() {
+    final opened = _pendingPromptOpened;
+    _pendingPromptOpened = false;
+    return opened;
   }
 
   /// Show (or refresh) the persistent timer notification.
@@ -443,6 +497,10 @@ class NotificationService {
           importance: Importance.high,
           priority: Priority.high,
           category: AndroidNotificationCategory.alarm,
+          ticker: 'Still working?',
+          // Forces a heads-up banner on MIUI/HyperOS, which otherwise hides
+          // the action buttons behind the expanded view.
+          fullScreenIntent: true,
           ongoing: true,
           autoCancel: false,
           actions: const <AndroidNotificationAction>[

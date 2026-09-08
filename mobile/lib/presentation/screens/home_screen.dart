@@ -9,6 +9,8 @@ import '../providers/time_entries_provider.dart';
 import '../providers/projects_provider.dart';
 import '../providers/user_prefs_provider.dart';
 import 'package:timetracker_mobile/utils/date_format_utils.dart';
+import 'package:timetracker_mobile/core/services/idle_detection_service.dart';
+import 'package:timetracker_mobile/core/services/notification_service.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/workday_card.dart';
 import 'timer_screen.dart';
@@ -28,6 +30,67 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  bool _showingIdleDialog = false;
+
+  @override
+  void initState() {
+    super.initState();
+    NotificationService.instance.onIdlePromptOpened = _showIdlePromptDialog;
+    // The app may have been cold-started by tapping the idle notification.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (NotificationService.instance.consumePendingPromptOpened()) {
+        _showIdlePromptDialog();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    NotificationService.instance.onIdlePromptOpened = null;
+    super.dispose();
+  }
+
+  void _showIdlePromptDialog() {
+    final idle = IdleDetectionService.instance;
+    if (!mounted || _showingIdleDialog || !idle.isRunning) return;
+    setState(() => _showingIdleDialog = true);
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final promptActive = idle.isPromptActive;
+        return AlertDialog(
+          title: Text(promptActive ? 'Still working?' : 'Timer needs review'),
+          content: Text(
+            promptActive
+                ? 'You have been idle. Keep the timer running?'
+                : 'You were idle and did not answer. The timer kept running — trim the idle time or stop it in the timer screen.',
+          ),
+          actions: [
+            if (promptActive)
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                  _showingIdleDialog = false;
+                  idle.respondToIdlePrompt(IdlePromptAction.stop);
+                },
+                child: const Text('No, stop timer'),
+              ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _showingIdleDialog = false;
+                if (promptActive) {
+                  idle.respondToIdlePrompt(IdlePromptAction.stillWorking);
+                }
+              },
+              child: Text(promptActive ? 'Yes, still working' : 'OK'),
+            ),
+          ],
+        );
+      },
+    ).then((_) => _showingIdleDialog = false);
+  }
 
   final List<Widget> _screens = [
     const DashboardTab(),
