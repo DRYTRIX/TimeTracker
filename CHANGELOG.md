@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.13.5] - 2026-09-08
+
+### Fixed
+
+- **Timezone `local_date` crash on plain dates** — Dashboard crashed when `Task.due_date` (a calendar date) was piped through `|local_date`, which assumed a datetime and read `.tzinfo`. Skip timezone conversion for date-only values, matching `format_user_datetime`.
+- **Idle auto-stop on paused timers (#752)** — Paused timers stop heartbeating, so the idle sweep treated them as idle: “Still working?” push, needs-review flag, then optional auto-stop. Guard the idle query on `paused_at IS NULL` so intentionally paused timers are skipped.
+- **Manual entry single-client lock (#753)** — The manual time-entry form passed `force_selectable=True` to the client select, which bypassed the single-client readonly lock. Dropping the flag restores the pre-filled lock when the org has exactly one client.
+
+### Changed
+
+- **Client versions** — Synced Electron (`desktop/package.json`), Flutter (`mobile/pubspec.yaml`), and Chromium extension (`browser-extension/manifest.json` / `package.json`) to **5.13.5** with the webapp (`setup.py`).
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.13.5** (single source of truth for the application version).
+
 ## [5.13.4] - 2026-09-04
 
 ### Fixed
