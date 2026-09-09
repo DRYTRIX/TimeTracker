@@ -708,12 +708,13 @@
                         <select name="ai_provider" id="ai_provider" class="form-input">
                             <option value="ollama" {% if ai_config.provider == 'ollama' %}selected{% endif %}>Ollama / local OpenAI-compatible</option>
                             <option value="openai_compatible" {% if ai_config.provider == 'openai_compatible' %}selected{% endif %}>Hosted OpenAI-compatible</option>
+                            <option value="orcarouter" {% if ai_config.provider == 'orcarouter' %}selected{% endif %}>OrcaRouter (hosted, OpenAI-compatible)</option>
                         </select>
                     </div>
                     <div>
                         <label for="ai_base_url" class="form-label">{{ _('Base URL') }}</label>
                         <input type="url" name="ai_base_url" id="ai_base_url" value="{{ settings.ai_base_url or ai_config.base_url }}" placeholder="http://127.0.0.1:11434" class="form-input">
-                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('For Ollama, this is the URL from the Flask server to Ollama.') }}</p>
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('For Ollama, this is the URL from the Flask server to Ollama. For OrcaRouter, use https://api.orcarouter.ai.') }}</p>
                     </div>
                     <div>
                         <label for="ai_model" class="form-label">{{ _('Model') }}</label>

@@ -1645,7 +1645,7 @@ def settings():
                 settings_obj.ai_enabled = None
 
             ai_provider = (request.form.get("ai_provider") or "ollama").strip().lower()
-            if ai_provider not in ("ollama", "openai_compatible"):
+            if ai_provider not in ("ollama", "openai_compatible", "orcarouter"):
                 ai_provider = "ollama"
             settings_obj.ai_provider = ai_provider
             settings_obj.ai_base_url = (request.form.get("ai_base_url") or "").strip()

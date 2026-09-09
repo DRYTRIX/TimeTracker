@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **OrcaRouter AI provider** — Added `orcarouter` as a named AI provider option (OpenAI-compatible endpoint, standard Bearer-token auth). Admins can select it in System Settings → AI Helper or set `AI_PROVIDER=orcarouter` with `AI_BASE_URL=https://api.orcarouter.ai`.
+
 ## [5.13.5] - 2026-09-08
 
 ### Fixed

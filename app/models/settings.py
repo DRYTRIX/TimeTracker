@@ -467,7 +467,7 @@ class Settings(db.Model):
 
         return {
             "enabled": bool(enabled),
-            "provider": provider if provider in {"ollama", "openai_compatible"} else "ollama",
+            "provider": provider if provider in {"ollama", "openai_compatible", "orcarouter"} else "ollama",
             "base_url": base_url.rstrip("/"),
             "model": model,
             "api_key": api_key if include_secrets else "",
