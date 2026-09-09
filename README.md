@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.14.1
+
+**Patch (5.14.1):** **Docker base images** — Node 20 and Python Bookworm replace expired Bullseye bases so fresh CI/image builds succeed. See [CHANGELOG.md](CHANGELOG.md#5141---2026-09-09).
+
 ### ✨ Highlights of v5.14.0
 
 **Minor (5.14.0):** **OrcaRouter AI provider** — `orcarouter` is now a named AI provider option (OpenAI-compatible endpoint, Bearer-token auth). Select it in System Settings → AI Helper or set `AI_PROVIDER=orcarouter` with `AI_BASE_URL=https://api.orcarouter.ai`. See [CHANGELOG.md](CHANGELOG.md#5140---2026-09-09).

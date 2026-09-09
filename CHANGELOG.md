@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.14.1] - 2026-09-09
+
+### Fixed
+
+- **Docker base images (expired Bullseye security repo)** — Upgrade `node:18-slim` → `node:20-slim` (satisfies sharp’s Node engine) and `python:3.11-slim-bullseye` → `python:3.11-slim-bookworm` so `apt-get update` no longer fails on fresh CI builds after Debian 11’s bullseye-security InRelease expired.
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.14.1** (single source of truth for the application version).
+
 ## [5.14.0] - 2026-09-09
 
 ### Added
