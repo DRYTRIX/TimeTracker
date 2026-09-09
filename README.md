@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.14.0
+
+**Minor (5.14.0):** **OrcaRouter AI provider** — `orcarouter` is now a named AI provider option (OpenAI-compatible endpoint, Bearer-token auth). Select it in System Settings → AI Helper or set `AI_PROVIDER=orcarouter` with `AI_BASE_URL=https://api.orcarouter.ai`. See [CHANGELOG.md](CHANGELOG.md#5140---2026-09-09).
+
 ### ✨ Highlights of v5.13.5
 
 **Patch (5.13.5):** **Timezone `local_date`** — date-only values (e.g. task due dates) no longer crash the dashboard filter. **Idle skip paused (#752)** — paused timers are excluded from idle notify / needs-review / auto-stop. **Manual entry single-client (#753)** — restores the readonly pre-filled client lock when the org has one client. See [CHANGELOG.md](CHANGELOG.md#5135---2026-09-08).
