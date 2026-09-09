@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.4
 
 # --- Stage 1: Frontend Build ---
-FROM node:18-slim as frontend
+FROM node:20-slim as frontend
 WORKDIR /app
 COPY package*.json ./
 # `npm install`, not `npm ci`: package-lock.json is intentionally gitignored
@@ -24,7 +24,7 @@ RUN mkdir -p app/static/dist
 RUN npm run build:docker
 
 # --- Stage 2: Python Application ---
-FROM python:3.11-slim-bullseye
+FROM python:3.11-slim-bookworm
 
 # Build-time version argument with safe default
 ARG APP_VERSION=dev-0
