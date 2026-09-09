@@ -80,7 +80,7 @@ class LLMService:
             raise AIServiceError("AI helper is disabled.", "ai_disabled", 503)
         if not self.config.base_url or not self.config.model:
             raise AIServiceError("AI helper is not fully configured.", "ai_not_configured", 400)
-        if self.config.provider == "openai_compatible" and not self.config.api_key:
+        if self.config.provider in ("openai_compatible", "orcarouter") and not self.config.api_key:
             raise AIServiceError("Hosted AI provider requires an API key.", "ai_missing_api_key", 400)
 
     def test_connection(self) -> Dict[str, Any]:
@@ -186,7 +186,7 @@ class LLMService:
     def _chat_completion(self, messages: List[Dict[str, str]], max_tokens: int = 700) -> Dict[str, Any]:
         url = f"{self.config.base_url.rstrip('/')}/v1/chat/completions"
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
-        if self.config.provider == "openai_compatible" and self.config.api_key:
+        if self.config.provider in ("openai_compatible", "orcarouter") and self.config.api_key:
             headers["Authorization"] = f"Bearer {self.config.api_key}"
         payload = {
             "model": self.config.model,
