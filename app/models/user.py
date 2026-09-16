@@ -77,6 +77,12 @@ class User(UserMixin, db.Model):
     # Time rounding preferences
     time_rounding_enabled = db.Column(db.Boolean, default=True, nullable=False)  # Enable/disable time rounding
     time_rounding_minutes = db.Column(db.Integer, default=1, nullable=False)  # Rounding interval: 1, 5, 10, 15, 30, 60
+
+    # Pomodoro / focus session defaults
+    pomodoro_length = db.Column(db.Integer, default=25, nullable=False)
+    pomodoro_short_break = db.Column(db.Integer, default=5, nullable=False)
+    pomodoro_long_break = db.Column(db.Integer, default=15, nullable=False)
+    pomodoro_long_break_interval = db.Column(db.Integer, default=4, nullable=False)
     time_rounding_method = db.Column(
         db.String(10), default="nearest", nullable=False
     )  # 'nearest', 'up', 'down', or 'boundary'

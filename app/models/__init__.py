@@ -1,4 +1,5 @@
 from .activity import Activity
+from .activitywatch_rule import ActivityWatchRule, PendingActivity
 from .api_idempotency_key import ApiIdempotencyKey
 from .api_token import ApiToken
 from .attendance_compliance import (
@@ -38,10 +39,12 @@ from .expense_category import ExpenseCategory
 from .expense_gps import MileageTrack
 from .extra_good import ExtraGood
 from .focus_session import FocusSession
+from .geofence import Geofence, GeofencePolicy
 from .gamification import Badge, Leaderboard, LeaderboardEntry, UserBadge
 from .import_export import DataExport, DataImport
 from .integration import Integration, IntegrationCredential, IntegrationEvent
 from .integration_external_event_link import IntegrationExternalEventLink
+from .integration_sync_error import IntegrationSyncError
 from .invoice import Invoice, InvoiceItem
 from .invoice_approval import InvoiceApproval
 from .invoice_email import InvoiceEmail
@@ -58,6 +61,7 @@ from .link_template import LinkTemplate
 from .mileage import Mileage
 from .payment_gateway import PaymentGateway, PaymentTransaction
 from .payments import CreditNote, InvoiceReminderSchedule, Payment
+from .payroll_export_template import PayrollExportTemplate
 from .per_diem import PerDiem, PerDiemRate
 from .permission import Permission, Role
 from .project import Project
@@ -75,8 +79,10 @@ from .quote_version import QuoteVersion
 from .rate_override import RateOverride
 from .recurring_block import RecurringBlock
 from .recurring_invoice import RecurringInvoice
+from .recurring_project_cost import RecurringProjectCost
 from .recurring_task import RecurringTask
 from .reporting import ReportEmailSchedule, SavedReportView
+from .shared_report_link import SharedReportLink
 from .salesman_email_mapping import SalesmanEmailMapping
 from .saved_filter import SavedFilter
 from .settings import Settings
@@ -127,6 +133,8 @@ __all__ = [
     "TaskChecklistItem",
     "Comment",
     "FocusSession",
+    "Geofence",
+    "GeofencePolicy",
     "RecurringBlock",
     "RateOverride",
     "SavedFilter",
@@ -136,14 +144,18 @@ __all__ = [
     "ExchangeRate",
     "TaxRule",
     "Payment",
+    "PayrollExportTemplate",
     "CreditNote",
     "InvoiceReminderSchedule",
     "SavedReportView",
+    "SharedReportLink",
     "ReportEmailSchedule",
     "KanbanColumn",
     "KanbanBoardTemplate",
     "TimeEntryTemplate",
     "Activity",
+    "ActivityWatchRule",
+    "PendingActivity",
     "UserFavoriteProject",
     "UserClient",
     "ClientNote",
@@ -170,6 +182,7 @@ __all__ = [
     "ClientPrepaidConsumption",
     "AuditLog",
     "RecurringInvoice",
+    "RecurringProjectCost",
     "InvoiceEmail",
     "InvoicePeppolTransmission",
     "Webhook",
@@ -211,6 +224,7 @@ __all__ = [
     "CalendarIntegration",
     "CalendarSyncEvent",
     "Integration",
+    "IntegrationSyncError",
     "IntegrationCredential",
     "IntegrationEvent",
     "IntegrationExternalEventLink",
