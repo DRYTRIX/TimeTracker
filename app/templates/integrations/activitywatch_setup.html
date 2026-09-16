@@ -144,6 +144,12 @@
                     class="bg-primary text-white px-6 py-2 min-h-[44px] rounded-lg hover:bg-primary/90 transition-colors">
                 <i class="fas fa-save mr-2"></i>{{ _('Save Configuration') }}
             </button>
+            <a href="{{ url_for('integrations.activitywatch_rules') }}" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 min-h-[44px] rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors inline-flex items-center justify-center">
+                {{ _('Rules') }}
+            </a>
+            <a href="{{ url_for('integrations.activitywatch_inbox') }}" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 min-h-[44px] rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors inline-flex items-center justify-center">
+                {{ _('Inbox') }}
+            </a>
             <a href="{{ url_for('integrations.list_integrations') }}" class="bg-gray-200 dark:bg-gray-700 px-6 py-2 min-h-[44px] rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors inline-flex items-center justify-center">
                 {{ _('Cancel') }}
             </a>

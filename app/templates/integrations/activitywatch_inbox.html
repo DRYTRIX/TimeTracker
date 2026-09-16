@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Integrations'), 'url': url_for('integrations.list_integrations')},
+    {'text': _('ActivityWatch Inbox')}
+] %}
+{{ page_header(icon_class='fas fa-inbox', title_text=_('ActivityWatch Inbox'), subtitle_text=_('Approve or discard imported activities'), breadcrumbs=breadcrumbs) }}
+
+<div class="mb-4 flex gap-2">
+  <a class="btn btn-secondary" href="{{ url_for('integrations.activitywatch_rules') }}">{{ _('Rules') }}</a>
+  <a class="btn btn-secondary" href="{{ url_for('integrations.activitywatch_setup') }}">{{ _('Setup') }}</a>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md space-y-3">
+  {% for item in items %}
+  <div class="border border-border-light dark:border-border-dark rounded p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+    <div>
+      <div class="font-medium">{{ item.app_name or item.title or _('Activity') }}</div>
+      <div class="text-xs text-text-muted-light dark:text-text-muted-dark">
+        {{ item.started_at }} · {{ item.duration_seconds }}s
+        {% if item.suggested_project_id %}· project {{ item.suggested_project_id }}{% endif %}
+        · {{ 'billable' if item.suggested_billable else 'non-billable' }}
+      </div>
+      {% if item.notes %}<div class="text-xs mt-1">{{ item.notes }}</div>{% endif %}
+    </div>
+    <div class="flex gap-2">
+      <form method="POST" action="{{ url_for('integrations.activitywatch_inbox_approve', item_id=item.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-primary btn-sm" type="submit">{{ _('Approve') }}</button>
+      </form>
+      <form method="POST" action="{{ url_for('integrations.activitywatch_inbox_discard', item_id=item.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-secondary btn-sm" type="submit">{{ _('Discard') }}</button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Inbox is empty.') }}</p>
+  {% endfor %}
+</div>
+{% endblock %}

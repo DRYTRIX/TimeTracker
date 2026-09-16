@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Integrations'), 'url': url_for('integrations.list_integrations')},
+    {'text': _('ActivityWatch Rules')}
+] %}
+{{ page_header(icon_class='fas fa-filter', title_text=_('ActivityWatch Rules'), subtitle_text=_('Map apps and URLs to projects'), breadcrumbs=breadcrumbs) }}
+
+<div class="mb-4 flex gap-2">
+  <a class="btn btn-secondary" href="{{ url_for('integrations.activitywatch_setup') }}">{{ _('Setup') }}</a>
+  <a class="btn btn-secondary" href="{{ url_for('integrations.activitywatch_inbox') }}">{{ _('Review inbox') }}</a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Your rules') }}</h2>
+    <div class="space-y-3">
+      {% for r in rules %}
+      <div class="border border-border-light dark:border-border-dark rounded p-3 flex justify-between gap-2">
+        <div>
+          <div class="font-medium">{{ r.name }} <span class="text-xs text-text-muted-light dark:text-text-muted-dark">#{{ r.priority }}</span></div>
+          <div class="text-xs">{{ r.pattern_type }}: {{ r.pattern_value }} → project {{ r.project_id or 'default' }} · {{ 'billable' if r.billable else 'non-billable' }}</div>
+        </div>
+        <form method="POST" action="{{ url_for('integrations.activitywatch_rule_delete', rule_id=r.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-danger btn-sm" type="submit">{{ _('Delete') }}</button>
+        </form>
+      </div>
+      {% else %}
+      <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No rules yet. Unmatched events use the default project.') }}</p>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Add rule') }}</h2>
+    <form method="POST" class="space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input class="form-input w-full" name="name" placeholder="{{ _('Name') }}" required>
+      <select class="form-input w-full" name="pattern_type">
+        <option value="app">{{ _('App contains') }}</option>
+        <option value="domain">{{ _('URL/domain contains') }}</option>
+        <option value="title_regex">{{ _('Title regex') }}</option>
+        <option value="url_regex">{{ _('URL regex') }}</option>
+      </select>
+      <input class="form-input w-full" name="pattern_value" placeholder="{{ _('Pattern') }}" required>
+      <select class="form-input w-full" name="project_id">
+        <option value="">{{ _('Default project') }}</option>
+        {% for p in projects %}
+        <option value="{{ p.id }}">{{ p.name }}</option>
+        {% endfor %}
+      </select>
+      <input class="form-input w-full" name="priority" type="number" value="100" min="1">
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="billable" checked> {{ _('Billable') }}</label>
+      <button class="btn btn-primary" type="submit">{{ _('Create') }}</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
