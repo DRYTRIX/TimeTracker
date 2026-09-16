@@ -12,14 +12,7 @@ class WorkdayCard extends ConsumerWidget {
     WidgetRef ref,
     Future<bool> Function() action,
   ) async {
-    final ok = await action();
-    if (!context.mounted) return;
-    final error = ref.read(attendanceProvider).error;
-    if (!ok && error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error)),
-      );
-    }
+    await action();
   }
 
   Future<void> _showHistory(BuildContext context, WidgetRef ref) async {
@@ -225,6 +218,11 @@ class WorkdayCard extends ConsumerWidget {
       if (next.error != null && next.error != prev?.error) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(next.error!)),
+        );
+      }
+      if (next.warning != null && next.warning != prev?.warning) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.warning!)),
         );
       }
     });

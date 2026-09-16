@@ -1,11 +1,41 @@
 """REST API v1 endpoints for workday sessions."""
 
+from typing import Any, Dict, Optional, Tuple
+
 from flask import g, request
 
 from app.routes.api_v1 import api_v1_bp
+from app.services.geofence_service import GeofenceService
 from app.services.workday_session_service import WorkdaySessionService
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import error_response, success_response
+
+
+def _parse_optional_float(value: Any) -> Optional[float]:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_location(data: dict) -> Tuple[Optional[float], Optional[float], Optional[float]]:
+    latitude = _parse_optional_float(data.get("latitude"))
+    longitude = _parse_optional_float(data.get("longitude"))
+    accuracy_m = _parse_optional_float(data.get("accuracy_m"))
+    return latitude, longitude, accuracy_m
+
+
+def _geofence_payload(enforcement: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "action": enforcement.get("action"),
+        "status": enforcement.get("geofence_status"),
+        "geofence_id": enforcement.get("geofence_id"),
+        "distance_m": enforcement.get("distance_m"),
+        "message": enforcement.get("message"),
+        "violation": enforcement.get("violation"),
+    }
 
 
 @api_v1_bp.route("/workday/status", methods=["GET"])
@@ -26,16 +56,37 @@ def api_workday_start():
     data = request.get_json(silent=True) or {}
     notes = (data.get("notes") or "").strip() or None
     source = (data.get("source") or "mobile").strip() or "mobile"
+    latitude, longitude, accuracy_m = _parse_location(data)
 
-    result = WorkdaySessionService().start_workday(g.api_user.id, notes=notes, source=source)
+    enforcement = GeofenceService().enforce_policy(g.api_user, latitude, longitude)
+    if enforcement.get("action") == "block":
+        return error_response(
+            message=enforcement.get("message") or "Clock-in blocked by geofence policy",
+            status_code=403,
+            error_code="geofence_blocked",
+            details=_geofence_payload(enforcement),
+        )
+
+    result = WorkdaySessionService().start_workday(
+        g.api_user.id,
+        notes=notes,
+        source=source,
+        latitude=latitude,
+        longitude=longitude,
+        accuracy_m=accuracy_m,
+        geofence_enforcement=enforcement,
+    )
     if not result["success"]:
         return error_response(
             message=result.get("message", "Could not start workday"),
             status_code=400,
             error_code=result.get("error"),
         )
+    response_data = {"session": result["session"].to_dict()}
+    if enforcement.get("action") == "warn":
+        response_data["geofence"] = _geofence_payload(enforcement)
     return success_response(
-        data={"session": result["session"].to_dict()},
+        data=response_data,
         message=result["message"],
     )
 
@@ -58,15 +109,43 @@ def api_workday_end():
                 error_code="invalid_end_time",
             )
 
-    result = WorkdaySessionService().end_workday(g.api_user.id, notes=notes, at_time=at_time)
+    latitude, longitude, accuracy_m = _parse_location(data)
+    active_session = WorkdaySessionService().get_active_session(g.api_user.id)
+
+    enforcement = GeofenceService().enforce_policy(
+        g.api_user,
+        latitude,
+        longitude,
+        session=active_session,
+    )
+    if enforcement.get("action") == "block":
+        return error_response(
+            message=enforcement.get("message") or "Clock-out blocked by geofence policy",
+            status_code=403,
+            error_code="geofence_blocked",
+            details=_geofence_payload(enforcement),
+        )
+
+    result = WorkdaySessionService().end_workday(
+        g.api_user.id,
+        notes=notes,
+        at_time=at_time,
+        latitude=latitude,
+        longitude=longitude,
+        accuracy_m=accuracy_m,
+        geofence_enforcement=enforcement,
+    )
     if not result["success"]:
         return error_response(
             message=result.get("message", "Could not end workday"),
             status_code=400,
             error_code=result.get("error"),
         )
+    response_data = {"session": result["session"].to_dict()}
+    if enforcement.get("action") == "warn":
+        response_data["geofence"] = _geofence_payload(enforcement)
     return success_response(
-        data={"session": result["session"].to_dict()},
+        data=response_data,
         message=result["message"],
     )
 

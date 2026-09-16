@@ -47,6 +47,8 @@
 	<true/>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>This app does not track users across apps or websites</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>TimeTracker uses your location to verify geofenced workday clock-in and clock-out.</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>com.pravera.flutter_foreground_task.refresh</string>

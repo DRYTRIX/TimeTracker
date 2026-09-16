@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Admin'), 'url': url_for('admin.dashboard')},
+    {'text': _('Geofences')}
+] %}
+{{ page_header(icon_class='fas fa-map-marker-alt', title_text=_('Geofences'), subtitle_text=_('Field geofencing and attendance policies'), breadcrumbs=breadcrumbs) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Configured Geofences') }}</h2>
+    <div class="space-y-4">
+      {% for g in geofences %}
+      {% set is_editing = editing_geofence is defined and editing_geofence and editing_geofence.id == g.id %}
+      <div class="border border-border-light dark:border-border-dark rounded p-4">
+        <div class="flex justify-between items-start gap-2 mb-2">
+          <div>
+            <div class="font-medium">
+              {{ g.name }}
+              {% if not g.is_active %}<span class="text-xs text-text-muted-light dark:text-text-muted-dark">({{ _('inactive') }})</span>{% endif %}
+            </div>
+            <div class="text-xs text-text-muted-light dark:text-text-muted-dark">
+              {{ g.lat }}, {{ g.lng }} · {{ g.radius_m }} m · {{ g.policy }}
+              {% if g.project %} · {{ g.project.name }}{% endif %}
+            </div>
+            {% if g.address %}
+            <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ g.address }}</div>
+            {% endif %}
+          </div>
+          <div class="flex gap-2">
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('admin.edit_geofence', geofence_id=g.id) }}">{{ _('Edit') }}</a>
+            <form method="POST" action="{{ url_for('admin.delete_geofence', geofence_id=g.id) }}" onsubmit="return confirm('{{ _('Delete this geofence?') }}');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-danger btn-sm" type="submit">{{ _('Delete') }}</button>
+            </form>
+          </div>
+        </div>
+        {% if is_editing %}
+        <form method="POST" action="{{ url_for('admin.edit_geofence', geofence_id=g.id) }}" class="space-y-2 mt-3 border-t border-border-light dark:border-border-dark pt-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input class="form-input w-full" name="name" value="{{ g.name }}" required>
+          <input class="form-input w-full" name="address" value="{{ g.address or '' }}" placeholder="{{ _('Address (display only)') }}">
+          <div class="grid grid-cols-3 gap-2">
+            <input class="form-input" name="lat" value="{{ g.lat }}" step="any" required placeholder="{{ _('Latitude') }}">
+            <input class="form-input" name="lng" value="{{ g.lng }}" step="any" required placeholder="{{ _('Longitude') }}">
+            <input class="form-input" name="radius_m" value="{{ g.radius_m }}" step="any" required placeholder="{{ _('Radius (m)') }}">
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <select name="project_id" class="form-input">
+              <option value="">{{ _('All workdays') }}</option>
+              {% for p in projects %}
+              <option value="{{ p.id }}" {% if g.project_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+              {% endfor %}
+            </select>
+            <select name="policy" class="form-input">
+              {% for pol in policies %}
+              <option value="{{ pol }}" {% if g.policy == pol %}selected{% endif %}>{{ pol }}</option>
+              {% endfor %}
+            </select>
+            <label class="flex items-center gap-1 text-sm"><input type="checkbox" name="is_active" {% if g.is_active %}checked{% endif %}> {{ _('Active') }}</label>
+            <button class="btn btn-primary btn-sm" type="submit">{{ _('Save') }}</button>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('admin.geofences') }}">{{ _('Cancel') }}</a>
+          </div>
+        </form>
+        {% endif %}
+      </div>
+      {% else %}
+      <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No geofences configured yet.') }}</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Create Geofence') }}</h2>
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+      {{ _('Policies: log records violations, warn allows clock-in/out with a warning, block prevents the action.') }}
+    </p>
+    <form method="POST" class="space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div>
+        <label class="form-label">{{ _('Name') }}</label>
+        <input class="form-input w-full" name="name" required>
+      </div>
+      <div>
+        <label class="form-label">{{ _('Address (display only)') }}</label>
+        <input class="form-input w-full" name="address">
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        <div>
+          <label class="form-label">{{ _('Latitude') }}</label>
+          <input class="form-input w-full" name="lat" step="any" required>
+        </div>
+        <div>
+          <label class="form-label">{{ _('Longitude') }}</label>
+          <input class="form-input w-full" name="lng" step="any" required>
+        </div>
+        <div>
+          <label class="form-label">{{ _('Radius (m)') }}</label>
+          <input class="form-input w-full" name="radius_m" value="100" step="any" required>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="form-label">{{ _('Project (optional)') }}</label>
+          <select name="project_id" class="form-input w-full">
+            <option value="">{{ _('All workdays') }}</option>
+            {% for p in projects %}
+            <option value="{{ p.id }}">{{ p.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">{{ _('Policy') }}</label>
+          <select name="policy" class="form-input w-full">
+            {% for pol in policies %}
+            <option value="{{ pol }}">{{ pol }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_active" checked> {{ _('Active') }}</label>
+      <button class="btn btn-primary" type="submit">{{ _('Create Geofence') }}</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
