@@ -42,8 +42,24 @@
         <h2 class="text-lg font-semibold">{{ _('Exports') }}</h2>
         <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Download payroll, capacity, and compliance exports') }}</p>
     </div>
-    <div class="flex flex-wrap gap-2">
-        <a class="btn btn-secondary" href="{{ url_for('workforce.payroll_export_csv', start_date=cap_start.isoformat(), end_date=cap_end.isoformat(), user_id=selected_user_id) }}">{{ _('Payroll CSV') }}</a>
+    <div class="flex flex-wrap gap-2 items-center">
+        <form class="flex flex-wrap gap-2 items-center" method="GET" action="{{ url_for('workforce.payroll_export_csv') }}">
+            <input type="hidden" name="start_date" value="{{ cap_start.isoformat() }}">
+            <input type="hidden" name="end_date" value="{{ cap_end.isoformat() }}">
+            <input type="hidden" name="user_id" value="{{ selected_user_id }}">
+            <select name="template_id" class="form-input text-sm">
+                {% for t in payroll_templates|default([]) %}
+                <option value="{{ t.id }}" {% if default_payroll_template and t.id == default_payroll_template.id %}selected{% endif %}>{{ t.name }} ({{ t.format }})</option>
+                {% else %}
+                <option value="">{{ _('Generic Payroll') }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-secondary" type="submit">{{ _('Payroll CSV') }}</button>
+        </form>
+        <a class="btn btn-secondary" href="{{ url_for('workforce.payroll_export_xlsx', start_date=cap_start.isoformat(), end_date=cap_end.isoformat(), user_id=selected_user_id, template_id=(default_payroll_template.id if default_payroll_template else none)) }}">{{ _('Payroll XLSX') }}</a>
+        {% if current_user.is_admin %}
+        <a class="btn btn-secondary" href="{{ url_for('admin.payroll_templates') }}">{{ _('Templates') }}</a>
+        {% endif %}
         <a class="btn btn-secondary" href="{{ url_for('workforce.capacity_export_csv', start_date=cap_start.isoformat(), end_date=cap_end.isoformat()) }}">{{ _('Capacity CSV') }}</a>
         {% if can_approve %}
         <a class="btn btn-secondary" href="{{ url_for('workforce.locked_periods_export_csv', start_date=cap_start.isoformat(), end_date=cap_end.isoformat()) }}">{{ _('Locked Periods CSV') }}</a>
