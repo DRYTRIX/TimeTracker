@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.15.0] - 2026-09-16
+
+### Added
+
+- **Timer start-time override (#760)** — Start a new timer at a custom time, or adjust the start while already running; the timer page and API both support the override.
+- **Pomodoro / Focus sessions** — Pomodoro sessions are now wired into the timer API and UI so focus blocks are tracked and surfaced alongside regular time entries.
+- **Expense lifecycle on mobile & desktop** — Full expense CRUD (submit, approve, reject, reimburse) now available in the Flutter mobile and Electron desktop clients.
+- **Payroll export templates** — Admins can configure reusable payroll export templates (admin panel + geofence management pages); exports are rendered via the template engine.
+- **QuickBooks & Xero sync depth** — Extended accounting sync covers additional entity types, mapping, and error-route handling for both integrations.
+- **ActivityWatch rules, inbox & sync errors** — Rules engine and merge filters for ActivityWatch events; a dedicated review inbox and sync-error route surface unmatched entries.
+- **Gamification — badges, leaderboards & award hooks** — Badge definitions, leaderboard calculations, and award-hook endpoints exposed via the API for team engagement features.
+- **Calendar drag-and-drop** — Events on the calendar view can be moved and resized by dragging, updating the underlying time entry in real time.
+- **Recurring project cost engine** — Projects can have recurring costs that are calculated and posted automatically on a configured schedule.
+- **Public shareable report links** — Reports can be shared via a public, tokenized URL without requiring the recipient to log in.
+- **Geofencing policies** — Attendance module gains location-based clock-in policies; admin UI added for geofence management.
+- **Gap-feature models & dashboard surface** — New database models and migrations for the product-gap backlog; key features registered and surfaced on the main dashboard.
+- **Mobile API extensions** — Flutter client extended with expense, report, and geofencing API calls.
+- **New API endpoints** — Focus sessions, recurring project costs, and shared report endpoints added to the REST API.
+
+### Fixed
+
+- **Inventory PO lines & edit form (#759)** — Correct stock IDs on PO lines and restore the broken edit form.
+- **Migrations PostgreSQL boolean defaults** — Migration server defaults now use `true`/`false` literals instead of `1`/`0` for PostgreSQL compatibility.
+- **Dashboard Open Timer link** — Use the correct `timer_page` endpoint for the "Open timer" link so it no longer 404s.
+
+### Changed
+
+- **Dependencies** — Bumped `weasyprint` (pip group).
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.15.0** (single source of truth for the application version).
+
 ## [5.14.1] - 2026-09-09
 
 ### Fixed
