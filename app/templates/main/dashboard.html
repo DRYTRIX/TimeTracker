@@ -417,6 +417,40 @@
         <a href="{{ url_for('reports.utilization_report') }}" class="text-xs text-teal-700 dark:text-teal-300 hover:underline">{{ _('Open report') }}</a>
     </div>
     {% endif %}
+    <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20 border border-indigo-200 dark:border-indigo-800 p-6 rounded-xl shadow-sm dashboard-widget" id="focusTodayCard">
+        <div class="flex items-center justify-between mb-2">
+            <div>
+                <p class="text-sm font-medium text-indigo-600 dark:text-indigo-400 mb-1">{{ _('Focus today') }}</p>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-2xl lg:text-3xl font-bold text-indigo-900 dark:text-indigo-100" id="focusTodayCycles">{{ focus_today_cycles|default(0) }}</span>
+                    <span class="text-sm text-indigo-600/70 dark:text-indigo-400/70">{{ _('cycles') }}</span>
+                </div>
+                <p class="mt-1 text-xs text-indigo-700 dark:text-indigo-300">
+                    {{ focus_today_minutes|default(0) }} {{ _('min') }} · {{ focus_today_sessions|default(0) }} {{ _('sessions') }}
+                </p>
+            </div>
+            <div class="bg-indigo-500/10 dark:bg-indigo-400/10 p-4 rounded-full">
+                <i class="fas fa-brain text-indigo-600 dark:text-indigo-400 text-2xl"></i>
+            </div>
+        </div>
+        <a href="{{ url_for('timer.timer') }}" class="text-xs text-indigo-700 dark:text-indigo-300 hover:underline">{{ _('Open timer') }}</a>
+    </div>
+    <div class="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border border-amber-200 dark:border-amber-800 p-6 rounded-xl shadow-sm dashboard-widget">
+        <div class="flex items-center justify-between mb-2">
+            <div>
+                <p class="text-sm font-medium text-amber-600 dark:text-amber-400 mb-1">{{ _('Badges') }}</p>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-2xl lg:text-3xl font-bold text-amber-900 dark:text-amber-100">{{ gamification_points|default(0) }}</span>
+                    <span class="text-sm text-amber-600/70 dark:text-amber-400/70">{{ _('pts') }}</span>
+                </div>
+                <p class="mt-1 text-xs text-amber-700 dark:text-amber-300">{{ gamification_badge_count|default(0) }} {{ _('earned') }}</p>
+            </div>
+            <div class="bg-amber-500/10 dark:bg-amber-400/10 p-4 rounded-full">
+                <i class="fas fa-trophy text-amber-600 dark:text-amber-400 text-2xl"></i>
+            </div>
+        </div>
+        <a href="{{ url_for('gamification.leaderboard_page') }}" class="text-xs text-amber-700 dark:text-amber-300 hover:underline">{{ _('Leaderboard') }}</a>
+    </div>
 </div>
 
 <!-- Value Dashboard: productivity insights (filled via /api/stats/value-dashboard) -->

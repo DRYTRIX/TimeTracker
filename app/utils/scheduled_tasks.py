@@ -323,6 +323,20 @@ def generate_recurring_invoices():
         return 0
 
 
+def generate_recurring_project_costs():
+    """Generate project costs from active recurring cost templates."""
+    try:
+        logger.info("Generating recurring project costs...")
+        from app.services.recurring_project_cost_service import RecurringProjectCostService
+
+        generated = RecurringProjectCostService().generate_due_recurring_costs()
+        logger.info("Generated %s recurring project costs", generated)
+        return generated
+    except Exception as e:
+        logger.error(f"Error generating recurring project costs: {e}")
+        return 0
+
+
 def send_monthly_unpaid_hours_reports():
     """Send monthly unpaid hours reports split by salesman
 
@@ -550,7 +564,28 @@ def register_scheduled_tasks(scheduler, app=None):
             replace_existing=True,
         )
         logger.info("Registered recurring invoices generation task")
-        logger.info("Registered recurring invoices generation task")
+
+        def generate_recurring_project_costs_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for recurring project costs generation")
+                    return
+            with external_url_context(app_instance):
+                generate_recurring_project_costs()
+
+        scheduler.add_job(
+            func=generate_recurring_project_costs_with_app,
+            trigger="cron",
+            hour=8,
+            minute=15,
+            id="generate_recurring_project_costs",
+            name="Generate recurring project costs",
+            replace_existing=True,
+        )
+        logger.info("Registered recurring project costs generation task")
 
         # Send monthly unpaid hours reports by salesman (first day of month at 9 AM)
         def send_monthly_unpaid_hours_reports_with_app():
@@ -870,6 +905,39 @@ def register_scheduled_tasks(scheduler, app=None):
             replace_existing=True,
         )
         logger.info("Registered Slack daily summary task")
+
+        def recalculate_gamification_leaderboards_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for gamification leaderboards")
+                    return
+            with app_instance.app_context():
+                try:
+                    from app.models.gamification import Leaderboard
+                    from app.services.gamification_service import GamificationService
+
+                    svc = GamificationService()
+                    for board in Leaderboard.query.filter_by(is_active=True).all():
+                        try:
+                            svc.calculate_leaderboard(board.id)
+                        except Exception:
+                            logger.debug("Leaderboard calc failed for %s", board.id, exc_info=True)
+                except Exception:
+                    logger.debug("Gamification leaderboard job failed", exc_info=True)
+
+        scheduler.add_job(
+            func=recalculate_gamification_leaderboards_with_app,
+            trigger="cron",
+            hour=3,
+            minute=15,
+            id="recalculate_gamification_leaderboards",
+            name="Recalculate gamification leaderboards daily",
+            replace_existing=True,
+        )
+        logger.info("Registered gamification leaderboard task")
 
         try:
             from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
