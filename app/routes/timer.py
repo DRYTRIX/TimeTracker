@@ -17,12 +17,20 @@ from app.utils.db import safe_commit
 from app.utils.error_handling import safe_log
 from app.utils.posthog_funnels import track_onboarding_first_time_entry, track_onboarding_first_timer
 from app.utils.scope_filter import user_can_access_client, user_can_access_project
-from app.utils.timezone import parse_local_datetime, parse_user_local_datetime, utc_to_local
+from app.utils.timezone import (
+    parse_local_datetime,
+    parse_user_local_datetime,
+    parse_user_local_datetime_from_string,
+    utc_to_local,
+)
 
 _project_service = ProjectService()
 _client_service = ClientService()
 
 timer_bp = Blueprint("timer", __name__)
+
+# Max how far back a start-time override may go (Issue #760)
+_START_TIME_OVERRIDE_MAX_AGE = timedelta(hours=24)
 
 
 def _parse_optional_int(value):
@@ -33,6 +41,24 @@ def _parse_optional_int(value):
         return int(value)
     except (ValueError, TypeError):
         return None
+
+
+def _parse_and_validate_start_override(raw_value, now_local):
+    """Parse a datetime-local override string; return (datetime|None, error_message|None).
+
+    Empty/blank input returns (None, None) so callers can fall back to now.
+    Invalid, future, or >24h-old values return (None, error_message).
+    """
+    if not raw_value or not str(raw_value).strip():
+        return None, None
+    parsed = parse_user_local_datetime_from_string(str(raw_value).strip(), user=current_user)
+    if parsed is None:
+        return None, _("Invalid start time")
+    if parsed > now_local:
+        return None, _("Start time cannot be in the future")
+    if parsed < now_local - _START_TIME_OVERRIDE_MAX_AGE:
+        return None, _("Start time cannot be more than 24 hours in the past")
+    return parsed, None
 
 
 def _active_users_for_admin():
@@ -224,12 +250,20 @@ def start_timer():
     # Create new timer
     from app.models.time_entry import local_now
 
+    now_local = local_now()
+    start_time_override = request.form.get("start_time_override", "").strip()
+    resolved_start, start_err = _parse_and_validate_start_override(start_time_override, now_local)
+    if start_err:
+        flash(start_err, "error")
+        return redirect(url_for("timer.timer_page"))
+    start_time = resolved_start if resolved_start is not None else now_local
+
     new_timer = TimeEntry(
         user_id=current_user.id,
         project_id=project_id if project_id else None,
         client_id=client_id if client_id and not project_id else None,
         task_id=task.id if task else None,
-        start_time=local_now(),
+        start_time=start_time,
         notes=notes if notes else None,
         source="auto",
     )
@@ -788,6 +822,57 @@ def adjust_timer():
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"success": True, "start_time": active_timer.start_time.isoformat()})
     return redirect(url_for("main.dashboard"))
+
+
+@timer_bp.route("/timer/set-start", methods=["POST"])
+@login_required
+def set_timer_start():
+    """Set the active timer's start time to an absolute datetime (Issue #760)."""
+    active_timer = current_user.active_timer
+    if not active_timer:
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "error": _("No active timer to adjust")}), 400
+        flash(_("No active timer to adjust"), "error")
+        return redirect(url_for("main.dashboard"))
+
+    raw = (
+        request.form.get("start_time")
+        or (request.get_json(silent=True) or {}).get("start_time")
+        or ""
+    )
+    from app.models.time_entry import local_now
+
+    now_local = local_now()
+    resolved_start, start_err = _parse_and_validate_start_override(raw, now_local)
+    if start_err or resolved_start is None:
+        msg = start_err or _("Start time is required")
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "error": msg}), 400
+        flash(msg, "error")
+        return redirect(url_for("timer.timer_page"))
+
+    active_timer.start_time = resolved_start
+    active_timer.updated_at = now_local
+    db.session.commit()
+
+    try:
+        from app.utils.cache import invalidate_dashboard_for_user
+
+        invalidate_dashboard_for_user(current_user.id)
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Dashboard cache invalidation failed: %s", e)
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify(
+            {
+                "success": True,
+                "start_time": active_timer.start_time.isoformat(),
+                "duration_formatted": active_timer.duration_formatted,
+                "current_duration": active_timer.current_duration_seconds,
+            }
+        )
+    flash(_("Timer start time updated"), "success")
+    return redirect(url_for("timer.timer_page"))
 
 
 @timer_bp.route("/timer/status")
