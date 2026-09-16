@@ -1677,3 +1677,197 @@ def test_connection_wizard(provider):
     except Exception as e:
         logger.error(f"Connection test error for {provider}: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@integrations_bp.route("/integrations/sync-errors")
+@login_required
+def sync_errors():
+    """List unresolved integration sync dead-letter errors."""
+    from app.models.integration_sync_error import IntegrationSyncError
+
+    if not current_user.is_admin:
+        flash(_("Access denied"), "error")
+        return redirect(url_for("integrations.list_integrations"))
+
+    errors = (
+        IntegrationSyncError.query.filter_by(resolved=False)
+        .order_by(IntegrationSyncError.created_at.desc())
+        .limit(200)
+        .all()
+    )
+    return render_template("integrations/sync_errors.html", errors=errors)
+
+
+@integrations_bp.route("/integrations/sync-errors/<int:error_id>/resolve", methods=["POST"])
+@login_required
+def resolve_sync_error(error_id):
+    from app.models.integration_sync_error import IntegrationSyncError
+    from app.utils.db import safe_commit
+
+    if not current_user.is_admin:
+        flash(_("Access denied"), "error")
+        return redirect(url_for("integrations.list_integrations"))
+
+    row = IntegrationSyncError.query.get_or_404(error_id)
+    row.resolved = True
+    safe_commit("resolve_sync_error", {"error_id": error_id})
+    flash(_("Error marked resolved"), "success")
+    return redirect(url_for("integrations.sync_errors"))
+
+
+@integrations_bp.route("/integrations/sync-errors/<int:error_id>/retry", methods=["POST"])
+@login_required
+def retry_sync_error(error_id):
+    from datetime import datetime
+
+    from app.models.integration_sync_error import IntegrationSyncError
+    from app.services.integration_service import IntegrationService
+    from app.utils.db import safe_commit
+
+    if not current_user.is_admin:
+        flash(_("Access denied"), "error")
+        return redirect(url_for("integrations.list_integrations"))
+
+    row = IntegrationSyncError.query.get_or_404(error_id)
+    row.retry_count = (row.retry_count or 0) + 1
+    row.last_retry_at = datetime.utcnow()
+    try:
+        connector = IntegrationService.get_connector_instance(row.connector, user_id=None)
+        if connector:
+            connector.sync_data(sync_type="incremental")
+            row.resolved = True
+            flash(_("Retry triggered"), "success")
+        else:
+            flash(_("Connector unavailable"), "error")
+    except Exception as e:
+        flash(_("Retry failed: %(err)s", err=str(e)), "error")
+    safe_commit("retry_sync_error", {"error_id": error_id})
+    return redirect(url_for("integrations.sync_errors"))
+
+
+@integrations_bp.route("/integrations/activitywatch/rules", methods=["GET", "POST"])
+@login_required
+def activitywatch_rules():
+    from app.models import Project
+    from app.models.activitywatch_rule import ActivityWatchRule
+    from app.utils.db import safe_commit
+
+    if request.method == "POST":
+        rule = ActivityWatchRule(
+            user_id=current_user.id,
+            name=(request.form.get("name") or "Rule").strip(),
+            pattern_type=(request.form.get("pattern_type") or "app").strip(),
+            pattern_value=(request.form.get("pattern_value") or "").strip(),
+            project_id=request.form.get("project_id", type=int) or None,
+            task_id=request.form.get("task_id", type=int) or None,
+            billable="billable" in request.form,
+            min_duration_seconds=request.form.get("min_duration_seconds", type=int),
+            priority=request.form.get("priority", type=int) or 100,
+            is_active=True,
+        )
+        if not rule.pattern_value:
+            flash(_("Pattern is required"), "error")
+        else:
+            db.session.add(rule)
+            if safe_commit("create_aw_rule"):
+                flash(_("Rule created"), "success")
+            else:
+                flash(_("Could not create rule"), "error")
+        return redirect(url_for("integrations.activitywatch_rules"))
+
+    rules = ActivityWatchRule.query.filter_by(user_id=current_user.id).order_by(ActivityWatchRule.priority.asc()).all()
+    projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    return render_template("integrations/activitywatch_rules.html", rules=rules, projects=projects)
+
+
+@integrations_bp.route("/integrations/activitywatch/rules/<int:rule_id>/delete", methods=["POST"])
+@login_required
+def activitywatch_rule_delete(rule_id):
+    from app.models.activitywatch_rule import ActivityWatchRule
+    from app.utils.db import safe_commit
+
+    rule = ActivityWatchRule.query.get_or_404(rule_id)
+    if rule.user_id != current_user.id and not current_user.is_admin:
+        flash(_("Access denied"), "error")
+        return redirect(url_for("integrations.activitywatch_rules"))
+    db.session.delete(rule)
+    safe_commit("delete_aw_rule", {"rule_id": rule_id})
+    flash(_("Rule deleted"), "success")
+    return redirect(url_for("integrations.activitywatch_rules"))
+
+
+@integrations_bp.route("/integrations/activitywatch/inbox", methods=["GET"])
+@login_required
+def activitywatch_inbox():
+    from app.models.activitywatch_rule import PendingActivity
+
+    items = (
+        PendingActivity.query.filter_by(user_id=current_user.id, status="pending")
+        .order_by(PendingActivity.started_at.desc())
+        .limit(200)
+        .all()
+    )
+    return render_template("integrations/activitywatch_inbox.html", items=items)
+
+
+@integrations_bp.route("/integrations/activitywatch/inbox/<int:item_id>/approve", methods=["POST"])
+@login_required
+def activitywatch_inbox_approve(item_id):
+    from datetime import timedelta
+
+    from app.models import TimeEntry
+    from app.models.activitywatch_rule import PendingActivity
+    from app.utils.db import safe_commit
+
+    item = PendingActivity.query.get_or_404(item_id)
+    if item.user_id != current_user.id and not current_user.is_admin:
+        flash(_("Access denied"), "error")
+        return redirect(url_for("integrations.activitywatch_inbox"))
+    end_time = item.started_at + timedelta(seconds=item.duration_seconds or 0)
+    entry = TimeEntry(
+        user_id=item.user_id,
+        project_id=item.suggested_project_id,
+        task_id=item.suggested_task_id,
+        start_time=item.started_at,
+        end_time=end_time,
+        notes=item.notes,
+        source="auto",
+        billable=bool(item.suggested_billable),
+    )
+    db.session.add(entry)
+    item.status = "approved"
+    if safe_commit("approve_pending_activity", {"item_id": item_id}):
+        flash(_("Activity approved"), "success")
+    else:
+        flash(_("Could not approve"), "error")
+    return redirect(url_for("integrations.activitywatch_inbox"))
+
+
+@integrations_bp.route("/integrations/activitywatch/inbox/<int:item_id>/discard", methods=["POST"])
+@login_required
+def activitywatch_inbox_discard(item_id):
+    from app.models.activitywatch_rule import PendingActivity
+    from app.utils.db import safe_commit
+
+    item = PendingActivity.query.get_or_404(item_id)
+    if item.user_id != current_user.id and not current_user.is_admin:
+        flash(_("Access denied"), "error")
+        return redirect(url_for("integrations.activitywatch_inbox"))
+    item.status = "discarded"
+    safe_commit("discard_pending_activity", {"item_id": item_id})
+    flash(_("Activity discarded"), "success")
+    return redirect(url_for("integrations.activitywatch_inbox"))
+
+
+@integrations_bp.route("/api/integrations/activitywatch/buckets", methods=["GET"])
+@login_required
+def activitywatch_buckets_api():
+    from app.services.integration_service import IntegrationService
+
+    try:
+        connector = IntegrationService.get_connector_instance("activitywatch", user_id=current_user.id)
+        if not connector:
+            return jsonify({"buckets": [], "error": "not configured"}), 400
+        return jsonify({"buckets": connector.list_buckets()})
+    except Exception as e:
+        return jsonify({"buckets": [], "error": str(e)}), 400
