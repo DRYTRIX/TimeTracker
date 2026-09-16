@@ -27,8 +27,8 @@ def upgrade():
             sa.Column("filters", sa.JSON(), nullable=True),
             sa.Column("format", sa.String(length=10), nullable=False, server_default="csv"),
             sa.Column("delimiter", sa.String(length=5), nullable=False, server_default=","),
-            sa.Column("is_default", sa.Boolean(), nullable=False, server_default=sa.text("0")),
-            sa.Column("is_builtin", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+            sa.Column("is_default", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+            sa.Column("is_builtin", sa.Boolean(), nullable=False, server_default=sa.text("false")),
             sa.Column("created_at", sa.DateTime(), nullable=False),
             sa.Column("updated_at", sa.DateTime(), nullable=False),
         )

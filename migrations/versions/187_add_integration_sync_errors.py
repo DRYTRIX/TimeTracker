@@ -26,7 +26,7 @@ def upgrade():
             sa.Column("entity_id", sa.Integer(), nullable=True),
             sa.Column("error_message", sa.Text(), nullable=False),
             sa.Column("retry_count", sa.Integer(), nullable=False, server_default="0"),
-            sa.Column("resolved", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+            sa.Column("resolved", sa.Boolean(), nullable=False, server_default=sa.text("false")),
             sa.Column("created_at", sa.DateTime(), nullable=False),
             sa.Column("updated_at", sa.DateTime(), nullable=False),
             sa.Column("last_retry_at", sa.DateTime(), nullable=True),
