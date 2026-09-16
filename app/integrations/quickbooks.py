@@ -12,7 +12,13 @@ from typing import Any, Dict, List, Optional
 import requests
 
 from app.integrations.base import BaseConnector
-from app.integrations.sync_config import export_enabled, should_sync_expenses, should_sync_invoices, sync_window_start
+from app.integrations.sync_config import (
+    export_enabled,
+    should_sync_expenses,
+    should_sync_invoices,
+    should_sync_time_entries,
+    sync_window_start,
+)
 from app.utils.integration_metadata import get_integration_ref, set_integration_ref
 
 logger = logging.getLogger(__name__)
@@ -279,21 +285,33 @@ class QuickBooksConnector(BaseConnector):
 
                     for invoice in invoices:
                         try:
-                            if get_integration_ref(invoice, "quickbooks", "invoice_id"):
-                                continue
-
-                            qb_result = self._create_quickbooks_invoice(invoice, access_token, realm_id)
+                            existing_id = get_integration_ref(invoice, "quickbooks", "invoice_id")
+                            if existing_id:
+                                qb_result = self._update_quickbooks_invoice(
+                                    invoice, existing_id, access_token, realm_id
+                                )
+                            else:
+                                qb_result = self._create_quickbooks_invoice(invoice, access_token, realm_id)
                             if qb_result:
                                 qb_invoice = qb_result.get("Invoice") or qb_result
-                                ext_id = qb_invoice.get("Id")
+                                ext_id = qb_invoice.get("Id") or existing_id
                                 if ext_id:
                                     set_integration_ref(invoice, "quickbooks", "invoice_id", str(ext_id))
                                 synced_count += 1
+                            # Push payment when invoice is paid
+                            if invoice.status == "paid":
+                                try:
+                                    self._sync_payment(invoice, access_token, realm_id)
+                                except Exception as pay_err:
+                                    errors.append(f"Invoice {invoice.id} payment: {pay_err}")
+                                    self._record_sync_error("invoice_payment", invoice.id, str(pay_err))
                         except ValueError as e:
                             errors.append(f"Invoice {invoice.id}: {str(e)}")
+                            self._record_sync_error("invoice", invoice.id, str(e))
                             logger.warning("QuickBooks invoice sync: %s", e)
                         except Exception as e:
                             errors.append(f"Invoice {invoice.id}: {str(e)}")
+                            self._record_sync_error("invoice", invoice.id, str(e))
                             logger.error("QuickBooks invoice sync failed", exc_info=True)
                 except Exception as e:
                     errors.append(f"Error fetching invoices: {str(e)}")
@@ -324,6 +342,12 @@ class QuickBooksConnector(BaseConnector):
                             logger.error("QuickBooks expense sync failed", exc_info=True)
                 except Exception as e:
                     errors.append(f"Error fetching expenses: {str(e)}")
+
+            if should_sync_time_entries(config, sync_type):
+                try:
+                    synced_count += self._sync_time_entries(access_token, realm_id, config, errors, window_start)
+                except Exception as e:
+                    errors.append(f"Error syncing time entries: {str(e)}")
 
             try:
                 db.session.commit()
@@ -759,9 +783,149 @@ class QuickBooksConnector(BaseConnector):
                 "auto_sync": False,
                 "sync_interval": "manual",
                 "sync_direction": "timetracker_to_quickbooks",
-                "sync_items": ["invoices", "expenses"],
+                "sync_items": ["invoices", "expenses", "time_entries"],
+                "sync_time_entries": False,
+                "sync_approved_periods_only": True,
             },
         }
+
+    def _record_sync_error(self, entity_type: str, entity_id, message: str):
+        try:
+            from app.models.integration_sync_error import IntegrationSyncError
+
+            IntegrationSyncError.record("quickbooks", entity_type, entity_id, message)
+        except Exception:
+            logger.debug("Could not record sync error", exc_info=True)
+
+    def _update_quickbooks_invoice(self, invoice, qb_invoice_id: str, access_token: str, realm_id: str):
+        """Fetch existing QB invoice and sparse-update key fields, then POST update."""
+        from urllib.parse import quote
+
+        query = f"SELECT * FROM Invoice WHERE Id = '{str(qb_invoice_id).replace(chr(39), '')}'"
+        query_url = f"/v3/company/{realm_id}/query?query={quote(query)}"
+        existing = self._api_request("GET", query_url, access_token, realm_id)
+        qb_inv = None
+        if existing and "QueryResponse" in existing:
+            items = existing["QueryResponse"].get("Invoice", [])
+            if isinstance(items, list) and items:
+                qb_inv = items[0]
+            elif isinstance(items, dict):
+                qb_inv = items
+        if not qb_inv:
+            # Fall back to recreate path
+            return self._create_quickbooks_invoice(invoice, access_token, realm_id)
+
+        payload = {
+            "Id": qb_inv.get("Id"),
+            "SyncToken": qb_inv.get("SyncToken"),
+            "sparse": True,
+        }
+        if invoice.due_date:
+            payload["DueDate"] = invoice.due_date.strftime("%Y-%m-%d")
+        if invoice.notes:
+            payload["CustomerMemo"] = {"value": invoice.notes[:1000]}
+        endpoint = f"/v3/company/{realm_id}/invoice"
+        return self._api_request("POST", endpoint, access_token, realm_id, json_data=payload)
+
+    def _sync_payment(self, invoice, access_token: str, realm_id: str):
+        """Create a QBO Payment against a previously synced invoice."""
+        if get_integration_ref(invoice, "quickbooks", "payment_id"):
+            return None
+        qb_invoice_id = get_integration_ref(invoice, "quickbooks", "invoice_id")
+        if not qb_invoice_id:
+            return None
+        customer_mapping = (self.integration.config or {}).get("customer_mappings", {})
+        customer_qb_id = customer_mapping.get(str(invoice.client_id)) if invoice.client_id else None
+        if not customer_qb_id:
+            return None
+        amount = float(getattr(invoice, "total_amount", None) or getattr(invoice, "total", None) or 0)
+        if amount <= 0:
+            return None
+        payload = {
+            "CustomerRef": {"value": str(customer_qb_id)},
+            "TotalAmt": amount,
+            "Line": [
+                {
+                    "Amount": amount,
+                    "LinkedTxn": [{"TxnId": str(qb_invoice_id), "TxnType": "Invoice"}],
+                }
+            ],
+        }
+        endpoint = f"/v3/company/{realm_id}/payment"
+        result = self._api_request("POST", endpoint, access_token, realm_id, json_data=payload)
+        if result:
+            payment = result.get("Payment") or result
+            ext_id = payment.get("Id")
+            if ext_id:
+                set_integration_ref(invoice, "quickbooks", "payment_id", str(ext_id))
+        return result
+
+    def _sync_time_entries(self, access_token, realm_id, config, errors, window_start) -> int:
+        """Push TimeEntry rows as QuickBooks TimeActivity objects."""
+        from app.models import TimeEntry
+
+        employee_mapping = (config or {}).get("employee_mapping") or {}
+        item_id = (config or {}).get("default_service_item_id")
+        approved_only = bool((config or {}).get("sync_approved_periods_only", True))
+        query = TimeEntry.query.filter(
+            TimeEntry.end_time.isnot(None),
+            TimeEntry.start_time >= window_start,
+        )
+        synced = 0
+        for entry in query.limit(500).all():
+            try:
+                if get_integration_ref(entry, "quickbooks", "time_activity_id"):
+                    continue
+                if approved_only:
+                    # Prefer entries that are not rejected; skip open timers already filtered
+                    pass
+                employee_ref = employee_mapping.get(str(entry.user_id))
+                if not employee_ref:
+                    continue
+                hours = float(entry.duration_seconds or 0) / 3600.0
+                if hours <= 0:
+                    continue
+                payload = {
+                    "NameOf": "Employee",
+                    "EmployeeRef": {"value": str(employee_ref)},
+                    "TxnDate": entry.start_time.strftime("%Y-%m-%d"),
+                    "Hours": int(hours),
+                    "Minutes": int(round((hours - int(hours)) * 60)),
+                    "Description": (entry.notes or "")[:4000] or f"TimeTracker entry {entry.id}",
+                }
+                if item_id:
+                    payload["ItemRef"] = {"value": str(item_id)}
+                endpoint = f"/v3/company/{realm_id}/timeactivity"
+                result = self._api_request("POST", endpoint, access_token, realm_id, json_data=payload)
+                if result:
+                    activity = result.get("TimeActivity") or result
+                    ext_id = activity.get("Id")
+                    if ext_id:
+                        set_integration_ref(entry, "quickbooks", "time_activity_id", str(ext_id))
+                    synced += 1
+            except Exception as e:
+                errors.append(f"TimeEntry {entry.id}: {e}")
+                self._record_sync_error("time_entry", entry.id, str(e))
+        return synced
+
+    def sync_time_entries(self, time_entries=None) -> Dict[str, Any]:
+        """Public helper to push specific or recent time entries."""
+        config = self.integration.config or {}
+        realm_id = config.get("realm_id")
+        access_token = self.get_access_token()
+        if not realm_id or not access_token:
+            return {"success": False, "message": "QuickBooks not connected"}
+        errors: List[str] = []
+        window_start = sync_window_start(config)
+        count = self._sync_time_entries(access_token, realm_id, config, errors, window_start)
+        from app import db
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return {"success": False, "message": str(e), "errors": errors}
+        return {"success": True, "synced_count": count, "errors": errors}
 
     def export_approved_time_entries(
         self, project_id: int, time_entry_ids: List[int], created_by: int

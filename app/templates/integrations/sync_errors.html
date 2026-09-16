@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Integrations'), 'url': url_for('integrations.list_integrations')},
+    {'text': _('Sync Errors')}
+] %}
+{{ page_header(icon_class='fas fa-exclamation-triangle', title_text=_('Integration Sync Errors'), subtitle_text=_('Dead-letter queue for failed accounting syncs'), breadcrumbs=breadcrumbs) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
+  {% if errors %}
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead>
+        <tr class="text-left border-b border-border-light dark:border-border-dark">
+          <th class="py-2 pr-4">{{ _('Connector') }}</th>
+          <th class="py-2 pr-4">{{ _('Entity') }}</th>
+          <th class="py-2 pr-4">{{ _('Error') }}</th>
+          <th class="py-2 pr-4">{{ _('Retries') }}</th>
+          <th class="py-2 pr-4">{{ _('When') }}</th>
+          <th class="py-2">{{ _('Actions') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in errors %}
+        <tr class="border-b border-border-light dark:border-border-dark align-top">
+          <td class="py-2 pr-4">{{ e.connector }}</td>
+          <td class="py-2 pr-4">{{ e.entity_type }} #{{ e.entity_id }}</td>
+          <td class="py-2 pr-4 max-w-md break-words">{{ e.error_message }}</td>
+          <td class="py-2 pr-4">{{ e.retry_count }}</td>
+          <td class="py-2 pr-4">{{ e.created_at }}</td>
+          <td class="py-2">
+            <form method="POST" action="{{ url_for('integrations.retry_sync_error', error_id=e.id) }}" class="inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-secondary btn-sm" type="submit">{{ _('Retry') }}</button>
+            </form>
+            <form method="POST" action="{{ url_for('integrations.resolve_sync_error', error_id=e.id) }}" class="inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-secondary btn-sm" type="submit">{{ _('Resolve') }}</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No unresolved sync errors.') }}</p>
+  {% endif %}
+</div>
+{% endblock %}
