@@ -5,12 +5,13 @@ Routes for custom report builder.
 import json
 from datetime import datetime, timedelta
 
-from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
 
 from app import db
-from app.models import Client, Expense, Invoice, Project, SavedReportView, Task, TimeEntry, User
+from app.models import Client, Expense, Invoice, Project, SavedReportView, SharedReportLink, Task, TimeEntry, User
+from app.services.shared_report_service import SharedReportService
 from app.services.unpaid_hours_service import UnpaidHoursService
 from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
@@ -642,9 +643,15 @@ def list_saved_views():
     saved_views = (
         SavedReportView.query.filter_by(owner_id=current_user.id).order_by(SavedReportView.created_at.desc()).all()
     )
+    shared_service = SharedReportService()
+    shared_links_by_view = {
+        view.id: [link.to_dict() for link in shared_service.list_active_links_for_view(view.id)]
+        for view in saved_views
+    }
     return render_template(
         "reports/saved_views_list.html",
         saved_views=saved_views,
+        shared_links_by_view=shared_links_by_view,
         convert_app_datetime_to_user=convert_app_datetime_to_user,
     )
 
@@ -718,6 +725,128 @@ def delete_saved_view(view_id):
         flash(_("Could not delete report view due to a database error"), "error")
 
     return redirect(url_for("custom_reports.list_saved_views"))
+
+
+def _shared_report_session_key(token: str) -> str:
+    return f"shared_report_access_{token}"
+
+
+def _has_shared_report_access(link: SharedReportLink) -> bool:
+    if not link.requires_password:
+        return True
+    return session.get(_shared_report_session_key(link.token)) is True
+
+
+@custom_reports_bp.route("/reports/builder/<int:view_id>/share", methods=["POST"])
+@login_required
+@module_enabled("custom_reports")
+def create_shared_report_link(view_id):
+    """Create a share link for the current user (session auth for web UI)."""
+    saved_view = SavedReportView.query.get_or_404(view_id)
+    if saved_view.owner_id != current_user.id and not current_user.is_admin:
+        return jsonify({"error": "Access denied"}), 403
+
+    data = request.get_json(silent=True) or {}
+    expiry = (data.get("expiry") or "never").lower()
+    expires_in_days = None
+    if expiry == "7d":
+        expires_in_days = 7
+    elif expiry == "30d":
+        expires_in_days = 30
+    elif expiry not in ("never", ""):
+        return jsonify({"error": "Invalid expiry option"}), 400
+
+    password = (data.get("password") or "").strip() or None
+    service = SharedReportService()
+    link = service.create_link(
+        saved_view=saved_view,
+        created_by_id=current_user.id,
+        expires_in_days=expires_in_days,
+        password=password,
+    )
+    if not safe_commit("create_shared_report_link", {"view_id": view_id}):
+        return jsonify({"error": "Failed to create share link"}), 500
+
+    return jsonify(
+        {
+            "success": True,
+            "message": _("Share link created successfully"),
+            "link": link.to_dict(include_url=True),
+            "url": service.get_public_url(link),
+        }
+    ), 201
+
+
+@custom_reports_bp.route("/reports/builder/<int:view_id>/share/<token>", methods=["DELETE"])
+@login_required
+@module_enabled("custom_reports")
+def revoke_shared_report_link(view_id, token):
+    """Revoke a share link for the current user (session auth for web UI)."""
+    saved_view = SavedReportView.query.get_or_404(view_id)
+    if saved_view.owner_id != current_user.id and not current_user.is_admin:
+        return jsonify({"error": "Access denied"}), 403
+
+    service = SharedReportService()
+    if not service.revoke_link(view_id, token):
+        return jsonify({"error": "Share link not found"}), 404
+    return jsonify({"success": True, "message": _("Share link revoked successfully")})
+
+
+@custom_reports_bp.route("/reports/shared/<token>")
+@module_enabled("custom_reports")
+def view_shared_report(token):
+    """Public shared report page (no login required)."""
+    service = SharedReportService()
+    link, error = service.resolve_token(token)
+    if error:
+        return render_template("reports/shared_view.html", token=token, report_name=None, error=error), 404
+
+    needs_password = link.requires_password and not _has_shared_report_access(link)
+    return render_template(
+        "reports/shared_view.html",
+        token=token,
+        report_name=link.report_name,
+        needs_password=needs_password,
+        error=None,
+    )
+
+
+@custom_reports_bp.route("/reports/shared/<token>/verify", methods=["POST"])
+@module_enabled("custom_reports")
+def verify_shared_report(token):
+    """Verify password for a protected shared report link."""
+    service = SharedReportService()
+    link, error = service.resolve_token(token)
+    if error:
+        return jsonify({"success": False, "message": error}), 404
+
+    data = request.get_json(silent=True) or {}
+    password = data.get("password", "")
+    if not link.check_password(password):
+        return jsonify({"success": False, "message": _("Invalid password")}), 403
+
+    session[_shared_report_session_key(token)] = True
+    return jsonify({"success": True})
+
+
+@custom_reports_bp.route("/api/reports/shared/<token>/data")
+@module_enabled("custom_reports")
+def shared_report_data(token):
+    """JSON report data for a shared link (no login required)."""
+    service = SharedReportService()
+    link, error = service.resolve_token(token)
+    if error:
+        return jsonify({"error": error}), 404
+
+    if link.requires_password and not _has_shared_report_access(link):
+        return jsonify({"error": _("Password required")}), 403
+
+    try:
+        report_data = service.execute_report_with_snapshot(link)
+        return jsonify(report_data)
+    except Exception as exc:
+        current_app.logger.error("Error executing shared report %s: %s", token, exc, exc_info=True)
+        return jsonify({"error": str(exc)}), 500
 
 
 def _generate_iterative_reports(saved_view: SavedReportView, config: dict, user_id: int):
