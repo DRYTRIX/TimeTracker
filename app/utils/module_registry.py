@@ -811,6 +811,19 @@ class ModuleRegistry:
             )
         )
 
+        cls.register(
+            ModuleDefinition(
+                id="gamification",
+                name="Gamification",
+                description="Badges and leaderboards",
+                category=ModuleCategory.ADVANCED,
+                blueprint_name="gamification",
+                default_enabled=True,
+                icon="fa-trophy",
+                order=87,
+            )
+        )
+
         cls._apply_preset_membership()
         cls._initialized = True
 

@@ -628,6 +628,17 @@ def stop_timer():
         # Check if this is user's first completed time entry (onboarding milestone)
         entry_count = TimeEntry.query.filter_by(user_id=current_user.id).filter(TimeEntry.end_time.isnot(None)).count()
 
+        try:
+            from app.services.gamification_service import GamificationService
+
+            awarded = GamificationService().check_and_award_badges(
+                current_user.id, "time_entry_created", {"entry_id": active_timer.id}
+            )
+            if awarded:
+                flash(_("Badge earned: %(name)s", name=awarded[0].get("name", "Badge")), "success")
+        except Exception:
+            current_app.logger.debug("Gamification hook failed", exc_info=True)
+
         if entry_count == 1:  # First completed time entry ever
             track_onboarding_first_time_entry(
                 current_user.id,

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Admin'), 'url': url_for('admin.dashboard')},
+    {'text': _('Gamification')}
+] %}
+{{ page_header(icon_class='fas fa-trophy', title_text=_('Gamification Admin'), subtitle_text=_('Manage badges and leaderboards'), breadcrumbs=breadcrumbs) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Badges') }}</h2>
+    <ul class="space-y-2 mb-4 text-sm">
+      {% for b in badges %}
+      <li>{{ b.name }} · {{ b.points }} pts · {{ b.rarity }}</li>
+      {% endfor %}
+    </ul>
+    <form method="POST" class="space-y-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="badge">
+      <input class="form-input w-full" name="name" placeholder="{{ _('Name') }}" required>
+      <input class="form-input w-full" name="description" placeholder="{{ _('Description') }}">
+      <input class="form-input w-full" name="points" type="number" value="10">
+      <button class="btn btn-primary" type="submit">{{ _('Add badge') }}</button>
+    </form>
+  </div>
+  <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Leaderboards') }}</h2>
+    <ul class="space-y-2 mb-4 text-sm">
+      {% for b in boards %}
+      <li>{{ b.name }} · {{ b.leaderboard_type }} · {{ b.period }}</li>
+      {% endfor %}
+    </ul>
+    <form method="POST" class="space-y-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="leaderboard">
+      <input class="form-input w-full" name="name" placeholder="{{ _('Name') }}" required>
+      <select class="form-input w-full" name="leaderboard_type">
+        <option value="time_tracked">time_tracked</option>
+        <option value="tasks_completed">tasks_completed</option>
+        <option value="points">points</option>
+        <option value="streak">streak</option>
+        <option value="projects_completed">projects_completed</option>
+      </select>
+      <select class="form-input w-full" name="period">
+        <option value="weekly">weekly</option>
+        <option value="monthly">monthly</option>
+        <option value="daily">daily</option>
+        <option value="all_time">all_time</option>
+      </select>
+      <button class="btn btn-primary" type="submit">{{ _('Add leaderboard') }}</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
