@@ -9,11 +9,16 @@ class Calendar {
         this.currentDate = new Date(options.currentDate || new Date());
         this.container = document.getElementById('calendarContainer');
         this.apiUrl = options.apiUrl;
+        this.moveEventUrl = options.moveEventUrl || (window.calendarData && window.calendarData.moveEventUrl) || '';
+        this.resizeEventUrl = options.resizeEventUrl || (window.calendarData && window.calendarData.resizeEventUrl) || '';
+        this.csrfToken = options.csrfToken || (window.calendarData && window.calendarData.csrfToken) || '';
         this.events = [];
         this.tasks = [];
         this.timeEntries = [];
         this.holidays = [];
         this.timeOff = [];
+        this._dragState = null;
+        this._resizeState = null;
         
         // Filters
         this.showEvents = true;
@@ -57,8 +62,217 @@ class Calendar {
     
     init() {
         this.setupEventListeners();
+        this.setupDragAndDrop();
         this.loadEvents();
         this.updateViewLinks();
+    }
+
+    setupDragAndDrop() {
+        if (!this.container) return;
+
+        this.container.addEventListener('dragstart', (e) => this.onDragStart(e));
+        this.container.addEventListener('dragend', (e) => this.onDragEnd(e));
+        this.container.addEventListener('dragover', (e) => this.onDragOver(e));
+        this.container.addEventListener('dragleave', (e) => this.onDragLeave(e));
+        this.container.addEventListener('drop', (e) => this.onDrop(e));
+        this.container.addEventListener('mousedown', (e) => this.onResizeMouseDown(e));
+
+        document.addEventListener('mousemove', (e) => this.onResizeMouseMove(e));
+        document.addEventListener('mouseup', (e) => this.onResizeMouseUp(e));
+    }
+
+    onDragStart(e) {
+        const el = e.target.closest('[data-type="event"][draggable="true"]');
+        if (!el || !this.moveEventUrl) return;
+        const id = el.dataset.id;
+        const start = el.dataset.start;
+        const end = el.dataset.end;
+        if (!id || !start) return;
+        this._dragState = {
+            id: parseInt(id, 10),
+            start,
+            end,
+            durationMs: end ? (new Date(end) - new Date(start)) : 60 * 60 * 1000
+        };
+        el.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(id));
+        e.dataTransfer.setData('application/x-calendar-event', JSON.stringify(this._dragState));
+    }
+
+    onDragEnd(e) {
+        const el = e.target.closest('.dragging');
+        if (el) el.classList.remove('dragging');
+        this.container.querySelectorAll('.drop-target').forEach(n => n.classList.remove('drop-target'));
+        this._dragState = null;
+    }
+
+    _dropTargetFromEvent(e) {
+        const monthCell = e.target.closest('.month-cell[data-date]');
+        if (monthCell) return { kind: 'day', date: monthCell.dataset.date, el: monthCell };
+
+        const weekCol = e.target.closest('.week-day-column[data-date]');
+        if (weekCol) {
+            const blocks = weekCol.querySelector('.week-day-blocks') || weekCol;
+            const rect = blocks.getBoundingClientRect();
+            const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+            const minutes = Math.round((y / 60) * 60 / 15) * 15; // 15-min snap within hour px
+            const hour = Math.floor(y / 60);
+            const min = Math.round(((y % 60) / 60) * 60 / 15) * 15;
+            return { kind: 'datetime', date: weekCol.dataset.date, minutes: hour * 60 + min, el: weekCol };
+        }
+
+        const dayContainer = e.target.closest('.day-events-container, .events-column');
+        if (dayContainer) {
+            const container = this.container.querySelector('.day-events-container') || dayContainer;
+            const rect = container.getBoundingClientRect();
+            const y = Math.max(0, Math.min(1440, e.clientY - rect.top));
+            const minutes = Math.round(y / 15) * 15;
+            return {
+                kind: 'datetime',
+                date: this.formatLocalDate(this.currentDate),
+                minutes,
+                el: container
+            };
+        }
+        return null;
+    }
+
+    onDragOver(e) {
+        if (!this._dragState && !(e.dataTransfer && e.dataTransfer.types.includes('application/x-calendar-event'))) {
+            return;
+        }
+        const target = this._dropTargetFromEvent(e);
+        if (!target) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        this.container.querySelectorAll('.drop-target').forEach(n => {
+            if (n !== target.el) n.classList.remove('drop-target');
+        });
+        target.el.classList.add('drop-target');
+    }
+
+    onDragLeave(e) {
+        const el = e.target.closest('.drop-target');
+        if (el && !el.contains(e.relatedTarget)) {
+            el.classList.remove('drop-target');
+        }
+    }
+
+    async onDrop(e) {
+        e.preventDefault();
+        const target = this._dropTargetFromEvent(e);
+        this.container.querySelectorAll('.drop-target').forEach(n => n.classList.remove('drop-target'));
+        let state = this._dragState;
+        if (!state) {
+            try {
+                state = JSON.parse(e.dataTransfer.getData('application/x-calendar-event'));
+            } catch (_) {
+                return;
+            }
+        }
+        if (!state || !target || !this.moveEventUrl) return;
+
+        let newStart;
+        if (target.kind === 'day') {
+            const old = new Date(state.start);
+            newStart = new Date(`${target.date}T00:00:00`);
+            newStart.setHours(old.getHours(), old.getMinutes(), 0, 0);
+        } else {
+            const h = Math.floor(target.minutes / 60);
+            const m = target.minutes % 60;
+            newStart = new Date(`${target.date}T00:00:00`);
+            newStart.setHours(h, m, 0, 0);
+        }
+        const newEnd = new Date(newStart.getTime() + (state.durationMs || 3600000));
+
+        await this.postMoveOrResize('move', state.id, {
+                start: newStart.toISOString(),
+                end: newEnd.toISOString()
+            });
+        this._dragState = null;
+        this.loadEvents();
+    }
+
+    onResizeMouseDown(e) {
+        const handle = e.target.closest('.event-resize-handle');
+        if (!handle || !this.resizeEventUrl) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const card = handle.closest('[data-type="event"]');
+        if (!card) return;
+        this._resizeState = {
+            id: parseInt(card.dataset.id, 10),
+            start: card.dataset.start,
+            end: card.dataset.end,
+            startY: e.clientY,
+            el: card
+        };
+        card.classList.add('resizing');
+    }
+
+    onResizeMouseMove(e) {
+        if (!this._resizeState) return;
+        const deltaPx = e.clientY - this._resizeState.startY;
+        const deltaMin = Math.round(deltaPx / 15) * 15;
+        const start = new Date(this._resizeState.start);
+        let end = new Date(this._resizeState.end || start.getTime() + 3600000);
+        end = new Date(end.getTime() + deltaMin * 60 * 1000);
+        if (end <= start) end = new Date(start.getTime() + 15 * 60 * 1000);
+        this._resizeState.previewEnd = end;
+        const top = parseFloat(this._resizeState.el.style.top) || 0;
+        const startMin = start.getHours() * 60 + start.getMinutes();
+        const height = Math.max(30, (end - start) / 60000);
+        this._resizeState.el.style.height = `${height}px`;
+        void top; void startMin;
+    }
+
+    async onResizeMouseUp() {
+        if (!this._resizeState) return;
+        const state = this._resizeState;
+        this._resizeState = null;
+        state.el.classList.remove('resizing');
+        if (!state.previewEnd) return;
+        await this.postMoveOrResize('resize', state.id, { end: state.previewEnd.toISOString() });
+        this.loadEvents();
+    }
+
+    async postMoveOrResize(kind, eventId, body) {
+        const base = kind === 'move' ? this.moveEventUrl : this.resizeEventUrl;
+        if (!base) return;
+        // Template strips /0 from .../events/0/move → .../events/move; restore id before action
+        const action = kind === 'move' ? 'move' : 'resize';
+        let finalUrl = base;
+        if (base.endsWith(`/${action}`)) {
+            finalUrl = base.replace(new RegExp(`/${action}$`), `/${eventId}/${action}`);
+        } else {
+            finalUrl = `${base.replace(/\/$/, '')}/${eventId}/${action}`;
+        }
+        try {
+            const resp = await fetch(finalUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.csrfToken
+                },
+                body: JSON.stringify(body)
+            });
+            if (!resp.ok) {
+                const data = await resp.json().catch(() => ({}));
+                console.error('Calendar move/resize failed', data);
+                alert(data.error || 'Failed to update event');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Failed to update event');
+        }
+    }
+
+    _eventDragAttrs(event) {
+        if (!event || !event.id || !event.start) return 'data-type="event"';
+        const start = event.start;
+        const end = event.end || '';
+        return `draggable="true" data-id="${event.id}" data-type="event" data-start="${start}" data-end="${end}"`;
     }
     
     setupEventListeners() {
@@ -530,12 +744,13 @@ class Calendar {
             const detailId = item.event ? item.event.id : item.entry.id;
             if (item.type === 'event') {
                 html += `
-                    <div class="event-card event" data-id="${item.event.id}" data-type="event"
+                    <div class="event-card event" ${this._eventDragAttrs(item.event)}
                          style="border-left-color: ${item.color}; ${style}"
                          onclick="window.calendar.showEventDetails(${item.event.id}, '${detailType}', event)">
                         <i class="fas fa-calendar mr-2 text-blue-600 dark:text-blue-400"></i>
                         <strong>${item.title}</strong>
                         <br><small>${item.time}</small>
+                        <div class="event-resize-handle" title="Resize"></div>
                     </div>
                 `;
             } else if (item.type === 'time_entry') {
@@ -717,7 +932,7 @@ class Calendar {
             const { left, width } = this.columnStyle(item.column, item.totalColumns);
             const style = `left: ${left}; width: ${width}; top: ${item.topPosition}px; height: ${item.heightMinutes}px;`;
             if (item.type === 'event') {
-                html += `<div class="week-event-block event" data-id="${item.event.id}" data-type="event" style="border-left-color: ${item.color}; ${style}" onclick="window.calendar.showEventDetails(${item.event.id}, '${item.type}', event)" title="${item.title} (${item.timeStr})"><i class="fas fa-calendar mr-1"></i><strong>${item.title}</strong><br><small>${item.timeStr}</small></div>`;
+                html += `<div class="week-event-block event" ${this._eventDragAttrs(item.event)} style="border-left-color: ${item.color}; ${style}" onclick="window.calendar.showEventDetails(${item.event.id}, '${item.type}', event)" title="${item.title} (${item.timeStr})"><i class="fas fa-calendar mr-1"></i><strong>${item.title}</strong><br><small>${item.timeStr}</small><div class="event-resize-handle" title="Resize"></div></div>`;
             } else if (item.type === 'time_entry') {
                 const durationText = (item.entryEnd != null && item.startTime != null) ? `${item.startTime} - ${item.endTimeStr}` : (item.startTime || item.timeStr || '');
                 const blockId = (item.entry && item.entry.id) != null ? item.entry.id : item.event.id;
@@ -812,7 +1027,7 @@ class Calendar {
                         const eventColor = event.color || (blockType === 'time_entry' ? '#10b981' : '#3b82f6');
                         const badgeIcon = blockType === 'time_entry' ? '⏱' : '📅';
                         const badgeClass = blockType === 'time_entry' ? 'event-badge time-entry-badge' : 'event-badge';
-                        html += `<div class="${badgeClass}" style="background-color: ${eventColor}" onclick="window.calendar.showEventDetails(${event.id}, '${blockType}', event); event.stopPropagation();" title="${eventTitle}">${badgeIcon} ${eventTitle}</div>`;
+                        html += `<div class="${badgeClass}" ${blockType === 'event' ? this._eventDragAttrs(event) : `data-id="${event.id}" data-type="${blockType}"`} style="background-color: ${eventColor}" onclick="window.calendar.showEventDetails(${event.id}, '${blockType}', event); event.stopPropagation();" title="${eventTitle}">${badgeIcon} ${eventTitle}</div>`;
                     }
                     count++;
                 }
@@ -1005,7 +1220,10 @@ document.addEventListener('DOMContentLoaded', () => {
         window.calendar = new Calendar({
             viewType: window.calendarData.viewType,
             currentDate: window.calendarData.currentDate,
-            apiUrl: window.calendarData.apiUrl
+            apiUrl: window.calendarData.apiUrl,
+            moveEventUrl: window.calendarData.moveEventUrl,
+            resizeEventUrl: window.calendarData.resizeEventUrl,
+            csrfToken: window.calendarData.csrfToken
         });
         
     }
