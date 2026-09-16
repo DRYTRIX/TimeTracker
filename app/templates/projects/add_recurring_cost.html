@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}{% if recurring %}{{ _('Edit Recurring Cost') }}{% else %}{{ _('Add Recurring Cost') }}{% endif %} · {{ project.name }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold">
+            {% if recurring %}{{ _('Edit Recurring Cost') }}{% else %}{{ _('Add Recurring Cost') }}{% endif %}
+        </h1>
+        <p class="text-text-muted-light dark:text-text-muted-dark">{{ project.name }}</p>
+    </div>
+
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <form method="POST" action="{% if recurring %}{{ url_for('projects.edit_recurring_cost', project_id=project.id, rid=recurring.id) }}{% else %}{{ url_for('projects.add_recurring_cost', project_id=project.id) }}{% endif %}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="mb-4">
+                <label for="description" class="form-label">{{ _('Description') }} *</label>
+                <input type="text" id="description" name="description" class="form-input" required value="{{ recurring.description if recurring else '' }}">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="category" class="form-label">{{ _('Category') }} *</label>
+                    <select id="category" name="category" class="form-input" required>
+                        <option value="">{{ _('Select category') }}</option>
+                        {% for cat in ['travel', 'materials', 'services', 'equipment', 'software', 'other'] %}
+                        <option value="{{ cat }}" {% if recurring and recurring.category == cat %}selected{% endif %}>{{ cat|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="amount" class="form-label">{{ _('Amount') }} *</label>
+                    <input type="number" id="amount" name="amount" step="0.01" min="0.01" class="form-input" required value="{{ recurring.amount if recurring else '' }}">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="currency_code" class="form-label">{{ _('Currency') }}</label>
+                    <select id="currency_code" name="currency_code" class="form-input">
+                        {% for code in ['EUR', 'USD', 'GBP', 'CHF'] %}
+                        <option value="{{ code }}" {% if (recurring and recurring.currency_code == code) or (not recurring and code == 'EUR') %}selected{% endif %}>{{ code }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" name="billable" class="form-checkbox mr-2" {% if not recurring or recurring.billable %}checked{% endif %}>
+                        <span>{{ _('Billable to client') }}</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label for="frequency" class="form-label">{{ _('Frequency') }} *</label>
+                    <select id="frequency" name="frequency" class="form-input" required>
+                        {% for freq in ['daily', 'weekly', 'monthly', 'yearly'] %}
+                        <option value="{{ freq }}" {% if recurring and recurring.frequency == freq %}selected{% elif not recurring and freq == 'monthly' %}selected{% endif %}>{{ freq|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="interval" class="form-label">{{ _('Every') }}</label>
+                    <input type="number" id="interval" name="interval" min="1" class="form-input" value="{{ recurring.interval if recurring else 1 }}">
+                </div>
+                <div>
+                    <label for="next_run_date" class="form-label">{{ _('Next Run Date') }} *</label>
+                    <input type="date" id="next_run_date" name="next_run_date" class="form-input user-date-input" required value="{{ recurring.next_run_date.strftime('%Y-%m-%d') if recurring and recurring.next_run_date else default_next_run_date }}">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="end_date" class="form-label">{{ _('End Date') }}</label>
+                    <input type="date" id="end_date" name="end_date" class="form-input user-date-input" value="{{ recurring.end_date.strftime('%Y-%m-%d') if recurring and recurring.end_date else '' }}">
+                </div>
+                {% if recurring %}
+                <div class="flex items-end">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" name="is_active" class="form-checkbox mr-2" {% if recurring.is_active %}checked{% endif %}>
+                        <span>{{ _('Active') }}</span>
+                    </label>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="flex justify-end gap-2 mt-6">
+                <a href="{{ url_for('projects.list_recurring_costs', project_id=project.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">{{ _('Cancel') }}</a>
+                <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Save') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

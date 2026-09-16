@@ -1,7 +1,7 @@
 import csv
 import io
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from flask import (
@@ -28,6 +28,7 @@ from app.models import (
     Project,
     ProjectAttachment,
     ProjectCost,
+    RecurringProjectCost,
     Task,
     TimeEntry,
     UserFavoriteProject,
@@ -1849,6 +1850,204 @@ def api_project_costs(project_id):
             "count": len(costs),
         }
     )
+
+
+# ===== RECURRING PROJECT COSTS ROUTES =====
+
+
+def _parse_recurring_cost_form(project_id):
+    """Parse and validate recurring cost form fields."""
+    description = request.form.get("description", "").strip()
+    category = request.form.get("category", "").strip()
+    amount = request.form.get("amount", "").strip()
+    frequency = request.form.get("frequency", "").strip()
+    interval = request.form.get("interval", type=int, default=1)
+    next_run_date_str = request.form.get("next_run_date", "").strip()
+    end_date_str = request.form.get("end_date", "").strip()
+    billable = request.form.get("billable") == "on"
+    currency_code = request.form.get("currency_code", "EUR").strip()
+    is_active = request.form.get("is_active") == "on" if "is_active" in request.form else True
+
+    if not description or not category or not amount or not frequency or not next_run_date_str:
+        return None, _("Description, category, amount, frequency, and next run date are required")
+
+    if frequency not in ("daily", "weekly", "monthly", "yearly"):
+        return None, _("Invalid frequency")
+
+    try:
+        amount = Decimal(amount)
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+    except (ValueError, Exception):
+        return None, _("Invalid amount format")
+
+    try:
+        next_run_date = datetime.strptime(next_run_date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return None, _("Invalid next run date format")
+
+    end_date = None
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            return None, _("Invalid end date format")
+
+    return {
+        "description": description,
+        "category": category,
+        "amount": amount,
+        "frequency": frequency,
+        "interval": interval or 1,
+        "next_run_date": next_run_date,
+        "end_date": end_date,
+        "billable": billable,
+        "currency_code": currency_code,
+        "is_active": is_active,
+        "project_id": project_id,
+        "user_id": current_user.id,
+    }, None
+
+
+@projects_bp.route("/projects/<int:project_id>/costs/recurring")
+@login_required
+def list_recurring_costs(project_id):
+    """List recurring costs for a project."""
+    project = Project.query.get_or_404(project_id)
+    from app.services.recurring_project_cost_service import RecurringProjectCostService
+
+    recurring_costs = RecurringProjectCostService().list_for_project(project_id)
+    return render_template(
+        "projects/recurring_costs.html",
+        project=project,
+        recurring_costs=recurring_costs,
+    )
+
+
+@projects_bp.route("/projects/<int:project_id>/costs/recurring/add", methods=["GET", "POST"])
+@login_required
+def add_recurring_cost(project_id):
+    """Add a recurring project cost template."""
+    project = Project.query.get_or_404(project_id)
+
+    if request.method == "POST":
+        data, error = _parse_recurring_cost_form(project_id)
+        if error:
+            flash(error, "error")
+            return render_template("projects/add_recurring_cost.html", project=project)
+
+        recurring = RecurringProjectCost(**data)
+        db.session.add(recurring)
+        if not safe_commit("add_recurring_project_cost", {"project_id": project_id}):
+            flash(_("Could not add recurring cost due to a database error. Please check server logs."), "error")
+            return render_template("projects/add_recurring_cost.html", project=project)
+
+        flash(_("Recurring cost created successfully"), "success")
+        return redirect(url_for("projects.list_recurring_costs", project_id=project.id))
+
+    default_next_run_date = (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%d")
+    return render_template(
+        "projects/add_recurring_cost.html",
+        project=project,
+        default_next_run_date=default_next_run_date,
+    )
+
+
+@projects_bp.route("/projects/<int:project_id>/costs/recurring/<int:rid>/edit", methods=["GET", "POST"])
+@login_required
+def edit_recurring_cost(project_id, rid):
+    """Edit a recurring project cost template."""
+    project = Project.query.get_or_404(project_id)
+    recurring = RecurringProjectCost.query.get_or_404(rid)
+
+    if recurring.project_id != project_id:
+        flash(_("Recurring cost not found"), "error")
+        return redirect(url_for("projects.list_recurring_costs", project_id=project_id))
+
+    if not current_user.is_admin and recurring.user_id != current_user.id:
+        flash(_("You do not have permission to edit this recurring cost"), "error")
+        return redirect(url_for("projects.list_recurring_costs", project_id=project_id))
+
+    if request.method == "POST":
+        data, error = _parse_recurring_cost_form(project_id)
+        if error:
+            flash(error, "error")
+            return render_template("projects/add_recurring_cost.html", project=project, recurring=recurring)
+
+        for field in (
+            "description",
+            "category",
+            "amount",
+            "frequency",
+            "interval",
+            "next_run_date",
+            "end_date",
+            "billable",
+            "currency_code",
+            "is_active",
+        ):
+            setattr(recurring, field, data[field])
+        recurring.updated_at = datetime.utcnow()
+
+        if not safe_commit("edit_recurring_project_cost", {"recurring_id": rid}):
+            flash(_("Could not update recurring cost due to a database error. Please check server logs."), "error")
+            return render_template("projects/add_recurring_cost.html", project=project, recurring=recurring)
+
+        flash(_("Recurring cost updated successfully"), "success")
+        return redirect(url_for("projects.list_recurring_costs", project_id=project.id))
+
+    return render_template("projects/add_recurring_cost.html", project=project, recurring=recurring)
+
+
+@projects_bp.route("/projects/<int:project_id>/costs/recurring/<int:rid>/delete", methods=["POST"])
+@login_required
+def delete_recurring_cost(project_id, rid):
+    """Delete a recurring project cost template."""
+    project = Project.query.get_or_404(project_id)
+    recurring = RecurringProjectCost.query.get_or_404(rid)
+
+    if recurring.project_id != project_id:
+        flash(_("Recurring cost not found"), "error")
+        return redirect(url_for("projects.list_recurring_costs", project_id=project_id))
+
+    if not current_user.is_admin and recurring.user_id != current_user.id:
+        flash(_("You do not have permission to delete this recurring cost"), "error")
+        return redirect(url_for("projects.list_recurring_costs", project_id=project_id))
+
+    db.session.delete(recurring)
+    if not safe_commit("delete_recurring_project_cost", {"recurring_id": rid}):
+        flash(_("Could not delete recurring cost due to a database error. Please check server logs."), "error")
+        return redirect(url_for("projects.list_recurring_costs", project_id=project_id))
+
+    flash(_("Recurring cost deleted successfully"), "success")
+    return redirect(url_for("projects.list_recurring_costs", project_id=project.id))
+
+
+@projects_bp.route("/projects/<int:project_id>/costs/recurring/<int:rid>/generate-now", methods=["POST"])
+@login_required
+def generate_recurring_cost_now(project_id, rid):
+    """Manually generate a project cost from a recurring template."""
+    project = Project.query.get_or_404(project_id)
+    recurring = RecurringProjectCost.query.get_or_404(rid)
+
+    if recurring.project_id != project_id:
+        return jsonify({"error": "Recurring cost not found"}), 404
+
+    if not current_user.is_admin and recurring.user_id != current_user.id:
+        return jsonify({"error": "Permission denied"}), 403
+
+    try:
+        original_next_run_date = recurring.next_run_date
+        recurring.next_run_date = datetime.utcnow().date()
+        cost = recurring.generate_cost()
+        if cost:
+            db.session.commit()
+            return jsonify({"success": True, "cost_id": cost.id})
+        recurring.next_run_date = original_next_run_date
+        return jsonify({"error": "Failed to generate cost"}), 400
+    except Exception as e:
+        current_app.logger.error(f"Error generating cost from recurring template: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 # ===== PROJECT EXTRA GOODS ROUTES =====
