@@ -2,21 +2,22 @@
 {% from "components/ui.html" import page_header %}
 
 {% block content %}
+{% set is_edit = purchase_order is not none %}
 {% set breadcrumbs = [
     {'text': 'Inventory', 'url': url_for('inventory.list_stock_items')},
     {'text': 'Purchase Orders', 'url': url_for('inventory.list_purchase_orders')},
-    {'text': 'New Purchase Order'}
+    {'text': _('Edit Purchase Order') if is_edit else _('New Purchase Order')}
 ] %}
 
 {{ page_header(
     icon_class='fas fa-shopping-cart',
-    title_text='New Purchase Order',
-    subtitle_text='Create a new purchase order to a supplier',
+    title_text=_('Edit Purchase Order') if is_edit else _('New Purchase Order'),
+    subtitle_text=_('Update purchase order details') if is_edit else _('Create a new purchase order to a supplier'),
     breadcrumbs=breadcrumbs
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm max-w-6xl mx-auto">
-    <form method="POST" action="{{ url_for('inventory.new_purchase_order') }}">
+    <form method="POST" action="{{ url_for('inventory.edit_purchase_order', po_id=purchase_order.id) if is_edit else url_for('inventory.new_purchase_order') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
         <!-- Basic Information -->
@@ -27,37 +28,42 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label for="supplier_id" class="form-label">{{ _('Supplier') }} *</label>
-                    <select name="supplier_id" id="supplier_id" class="form-input" required>
+                    <select name="supplier_id" id="supplier_id" class="form-input" required {% if is_edit %}disabled{% endif %}>
                         <option value="">{{ _('Select Supplier') }}</option>
                         {% for supplier in suppliers %}
-                        <option value="{{ supplier.id }}">{{ supplier.code }} - {{ supplier.name }}</option>
+                        <option value="{{ supplier.id }}" {% if is_edit and purchase_order.supplier_id == supplier.id %}selected{% endif %}>{{ supplier.code }} - {{ supplier.name }}</option>
                         {% endfor %}
                     </select>
+                    {% if is_edit %}
+                    {# Disabled selects are not submitted; keep supplier_id for any client-side use #}
+                    <input type="hidden" name="supplier_id" value="{{ purchase_order.supplier_id }}">
+                    {% endif %}
                 </div>
                 <div>
                     <label for="order_date" class="form-label">{{ _('Order Date') }} *</label>
-                    <input type="date" name="order_date" id="order_date" value="{{ request.form.get('order_date', '') }}" class="form-input" required>
+                    <input type="date" name="order_date" id="order_date" value="{{ request.form.get('order_date', purchase_order.order_date.isoformat() if is_edit and purchase_order.order_date else '') }}" class="form-input" required>
                 </div>
                 <div>
                     <label for="expected_delivery_date" class="form-label">{{ _('Expected Delivery Date') }}</label>
-                    <input type="date" name="expected_delivery_date" id="expected_delivery_date" value="{{ request.form.get('expected_delivery_date', '') }}" class="form-input">
+                    <input type="date" name="expected_delivery_date" id="expected_delivery_date" value="{{ request.form.get('expected_delivery_date', purchase_order.expected_delivery_date.isoformat() if is_edit and purchase_order.expected_delivery_date else '') }}" class="form-input">
                 </div>
                 <div>
                     <label for="currency_code" class="form-label">{{ _('Currency') }}</label>
+                    {% set selected_currency = request.form.get('currency_code', purchase_order.currency_code if is_edit else 'EUR') %}
                     <select name="currency_code" id="currency_code" class="form-input">
-                        <option value="EUR" selected>EUR</option>
-                        <option value="USD">USD</option>
-                        <option value="GBP">GBP</option>
-                        <option value="CHF">CHF</option>
+                        <option value="EUR" {% if selected_currency == 'EUR' %}selected{% endif %}>EUR</option>
+                        <option value="USD" {% if selected_currency == 'USD' %}selected{% endif %}>USD</option>
+                        <option value="GBP" {% if selected_currency == 'GBP' %}selected{% endif %}>GBP</option>
+                        <option value="CHF" {% if selected_currency == 'CHF' %}selected{% endif %}>CHF</option>
                     </select>
                 </div>
                 <div class="md:col-span-2">
                     <label for="notes" class="form-label">{{ _('Notes') }}</label>
-                    <textarea name="notes" id="notes" rows="2" class="form-input" placeholder="{{ _('Notes visible to supplier') }}">{{ request.form.get('notes', '') }}</textarea>
+                    <textarea name="notes" id="notes" rows="2" class="form-input" placeholder="{{ _('Notes visible to supplier') }}">{{ request.form.get('notes', purchase_order.notes if is_edit and purchase_order.notes else '') }}</textarea>
                 </div>
                 <div class="md:col-span-2">
                     <label for="internal_notes" class="form-label">{{ _('Internal Notes') }}</label>
-                    <textarea name="internal_notes" id="internal_notes" rows="2" class="form-input" placeholder="{{ _('Internal notes (not visible to supplier)') }}">{{ request.form.get('internal_notes', '') }}</textarea>
+                    <textarea name="internal_notes" id="internal_notes" rows="2" class="form-input" placeholder="{{ _('Internal notes (not visible to supplier)') }}">{{ request.form.get('internal_notes', purchase_order.internal_notes if is_edit and purchase_order.internal_notes else '') }}</textarea>
                 </div>
             </div>
         </div>
@@ -97,11 +103,11 @@
         </div>
 
         <div class="mt-6 flex flex-col sm:flex-row justify-end gap-3">
-            <a href="{{ url_for('inventory.list_purchase_orders') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-center">
+            <a href="{{ url_for('inventory.view_purchase_order', po_id=purchase_order.id) if is_edit else url_for('inventory.list_purchase_orders') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-center">
                 {{ _('Cancel') }}
             </a>
             <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
-                {{ _('Create Purchase Order') }}
+                {{ _('Update Purchase Order') if is_edit else _('Create Purchase Order') }}
             </button>
         </div>
     </form>
@@ -112,13 +118,19 @@
 document.addEventListener('DOMContentLoaded', function() {
     const itemsContainer = document.getElementById('po-items');
     const addItemBtn = document.getElementById('add-item');
-    const supplierSelect = document.getElementById('supplier_id');
     
     const stockItems = {{ stock_items | tojson if stock_items else '[]' }};
     const warehouses = {{ warehouses | tojson if warehouses else '[]' }};
+    const existingItems = [
+        {% if is_edit %}
+        {% for item in purchase_order.items %}
+        {{ item.to_dict() | tojson }}{% if not loop.last %},{% endif %}
+        {% endfor %}
+        {% endif %}
+    ];
     
     // Build stock items dropdown HTML
-    function buildStockItemsHtml(selectedSupplierId = null) {
+    function buildStockItemsHtml() {
         let html = '<option value="">{{ _("Select Item") }}</option>';
         stockItems.forEach(item => {
             html += '<option value="' + item.id + '" data-name="' + (item.name || '').replace(/"/g, '&quot;') + '" data-unit="' + (item.unit || '') + '">' + item.sku + ' - ' + item.name + '</option>';
@@ -141,14 +153,13 @@ document.addEventListener('DOMContentLoaded', function() {
         row.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 po-item-row';
         
         row.innerHTML = 
-            '<input type="hidden" name="item_stock_item_id[]" value="' + (item && item.stock_item_id ? item.stock_item_id : '') + '">' +
             '<input type="hidden" name="item_supplier_stock_item_id[]" value="' + (item && item.supplier_stock_item_id ? item.supplier_stock_item_id : '') + '">' +
             '<select name="item_stock_item_id[]" class="md:col-span-3 form-input text-sm item-stock-select">' + buildStockItemsHtml() + '</select>' +
             '<input type="text" name="item_description[]" placeholder="{{ _("Description") }}" value="' + (item ? (item.description || '').replace(/"/g, '&quot;') : '') + '" class="md:col-span-2 form-input text-sm item-description" required>' +
             '<input type="number" name="item_quantity[]" placeholder="{{ _("Qty") }}" value="' + (item ? item.quantity_ordered : '1') + '" step="0.01" min="0" class="md:col-span-1 form-input text-sm item-quantity" required data-calc-trigger>' +
             '<input type="number" name="item_unit_cost[]" placeholder="{{ _("Cost") }}" value="' + (item ? item.unit_cost : '') + '" step="0.01" min="0" class="md:col-span-1 form-input text-sm item-cost" required data-calc-trigger>' +
             '<div class="md:col-span-1 flex items-center font-medium item-total">0.00</div>' +
-            '<select name="item_warehouse_id[]" class="md:col-span-2 form-input text-sm">' + buildWarehousesHtml() + '</select>' +
+            '<select name="item_warehouse_id[]" class="md:col-span-2 form-input text-sm item-warehouse-select">' + buildWarehousesHtml() + '</select>' +
             '<input type="text" name="item_supplier_sku[]" placeholder="{{ _("Supplier SKU") }}" value="' + (item ? (item.supplier_sku || '') : '') + '" class="md:col-span-1 form-input text-sm">' +
             '<button type="button" class="remove-item md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition text-sm" title="{{ _("Remove") }}">' +
                 '<i class="fas fa-trash"></i>' +
@@ -158,6 +169,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Setup stock item select handler
         const stockSelect = row.querySelector('.item-stock-select');
+        const warehouseSelect = row.querySelector('.item-warehouse-select');
+        
+        if (item && item.stock_item_id) {
+            stockSelect.value = String(item.stock_item_id);
+        }
+        if (item && item.warehouse_id) {
+            warehouseSelect.value = String(item.warehouse_id);
+        }
+        
         stockSelect.addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];
             const descInput = row.querySelector('.item-description');
@@ -205,10 +225,13 @@ document.addEventListener('DOMContentLoaded', function() {
         addItemRow();
     });
     
-    // Add initial row
-    addItemRow();
+    // Prefill existing items in edit mode, otherwise one blank row
+    if (existingItems.length > 0) {
+        existingItems.forEach(item => addItemRow(item));
+    } else {
+        addItemRow();
+    }
 });
 </script>
 {% endblock %}
 {% endblock %}
-
