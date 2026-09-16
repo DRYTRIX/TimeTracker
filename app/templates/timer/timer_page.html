@@ -264,6 +264,49 @@
     
     <!-- Sidebar -->
     <div class="space-y-6">
+        <!-- Focus / Pomodoro -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md" id="focus-panel"
+             data-pomodoro-length="{{ current_user.pomodoro_length or 25 }}"
+             data-short-break="{{ current_user.pomodoro_short_break or 5 }}"
+             data-long-break="{{ current_user.pomodoro_long_break or 15 }}"
+             data-long-interval="{{ current_user.pomodoro_long_break_interval or 4 }}"
+             data-csrf="{{ csrf_token() }}">
+            <h2 class="text-lg font-semibold mb-2">{{ _('Focus / Pomodoro') }}</h2>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Work in focused cycles with short breaks') }}</p>
+            <div class="flex flex-col items-center mb-4">
+                <div class="relative w-36 h-36 mb-3">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="42" stroke="currentColor" class="text-gray-200 dark:text-gray-700" stroke-width="8" fill="none" />
+                        <circle id="focus-progress-ring" cx="50" cy="50" r="42" stroke="currentColor"
+                                class="text-indigo-500 transition-all duration-500" stroke-width="8" fill="none"
+                                stroke-dasharray="263.89" stroke-dashoffset="263.89" />
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <div id="focus-countdown" class="text-2xl font-bold text-text-light dark:text-text-dark">25:00</div>
+                        <div id="focus-phase" class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Ready') }}</div>
+                    </div>
+                </div>
+                <div class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">
+                    <span id="focus-cycles">0</span> {{ _('cycles') }} ·
+                    <span id="focus-interrupts">0</span> {{ _('interrupts') }}
+                </div>
+                <div class="flex flex-wrap gap-2 justify-center">
+                    <button type="button" id="focus-start-btn" class="btn btn-primary btn-sm">
+                        <i class="fas fa-play mr-1"></i>{{ _('Start Focus') }}
+                    </button>
+                    <button type="button" id="focus-cycle-btn" class="btn btn-secondary btn-sm" disabled>
+                        <i class="fas fa-check mr-1"></i>{{ _('Complete Cycle') }}
+                    </button>
+                    <button type="button" id="focus-interrupt-btn" class="btn btn-secondary btn-sm" disabled>
+                        <i class="fas fa-exclamation mr-1"></i>{{ _('Interrupt') }}
+                    </button>
+                    <button type="button" id="focus-finish-btn" class="btn btn-danger btn-sm" disabled>
+                        <i class="fas fa-stop mr-1"></i>{{ _('Finish') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Recent Projects Quick Access -->
         {% if recent_projects %}
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
@@ -585,5 +628,173 @@ window.applyTemplate = async function(templateId) {
         alert('Failed to load template. Please try again.');
     }
 };
+</script>
+<script>
+(function initFocusPanel() {
+    const panel = document.getElementById('focus-panel');
+    if (!panel) return;
+    const csrf = panel.dataset.csrf;
+    const circumference = 2 * Math.PI * 42;
+    let session = null;
+    let phase = 'idle'; // idle | work | break
+    let remainingSeconds = 0;
+    let tickTimer = null;
+    let breakLength = 0;
+
+    const els = {
+        countdown: document.getElementById('focus-countdown'),
+        phase: document.getElementById('focus-phase'),
+        cycles: document.getElementById('focus-cycles'),
+        interrupts: document.getElementById('focus-interrupts'),
+        ring: document.getElementById('focus-progress-ring'),
+        start: document.getElementById('focus-start-btn'),
+        cycle: document.getElementById('focus-cycle-btn'),
+        interrupt: document.getElementById('focus-interrupt-btn'),
+        finish: document.getElementById('focus-finish-btn'),
+    };
+
+    function fmt(sec) {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+
+    function setButtons(active) {
+        els.start.disabled = active;
+        els.cycle.disabled = !active || phase !== 'work';
+        els.interrupt.disabled = !active;
+        els.finish.disabled = !active;
+    }
+
+    function updateRing(total) {
+        const progress = total > 0 ? (total - remainingSeconds) / total : 0;
+        els.ring.style.strokeDasharray = String(circumference);
+        els.ring.style.strokeDashoffset = String(circumference - progress * circumference);
+    }
+
+    function render() {
+        els.countdown.textContent = fmt(Math.max(0, remainingSeconds));
+        if (session) {
+            els.cycles.textContent = session.cycles_completed || 0;
+            els.interrupts.textContent = session.interruptions || 0;
+        }
+        const total = phase === 'break'
+            ? breakLength * 60
+            : (session ? session.pomodoro_length : parseInt(panel.dataset.pomodoroLength, 10) || 25) * 60;
+        updateRing(total);
+    }
+
+    function stopTick() {
+        if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+    }
+
+    function startTick(totalMinutes) {
+        stopTick();
+        remainingSeconds = Math.round(totalMinutes * 60);
+        render();
+        tickTimer = setInterval(() => {
+            remainingSeconds -= 1;
+            if (remainingSeconds <= 0) {
+                remainingSeconds = 0;
+                render();
+                stopTick();
+                if (phase === 'work') {
+                    els.phase.textContent = '{{ _("Cycle ready — complete it") }}';
+                } else {
+                    els.phase.textContent = '{{ _("Break over — start next cycle") }}';
+                    phase = 'work';
+                    remainingSeconds = (session.pomodoro_length || 25) * 60;
+                    setButtons(true);
+                    startTick(session.pomodoro_length || 25);
+                }
+                return;
+            }
+            render();
+        }, 1000);
+    }
+
+    async function api(url, method, body) {
+        const opts = {
+            method: method || 'GET',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+        };
+        if (body) opts.body = JSON.stringify(body);
+        const res = await fetch(url, opts);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || data.message || ('HTTP ' + res.status));
+        return data;
+    }
+
+    function applySession(s) {
+        session = s;
+        setButtons(!!s);
+        if (!s) {
+            phase = 'idle';
+            els.phase.textContent = '{{ _("Ready") }}';
+            remainingSeconds = (parseInt(panel.dataset.pomodoroLength, 10) || 25) * 60;
+            stopTick();
+            render();
+            return;
+        }
+        phase = 'work';
+        els.phase.textContent = '{{ _("Focus") }}';
+        startTick(s.pomodoro_length || 25);
+    }
+
+    els.start.addEventListener('click', async () => {
+        try {
+            const projectSelect = document.getElementById('project_id');
+            const taskSelect = document.getElementById('task_id');
+            const body = {
+                project_id: projectSelect && projectSelect.value ? parseInt(projectSelect.value, 10) : null,
+                task_id: taskSelect && taskSelect.value ? parseInt(taskSelect.value, 10) : null,
+                pomodoro_length: parseInt(panel.dataset.pomodoroLength, 10) || 25,
+                short_break_length: parseInt(panel.dataset.shortBreak, 10) || 5,
+                long_break_length: parseInt(panel.dataset.longBreak, 10) || 15,
+                long_break_interval: parseInt(panel.dataset.longInterval, 10) || 4,
+            };
+            const data = await api('/api/focus-sessions/start', 'POST', body);
+            applySession(data.session);
+        } catch (e) { alert(e.message); }
+    });
+
+    els.cycle.addEventListener('click', async () => {
+        if (!session) return;
+        try {
+            const data = await api('/api/focus-sessions/' + session.id + '/cycle', 'POST');
+            session = data.session;
+            phase = 'break';
+            breakLength = data.next_break_length || (data.needs_long_break ? session.long_break_length : session.short_break_length);
+            els.phase.textContent = data.needs_long_break ? '{{ _("Long break") }}' : '{{ _("Short break") }}';
+            setButtons(true);
+            els.cycle.disabled = true;
+            startTick(breakLength);
+            render();
+        } catch (e) { alert(e.message); }
+    });
+
+    els.interrupt.addEventListener('click', async () => {
+        if (!session) return;
+        try {
+            const data = await api('/api/focus-sessions/' + session.id + '/interrupt', 'POST', {});
+            session = data.session;
+            render();
+        } catch (e) { alert(e.message); }
+    });
+
+    els.finish.addEventListener('click', async () => {
+        if (!session) return;
+        try {
+            await api('/api/focus-sessions/finish', 'POST', { session_id: session.id });
+            applySession(null);
+        } catch (e) { alert(e.message); }
+    });
+
+    api('/api/focus-sessions/active').then(data => {
+        if (data.session) applySession(data.session);
+        else applySession(null);
+    }).catch(() => applySession(null));
+})();
 </script>
 {% endblock %}

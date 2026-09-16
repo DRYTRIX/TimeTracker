@@ -1043,39 +1043,37 @@ def project_forecast(project_id):
 @api_bp.route("/api/focus-sessions/start", methods=["POST"])
 @login_required
 def start_focus_session():
+    from app.services.pomodoro_service import PomodoroService
+
     data = request.get_json() or {}
-    project_id = data.get("project_id")
-    task_id = data.get("task_id")
-    pomodoro_length = int(data.get("pomodoro_length") or 25)
-    short_break_length = int(data.get("short_break_length") or 5)
-    long_break_length = int(data.get("long_break_length") or 15)
-    long_break_interval = int(data.get("long_break_interval") or 4)
-    link_active_timer = bool(data.get("link_active_timer", True))
-
-    time_entry_id = None
-    if link_active_timer and current_user.active_timer:
-        time_entry_id = current_user.active_timer.id
-
-    fs = FocusSession(
+    service = PomodoroService()
+    result = service.start_session(
         user_id=current_user.id,
-        project_id=project_id,
-        task_id=task_id,
-        time_entry_id=time_entry_id,
-        pomodoro_length=pomodoro_length,
-        short_break_length=short_break_length,
-        long_break_length=long_break_length,
-        long_break_interval=long_break_interval,
+        project_id=data.get("project_id"),
+        task_id=data.get("task_id"),
+        pomodoro_length=int(
+            data.get("pomodoro_length") or getattr(current_user, "pomodoro_length", None) or 25
+        ),
+        short_break_length=int(
+            data.get("short_break_length") or getattr(current_user, "pomodoro_short_break", None) or 5
+        ),
+        long_break_length=int(
+            data.get("long_break_length") or getattr(current_user, "pomodoro_long_break", None) or 15
+        ),
+        long_break_interval=int(
+            data.get("long_break_interval") or getattr(current_user, "pomodoro_long_break_interval", None) or 4
+        ),
     )
-    db.session.add(fs)
-    if not safe_commit("start_focus_session", {"user_id": current_user.id}):
-        return jsonify({"error": "Database error while starting focus session"}), 500
-
-    return jsonify({"success": True, "session": fs.to_dict()})
+    if not result.get("success"):
+        return jsonify(result), 409
+    return jsonify(result)
 
 
 @api_bp.route("/api/focus-sessions/finish", methods=["POST"])
 @login_required
 def finish_focus_session():
+    from app.services.pomodoro_service import PomodoroService
+
     data = request.get_json() or {}
     session_id = data.get("session_id")
     if not session_id:
@@ -1084,28 +1082,64 @@ def finish_focus_session():
     if fs.user_id != current_user.id and not current_user.is_admin:
         return jsonify({"error": "Access denied"}), 403
 
-    fs.ended_at = datetime.utcnow()
-    fs.cycles_completed = int(data.get("cycles_completed") or 0)
-    fs.interruptions = int(data.get("interruptions") or 0)
-    notes = (data.get("notes") or "").strip()
-    fs.notes = notes or fs.notes
-    if not safe_commit("finish_focus_session", {"session_id": fs.id}):
-        return jsonify({"error": "Database error while finishing focus session"}), 500
-    return jsonify({"success": True, "session": fs.to_dict()})
+    result = PomodoroService().end_session(session_id=session_id, notes=(data.get("notes") or "").strip() or None)
+    return jsonify(result)
+
+
+@api_bp.route("/api/focus-sessions/active", methods=["GET"])
+@login_required
+def active_focus_session():
+    from app.services.pomodoro_service import PomodoroService
+
+    session = PomodoroService().get_active_session(current_user.id)
+    return jsonify({"session": session.to_dict() if session else None})
+
+
+@api_bp.route("/api/focus-sessions/<int:session_id>/cycle", methods=["POST"])
+@login_required
+def complete_focus_cycle(session_id):
+    from app.services.pomodoro_service import PomodoroService
+
+    fs = FocusSession.query.get_or_404(session_id)
+    if fs.user_id != current_user.id and not current_user.is_admin:
+        return jsonify({"error": "Access denied"}), 403
+    if fs.ended_at:
+        return jsonify({"error": "Session already ended"}), 400
+    return jsonify(PomodoroService().complete_cycle(session_id))
+
+
+@api_bp.route("/api/focus-sessions/<int:session_id>/interrupt", methods=["POST"])
+@login_required
+def interrupt_focus_session(session_id):
+    from app.services.pomodoro_service import PomodoroService
+
+    data = request.get_json() or {}
+    fs = FocusSession.query.get_or_404(session_id)
+    if fs.user_id != current_user.id and not current_user.is_admin:
+        return jsonify({"error": "Access denied"}), 403
+    if fs.ended_at:
+        return jsonify({"error": "Session already ended"}), 400
+    return jsonify(PomodoroService().log_interruption(session_id, reason=data.get("reason")))
 
 
 @api_bp.route("/api/focus-sessions/summary")
 @login_required
 def focus_sessions_summary():
-    """Return simple summary counts for recent focus sessions for the current user."""
+    """Return Pomodoro session statistics for the current user."""
+    from app.services.pomodoro_service import PomodoroService
+
     days = int(request.args.get("days", 7))
-    since = datetime.utcnow() - timedelta(days=days)
-    q = FocusSession.query.filter(FocusSession.user_id == current_user.id, FocusSession.started_at >= since)
-    sessions = q.order_by(FocusSession.started_at.desc()).all()
-    total = len(sessions)
-    cycles = sum(s.cycles_completed or 0 for s in sessions)
-    interrupts = sum(s.interruptions or 0 for s in sessions)
-    return jsonify({"total_sessions": total, "cycles_completed": cycles, "interruptions": interrupts})
+    stats = PomodoroService().get_session_stats(current_user.id, days=days)
+    return jsonify(
+        {
+            "total_sessions": stats["total_sessions"],
+            "cycles_completed": stats["total_cycles"],
+            "interruptions": stats["total_interruptions"],
+            "total_minutes": stats["total_minutes"],
+            "average_cycles_per_session": stats["average_cycles_per_session"],
+            "average_minutes_per_session": stats["average_minutes_per_session"],
+        }
+    )
 
 
 @api_bp.route("/api/recurring-blocks", methods=["GET", "POST"])
