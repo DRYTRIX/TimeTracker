@@ -18,10 +18,16 @@ class WorkdaySession(db.Model):
     auto_closed = db.Column(db.Boolean, default=False, nullable=False)
     auto_close_confirmed_at = db.Column(db.DateTime, nullable=True)
     source = db.Column(db.String(20), default="manual", nullable=False)  # manual, kiosk, mobile
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
+    accuracy_m = db.Column(db.Float, nullable=True)
+    geofence_id = db.Column(db.Integer, db.ForeignKey("geofences.id"), nullable=True)
+    geofence_status = db.Column(db.String(20), nullable=True)  # inside, outside, unknown, no_geofences
     created_at = db.Column(db.DateTime, default=local_now, nullable=False)
     updated_at = db.Column(db.DateTime, default=local_now, onupdate=local_now, nullable=False)
 
     user = db.relationship("User", backref=db.backref("workday_sessions", lazy="dynamic"))
+    geofence = db.relationship("Geofence", backref=db.backref("workday_sessions", lazy="dynamic"))
 
     def __init__(
         self,
@@ -95,6 +101,11 @@ class WorkdaySession(db.Model):
             ),
             "source": self.source,
             "is_active": self.is_active,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "accuracy_m": self.accuracy_m,
+            "geofence_id": self.geofence_id,
+            "geofence_status": self.geofence_status,
         }
 
     @classmethod

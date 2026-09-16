@@ -78,6 +78,8 @@ class GamificationService:
                 return event_type == "task_completed"
             elif milestone_type == "first_project":
                 return event_type == "project_created"
+            elif milestone_type == "first_invoice":
+                return event_type == "invoice_created"
 
         return False
 
@@ -244,6 +246,25 @@ class GamificationService:
 
             for user_id, total_points in query.all():
                 scores[user_id] = total_points or 0
+
+        elif leaderboard_type == "streak":
+            for user in User.query.filter_by(is_active=True).all():
+                scores[user.id] = float(self._get_streak(user.id, {}))
+
+        elif leaderboard_type == "projects_completed":
+            query = (
+                db.session.query(TimeEntry.user_id, func.count(func.distinct(Project.id)).label("count"))
+                .join(Project, Project.id == TimeEntry.project_id)
+                .filter(
+                    Project.status.in_(["completed", "archived"]),
+                    TimeEntry.end_time.isnot(None),
+                    TimeEntry.start_time >= start,
+                    TimeEntry.start_time <= end,
+                )
+                .group_by(TimeEntry.user_id)
+            )
+            for user_id, count in query.all():
+                scores[user_id] = count or 0
 
         return scores
 

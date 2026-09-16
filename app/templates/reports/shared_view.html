@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="{{ current_language_code or 'en' }}" dir="{{ 'rtl' if is_rtl else 'ltr' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ report_name or _('Shared Report') }} - {{ app_name }}</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}?v={{ app_version }}-toastfix1">
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark min-h-screen">
+    <header class="border-b border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div>
+                <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Shared Report') }}</div>
+                <h1 class="text-xl font-bold">{{ report_name or _('Report') }}</h1>
+            </div>
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ app_name }}</div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        {% if error %}
+        <div class="text-center py-12 text-rose-600">{{ error }}</div>
+        {% elif needs_password %}
+        <div class="max-w-md mx-auto bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+            <h2 class="text-lg font-semibold mb-2">{{ _('Password Required') }}</h2>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Enter the password to view this report.') }}</p>
+            <form id="passwordForm" class="space-y-4">
+                <input type="password" id="sharePassword" class="form-input w-full" placeholder="{{ _('Password') }}" required>
+                <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg w-full">{{ _('View Report') }}</button>
+            </form>
+            <p id="passwordError" class="hidden text-sm text-rose-600 mt-3"></p>
+        </div>
+        {% else %}
+        <div id="reportLoading" class="text-center py-12">
+            <i class="fas fa-spinner fa-spin text-2xl text-primary mb-2"></i>
+            <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Loading report...') }}</p>
+        </div>
+        <div id="reportError" class="hidden text-center py-12 text-rose-600"></div>
+        <div id="reportContent" class="hidden space-y-6"></div>
+        {% endif %}
+    </main>
+
+    <script nonce="{{ csp_nonce() }}">
+    const token = {{ token|tojson }};
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+    {% if needs_password %}
+    document.getElementById('passwordForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const password = document.getElementById('sharePassword').value;
+        const errorEl = document.getElementById('passwordError');
+        errorEl.classList.add('hidden');
+        try {
+            const response = await fetch(`/reports/shared/${token}/verify`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ password })
+            });
+            const result = await response.json();
+            if (result.success) {
+                window.location.reload();
+            } else {
+                errorEl.textContent = result.message || '{{ _("Invalid password") }}';
+                errorEl.classList.remove('hidden');
+            }
+        } catch (err) {
+            errorEl.textContent = '{{ _("Could not verify password") }}';
+            errorEl.classList.remove('hidden');
+        }
+    });
+    {% else %}
+    async function loadSharedReport() {
+        try {
+            const response = await fetch(`/api/reports/shared/${token}/data`);
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || data.message || '{{ _("Failed to load report") }}');
+            }
+            renderReport(data);
+        } catch (err) {
+            document.getElementById('reportLoading').classList.add('hidden');
+            const errorEl = document.getElementById('reportError');
+            errorEl.textContent = err.message;
+            errorEl.classList.remove('hidden');
+        }
+    }
+
+    function renderReport(reportData) {
+        document.getElementById('reportLoading').classList.add('hidden');
+        const container = document.getElementById('reportContent');
+        container.classList.remove('hidden');
+
+        if (reportData.summary && Object.keys(reportData.summary).length) {
+            const summary = document.createElement('div');
+            summary.className = 'grid grid-cols-1 md:grid-cols-3 gap-4';
+            Object.entries(reportData.summary).forEach(([key, value]) => {
+                if (typeof value === 'object') return;
+                const card = document.createElement('div');
+                card.className = 'bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark';
+                card.innerHTML = `<div class="text-sm text-text-muted-light dark:text-text-muted-dark">${key.replace(/_/g, ' ')}</div><div class="text-2xl font-bold">${value}</div>`;
+                summary.appendChild(card);
+            });
+            container.appendChild(summary);
+        }
+
+        if (reportData.data && reportData.data.length) {
+            const tableWrap = document.createElement('div');
+            tableWrap.className = 'overflow-x-auto bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark';
+            const table = document.createElement('table');
+            table.className = 'min-w-full divide-y divide-border-light dark:divide-border-dark';
+            const headers = Object.keys(reportData.data[0]);
+            table.innerHTML = `
+                <thead class="bg-background-light dark:bg-background-dark">
+                    <tr>${headers.map(h => `<th class="px-6 py-3 text-left text-xs font-medium uppercase">${h.replace(/_/g, ' ')}</th>`).join('')}</tr>
+                </thead>
+                <tbody class="divide-y divide-border-light dark:divide-border-dark">
+                    ${reportData.data.map(row => `<tr>${headers.map(h => `<td class="px-6 py-4 text-sm">${row[h] ?? ''}</td>`).join('')}</tr>`).join('')}
+                </tbody>`;
+            tableWrap.appendChild(table);
+            container.appendChild(tableWrap);
+        } else {
+            container.innerHTML = `<div class="text-center py-12 text-text-muted-light dark:text-text-muted-dark">{{ _('No data found for this report.') }}</div>`;
+        }
+    }
+
+    loadSharedReport();
+    {% endif %}
+    </script>
+</body>
+</html>

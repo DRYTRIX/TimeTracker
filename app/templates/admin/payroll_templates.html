@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Admin'), 'url': url_for('admin.dashboard')},
+    {'text': _('Payroll Templates')}
+] %}
+{{ page_header(icon_class='fas fa-file-csv', title_text=_('Payroll Export Templates'), subtitle_text=_('Configure column sets and grouping for payroll downloads'), breadcrumbs=breadcrumbs) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Existing Templates') }}</h2>
+    <div class="space-y-4">
+      {% for t in templates %}
+      <div class="border border-border-light dark:border-border-dark rounded p-4">
+        <div class="flex justify-between items-start gap-2 mb-2">
+          <div>
+            <div class="font-medium">{{ t.name }} {% if t.is_default %}<span class="text-xs text-primary">({{ _('default') }})</span>{% endif %}{% if t.is_builtin %} <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('built-in') }}</span>{% endif %}</div>
+            <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ t.grouping }} · {{ t.format }} · {{ t.delimiter }}</div>
+          </div>
+          {% if not t.is_builtin %}
+          <form method="POST" action="{{ url_for('admin.delete_payroll_template', template_id=t.id) }}" onsubmit="return confirm('{{ _('Delete this template?') }}');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-danger btn-sm" type="submit">{{ _('Delete') }}</button>
+          </form>
+          {% endif %}
+        </div>
+        <form method="POST" action="{{ url_for('admin.edit_payroll_template', template_id=t.id) }}" class="space-y-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% if not t.is_builtin %}
+          <input class="form-input w-full" name="name" value="{{ t.name }}" placeholder="{{ _('Name') }}">
+          {% endif %}
+          <input class="form-input w-full text-xs" name="columns" value="{{ t.columns|join(',') }}" placeholder="{{ _('Columns (comma-separated)') }}">
+          <div class="flex flex-wrap gap-2">
+            <select name="grouping" class="form-input">
+              <option value="week" {% if t.grouping == 'week' %}selected{% endif %}>{{ _('Week') }}</option>
+              <option value="day" {% if t.grouping == 'day' %}selected{% endif %}>{{ _('Day') }}</option>
+              <option value="project" {% if t.grouping == 'project' %}selected{% endif %}>{{ _('Project') }}</option>
+            </select>
+            <select name="format" class="form-input">
+              <option value="csv" {% if t.format == 'csv' %}selected{% endif %}>CSV</option>
+              <option value="xlsx" {% if t.format == 'xlsx' %}selected{% endif %}>XLSX</option>
+            </select>
+            <input class="form-input w-16" name="delimiter" value="{{ t.delimiter }}" maxlength="2">
+            <label class="flex items-center gap-1 text-sm"><input type="checkbox" name="is_default" {% if t.is_default %}checked{% endif %}> {{ _('Default') }}</label>
+            <button class="btn btn-secondary btn-sm" type="submit">{{ _('Save') }}</button>
+          </div>
+        </form>
+      </div>
+      {% else %}
+      <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No templates yet.') }}</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Create Template') }}</h2>
+    <form method="POST" class="space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div>
+        <label class="form-label">{{ _('Name') }}</label>
+        <input class="form-input w-full" name="name" required>
+      </div>
+      <div>
+        <label class="form-label">{{ _('Columns (comma-separated)') }}</label>
+        <input class="form-input w-full text-xs" name="columns" value="{{ default_columns|join(',') }}">
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="form-label">{{ _('Grouping') }}</label>
+          <select name="grouping" class="form-input w-full">
+            <option value="week">{{ _('Week') }}</option>
+            <option value="day">{{ _('Day') }}</option>
+            <option value="project">{{ _('Project') }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">{{ _('Format') }}</label>
+          <select name="format" class="form-input w-full">
+            <option value="csv">CSV</option>
+            <option value="xlsx">XLSX</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="form-label">{{ _('Delimiter') }}</label>
+        <input class="form-input w-24" name="delimiter" value="," maxlength="2">
+      </div>
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_default"> {{ _('Set as default') }}</label>
+      <button class="btn btn-primary" type="submit">{{ _('Create') }}</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

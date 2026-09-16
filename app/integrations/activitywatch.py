@@ -120,6 +120,10 @@ class ActivityWatchConnector(BaseConnector):
         default_project_id = cfg.get("default_project_id")
         if default_project_id is not None:
             default_project_id = int(default_project_id)
+        min_duration_seconds = int(cfg.get("min_duration_seconds") or 30)
+        merge_gap_seconds = int(cfg.get("merge_gap_seconds") or 120)
+        review_mode = bool(cfg.get("review_mode"))
+        default_billable = bool(cfg.get("default_billable", False))
 
         # Parse bucket_ids: optional list; if empty, use aw-watcher-window_* and aw-watcher-web_*
         bucket_ids_cfg = cfg.get("bucket_ids")
@@ -199,6 +203,11 @@ class ActivityWatchConnector(BaseConnector):
         skipped = 0
         errors: List[str] = []
 
+        from app.models.activitywatch_rule import ActivityWatchRule, PendingActivity
+
+        # Collect raw parsed events first for merge
+        parsed_events: List[Dict[str, Any]] = []
+
         for bucket_id in selected:
             try:
                 events_data = self._get(
@@ -220,7 +229,6 @@ class ActivityWatchConnector(BaseConnector):
                         skipped += 1
                         continue
 
-                    # Parse timestamp (ISO UTC)
                     if isinstance(ts, str):
                         if ts.endswith("Z"):
                             ts = ts[:-1] + "+00:00"
@@ -243,9 +251,10 @@ class ActivityWatchConnector(BaseConnector):
                         except (TypeError, ValueError):
                             pass
 
-                    end_dt = start_dt + timedelta(seconds=dur_sec)
+                    if dur_sec < min_duration_seconds:
+                        skipped += 1
+                        continue
 
-                    # Notes: app+title or url+title
                     app = (data.get("app") or "").strip()
                     title = (data.get("title") or "").strip()
                     url = (data.get("url") or "").strip()
@@ -260,54 +269,124 @@ class ActivityWatchConnector(BaseConnector):
                     else:
                         notes = "ActivityWatch: (no app/title)"
 
-                    # external_uid for idempotency (max 255)
                     data_str = (app or "") + "|" + (title or "") + (url or "")
                     h = hashlib.md5(data_str.encode("utf-8")).hexdigest()[:16]
                     external_uid = f"{bucket_id}|{ts}|{dur_sec}|{h}"[:255]
 
-                    existing = IntegrationExternalEventLink.query.filter_by(
-                        integration_id=self.integration.id,
-                        external_uid=external_uid,
-                    ).first()
-                    if existing:
-                        skipped += 1
-                        continue
-
-                    start_local = _to_local_naive(start_dt)
-                    end_local = _to_local_naive(end_dt)
-                    if end_local <= start_local:
-                        skipped += 1
-                        continue
-
-                    # Omit duration_seconds so calculate_duration() runs and applies
-                    # per-user rounding (start/end already encode the ActivityWatch duration).
-                    entry = TimeEntry(
-                        user_id=self.integration.user_id,
-                        project_id=default_project_id,
-                        client_id=None,
-                        task_id=None,
-                        start_time=start_local,
-                        end_time=end_local,
-                        notes=notes[:5000] if notes else None,
-                        tags=None,
-                        source="auto",
-                        billable=True,
-                        paid=False,
+                    parsed_events.append(
+                        {
+                            "bucket_id": bucket_id,
+                            "start_dt": start_dt,
+                            "dur_sec": dur_sec,
+                            "app": app,
+                            "title": title,
+                            "url": url,
+                            "notes": notes,
+                            "external_uid": external_uid,
+                            "merge_key": (app or url or title or "").lower(),
+                        }
                     )
-                    db.session.add(entry)
-                    db.session.flush()
-
-                    link = IntegrationExternalEventLink(
-                        integration_id=self.integration.id,
-                        time_entry_id=entry.id,
-                        external_uid=external_uid,
-                        external_href=None,
-                    )
-                    db.session.add(link)
-                    imported += 1
-
                 except Exception as e:
                     errors.append(f"Event {ev.get('timestamp', '?')}: {e}")
+
+        # Merge consecutive same-app events within gap threshold
+        parsed_events.sort(key=lambda e: e["start_dt"])
+        merged: List[Dict[str, Any]] = []
+        for ev in parsed_events:
+            if not merged:
+                merged.append(ev)
+                continue
+            prev = merged[-1]
+            prev_end = prev["start_dt"] + timedelta(seconds=prev["dur_sec"])
+            gap = (ev["start_dt"] - prev_end).total_seconds()
+            if prev["merge_key"] and prev["merge_key"] == ev["merge_key"] and 0 <= gap <= merge_gap_seconds:
+                prev["dur_sec"] = int((ev["start_dt"] + timedelta(seconds=ev["dur_sec"]) - prev["start_dt"]).total_seconds())
+                prev["external_uid"] = f"{prev['external_uid']}+{ev['external_uid']}"[:255]
+            else:
+                merged.append(ev)
+
+        for ev in merged:
+            try:
+                existing = IntegrationExternalEventLink.query.filter_by(
+                    integration_id=self.integration.id,
+                    external_uid=ev["external_uid"],
+                ).first()
+                if existing:
+                    skipped += 1
+                    continue
+
+                start_local = _to_local_naive(ev["start_dt"])
+                end_local = _to_local_naive(ev["start_dt"] + timedelta(seconds=ev["dur_sec"]))
+                if end_local <= start_local:
+                    skipped += 1
+                    continue
+
+                rule = ActivityWatchRule.match_event(
+                    self.integration.user_id, ev["app"], ev["title"], ev["url"]
+                )
+                project_id = rule.project_id if rule else default_project_id
+                task_id = rule.task_id if rule else None
+                billable = rule.billable if rule else default_billable
+                tags = rule.tags if rule and rule.tags else None
+                if rule and rule.min_duration_seconds and ev["dur_sec"] < rule.min_duration_seconds:
+                    skipped += 1
+                    continue
+
+                if review_mode:
+                    existing_pending = PendingActivity.query.filter_by(
+                        user_id=self.integration.user_id,
+                        external_uid=ev["external_uid"],
+                    ).first()
+                    if existing_pending:
+                        skipped += 1
+                        continue
+                    pending = PendingActivity(
+                        user_id=self.integration.user_id,
+                        aw_bucket=ev["bucket_id"],
+                        app_name=ev["app"] or None,
+                        title=ev["title"] or None,
+                        url=ev["url"] or None,
+                        started_at=start_local,
+                        duration_seconds=ev["dur_sec"],
+                        matched_rule_id=rule.id if rule else None,
+                        suggested_project_id=project_id,
+                        suggested_task_id=task_id,
+                        suggested_billable=billable,
+                        external_uid=ev["external_uid"],
+                        status="pending",
+                        notes=ev["notes"][:5000] if ev["notes"] else None,
+                    )
+                    db.session.add(pending)
+                    imported += 1
+                    continue
+
+                entry = TimeEntry(
+                    user_id=self.integration.user_id,
+                    project_id=project_id,
+                    client_id=None,
+                    task_id=task_id,
+                    start_time=start_local,
+                    end_time=end_local,
+                    notes=ev["notes"][:5000] if ev["notes"] else None,
+                    tags=",".join(tags) if isinstance(tags, list) else tags,
+                    source="auto",
+                    billable=billable,
+                    paid=False,
+                )
+                db.session.add(entry)
+                db.session.flush()
+
+                link = IntegrationExternalEventLink(
+                    integration_id=self.integration.id,
+                    time_entry_id=entry.id,
+                    external_uid=ev["external_uid"],
+                    external_href=None,
+                )
+                db.session.add(link)
+                imported += 1
+
+            except Exception as e:
+                errors.append(f"Commit event: {e}")
 
         self.integration.last_sync_at = datetime.utcnow()
         self.integration.last_sync_status = "success" if not errors else "partial"
@@ -325,6 +404,15 @@ class ActivityWatchConnector(BaseConnector):
             "errors": errors,
             "message": msg,
         }
+
+    def list_buckets(self) -> List[str]:
+        """Return discovered bucket IDs from aw-server."""
+        data = self._get("buckets/")
+        if isinstance(data, dict):
+            return list(data.keys())
+        if isinstance(data, list):
+            return [b.get("id") if isinstance(b, dict) else str(b) for b in data if b]
+        return []
 
     def get_config_schema(self) -> Dict[str, Any]:
         return {
@@ -364,6 +452,34 @@ class ActivityWatchConnector(BaseConnector):
                     "help": "e.g. aw-watcher-window_hostname. Empty = use all aw-watcher-window_* and aw-watcher-web_*.",
                 },
                 {
+                    "name": "min_duration_seconds",
+                    "type": "number",
+                    "label": "Minimum Duration (seconds)",
+                    "default": 30,
+                    "description": "Skip events shorter than this",
+                },
+                {
+                    "name": "merge_gap_seconds",
+                    "type": "number",
+                    "label": "Merge Gap (seconds)",
+                    "default": 120,
+                    "description": "Merge consecutive same-app events within this gap",
+                },
+                {
+                    "name": "review_mode",
+                    "type": "boolean",
+                    "label": "Review Mode",
+                    "default": False,
+                    "description": "Queue imports for approval instead of creating time entries immediately",
+                },
+                {
+                    "name": "default_billable",
+                    "type": "boolean",
+                    "label": "Default Billable",
+                    "default": False,
+                    "description": "Billable flag when no rule matches",
+                },
+                {
                     "name": "auto_sync",
                     "type": "boolean",
                     "label": "Auto Sync",
@@ -393,7 +509,17 @@ class ActivityWatchConnector(BaseConnector):
                 {
                     "title": "Import Settings",
                     "description": "What to import and where",
-                    "fields": ["default_project_id", "lookback_days", "bucket_ids", "auto_sync", "sync_interval"],
+                    "fields": [
+                        "default_project_id",
+                        "lookback_days",
+                        "bucket_ids",
+                        "min_duration_seconds",
+                        "merge_gap_seconds",
+                        "review_mode",
+                        "default_billable",
+                        "auto_sync",
+                        "sync_interval",
+                    ],
                 },
             ],
             "sync_settings": {

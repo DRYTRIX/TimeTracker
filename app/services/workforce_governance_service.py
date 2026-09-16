@@ -425,7 +425,14 @@ class WorkforceGovernanceService:
         user_id: Optional[int],
         approved_only: bool = False,
         closed_only: bool = False,
+        grouping: str = "week",
     ) -> List[Dict[str, Any]]:
+        """Build payroll export rows.
+
+        grouping: week (default ISO week), day, or project.
+        Includes richer fields (rate, amount, project_code, employee_id, etc.)
+        when available from related models.
+        """
         entries_query = TimeEntry.query.filter(
             TimeEntry.end_time.isnot(None),
             TimeEntry.start_time >= datetime.combine(start_date, datetime.min.time()),
@@ -434,10 +441,9 @@ class WorkforceGovernanceService:
         if user_id is not None:
             entries_query = entries_query.filter(TimeEntry.user_id == user_id)
 
+        grouping = (grouping or "week").lower()
         rows: Dict[tuple, Dict[str, Any]] = {}
         for entry in entries_query.all():
-            key = (entry.user_id, entry.start_time.date().isocalendar()[:2])
-
             if approved_only or closed_only:
                 period = self.get_or_create_period_for_date(
                     entry.user_id, entry.start_time.date(), period_type="weekly"
@@ -448,18 +454,50 @@ class WorkforceGovernanceService:
                 if closed_only and status_value != TimesheetPeriodStatus.CLOSED.value:
                     continue
 
+            entry_date = entry.start_time.date()
+            week_year, week_no = entry_date.isocalendar()[0], entry_date.isocalendar()[1]
+            project = entry.project
+            project_id = entry.project_id or 0
+            project_code = getattr(project, "code", None) or getattr(project, "name", None) or ""
+            rate = None
+            if project and getattr(project, "hourly_rate", None) is not None:
+                try:
+                    rate = float(project.hourly_rate)
+                except (TypeError, ValueError):
+                    rate = None
+            if rate is None and entry.user and getattr(entry.user, "hourly_rate", None) is not None:
+                try:
+                    rate = float(entry.user.hourly_rate)
+                except (TypeError, ValueError):
+                    rate = None
+
+            if grouping == "day":
+                key = (entry.user_id, entry_date.isoformat(), project_id)
+            elif grouping == "project":
+                key = (entry.user_id, week_year, week_no, project_id)
+            else:
+                key = (entry.user_id, week_year, week_no)
+
             if key not in rows:
-                week_year, week_no = entry.start_time.date().isocalendar()[0], entry.start_time.date().isocalendar()[1]
+                employee_id = getattr(entry.user, "employee_id", None) or getattr(entry.user, "id", None)
+                cost_center = getattr(entry.user, "cost_center", None) or getattr(project, "cost_center", None) or ""
                 rows[key] = {
                     "user_id": entry.user_id,
                     "username": entry.user.username if entry.user else None,
+                    "employee_id": employee_id,
                     "week_year": week_year,
                     "week_number": week_no,
-                    "period_start": None,
-                    "period_end": None,
+                    "period_start": entry_date.isoformat() if grouping == "day" else None,
+                    "period_end": entry_date.isoformat() if grouping == "day" else None,
+                    "project_id": project_id or None,
+                    "project_code": project_code,
                     "hours": 0.0,
                     "billable_hours": 0.0,
                     "non_billable_hours": 0.0,
+                    "rate": rate,
+                    "amount": 0.0,
+                    "earning_code": "REG",
+                    "cost_center": cost_center,
                 }
 
             h = float(entry.duration_seconds or 0) / 3600.0
@@ -468,17 +506,23 @@ class WorkforceGovernanceService:
                 rows[key]["billable_hours"] += h
             else:
                 rows[key]["non_billable_hours"] += h
+            if rows[key]["rate"] is not None:
+                rows[key]["amount"] += h * float(rows[key]["rate"])
 
         out = list(rows.values())
         for item in out:
-            ref = date.fromisocalendar(item["week_year"], item["week_number"], 1)
-            rng = self.resolve_period_range(ref, period_type="weekly")
-            item["period_start"] = rng["period_start"].isoformat()
-            item["period_end"] = rng["period_end"].isoformat()
+            if grouping != "day":
+                ref = date.fromisocalendar(item["week_year"], item["week_number"], 1)
+                rng = self.resolve_period_range(ref, period_type="weekly")
+                item["period_start"] = rng["period_start"].isoformat()
+                item["period_end"] = rng["period_end"].isoformat()
             item["hours"] = round(item["hours"], 2)
             item["billable_hours"] = round(item["billable_hours"], 2)
             item["non_billable_hours"] = round(item["non_billable_hours"], 2)
-        out.sort(key=lambda x: (x["week_year"], x["week_number"], x["username"] or ""))
+            item["amount"] = round(item["amount"] or 0.0, 2)
+            if item.get("rate") is not None:
+                item["rate"] = round(float(item["rate"]), 2)
+        out.sort(key=lambda x: (x["week_year"], x["week_number"], x.get("project_code") or "", x["username"] or ""))
         return out
 
     def delete_period(self, period_id: int, actor_id: int) -> Dict[str, Any]:

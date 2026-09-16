@@ -32,6 +32,18 @@ def should_sync_expenses(config: Optional[Dict[str, Any]], sync_type: str, appro
     return sync_type in ("full", "expenses", "incremental")
 
 
+def should_sync_time_entries(config: Optional[Dict[str, Any]], sync_type: str) -> bool:
+    cfg = config or {}
+    if not cfg.get("sync_time_entries"):
+        return False
+    items = cfg.get("sync_items") or []
+    if items and "time_entries" not in items and "time" not in items:
+        # Allow when sync_time_entries flag is on even without sync_items list
+        if items:
+            return False
+    return sync_type in ("full", "time_entries", "time", "incremental")
+
+
 def sync_window_start(config: Optional[Dict[str, Any]], days: int = 90) -> datetime:
     """Return UTC datetime for incremental/full scan window."""
     cfg = config or {}

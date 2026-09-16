@@ -13,6 +13,22 @@ from app.models.expense_gps import MileageTrack
 logger = logging.getLogger(__name__)
 
 
+def haversine_distance_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """Great-circle distance between two WGS84 points in meters."""
+    from math import atan2, cos, radians, sin, sqrt
+
+    earth_radius_m = 6371000.0
+    lat1_r = radians(lat1)
+    lon1_r = radians(lng1)
+    lat2_r = radians(lat2)
+    lon2_r = radians(lng2)
+    dlat = lat2_r - lat1_r
+    dlon = lon2_r - lon1_r
+    a = sin(dlat / 2) ** 2 + cos(lat1_r) * cos(lat2_r) * sin(dlon / 2) ** 2
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    return earth_radius_m * c
+
+
 class GPSTrackingService:
     """Service for GPS tracking and mileage calculation"""
 
@@ -125,23 +141,7 @@ class GPSTrackingService:
         """Calculate route distance between two points (can use routing API)"""
         # Simple Haversine calculation (straight line)
         # In production, use Google Maps API or similar for actual route distance
-
-        from math import atan2, cos, radians, sin, sqrt
-
-        R = 6371  # Earth radius in km
-
-        lat1 = radians(start_lat)
-        lon1 = radians(start_lng)
-        lat2 = radians(end_lat)
-        lon2 = radians(end_lng)
-
-        dlat = lat2 - lat1
-        dlon = lon2 - lon1
-
-        a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
-        c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-        distance_km = R * c
+        distance_km = haversine_distance_m(start_lat, start_lng, end_lat, end_lng) / 1000.0
         distance_miles = distance_km * 0.621371
 
         return {

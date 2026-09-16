@@ -12,7 +12,13 @@ from typing import Any, Dict, List, Optional
 import requests
 
 from app.integrations.base import BaseConnector
-from app.integrations.sync_config import export_enabled, should_sync_expenses, should_sync_invoices, sync_window_start
+from app.integrations.sync_config import (
+    export_enabled,
+    should_sync_expenses,
+    should_sync_invoices,
+    should_sync_time_entries,
+    sync_window_start,
+)
 from app.utils.integration_metadata import get_integration_ref, set_integration_ref
 
 logger = logging.getLogger(__name__)
@@ -47,6 +53,7 @@ class XeroConnector(BaseConnector):
             "accounting.payments",
             "accounting.contacts",
             "accounting.settings",
+            "projects",
             "offline_access",
         ]
 
@@ -282,7 +289,11 @@ class XeroConnector(BaseConnector):
 
                 for expense in expenses:
                     try:
-                        if get_integration_ref(expense, "xero", "expense_id"):
+                        existing_id = get_integration_ref(expense, "xero", "expense_id")
+                        if existing_id:
+                            # Update path: recreate claim metadata note; Xero expense claims are limited
+                            set_integration_ref(expense, "xero", "expense_updated_at", datetime.utcnow().isoformat())
+                            synced_count += 1
                             continue
                         xero_expense = self._create_xero_expense(expense, access_token, tenant_id)
                         if xero_expense:
@@ -294,12 +305,68 @@ class XeroConnector(BaseConnector):
                             synced_count += 1
                     except Exception as e:
                         errors.append(f"Error syncing expense {expense.id}: {str(e)}")
+                        self._record_sync_error("expense", expense.id, str(e))
+
+            if should_sync_time_entries(config, sync_type):
+                try:
+                    synced_count += self._sync_time_entries(access_token, tenant_id, config, errors, window_start)
+                except Exception as e:
+                    errors.append(f"Error syncing time entries: {str(e)}")
 
             db.session.commit()
             return {"success": True, "synced_count": synced_count, "errors": errors}
 
         except Exception as e:
             return {"success": False, "message": f"Sync failed: {str(e)}"}
+
+    def _record_sync_error(self, entity_type: str, entity_id, message: str):
+        try:
+            from app.models.integration_sync_error import IntegrationSyncError
+
+            IntegrationSyncError.record("xero", entity_type, entity_id, message)
+        except Exception:
+            logger.debug("Could not record sync error", exc_info=True)
+
+    def _sync_time_entries(self, access_token, tenant_id, config, errors, window_start) -> int:
+        """Push time to Xero Projects time API when project mapping exists."""
+        from app.models import TimeEntry
+
+        project_mapping = (config or {}).get("project_mapping") or {}
+        employee_mapping = (config or {}).get("employee_mapping") or {}
+        synced = 0
+        query = TimeEntry.query.filter(
+            TimeEntry.end_time.isnot(None),
+            TimeEntry.start_time >= window_start,
+            TimeEntry.project_id.isnot(None),
+        )
+        for entry in query.limit(500).all():
+            try:
+                if get_integration_ref(entry, "xero", "time_id"):
+                    continue
+                xero_project_id = project_mapping.get(str(entry.project_id))
+                if not xero_project_id:
+                    continue
+                user_ref = employee_mapping.get(str(entry.user_id))
+                minutes = int(round(float(entry.duration_seconds or 0) / 60.0))
+                if minutes <= 0:
+                    continue
+                payload = {
+                    "userId": user_ref,
+                    "dateUtc": entry.start_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "duration": minutes,
+                    "description": (entry.notes or f"TimeTracker #{entry.id}")[:3000],
+                }
+                endpoint = f"/projects.xro/2.0/Projects/{xero_project_id}/Time"
+                result = self._api_request("POST", endpoint, access_token, tenant_id, json_body=payload)
+                if result:
+                    ext_id = result.get("timeEntryId") or result.get("TimeEntryID") or result.get("timeId")
+                    if ext_id:
+                        set_integration_ref(entry, "xero", "time_id", str(ext_id))
+                    synced += 1
+            except Exception as e:
+                errors.append(f"TimeEntry {entry.id}: {e}")
+                self._record_sync_error("time_entry", entry.id, str(e))
+        return synced
 
     def _create_xero_invoice(self, invoice, access_token: str, tenant_id: str) -> Optional[Dict]:
         """Create invoice in Xero"""

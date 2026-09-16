@@ -76,6 +76,10 @@ class WorkdaySessionService:
         user_id: int,
         notes: Optional[str] = None,
         source: str = "manual",
+        latitude: Optional[float] = None,
+        longitude: Optional[float] = None,
+        accuracy_m: Optional[float] = None,
+        geofence_enforcement: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         result = self.compliance.clock_in(user_id, notes=notes, source=source)
         if not result.get("success"):
@@ -92,6 +96,17 @@ class WorkdaySessionService:
         db.session.flush()
         period.workday_session_id = session.id
 
+        if geofence_enforcement is not None:
+            from app.services.geofence_service import GeofenceService
+
+            GeofenceService().apply_to_session(
+                session,
+                latitude,
+                longitude,
+                accuracy_m,
+                geofence_enforcement,
+            )
+
         if not safe_commit("start_workday", {"user_id": user_id}):
             return {
                 "success": False,
@@ -106,6 +121,10 @@ class WorkdaySessionService:
         user_id: int,
         notes: Optional[str] = None,
         at_time: Optional[datetime] = None,
+        latitude: Optional[float] = None,
+        longitude: Optional[float] = None,
+        accuracy_m: Optional[float] = None,
+        geofence_enforcement: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         session = self.get_active_session(user_id)
         if not session:
@@ -137,6 +156,17 @@ class WorkdaySessionService:
         if notes:
             session.notes = (session.notes or "") + ("\n" if session.notes else "") + notes.strip()
         session.calculate_duration()
+
+        if geofence_enforcement is not None:
+            from app.services.geofence_service import GeofenceService
+
+            GeofenceService().apply_to_session(
+                session,
+                latitude,
+                longitude,
+                accuracy_m,
+                geofence_enforcement,
+            )
 
         if not safe_commit("end_workday", {"user_id": user_id, "session_id": session.id}):
             return {

@@ -57,6 +57,7 @@ def register_all_blueprints(app, logger=None):
     from app.routes.api_v1 import api_v1_bp
 
     import_module("app.routes.api_v1_workday")
+    import_module("app.routes.api_v1_geofences")
     import_module("app.routes.api_v1_attendance")
     from app.routes.api_v1_ai import api_v1_ai_bp
     from app.routes.api_v1_clients import api_v1_clients_bp
@@ -114,6 +115,7 @@ def register_all_blueprints(app, logger=None):
     from app.routes.webhooks import webhooks_bp
     from app.routes.weekly_goals import weekly_goals_bp
     from app.routes.workday import workday_bp
+    from app.routes.gamification import gamification_bp
 
     try:
         from app.routes.audit_logs import audit_logs_bp
@@ -202,6 +204,7 @@ def register_all_blueprints(app, logger=None):
     app.register_blueprint(expenses_bp)
     app.register_blueprint(permissions_bp)
     app.register_blueprint(calendar_bp)
+    app.register_blueprint(gamification_bp)
     app.register_blueprint(expense_categories_bp)
     app.register_blueprint(mileage_bp)
     app.register_blueprint(per_diem_bp)

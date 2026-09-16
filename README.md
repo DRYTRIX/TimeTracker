@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.15.0
+
+**Minor (5.15.0):** **Timer start override (#760)** — start or adjust a running timer at a custom time. **Pomodoro sessions** — focus blocks tracked via timer API and UI. **Expense lifecycle** — full mobile/desktop expense CRUD. **Payroll templates** — configurable export templates. **QuickBooks & Xero** — deeper accounting sync. **ActivityWatch inbox** — rules, merge filters, and sync-error review. **Gamification** — badges, leaderboards, and award hooks. **Calendar DnD** — drag-to-move and resize events. **Recurring costs** — automatic recurring project cost engine. **Shareable reports** — public tokenized report links. **Geofencing** — location-based attendance clock-in policies. See [CHANGELOG.md](CHANGELOG.md#5150---2026-09-16).
+
 ### ✨ Highlights of v5.14.1
 
 **Patch (5.14.1):** **Docker base images** — Node 20 and Python Bookworm replace expired Bullseye bases so fresh CI/image builds succeed. See [CHANGELOG.md](CHANGELOG.md#5141---2026-09-09).

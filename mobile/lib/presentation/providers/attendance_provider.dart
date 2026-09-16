@@ -1,5 +1,7 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timetracker_mobile/presentation/providers/api_provider.dart';
+import 'package:timetracker_mobile/utils/location_utils.dart';
 
 class AttendanceState {
   const AttendanceState({
@@ -7,6 +9,7 @@ class AttendanceState {
     this.workActive = false,
     this.breakActive = false,
     this.error,
+    this.warning,
     this.workPeriod,
     this.today,
   });
@@ -15,6 +18,7 @@ class AttendanceState {
   final bool workActive;
   final bool breakActive;
   final String? error;
+  final String? warning;
   final Map<String, dynamic>? workPeriod;
   final Map<String, dynamic>? today;
 
@@ -23,6 +27,7 @@ class AttendanceState {
     bool? workActive,
     bool? breakActive,
     String? error,
+    String? warning,
     Map<String, dynamic>? workPeriod,
     Map<String, dynamic>? today,
   }) {
@@ -31,6 +36,7 @@ class AttendanceState {
       workActive: workActive ?? this.workActive,
       breakActive: breakActive ?? this.breakActive,
       error: error,
+      warning: warning,
       workPeriod: workPeriod ?? this.workPeriod,
       today: today ?? this.today,
     );
@@ -66,34 +72,72 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
     }
   }
 
+  String? _extractGeofenceWarning(Map<String, dynamic> data) {
+    final geofence = data['geofence'];
+    if (geofence is Map && geofence['message'] != null) {
+      return geofence['message'].toString();
+    }
+    return null;
+  }
+
+  String _formatWorkdayError(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map) {
+        final message = data['message'] ?? data['error'];
+        if (message != null) return message.toString();
+      }
+      if (error.message != null && error.message!.isNotEmpty) {
+        return error.message!;
+      }
+    }
+    return error.toString();
+  }
+
   Future<bool> startWorkday() async {
+    state = state.copyWith(loading: true, error: null, warning: null);
     try {
       final client = await ref.read(apiClientProvider.future);
       if (client == null) {
-        state = state.copyWith(error: 'Not authenticated');
+        state = state.copyWith(loading: false, error: 'Not authenticated');
         return false;
       }
-      await client.startWorkday();
+      final position = await getWorkdayPosition();
+      final result = await client.startWorkday(
+        latitude: position?.latitude,
+        longitude: position?.longitude,
+        accuracyM: position?.accuracy,
+      );
+      final warning = _extractGeofenceWarning(result);
       await refresh();
+      state = state.copyWith(loading: false, warning: warning);
       return true;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(loading: false, error: _formatWorkdayError(e));
       return false;
     }
   }
 
   Future<bool> endWorkday() async {
+    state = state.copyWith(loading: true, error: null, warning: null);
     try {
       final client = await ref.read(apiClientProvider.future);
       if (client == null) {
-        state = state.copyWith(error: 'Not authenticated');
+        state = state.copyWith(loading: false, error: 'Not authenticated');
         return false;
       }
-      await client.endWorkday();
+      final position = await getWorkdayPosition();
+      final result = await client.endWorkday(
+        latitude: position?.latitude,
+        longitude: position?.longitude,
+        accuracyM: position?.accuracy,
+      );
+      final warning = _extractGeofenceWarning(result);
       await refresh();
+      state = state.copyWith(loading: false, warning: warning);
       return true;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(loading: false, error: _formatWorkdayError(e));
       return false;
     }
   }

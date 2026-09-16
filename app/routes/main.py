@@ -104,6 +104,33 @@ def dashboard():
     workday_week_hours = stats.get("workday_hours", {}).get("week", 0.0)
     workday_month_hours = stats.get("workday_hours", {}).get("month", 0.0)
 
+    # Focus / Pomodoro today stats
+    from app.models.focus_session import FocusSession
+
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    focus_today = FocusSession.query.filter(
+        FocusSession.user_id == current_user.id,
+        FocusSession.started_at >= today_start,
+    ).all()
+    focus_today_sessions = len(focus_today)
+    focus_today_cycles = sum(s.cycles_completed or 0 for s in focus_today)
+    focus_today_minutes = 0
+    for s in focus_today:
+        end = s.ended_at or datetime.utcnow()
+        if s.started_at:
+            focus_today_minutes += int((end - s.started_at).total_seconds() / 60)
+
+    gamification_points = 0
+    gamification_badge_count = 0
+    try:
+        from app.services.gamification_service import GamificationService
+
+        gsvc = GamificationService()
+        gamification_points = gsvc.get_user_points(current_user.id)
+        gamification_badge_count = len(gsvc.get_user_badges(current_user.id))
+    except Exception:
+        pass
+
     from app.services.attendance_compliance_service import AttendanceComplianceService
     from app.services.workday_session_service import WorkdaySessionService
     from app.services.working_time_limit_service import WorkingTimeLimitService
@@ -476,6 +503,11 @@ def dashboard():
         "week_hours": week_hours,
         "month_hours": month_hours,
         "utilization": utilization,
+        "focus_today_cycles": focus_today_cycles,
+        "focus_today_minutes": focus_today_minutes,
+        "focus_today_sessions": focus_today_sessions,
+        "gamification_points": gamification_points,
+        "gamification_badge_count": gamification_badge_count,
         "standard_hours_per_day": standard_hours_per_day,
         "today_regular_hours": today_overtime["regular_hours"],
         "today_overtime_hours": today_overtime["overtime_hours"],

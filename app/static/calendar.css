@@ -687,3 +687,46 @@
     cursor: pointer;
 }
 
+/* Drag and drop / resize */
+.event-card[draggable="true"],
+.week-event-block[draggable="true"],
+.event-badge[draggable="true"] {
+    cursor: grab;
+}
+
+.event-card.dragging,
+.week-event-block.dragging,
+.event-badge.dragging {
+    opacity: 0.45;
+    cursor: grabbing;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.event-card.resizing,
+.week-event-block.resizing {
+    outline: 2px dashed #3b82f6;
+    z-index: 5;
+}
+
+.drop-target {
+    background-color: rgba(59, 130, 246, 0.12) !important;
+    box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.45);
+}
+
+.event-resize-handle {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 8px;
+    cursor: ns-resize;
+    background: linear-gradient(to bottom, transparent, rgba(59, 130, 246, 0.35));
+    border-bottom-left-radius: 0.4rem;
+    border-bottom-right-radius: 0.4rem;
+}
+
+.event-card,
+.week-event-block {
+    position: relative;
+}
+

@@ -40,7 +40,10 @@ from app.models import (
     PurchaseOrder,
     RecurringBlock,
     RecurringInvoice,
+    RecurringProjectCost,
     SavedFilter,
+    SavedReportView,
+    SharedReportLink,
     StockItem,
     StockMovement,
     StockReservation,
@@ -59,6 +62,7 @@ from app.models import (
 from app.models.time_entry import local_now
 from app.models.time_entry_approval import ApprovalStatus, TimeEntryApproval
 from app.services.global_search_service import run_global_search
+from app.services.shared_report_service import SharedReportService
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import (
     error_response,
@@ -193,6 +197,7 @@ def api_info():
                     "audit_events": "/api/v1/reports/compliance/audit-events",
                 },
                 "mileage_gps": "/api/v1/mileage/gps",
+                "focus_sessions": "/api/v1/focus-sessions",
                 "search": "/api/v1/search",
                 "inventory": {
                     "items": "/api/v1/inventory/items",
@@ -1902,6 +1907,202 @@ def delete_project_cost(cost_id):
     db.session.delete(cost)
     db.session.commit()
     return jsonify({"message": "Project cost deleted successfully"})
+
+
+# ==================== Recurring Project Costs ====================
+
+
+@api_v1_bp.route("/projects/<int:project_id>/recurring-costs", methods=["GET"])
+@require_api_token("read:projects")
+def list_recurring_project_costs(project_id):
+    """List recurring project cost templates."""
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 50, type=int)
+
+    query = RecurringProjectCost.query.filter(RecurringProjectCost.project_id == project_id)
+    is_active = request.args.get("is_active")
+    if is_active is not None:
+        query = query.filter(RecurringProjectCost.is_active == (is_active.lower() == "true"))
+
+    query = query.order_by(RecurringProjectCost.next_run_date.asc())
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    pagination_dict = {
+        "page": pagination.page,
+        "per_page": pagination.per_page,
+        "total": pagination.total,
+        "pages": pagination.pages,
+        "has_next": pagination.has_next,
+        "has_prev": pagination.has_prev,
+        "next_page": pagination.page + 1 if pagination.has_next else None,
+        "prev_page": pagination.page - 1 if pagination.has_prev else None,
+    }
+    return jsonify(
+        {
+            "recurring_costs": [item.to_dict() for item in pagination.items],
+            "pagination": pagination_dict,
+        }
+    )
+
+
+@api_v1_bp.route("/projects/<int:project_id>/recurring-costs", methods=["POST"])
+@require_api_token("write:projects")
+def create_recurring_project_cost(project_id):
+    """Create a recurring project cost template."""
+    data = request.get_json() or {}
+    required = ["description", "category", "amount", "frequency", "next_run_date"]
+    missing = [field for field in required if not data.get(field)]
+    if missing:
+        return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
+
+    freq = (data.get("frequency") or "").lower()
+    if freq not in ("daily", "weekly", "monthly", "yearly"):
+        return jsonify({"error": "Invalid frequency"}), 400
+
+    next_date = _parse_date(data.get("next_run_date"))
+    if not next_date:
+        return jsonify({"error": "Invalid next_run_date (YYYY-MM-DD)"}), 400
+
+    try:
+        amount = Decimal(str(data["amount"]))
+    except (ValueError, TypeError, InvalidOperation):
+        return jsonify({"error": "Invalid amount"}), 400
+
+    recurring = RecurringProjectCost(
+        project_id=project_id,
+        user_id=g.api_user.id,
+        description=data["description"],
+        category=data["category"],
+        amount=amount,
+        frequency=freq,
+        next_run_date=next_date,
+        interval=data.get("interval", 1),
+        end_date=_parse_date(data.get("end_date")),
+        billable=bool(data.get("billable", True)),
+        currency_code=data.get("currency_code", "EUR"),
+        is_active=bool(data.get("is_active", True)),
+    )
+    db.session.add(recurring)
+    db.session.commit()
+    return jsonify({"message": "Recurring project cost created successfully", "recurring_cost": recurring.to_dict()}), 201
+
+
+@api_v1_bp.route("/projects/<int:project_id>/recurring-costs/<int:rid>", methods=["GET"])
+@require_api_token("read:projects")
+def get_recurring_project_cost(project_id, rid):
+    recurring = RecurringProjectCost.query.filter_by(id=rid, project_id=project_id).first_or_404()
+    return jsonify({"recurring_cost": recurring.to_dict()})
+
+
+@api_v1_bp.route("/projects/<int:project_id>/recurring-costs/<int:rid>", methods=["PUT", "PATCH"])
+@require_api_token("write:projects")
+def update_recurring_project_cost(project_id, rid):
+    recurring = RecurringProjectCost.query.filter_by(id=rid, project_id=project_id).first_or_404()
+    data = request.get_json() or {}
+
+    for field in ("description", "category", "currency_code"):
+        if field in data:
+            setattr(recurring, field, data[field])
+    if "frequency" in data and data["frequency"] in ("daily", "weekly", "monthly", "yearly"):
+        recurring.frequency = data["frequency"]
+    if "interval" in data:
+        try:
+            recurring.interval = int(data["interval"])
+        except (ValueError, TypeError):
+            return validation_error_response({"interval": ["Invalid value."]}, message="Invalid interval")
+    if "next_run_date" in data:
+        parsed = _parse_date(data["next_run_date"])
+        if parsed:
+            recurring.next_run_date = parsed
+    if "end_date" in data:
+        recurring.end_date = _parse_date(data["end_date"])
+    for bfield in ("billable", "is_active"):
+        if bfield in data:
+            setattr(recurring, bfield, bool(data[bfield]))
+    if "amount" in data:
+        try:
+            recurring.amount = Decimal(str(data["amount"]))
+        except (ValueError, TypeError, InvalidOperation):
+            return validation_error_response({"amount": ["Invalid value."]}, message="Invalid amount")
+
+    db.session.commit()
+    return jsonify({"message": "Recurring project cost updated successfully", "recurring_cost": recurring.to_dict()})
+
+
+@api_v1_bp.route("/projects/<int:project_id>/recurring-costs/<int:rid>", methods=["DELETE"])
+@require_api_token("write:projects")
+def delete_recurring_project_cost(project_id, rid):
+    recurring = RecurringProjectCost.query.filter_by(id=rid, project_id=project_id).first_or_404()
+    db.session.delete(recurring)
+    db.session.commit()
+    return jsonify({"message": "Recurring project cost deleted successfully"})
+
+
+@api_v1_bp.route("/projects/<int:project_id>/recurring-costs/<int:rid>/generate", methods=["POST"])
+@require_api_token("write:projects")
+def generate_recurring_project_cost(project_id, rid):
+    recurring = RecurringProjectCost.query.filter_by(id=rid, project_id=project_id).first_or_404()
+    original_next_run_date = recurring.next_run_date
+    recurring.next_run_date = datetime.utcnow().date()
+    cost = recurring.generate_cost()
+    if not cost:
+        recurring.next_run_date = original_next_run_date
+        return jsonify({"message": "No cost generated (not due yet or inactive)"}), 200
+    db.session.commit()
+    return jsonify({"message": "Project cost generated successfully", "cost": cost.to_dict()}), 201
+
+
+# ==================== Shared Report Links ====================
+
+
+@api_v1_bp.route("/reports/saved/<int:view_id>/share", methods=["POST"])
+@require_api_token("write:reports")
+def create_shared_report_link(view_id):
+    """Create a public share link for a saved report view."""
+    saved_view = SavedReportView.query.get_or_404(view_id)
+    if saved_view.owner_id != g.api_user.id and not g.api_user.is_admin:
+        return jsonify({"error": "Access denied"}), 403
+
+    data = request.get_json(silent=True) or {}
+    expiry = (data.get("expiry") or "never").lower()
+    expires_in_days = None
+    if expiry == "7d":
+        expires_in_days = 7
+    elif expiry == "30d":
+        expires_in_days = 30
+    elif expiry not in ("never", ""):
+        return jsonify({"error": "Invalid expiry option"}), 400
+
+    password = (data.get("password") or "").strip() or None
+    service = SharedReportService()
+    link = service.create_link(
+        saved_view=saved_view,
+        created_by_id=g.api_user.id,
+        expires_in_days=expires_in_days,
+        password=password,
+    )
+    db.session.commit()
+    url = service.get_public_url(link)
+    return jsonify(
+        {
+            "message": "Share link created successfully",
+            "link": link.to_dict(include_url=True),
+            "url": url,
+        }
+    ), 201
+
+
+@api_v1_bp.route("/reports/saved/<int:view_id>/share/<token>", methods=["DELETE"])
+@require_api_token("write:reports")
+def revoke_shared_report_link(view_id, token):
+    """Revoke a shared report link."""
+    saved_view = SavedReportView.query.get_or_404(view_id)
+    if saved_view.owner_id != g.api_user.id and not g.api_user.is_admin:
+        return jsonify({"error": "Access denied"}), 403
+
+    service = SharedReportService()
+    if not service.revoke_link(view_id, token):
+        return jsonify({"error": "Share link not found"}), 404
+    return jsonify({"message": "Share link revoked successfully"})
 
 
 # ==================== Tax Rules (Admin) ====================
@@ -5208,6 +5409,92 @@ def mileage_gps_list_api():
 
     tracks = GPSTrackingService().get_user_tracks(user_id=user_id, start_date=start, end_date=end)
     return jsonify({"tracks": tracks})
+
+
+# ==================== Focus / Pomodoro Sessions ====================
+
+
+@api_v1_bp.route("/focus-sessions/active", methods=["GET"])
+@require_api_token("read:time_entries")
+def api_v1_focus_active():
+    from app.services.pomodoro_service import PomodoroService
+
+    session = PomodoroService().get_active_session(g.api_user.id)
+    return jsonify({"session": session.to_dict() if session else None})
+
+
+@api_v1_bp.route("/focus-sessions/start", methods=["POST"])
+@require_api_token("write:time_entries")
+def api_v1_focus_start():
+    from app.services.pomodoro_service import PomodoroService
+
+    data = request.get_json() or {}
+    user = g.api_user
+    result = PomodoroService().start_session(
+        user_id=user.id,
+        project_id=data.get("project_id"),
+        task_id=data.get("task_id"),
+        pomodoro_length=int(data.get("pomodoro_length") or getattr(user, "pomodoro_length", None) or 25),
+        short_break_length=int(data.get("short_break_length") or getattr(user, "pomodoro_short_break", None) or 5),
+        long_break_length=int(data.get("long_break_length") or getattr(user, "pomodoro_long_break", None) or 15),
+        long_break_interval=int(
+            data.get("long_break_interval") or getattr(user, "pomodoro_long_break_interval", None) or 4
+        ),
+    )
+    if not result.get("success"):
+        return jsonify(result), 409
+    return jsonify(result), 201
+
+
+@api_v1_bp.route("/focus-sessions/<int:session_id>/cycle", methods=["POST"])
+@require_api_token("write:time_entries")
+def api_v1_focus_cycle(session_id):
+    from app.services.pomodoro_service import PomodoroService
+
+    fs = FocusSession.query.get_or_404(session_id)
+    if fs.user_id != g.api_user.id and not g.api_user.is_admin:
+        return jsonify({"error": "Access denied"}), 403
+    if fs.ended_at:
+        return jsonify({"error": "Session already ended"}), 400
+    return jsonify(PomodoroService().complete_cycle(session_id))
+
+
+@api_v1_bp.route("/focus-sessions/<int:session_id>/interrupt", methods=["POST"])
+@require_api_token("write:time_entries")
+def api_v1_focus_interrupt(session_id):
+    from app.services.pomodoro_service import PomodoroService
+
+    data = request.get_json() or {}
+    fs = FocusSession.query.get_or_404(session_id)
+    if fs.user_id != g.api_user.id and not g.api_user.is_admin:
+        return jsonify({"error": "Access denied"}), 403
+    if fs.ended_at:
+        return jsonify({"error": "Session already ended"}), 400
+    return jsonify(PomodoroService().log_interruption(session_id, reason=data.get("reason")))
+
+
+@api_v1_bp.route("/focus-sessions/finish", methods=["POST"])
+@require_api_token("write:time_entries")
+def api_v1_focus_finish():
+    from app.services.pomodoro_service import PomodoroService
+
+    data = request.get_json() or {}
+    session_id = data.get("session_id")
+    if not session_id:
+        return jsonify({"error": "session_id is required"}), 400
+    fs = FocusSession.query.get_or_404(session_id)
+    if fs.user_id != g.api_user.id and not g.api_user.is_admin:
+        return jsonify({"error": "Access denied"}), 403
+    return jsonify(PomodoroService().end_session(session_id, notes=(data.get("notes") or "").strip() or None))
+
+
+@api_v1_bp.route("/focus-sessions/summary", methods=["GET"])
+@require_api_token("read:time_entries")
+def api_v1_focus_summary():
+    from app.services.pomodoro_service import PomodoroService
+
+    days = int(request.args.get("days", 7))
+    return jsonify(PomodoroService().get_session_stats(g.api_user.id, days=days))
 
 
 # ==================== Error Handlers ====================

@@ -34,6 +34,7 @@
             </thead>
             <tbody class="divide-y divide-border-light dark:divide-border-dark">
                 {% for view in saved_views %}
+                {% set active_links = shared_links_by_view.get(view.id, []) %}
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td class="px-6 py-4 whitespace-nowrap" data-label="{{ _('Name') }}">
                         <div class="font-medium">{{ view.name }}</div>
@@ -46,6 +47,11 @@
                             {% if view.iterative_report_generation %}
                             <span class="px-2 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200" title="{{ _('Iterative Report Generation') }}">
                                 <i class="fas fa-sync-alt mr-1"></i>{{ _('Iterative') }}
+                            </span>
+                            {% endif %}
+                            {% if active_links %}
+                            <span class="px-2 py-1 text-xs rounded bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200" title="{{ _('Active share links') }}">
+                                <i class="fas fa-share-alt mr-1"></i>{{ active_links|length }}
                             </span>
                             {% endif %}
                         </div>
@@ -64,6 +70,9 @@
                             <a href="{{ url_for('custom_reports.edit_saved_view', view_id=view.id) }}" class="text-green-600 hover:text-green-800" title="{{ _('Edit') }}">
                                 <i class="fas fa-edit"></i>
                             </a>
+                            <button type="button" onclick="openShareModal({{ view.id }}, {{ active_links|tojson }})" class="text-purple-600 hover:text-purple-800" title="{{ _('Share') }}">
+                                <i class="fas fa-share-alt"></i>
+                            </button>
                             <form method="POST" action="{{ url_for('custom_reports.delete_saved_view', view_id=view.id) }}" class="inline" onsubmit="return confirm('{{ _('Are you sure you want to delete this report view?') }}')">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="text-red-600 hover:text-red-800" title="{{ _('Delete') }}">
@@ -86,4 +95,125 @@
     ) }}
     {% endif %}
 </div>
+
+<div id="shareModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl p-6 max-w-lg w-full">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">{{ _('Share Report') }}</h3>
+            <button type="button" onclick="closeShareModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label for="shareExpiry" class="form-label">{{ _('Link expires') }}</label>
+                <select id="shareExpiry" class="form-input">
+                    <option value="7d">{{ _('7 days') }}</option>
+                    <option value="30d">{{ _('30 days') }}</option>
+                    <option value="never" selected>{{ _('Never') }}</option>
+                </select>
+            </div>
+            <div>
+                <label for="sharePassword" class="form-label">{{ _('Password (optional)') }}</label>
+                <input type="password" id="sharePassword" class="form-input" placeholder="{{ _('Leave blank for no password') }}">
+            </div>
+            <div id="shareResult" class="hidden">
+                <label for="shareUrl" class="form-label">{{ _('Share link') }}</label>
+                <div class="flex gap-2">
+                    <input type="text" id="shareUrl" class="form-input flex-1" readonly>
+                    <button type="button" onclick="copyShareUrl()" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Copy') }}</button>
+                </div>
+            </div>
+            <div id="shareLinksList" class="hidden border-t border-border-light dark:border-border-dark pt-4">
+                <h4 class="text-sm font-semibold mb-2">{{ _('Active links') }}</h4>
+                <div id="shareLinksContent" class="space-y-2 text-sm"></div>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeShareModal()" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">{{ _('Close') }}</button>
+                <button type="button" onclick="createShareLink()" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Create Link') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ csp_nonce() }}">
+let shareViewId = null;
+
+function openShareModal(viewId, activeLinks) {
+    shareViewId = viewId;
+    document.getElementById('shareModal').classList.remove('hidden');
+    document.getElementById('shareResult').classList.add('hidden');
+    document.getElementById('sharePassword').value = '';
+    renderActiveLinks(activeLinks || []);
+}
+
+function closeShareModal() {
+    document.getElementById('shareModal').classList.add('hidden');
+    shareViewId = null;
+}
+
+function renderActiveLinks(links) {
+    const container = document.getElementById('shareLinksContent');
+    const wrapper = document.getElementById('shareLinksList');
+    if (!links.length) {
+        wrapper.classList.add('hidden');
+        container.innerHTML = '';
+        return;
+    }
+    wrapper.classList.remove('hidden');
+    container.innerHTML = links.map(link => `
+        <div class="flex items-center justify-between gap-2 p-2 rounded border border-border-light dark:border-border-dark">
+            <div class="truncate">${link.token.slice(0, 8)}... · ${link.view_count || 0} {{ _('views') }}</div>
+            <button type="button" class="text-rose-600 hover:text-rose-800" onclick="revokeShareLink('${link.token}')">{{ _('Revoke') }}</button>
+        </div>
+    `).join('');
+}
+
+async function createShareLink() {
+    if (!shareViewId) return;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const expiry = document.getElementById('shareExpiry').value;
+    const password = document.getElementById('sharePassword').value;
+    const response = await fetch(`/reports/builder/${shareViewId}/share`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ expiry, password })
+    });
+    const result = await response.json();
+    if (!response.ok) {
+        alert(result.error || result.message || '{{ _("Failed to create share link") }}');
+        return;
+    }
+    document.getElementById('shareUrl').value = result.url;
+    document.getElementById('shareResult').classList.remove('hidden');
+    const links = result.link ? [result.link] : [];
+    renderActiveLinks(links);
+}
+
+async function copyShareUrl() {
+    const url = document.getElementById('shareUrl').value;
+    if (!url) return;
+    try {
+        await navigator.clipboard.writeText(url);
+    } catch (err) {
+        document.getElementById('shareUrl').select();
+        document.execCommand('copy');
+    }
+}
+
+async function revokeShareLink(token) {
+    if (!shareViewId || !confirm('{{ _("Revoke this share link?") }}')) return;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const response = await fetch(`/reports/builder/${shareViewId}/share/${token}`, {
+        method: 'DELETE',
+        headers: { 'X-CSRFToken': csrfToken }
+    });
+    if (response.ok) {
+        window.location.reload();
+    }
+}
+</script>
 {% endblock %}

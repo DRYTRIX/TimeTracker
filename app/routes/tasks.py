@@ -803,6 +803,14 @@ def update_task_status(task_id):
                 safe_commit("log_task_start", {"task_id": task.id})
         elif new_status == "done":
             task.complete_task()
+            try:
+                from app.services.gamification_service import GamificationService
+
+                GamificationService().check_and_award_badges(
+                    current_user.id, "task_completed", {"task_id": task.id}
+                )
+            except Exception:
+                current_app.logger.debug("Gamification task hook failed", exc_info=True)
             db.session.add(
                 TaskActivity(task_id=task.id, user_id=current_user.id, event="complete", details="Task completed")
             )

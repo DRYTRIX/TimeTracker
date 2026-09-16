@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [{'text': _('Gamification')}, {'text': _('Leaderboard')}] %}
+{{ page_header(icon_class='fas fa-trophy', title_text=_('Leaderboard'), subtitle_text=_('Badges and rankings'), breadcrumbs=breadcrumbs) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Your points') }}</p>
+    <p class="text-3xl font-bold">{{ my_points }}</p>
+  </div>
+  <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md lg:col-span-2">
+    <p class="text-sm font-medium mb-2">{{ _('Recent badges') }}</p>
+    <div class="flex flex-wrap gap-2">
+      {% for ub in my_badges[:8] %}
+      <span class="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-sm">{{ ub.badge.name if ub.badge is defined and ub.badge else (ub.get('badge', {}) or {}).get('name', 'Badge') }}</span>
+      {% else %}
+      <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No badges yet — keep tracking!') }}</span>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% if boards %}
+<form method="GET" class="mb-4">
+  <select name="board_id" class="form-input" onchange="this.form.submit()">
+    {% for b in boards %}
+    <option value="{{ b.id }}" {% if board and b.id == board.id %}selected{% endif %}>{{ b.name }}</option>
+    {% endfor %}
+  </select>
+</form>
+{% endif %}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
+  <h2 class="text-lg font-semibold mb-4">{{ board.name if board else _('Leaderboard') }}</h2>
+  <table class="min-w-full text-sm">
+    <thead>
+      <tr class="text-left border-b border-border-light dark:border-border-dark">
+        <th class="py-2">{{ _('Rank') }}</th>
+        <th class="py-2">{{ _('User') }}</th>
+        <th class="py-2">{{ _('Score') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in entries %}
+      <tr class="border-b border-border-light dark:border-border-dark">
+        <td class="py-2">{{ e.rank }}</td>
+        <td class="py-2">{{ e.user.username if e.user else (e.get('user', {}) or {}).get('username', e.user_id) }}</td>
+        <td class="py-2">{{ '%.2f'|format(e.score or 0) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="py-4 text-text-muted-light dark:text-text-muted-dark">{{ _('No rankings yet.') }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

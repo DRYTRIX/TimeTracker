@@ -5926,3 +5926,256 @@ def list_integrations_admin():
 def integration_setup(provider):
     """Setup page for configuring integration OAuth credentials. Redirect to main integrations manage page."""
     return redirect(url_for("integrations.manage_integration", provider=provider))
+
+
+# ==================== Payroll Export Templates ====================
+
+
+@admin_bp.route("/admin/payroll-templates", methods=["GET", "POST"])
+@login_required
+@admin_or_permission_required("access_admin")
+def payroll_templates():
+    from app.models.payroll_export_template import PayrollExportTemplate
+
+    PayrollExportTemplate.ensure_builtin_defaults()
+
+    if request.method == "POST":
+        name = (request.form.get("name") or "").strip()
+        grouping = (request.form.get("grouping") or "week").strip()
+        fmt = (request.form.get("format") or "csv").strip()
+        delimiter = (request.form.get("delimiter") or ",").strip() or ","
+        columns_raw = (request.form.get("columns") or "").strip()
+        columns = [c.strip() for c in columns_raw.split(",") if c.strip()]
+        if not columns:
+            columns = list(PayrollExportTemplate.DEFAULT_COLUMNS)
+        is_default = "is_default" in request.form
+
+        if not name:
+            flash(_("Name is required"), "error")
+            return redirect(url_for("admin.payroll_templates"))
+
+        if is_default:
+            for t in PayrollExportTemplate.query.filter_by(is_default=True).all():
+                t.is_default = False
+
+        tmpl = PayrollExportTemplate(
+            name=name,
+            columns=columns,
+            grouping=grouping if grouping in ("week", "day", "project") else "week",
+            format=fmt if fmt in ("csv", "xlsx") else "csv",
+            delimiter=delimiter,
+            is_default=is_default,
+            is_builtin=False,
+        )
+        db.session.add(tmpl)
+        if safe_commit("create_payroll_template"):
+            flash(_("Payroll template created"), "success")
+        else:
+            flash(_("Could not create template"), "error")
+        return redirect(url_for("admin.payroll_templates"))
+
+    templates = PayrollExportTemplate.query.order_by(PayrollExportTemplate.name.asc()).all()
+    return render_template(
+        "admin/payroll_templates.html",
+        templates=templates,
+        default_columns=PayrollExportTemplate.DEFAULT_COLUMNS,
+    )
+
+
+@admin_bp.route("/admin/payroll-templates/<int:template_id>/edit", methods=["POST"])
+@login_required
+@admin_or_permission_required("access_admin")
+def edit_payroll_template(template_id):
+    from app.models.payroll_export_template import PayrollExportTemplate
+
+    tmpl = PayrollExportTemplate.query.get_or_404(template_id)
+    if not tmpl.is_builtin:
+        name = (request.form.get("name") or "").strip()
+        if name:
+            tmpl.name = name
+    grouping = (request.form.get("grouping") or tmpl.grouping).strip()
+    tmpl.grouping = grouping if grouping in ("week", "day", "project") else tmpl.grouping
+    fmt = (request.form.get("format") or tmpl.format).strip()
+    tmpl.format = fmt if fmt in ("csv", "xlsx") else tmpl.format
+    delimiter = (request.form.get("delimiter") or tmpl.delimiter).strip() or ","
+    tmpl.delimiter = delimiter
+    columns_raw = (request.form.get("columns") or "").strip()
+    if columns_raw:
+        tmpl.columns = [c.strip() for c in columns_raw.split(",") if c.strip()]
+    if "is_default" in request.form:
+        for t in PayrollExportTemplate.query.filter_by(is_default=True).all():
+            t.is_default = False
+        tmpl.is_default = True
+    if safe_commit("edit_payroll_template", {"template_id": template_id}):
+        flash(_("Template updated"), "success")
+    else:
+        flash(_("Could not update template"), "error")
+    return redirect(url_for("admin.payroll_templates"))
+
+
+@admin_bp.route("/admin/payroll-templates/<int:template_id>/delete", methods=["POST"])
+@login_required
+@admin_or_permission_required("access_admin")
+def delete_payroll_template(template_id):
+    from app.models.payroll_export_template import PayrollExportTemplate
+
+    tmpl = PayrollExportTemplate.query.get_or_404(template_id)
+    if tmpl.is_builtin:
+        flash(_("Cannot delete built-in templates"), "error")
+        return redirect(url_for("admin.payroll_templates"))
+    was_default = tmpl.is_default
+    db.session.delete(tmpl)
+    if safe_commit("delete_payroll_template", {"template_id": template_id}):
+        if was_default:
+            PayrollExportTemplate.ensure_builtin_defaults()
+            builtin = PayrollExportTemplate.query.filter_by(name="Generic Payroll").first()
+            if builtin:
+                builtin.is_default = True
+                safe_commit("reset_default_payroll_template")
+        flash(_("Template deleted"), "success")
+    else:
+        flash(_("Could not delete template"), "error")
+    return redirect(url_for("admin.payroll_templates"))
+
+
+# ==================== Geofences ====================
+
+
+@admin_bp.route("/admin/geofences", methods=["GET", "POST"])
+@login_required
+@admin_or_permission_required("access_admin")
+def geofences():
+    from app.models.geofence import Geofence, GeofencePolicy
+    from app.models import Project
+
+    if request.method == "POST":
+        name = (request.form.get("name") or "").strip()
+        lat = request.form.get("lat")
+        lng = request.form.get("lng")
+        radius_m = request.form.get("radius_m") or "100"
+        address = (request.form.get("address") or "").strip() or None
+        project_raw = (request.form.get("project_id") or "").strip()
+        policy = (request.form.get("policy") or GeofencePolicy.LOG).strip()
+        is_active = "is_active" in request.form
+
+        if not name:
+            flash(_("Name is required"), "error")
+            return redirect(url_for("admin.geofences"))
+
+        try:
+            lat_f = float(lat)
+            lng_f = float(lng)
+            radius_f = float(radius_m)
+        except (TypeError, ValueError):
+            flash(_("Valid latitude, longitude, and radius are required"), "error")
+            return redirect(url_for("admin.geofences"))
+
+        if policy not in GeofencePolicy.CHOICES:
+            policy = GeofencePolicy.LOG
+
+        project_id = int(project_raw) if project_raw.isdigit() else None
+
+        geofence = Geofence(
+            name=name,
+            lat=lat_f,
+            lng=lng_f,
+            radius_m=radius_f,
+            address=address,
+            project_id=project_id,
+            policy=policy,
+            is_active=is_active,
+        )
+        db.session.add(geofence)
+        if safe_commit("create_geofence"):
+            flash(_("Geofence created"), "success")
+        else:
+            flash(_("Could not create geofence"), "error")
+        return redirect(url_for("admin.geofences"))
+
+    geofence_list = Geofence.query.order_by(Geofence.name.asc()).all()
+    projects = Project.query.filter_by(status="active").order_by(Project.name.asc()).all()
+    return render_template(
+        "admin/geofences.html",
+        geofences=geofence_list,
+        projects=projects,
+        policies=GeofencePolicy.CHOICES,
+    )
+
+
+@admin_bp.route("/admin/geofences/<int:geofence_id>/edit", methods=["GET", "POST"])
+@login_required
+@admin_or_permission_required("access_admin")
+def edit_geofence(geofence_id):
+    from app.models.geofence import Geofence, GeofencePolicy
+    from app.models import Project
+
+    geofence = Geofence.query.get_or_404(geofence_id)
+    projects = Project.query.filter_by(status="active").order_by(Project.name.asc()).all()
+
+    if request.method == "POST":
+        name = (request.form.get("name") or "").strip()
+        lat = request.form.get("lat")
+        lng = request.form.get("lng")
+        radius_m = request.form.get("radius_m")
+        address = (request.form.get("address") or "").strip() or None
+        project_raw = (request.form.get("project_id") or "").strip()
+        policy = (request.form.get("policy") or geofence.policy).strip()
+        is_active = "is_active" in request.form
+
+        if not name:
+            flash(_("Name is required"), "error")
+            return render_template(
+                "admin/geofences.html",
+                geofences=Geofence.query.order_by(Geofence.name.asc()).all(),
+                projects=projects,
+                policies=GeofencePolicy.CHOICES,
+                editing_geofence=geofence,
+            )
+
+        try:
+            geofence.lat = float(lat)
+            geofence.lng = float(lng)
+            geofence.radius_m = float(radius_m)
+        except (TypeError, ValueError):
+            flash(_("Valid latitude, longitude, and radius are required"), "error")
+            return render_template(
+                "admin/geofences.html",
+                geofences=Geofence.query.order_by(Geofence.name.asc()).all(),
+                projects=projects,
+                policies=GeofencePolicy.CHOICES,
+                editing_geofence=geofence,
+            )
+
+        geofence.name = name
+        geofence.address = address
+        geofence.project_id = int(project_raw) if project_raw.isdigit() else None
+        geofence.policy = policy if policy in GeofencePolicy.CHOICES else geofence.policy
+        geofence.is_active = is_active
+
+        if safe_commit("edit_geofence", {"geofence_id": geofence_id}):
+            flash(_("Geofence updated"), "success")
+            return redirect(url_for("admin.geofences"))
+        flash(_("Could not update geofence"), "error")
+
+    return render_template(
+        "admin/geofences.html",
+        geofences=Geofence.query.order_by(Geofence.name.asc()).all(),
+        projects=projects,
+        policies=GeofencePolicy.CHOICES,
+        editing_geofence=geofence,
+    )
+
+
+@admin_bp.route("/admin/geofences/<int:geofence_id>/delete", methods=["POST"])
+@login_required
+@admin_or_permission_required("access_admin")
+def delete_geofence(geofence_id):
+    from app.models.geofence import Geofence
+
+    geofence = Geofence.query.get_or_404(geofence_id)
+    db.session.delete(geofence)
+    if safe_commit("delete_geofence", {"geofence_id": geofence_id}):
+        flash(_("Geofence deleted"), "success")
+    else:
+        flash(_("Could not delete geofence"), "error")
+    return redirect(url_for("admin.geofences"))

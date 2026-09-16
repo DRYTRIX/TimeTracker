@@ -529,12 +529,22 @@ def _comment_to_dict(comment):
 
 def _focus_session_to_dict(session):
     """Convert focus session to dictionary"""
+    duration_minutes = None
+    if session.started_at and session.ended_at:
+        duration_minutes = int((session.ended_at - session.started_at).total_seconds() / 60)
     return {
         "id": session.id,
         "user_id": session.user_id,
-        "start_time": session.start_time.isoformat() if session.start_time else None,
-        "end_time": session.end_time.isoformat() if session.end_time else None,
-        "duration_minutes": session.duration_minutes,
+        "project_id": session.project_id,
+        "task_id": session.task_id,
+        "time_entry_id": session.time_entry_id,
+        "started_at": session.started_at.isoformat() if session.started_at else None,
+        "ended_at": session.ended_at.isoformat() if session.ended_at else None,
+        "duration_minutes": duration_minutes,
+        "pomodoro_length": session.pomodoro_length,
+        "cycles_completed": session.cycles_completed,
+        "interruptions": session.interruptions,
+        "notes": session.notes,
         "created_at": session.created_at.isoformat() if session.created_at else None,
     }
 

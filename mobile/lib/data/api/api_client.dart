@@ -435,6 +435,42 @@ class ApiClient {
     return Map<String, dynamic>.from(res.data ?? {});
   }
 
+  Future<Map<String, dynamic>> getExpense(int expenseId) async {
+    final res = await _dio.get<Map<String, dynamic>>('/api/v1/expenses/$expenseId');
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> updateExpense(int expenseId, Map<String, dynamic> body) async {
+    final res = await _dio.patch<Map<String, dynamic>>('/api/v1/expenses/$expenseId', data: body);
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> deleteExpense(int expenseId) async {
+    final res = await _dio.delete<Map<String, dynamic>>('/api/v1/expenses/$expenseId');
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> approveExpense(int expenseId, {String? notes}) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/expenses/$expenseId/approve',
+      data: <String, dynamic>{if (notes != null) 'notes': notes},
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> rejectExpense(int expenseId, {required String reason}) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/expenses/$expenseId/reject',
+      data: <String, dynamic>{'reason': reason},
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
   Future<Map<String, dynamic>> createInvoice(Map<String, dynamic> body) async {
     final res = await _dio.post<Map<String, dynamic>>('/api/v1/invoices', data: body);
     _throwIfError(res);
@@ -653,25 +689,56 @@ class ApiClient {
     return _unwrapData(res.data);
   }
 
-  Future<Map<String, dynamic>> startWorkday({String? notes, String source = 'mobile'}) async {
+  Future<Map<String, dynamic>> startWorkday({
+    String? notes,
+    String source = 'mobile',
+    double? latitude,
+    double? longitude,
+    double? accuracyM,
+  }) async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/api/v1/workday/start',
       data: <String, dynamic>{
         if (notes != null) 'notes': notes,
         'source': source,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+        if (accuracyM != null) 'accuracy_m': accuracyM,
       },
     );
     _throwIfError(res);
     return _unwrapData(res.data);
   }
 
-  Future<Map<String, dynamic>> endWorkday({String? notes}) async {
+  Future<Map<String, dynamic>> endWorkday({
+    String? notes,
+    double? latitude,
+    double? longitude,
+    double? accuracyM,
+  }) async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/api/v1/workday/end',
-      data: <String, dynamic>{if (notes != null) 'notes': notes},
+      data: <String, dynamic>{
+        if (notes != null) 'notes': notes,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+        if (accuracyM != null) 'accuracy_m': accuracyM,
+      },
     );
     _throwIfError(res);
     return _unwrapData(res.data);
+  }
+
+  Future<List<Map<String, dynamic>>> getGeofences() async {
+    final res = await _dio.get<Map<String, dynamic>>('/api/v1/geofences');
+    _throwIfError(res);
+    final data = _unwrapData(res.data);
+    final raw = data['geofences'] ?? const [];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
   }
 
   Future<Map<String, dynamic>> startAttendanceBreak({String breakType = 'rest'}) async {

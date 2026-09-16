@@ -191,6 +191,19 @@ def settings():
                 if time_rounding_minimum is not None and time_rounding_minimum in [0, 5, 10, 15, 30, 60]:
                     current_user.time_rounding_minimum_minutes = time_rounding_minimum
 
+            # Pomodoro / focus defaults
+            for form_key, attr, lo, hi, default in (
+                ("pomodoro_length", "pomodoro_length", 5, 120, 25),
+                ("pomodoro_short_break", "pomodoro_short_break", 1, 60, 5),
+                ("pomodoro_long_break", "pomodoro_long_break", 5, 60, 15),
+                ("pomodoro_long_break_interval", "pomodoro_long_break_interval", 2, 10, 4),
+            ):
+                raw = request.form.get(form_key, type=int)
+                if raw is not None and lo <= raw <= hi:
+                    setattr(current_user, attr, raw)
+                elif raw is None and hasattr(current_user, attr):
+                    pass
+
             # Overtime settings
             standard_hours_per_day = request.form.get("standard_hours_per_day", type=float)
             if standard_hours_per_day is not None:
