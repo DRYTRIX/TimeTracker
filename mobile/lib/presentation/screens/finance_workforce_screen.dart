@@ -8,7 +8,9 @@ import 'package:share_plus/share_plus.dart';
 
 import '../providers/api_provider.dart';
 import '../providers/finance_workforce_providers.dart';
+import 'expense_detail_screen.dart';
 import 'invoice_detail_screen.dart';
+import 'report_screen.dart';
 
 class FinanceWorkforceScreen extends ConsumerStatefulWidget {
   const FinanceWorkforceScreen({super.key});
@@ -304,6 +306,9 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
     required String category,
     required String amount,
     required String expenseDate,
+    int? projectId,
+    bool billable = false,
+    bool reimbursable = true,
   }) async {
     final parsedAmount = double.tryParse(amount);
     if (parsedAmount == null || parsedAmount <= 0) {
@@ -322,6 +327,9 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
         'category': category.trim(),
         'amount': parsedAmount,
         'expense_date': expenseDate,
+        if (projectId != null) 'project_id': projectId,
+        'billable': billable,
+        'reimbursable': reimbursable,
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -330,9 +338,7 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
       await _refresh();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to create expense: $e')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Create failed: $e')));
     }
   }
 
@@ -341,8 +347,20 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
     final categoryController = TextEditingController(text: 'travel');
     final amountController = TextEditingController();
     DateTime selectedDate = DateTime.now();
+    int? selectedProjectId;
+    var billable = false;
+    var reimbursable = true;
+    List<Map<String, dynamic>> projects = const [];
 
     try {
+      final client = await ref.read(apiClientProvider.future);
+      if (client != null) {
+        final projectsRes = await client.getProjects(status: 'active', perPage: 100);
+        projects = List<Map<String, dynamic>>.from(
+          (projectsRes['projects'] ?? projectsRes['items'] ?? const []) as List,
+        );
+      }
+      if (!mounted) return;
       await showDialog<void>(
         context: context,
         builder: (dialogContext) {
@@ -368,6 +386,34 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
                         controller: amountController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         decoration: const InputDecoration(labelText: 'Amount *'),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<int?>(
+                        value: selectedProjectId,
+                        decoration: const InputDecoration(labelText: 'Project'),
+                        items: [
+                          const DropdownMenuItem<int?>(value: null, child: Text('None')),
+                          ...projects.map((p) {
+                            final id = (p['id'] as num?)?.toInt();
+                            return DropdownMenuItem<int?>(
+                              value: id,
+                              child: Text((p['name'] ?? 'Project $id').toString()),
+                            );
+                          }),
+                        ],
+                        onChanged: (v) => setDialogState(() => selectedProjectId = v),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Billable'),
+                        value: billable,
+                        onChanged: (v) => setDialogState(() => billable = v),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Reimbursable'),
+                        value: reimbursable,
+                        onChanged: (v) => setDialogState(() => reimbursable = v),
                       ),
                       const SizedBox(height: 12),
                       Row(
@@ -416,6 +462,9 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
                         category: categoryController.text,
                         amount: amountController.text,
                         expenseDate: selectedDate.toIso8601String().split('T')[0],
+                        projectId: selectedProjectId,
+                        billable: billable,
+                        reimbursable: reimbursable,
                       );
                     },
                     child: const Text('Create'),
@@ -852,6 +901,13 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
         title: const Text('Finance & Workforce'),
         actions: [
           IconButton(
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportScreen()));
+            },
+            icon: const Icon(Icons.bar_chart_outlined),
+            tooltip: 'Reports',
+          ),
+          IconButton(
             onPressed: _openCreateExpenseDialog,
             icon: const Icon(Icons.add_card_outlined),
             tooltip: 'Create expense',
@@ -1123,15 +1179,29 @@ class _FinanceWorkforceScreenState extends ConsumerState<FinanceWorkforceScreen>
                       else
                         Column(
                           children: filteredExpenses.take(_expenseVisible).map((expense) {
+                            final expenseId = (expense['id'] as num?)?.toInt();
                             final category = (expense['category'] ?? 'General').toString();
+                            final title = (expense['title'] ?? category).toString();
                             final amount = (expense['amount'] ?? '-').toString();
                             final date = (expense['expense_date'] ?? expense['date'] ?? '').toString();
+                            final status = (expense['status'] ?? '').toString();
                             return ListTile(
                               dense: true,
                               contentPadding: EdgeInsets.zero,
-                              title: Text(category),
-                              subtitle: Text(date),
+                              title: Text(title),
+                              subtitle: Text('$category · $date · $status'),
                               trailing: Text(amount),
+                              onTap: expenseId == null
+                                  ? null
+                                  : () async {
+                                      final changed = await Navigator.push<bool>(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ExpenseDetailScreen(expenseId: expenseId),
+                                        ),
+                                      );
+                                      if (changed == true && mounted) await _refresh();
+                                    },
                             );
                           }).toList(),
                         ),

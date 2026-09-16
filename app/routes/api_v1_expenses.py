@@ -177,3 +177,61 @@ def delete_expense(expense_id):
     if not result.get("success"):
         return error_response(result.get("message", "Could not reject expense"), status_code=400)
     return jsonify({"message": "Expense rejected successfully"})
+
+
+@api_v1_expenses_bp.route("/expenses/<int:expense_id>/approve", methods=["POST"])
+@require_api_token("write:expenses")
+def api_approve_expense(expense_id):
+    """Approve a pending expense (admin / approver)."""
+    from app import db
+    from app.models import Expense
+    from app.utils.db import safe_commit
+
+    if not g.api_user.is_admin and not getattr(g.api_user, "has_permission", lambda *_: False)("approve_expenses"):
+        # Fall back: admins only when permission helper unavailable
+        if not g.api_user.is_admin:
+            return forbidden_response("Only administrators can approve expenses")
+
+    expense = Expense.query.get_or_404(expense_id)
+    if expense.status != "pending":
+        return error_response("Only pending expenses can be approved", status_code=400)
+
+    data = request.get_json() or {}
+    notes = (data.get("notes") or data.get("approval_notes") or "").strip() or None
+    expense.approve(g.api_user.id, notes)
+    if not safe_commit("api_approve_expense", {"expense_id": expense_id}):
+        return error_response("Could not approve expense", status_code=500)
+
+    try:
+        from app.utils.integration_sync_hooks import trigger_expense_sync
+
+        trigger_expense_sync(expense)
+    except Exception:
+        pass
+
+    return jsonify({"message": "Expense approved successfully", "expense": expense.to_dict()})
+
+
+@api_v1_expenses_bp.route("/expenses/<int:expense_id>/reject", methods=["POST"])
+@require_api_token("write:expenses")
+def api_reject_expense(expense_id):
+    """Reject a pending expense."""
+    from app.models import Expense
+    from app.utils.db import safe_commit
+
+    if not g.api_user.is_admin:
+        return forbidden_response("Only administrators can reject expenses")
+
+    expense = Expense.query.get_or_404(expense_id)
+    if expense.status != "pending":
+        return error_response("Only pending expenses can be rejected", status_code=400)
+
+    data = request.get_json() or {}
+    reason = (data.get("reason") or "").strip()
+    if not reason:
+        return validation_error_response(errors={"reason": ["reason is required"]}, message="reason is required")
+
+    expense.reject(g.api_user.id, reason)
+    if not safe_commit("api_reject_expense", {"expense_id": expense_id}):
+        return error_response("Could not reject expense", status_code=500)
+    return jsonify({"message": "Expense rejected successfully", "expense": expense.to_dict()})

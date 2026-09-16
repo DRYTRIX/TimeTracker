@@ -11,6 +11,7 @@ import 'issues_screen.dart';
 import 'kanban_screen.dart';
 import 'mileage_screen.dart';
 import 'per_diem_screen.dart';
+import 'report_screen.dart';
 
 class MoreHubScreen extends ConsumerStatefulWidget {
   const MoreHubScreen({super.key});
@@ -73,6 +74,7 @@ class _MoreHubScreenState extends ConsumerState<MoreHubScreen> {
   Widget build(BuildContext context) {
     final items = <_MoreItem>[
       const _MoreItem('Clients', Icons.people_outline, ClientsScreen(), null),
+      const _MoreItem('Reports', Icons.bar_chart_outlined, ReportScreen(), 'reports'),
       const _MoreItem('Calendar', Icons.calendar_month_outlined, CalendarScreen(), 'calendar'),
       const _MoreItem('Kanban', Icons.view_kanban_outlined, KanbanScreen(), 'kanban'),
       const _MoreItem('CRM', Icons.handshake_outlined, CrmHubScreen(), 'deals'),

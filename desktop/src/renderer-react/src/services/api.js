@@ -203,6 +203,11 @@ export class ApiClient {
   }
   getExpenses(params = {}) { return this.unwrap(this.client.get('/api/v1/expenses', { params })); }
   createExpense(data) { return this.unwrap(this.client.post('/api/v1/expenses', data)); }
+  getExpense(id) { return this.unwrap(this.client.get(`/api/v1/expenses/${id}`)); }
+  updateExpense(id, data) { return this.unwrap(this.client.patch(`/api/v1/expenses/${id}`, data)); }
+  deleteExpense(id) { return this.unwrap(this.client.delete(`/api/v1/expenses/${id}`)); }
+  approveExpense(id, notes) { return this.unwrap(this.client.post(`/api/v1/expenses/${id}/approve`, { notes })); }
+  rejectExpense(id, reason) { return this.unwrap(this.client.post(`/api/v1/expenses/${id}/reject`, { reason })); }
   getClients(params = {}) { return this.unwrap(this.client.get('/api/v1/clients', { params })); }
   createClient(data) { return this.unwrap(this.client.post('/api/v1/clients', data)); }
   createProject(data) { return this.unwrap(this.client.post('/api/v1/projects', data)); }
