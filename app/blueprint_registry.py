@@ -72,6 +72,7 @@ def register_all_blueprints(app, logger=None):
     from app.routes.api_v1_projects import api_v1_projects_bp
     from app.routes.api_v1_tasks import api_v1_tasks_bp
     from app.routes.api_v1_time_entries import api_v1_time_entries_bp
+    from app.routes.api_v1_client_portal import api_v1_client_portal_bp
     from app.routes.auth import auth_bp
     from app.routes.budget_alerts import budget_alerts_bp
     from app.routes.calendar import calendar_bp
@@ -182,6 +183,7 @@ def register_all_blueprints(app, logger=None):
     app.register_blueprint(api_v1_leads_bp)
     app.register_blueprint(api_v1_contacts_bp)
     app.register_blueprint(api_v1_issues_bp)
+    app.register_blueprint(api_v1_client_portal_bp)
     app.register_blueprint(api_docs_bp)
     app.register_blueprint(swaggerui_blueprint)
     app.register_blueprint(analytics_bp)
