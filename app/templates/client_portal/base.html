@@ -281,6 +281,9 @@
                         <span class="badge-count">{{ unread_notifications_count }}</span>
                         {% endif %}
                     </a>
+                    <a href="{{ url_for('client_portal.portal_messages') }}" class="client-portal-nav-item {% if current_endpoint in ['client_portal.portal_messages', 'client_portal.portal_send_message'] %}active{% endif %}">
+                        <i class="fas fa-comments mr-2"></i>{{ _('Messages') }}
+                    </a>
                     <div class="relative group">
                         <button class="client-portal-nav-item">
                             <i class="fas fa-ellipsis-h mr-2"></i>{{ _('More') }}
@@ -368,6 +371,9 @@
                 {% if unread_notifications_count > 0 %}
                 <span class="badge-count ml-auto">{{ unread_notifications_count }}</span>
                 {% endif %}
+            </a>
+            <a href="{{ url_for('client_portal.portal_messages') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg transition-all duration-200 {% if current_endpoint in ['client_portal.portal_messages', 'client_portal.portal_send_message'] %}bg-primary/15 text-primary font-semibold shadow-sm{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark hover:translate-x-1{% endif %}">
+                <i class="fas fa-comments w-5 mr-3"></i>{{ _('Messages') }}
             </a>
             <div class="border-t border-border-light dark:border-border-dark my-3"></div>
             <a href="{{ url_for('client_portal.quotes') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition-all duration-200 hover:translate-x-1">

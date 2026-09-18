@@ -1708,3 +1708,90 @@ def survey_response(token):
     # which extends portal base; inject a fake session-free path by setting client.
     return render_template("client_portal/survey.html", survey=survey, client=client or Client(name="Client"))
 
+
+
+@client_portal_bp.route("/client-portal/messages")
+def portal_messages():
+    """Client portal communication hub."""
+    client = check_client_portal_access()
+    if not isinstance(client, Client):
+        return client
+
+    from app.services.client_message_service import ClientMessageService
+
+    service = ClientMessageService()
+    messages = service.list_messages(client.id)
+    service.mark_thread_read(client.id, for_sender_type="client")
+    return render_template("client_portal/messages.html", client=client, messages=messages)
+
+
+@client_portal_bp.route("/client-portal/messages", methods=["POST"])
+def portal_send_message():
+    """Client sends a message to the team."""
+    client = check_client_portal_access()
+    if not isinstance(client, Client):
+        return client
+
+    from app.services.client_message_service import ClientMessageService
+
+    body = request.form.get("body") or (request.get_json(silent=True) or {}).get("body")
+    service = ClientMessageService()
+    msg = service.send(
+        client.id,
+        sender_type="client",
+        body=body or "",
+        sender_id=client.id,
+        sender_name=client.name,
+    )
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        if not msg:
+            return jsonify({"success": False, "error": "empty"}), 400
+        return jsonify({"success": True, "message": msg.to_dict()})
+    if not msg:
+        flash(_("Message cannot be empty."), "error")
+    else:
+        flash(_("Message sent."), "success")
+    return redirect(url_for("client_portal.portal_messages"))
+
+
+@client_portal_bp.route("/client-portal/messages/poll")
+def portal_poll_messages():
+    """JSON poll for new portal messages."""
+    client = check_client_portal_access()
+    if not isinstance(client, Client):
+        return client
+
+    from app.services.client_message_service import ClientMessageService
+
+    after_id = request.args.get("after_id", type=int)
+    service = ClientMessageService()
+    messages = service.list_messages(client.id, after_id=after_id)
+    return jsonify({"messages": [m.to_dict() for m in messages]})
+
+
+@client_portal_bp.route("/client-portal/messages/stream")
+def portal_messages_stream():
+    """Server-Sent Events stream for live message updates."""
+    client = check_client_portal_access()
+    if not isinstance(client, Client):
+        return client
+
+    import json
+    import time
+
+    from app.services.client_message_service import ClientMessageService
+
+    def generate():
+        service = ClientMessageService()
+        last_id = request.args.get("after_id", type=int) or 0
+        for _ in range(60):
+            messages = service.list_messages(client.id, after_id=last_id, limit=50)
+            if messages:
+                last_id = messages[-1].id
+                payload = json.dumps({"messages": [m.to_dict() for m in messages]})
+                yield f"data: {payload}\n\n"
+            else:
+                yield ": keepalive\n\n"
+            time.sleep(2)
+
+    return current_app.response_class(generate(), mimetype="text/event-stream")

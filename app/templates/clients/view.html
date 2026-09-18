@@ -8,6 +8,7 @@
     {% if current_user.is_admin or has_permission('edit_clients') %}
     <a href="{{ url_for('clients.edit_client', client_id=client.id) }}" class="btn btn-primary">{{ _('Edit Client') }}</a>
     {% endif %}
+    <a href="{{ url_for('clients.client_messages', client_id=client.id) }}" class="btn btn-secondary"><i class="fas fa-comments mr-1"></i>{{ _('Messages') }}</a>
     {% if can_invoice_unbilled_time|default(false) and unbilled_invoice_preview is defined and unbilled_invoice_preview %}
     {% set up = unbilled_invoice_preview %}
     {% set no_unbilled = (up.entry_count == 0) and (not up.blocked_reason) %}
@@ -51,6 +52,7 @@
 {% endif %}
 {% endset %}
 {{ page_header('fas fa-user', client.name, subtitle_text=_('Client details and associated projects.'), actions_html=actions, breadcrumbs=[{'text': _('Clients'), 'url': url_for('clients.list_clients')}, {'text': client.name}]) }}
+
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Left Column: Client Details -->

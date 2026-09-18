@@ -1462,3 +1462,75 @@ def delete_client_attachment(attachment_id):
 
     flash(_("Attachment deleted successfully"), "success")
     return redirect(url_for("clients.view_client", client_id=client_id))
+
+
+@clients_bp.route("/clients/<int:client_id>/messages")
+@login_required
+@admin_or_permission_required("view_clients", "view_all_clients", "view_own_clients")
+def client_messages(client_id):
+    """Team-side communication hub for a client."""
+    from app.services.client_message_service import ClientMessageService
+    from app.utils.scope_filter import user_can_access_client
+
+    client = Client.query.get_or_404(client_id)
+    if not user_can_access_client(current_user, client_id):
+        abort(403)
+
+    service = ClientMessageService()
+    messages = service.list_messages(client_id)
+    service.mark_thread_read(client_id, for_sender_type="team")
+    unread = service.unread_count(client_id, for_sender_type="team")
+    return render_template(
+        "clients/messages.html",
+        client=client,
+        messages=messages,
+        unread_count=unread,
+    )
+
+
+@clients_bp.route("/clients/<int:client_id>/messages", methods=["POST"])
+@login_required
+@admin_or_permission_required("edit_clients", "edit_all_clients", "edit_own_clients")
+def send_client_message(client_id):
+    """Send a team message to the client hub."""
+    from app.services.client_message_service import ClientMessageService
+    from app.utils.scope_filter import user_can_access_client
+
+    client = Client.query.get_or_404(client_id)
+    if not user_can_access_client(current_user, client_id):
+        abort(403)
+
+    body = request.form.get("body") or (request.get_json(silent=True) or {}).get("body")
+    service = ClientMessageService()
+    msg = service.send(
+        client_id,
+        sender_type="team",
+        body=body or "",
+        sender_id=current_user.id,
+        sender_name=current_user.username,
+    )
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        if not msg:
+            return jsonify({"success": False, "error": "empty"}), 400
+        return jsonify({"success": True, "message": msg.to_dict()})
+    if not msg:
+        flash(_("Message cannot be empty."), "error")
+    else:
+        flash(_("Message sent."), "success")
+    return redirect(url_for("clients.client_messages", client_id=client_id))
+
+
+@clients_bp.route("/clients/<int:client_id>/messages/poll")
+@login_required
+@admin_or_permission_required("view_clients", "view_all_clients", "view_own_clients")
+def poll_client_messages(client_id):
+    """JSON poll for new messages."""
+    from app.services.client_message_service import ClientMessageService
+    from app.utils.scope_filter import user_can_access_client
+
+    if not user_can_access_client(current_user, client_id):
+        abort(403)
+    after_id = request.args.get("after_id", type=int)
+    service = ClientMessageService()
+    messages = service.list_messages(client_id, after_id=after_id)
+    return jsonify({"messages": [m.to_dict() for m in messages]})

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Messages') }} - {{ client.name }}{% endblock %}
+
+{% block content %}
+{% set actions %}
+<a href="{{ url_for('clients.view_client', client_id=client.id) }}" class="btn btn-secondary"><i class="fas fa-arrow-left mr-2"></i>{{ _('Back') }}</a>
+{% endset %}
+{{ page_header('fas fa-comments', _('Messages'), subtitle_text=client.name, actions_html=actions, breadcrumbs=[{'text': _('Clients'), 'url': url_for('clients.list_clients')}, {'text': client.name, 'url': url_for('clients.view_client', client_id=client.id)}, {'text': _('Messages')}]) }}
+
+<div class="max-w-3xl mx-auto">
+    <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm flex flex-col" style="min-height: 480px; max-height: 70vh;">
+        <div id="msg-list" class="flex-1 overflow-y-auto p-4 space-y-3" data-poll-url="{{ url_for('clients.poll_client_messages', client_id=client.id) }}" data-last-id="{{ messages[-1].id if messages else 0 }}">
+            {% for m in messages %}
+            <div class="flex {% if m.sender_type == 'team' %}justify-end{% else %}justify-start{% endif %}" data-msg-id="{{ m.id }}">
+                <div class="max-w-[80%] rounded-xl px-4 py-2 {% if m.sender_type == 'team' %}bg-indigo-600 text-white{% else %}bg-gray-100 dark:bg-gray-800 text-text-light dark:text-text-dark{% endif %}">
+                    <div class="text-xs opacity-75 mb-1">{{ m.sender_name or m.sender_type }} · {{ m.created_at.strftime('%Y-%m-%d %H:%M') if m.created_at else '' }}</div>
+                    <div class="text-sm whitespace-pre-wrap">{{ m.body }}</div>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-center text-text-muted-light dark:text-text-muted-dark py-12">{{ _('No messages yet. Start the conversation.') }}</p>
+            {% endfor %}
+        </div>
+        <form method="POST" action="{{ url_for('clients.send_client_message', client_id=client.id) }}" class="border-t border-border-light dark:border-border-dark p-3 flex gap-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <textarea name="body" rows="2" required class="form-input flex-1 text-base" placeholder="{{ _('Write a message…') }}"></textarea>
+            <button type="submit" class="btn btn-primary self-end min-h-[44px]"><i class="fas fa-paper-plane"></i></button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script nonce="{{ csp_nonce() }}">
+(function(){
+  const list = document.getElementById('msg-list');
+  if (!list) return;
+  let lastId = parseInt(list.dataset.lastId || '0', 10);
+  setInterval(async () => {
+    try {
+      const res = await fetch(list.dataset.pollUrl + '?after_id=' + lastId);
+      const data = await res.json();
+      (data.messages || []).forEach(m => {
+        lastId = Math.max(lastId, m.id);
+        const wrap = document.createElement('div');
+        wrap.className = 'flex ' + (m.sender_type === 'team' ? 'justify-end' : 'justify-start');
+        wrap.innerHTML = '<div class="max-w-[80%] rounded-xl px-4 py-2 ' +
+          (m.sender_type === 'team' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800') +
+          '"><div class="text-xs opacity-75 mb-1">' + (m.sender_name || m.sender_type) +
+          '</div><div class="text-sm whitespace-pre-wrap"></div></div>';
+        wrap.querySelector('.text-sm').textContent = m.body;
+        list.appendChild(wrap);
+        list.scrollTop = list.scrollHeight;
+      });
+    } catch (e) {}
+  }, 5000);
+})();
+</script>
+{% endblock %}
