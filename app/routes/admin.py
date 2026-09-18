@@ -829,6 +829,26 @@ def admin_dashboard_alias():
     return redirect(url_for("admin.admin_dashboard"))
 
 
+@admin_bp.route("/admin/client-surveys")
+@login_required
+@admin_or_permission_required("access_admin")
+def client_surveys():
+    """Admin view of client NPS / satisfaction survey responses."""
+    from sqlalchemy import func
+
+    from app.models.client_survey import ClientSurvey
+
+    surveys = ClientSurvey.query.order_by(ClientSurvey.sent_at.desc()).limit(200).all()
+    completed = [s for s in surveys if s.nps_score is not None]
+    responses = len(completed)
+    avg_score = (sum(s.nps_score for s in completed) / responses) if responses else None
+    promoters = sum(1 for s in completed if s.nps_score >= 9)
+    detractors = sum(1 for s in completed if s.nps_score <= 6)
+    nps = int(round(((promoters - detractors) / responses) * 100)) if responses else None
+    stats = {"responses": responses, "avg_score": avg_score, "nps": nps}
+    return render_template("admin/client_surveys.html", surveys=surveys, stats=stats)
+
+
 @admin_bp.route("/admin/users")
 @login_required
 @admin_or_permission_required("view_users")
@@ -1645,11 +1665,20 @@ def settings():
                 settings_obj.ai_enabled = None
 
             ai_provider = (request.form.get("ai_provider") or "ollama").strip().lower()
-            if ai_provider not in ("ollama", "openai_compatible", "orcarouter"):
+            if ai_provider == "custom":
+                ai_provider = "openai_compatible"
+            from app.services.llm_service import NAMED_PROVIDERS, PROVIDER_PRESETS, ROUTING_STRATEGIES
+
+            if ai_provider not in NAMED_PROVIDERS:
                 ai_provider = "ollama"
             settings_obj.ai_provider = ai_provider
             settings_obj.ai_base_url = (request.form.get("ai_base_url") or "").strip()
+            # If base URL left blank for a named preset, store the preset default so runtime is explicit.
+            if not settings_obj.ai_base_url and PROVIDER_PRESETS.get(ai_provider, {}).get("base_url"):
+                settings_obj.ai_base_url = PROVIDER_PRESETS[ai_provider]["base_url"]
             settings_obj.ai_model = (request.form.get("ai_model") or "").strip()
+            routing = (request.form.get("ai_routing_strategy") or "").strip().lower()
+            settings_obj.ai_routing_strategy = routing if routing in ROUTING_STRATEGIES else ""
             if request.form.get("ai_clear_api_key") == "on":
                 settings_obj.set_secret("ai_api_key", "")
             else:
@@ -1672,6 +1701,7 @@ def settings():
         allow_analytics = request.form.get("allow_analytics") == "on"
         old_analytics_state = settings_obj.allow_analytics
         settings_obj.allow_analytics = allow_analytics
+        settings_obj.portal_allowed_custom_domains = request.form.get("portal_allowed_custom_domains") == "on"
 
         # Also update the installation config (used by telemetry system)
         # This ensures the telemetry system sees the updated preference

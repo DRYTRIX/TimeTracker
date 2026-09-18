@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ _('Feedback') }} — {{ app_name|default('TimeTracker') }}</title>
+    <link href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}?v={{ app_version }}">
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark min-h-screen">
+<main class="max-w-xl mx-auto px-4 py-12">
+    <div class="mb-8 text-center">
+        <h1 class="text-2xl font-bold">{{ _('How did we do?') }}</h1>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
+            {% if client %}{{ client.name }}{% endif %}
+        </p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-4 space-y-2">
+          {% for category, message in messages %}
+          <div class="rounded-lg px-4 py-3 text-sm {% if category == 'success' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="bg-card-light dark:bg-card-dark p-8 rounded-xl shadow-md border border-border-light dark:border-border-dark">
+      {% if survey.is_completed %}
+      <p class="text-lg">{{ _('Thanks — your feedback was recorded.') }}</p>
+      {% if survey.nps_score is not none %}
+      <p class="mt-2 text-text-muted-light dark:text-text-muted-dark">{{ _('Your score:') }} <strong>{{ survey.nps_score }}</strong>/10</p>
+      {% endif %}
+      {% elif survey.is_expired %}
+      <p class="text-lg text-red-600">{{ _('This feedback link has expired.') }}</p>
+      {% else %}
+      <form method="POST" class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div>
+          <label class="form-label">{{ _('How likely are you to recommend us? (0–10)') }}</label>
+          <div class="flex flex-wrap gap-2 mt-2">
+            {% for i in range(0, 11) %}
+            <label class="inline-flex items-center justify-center w-10 h-10 rounded-lg border border-border-light dark:border-border-dark cursor-pointer hover:bg-primary/10">
+              <input type="radio" name="nps_score" value="{{ i }}" class="sr-only peer" required {% if i == 10 %}checked{% endif %}>
+              <span class="peer-checked:font-bold peer-checked:text-primary">{{ i }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        <div>
+          <label for="comment" class="form-label">{{ _('Anything else? (optional)') }}</label>
+          <textarea id="comment" name="comment" rows="4" class="form-input w-full" placeholder="{{ _('Tell us what went well or what we could improve') }}"></textarea>
+        </div>
+        <button type="submit" class="w-full px-4 py-3 rounded-lg bg-primary text-white font-medium hover:bg-primary/90">{{ _('Submit feedback') }}</button>
+      </form>
+      {% endif %}
+    </div>
+</main>
+</body>
+</html>

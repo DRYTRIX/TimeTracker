@@ -166,6 +166,8 @@ class Settings(db.Model):
     ai_base_url = db.Column(db.String(500), default="", nullable=True)
     ai_model = db.Column(db.String(120), default="", nullable=True)
     ai_api_key = db.Column(db.String(500), default="", nullable=True)
+    ai_routing_strategy = db.Column(db.String(20), default="", nullable=True)
+    portal_allowed_custom_domains = db.Column(db.Boolean, default=False, nullable=True)
     ai_timeout_seconds = db.Column(db.Integer, default=None, nullable=True)
     ai_context_limit = db.Column(db.Integer, default=None, nullable=True)
     ai_system_prompt = db.Column(db.Text, default="", nullable=True)
@@ -354,6 +356,7 @@ class Settings(db.Model):
         self.ai_base_url = kwargs.get("ai_base_url", "")
         self.ai_model = kwargs.get("ai_model", "")
         self.ai_api_key = kwargs.get("ai_api_key", "")
+        self.ai_routing_strategy = kwargs.get("ai_routing_strategy", "")
         self.ai_timeout_seconds = kwargs.get("ai_timeout_seconds", None)
         self.ai_context_limit = kwargs.get("ai_context_limit", None)
         self.ai_system_prompt = kwargs.get("ai_system_prompt", "")
@@ -445,8 +448,23 @@ class Settings(db.Model):
                 return getattr(Config, name, default)
 
         provider = (getattr(self, "ai_provider", "") or cfg("AI_PROVIDER", "ollama") or "ollama").strip().lower()
-        base_url = (getattr(self, "ai_base_url", "") or cfg("AI_BASE_URL", "http://127.0.0.1:11434") or "").strip()
-        model = (getattr(self, "ai_model", "") or cfg("AI_MODEL", "llama3.1") or "").strip()
+        if provider == "custom":
+            provider = "openai_compatible"
+
+        from app.services.llm_service import NAMED_PROVIDERS, PROVIDER_PRESETS, ROUTING_STRATEGIES
+
+        if provider not in NAMED_PROVIDERS:
+            provider = "ollama"
+
+        preset = PROVIDER_PRESETS.get(provider) or {}
+        stored_base = (getattr(self, "ai_base_url", "") or "").strip()
+        env_base = (cfg("AI_BASE_URL", "") or "").strip()
+        base_url = stored_base or env_base or (preset.get("base_url") or "http://127.0.0.1:11434")
+
+        stored_model = (getattr(self, "ai_model", "") or "").strip()
+        env_model = (cfg("AI_MODEL", "") or "").strip()
+        model = stored_model or env_model or (preset.get("default_model") or "llama3.1")
+
         timeout = getattr(self, "ai_timeout_seconds", None) or cfg("AI_TIMEOUT_SECONDS", 30)
         context_limit = getattr(self, "ai_context_limit", None) or cfg("AI_CONTEXT_LIMIT", 40)
         system_prompt = (getattr(self, "ai_system_prompt", "") or cfg("AI_SYSTEM_PROMPT", "") or "").strip()
@@ -455,6 +473,10 @@ class Settings(db.Model):
         enabled = getattr(self, "ai_enabled", None)
         if enabled is None:
             enabled = bool(cfg("AI_ENABLED", False))
+
+        routing_strategy = (getattr(self, "ai_routing_strategy", "") or cfg("AI_ROUTING_STRATEGY", "") or "").strip().lower()
+        if routing_strategy not in ROUTING_STRATEGIES:
+            routing_strategy = ""
 
         try:
             timeout = max(1, int(timeout))
@@ -467,7 +489,7 @@ class Settings(db.Model):
 
         return {
             "enabled": bool(enabled),
-            "provider": provider if provider in {"ollama", "openai_compatible", "orcarouter"} else "ollama",
+            "provider": provider,
             "base_url": base_url.rstrip("/"),
             "model": model,
             "api_key": api_key if include_secrets else "",
@@ -475,6 +497,10 @@ class Settings(db.Model):
             "timeout_seconds": timeout,
             "context_limit": context_limit,
             "system_prompt": system_prompt,
+            "routing_strategy": routing_strategy,
+            "suggested_models": list(preset.get("suggested_models") or []),
+            "requires_key": bool(preset.get("requires_key")),
+            "preset_base_url": (preset.get("base_url") or ""),
         }
 
     def get_integration_credentials(self, provider: str, *, include_secrets: bool = True) -> dict:
@@ -679,6 +705,7 @@ class Settings(db.Model):
             "ai_provider": getattr(self, "ai_provider", "") or "",
             "ai_base_url": getattr(self, "ai_base_url", "") or "",
             "ai_model": getattr(self, "ai_model", "") or "",
+            "ai_routing_strategy": getattr(self, "ai_routing_strategy", "") or "",
             "ai_api_key_set": bool(getattr(self, "ai_api_key", "")),
             "ai_timeout_seconds": getattr(self, "ai_timeout_seconds", None),
             "ai_context_limit": getattr(self, "ai_context_limit", None),

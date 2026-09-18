@@ -1445,6 +1445,12 @@ def bulk_status_change():
                 project.archived_by = current_user.id
                 project.archived_reason = archive_reason if archive_reason else None
                 project.updated_at = datetime.utcnow()
+                try:
+                    from app.services.client_survey_service import ClientSurveyService
+
+                    ClientSurveyService().on_project_closed(project)
+                except Exception as survey_exc:
+                    current_app.logger.debug("Client survey on project archive skipped: %s", survey_exc)
             elif new_status == "active":
                 # Clear archiving metadata when activating
                 project.status = "active"
@@ -1456,7 +1462,13 @@ def bulk_status_change():
                 # Just update status for inactive
                 project.status = new_status
                 project.updated_at = datetime.utcnow()
+                if new_status == "inactive":
+                    try:
+                        from app.services.client_survey_service import ClientSurveyService
 
+                        ClientSurveyService().on_project_closed(project)
+                    except Exception as survey_exc:
+                        current_app.logger.debug("Client survey on project inactive skipped: %s", survey_exc)
             updated_count += 1
 
             # Log the status change
@@ -2084,6 +2096,12 @@ def list_goods(project_id):
 def add_good(project_id):
     """Add a new extra good to a project"""
     project = Project.query.get_or_404(project_id)
+    from app.models import StockItem
+
+    try:
+        stock_items = StockItem.query.filter_by(is_active=True).order_by(StockItem.name).limit(500).all()
+    except Exception:
+        stock_items = []
 
     if request.method == "POST":
         name = request.form.get("name", "").strip()
@@ -2094,11 +2112,12 @@ def add_good(project_id):
         sku = request.form.get("sku", "").strip()
         billable = request.form.get("billable") == "on"
         currency_code = request.form.get("currency_code", "EUR").strip()
+        stock_item_id = request.form.get("stock_item_id", type=int) or None
 
         # Validate required fields
         if not name or not unit_price:
             flash(_("Name and unit price are required"), "error")
-            return render_template("projects/add_good.html", project=project)
+            return render_template("projects/add_good.html", project=project, stock_items=stock_items)
 
         # Validate quantity
         try:
@@ -2107,7 +2126,7 @@ def add_good(project_id):
                 raise ValueError("Quantity must be positive")
         except (ValueError, Exception):
             flash(_("Invalid quantity format"), "error")
-            return render_template("projects/add_good.html", project=project)
+            return render_template("projects/add_good.html", project=project, stock_items=stock_items)
 
         # Validate unit price
         try:
@@ -2116,7 +2135,7 @@ def add_good(project_id):
                 raise ValueError("Unit price cannot be negative")
         except (ValueError, Exception):
             flash(_("Invalid unit price format"), "error")
-            return render_template("projects/add_good.html", project=project)
+            return render_template("projects/add_good.html", project=project, stock_items=stock_items)
 
         # Create extra good
         good = ExtraGood(
@@ -2130,17 +2149,18 @@ def add_good(project_id):
             currency_code=currency_code,
             project_id=project_id,
             created_by=current_user.id,
+            stock_item_id=stock_item_id,
         )
 
         db.session.add(good)
         if not safe_commit("add_project_good", {"project_id": project_id}):
             flash(_("Could not add extra good due to a database error. Please check server logs."), "error")
-            return render_template("projects/add_good.html", project=project)
+            return render_template("projects/add_good.html", project=project, stock_items=stock_items)
 
         flash(_("Extra good added successfully"), "success")
         return redirect(url_for("projects.view_project", project_id=project.id))
 
-    return render_template("projects/add_good.html", project=project)
+    return render_template("projects/add_good.html", project=project, stock_items=stock_items)
 
 
 @projects_bp.route("/projects/<int:project_id>/goods/<int:good_id>/edit", methods=["GET", "POST"])
@@ -2149,6 +2169,12 @@ def edit_good(project_id, good_id):
     """Edit a project extra good"""
     project = Project.query.get_or_404(project_id)
     good = ExtraGood.query.get_or_404(good_id)
+    from app.models import StockItem
+
+    try:
+        stock_items = StockItem.query.filter_by(is_active=True).order_by(StockItem.name).limit(500).all()
+    except Exception:
+        stock_items = []
 
     # Verify good belongs to project
     if good.project_id != project_id:
@@ -2173,7 +2199,7 @@ def edit_good(project_id, good_id):
         # Validate required fields
         if not name or not unit_price:
             flash(_("Name and unit price are required"), "error")
-            return render_template("projects/edit_good.html", project=project, good=good)
+            return render_template("projects/edit_good.html", project=project, good=good, stock_items=stock_items)
 
         # Validate quantity
         try:
@@ -2182,7 +2208,7 @@ def edit_good(project_id, good_id):
                 raise ValueError("Quantity must be positive")
         except (ValueError, Exception):
             flash(_("Invalid quantity format"), "error")
-            return render_template("projects/edit_good.html", project=project, good=good)
+            return render_template("projects/edit_good.html", project=project, good=good, stock_items=stock_items)
 
         # Validate unit price
         try:
@@ -2191,7 +2217,7 @@ def edit_good(project_id, good_id):
                 raise ValueError("Unit price cannot be negative")
         except (ValueError, Exception):
             flash(_("Invalid unit price format"), "error")
-            return render_template("projects/edit_good.html", project=project, good=good)
+            return render_template("projects/edit_good.html", project=project, good=good, stock_items=stock_items)
 
         # Update good
         good.name = name
@@ -2202,16 +2228,17 @@ def edit_good(project_id, good_id):
         good.sku = sku if sku else None
         good.billable = billable
         good.currency_code = currency_code
+        good.stock_item_id = request.form.get("stock_item_id", type=int) or None
         good.update_total()
 
         if not safe_commit("edit_project_good", {"good_id": good_id}):
             flash(_("Could not update extra good due to a database error. Please check server logs."), "error")
-            return render_template("projects/edit_good.html", project=project, good=good)
+            return render_template("projects/edit_good.html", project=project, good=good, stock_items=stock_items)
 
         flash(_("Extra good updated successfully"), "success")
         return redirect(url_for("projects.view_project", project_id=project.id))
 
-    return render_template("projects/edit_good.html", project=project, good=good)
+    return render_template("projects/edit_good.html", project=project, good=good, stock_items=stock_items)
 
 
 @projects_bp.route("/projects/<int:project_id>/goods/<int:good_id>/delete", methods=["POST"])

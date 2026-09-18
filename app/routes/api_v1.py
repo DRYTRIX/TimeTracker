@@ -198,6 +198,11 @@ def api_info():
                 },
                 "mileage_gps": "/api/v1/mileage/gps",
                 "focus_sessions": "/api/v1/focus-sessions",
+                "gamification": {
+                    "me": "/api/v1/gamification/me",
+                    "badges": "/api/v1/gamification/badges",
+                    "leaderboard": "/api/v1/gamification/leaderboard",
+                },
                 "search": "/api/v1/search",
                 "inventory": {
                     "items": "/api/v1/inventory/items",
@@ -3627,6 +3632,39 @@ def get_stock_levels_api():
     return jsonify({"stock_levels": levels})
 
 
+@api_v1_bp.route("/inventory/movements", methods=["GET"])
+@require_api_token(("read:inventory", "read:projects"))
+def list_stock_movements_api():
+    """List stock movements with optional filters and pagination."""
+    blocked = _require_module_enabled_for_api("inventory")
+    if blocked:
+        return blocked
+
+    item_id = request.args.get("item_id", type=int) or request.args.get("stock_item_id", type=int)
+    warehouse_id = request.args.get("warehouse_id", type=int)
+    movement_type = (request.args.get("movement_type") or "").strip()
+    date_from_str = request.args.get("date_from")
+    date_to_str = request.args.get("date_to")
+    date_from, date_to = _parse_date_range(date_from_str, date_to_str)
+
+    query = StockMovement.query
+
+    if item_id:
+        query = query.filter(StockMovement.stock_item_id == item_id)
+    if warehouse_id:
+        query = query.filter(StockMovement.warehouse_id == warehouse_id)
+    if movement_type:
+        query = query.filter(StockMovement.movement_type == movement_type)
+    if date_from:
+        query = query.filter(StockMovement.moved_at >= date_from)
+    if date_to:
+        query = query.filter(StockMovement.moved_at <= date_to)
+
+    result = paginate_query(query.order_by(StockMovement.moved_at.desc()))
+    result["items"] = [m.to_dict() for m in result["items"]]
+    return jsonify(result)
+
+
 @api_v1_bp.route("/inventory/movements", methods=["POST"])
 @require_api_token(("write:inventory", "write:projects"))
 def create_stock_movement_api():
@@ -5495,6 +5533,73 @@ def api_v1_focus_summary():
 
     days = int(request.args.get("days", 7))
     return jsonify(PomodoroService().get_session_stats(g.api_user.id, days=days))
+
+
+# ==================== Gamification ====================
+
+
+@api_v1_bp.route("/gamification/me", methods=["GET"])
+@require_api_token("read:users")
+def api_v1_gamification_me():
+    """Return badges and points for the authenticated API user."""
+    blocked = _require_module_enabled_for_api("gamification")
+    if blocked:
+        return blocked
+
+    from app.routes.gamification import ensure_default_gamification_data
+    from app.services.gamification_service import GamificationService
+
+    ensure_default_gamification_data()
+    svc = GamificationService()
+    return jsonify(
+        {
+            "badges": svc.get_user_badges(g.api_user.id),
+            "points": svc.get_user_points(g.api_user.id),
+        }
+    )
+
+
+@api_v1_bp.route("/gamification/badges", methods=["GET"])
+@require_api_token("read:users")
+def api_v1_gamification_badges():
+    """List active badge definitions."""
+    blocked = _require_module_enabled_for_api("gamification")
+    if blocked:
+        return blocked
+
+    from app.models.gamification import Badge
+    from app.routes.gamification import ensure_default_gamification_data
+
+    ensure_default_gamification_data()
+    badges = Badge.query.filter_by(is_active=True).order_by(Badge.points.asc()).all()
+    return jsonify({"badges": [b.to_dict() for b in badges]})
+
+
+@api_v1_bp.route("/gamification/leaderboard", methods=["GET"])
+@require_api_token("read:users")
+def api_v1_gamification_leaderboard():
+    """Return leaderboard entries for an active board."""
+    blocked = _require_module_enabled_for_api("gamification")
+    if blocked:
+        return blocked
+
+    from app.models.gamification import Leaderboard
+    from app.routes.gamification import ensure_default_gamification_data
+    from app.services.gamification_service import GamificationService
+
+    ensure_default_gamification_data()
+    board_id = request.args.get("board_id", type=int)
+    board = Leaderboard.query.get(board_id) if board_id else Leaderboard.query.filter_by(is_active=True).first()
+    if not board:
+        return jsonify({"leaderboard": None, "entries": []})
+
+    svc = GamificationService()
+    try:
+        svc.calculate_leaderboard(board.id)
+    except Exception:
+        pass
+    limit = min(request.args.get("limit", 50, type=int) or 50, 100)
+    return jsonify({"leaderboard": board.to_dict(), "entries": svc.get_leaderboard(board.id, limit=limit)})
 
 
 # ==================== Error Handlers ====================

@@ -2022,6 +2022,17 @@ def bulk_entry():
     return render_template("timer/bulk_entry.html", **_bulk_ctx())
 
 
+@timer_bp.route("/focus")
+@login_required
+def focus_mode():
+    """Dedicated Focus / Pomodoro page."""
+    from app.services.pomodoro_service import PomodoroService
+
+    projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+    stats = PomodoroService().get_session_stats(current_user.id, days=7)
+    return render_template("timer/focus.html", projects=projects, stats=stats)
+
+
 @timer_bp.route("/timer")
 @login_required
 def timer_page():

@@ -709,6 +709,20 @@ def edit_client(client_id):
         client.prepaid_reset_day = prepaid_reset_day
         client.portal_enabled = portal_enabled
         client.portal_issues_enabled = portal_issues_enabled if portal_enabled else False
+        custom_domain = (request.form.get("custom_domain") or "").strip().lower()
+        if custom_domain:
+            # Normalize: strip scheme and path
+            custom_domain = custom_domain.replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
+            existing_domain = Client.query.filter(Client.custom_domain == custom_domain, Client.id != client.id).first()
+            if existing_domain:
+                flash(_("That custom domain is already used by another client."), "error")
+                custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+                return render_template(
+                    "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
+                )
+            client.custom_domain = custom_domain
+        else:
+            client.custom_domain = None
         client.custom_fields = custom_fields if custom_fields else None
 
         # Update portal credentials

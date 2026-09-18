@@ -11,6 +11,7 @@ from flask import (
     abort,
     current_app,
     flash,
+    g,
     jsonify,
     redirect,
     render_template,
@@ -238,6 +239,25 @@ def check_client_portal_access():
         Response: A redirect response if authentication is needed
         None: If 403 is raised (abort is called)
     """
+    # Custom domain: resolve host to a client when portal custom domains are allowed
+    try:
+        from app.models import Settings
+
+        settings = Settings.get_settings()
+        if getattr(settings, "portal_allowed_custom_domains", None):
+            host = (request.host or "").split(":")[0].strip().lower()
+            if host:
+                domain_client = Client.query.filter(Client.custom_domain == host).first()
+                if domain_client and domain_client.has_portal_access and domain_client.is_active:
+                    # Prefer an existing portal session for this client; otherwise continue auth flow
+                    session_client_id = session.get("client_portal_id")
+                    if session_client_id and int(session_client_id) == domain_client.id:
+                        return domain_client
+                    # Stash resolved client for login branding / redirects
+                    g.portal_domain_client = domain_client
+    except Exception:
+        pass
+
     # Check for Client portal authentication
     client_id = session.get("client_portal_id")
     if client_id:
@@ -1639,3 +1659,29 @@ def activity_feed():
         client=client,
         feed_items=feed_items,
     )
+
+
+@client_portal_bp.route("/client-portal/survey/<token>", methods=["GET", "POST"])
+def survey_response(token):
+    """Public token-based NPS survey form (no portal login required)."""
+    from app.models.client_survey import ClientSurvey
+    from app.utils.db import safe_commit
+
+    survey = ClientSurvey.query.filter_by(token=token).first_or_404()
+    client = Client.query.get(survey.client_id)
+
+    if request.method == "POST" and not survey.is_completed and not survey.is_expired:
+        try:
+            score = int(request.form.get("nps_score"))
+            survey.submit(score, comment=request.form.get("comment"))
+            if not safe_commit("submit_client_survey", {"survey_id": survey.id}):
+                flash(_("Could not save your feedback. Please try again."), "error")
+            else:
+                flash(_("Thank you for your feedback!"), "success")
+        except (TypeError, ValueError) as exc:
+            flash(str(exc) or _("Invalid score."), "error")
+
+    # Minimal render without requiring portal session — use survey template
+    # which extends portal base; inject a fake session-free path by setting client.
+    return render_template("client_portal/survey.html", survey=survey, client=client or Client(name="Client"))
+

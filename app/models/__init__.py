@@ -22,6 +22,7 @@ from .client_notification import ClientNotification, ClientNotificationPreferenc
 from .client_portal_customization import ClientPortalCustomization
 from .client_portal_dashboard_preference import DEFAULT_WIDGET_ORDER, VALID_WIDGET_IDS, ClientPortalDashboardPreference
 from .client_prepaid_consumption import ClientPrepaidConsumption
+from .client_survey import ClientSurvey
 from .client_time_approval import ClientApprovalPolicy, ClientApprovalStatus, ClientTimeApproval
 from .comment import Comment
 from .comment_attachment import CommentAttachment
@@ -267,4 +268,5 @@ __all__ = [
     "ClientNotification",
     "ClientNotificationPreferences",
     "NotificationType",
+    "ClientSurvey",
 ]

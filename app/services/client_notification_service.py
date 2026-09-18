@@ -59,6 +59,25 @@ class ClientNotificationService:
                 },
                 room=f"client_portal_{client_id}",
             )
+            socketio.emit(
+                "portal_refresh",
+                {
+                    "title": notification.title,
+                    "message": notification.message,
+                    "type": notification.type,
+                    "reload": notification.type
+                    in {
+                        "invoice_created",
+                        "invoice_paid",
+                        "invoice_overdue",
+                        "budget_alert",
+                        "time_entry_approval",
+                        "quote_available",
+                        "project_milestone",
+                    },
+                },
+                room=f"client_portal_{client_id}",
+            )
         except Exception as e:
             logger.debug("SocketIO emit for client notification skipped: %s", e)
 

@@ -485,6 +485,7 @@ def edit_invoice(invoice_id):
         good_quantities = request.form.getlist("good_quantity[]")
         good_unit_prices = request.form.getlist("good_unit_price[]")
         good_skus = request.form.getlist("good_sku[]")
+        good_stock_item_ids = request.form.getlist("good_stock_item_id[]")
 
         # Remove existing extra goods
         invoice.extra_goods.delete()
@@ -495,6 +496,12 @@ def edit_invoice(invoice_id):
                 try:
                     quantity = Decimal(good_quantities[i])
                     unit_price = Decimal(good_unit_prices[i])
+                    stock_item_id = None
+                    if i < len(good_stock_item_ids) and good_stock_item_ids[i]:
+                        try:
+                            stock_item_id = int(good_stock_item_ids[i])
+                        except (TypeError, ValueError):
+                            stock_item_id = None
 
                     good = ExtraGood(
                         name=good_names[i].strip(),
@@ -510,6 +517,7 @@ def edit_invoice(invoice_id):
                         invoice_id=invoice.id,
                         created_by=current_user.id,
                         currency_code=invoice.currency_code,
+                        stock_item_id=stock_item_id,
                     )
                     db.session.add(good)
                 except ValueError:
@@ -712,6 +720,51 @@ def update_invoice_status(invoice_id):
                         "warning",
                     )
 
+        # Also deplete stock linked from ExtraGoods on this invoice
+        for good in invoice.extra_goods:
+            if not getattr(good, "stock_item_id", None):
+                continue
+            try:
+                from app.models import Warehouse, WarehouseStock
+
+                warehouse_id = None
+                # Prefer first active warehouse with available stock for this item
+                stock_row = (
+                    WarehouseStock.query.filter_by(stock_item_id=good.stock_item_id)
+                    .join(Warehouse)
+                    .filter(Warehouse.is_active == True)  # noqa: E712
+                    .order_by(WarehouseStock.quantity_on_hand.desc())
+                    .first()
+                )
+                if stock_row:
+                    warehouse_id = stock_row.warehouse_id
+                else:
+                    first_wh = Warehouse.query.filter_by(is_active=True).first()
+                    warehouse_id = first_wh.id if first_wh else None
+                if not warehouse_id:
+                    continue
+                StockMovement.record_movement(
+                    movement_type="sale",
+                    stock_item_id=good.stock_item_id,
+                    warehouse_id=warehouse_id,
+                    quantity=-Decimal(str(good.quantity or 0)),
+                    moved_by=current_user.id,
+                    reference_type="invoice_extra_good",
+                    reference_id=invoice.id,
+                    unit_cost=good.stock_item.default_cost if good.stock_item else None,
+                    reason=f"Invoice {invoice.invoice_number} extra good: {good.name}",
+                    update_stock=True,
+                )
+            except Exception as e:
+                flash(
+                    _(
+                        "Warning: Could not reduce stock for extra good %(item)s: %(error)s",
+                        item=good.name,
+                        error=str(e),
+                    ),
+                    "warning",
+                )
+
     if not safe_commit("update_invoice_status", {"invoice_id": invoice.id, "status": new_status}):
         return jsonify({"error": "Database error while updating status"}), 500
 
@@ -719,6 +772,12 @@ def update_invoice_status(invoice_id):
         from app.utils.workflow_bridge import fire_invoice_paid_workflow
 
         fire_invoice_paid_workflow(invoice, current_user.id)
+        try:
+            from app.services.client_survey_service import ClientSurveyService
+
+            ClientSurveyService().on_invoice_paid(invoice)
+        except Exception as survey_exc:
+            current_app.logger.debug("Client survey on invoice paid skipped: %s", survey_exc)
 
     try:
         log_event(

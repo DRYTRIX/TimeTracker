@@ -130,6 +130,13 @@
                                     <input type="password" id="portal_password" name="portal_password" value="" placeholder="{{ _('Leave empty to keep current password') }}" class="form-input">
                                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Set a new password or leave empty to keep current') }}</p>
                                 </div>
+                                <div class="md:col-span-2">
+                                    <label for="custom_domain" class="form-label">{{ _('Custom portal domain') }}</label>
+                                    <input type="text" id="custom_domain" name="custom_domain" value="{{ request.form.get('custom_domain', client.custom_domain or '') }}" placeholder="portal.client.com" class="form-input">
+                                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                                        {{ _('Optional CNAME hostname for white-label portal access. Point DNS to this server, then issue a certificate (see nginx/CUSTOM_DOMAINS.md). Requires Admin → Settings → Allow portal custom domains.') }}
+                                    </p>
+                                </div>
                             </div>
                             {% if client.portal_enabled and client.portal_username %}
                             <div class="mt-2 text-sm text-text-muted-light dark:text-text-muted-dark">

@@ -419,15 +419,42 @@
             if (typeof showToast === 'function' && data && data.title) {
                 showToast(data.title, data.message || '', 'info');
             }
+            // Soft-refresh dashboard counters when present
+            if (data && data.type) {
+                document.querySelectorAll('[data-portal-stat]').forEach(function(el) {
+                    if (el.getAttribute('data-portal-stat') === 'pending_refresh') {
+                        el.classList.add('ring-2', 'ring-primary');
+                    }
+                });
+                var badge = document.getElementById('portal-notification-badge');
+                if (badge) {
+                    var n = parseInt(badge.textContent || '0', 10) || 0;
+                    badge.textContent = String(n + 1);
+                    badge.classList.remove('hidden');
+                }
+            }
         });
         socket.on('client_approval_update', function(data) {
             if (typeof showToast === 'function' && data) {
                 showToast('{{ _("Approval update") }}', data.event === 'requested' ? '{{ _("A time entry approval was requested.") }}' : '{{ _("An approval was updated.") }}', 'info');
             }
         });
+        socket.on('portal_refresh', function(data) {
+            if (typeof showToast === 'function' && data && data.message) {
+                showToast(data.title || '{{ _("Update") }}', data.message, 'info');
+            }
+            // Reload lightweight stat widgets if on dashboard
+            if (window.location.pathname.indexOf('/client-portal') === 0 && !window.location.pathname.match(/\/(invoices|quotes|approvals|survey)\//)) {
+                var stats = document.getElementById('dashboard-widgets');
+                if (stats && data && data.reload) {
+                    window.setTimeout(function() { window.location.reload(); }, 800);
+                }
+            }
+        });
         window.addEventListener('beforeunload', function() {
             socket.emit('leave_client_room', {});
         });
+        window.portalSocket = socket;
     })();
     </script>
 </body>

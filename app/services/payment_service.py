@@ -113,6 +113,17 @@ class PaymentService:
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send client notification for payment {payment.id}: {e}", exc_info=True)
 
+            try:
+                from app.services.client_survey_service import ClientSurveyService
+
+                ClientSurveyService().on_invoice_paid(invoice)
+            except Exception as e:
+                import logging
+
+                logging.getLogger(__name__).error(
+                    "Failed to send client survey for payment %s: %s", payment.id, e, exc_info=True
+                )
+
         return {"success": True, "message": "Payment created successfully", "payment": payment}
 
     def get_invoice_payments(self, invoice_id: int) -> List[Payment]:

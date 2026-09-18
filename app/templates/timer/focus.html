@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Time Tracking')},
+    {'text': _('Focus')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-bullseye',
+    title_text=_('Focus / Pomodoro'),
+    subtitle_text=_('Work in focused cycles with short breaks'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl mx-auto"
+     id="focus-panel"
+     data-pomodoro-length="{{ current_user.pomodoro_length or 25 }}"
+     data-short-break="{{ current_user.pomodoro_short_break or 5 }}"
+     data-long-break="{{ current_user.pomodoro_long_break or 15 }}"
+     data-long-interval="{{ current_user.pomodoro_long_break_interval or 4 }}"
+     data-csrf="{{ csrf_token() }}">
+
+    <div class="lg:col-span-2 bg-card-light dark:bg-card-dark p-8 rounded-xl shadow-md">
+        <div class="flex flex-col items-center">
+            <div class="relative w-56 h-56 mb-6">
+                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="42" stroke="currentColor" class="text-gray-200 dark:text-gray-700" stroke-width="8" fill="none" />
+                    <circle id="focus-progress-ring" cx="50" cy="50" r="42" stroke="currentColor"
+                            class="text-indigo-500 transition-all duration-500" stroke-width="8" fill="none"
+                            stroke-dasharray="263.89" stroke-dashoffset="263.89" />
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <div id="focus-countdown" class="text-4xl font-bold text-text-light dark:text-text-dark">25:00</div>
+                    <div id="focus-phase" class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Ready') }}</div>
+                </div>
+            </div>
+
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark mb-6">
+                <span id="focus-cycles">0</span> {{ _('cycles') }} ·
+                <span id="focus-interrupts">0</span> {{ _('interrupts') }}
+            </div>
+
+            <div class="w-full max-w-md grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                <div>
+                    <label for="focus_project_id" class="form-label">{{ _('Project') }}</label>
+                    <select id="focus_project_id" class="form-input">
+                        <option value="">{{ _('No project') }}</option>
+                        {% for project in projects %}
+                        <option value="{{ project.id }}">{{ project.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="focus_task_id" class="form-label">{{ _('Task') }}</label>
+                    <select id="focus_task_id" class="form-input" disabled>
+                        <option value="">{{ _('No task') }}</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2 justify-center">
+                <button type="button" id="focus-start-btn" class="btn btn-primary">
+                    <i class="fas fa-play mr-1"></i>{{ _('Start Focus') }}
+                </button>
+                <button type="button" id="focus-cycle-btn" class="btn btn-secondary" disabled>
+                    <i class="fas fa-check mr-1"></i>{{ _('Complete Cycle') }}
+                </button>
+                <button type="button" id="focus-interrupt-btn" class="btn btn-secondary" disabled>
+                    <i class="fas fa-exclamation mr-1"></i>{{ _('Interrupt') }}
+                </button>
+                <button type="button" id="focus-finish-btn" class="btn btn-danger" disabled>
+                    <i class="fas fa-stop mr-1"></i>{{ _('Finish') }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="space-y-6">
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-md">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Your defaults') }}</h2>
+            <dl class="space-y-2 text-sm">
+                <div class="flex justify-between"><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Focus length') }}</dt><dd>{{ current_user.pomodoro_length or 25 }} {{ _('min') }}</dd></div>
+                <div class="flex justify-between"><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Short break') }}</dt><dd>{{ current_user.pomodoro_short_break or 5 }} {{ _('min') }}</dd></div>
+                <div class="flex justify-between"><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Long break') }}</dt><dd>{{ current_user.pomodoro_long_break or 15 }} {{ _('min') }}</dd></div>
+                <div class="flex justify-between"><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Long break every') }}</dt><dd>{{ current_user.pomodoro_long_break_interval or 4 }} {{ _('cycles') }}</dd></div>
+            </dl>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-4">
+                {{ _('Change defaults in your user settings.') }}
+                <a href="{{ url_for('user.settings') }}" class="text-primary hover:underline">{{ _('Open settings') }}</a>
+            </p>
+        </div>
+
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-md">
+            <h2 class="text-lg font-semibold mb-4">{{ _('Last 7 days') }}</h2>
+            <dl class="space-y-2 text-sm" id="focus-stats">
+                <div class="flex justify-between"><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Sessions') }}</dt><dd id="stat-sessions">{{ stats.total_sessions if stats else 0 }}</dd></div>
+                <div class="flex justify-between"><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Cycles') }}</dt><dd id="stat-cycles">{{ stats.total_cycles if stats else 0 }}</dd></div>
+                <div class="flex justify-between"><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Minutes focused') }}</dt><dd id="stat-minutes">{{ stats.total_minutes if stats else 0 }}</dd></div>
+                <div class="flex justify-between"><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Interruptions') }}</dt><dd id="stat-interrupts">{{ stats.total_interruptions if stats else 0 }}</dd></div>
+            </dl>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script nonce="{{ csp_nonce() }}">
+(function initFocusPage() {
+    const panel = document.getElementById('focus-panel');
+    if (!panel) return;
+    const csrf = panel.dataset.csrf;
+    const circumference = 2 * Math.PI * 42;
+    let session = null;
+    let phase = 'idle';
+    let remainingSeconds = 0;
+    let tickTimer = null;
+    let breakLength = 0;
+
+    const els = {
+        countdown: document.getElementById('focus-countdown'),
+        phase: document.getElementById('focus-phase'),
+        cycles: document.getElementById('focus-cycles'),
+        interrupts: document.getElementById('focus-interrupts'),
+        ring: document.getElementById('focus-progress-ring'),
+        start: document.getElementById('focus-start-btn'),
+        cycle: document.getElementById('focus-cycle-btn'),
+        interrupt: document.getElementById('focus-interrupt-btn'),
+        finish: document.getElementById('focus-finish-btn'),
+        project: document.getElementById('focus_project_id'),
+        task: document.getElementById('focus_task_id'),
+    };
+
+    function fmt(sec) {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+
+    function setButtons(active) {
+        els.start.disabled = active;
+        els.cycle.disabled = !active || phase !== 'work';
+        els.interrupt.disabled = !active;
+        els.finish.disabled = !active;
+        if (els.project) els.project.disabled = active;
+        if (els.task) els.task.disabled = active || !els.project.value;
+    }
+
+    function updateRing(total) {
+        const progress = total > 0 ? (total - remainingSeconds) / total : 0;
+        els.ring.style.strokeDasharray = String(circumference);
+        els.ring.style.strokeDashoffset = String(circumference - progress * circumference);
+    }
+
+    function render() {
+        els.countdown.textContent = fmt(Math.max(0, remainingSeconds));
+        if (session) {
+            els.cycles.textContent = session.cycles_completed || 0;
+            els.interrupts.textContent = session.interruptions || 0;
+        }
+        const total = phase === 'break'
+            ? breakLength * 60
+            : (session ? session.pomodoro_length : parseInt(panel.dataset.pomodoroLength, 10) || 25) * 60;
+        updateRing(total);
+    }
+
+    function stopTick() {
+        if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+    }
+
+    function startTick(totalMinutes) {
+        stopTick();
+        remainingSeconds = Math.round(totalMinutes * 60);
+        render();
+        tickTimer = setInterval(() => {
+            remainingSeconds -= 1;
+            if (remainingSeconds <= 0) {
+                remainingSeconds = 0;
+                render();
+                stopTick();
+                if (phase === 'work') {
+                    els.phase.textContent = {{ _('Cycle ready — complete it')|tojson }};
+                } else {
+                    els.phase.textContent = {{ _('Break over — start next cycle')|tojson }};
+                    phase = 'work';
+                    remainingSeconds = (session.pomodoro_length || 25) * 60;
+                    setButtons(true);
+                    startTick(session.pomodoro_length || 25);
+                }
+                return;
+            }
+            render();
+        }, 1000);
+    }
+
+    async function api(url, method, body) {
+        const opts = {
+            method: method || 'GET',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+        };
+        if (body) opts.body = JSON.stringify(body);
+        const res = await fetch(url, opts);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || data.message || ('HTTP ' + res.status));
+        return data;
+    }
+
+    function applySession(s) {
+        session = s;
+        setButtons(!!s);
+        if (!s) {
+            phase = 'idle';
+            els.phase.textContent = {{ _('Ready')|tojson }};
+            remainingSeconds = (parseInt(panel.dataset.pomodoroLength, 10) || 25) * 60;
+            stopTick();
+            render();
+            return;
+        }
+        phase = 'work';
+        els.phase.textContent = {{ _('Focus')|tojson }};
+        startTick(s.pomodoro_length || 25);
+    }
+
+    async function loadTasks(projectId) {
+        if (!els.task) return;
+        els.task.innerHTML = '<option value="">' + {{ _('No task')|tojson }} + '</option>';
+        if (!projectId) {
+            els.task.disabled = true;
+            return;
+        }
+        try {
+            const res = await fetch('/api/projects/' + encodeURIComponent(projectId) + '/tasks', { credentials: 'same-origin' });
+            const data = await res.json();
+            const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+            tasks.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.name;
+                els.task.appendChild(opt);
+            });
+            els.task.disabled = !!session;
+        } catch (_) {
+            els.task.disabled = true;
+        }
+    }
+
+    if (els.project) {
+        els.project.addEventListener('change', () => loadTasks(els.project.value));
+    }
+
+    els.start.addEventListener('click', async () => {
+        try {
+            const body = {
+                project_id: els.project && els.project.value ? parseInt(els.project.value, 10) : null,
+                task_id: els.task && els.task.value ? parseInt(els.task.value, 10) : null,
+                pomodoro_length: parseInt(panel.dataset.pomodoroLength, 10) || 25,
+                short_break_length: parseInt(panel.dataset.shortBreak, 10) || 5,
+                long_break_length: parseInt(panel.dataset.longBreak, 10) || 15,
+                long_break_interval: parseInt(panel.dataset.longInterval, 10) || 4,
+            };
+            const data = await api('/api/focus-sessions/start', 'POST', body);
+            applySession(data.session);
+        } catch (e) { alert(e.message); }
+    });
+
+    els.cycle.addEventListener('click', async () => {
+        if (!session) return;
+        try {
+            const data = await api('/api/focus-sessions/' + session.id + '/cycle', 'POST');
+            session = data.session;
+            phase = 'break';
+            breakLength = data.next_break_length || (data.needs_long_break ? session.long_break_length : session.short_break_length);
+            els.phase.textContent = data.needs_long_break ? {{ _('Long break')|tojson }} : {{ _('Short break')|tojson }};
+            setButtons(true);
+            els.cycle.disabled = true;
+            startTick(breakLength);
+            render();
+        } catch (e) { alert(e.message); }
+    });
+
+    els.interrupt.addEventListener('click', async () => {
+        if (!session) return;
+        try {
+            const data = await api('/api/focus-sessions/' + session.id + '/interrupt', 'POST', {});
+            session = data.session;
+            render();
+        } catch (e) { alert(e.message); }
+    });
+
+    els.finish.addEventListener('click', async () => {
+        if (!session) return;
+        try {
+            await api('/api/focus-sessions/finish', 'POST', { session_id: session.id });
+            applySession(null);
+            const stats = await api('/api/focus-sessions/summary?days=7');
+            if (stats) {
+                const s = document.getElementById('stat-sessions');
+                const c = document.getElementById('stat-cycles');
+                const m = document.getElementById('stat-minutes');
+                const i = document.getElementById('stat-interrupts');
+                if (s) s.textContent = stats.total_sessions || 0;
+                if (c) c.textContent = stats.total_cycles || 0;
+                if (m) m.textContent = stats.total_minutes || 0;
+                if (i) i.textContent = stats.total_interruptions || 0;
+            }
+        } catch (e) { alert(e.message); }
+    });
+
+    api('/api/focus-sessions/active').then(data => {
+        if (data.session) applySession(data.session);
+        else applySession(null);
+    }).catch(() => applySession(null));
+})();
+</script>
+{% endblock %}
