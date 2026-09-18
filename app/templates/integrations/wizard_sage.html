@@ -1,0 +1,23 @@
+{% extends "integrations/wizard_base.html" %}
+
+{% block wizard_steps %}
+<div class="wizard-step" data-step="1">
+    <h2 class="text-xl font-semibold mb-4">{{ _('Step 1: OAuth credentials') }}</h2>
+    {% if current_user.is_admin %}
+    <div class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium mb-2">{{ _('Sage Client ID') }}</label>
+            <input type="text" name="sage_client_id" class="w-full px-3 py-2 border rounded-lg bg-card-light dark:bg-card-dark" required>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-2">{{ _('Sage Client Secret') }}</label>
+            <input type="password" name="sage_client_secret" class="w-full px-3 py-2 border rounded-lg bg-card-light dark:bg-card-dark" required>
+        </div>
+    </div>
+    {% endif %}
+</div>
+<div class="wizard-step hidden" data-step="2">
+    <h2 class="text-xl font-semibold mb-4">{{ _('Step 2: Sync options') }}</h2>
+    <label class="flex items-center gap-2"><input type="checkbox" name="sync_invoices" checked> {{ _('Push invoices') }}</label>
+</div>
+{% endblock %}

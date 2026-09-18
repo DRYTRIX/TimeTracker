@@ -13,7 +13,9 @@ from app.integrations.jira import JiraConnector
 from app.integrations.linear import LinearConnector
 from app.integrations.microsoft_teams import MicrosoftTeamsConnector
 from app.integrations.outlook_calendar import OutlookCalendarConnector
+from app.integrations.datev import DatevConnector
 from app.integrations.quickbooks import QuickBooksConnector
+from app.integrations.sage import SageConnector
 from app.integrations.slack import SlackConnector
 from app.integrations.trello import TrelloConnector
 from app.integrations.xero import XeroConnector
@@ -36,6 +38,8 @@ def register_connectors():
     IntegrationService.register_connector("gitlab", GitLabConnector)
     IntegrationService.register_connector("quickbooks", QuickBooksConnector)
     IntegrationService.register_connector("xero", XeroConnector)
+    IntegrationService.register_connector("sage", SageConnector)
+    IntegrationService.register_connector("datev", DatevConnector)
 
 
 # Auto-register on import
