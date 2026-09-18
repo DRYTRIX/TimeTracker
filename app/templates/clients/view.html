@@ -53,6 +53,7 @@
 {% endset %}
 {{ page_header('fas fa-user', client.name, subtitle_text=_('Client details and associated projects.'), actions_html=actions, breadcrumbs=[{'text': _('Clients'), 'url': url_for('clients.list_clients')}, {'text': client.name}]) }}
 
+{% include "partials/_email_threads.html" %}
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Left Column: Client Details -->

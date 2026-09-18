@@ -126,7 +126,14 @@ def view_lead(lead_id):
     activities = (
         LeadActivity.query.filter_by(lead_id=lead_id).order_by(LeadActivity.activity_date.desc()).limit(50).all()
     )
-    return render_template("leads/view.html", lead=lead, activities=activities)
+    email_threads = []
+    try:
+        from app.services.email_sync_service import EmailSyncService
+
+        email_threads = EmailSyncService().threads_for_lead(lead_id)
+    except Exception:
+        pass
+    return render_template("leads/view.html", lead=lead, activities=activities, email_threads=email_threads)
 
 
 @leads_bp.route("/leads/<int:lead_id>/edit", methods=["GET", "POST"])

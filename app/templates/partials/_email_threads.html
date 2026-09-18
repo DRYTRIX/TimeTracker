@@ -1,0 +1,24 @@
+{# Shared CRM email threads list #}
+{% if email_threads is defined and email_threads %}
+<div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 mb-6">
+    <h3 class="text-lg font-semibold mb-3"><i class="fas fa-envelope mr-2 text-primary"></i>{{ _('Synced Emails') }}</h3>
+    <ul class="divide-y divide-border-light dark:divide-border-dark">
+        {% for t in email_threads %}
+        <li class="py-3">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="font-medium truncate">{{ t.subject or _('(no subject)') }}</div>
+                    <div class="text-sm text-text-muted-light dark:text-text-muted-dark truncate">{{ t.snippet or '' }}</div>
+                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                        <span class="uppercase">{{ t.provider }}</span>
+                        {% if t.last_message_at %} · {{ t.last_message_at.strftime('%Y-%m-%d %H:%M') }}{% endif %}
+                        {% if t.participants %} · {{ t.participants|join(', ') }}{% endif %}
+                    </div>
+                </div>
+                <span class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 shrink-0">{{ t.messages.count() if t.messages else 0 }} {{ _('msgs') }}</span>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}

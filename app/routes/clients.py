@@ -559,6 +559,14 @@ def view_client(client_id):
     except Exception as e:
         current_app.logger.warning("Could not load unbilled invoice preview for client %s: %s", client_id, e)
 
+    email_threads = []
+    try:
+        from app.services.email_sync_service import EmailSyncService
+
+        email_threads = EmailSyncService().threads_for_client(client_id)
+    except Exception as e:
+        current_app.logger.debug("Could not load email threads for client %s: %s", client_id, e)
+
     return render_template(
         "clients/view.html",
         client=client,
@@ -572,6 +580,7 @@ def view_client(client_id):
         custom_field_definitions_by_key=custom_field_definitions_by_key,
         can_invoice_unbilled_time=can_invoice_unbilled_time,
         unbilled_invoice_preview=unbilled_invoice_preview,
+        email_threads=email_threads,
     )
 
 

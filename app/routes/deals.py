@@ -171,7 +171,16 @@ def view_deal(deal_id):
         .limit(25)
         .all()
     )
-    return render_template("deals/view.html", deal=deal, activities=activities, audit_logs=audit_logs)
+    email_threads = []
+    try:
+        from app.services.email_sync_service import EmailSyncService
+
+        email_threads = EmailSyncService().threads_for_deal(deal_id)
+    except Exception:
+        pass
+    return render_template(
+        "deals/view.html", deal=deal, activities=activities, audit_logs=audit_logs, email_threads=email_threads
+    )
 
 
 @deals_bp.route("/deals/<int:deal_id>/edit", methods=["GET", "POST"])

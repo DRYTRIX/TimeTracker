@@ -7,12 +7,14 @@ from app.integrations.activitywatch import ActivityWatchConnector
 from app.integrations.asana import AsanaConnector
 from app.integrations.caldav_calendar import CalDAVCalendarConnector
 from app.integrations.github import GitHubConnector
+from app.integrations.gmail import GmailConnector
 from app.integrations.gitlab import GitLabConnector
 from app.integrations.google_calendar import GoogleCalendarConnector
 from app.integrations.jira import JiraConnector
 from app.integrations.linear import LinearConnector
 from app.integrations.microsoft_teams import MicrosoftTeamsConnector
 from app.integrations.outlook_calendar import OutlookCalendarConnector
+from app.integrations.outlook_email import OutlookEmailConnector
 from app.integrations.datev import DatevConnector
 from app.integrations.quickbooks import QuickBooksConnector
 from app.integrations.sage import SageConnector
@@ -40,6 +42,8 @@ def register_connectors():
     IntegrationService.register_connector("xero", XeroConnector)
     IntegrationService.register_connector("sage", SageConnector)
     IntegrationService.register_connector("datev", DatevConnector)
+    IntegrationService.register_connector("gmail", GmailConnector)
+    IntegrationService.register_connector("outlook_email", OutlookEmailConnector)
 
 
 # Auto-register on import
