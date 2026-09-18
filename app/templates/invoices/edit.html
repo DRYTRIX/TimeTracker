@@ -3,36 +3,36 @@
 
 {% block content %}
 {% set actions %}
-<a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary">
+<a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary hidden sm:inline-flex">
     <i class="fas fa-arrow-left mr-2"></i>{{ _('Back') }}
 </a>
-<button type="button" onclick="showSendEmailModal()" class="btn bg-blue-500 text-white hover:bg-blue-600">
+<button type="button" onclick="showSendEmailModal()" class="btn bg-blue-500 text-white hover:bg-blue-600 hidden sm:inline-flex">
     <i class="fas fa-envelope mr-1"></i>{{ _('Send Email') }}
 </button>
 {% endset %}
 {{ page_header('fas fa-file-invoice', _('Edit Invoice') ~ ' ' ~ invoice.invoice_number, subtitle_text=_('Update invoice details, items, and terms'), actions_html=actions, breadcrumbs=[{'text': _('Invoices'), 'url': url_for('invoices.list_invoices')}, {'text': _('Edit Invoice')}]) }}
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 pb-28 sm:pb-6">
+    <div class="lg:col-span-2 min-w-0">
+        <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <form method="POST" id="editInvoiceForm" novalidate data-validate-form>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 min-w-0">
                     <div class="min-w-0">
                         <label for="client_name" class="form-label">{{ _('Client Name') }} *</label>
-                        <input type="text" name="client_name" id="client_name" value="{{ invoice.client_name }}" required class="form-input">
+                        <input type="text" name="client_name" id="client_name" value="{{ invoice.client_name }}" required class="form-input text-base min-h-[44px]">
                     </div>
                     <div class="min-w-0">
                         <label for="client_email" class="form-label">{{ _('Client Email') }}</label>
-                        <input type="email" name="client_email" id="client_email" value="{{ invoice.client_email }}" class="form-input">
+                        <input type="email" name="client_email" id="client_email" value="{{ invoice.client_email }}" class="form-input text-base min-h-[44px]">
                     </div>
-                    <div>
+                    <div class="min-w-0">
                         <label for="due_date" class="form-label">{{ _('Due Date') }} *</label>
-                        <input type="date" name="due_date" id="due_date" value="{{ invoice.due_date.strftime('%Y-%m-%d') }}" required class="form-input user-date-input">
+                        <input type="date" name="due_date" id="due_date" value="{{ invoice.due_date.strftime('%Y-%m-%d') }}" required class="form-input text-base min-h-[44px] user-date-input">
                     </div>
                     <div class="min-w-0">
                         <label for="tax_rate" class="form-label">{{ _('Tax Rate (%)') }}</label>
-                        <input type="number" name="tax_rate" id="tax_rate" value="{{ invoice.tax_rate }}" step="0.01" class="form-input">
+                        <input type="number" name="tax_rate" id="tax_rate" value="{{ invoice.tax_rate }}" step="0.01" inputmode="decimal" class="form-input text-base min-h-[44px]">
                     </div>
                     <div class="md:col-span-2">
                         <label for="client_address" class="form-label">{{ _('Client Address') }}</label>
@@ -79,22 +79,25 @@
                     
                     <div id="invoice-items" class="space-y-2">
                         {% for item in invoice.items %}
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row min-w-0 hover:shadow-sm transition" data-is-time-based="{{ 'true' if item.time_entry_ids else 'false' }}">
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 md:p-3 rounded-xl md:rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row min-w-0 hover:shadow-sm transition shadow-sm md:shadow-none" data-is-time-based="{{ 'true' if item.time_entry_ids else 'false' }}">
                             <input type="hidden" name="item_stock_item_id[]" value="{{ item.stock_item_id if item.stock_item_id else '' }}">
                             <input type="hidden" name="item_warehouse_id[]" value="{{ item.warehouse_id if item.warehouse_id else '' }}">
                             <input type="hidden" name="item_time_entry_ids[]" value="{{ item.time_entry_ids or '' }}">
                             {% if item.time_entry_ids %}
                             {# Time-based item: show Project and Task #}
                             <div class="md:col-span-2 min-w-0 flex flex-col justify-center">
+                                <span class="md:hidden text-xs font-semibold uppercase text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Project') }}</span>
                                 <span class="text-sm text-text-light dark:text-text-dark py-2">{{ invoice.project.name if invoice.project else '-' }}</span>
                             </div>
                             <div class="md:col-span-2 min-w-0 flex flex-col justify-center">
+                                <span class="md:hidden text-xs font-semibold uppercase text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Task') }}</span>
                                 <span class="text-sm text-text-light dark:text-text-dark py-2">{{ item.task_name_from_time_entries or _('Project hours') }}</span>
                             </div>
                             {% else %}
                             {# Stock/manual item: show Stock and Warehouse dropdowns #}
                             <div class="md:col-span-2 min-w-0 flex flex-col">
-                                <select class="form-input item-stock-select text-sm" data-row-index="{{ loop.index0 }}" title="{{ _('Select Stock Item') }}">
+                                <span class="md:hidden text-xs font-semibold uppercase text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Stock Item') }}</span>
+                                <select class="form-input item-stock-select text-base md:text-sm min-h-[44px] md:min-h-0" data-row-index="{{ loop.index0 }}" title="{{ _('Select Stock Item') }}">
                                     <option value="">{{ _('None') }}</option>
                                     {% for stock_item in stock_items %}
                                     <option value="{{ stock_item.id }}" data-price="{{ stock_item.default_price or 0 }}" data-unit="{{ stock_item.unit }}" data-description="{{ stock_item.name }}" {% if item.stock_item_id == stock_item.id %}selected{% endif %}>{{ stock_item.sku }} - {{ stock_item.name }}</option>
@@ -102,7 +105,8 @@
                                 </select>
                             </div>
                             <div class="md:col-span-2 min-w-0 flex flex-col">
-                                <select class="form-input item-warehouse-select text-sm" data-row-index="{{ loop.index0 }}" title="{{ _('Select Warehouse') }}">
+                                <span class="md:hidden text-xs font-semibold uppercase text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Warehouse') }}</span>
+                                <select class="form-input item-warehouse-select text-base md:text-sm min-h-[44px] md:min-h-0" data-row-index="{{ loop.index0 }}" title="{{ _('Select Warehouse') }}">
                                     <option value="">{{ _('None') }}</option>
                                     {% for warehouse in warehouses %}
                                     <option value="{{ warehouse.id }}" {% if item.warehouse_id == warehouse.id %}selected{% endif %}>{{ warehouse.code }} - {{ warehouse.name }}</option>
@@ -111,21 +115,24 @@
                             </div>
                             {% endif %}
                             <div class="md:col-span-3 min-w-0 flex flex-col">
-                                <input type="text" name="description[]" placeholder="{{ _('e.g., Web Development Services') }}" value="{{ item.description }}" class="form-input item-description" data-calc-trigger>
+                                <span class="md:hidden text-xs font-semibold uppercase text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Description') }}</span>
+                                <input type="text" name="description[]" placeholder="{{ _('e.g., Web Development Services') }}" value="{{ item.description }}" class="form-input item-description text-base min-h-[44px] md:min-h-0" data-calc-trigger>
                             </div>
                             <div class="md:col-span-2 min-w-0 flex flex-col">
+                                <span class="md:hidden text-xs font-semibold uppercase text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Quantity') }}</span>
                                 {% if item.time_entry_ids %}
-                                <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" value="{{ item.quantity }}" step="0.01" min="0" class="form-input item-quantity bg-gray-100 dark:bg-gray-800 cursor-not-allowed" readonly title="{{ _('Quantity is from logged hours and cannot be edited') }}">
+                                <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" value="{{ item.quantity }}" step="0.01" min="0" inputmode="decimal" class="form-input item-quantity text-base min-h-[44px] md:min-h-0 bg-gray-100 dark:bg-gray-800 cursor-not-allowed" readonly title="{{ _('Quantity is from logged hours and cannot be edited') }}">
                                 {% else %}
-                                <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" value="{{ item.quantity }}" step="0.01" min="0" class="form-input item-quantity" data-calc-trigger>
+                                <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" value="{{ item.quantity }}" step="0.01" min="0" inputmode="decimal" class="form-input item-quantity text-base min-h-[44px] md:min-h-0" data-calc-trigger>
                                 {% endif %}
                             </div>
                             <div class="md:col-span-2 min-w-0 flex flex-col">
-                                <input type="number" name="unit_price[]" placeholder="{{ _('Unit Price') }}" value="{{ item.unit_price }}" step="0.01" min="0" class="form-input item-price" data-calc-trigger>
+                                <span class="md:hidden text-xs font-semibold uppercase text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Unit Price') }}</span>
+                                <input type="number" name="unit_price[]" placeholder="{{ _('Unit Price') }}" value="{{ item.unit_price }}" step="0.01" min="0" inputmode="decimal" class="form-input item-price text-base min-h-[44px] md:min-h-0" data-calc-trigger>
                             </div>
                             <div class="md:col-span-1 min-w-0 flex flex-col">
-                                <button type="button" class="remove-item bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Remove item') }}">
-                                    <i class="fas fa-trash"></i>
+                                <button type="button" class="remove-item bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-3 md:py-2 rounded min-h-[44px] hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Remove item') }}">
+                                    <i class="fas fa-trash"></i> <span class="md:hidden ml-1">{{ _('Remove') }}</span>
                                 </button>
                             </div>
                         </div>
@@ -288,13 +295,23 @@
                     </div>
                 </div>
 
-                <div class="mt-6 flex flex-wrap justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
+                <div class="mt-6 hidden sm:flex flex-wrap justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
                     <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+                    <button type="button" onclick="showSendEmailModal()" class="btn bg-blue-500 text-white hover:bg-blue-600">{{ _('Send Email') }}</button>
                     <button type="submit" class="btn btn-primary">{{ _('Save Changes') }}</button>
                 </div>
             </form>
         </div>
     </div>
+
+{# Sticky mobile action bar #}
+<div class="fixed bottom-0 inset-x-0 z-40 sm:hidden border-t border-border-light dark:border-border-dark bg-card-light/95 dark:bg-card-dark/95 backdrop-blur px-3 py-3">
+    <div class="flex gap-2 max-w-lg mx-auto">
+        <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary flex-1 min-h-[48px] justify-center text-sm">{{ _('Cancel') }}</a>
+        <button type="button" onclick="showSendEmailModal()" class="btn bg-blue-500 text-white hover:bg-blue-600 flex-1 min-h-[48px] justify-center text-sm">{{ _('Send') }}</button>
+        <button type="submit" form="editInvoiceForm" class="btn btn-primary flex-1 min-h-[48px] justify-center text-sm">{{ _('Save') }}</button>
+    </div>
+</div>
 
     <div class="space-y-4">
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm sticky top-4">

@@ -3,19 +3,19 @@
 
 {% block content %}
 {% set actions %}
-<a href="{{ url_for('invoices.list_invoices') }}" class="btn btn-secondary">{{ _('Back to Invoices') }}</a>
+<a href="{{ url_for('invoices.list_invoices') }}" class="btn btn-secondary hidden sm:inline-flex">{{ _('Back to Invoices') }}</a>
 {% endset %}
 {{ page_header('fas fa-file-invoice', _('Create Invoice'), subtitle_text=_('Generate a new invoice for a project and client'), actions_html=actions, breadcrumbs=[{'text': _('Invoices'), 'url': url_for('invoices.list_invoices')}, {'text': _('Create Invoice')}]) }}
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2">
-        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 pb-24 sm:pb-6">
+    <div class="lg:col-span-2 min-w-0">
+        <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <form method="POST" id="createInvoiceForm" novalidate data-validate-form>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                    <div class="min-w-0">
                         <label for="project_id" class="form-label">{{ _('Project') }} *</label>
-                        <select name="project_id" id="project_id" required class="form-input">
+                        <select name="project_id" id="project_id" required class="form-input text-base min-h-[44px]">
                             <option value="">{{ _('Select a project') }}</option>
                             {% for project in projects %}
                             <option value="{{ project.id }}" data-client-name="{{ project.client_obj.name if project.client_obj else '' }}" data-client-email="{{ project.client_obj.email if project.client_obj else '' }}" data-client-address="{{ project.client_obj.address if project.client_obj else '' }}">{{ project.name }} ({{ project.client }})</option>
@@ -23,46 +23,46 @@
                         </select>
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Selecting a project will auto-fill client details') }}</p>
                     </div>
-                    <div>
+                    <div class="min-w-0">
                         <label for="client_name" class="form-label">{{ _('Client Name') }} *</label>
-                        <input type="text" name="client_name" id="client_name" value="{{ request.form.get('client_name','') }}" required class="form-input">
+                        <input type="text" name="client_name" id="client_name" value="{{ request.form.get('client_name','') }}" required class="form-input text-base min-h-[44px]">
                     </div>
-                    <div>
+                    <div class="min-w-0">
                         <label for="client_email" class="form-label">{{ _('Client Email') }}</label>
-                        <input type="email" name="client_email" id="client_email" value="{{ request.form.get('client_email','') }}" class="form-input">
+                        <input type="email" name="client_email" id="client_email" value="{{ request.form.get('client_email','') }}" class="form-input text-base min-h-[44px]">
                     </div>
-                    <div>
+                    <div class="min-w-0">
                         <label for="due_date" class="form-label">{{ _('Due Date') }} *</label>
-                        <input type="date" name="due_date" id="due_date" value="{{ default_due_date }}" required class="form-input">
+                        <input type="date" name="due_date" id="due_date" value="{{ default_due_date }}" required class="form-input text-base min-h-[44px] user-date-input">
                     </div>
-                    <div class="md:col-span-2">
+                    <div class="md:col-span-2 min-w-0">
                         <label for="client_address" class="form-label">{{ _('Client Address') }}</label>
-                        <textarea name="client_address" id="client_address" rows="3" class="form-input">{{ request.form.get('client_address','') }}</textarea>
+                        <textarea name="client_address" id="client_address" rows="3" class="form-input text-base">{{ request.form.get('client_address','') }}</textarea>
                     </div>
-                    <div class="md:col-span-2">
+                    <div class="md:col-span-2 min-w-0">
                         <label for="buyer_reference" class="form-label">{{ _('Buyer reference (PEPPOL BT-10)') }}</label>
-                        <input type="text" name="buyer_reference" id="buyer_reference" value="{{ request.form.get('buyer_reference','') }}" class="form-input" placeholder="{{ _('Optional; used in PEPPOL UBL') }}">
+                        <input type="text" name="buyer_reference" id="buyer_reference" value="{{ request.form.get('buyer_reference','') }}" class="form-input text-base min-h-[44px]" placeholder="{{ _('Optional; used in PEPPOL UBL') }}">
                     </div>
-                    <div>
+                    <div class="min-w-0">
                         <label for="tax_rate" class="form-label">{{ _('Tax Rate (%)') }}</label>
-                        <input type="number" name="tax_rate" id="tax_rate" value="{{ settings.tax_rate or 0 }}" step="0.01" class="form-input">
+                        <input type="number" name="tax_rate" id="tax_rate" value="{{ settings.tax_rate or 0 }}" step="0.01" inputmode="decimal" class="form-input text-base min-h-[44px]">
                     </div>
-                    <div class="md:col-span-2">
+                    <div class="md:col-span-2 min-w-0">
                         <label for="notes" class="form-label">{{ _('Notes') }}</label>
-                        <textarea name="notes" id="notes" rows="3" class="form-input">{{ request.form.get('notes','') }}</textarea>
+                        <textarea name="notes" id="notes" rows="3" class="form-input text-base">{{ request.form.get('notes','') }}</textarea>
                     </div>
-                    <div class="md:col-span-2">
+                    <div class="md:col-span-2 min-w-0">
                         <label for="terms" class="form-label">{{ _('Terms') }}</label>
-                        <textarea name="terms" id="terms" rows="3" class="form-input">{{ request.form.get('terms','') }}</textarea>
+                        <textarea name="terms" id="terms" rows="3" class="form-input text-base">{{ request.form.get('terms','') }}</textarea>
                     </div>
                 </div>
-                <div class="mt-6">
-                    <button type="submit" class="btn btn-primary">{{ _('Create Invoice') }}</button>
+                <div class="mt-6 hidden sm:block">
+                    <button type="submit" class="btn btn-primary min-h-[44px]">{{ _('Create Invoice') }}</button>
                 </div>
             </form>
         </div>
     </div>
-    <div>
+    <div class="hidden lg:block">
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Tips') }}</h2>
             <ul class="list-disc pl-5 text-sm text-text-muted-light dark:text-text-muted-dark space-y-2">
@@ -70,6 +70,14 @@
                 <li>{{ _('You can customize notes and terms before sending the invoice.') }}</li>
             </ul>
         </div>
+    </div>
+</div>
+
+{# Sticky mobile action bar #}
+<div class="fixed bottom-0 inset-x-0 z-40 sm:hidden border-t border-border-light dark:border-border-dark bg-card-light/95 dark:bg-card-dark/95 backdrop-blur px-4 py-3">
+    <div class="flex gap-2 max-w-lg mx-auto">
+        <a href="{{ url_for('invoices.list_invoices') }}" class="btn btn-secondary flex-1 min-h-[48px] justify-center">{{ _('Cancel') }}</a>
+        <button type="submit" form="createInvoiceForm" class="btn btn-primary flex-1 min-h-[48px] justify-center">{{ _('Create Invoice') }}</button>
     </div>
 </div>
 {% endblock %}
