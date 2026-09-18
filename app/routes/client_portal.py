@@ -239,24 +239,24 @@ def check_client_portal_access():
         Response: A redirect response if authentication is needed
         None: If 403 is raised (abort is called)
     """
-    # Custom domain: resolve host to a client when portal custom domains are allowed
-    try:
-        from app.models import Settings
+    # Custom domain: prefer g.portal_client set by before_request (white-label host)
+    domain_client = getattr(g, "portal_client", None) or getattr(g, "portal_domain_client", None)
+    if domain_client is None:
+        try:
+            from app.utils.portal_domain import resolve_portal_client_for_host
 
-        settings = Settings.get_settings()
-        if getattr(settings, "portal_allowed_custom_domains", None):
-            host = (request.host or "").split(":")[0].strip().lower()
-            if host:
-                domain_client = Client.query.filter(Client.custom_domain == host).first()
-                if domain_client and domain_client.has_portal_access and domain_client.is_active:
-                    # Prefer an existing portal session for this client; otherwise continue auth flow
-                    session_client_id = session.get("client_portal_id")
-                    if session_client_id and int(session_client_id) == domain_client.id:
-                        return domain_client
-                    # Stash resolved client for login branding / redirects
-                    g.portal_domain_client = domain_client
-    except Exception:
-        pass
+            domain_client = resolve_portal_client_for_host()
+            if domain_client is not None:
+                g.portal_client = domain_client
+                g.portal_domain_client = domain_client
+        except Exception:
+            domain_client = None
+
+    if domain_client is not None:
+        session_client_id = session.get("client_portal_id")
+        if session_client_id and int(session_client_id) == domain_client.id:
+            return domain_client
+        g.portal_domain_client = domain_client
 
     # Check for Client portal authentication
     client_id = session.get("client_portal_id")
@@ -384,11 +384,17 @@ def get_effective_widget_layout(client_id, user_id=None):
 @client_portal_bp.route("/client-portal/login", methods=["GET", "POST"])
 def login():
     """Client portal login page"""
+    domain_client = getattr(g, "portal_client", None) or getattr(g, "portal_domain_client", None)
+
     if request.method == "GET":
         # If already logged in, redirect to dashboard
         if get_current_client():
             return redirect(url_for("client_portal.dashboard"))
-        return render_template("client_portal/login.html")
+        return render_template(
+            "client_portal/login.html",
+            portal_client=domain_client,
+            prefill_username=domain_client.portal_username if domain_client else "",
+        )
 
     # POST - handle login
     username = request.form.get("username", "").strip()
@@ -396,14 +402,31 @@ def login():
 
     if not username or not password:
         flash(_("Username and password are required."), "error")
-        return render_template("client_portal/login.html")
+        return render_template(
+            "client_portal/login.html",
+            portal_client=domain_client,
+            prefill_username=username or (domain_client.portal_username if domain_client else ""),
+        )
 
     # Authenticate client
     client = Client.authenticate_portal(username, password)
 
     if not client:
         flash(_("Invalid username or password."), "error")
-        return render_template("client_portal/login.html")
+        return render_template(
+            "client_portal/login.html",
+            portal_client=domain_client,
+            prefill_username=username,
+        )
+
+    # On a white-label host, only allow the mapped client to sign in
+    if domain_client is not None and client.id != domain_client.id:
+        flash(_("This portal is reserved for %(name)s.", name=domain_client.name), "error")
+        return render_template(
+            "client_portal/login.html",
+            portal_client=domain_client,
+            prefill_username=domain_client.portal_username or "",
+        )
 
     # Log in the client
     from flask_login import logout_user
