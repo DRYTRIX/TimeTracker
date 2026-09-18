@@ -10,7 +10,7 @@
         <span class="text-text-light dark:text-text-dark">{{ _('Support Development') }}</span>
     </nav>
     
-    <!-- Hero Section (A/B: control | key_first | cta_alt) -->
+    <!-- Hero Section (A/B: control | key_first | cta_alt | never_see) -->
     <div class="bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-5 sm:p-8 rounded-lg shadow-lg text-white mb-6">
         <div class="text-center">
             <i class="fas fa-mug-saucer text-4xl sm:text-6xl mb-4"></i>
@@ -18,6 +18,8 @@
             <p class="text-xl opacity-90 mb-6">
                 {% if (support_ab_variant|default('control')) == 'cta_alt' %}
                 {{ _('Donate to support development — or become a Supporter to show your badge') }}
+                {% elif (support_ab_variant|default('control')) == 'never_see' %}
+                {{ _('Never see support prompts again — or donate any amount') }}
                 {% else %}
                 {{ _('Support updates and keep TimeTracker free for everyone') }}
                 {% endif %}
@@ -32,6 +34,17 @@
                 <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=donate_page_hero&utm_campaign=support" target="_blank" rel="noopener noreferrer" onclick="trackDonationClick('donate_page_hero')"
                    class="px-6 py-3 bg-amber-700/90 hover:bg-amber-800 text-white rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 border border-white/30">
                     <i class="fas fa-mug-saucer mr-2"></i>{{ _('Donate') }}
+                    <i class="fas fa-external-link-alt ml-2 text-xs"></i>
+                </a>
+                {% elif (support_ab_variant|default('control')) == 'never_see' %}
+                <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" onclick="trackDonationClick('donate_page_key')"
+                   class="px-6 py-3 bg-white text-amber-600 rounded-lg font-semibold hover:bg-amber-50 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                    <i class="fas fa-key mr-2"></i>{{ _('Never see this again — €25 key') }}
+                    <i class="fas fa-external-link-alt ml-2 text-xs"></i>
+                </a>
+                <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=donate_page_hero&utm_campaign=support" target="_blank" rel="noopener noreferrer" onclick="trackDonationClick('donate_page_hero')"
+                   class="px-6 py-3 bg-amber-700/90 hover:bg-amber-800 text-white rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 border border-white/30">
+                    <i class="fas fa-mug-saucer mr-2"></i>{{ _('Or donate any amount') }}
                     <i class="fas fa-external-link-alt ml-2 text-xs"></i>
                 </a>
                 {% else %}

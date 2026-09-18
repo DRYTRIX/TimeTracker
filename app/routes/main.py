@@ -467,10 +467,15 @@ def dashboard():
             support_dashboard_prompt = {
                 **support_dashboard_prompt,
                 "message": _(
-                    "You've tracked %(hours)s hours with TimeTracker. That's reliable data for your clients "
-                    "and your business — consider supporting continued development.",
+                    "TimeTracker has kept you on track for %(hours)s hours. "
+                    "Consider buying a key to remove prompts and support future development.",
                     hours=milestone,
                 ),
+                "celebration": True,
+                "title": _("%(hours)s hours tracked!", hours=milestone),
+                "keyLabel": _("Get key (€25)"),
+                "bmcLabel": _("Buy a coffee"),
+                "dismissLabel": _("Maybe later"),
             }
         elif v == SupportPromptService.VARIANT_ACTIVE_TODAY:
             support_dashboard_prompt = {

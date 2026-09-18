@@ -1,12 +1,13 @@
 # Support / Donate conversion A/B tests
 
-TimeTracker supports in-product A/B tests for support and key-purchase CTAs. Variants are assigned stably per user (by `user_id % 3`) and recorded with every support interaction so you can compare conversion by variant.
+TimeTracker supports in-product A/B tests for support and key-purchase CTAs. Variants are assigned stably per user (by `user_id % 4`) and recorded with every support interaction so you can compare conversion by variant.
 
 ## Variants
 
 - **control** — Default: donate-first hero, “Support updates” copy.
 - **key_first** — Hero shows “Remove prompts with key” as primary button, then Donate.
 - **cta_alt** — Alternate CTA copy: “Donate to support development — or get a key to remove prompts”.
+- **never_see** — Hero primary CTA: “Never see this again — €25 key”; secondary: “Or donate any amount” (Buy Me a Coffee).
 
 ## Data
 
@@ -45,7 +46,7 @@ GROUP BY variant;
 ## Rolling out a winner
 
 1. Run the experiment for at least 2–4 weeks and compare CTR (and, if available, key purchases) by variant.
-2. In `app/utils/context_processors.py`, set `support_ab_variant` to the winning variant for everyone, e.g. `support_ab_variant = "key_first"` (remove the `current_user.id % 3` logic).
+2. In `app/utils/context_processors.py`, set `support_ab_variant` to the winning variant for everyone, e.g. `support_ab_variant = "never_see"` (remove the `current_user.id % 4` logic).
 3. Optionally remove variant-specific template branches in `app/templates/main/donate.html` and keep only the winning layout/copy.
 4. Keep the `variant` column and tracking for future experiments.
 
