@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.16.0
+
+**Minor (5.16.0):** **Client–team messaging** — bidirectional in-portal messaging between team and client contacts with thread UI on both sides. **Gmail & Outlook sync** — email threads pulled from Gmail API and Microsoft Graph and linked to CRM clients, leads, and deals. **Payroll sync (Gusto & ADP)** — time entries aggregated into payroll batches and pushed to Gusto and ADP Workforce Now. **DATEV export** — EXTF Buchungsstapel CSV generator for direct DATEV import. **Sage integration** — invoices, contacts, and payments synced with Sage Business Cloud. **Integration wizards** — guided setup wizards for ADP, DATEV, Gmail, Gusto, Outlook Email, and Sage. **Visual workflow builder** — drag-and-drop canvas for building automation workflows. **Portal custom domains** — white-label client portal host resolution. **Client Portal API** — new authenticated REST blueprint for portal sessions and data access. See [CHANGELOG.md](CHANGELOG.md#5160---2026-09-18).
+
 ### ✨ Highlights of v5.15.0
 
 **Minor (5.15.0):** **Timer start override (#760)** — start or adjust a running timer at a custom time. **Pomodoro sessions** — focus blocks tracked via timer API and UI. **Expense lifecycle** — full mobile/desktop expense CRUD. **Payroll templates** — configurable export templates. **QuickBooks & Xero** — deeper accounting sync. **ActivityWatch inbox** — rules, merge filters, and sync-error review. **Gamification** — badges, leaderboards, and award hooks. **Calendar DnD** — drag-to-move and resize events. **Recurring costs** — automatic recurring project cost engine. **Shareable reports** — public tokenized report links. **Geofencing** — location-based attendance clock-in policies. See [CHANGELOG.md](CHANGELOG.md#5150---2026-09-16).
