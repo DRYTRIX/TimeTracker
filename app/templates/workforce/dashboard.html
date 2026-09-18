@@ -70,6 +70,65 @@
     </div>
 </div>
 
+{% if current_user.is_admin %}
+<div class="card p-4 space-y-3" id="payroll-sync">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+            <h2 class="text-lg font-semibold">{{ _('Payroll connectors') }}</h2>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Push hours for this period to Gusto or ADP') }}</p>
+        </div>
+    </div>
+    <form method="post" action="{{ url_for('workforce.payroll_sync_push') }}" class="flex flex-wrap gap-2 items-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div>
+            <label class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Provider') }}</label>
+            <select name="provider" class="form-select">
+                <option value="gusto">Gusto</option>
+                <option value="adp">ADP</option>
+            </select>
+        </div>
+        <div>
+            <label class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Start') }}</label>
+            <input type="date" name="start_date" value="{{ cap_start.isoformat() }}" class="form-input" required>
+        </div>
+        <div>
+            <label class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('End') }}</label>
+            <input type="date" name="end_date" value="{{ cap_end.isoformat() }}" class="form-input" required>
+        </div>
+        <button class="btn btn-primary" type="submit">{{ _('Push payroll') }}</button>
+        <a class="btn btn-secondary" href="{{ url_for('integrations.list_integrations') }}">{{ _('Configure') }}</a>
+    </form>
+    {% if payroll_sync_logs %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+            <thead>
+                <tr class="text-left text-text-muted-light dark:text-text-muted-dark">
+                    <th class="py-1 pr-3">{{ _('When') }}</th>
+                    <th class="py-1 pr-3">{{ _('Provider') }}</th>
+                    <th class="py-1 pr-3">{{ _('Period') }}</th>
+                    <th class="py-1 pr-3">{{ _('Status') }}</th>
+                    <th class="py-1 pr-3">{{ _('Employees') }}</th>
+                    <th class="py-1">{{ _('Hours') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in payroll_sync_logs %}
+                <tr class="border-t border-border-light dark:border-border-dark">
+                    <td class="py-1 pr-3">{{ log.created_at.strftime('%Y-%m-%d %H:%M') if log.created_at else '' }}</td>
+                    <td class="py-1 pr-3 uppercase">{{ log.provider }}</td>
+                    <td class="py-1 pr-3">{{ log.period_start }} – {{ log.period_end }}</td>
+                    <td class="py-1 pr-3">{{ log.status }}</td>
+                    <td class="py-1 pr-3">{{ log.employee_count }}</td>
+                    <td class="py-1">{{ '%.2f'|format(log.hours_total or 0) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section class="card p-4">
             <h2 class="text-lg font-semibold mb-3">{{ _('Timesheet Periods') }}</h2>

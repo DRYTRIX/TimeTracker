@@ -65,6 +65,7 @@ from .mileage import Mileage
 from .payment_gateway import PaymentGateway, PaymentTransaction
 from .payments import CreditNote, InvoiceReminderSchedule, Payment
 from .payroll_export_template import PayrollExportTemplate
+from .payroll_sync_log import PayrollSyncLog
 from .per_diem import PerDiem, PerDiemRate
 from .permission import Permission, Role
 from .project import Project
@@ -148,6 +149,7 @@ __all__ = [
     "TaxRule",
     "Payment",
     "PayrollExportTemplate",
+    "PayrollSyncLog",
     "CreditNote",
     "InvoiceReminderSchedule",
     "SavedReportView",

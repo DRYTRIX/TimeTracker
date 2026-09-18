@@ -95,6 +95,15 @@ def dashboard():
     payroll_templates = PayrollExportTemplate.query.order_by(PayrollExportTemplate.name.asc()).all()
     default_payroll_template = next((t for t in payroll_templates if t.is_default), payroll_templates[0] if payroll_templates else None)
 
+    payroll_sync_logs = []
+    if current_user.is_admin:
+        try:
+            from app.models.payroll_sync_log import PayrollSyncLog
+
+            payroll_sync_logs = PayrollSyncLog.query.order_by(PayrollSyncLog.created_at.desc()).limit(15).all()
+        except Exception:
+            payroll_sync_logs = []
+
     return render_template(
         "workforce/dashboard.html",
         periods=periods,
@@ -113,7 +122,56 @@ def dashboard():
         overtime_leave_type_id=overtime_leave_type_id,
         payroll_templates=payroll_templates,
         default_payroll_template=default_payroll_template,
+        payroll_sync_logs=payroll_sync_logs,
     )
+
+
+@workforce_bp.route("/workforce/payroll-sync", methods=["POST"])
+@login_required
+def payroll_sync_push():
+    """Push a payroll period to Gusto or ADP."""
+    if not current_user.is_admin:
+        flash(_("Admin access required"), "error")
+        return redirect(url_for("workforce.dashboard"))
+
+    provider = (request.form.get("provider") or "gusto").strip().lower()
+    if provider not in ("gusto", "adp"):
+        flash(_("Unknown payroll provider"), "error")
+        return redirect(url_for("workforce.dashboard") + "#payroll-sync")
+
+    period_start = _parse_date(request.form.get("start_date"))
+    period_end = _parse_date(request.form.get("end_date"))
+    if not period_start or not period_end:
+        flash(_("Start and end dates are required"), "error")
+        return redirect(url_for("workforce.dashboard") + "#payroll-sync")
+
+    from app.models import Integration
+    from app.services.integration_service import IntegrationService
+    from app.services.payroll_sync_service import PayrollSyncService
+
+    integration = Integration.query.filter_by(provider=provider, is_active=True).first()
+    if not integration:
+        flash(_("No active %(provider)s integration found. Configure it under Integrations.", provider=provider), "error")
+        return redirect(url_for("integrations.list_integrations"))
+
+    try:
+        connector = IntegrationService().get_connector(integration)
+        result = PayrollSyncService().push_period(
+            provider=provider,
+            integration=integration,
+            connector=connector,
+            period_start=period_start,
+            period_end=period_end,
+            created_by=current_user.id,
+        )
+        if result.get("success"):
+            flash(_("Payroll push succeeded (%(n)s employees)", n=result.get("synced", 0)), "success")
+        else:
+            flash(_("Payroll push failed: %(msg)s", msg=result.get("message") or "error"), "error")
+    except Exception as exc:
+        flash(_("Payroll push failed: %(msg)s", msg=str(exc)), "error")
+
+    return redirect(url_for("workforce.dashboard") + "#payroll-sync")
 
 
 @workforce_bp.route("/workforce/periods/create", methods=["POST"])

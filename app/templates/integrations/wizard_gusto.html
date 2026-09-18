@@ -1,0 +1,26 @@
+{% extends "integrations/wizard_base.html" %}
+
+{% block wizard_steps %}
+<div class="wizard-step" data-step="1">
+    <h2 class="text-xl font-semibold mb-4">{{ _('Step 1: Gusto OAuth') }}</h2>
+    {% if current_user.is_admin %}
+    <div class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium mb-2">{{ _('Gusto Client ID') }}</label>
+            <input type="text" name="gusto_client_id" class="w-full px-3 py-2 border rounded-lg bg-card-light dark:bg-card-dark" required>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-2">{{ _('Gusto Client Secret') }}</label>
+            <input type="password" name="gusto_client_secret" class="w-full px-3 py-2 border rounded-lg bg-card-light dark:bg-card-dark" required>
+        </div>
+    </div>
+    {% endif %}
+</div>
+<div class="wizard-step hidden" data-step="2">
+    <h2 class="text-xl font-semibold mb-4">{{ _('Step 2: Company') }}</h2>
+    <div>
+        <label class="block text-sm font-medium mb-2">{{ _('Company UUID') }}</label>
+        <input type="text" name="company_uuid" value="{{ current_config.get('company_uuid', '') }}" class="w-full px-3 py-2 border rounded-lg bg-card-light dark:bg-card-dark" required>
+    </div>
+</div>
+{% endblock %}
