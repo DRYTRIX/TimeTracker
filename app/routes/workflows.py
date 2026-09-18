@@ -181,6 +181,46 @@ def toggle_workflow(workflow_id):
     return jsonify({"success": True, "enabled": workflow.enabled})
 
 
+@workflows_bp.route("/workflows/<int:workflow_id>/builder", methods=["GET", "POST"])
+@login_required
+@module_enabled("workflows")
+def visual_builder(workflow_id):
+    """Visual canvas editor for workflow trigger → conditions → actions."""
+    workflow = WorkflowRule.query.get_or_404(workflow_id)
+
+    if workflow.user_id != current_user.id and not current_user.is_admin:
+        flash(_("Access denied"), "error")
+        return redirect(url_for("workflows.list_workflows"))
+
+    if request.method == "POST":
+        data = request.get_json() if request.is_json else request.form
+        fields, _conditions, _actions = parse_workflow_form_data(data)
+        # Preserve name/description/enabled/priority when only graph fields sent
+        if not fields.get("name"):
+            fields["name"] = workflow.name
+        if fields.get("description") is None:
+            fields["description"] = workflow.description
+        if "enabled" not in data and "enabled" not in (data or {}):
+            fields["enabled"] = workflow.enabled
+        if data.get("priority") in (None, ""):
+            fields["priority"] = workflow.priority
+        _apply_workflow_fields(workflow, fields)
+        db.session.commit()
+
+        if request.is_json:
+            return jsonify({"success": True, "workflow": workflow.to_dict()})
+
+        flash(_("Workflow saved"), "success")
+        return redirect(url_for("workflows.visual_builder", workflow_id=workflow_id))
+
+    return render_template(
+        "workflows/visual_builder.html",
+        workflow=workflow,
+        trigger_types=get_trigger_types(),
+        action_types=get_action_types(),
+    )
+
+
 # --- Workflow template library ---
 
 
