@@ -23,8 +23,11 @@ class ApiToken(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     user = relationship("User", backref="api_tokens")
 
+    client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=True, index=True)
+    client = relationship("Client", backref="portal_api_tokens")
+
     # Scopes for fine-grained permissions (comma-separated)
-    # Examples: read:projects, write:time_entries, admin:all
+    # Examples: read:projects, write:time_entries, admin:all, portal:all
     scopes = db.Column(db.Text, default="")
 
     # Token lifecycle
@@ -57,7 +60,7 @@ class ApiToken(db.Model):
         return hashlib.sha256(token.encode()).hexdigest()
 
     @classmethod
-    def create_token(cls, user_id, name, description="", scopes="", expires_days=None):
+    def create_token(cls, user_id, name, description="", scopes="", expires_days=None, client_id=None):
         """Create a new API token
 
         Args:
@@ -66,6 +69,7 @@ class ApiToken(db.Model):
             description: Optional description
             scopes: Comma-separated list of scopes
             expires_days: Number of days until expiration (None = never expires)
+            client_id: Optional client ID for portal-scoped tokens
 
         Returns:
             tuple: (ApiToken instance, plain_token)
@@ -86,6 +90,7 @@ class ApiToken(db.Model):
             user_id=user_id,
             scopes=scopes,
             expires_at=expires_at,
+            client_id=client_id,
         )
 
         return api_token, plain_token

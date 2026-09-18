@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
-from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
 from sqlalchemy import func, or_
@@ -1956,6 +1956,27 @@ def view_purchase_order(po_id):
         "inventory/purchase_orders/view.html",
         purchase_order=purchase_order,
         default_received_date=date.today().isoformat(),
+    )
+
+
+@inventory_bp.route("/inventory/purchase-orders/<int:po_id>/pdf")
+@login_required
+@module_enabled("inventory")
+@admin_or_permission_required("view_inventory")
+def purchase_order_pdf(po_id):
+    """Download purchase order as PDF."""
+    import io
+
+    purchase_order = PurchaseOrder.query.get_or_404(po_id)
+    from app.utils.purchase_order_pdf import PurchaseOrderPDFGenerator
+
+    pdf_bytes = PurchaseOrderPDFGenerator(purchase_order, settings=Settings.get_settings()).generate_pdf()
+    filename = f"{purchase_order.po_number or f'PO-{po_id}'}.pdf".replace("/", "-")
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename,
     )
 
 

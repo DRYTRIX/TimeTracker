@@ -1,0 +1,31 @@
+{% extends "integrations/wizard_base.html" %}
+
+{% block wizard_steps %}
+<div class="wizard-step" data-step="1">
+    <h2 class="text-xl font-semibold mb-4">{{ _('Step 1: DATEV firm data') }}</h2>
+    <div class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium mb-2">{{ _('Consultant number (Berater-Nr)') }}</label>
+            <input type="text" name="consultant_number" value="{{ current_config.get('consultant_number', '') }}" class="w-full px-3 py-2 border rounded-lg bg-card-light dark:bg-card-dark" required>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-2">{{ _('Client number (Mandanten-Nr)') }}</label>
+            <input type="text" name="client_number" value="{{ current_config.get('client_number', '') }}" class="w-full px-3 py-2 border rounded-lg bg-card-light dark:bg-card-dark" required>
+        </div>
+    </div>
+</div>
+<div class="wizard-step hidden" data-step="2">
+    <h2 class="text-xl font-semibold mb-4">{{ _('Step 2: Chart of accounts') }}</h2>
+    <div class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium mb-2">{{ _('Revenue account') }}</label>
+            <input type="text" name="account_revenue" value="{{ current_config.get('account_revenue', '8400') }}" class="w-full px-3 py-2 border rounded-lg bg-card-light dark:bg-card-dark">
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-2">{{ _('Receivables account') }}</label>
+            <input type="text" name="account_receivable" value="{{ current_config.get('account_receivable', '10000') }}" class="w-full px-3 py-2 border rounded-lg bg-card-light dark:bg-card-dark">
+        </div>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('DATEV uses a file export (EXTF Buchungsstapel). Run Sync to generate a CSV for import.') }}</p>
+    </div>
+</div>
+{% endblock %}

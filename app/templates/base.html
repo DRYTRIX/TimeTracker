@@ -72,19 +72,25 @@
                             <p class="text-xs text-amber-700 dark:text-amber-300" id="bannerMessage">
                                 {{ _('Become a Supporter or buy a coffee — every contribution helps keep TimeTracker free for everyone.') }}
                             </p>
+                            <p class="text-xs text-amber-600/80 dark:text-amber-400/80 mt-0.5" id="bannerSubtitle">
+                                {{ _('One-time key — pay once, never see this again.') }}
+                            </p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 flex-wrap">
-                        <a href="{{ url_for('main.donate') }}" 
+                        <a href="{{ support_purchase_url }}"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           onclick="trackDonationClick('banner_key')"
                            class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors">
-                            {{ _('Become a Supporter') }}
+                            {{ _('Remove prompts forever (€25)') }}
                         </a>
                         <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=banner&utm_campaign=support" 
                            target="_blank" 
                            rel="noopener noreferrer"
                            onclick="trackDonationClick('banner_bmc')"
-                           class="px-3 py-1.5 bg-white hover:bg-amber-50 text-amber-600 text-sm font-medium rounded-lg transition-colors border border-amber-600">
-                            <i class="fas fa-mug-saucer mr-1"></i>{{ _('Buy Me a Coffee') }}
+                           class="px-3 py-1.5 bg-white hover:bg-amber-50 text-amber-600 text-sm font-semibold rounded-lg transition-colors border-2 border-amber-600 shadow-sm">
+                            <i class="fas fa-mug-saucer mr-1"></i>{{ _('Buy me a coffee') }}
                         </a>
                         <a href="https://www.paypal.com/donate/?hosted_button_id=KZB27X5LNGU3J" 
                            target="_blank" 
@@ -1097,7 +1103,7 @@
             if (banner) {
                 banner.classList.add('opacity-0', 'invisible', 'max-h-0', 'overflow-hidden');
                 banner.classList.remove('opacity-100', 'visible', 'max-h-[100px]');
-                // Store dismissal timestamp (show again after 30 days)
+                // Store dismissal timestamp (show again after 14 days)
                 try {
                     localStorage.setItem('supportBannerDismissed', Date.now().toString());
                     // Track dismissal
@@ -1154,22 +1160,22 @@ function trackBannerImpression(source) {
         
         function shouldShowSupportBanner() {
             try {
-                // Check if dismissed recently (30 days)
+                // Check if dismissed recently (14 days)
                 const dismissed = localStorage.getItem('supportBannerDismissed');
                 if (dismissed) {
                     const dismissedTime = parseInt(dismissed);
-                    const thirtyDays = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
-                    if ((Date.now() - dismissedTime) < thirtyDays) {
+                    const fourteenDays = 14 * 24 * 60 * 60 * 1000;
+                    if ((Date.now() - dismissedTime) < fourteenDays) {
                         return false;
                     }
                 }
                 
-                // Check if user clicked donation link recently (30 days)
+                // Check if user clicked donation link recently (14 days)
                 const lastClick = localStorage.getItem('donationLinkClicked');
                 if (lastClick) {
                     const clickTime = parseInt(lastClick);
-                    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
-                    if ((Date.now() - clickTime) < thirtyDays) {
+                    const fourteenDays = 14 * 24 * 60 * 60 * 1000;
+                    if ((Date.now() - clickTime) < fourteenDays) {
                         return false;
                     }
                 }
@@ -1179,34 +1185,60 @@ function trackBannerImpression(source) {
                 return true; // Show by default if localStorage fails
             }
         }
+
+        function getSupportBannerSeenCount() {
+            try {
+                return parseInt(localStorage.getItem('supportBannerSeenCount') || '0', 10) || 0;
+            } catch (e) {
+                return 0;
+            }
+        }
+
+        function incrementSupportBannerSeenCount() {
+            try {
+                const next = getSupportBannerSeenCount() + 1;
+                localStorage.setItem('supportBannerSeenCount', String(next));
+                return next;
+            } catch (e) {
+                return 1;
+            }
+        }
         
-        function updateBannerMessage() {
-            // Get user stats from page if available
+        function updateBannerMessage(seenCount) {
             const bannerTitle = document.getElementById('bannerTitle');
             const bannerMessage = document.getElementById('bannerMessage');
             
             if (!bannerTitle || !bannerMessage) return;
-            
-            // Try to get user stats from data attributes or API
+
+            const count = typeof seenCount === 'number' ? seenCount : getSupportBannerSeenCount();
             const userStats = window.userStats || {};
             const daysSinceSignup = userStats.days_since_signup || 0;
             const timeEntriesCount = userStats.time_entries_count || 0;
             const totalHours = userStats.total_hours || 0;
-            
-            // Smart messaging based on milestones
+
+            // Escalating copy based on how often the banner has been shown
+            if (count >= 5) {
+                bannerTitle.textContent = '{{ _("Still here?") }}';
+                bannerMessage.textContent = '{{ _("Buy a key — it removes all prompts permanently.") }}';
+                return;
+            }
+            if (count >= 3) {
+                bannerTitle.textContent = {{ _("You've seen this %(n)s times.")|tojson }}.replace('%(n)s', String(count));
+                bannerMessage.textContent = '{{ _("A one-time key removes it forever.") }}';
+                return;
+            }
+
+            // Smart messaging based on milestones (first 1–2 impressions)
             if (totalHours >= 100) {
                 bannerTitle.textContent = '{{ _("Amazing! You\'ve tracked over 100 hours") }}';
-                bannerMessage.textContent = '{{ _("Support updates and new features — or remove prompts with a key") }} ☕';
             } else if (timeEntriesCount >= 50) {
                 bannerTitle.textContent = '{{ _("Great progress! You\'ve logged 50+ entries") }}';
-                bannerMessage.textContent = '{{ _("Support updates and new features — or remove prompts with a key") }} ☕';
             } else if (daysSinceSignup >= 7) {
                 bannerTitle.textContent = '{{ _("Thanks for using TimeTracker!") }}';
-                bannerMessage.textContent = '{{ _("Support updates and new features — or remove prompts with a key") }} ☕';
             } else {
                 bannerTitle.textContent = '{{ _("Enjoying TimeTracker?") }}';
-                bannerMessage.textContent = '{{ _("Support updates and new features — or remove prompts with a key") }} ☕';
             }
+            bannerMessage.textContent = '{{ _("Support its development — or remove prompts forever with a key.") }}';
         }
         
 // Show support banner if conditions are met
@@ -1214,12 +1246,12 @@ function trackBannerImpression(source) {
         (function() {
             const banner = document.getElementById('supportBanner');
             if (!banner) return;
-            // Server-side suppression: don't show if user clicked a support CTA in last 30 days
+            // Server-side suppression: don't show if user clicked a support CTA recently
             if ({{ 'true' if support_banner_suppressed else 'false' }}) { return; }
 
             if (shouldShowSupportBanner()) {
-                // Update banner message based on user stats
-                updateBannerMessage();
+                const seenCount = incrementSupportBannerSeenCount();
+                updateBannerMessage(seenCount);
                 
                 // Reserve space immediately by removing height constraints
                 // This prevents layout shift when banner becomes visible

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.16.0] - 2026-09-18
+
+### Added
+
+- **Client–team messaging** — New `ClientMessage` model, message service, and UI for bidirectional in-portal messaging between the internal team and client contacts; threads visible from both the client view and the client portal (migration **194**).
+- **Email thread sync (Gmail & Outlook)** — `GmailConnector` and `OutlookEmailConnector` pull email threads from Gmail API and Microsoft Graph and link them to CRM clients, leads, and deals; `EmailSyncService` handles OAuth token refresh and incremental sync; dedicated setup wizards for both providers.
+- **Payroll sync (Gusto & ADP)** — `GustoConnector` and `AdpConnector` aggregate time entries into payroll batches and push them to Gusto's Partner API and ADP Workforce Now; `PayrollSyncService` builds period-scoped batches and `PayrollSyncLog` tracks sync history (migration **194**).
+- **DATEV accounting export** — `DatevConnector` generates EXTF Buchungsstapel CSV for direct import into DATEV; `datev_export.py` utility handles the format spec.
+- **Sage Business Cloud integration** — `SageConnector` syncs invoices, contacts, and payments with Sage Business Cloud Accounting via OAuth2.
+- **Integration setup wizards** — Guided step-by-step wizards for ADP, DATEV, Gmail, Gusto, Outlook Email, and Sage make credential configuration consistent with existing integrations.
+- **Visual workflow builder** — Drag-and-drop canvas (`visual_builder.html`) for constructing automation workflows without editing JSON; accessible alongside the existing form editor.
+- **Portal custom domain resolution** — `portal_domain.py` utility resolves white-label client portal hosts to the correct `Client` record, enabling custom-domain client portals when `portal_allowed_custom_domains` is enabled.
+- **Client Portal REST API** — `api_v1_client_portal.py` blueprint exposes authenticated REST endpoints for portal sessions and client data access.
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.16.0** (single source of truth for the application version).
+
 ## [5.15.0] - 2026-09-16
 
 ### Added

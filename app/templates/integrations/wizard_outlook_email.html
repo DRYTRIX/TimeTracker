@@ -1,0 +1,24 @@
+{% extends "integrations/wizard_base.html" %}
+
+{% block wizard_steps %}
+<div class="wizard-step" data-step="1">
+    <h2 class="text-xl font-semibold mb-4">{{ _('Step 1: Microsoft OAuth') }}</h2>
+    {% if current_user.is_admin %}
+    <div class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium mb-2">{{ _('Application (client) ID') }}</label>
+            <input type="text" name="outlook_email_client_id" class="w-full px-3 py-2 border rounded-lg bg-card-light dark:bg-card-dark" required>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-2">{{ _('Client secret') }}</label>
+            <input type="password" name="outlook_email_client_secret" class="w-full px-3 py-2 border rounded-lg bg-card-light dark:bg-card-dark" required>
+        </div>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Requires Mail.Read and offline_access on your Azure app registration.') }}</p>
+    </div>
+    {% endif %}
+</div>
+<div class="wizard-step hidden" data-step="2">
+    <h2 class="text-xl font-semibold mb-4">{{ _('Step 2: Matching') }}</h2>
+    <p class="text-sm">{{ _('Messages are matched to CRM records by participant email addresses.') }}</p>
+</div>
+{% endblock %}

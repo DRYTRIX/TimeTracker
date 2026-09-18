@@ -4,16 +4,22 @@ Registers all available connectors with the IntegrationService.
 """
 
 from app.integrations.activitywatch import ActivityWatchConnector
+from app.integrations.adp import AdpConnector
 from app.integrations.asana import AsanaConnector
 from app.integrations.caldav_calendar import CalDAVCalendarConnector
+from app.integrations.datev import DatevConnector
 from app.integrations.github import GitHubConnector
 from app.integrations.gitlab import GitLabConnector
+from app.integrations.gmail import GmailConnector
 from app.integrations.google_calendar import GoogleCalendarConnector
+from app.integrations.gusto import GustoConnector
 from app.integrations.jira import JiraConnector
 from app.integrations.linear import LinearConnector
 from app.integrations.microsoft_teams import MicrosoftTeamsConnector
 from app.integrations.outlook_calendar import OutlookCalendarConnector
+from app.integrations.outlook_email import OutlookEmailConnector
 from app.integrations.quickbooks import QuickBooksConnector
+from app.integrations.sage import SageConnector
 from app.integrations.slack import SlackConnector
 from app.integrations.trello import TrelloConnector
 from app.integrations.xero import XeroConnector
@@ -36,6 +42,12 @@ def register_connectors():
     IntegrationService.register_connector("gitlab", GitLabConnector)
     IntegrationService.register_connector("quickbooks", QuickBooksConnector)
     IntegrationService.register_connector("xero", XeroConnector)
+    IntegrationService.register_connector("sage", SageConnector)
+    IntegrationService.register_connector("datev", DatevConnector)
+    IntegrationService.register_connector("gmail", GmailConnector)
+    IntegrationService.register_connector("outlook_email", OutlookEmailConnector)
+    IntegrationService.register_connector("gusto", GustoConnector)
+    IntegrationService.register_connector("adp", AdpConnector)
 
 
 # Auto-register on import

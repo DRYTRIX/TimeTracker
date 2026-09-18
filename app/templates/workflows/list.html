@@ -71,6 +71,9 @@
                         {% endif %}
                     </td>
                     <td class="px-6 py-4 text-right space-x-2">
+                        <a href="{{ url_for('workflows.visual_builder', workflow_id=workflow.id) }}" class="text-gray-500 hover:text-indigo-600" title="{{ _('Visual Builder') }}">
+                            <i class="fas fa-project-diagram"></i>
+                        </a>
                         <a href="{{ url_for('workflows.edit_workflow', workflow_id=workflow.id) }}" class="text-gray-500 hover:text-blue-600" title="{{ _('Edit') }}">
                             <i class="fas fa-edit"></i>
                         </a>

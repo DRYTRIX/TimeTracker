@@ -883,6 +883,27 @@ def register_scheduled_tasks(scheduler, app=None):
         )
         logger.info("Registered Google Calendar connector sync task")
 
+        def sync_email_threads_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for email thread sync")
+                    return
+            with external_url_context(app_instance):
+                sync_email_threads()
+
+        scheduler.add_job(
+            func=sync_email_threads_with_app,
+            trigger="interval",
+            minutes=30,
+            id="sync_email_threads",
+            name="Sync Gmail / Outlook CRM email threads",
+            replace_existing=True,
+        )
+        logger.info("Registered CRM email thread sync task")
+
         # Slack daily summary dispatcher — runs every 30 minutes, checks each
         # active Slack integration whose daily_summary_time matches the window.
         def post_slack_daily_summaries_with_app():
@@ -1851,3 +1872,16 @@ def post_slack_daily_summaries():
             )
     logger.info("Slack daily summary dispatcher: posted=%d", posted)
     return {"ok": True, "posted": posted}
+
+
+def sync_email_threads():
+    """Poll Gmail / Outlook email integrations and ingest CRM threads."""
+    try:
+        from app.services.email_sync_service import EmailSyncService
+
+        result = EmailSyncService().sync_all_connected()
+        logger.info("Email thread sync finished: %s", result)
+        return result
+    except Exception as exc:
+        logger.exception("Email thread sync failed: %s", exc)
+        return {"ok": False, "error": str(exc)}

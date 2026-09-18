@@ -174,10 +174,93 @@
         showSoftToast(cfg, cfg.layoutPrompt.message, cfg.layoutPrompt.variant || 'after_report', 'layout');
     }
 
+    function showMilestoneCelebration(cfg, raw) {
+        if (document.getElementById('supportMilestoneCelebration')) return;
+
+        var purchaseUrl =
+            (cfg && cfg.urls && cfg.urls.license) ||
+            'https://timetracker.drytrix.com/support.html';
+        var bmcUrl =
+            'https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=milestone_toast&utm_campaign=support';
+        var title = raw.title || raw.message || 'Milestone reached!';
+        var message =
+            raw.message ||
+            'Consider buying a key to remove prompts and support future development.';
+        var keyLabel = raw.keyLabel || 'Get key (€25)';
+        var bmcLabel = raw.bmcLabel || 'Buy a coffee';
+        var dismissLabel = raw.dismissLabel || 'Maybe later';
+
+        var overlay = document.createElement('div');
+        overlay.id = 'supportMilestoneCelebration';
+        overlay.className = 'fixed inset-0 z-[110] flex items-center justify-center p-4';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-labelledby', 'supportMilestoneTitle');
+        overlay.innerHTML =
+            '<div class="absolute inset-0 bg-black/50" data-milestone-dismiss></div>' +
+            '<div class="relative max-w-md w-full rounded-xl shadow-2xl border border-amber-200 dark:border-amber-800 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark p-6">' +
+            '<div class="text-center mb-4">' +
+            '<div class="text-4xl mb-2" aria-hidden="true">🎉</div>' +
+            '<h2 id="supportMilestoneTitle" class="text-lg font-semibold"></h2>' +
+            '<p class="mt-2 text-sm text-text-muted-light dark:text-text-muted-dark" data-milestone-msg></p>' +
+            '</div>' +
+            '<div class="flex flex-col gap-2">' +
+            '<a href="' +
+            purchaseUrl +
+            '" target="_blank" rel="noopener noreferrer" data-milestone-key class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm"></a>' +
+            '<a href="' +
+            bmcUrl +
+            '" target="_blank" rel="noopener noreferrer" data-milestone-bmc class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 border-amber-600 text-amber-700 dark:text-amber-300 font-semibold text-sm hover:bg-amber-50 dark:hover:bg-amber-900/20"></a>' +
+            '<button type="button" data-milestone-dismiss class="text-sm text-text-muted-light dark:text-text-muted-dark hover:underline py-2"></button>' +
+            '</div></div>';
+
+        overlay.querySelector('#supportMilestoneTitle').textContent = title;
+        overlay.querySelector('[data-milestone-msg]').textContent = message;
+        var keyBtn = overlay.querySelector('[data-milestone-key]');
+        keyBtn.textContent = keyLabel;
+        var bmcBtn = overlay.querySelector('[data-milestone-bmc]');
+        bmcBtn.innerHTML = '<i class="fas fa-mug-saucer" aria-hidden="true"></i> ' + bmcLabel;
+        overlay.querySelectorAll('[data-milestone-dismiss]').forEach(function (el) {
+            if (el.tagName === 'BUTTON') el.textContent = dismissLabel;
+            el.addEventListener('click', function () {
+                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            });
+        });
+        keyBtn.addEventListener('click', function () {
+            postTrack(cfg, 'license_clicked', { source: 'milestone_toast', variant: 'hours_milestone' });
+            if (typeof window.trackDonationClick === 'function') {
+                window.trackDonationClick('milestone_key');
+            }
+        });
+        bmcBtn.addEventListener('click', function () {
+            postTrack(cfg, 'donation_clicked', { source: 'milestone_toast', variant: 'bmc' });
+            if (typeof window.trackDonationClick === 'function') {
+                window.trackDonationClick('milestone_bmc');
+            }
+        });
+        document.addEventListener('keydown', function onEsc(ev) {
+            if (ev.key === 'Escape' && overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+                document.removeEventListener('keydown', onEsc);
+            }
+        });
+
+        document.body.appendChild(overlay);
+        postTrack(cfg, 'prompt_shown', {
+            variant: 'hours_milestone',
+            source: 'milestone_celebration',
+            milestone: raw.milestone
+        });
+    }
+
     function dashboardPrompt() {
         var cfg = parseSupportConfig();
         var raw = window.__TT_DASHBOARD_SUPPORT_PROMPT;
         if (!cfg || !raw || !raw.message) return;
+        if (raw.variant === 'hours_milestone' || raw.celebration) {
+            showMilestoneCelebration(cfg, raw);
+            return;
+        }
         showSoftToast(cfg, raw.message, raw.variant || 'dashboard', raw.source || 'dashboard');
     }
 

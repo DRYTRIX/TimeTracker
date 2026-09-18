@@ -11,6 +11,7 @@ from flask import (
     abort,
     current_app,
     flash,
+    g,
     jsonify,
     redirect,
     render_template,
@@ -238,6 +239,25 @@ def check_client_portal_access():
         Response: A redirect response if authentication is needed
         None: If 403 is raised (abort is called)
     """
+    # Custom domain: prefer g.portal_client set by before_request (white-label host)
+    domain_client = getattr(g, "portal_client", None) or getattr(g, "portal_domain_client", None)
+    if domain_client is None:
+        try:
+            from app.utils.portal_domain import resolve_portal_client_for_host
+
+            domain_client = resolve_portal_client_for_host()
+            if domain_client is not None:
+                g.portal_client = domain_client
+                g.portal_domain_client = domain_client
+        except Exception:
+            domain_client = None
+
+    if domain_client is not None:
+        session_client_id = session.get("client_portal_id")
+        if session_client_id and int(session_client_id) == domain_client.id:
+            return domain_client
+        g.portal_domain_client = domain_client
+
     # Check for Client portal authentication
     client_id = session.get("client_portal_id")
     if client_id:
@@ -364,11 +384,17 @@ def get_effective_widget_layout(client_id, user_id=None):
 @client_portal_bp.route("/client-portal/login", methods=["GET", "POST"])
 def login():
     """Client portal login page"""
+    domain_client = getattr(g, "portal_client", None) or getattr(g, "portal_domain_client", None)
+
     if request.method == "GET":
         # If already logged in, redirect to dashboard
         if get_current_client():
             return redirect(url_for("client_portal.dashboard"))
-        return render_template("client_portal/login.html")
+        return render_template(
+            "client_portal/login.html",
+            portal_client=domain_client,
+            prefill_username=domain_client.portal_username if domain_client else "",
+        )
 
     # POST - handle login
     username = request.form.get("username", "").strip()
@@ -376,14 +402,31 @@ def login():
 
     if not username or not password:
         flash(_("Username and password are required."), "error")
-        return render_template("client_portal/login.html")
+        return render_template(
+            "client_portal/login.html",
+            portal_client=domain_client,
+            prefill_username=username or (domain_client.portal_username if domain_client else ""),
+        )
 
     # Authenticate client
     client = Client.authenticate_portal(username, password)
 
     if not client:
         flash(_("Invalid username or password."), "error")
-        return render_template("client_portal/login.html")
+        return render_template(
+            "client_portal/login.html",
+            portal_client=domain_client,
+            prefill_username=username,
+        )
+
+    # On a white-label host, only allow the mapped client to sign in
+    if domain_client is not None and client.id != domain_client.id:
+        flash(_("This portal is reserved for %(name)s.", name=domain_client.name), "error")
+        return render_template(
+            "client_portal/login.html",
+            portal_client=domain_client,
+            prefill_username=domain_client.portal_username or "",
+        )
 
     # Log in the client
     from flask_login import logout_user
@@ -1639,3 +1682,116 @@ def activity_feed():
         client=client,
         feed_items=feed_items,
     )
+
+
+@client_portal_bp.route("/client-portal/survey/<token>", methods=["GET", "POST"])
+def survey_response(token):
+    """Public token-based NPS survey form (no portal login required)."""
+    from app.models.client_survey import ClientSurvey
+    from app.utils.db import safe_commit
+
+    survey = ClientSurvey.query.filter_by(token=token).first_or_404()
+    client = Client.query.get(survey.client_id)
+
+    if request.method == "POST" and not survey.is_completed and not survey.is_expired:
+        try:
+            score = int(request.form.get("nps_score"))
+            survey.submit(score, comment=request.form.get("comment"))
+            if not safe_commit("submit_client_survey", {"survey_id": survey.id}):
+                flash(_("Could not save your feedback. Please try again."), "error")
+            else:
+                flash(_("Thank you for your feedback!"), "success")
+        except (TypeError, ValueError) as exc:
+            flash(str(exc) or _("Invalid score."), "error")
+
+    # Minimal render without requiring portal session — use survey template
+    # which extends portal base; inject a fake session-free path by setting client.
+    return render_template("client_portal/survey.html", survey=survey, client=client or Client(name="Client"))
+
+
+
+@client_portal_bp.route("/client-portal/messages")
+def portal_messages():
+    """Client portal communication hub."""
+    client = check_client_portal_access()
+    if not isinstance(client, Client):
+        return client
+
+    from app.services.client_message_service import ClientMessageService
+
+    service = ClientMessageService()
+    messages = service.list_messages(client.id)
+    service.mark_thread_read(client.id, for_sender_type="client")
+    return render_template("client_portal/messages.html", client=client, messages=messages)
+
+
+@client_portal_bp.route("/client-portal/messages", methods=["POST"])
+def portal_send_message():
+    """Client sends a message to the team."""
+    client = check_client_portal_access()
+    if not isinstance(client, Client):
+        return client
+
+    from app.services.client_message_service import ClientMessageService
+
+    body = request.form.get("body") or (request.get_json(silent=True) or {}).get("body")
+    service = ClientMessageService()
+    msg = service.send(
+        client.id,
+        sender_type="client",
+        body=body or "",
+        sender_id=client.id,
+        sender_name=client.name,
+    )
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        if not msg:
+            return jsonify({"success": False, "error": "empty"}), 400
+        return jsonify({"success": True, "message": msg.to_dict()})
+    if not msg:
+        flash(_("Message cannot be empty."), "error")
+    else:
+        flash(_("Message sent."), "success")
+    return redirect(url_for("client_portal.portal_messages"))
+
+
+@client_portal_bp.route("/client-portal/messages/poll")
+def portal_poll_messages():
+    """JSON poll for new portal messages."""
+    client = check_client_portal_access()
+    if not isinstance(client, Client):
+        return client
+
+    from app.services.client_message_service import ClientMessageService
+
+    after_id = request.args.get("after_id", type=int)
+    service = ClientMessageService()
+    messages = service.list_messages(client.id, after_id=after_id)
+    return jsonify({"messages": [m.to_dict() for m in messages]})
+
+
+@client_portal_bp.route("/client-portal/messages/stream")
+def portal_messages_stream():
+    """Server-Sent Events stream for live message updates."""
+    client = check_client_portal_access()
+    if not isinstance(client, Client):
+        return client
+
+    import json
+    import time
+
+    from app.services.client_message_service import ClientMessageService
+
+    def generate():
+        service = ClientMessageService()
+        last_id = request.args.get("after_id", type=int) or 0
+        for _ in range(60):
+            messages = service.list_messages(client.id, after_id=last_id, limit=50)
+            if messages:
+                last_id = messages[-1].id
+                payload = json.dumps({"messages": [m.to_dict() for m in messages]})
+                yield f"data: {payload}\n\n"
+            else:
+                yield ": keepalive\n\n"
+            time.sleep(2)
+
+    return current_app.response_class(generate(), mimetype="text/event-stream")

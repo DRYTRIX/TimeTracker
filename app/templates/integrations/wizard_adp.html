@@ -1,0 +1,26 @@
+{% extends "integrations/wizard_base.html" %}
+
+{% block wizard_steps %}
+<div class="wizard-step" data-step="1">
+    <h2 class="text-xl font-semibold mb-4">{{ _('Step 1: ADP OAuth') }}</h2>
+    {% if current_user.is_admin %}
+    <div class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium mb-2">{{ _('ADP Client ID') }}</label>
+            <input type="text" name="adp_client_id" class="w-full px-3 py-2 border rounded-lg bg-card-light dark:bg-card-dark" required>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-2">{{ _('ADP Client Secret') }}</label>
+            <input type="password" name="adp_client_secret" class="w-full px-3 py-2 border rounded-lg bg-card-light dark:bg-card-dark" required>
+        </div>
+    </div>
+    {% endif %}
+</div>
+<div class="wizard-step hidden" data-step="2">
+    <h2 class="text-xl font-semibold mb-4">{{ _('Step 2: Payroll group') }}</h2>
+    <div>
+        <label class="block text-sm font-medium mb-2">{{ _('Payroll group code') }}</label>
+        <input type="text" name="payroll_group_code" value="{{ current_config.get('payroll_group_code', 'DEFAULT') }}" class="w-full px-3 py-2 border rounded-lg bg-card-light dark:bg-card-dark">
+    </div>
+</div>
+{% endblock %}

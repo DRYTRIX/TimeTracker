@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Visual Builder') }} - {{ workflow.name }}{% endblock %}
+
+{% block content %}
+{% set actions %}
+<a href="{{ url_for('workflows.edit_workflow', workflow_id=workflow.id) }}" class="btn btn-secondary"><i class="fas fa-list mr-2"></i>{{ _('Form Editor') }}</a>
+<a href="{{ url_for('workflows.view_workflow', workflow_id=workflow.id) }}" class="btn btn-secondary"><i class="fas fa-eye mr-2"></i>{{ _('View') }}</a>
+<button type="button" id="wb-save" class="btn btn-primary"><i class="fas fa-save mr-2"></i>{{ _('Save') }}</button>
+{% endset %}
+{{ page_header(
+    icon_class='fas fa-project-diagram',
+    title_text=_('Visual Builder'),
+    subtitle_text=workflow.name,
+    breadcrumbs=[{'text': _('Workflows'), 'url': url_for('workflows.list_workflows')}, {'text': workflow.name, 'url': url_for('workflows.view_workflow', workflow_id=workflow.id)}, {'text': _('Builder')}],
+    actions_html=actions
+) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-4" id="workflow-builder"
+     data-workflow-id="{{ workflow.id }}"
+     data-save-url="{{ url_for('workflows.visual_builder', workflow_id=workflow.id) }}"
+     data-trigger-type="{{ workflow.trigger_type or '' }}"
+     data-name="{{ workflow.name|e }}"
+     data-description="{{ (workflow.description or '')|e }}"
+     data-enabled="{{ '1' if workflow.enabled else '0' }}"
+     data-priority="{{ workflow.priority or 0 }}">
+    <aside class="lg:col-span-3 space-y-4">
+        <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4">
+            <h3 class="text-sm font-semibold uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('Trigger') }}</h3>
+            <div class="space-y-2" id="wb-triggers">
+                {% for t in trigger_types %}
+                <button type="button" class="wb-palette-item w-full text-left px-3 py-2 rounded-lg border border-border-light dark:border-border-dark hover:border-indigo-400 text-sm"
+                        data-kind="trigger" data-value="{{ t.value }}" data-label="{{ t.label }}">
+                    <i class="fas fa-bolt text-amber-500 mr-2"></i>{{ t.label }}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4">
+            <h3 class="text-sm font-semibold uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('Actions') }}</h3>
+            <div class="space-y-2" id="wb-actions">
+                {% for a in action_types %}
+                <button type="button" class="wb-palette-item w-full text-left px-3 py-2 rounded-lg border border-border-light dark:border-border-dark hover:border-emerald-400 text-sm"
+                        data-kind="action" data-value="{{ a.value }}" data-label="{{ a.label }}">
+                    <i class="fas fa-play text-emerald-500 mr-2"></i>{{ a.label }}
+                </button>
+                {% endfor %}
+            </div>
+            <button type="button" id="wb-add-condition" class="mt-3 w-full btn btn-secondary text-sm">
+                <i class="fas fa-filter mr-2"></i>{{ _('Add Condition') }}
+            </button>
+        </div>
+    </aside>
+
+    <div class="lg:col-span-9">
+        <div class="relative bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden" style="min-height: 520px;">
+            <svg id="wb-edges" class="absolute inset-0 w-full h-full pointer-events-none" style="z-index:1;"></svg>
+            <div id="wb-canvas" class="relative p-6" style="z-index:2; min-height:520px;"></div>
+            <p class="absolute bottom-3 left-4 text-xs text-text-muted-light dark:text-text-muted-dark z-10">
+                {{ _('Click a trigger, then add conditions and actions. Drag nodes to rearrange.') }}
+            </p>
+        </div>
+        <p id="wb-status" class="mt-2 text-sm text-text-muted-light dark:text-text-muted-dark"></p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script nonce="{{ csp_nonce() }}">
+(function () {
+    const root = document.getElementById('workflow-builder');
+    if (!root) return;
+
+    const initialConditions = {{ (workflow.trigger_conditions or [])|tojson }};
+    const initialActions = {{ (workflow.actions or [])|tojson }};
+    const triggerLabels = {
+        {% for t in trigger_types %}"{{ t.value }}": {{ t.label|tojson }}{% if not loop.last %},{% endif %}{% endfor %}
+    };
+    const actionLabels = {
+        {% for a in action_types %}"{{ a.value }}": {{ a.label|tojson }}{% if not loop.last %},{% endif %}{% endfor %}
+    };
+
+    const state = {
+        triggerType: root.dataset.triggerType || '',
+        conditions: Array.isArray(initialConditions) ? initialConditions.slice() : [],
+        actions: Array.isArray(initialActions) ? initialActions.slice() : [],
+        positions: {},
+    };
+
+    const canvas = document.getElementById('wb-canvas');
+    const edges = document.getElementById('wb-edges');
+    const statusEl = document.getElementById('wb-status');
+
+    function ensurePositions() {
+        const ids = [];
+        if (state.triggerType) ids.push('trigger');
+        state.conditions.forEach((_, i) => ids.push('cond-' + i));
+        state.actions.forEach((_, i) => ids.push('act-' + i));
+        ids.forEach((id, idx) => {
+            if (!state.positions[id]) {
+                state.positions[id] = { x: 40 + (idx % 3) * 220, y: 40 + Math.floor(idx / 3) * 120 };
+            }
+        });
+    }
+
+    function nodeHtml(id, kind, title, subtitle) {
+        const pos = state.positions[id] || { x: 40, y: 40 };
+        const colors = {
+            trigger: 'border-amber-400 bg-amber-50 dark:bg-amber-950/40',
+            condition: 'border-indigo-400 bg-indigo-50 dark:bg-indigo-950/40',
+            action: 'border-emerald-400 bg-emerald-50 dark:bg-emerald-950/40',
+        };
+        return (
+            '<div class="wb-node absolute w-52 rounded-xl border-2 shadow-sm p-3 cursor-grab select-none ' +
+            (colors[kind] || '') +
+            '" data-id="' + id + '" style="left:' + pos.x + 'px;top:' + pos.y + 'px;">' +
+            '<div class="text-xs uppercase font-semibold opacity-70 mb-1">' + kind + '</div>' +
+            '<div class="font-medium text-sm truncate">' + title + '</div>' +
+            (subtitle ? '<div class="text-xs mt-1 opacity-70 truncate">' + subtitle + '</div>' : '') +
+            '<button type="button" class="wb-remove absolute -top-2 -right-2 w-6 h-6 rounded-full bg-rose-500 text-white text-xs" data-remove="' +
+            id +
+            '" title="Remove">&times;</button>' +
+            '</div>'
+        );
+    }
+
+    function render() {
+        ensurePositions();
+        let html = '';
+        if (state.triggerType) {
+            html += nodeHtml('trigger', 'trigger', triggerLabels[state.triggerType] || state.triggerType, state.triggerType);
+        }
+        state.conditions.forEach((c, i) => {
+            const label = (c.field || 'field') + ' ' + (c.operator || '==') + ' ' + (c.value != null ? c.value : '');
+            html += nodeHtml('cond-' + i, 'condition', label, 'condition');
+        });
+        state.actions.forEach((a, i) => {
+            const type = a.type || a.action || 'action';
+            html += nodeHtml('act-' + i, 'action', actionLabels[type] || type, type);
+        });
+        canvas.innerHTML = html;
+        drawEdges();
+        bindDrag();
+        canvas.querySelectorAll('[data-remove]').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                removeNode(btn.getAttribute('data-remove'));
+            });
+        });
+    }
+
+    function removeNode(id) {
+        if (id === 'trigger') {
+            state.triggerType = '';
+        } else if (id.startsWith('cond-')) {
+            state.conditions.splice(parseInt(id.split('-')[1], 10), 1);
+        } else if (id.startsWith('act-')) {
+            state.actions.splice(parseInt(id.split('-')[1], 10), 1);
+        }
+        delete state.positions[id];
+        render();
+    }
+
+    function drawEdges() {
+        const chain = [];
+        if (state.triggerType) chain.push('trigger');
+        state.conditions.forEach((_, i) => chain.push('cond-' + i));
+        state.actions.forEach((_, i) => chain.push('act-' + i));
+        const rect = canvas.parentElement.getBoundingClientRect();
+        edges.setAttribute('viewBox', '0 0 ' + rect.width + ' ' + Math.max(520, canvas.offsetHeight));
+        let paths = '';
+        for (let i = 0; i < chain.length - 1; i++) {
+            const a = state.positions[chain[i]];
+            const b = state.positions[chain[i + 1]];
+            if (!a || !b) continue;
+            const x1 = a.x + 104;
+            const y1 = a.y + 48;
+            const x2 = b.x + 104;
+            const y2 = b.y + 20;
+            const midY = (y1 + y2) / 2;
+            paths +=
+                '<path d="M' +
+                x1 +
+                ' ' +
+                y1 +
+                ' C' +
+                x1 +
+                ' ' +
+                midY +
+                ' ' +
+                x2 +
+                ' ' +
+                midY +
+                ' ' +
+                x2 +
+                ' ' +
+                y2 +
+                '" stroke="#6366f1" stroke-width="2" fill="none" marker-end="url(#arrow)"/>';
+        }
+        edges.innerHTML =
+            '<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#6366f1"/></marker></defs>' +
+            paths;
+    }
+
+    function bindDrag() {
+        canvas.querySelectorAll('.wb-node').forEach((node) => {
+            let startX, startY, origX, origY;
+            node.addEventListener('pointerdown', (e) => {
+                if (e.target.closest('[data-remove]')) return;
+                node.setPointerCapture(e.pointerId);
+                startX = e.clientX;
+                startY = e.clientY;
+                const id = node.dataset.id;
+                origX = state.positions[id].x;
+                origY = state.positions[id].y;
+                const onMove = (ev) => {
+                    state.positions[id] = {
+                        x: Math.max(0, origX + (ev.clientX - startX)),
+                        y: Math.max(0, origY + (ev.clientY - startY)),
+                    };
+                    node.style.left = state.positions[id].x + 'px';
+                    node.style.top = state.positions[id].y + 'px';
+                    drawEdges();
+                };
+                const onUp = () => {
+                    node.releasePointerCapture(e.pointerId);
+                    node.removeEventListener('pointermove', onMove);
+                    node.removeEventListener('pointerup', onUp);
+                };
+                node.addEventListener('pointermove', onMove);
+                node.addEventListener('pointerup', onUp);
+            });
+        });
+    }
+
+    document.querySelectorAll('.wb-palette-item').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const kind = btn.dataset.kind;
+            const value = btn.dataset.value;
+            if (kind === 'trigger') {
+                state.triggerType = value;
+            } else if (kind === 'action') {
+                state.actions.push({ type: value });
+            }
+            render();
+        });
+    });
+
+    document.getElementById('wb-add-condition').addEventListener('click', () => {
+        const field = window.prompt('{{ _("Condition field (e.g. status)") }}', 'status');
+        if (!field) return;
+        const operator = window.prompt('{{ _("Operator (==, !=, >, <)") }}', '==') || '==';
+        const value = window.prompt('{{ _("Value") }}', '') || '';
+        state.conditions.push({ field: field, operator: operator, value: value });
+        render();
+    });
+
+    document.getElementById('wb-save').addEventListener('click', async () => {
+        statusEl.textContent = '{{ _("Saving…") }}';
+        const payload = {
+            name: root.dataset.name,
+            description: root.dataset.description,
+            trigger_type: state.triggerType,
+            trigger_conditions: state.conditions,
+            actions: state.actions,
+            enabled: root.dataset.enabled === '1',
+            priority: parseInt(root.dataset.priority || '0', 10),
+        };
+        try {
+            const res = await fetch(root.dataset.saveUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (data.success) {
+                statusEl.textContent = '{{ _("Saved successfully") }}';
+            } else {
+                statusEl.textContent = '{{ _("Save failed") }}';
+            }
+        } catch (err) {
+            statusEl.textContent = '{{ _("Save failed") }}: ' + err.message;
+        }
+    });
+
+    window.addEventListener('resize', drawEdges);
+    render();
+})();
+</script>
+{% endblock %}

@@ -34,7 +34,7 @@ class DonationInteraction(db.Model):
     # Placement/source: header | banner | banner_bmc | banner_paypal | banner_key | dashboard_widget | donate_page_* | about_page | help_page
     source = db.Column(db.String(100), nullable=True)
 
-    # A/B test variant for experiments (e.g. control | key_first | cta_alt)
+    # A/B test variant for experiments (e.g. control | key_first | cta_alt | never_see)
     variant = db.Column(db.String(50), nullable=True)
 
     # User metrics at time of interaction (for smart prompts)

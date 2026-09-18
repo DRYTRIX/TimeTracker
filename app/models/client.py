@@ -40,6 +40,7 @@ class Client(db.Model):
     portal_issues_enabled = db.Column(
         db.Boolean, default=True, nullable=False
     )  # Enable/disable issue reporting in portal
+    custom_domain = db.Column(db.String(255), unique=True, nullable=True, index=True)  # e.g. portal.client.com
 
     # Custom fields for flexible data storage (e.g., debtor_number, ERP IDs, etc.)
     custom_fields = db.Column(db.JSON, nullable=True)

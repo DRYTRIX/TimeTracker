@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [{'text': _('Admin')}, {'text': _('Client feedback (NPS)')}] %}
+{{ page_header(icon_class='fas fa-star-half-alt', title_text=_('Client feedback (NPS)'), subtitle_text=_('Survey responses from clients'), breadcrumbs=breadcrumbs) }}
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow-md">
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Responses') }}</p>
+    <p class="text-2xl font-bold">{{ stats.responses }}</p>
+  </div>
+  <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow-md">
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Average score') }}</p>
+    <p class="text-2xl font-bold">{% if stats.avg_score is not none %}{{ '%.1f'|format(stats.avg_score) }}{% else %}—{% endif %}</p>
+  </div>
+  <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg shadow-md">
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('NPS') }}</p>
+    <p class="text-2xl font-bold">{% if stats.nps is not none %}{{ stats.nps }}{% else %}—{% endif %}</p>
+  </div>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md overflow-x-auto">
+  <table class="min-w-full text-sm">
+    <thead>
+      <tr class="text-left border-b border-border-light dark:border-border-dark">
+        <th class="py-2 pr-4">{{ _('Date') }}</th>
+        <th class="py-2 pr-4">{{ _('Client') }}</th>
+        <th class="py-2 pr-4">{{ _('Trigger') }}</th>
+        <th class="py-2 pr-4">{{ _('Score') }}</th>
+        <th class="py-2">{{ _('Comment') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in surveys %}
+      <tr class="border-b border-border-light dark:border-border-dark">
+        <td class="py-2 pr-4">{{ s.responded_at or s.sent_at }}</td>
+        <td class="py-2 pr-4">{{ s.client.name if s.client else s.client_id }}</td>
+        <td class="py-2 pr-4">{{ s.trigger }}</td>
+        <td class="py-2 pr-4">{% if s.nps_score is not none %}{{ s.nps_score }}{% else %}{{ _('Pending') }}{% endif %}</td>
+        <td class="py-2">{{ s.comment or '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="py-4 text-text-muted-light dark:text-text-muted-dark">{{ _('No surveys yet.') }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

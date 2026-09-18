@@ -22,6 +22,8 @@ from .client_notification import ClientNotification, ClientNotificationPreferenc
 from .client_portal_customization import ClientPortalCustomization
 from .client_portal_dashboard_preference import DEFAULT_WIDGET_ORDER, VALID_WIDGET_IDS, ClientPortalDashboardPreference
 from .client_prepaid_consumption import ClientPrepaidConsumption
+from .client_survey import ClientSurvey
+from .client_message import ClientMessage
 from .client_time_approval import ClientApprovalPolicy, ClientApprovalStatus, ClientTimeApproval
 from .comment import Comment
 from .comment_attachment import CommentAttachment
@@ -34,6 +36,7 @@ from .deal import Deal
 from .deal_activity import DealActivity
 from .deleted_username import DeletedUsername
 from .donation_interaction import DonationInteraction
+from .email_thread import EmailMessage, EmailThread
 from .expense import Expense
 from .expense_category import ExpenseCategory
 from .expense_gps import MileageTrack
@@ -62,6 +65,7 @@ from .mileage import Mileage
 from .payment_gateway import PaymentGateway, PaymentTransaction
 from .payments import CreditNote, InvoiceReminderSchedule, Payment
 from .payroll_export_template import PayrollExportTemplate
+from .payroll_sync_log import PayrollSyncLog
 from .per_diem import PerDiem, PerDiemRate
 from .permission import Permission, Role
 from .project import Project
@@ -145,6 +149,7 @@ __all__ = [
     "TaxRule",
     "Payment",
     "PayrollExportTemplate",
+    "PayrollSyncLog",
     "CreditNote",
     "InvoiceReminderSchedule",
     "SavedReportView",
@@ -159,6 +164,7 @@ __all__ = [
     "UserFavoriteProject",
     "UserClient",
     "ClientNote",
+    "ClientMessage",
     "WeeklyTimeGoal",
     "WorkdaySession",
     "WorkingTimeViolation",
@@ -267,4 +273,7 @@ __all__ = [
     "ClientNotification",
     "ClientNotificationPreferences",
     "NotificationType",
+    "ClientSurvey",
+    "EmailThread",
+    "EmailMessage",
 ]

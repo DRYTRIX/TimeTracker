@@ -524,6 +524,25 @@ def create_app(config=None):
 
         g.csp_nonce = secrets.token_urlsafe(16)
 
+    # White-label client portal: resolve Host to a Client.custom_domain when enabled.
+    @app.before_request
+    def _resolve_portal_custom_domain():
+        try:
+            from app.utils.portal_domain import bind_portal_client_to_g
+
+            bind_portal_client_to_g()
+        except Exception:
+            g.portal_client = None
+
+        # On a custom portal hostname, send bare "/" to the client portal.
+        try:
+            if getattr(g, "portal_client", None) is not None and request.path in ("/", ""):
+                from flask import redirect, url_for
+
+                return redirect(url_for("client_portal.login"))
+        except Exception:
+            pass
+
     # Remember the public base URL from real requests so background jobs can build
     # absolute links without SERVER_NAME (see app.utils.urls).
     @app.before_request

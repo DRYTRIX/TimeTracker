@@ -179,8 +179,9 @@ def register_context_processors(app):
 
                 user_stats = DonationInteraction.get_user_engagement_metrics(current_user.id)
                 support_banner_suppressed = DonationInteraction.has_recent_donation_click(current_user.id, days=30)
-                # Stable A/B variant per user for support CTA experiments (control | key_first | cta_alt)
-                support_ab_variant = ("control", "key_first", "cta_alt")[current_user.id % 3]
+                # Stable A/B variant per user for support CTA experiments
+                # (control | key_first | cta_alt | never_see)
+                support_ab_variant = ("control", "key_first", "cta_alt", "never_see")[current_user.id % 4]
             except Exception:
                 user_stats = {}
                 support_banner_suppressed = False

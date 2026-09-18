@@ -706,19 +706,41 @@
                     <div>
                         <label for="ai_provider" class="form-label">{{ _('Provider') }}</label>
                         <select name="ai_provider" id="ai_provider" class="form-input">
-                            <option value="ollama" {% if ai_config.provider == 'ollama' %}selected{% endif %}>Ollama / local OpenAI-compatible</option>
-                            <option value="openai_compatible" {% if ai_config.provider == 'openai_compatible' %}selected{% endif %}>Hosted OpenAI-compatible</option>
-                            <option value="orcarouter" {% if ai_config.provider == 'orcarouter' %}selected{% endif %}>OrcaRouter (hosted, OpenAI-compatible)</option>
+                            <option value="ollama" {% if ai_config.provider == 'ollama' %}selected{% endif %}>Ollama (local)</option>
+                            <option value="openai" {% if ai_config.provider == 'openai' %}selected{% endif %}>OpenAI</option>
+                            <option value="anthropic" {% if ai_config.provider == 'anthropic' %}selected{% endif %}>Anthropic</option>
+                            <option value="gemini" {% if ai_config.provider == 'gemini' %}selected{% endif %}>Google Gemini</option>
+                            <option value="orcarouter" {% if ai_config.provider == 'orcarouter' %}selected{% endif %}>OrcaRouter</option>
+                            <option value="openai_compatible" {% if ai_config.provider == 'openai_compatible' %}selected{% endif %}>{{ _('Custom OpenAI-compatible') }}</option>
                         </select>
                     </div>
                     <div>
                         <label for="ai_base_url" class="form-label">{{ _('Base URL') }}</label>
                         <input type="url" name="ai_base_url" id="ai_base_url" value="{{ settings.ai_base_url or ai_config.base_url }}" placeholder="http://127.0.0.1:11434" class="form-input">
-                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('For Ollama, this is the URL from the Flask server to Ollama. For OrcaRouter, use https://api.orcarouter.ai.') }}</p>
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Auto-filled for named providers. Override for self-hosted OrcaRouter or custom gateways.') }}</p>
+                        <details class="mt-2">
+                            <summary class="text-xs text-primary cursor-pointer">{{ _('Advanced: manual base URL') }}</summary>
+                            <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Leave blank to use the provider preset. For Ollama use http://127.0.0.1:11434; for OrcaRouter use https://api.orcarouter.ai.') }}</p>
+                        </details>
                     </div>
                     <div>
                         <label for="ai_model" class="form-label">{{ _('Model') }}</label>
-                        <input type="text" name="ai_model" id="ai_model" value="{{ settings.ai_model or ai_config.model }}" placeholder="llama3.1" class="form-input">
+                        <input type="text" name="ai_model" id="ai_model" list="ai_model_suggestions" value="{{ settings.ai_model or ai_config.model }}" placeholder="llama3.1" class="form-input">
+                        <datalist id="ai_model_suggestions">
+                            {% for m in ai_config.suggested_models or [] %}
+                            <option value="{{ m }}"></option>
+                            {% endfor %}
+                        </datalist>
+                    </div>
+                    <div id="ai_routing_strategy_wrap" class="{% if ai_config.provider != 'orcarouter' %}hidden{% endif %}">
+                        <label for="ai_routing_strategy" class="form-label">{{ _('OrcaRouter routing strategy') }}</label>
+                        <select name="ai_routing_strategy" id="ai_routing_strategy" class="form-input">
+                            <option value="" {% if not ai_config.routing_strategy %}selected{% endif %}>{{ _('Default') }}</option>
+                            <option value="cost" {% if ai_config.routing_strategy == 'cost' %}selected{% endif %}>{{ _('Cost') }}</option>
+                            <option value="quality" {% if ai_config.routing_strategy == 'quality' %}selected{% endif %}>{{ _('Quality') }}</option>
+                            <option value="balanced" {% if ai_config.routing_strategy == 'balanced' %}selected{% endif %}>{{ _('Balanced') }}</option>
+                        </select>
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Sent as x-routing-strategy when using OrcaRouter.') }}</p>
                     </div>
                     <div>
                         <label for="ai_api_key" class="form-label">{{ _('Hosted API key') }}</label>
@@ -757,6 +779,13 @@
             <div id="section-analytics">
                 <h2 class="text-lg font-semibold mb-4">{{ _('Privacy & Analytics') }}</h2>
                 <div class="space-y-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" name="portal_allowed_custom_domains" id="portal_allowed_custom_domains" {% if settings.portal_allowed_custom_domains %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <label for="portal_allowed_custom_domains" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">{{ _('Allow portal custom domains') }}</label>
+                    </div>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark ml-6">
+                        {{ _('When enabled, clients with a custom domain set will be resolved by Host header. See nginx/CUSTOM_DOMAINS.md for TLS setup.') }}
+                    </p>
                     <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
                         <strong>Minimal install telemetry (always on):</strong> Version, platform, and last-seen heartbeat so we can understand install footprint and distribution. No personal data.
                     </p>
@@ -1047,6 +1076,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 aiTestBtn.disabled = false;
             }
         });
+    }
+
+    const aiProviderSelect = document.getElementById('ai_provider');
+    const aiBaseUrlInput = document.getElementById('ai_base_url');
+    const aiModelInput = document.getElementById('ai_model');
+    const aiModelList = document.getElementById('ai_model_suggestions');
+    const aiRoutingWrap = document.getElementById('ai_routing_strategy_wrap');
+    const aiPresets = {
+        ollama: { base_url: 'http://127.0.0.1:11434', models: ['llama3.1', 'llama3.2', 'mistral', 'qwen2.5'], default_model: 'llama3.1' },
+        openai: { base_url: 'https://api.openai.com', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'], default_model: 'gpt-4o-mini' },
+        anthropic: { base_url: 'https://api.anthropic.com', models: ['claude-opus-4-5', 'claude-sonnet-4-5'], default_model: 'claude-sonnet-4-5' },
+        gemini: { base_url: 'https://generativelanguage.googleapis.com/v1beta/openai', models: ['gemini-2.0-flash', 'gemini-1.5-pro'], default_model: 'gemini-2.0-flash' },
+        orcarouter: { base_url: 'https://api.orcarouter.ai', models: ['auto'], default_model: 'auto' },
+        openai_compatible: { base_url: '', models: [], default_model: '' }
+    };
+    function applyAiProviderPreset(fillDefaults) {
+        if (!aiProviderSelect) return;
+        const preset = aiPresets[aiProviderSelect.value] || aiPresets.openai_compatible;
+        if (aiRoutingWrap) {
+            aiRoutingWrap.classList.toggle('hidden', aiProviderSelect.value !== 'orcarouter');
+        }
+        if (aiModelList) {
+            aiModelList.innerHTML = '';
+            (preset.models || []).forEach(function(m) {
+                const opt = document.createElement('option');
+                opt.value = m;
+                aiModelList.appendChild(opt);
+            });
+        }
+        if (!fillDefaults) return;
+        if (aiBaseUrlInput && preset.base_url) {
+            aiBaseUrlInput.value = preset.base_url;
+        }
+        if (aiModelInput && preset.default_model && (!aiModelInput.value || Object.values(aiPresets).some(function(p){ return (p.models||[]).includes(aiModelInput.value) || p.default_model === aiModelInput.value; }))) {
+            aiModelInput.value = preset.default_model;
+        }
+    }
+    if (aiProviderSelect) {
+        applyAiProviderPreset(false);
+        aiProviderSelect.addEventListener('change', function() { applyAiProviderPreset(true); });
     }
 });
 </script>

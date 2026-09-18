@@ -24,6 +24,63 @@ from app.utils.scope_filter import user_can_access_project
 
 logger = logging.getLogger(__name__)
 
+# Named provider presets. base_url is the host root; chat_path is appended for completions.
+PROVIDER_PRESETS: Dict[str, Dict[str, Any]] = {
+    "ollama": {
+        "base_url": "http://127.0.0.1:11434",
+        "requires_key": False,
+        "default_model": "llama3.1",
+        "suggested_models": ["llama3.1", "llama3.2", "mistral", "qwen2.5"],
+        "chat_path": "/v1/chat/completions",
+    },
+    "openai": {
+        "base_url": "https://api.openai.com",
+        "requires_key": True,
+        "default_model": "gpt-4o-mini",
+        "suggested_models": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"],
+        "chat_path": "/v1/chat/completions",
+    },
+    "anthropic": {
+        "base_url": "https://api.anthropic.com",
+        "requires_key": True,
+        "default_model": "claude-sonnet-4-5",
+        "suggested_models": ["claude-opus-4-5", "claude-sonnet-4-5"],
+        "chat_path": "/v1/chat/completions",
+    },
+    "gemini": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "requires_key": True,
+        "default_model": "gemini-2.0-flash",
+        "suggested_models": ["gemini-2.0-flash", "gemini-1.5-pro"],
+        "chat_path": "/chat/completions",
+    },
+    "orcarouter": {
+        "base_url": "https://api.orcarouter.ai",
+        "requires_key": True,
+        "default_model": "auto",
+        "suggested_models": ["auto"],
+        "chat_path": "/v1/chat/completions",
+    },
+    "openai_compatible": {
+        "base_url": "",
+        "requires_key": True,
+        "default_model": "",
+        "suggested_models": [],
+        "chat_path": "/v1/chat/completions",
+    },
+    "custom": {
+        "base_url": "",
+        "requires_key": True,
+        "default_model": "",
+        "suggested_models": [],
+        "chat_path": "/v1/chat/completions",
+    },
+}
+
+NAMED_PROVIDERS = set(PROVIDER_PRESETS.keys())
+HOSTED_PROVIDERS = {name for name, preset in PROVIDER_PRESETS.items() if preset.get("requires_key")}
+ROUTING_STRATEGIES = {"cost", "quality", "balanced"}
+
 
 class AIServiceError(Exception):
     """User-facing AI service error with a stable code."""
@@ -46,12 +103,14 @@ class AIProviderConfig:
     timeout_seconds: int
     context_limit: int
     system_prompt: str
+    routing_strategy: str = ""
 
     @classmethod
     def from_settings(cls) -> "AIProviderConfig":
         # Runtime use: include decrypted API key if configured.
         config = Settings.get_settings().get_ai_config(include_secrets=True)
-        return cls(**config)
+        known = set(cls.__dataclass_fields__)
+        return cls(**{k: v for k, v in config.items() if k in known})
 
     def public_dict(self) -> Dict[str, Any]:
         return {
@@ -62,7 +121,19 @@ class AIProviderConfig:
             "api_key_set": self.api_key_set,
             "timeout_seconds": self.timeout_seconds,
             "context_limit": self.context_limit,
+            "routing_strategy": self.routing_strategy or None,
         }
+
+    def chat_completions_url(self) -> str:
+        preset = PROVIDER_PRESETS.get(self.provider) or PROVIDER_PRESETS["openai_compatible"]
+        path = preset.get("chat_path") or "/v1/chat/completions"
+        base = (self.base_url or "").rstrip("/")
+        if not base:
+            raise AIServiceError("AI helper is not fully configured.", "ai_not_configured", 400)
+        # Avoid doubling /v1 when the stored base URL already includes it.
+        if path.startswith("/v1/") and base.endswith("/v1"):
+            path = path[len("/v1") :]
+        return f"{base}{path}"
 
 
 class LLMService:
@@ -80,7 +151,8 @@ class LLMService:
             raise AIServiceError("AI helper is disabled.", "ai_disabled", 503)
         if not self.config.base_url or not self.config.model:
             raise AIServiceError("AI helper is not fully configured.", "ai_not_configured", 400)
-        if self.config.provider in ("openai_compatible", "orcarouter") and not self.config.api_key:
+        provider = self.config.provider
+        if provider in HOSTED_PROVIDERS and not self.config.api_key:
             raise AIServiceError("Hosted AI provider requires an API key.", "ai_missing_api_key", 400)
 
     def test_connection(self) -> Dict[str, Any]:
@@ -184,10 +256,15 @@ class LLMService:
         raise AIServiceError("Unsupported AI action.", "unsupported_action", 400)
 
     def _chat_completion(self, messages: List[Dict[str, str]], max_tokens: int = 700) -> Dict[str, Any]:
-        url = f"{self.config.base_url.rstrip('/')}/v1/chat/completions"
+        url = self.config.chat_completions_url()
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
-        if self.config.provider in ("openai_compatible", "orcarouter") and self.config.api_key:
+        if self.config.provider in HOSTED_PROVIDERS and self.config.api_key:
             headers["Authorization"] = f"Bearer {self.config.api_key}"
+        if self.config.provider == "orcarouter" and self.config.routing_strategy in ROUTING_STRATEGIES:
+            headers["x-routing-strategy"] = self.config.routing_strategy
+        if self.config.provider == "anthropic" and self.config.api_key:
+            # Anthropic OpenAI-compatible gateways often still want the Anthropic version header.
+            headers.setdefault("anthropic-version", "2023-06-01")
         payload = {
             "model": self.config.model,
             "messages": messages,

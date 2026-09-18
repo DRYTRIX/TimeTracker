@@ -559,6 +559,14 @@ def view_client(client_id):
     except Exception as e:
         current_app.logger.warning("Could not load unbilled invoice preview for client %s: %s", client_id, e)
 
+    email_threads = []
+    try:
+        from app.services.email_sync_service import EmailSyncService
+
+        email_threads = EmailSyncService().threads_for_client(client_id)
+    except Exception as e:
+        current_app.logger.debug("Could not load email threads for client %s: %s", client_id, e)
+
     return render_template(
         "clients/view.html",
         client=client,
@@ -572,6 +580,7 @@ def view_client(client_id):
         custom_field_definitions_by_key=custom_field_definitions_by_key,
         can_invoice_unbilled_time=can_invoice_unbilled_time,
         unbilled_invoice_preview=unbilled_invoice_preview,
+        email_threads=email_threads,
     )
 
 
@@ -709,6 +718,20 @@ def edit_client(client_id):
         client.prepaid_reset_day = prepaid_reset_day
         client.portal_enabled = portal_enabled
         client.portal_issues_enabled = portal_issues_enabled if portal_enabled else False
+        custom_domain = (request.form.get("custom_domain") or "").strip().lower()
+        if custom_domain:
+            # Normalize: strip scheme and path
+            custom_domain = custom_domain.replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
+            existing_domain = Client.query.filter(Client.custom_domain == custom_domain, Client.id != client.id).first()
+            if existing_domain:
+                flash(_("That custom domain is already used by another client."), "error")
+                custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+                return render_template(
+                    "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
+                )
+            client.custom_domain = custom_domain
+        else:
+            client.custom_domain = None
         client.custom_fields = custom_fields if custom_fields else None
 
         # Update portal credentials
@@ -1448,3 +1471,75 @@ def delete_client_attachment(attachment_id):
 
     flash(_("Attachment deleted successfully"), "success")
     return redirect(url_for("clients.view_client", client_id=client_id))
+
+
+@clients_bp.route("/clients/<int:client_id>/messages")
+@login_required
+@admin_or_permission_required("view_clients", "view_all_clients", "view_own_clients")
+def client_messages(client_id):
+    """Team-side communication hub for a client."""
+    from app.services.client_message_service import ClientMessageService
+    from app.utils.scope_filter import user_can_access_client
+
+    client = Client.query.get_or_404(client_id)
+    if not user_can_access_client(current_user, client_id):
+        abort(403)
+
+    service = ClientMessageService()
+    messages = service.list_messages(client_id)
+    service.mark_thread_read(client_id, for_sender_type="team")
+    unread = service.unread_count(client_id, for_sender_type="team")
+    return render_template(
+        "clients/messages.html",
+        client=client,
+        messages=messages,
+        unread_count=unread,
+    )
+
+
+@clients_bp.route("/clients/<int:client_id>/messages", methods=["POST"])
+@login_required
+@admin_or_permission_required("edit_clients", "edit_all_clients", "edit_own_clients")
+def send_client_message(client_id):
+    """Send a team message to the client hub."""
+    from app.services.client_message_service import ClientMessageService
+    from app.utils.scope_filter import user_can_access_client
+
+    client = Client.query.get_or_404(client_id)
+    if not user_can_access_client(current_user, client_id):
+        abort(403)
+
+    body = request.form.get("body") or (request.get_json(silent=True) or {}).get("body")
+    service = ClientMessageService()
+    msg = service.send(
+        client_id,
+        sender_type="team",
+        body=body or "",
+        sender_id=current_user.id,
+        sender_name=current_user.username,
+    )
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        if not msg:
+            return jsonify({"success": False, "error": "empty"}), 400
+        return jsonify({"success": True, "message": msg.to_dict()})
+    if not msg:
+        flash(_("Message cannot be empty."), "error")
+    else:
+        flash(_("Message sent."), "success")
+    return redirect(url_for("clients.client_messages", client_id=client_id))
+
+
+@clients_bp.route("/clients/<int:client_id>/messages/poll")
+@login_required
+@admin_or_permission_required("view_clients", "view_all_clients", "view_own_clients")
+def poll_client_messages(client_id):
+    """JSON poll for new messages."""
+    from app.services.client_message_service import ClientMessageService
+    from app.utils.scope_filter import user_can_access_client
+
+    if not user_can_access_client(current_user, client_id):
+        abort(403)
+    after_id = request.args.get("after_id", type=int)
+    service = ClientMessageService()
+    messages = service.list_messages(client_id, after_id=after_id)
+    return jsonify({"messages": [m.to_dict() for m in messages]})

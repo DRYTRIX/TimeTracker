@@ -30,9 +30,9 @@
             <div class="hidden md:flex items-center justify-center p-10 bg-background-light dark:bg-background-dark">
                 <div class="text-center">
                     <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="logo" class="w-24 h-24 mx-auto">
-                    <h1 class="text-3xl font-bold mt-4 text-primary">TimeTracker</h1>
+                    <h1 class="text-3xl font-bold mt-4 text-primary">{% if portal_client %}{{ portal_client.name }}{% else %}TimeTracker{% endif %}</h1>
                     <p class="mt-2 text-text-muted-light dark:text-text-muted-dark">{{ _('Client Portal') }}</p>
-                    <p class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('View your projects and invoices') }}</p>
+                    <p class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">{% if portal_client %}{{ _('Sign in to your dedicated portal') }}{% else %}{{ _('View your projects and invoices') }}{% endif %}</p>
                 </div>
             </div>
             <div class="p-6 sm:p-8">
@@ -51,7 +51,7 @@
                     <label for="username" class="block mb-2 text-sm font-medium">{{ _('Username') }}</label>
                     <div class="relative">
                         <i class="fa-solid fa-user absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark"></i>
-                        <input type="text" name="username" id="username" autocomplete="username" class="w-full pl-10 bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg px-3 py-2.5 text-base text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" placeholder="{{ _('portal_username') }}" required>
+                        <input type="text" name="username" id="username" autocomplete="username" value="{{ prefill_username or '' }}" class="w-full pl-10 bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg px-3 py-2.5 text-base text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" placeholder="{{ _('portal_username') }}" required>
                     </div>
 
                     <label for="password" class="block mb-2 text-sm font-medium mt-4">{{ _('Password') }}</label>

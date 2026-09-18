@@ -281,6 +281,9 @@
                         <span class="badge-count">{{ unread_notifications_count }}</span>
                         {% endif %}
                     </a>
+                    <a href="{{ url_for('client_portal.portal_messages') }}" class="client-portal-nav-item {% if current_endpoint in ['client_portal.portal_messages', 'client_portal.portal_send_message'] %}active{% endif %}">
+                        <i class="fas fa-comments mr-2"></i>{{ _('Messages') }}
+                    </a>
                     <div class="relative group">
                         <button class="client-portal-nav-item">
                             <i class="fas fa-ellipsis-h mr-2"></i>{{ _('More') }}
@@ -369,6 +372,9 @@
                 <span class="badge-count ml-auto">{{ unread_notifications_count }}</span>
                 {% endif %}
             </a>
+            <a href="{{ url_for('client_portal.portal_messages') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg transition-all duration-200 {% if current_endpoint in ['client_portal.portal_messages', 'client_portal.portal_send_message'] %}bg-primary/15 text-primary font-semibold shadow-sm{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark hover:translate-x-1{% endif %}">
+                <i class="fas fa-comments w-5 mr-3"></i>{{ _('Messages') }}
+            </a>
             <div class="border-t border-border-light dark:border-border-dark my-3"></div>
             <a href="{{ url_for('client_portal.quotes') }}" onclick="closeMobileMenu()" class="flex items-center px-5 py-3.5 rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition-all duration-200 hover:translate-x-1">
                 <i class="fas fa-file-signature w-5 mr-3"></i>{{ _('Quotes') }}
@@ -419,15 +425,42 @@
             if (typeof showToast === 'function' && data && data.title) {
                 showToast(data.title, data.message || '', 'info');
             }
+            // Soft-refresh dashboard counters when present
+            if (data && data.type) {
+                document.querySelectorAll('[data-portal-stat]').forEach(function(el) {
+                    if (el.getAttribute('data-portal-stat') === 'pending_refresh') {
+                        el.classList.add('ring-2', 'ring-primary');
+                    }
+                });
+                var badge = document.getElementById('portal-notification-badge');
+                if (badge) {
+                    var n = parseInt(badge.textContent || '0', 10) || 0;
+                    badge.textContent = String(n + 1);
+                    badge.classList.remove('hidden');
+                }
+            }
         });
         socket.on('client_approval_update', function(data) {
             if (typeof showToast === 'function' && data) {
                 showToast('{{ _("Approval update") }}', data.event === 'requested' ? '{{ _("A time entry approval was requested.") }}' : '{{ _("An approval was updated.") }}', 'info');
             }
         });
+        socket.on('portal_refresh', function(data) {
+            if (typeof showToast === 'function' && data && data.message) {
+                showToast(data.title || '{{ _("Update") }}', data.message, 'info');
+            }
+            // Reload lightweight stat widgets if on dashboard
+            if (window.location.pathname.indexOf('/client-portal') === 0 && !window.location.pathname.match(/\/(invoices|quotes|approvals|survey)\//)) {
+                var stats = document.getElementById('dashboard-widgets');
+                if (stats && data && data.reload) {
+                    window.setTimeout(function() { window.location.reload(); }, 800);
+                }
+            }
+        });
         window.addEventListener('beforeunload', function() {
             socket.emit('leave_client_room', {});
         });
+        window.portalSocket = socket;
     })();
     </script>
 </body>

@@ -40,6 +40,17 @@
                     <label for="sku" class="form-label">{{ _('SKU/Product Code') }}</label>
                     <input type="text" name="sku" id="sku" class="form-input">
                 </div>
+
+                <div class="md:col-span-2">
+                    <label for="stock_item_id" class="form-label">{{ _('Link stock item') }}</label>
+                    <select name="stock_item_id" id="stock_item_id" class="form-input">
+                        <option value="">{{ _('None') }}</option>
+                        {% for item in stock_items or [] %}
+                        <option value="{{ item.id }}">{{ item.sku }} — {{ item.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('When this good is invoiced and the invoice is sent/paid, linked stock is depleted.') }}</p>
+                </div>
                 
                 <div>
                     <label for="quantity" class="form-label">{{ _('Quantity') }} *</label>
