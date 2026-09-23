@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.17.1
+
+**Patch (5.17.1):** **Health probes exempt from rate limiting** — `/_health`, `/_ready`, and the API health endpoints no longer return 429 under frequent liveness checks, fixing Render restart loops and 502s. See [CHANGELOG.md](CHANGELOG.md#5171---2026-09-23).
+
 ### ✨ Highlights of v5.17.0
 
 **Minor (5.17.0):** **Factur-X / ZUGFeRD (#433)** — structured addresses, VAT categories, PDF/A-3 embed, and EN 16931 CII fixes. **Idle unanswered action (#722)** — admin choice of review vs auto-stop when Still working? expires. **Phase 4 gap roadmap** — GDPR erasure, weekly goals / recurring tasks / project templates API, estimates vs actuals report, multi-level timesheet approval, XRechnung helper, Mollie skeleton. **Phase 5 foundations** — OAuth app models, SCIM Users stub, AI summarize-entries, Teams bot stub, and design docs. **UI / hygiene** — shared confirm dialogs, empty states, command palette expansion, security rate limits, and dead-code cleanup. See [CHANGELOG.md](CHANGELOG.md#5170---2026-09-23).
