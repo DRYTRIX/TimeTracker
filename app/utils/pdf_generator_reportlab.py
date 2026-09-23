@@ -29,6 +29,7 @@ from reportlab.pdfgen import canvas
 from reportlab.platypus import Flowable, Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from app.models import Settings
+from app.utils.pdf_fonts import ensure_pdf_fonts_registered, resolve_font
 from app.utils.pdf_template_schema import (
     PAGE_SIZE_DIMENSIONS_MM,
     ElementType,
@@ -143,6 +144,9 @@ class ReportLabTemplateRenderer:
             )
         except Exception:
             pass  # Logging not available or not in request context
+
+        # Embed Liberation fonts so PDFs are PDF/A capable (no base-14 fonts)
+        ensure_pdf_fonts_registered()
 
         # Initialize styles
         self.styles = getSampleStyleSheet()
@@ -727,7 +731,7 @@ class ReportLabTemplateRenderer:
             color_obj = colors.HexColor("#000000")
         return ParagraphStyle(
             name=f"_TableCell_{id(self)}_{align}_{font_name}_{int(font_size)}",
-            fontName=font_name,
+            fontName=resolve_font(font_name),
             fontSize=font_size,
             leading=leading if leading is not None else font_size * 1.2,
             textColor=color_obj,
@@ -757,8 +761,8 @@ class ReportLabTemplateRenderer:
 
         header_text_color_hex = _normalize_color(style_config.get("headerTextColor", "#000000")) or "#000000"
         row_text_color_hex = _normalize_color(style_config.get("rowTextColor", "#000000")) or "#000000"
-        header_font = style_config.get("headerFont") or "Helvetica-Bold"
-        row_font = style_config.get("rowFont") or "Helvetica"
+        header_font = resolve_font(style_config.get("headerFont") or "Helvetica-Bold")
+        row_font = resolve_font(style_config.get("rowFont") or "Helvetica")
         try:
             header_font_size = float(style_config.get("headerFontSize", 12))
         except (TypeError, ValueError):
@@ -914,7 +918,7 @@ class ReportLabTemplateRenderer:
             parent=base_style,
             fontSize=style_config.get("size", base_style.fontSize),
             textColor=colors.HexColor(style_config.get("color", "#000000")),
-            fontName=style_config.get("font", base_style.fontName),
+            fontName=resolve_font(style_config.get("font", base_style.fontName)),
             alignment=self._get_alignment(style_config.get("align", "left")),
             spaceAfter=style_config.get("spaceAfter", base_style.spaceAfter),
         )
@@ -1143,7 +1147,7 @@ class ReportLabTemplateRenderer:
         page_num = canv.getPageNumber()
         text = f"Page {page_num}"
         canv.saveState()
-        canv.setFont("Helvetica", 9)
+        canv.setFont(resolve_font("Helvetica"), 9)
         canv.setFillColor(colors.HexColor("#666666"))
         # Ensure page number is within page boundaries
         page_num_x = min(doc.leftMargin + doc.width, page_width - 10)
@@ -1159,7 +1163,7 @@ class ReportLabTemplateRenderer:
         text = self._process_template_variables(text)
 
         style = element.get("style", {})
-        font = style.get("font", "Helvetica")
+        font = resolve_font(style.get("font", "Helvetica"))
         size = style.get("size", 10)
         color = style.get("color", "#000000")
         align = style.get("align", "left")

@@ -266,6 +266,11 @@ def create_client():
         email = request.form.get("email", "").strip()
         phone = sanitize_input(request.form.get("phone", "").strip(), max_length=50)
         address = sanitize_input(request.form.get("address", "").strip(), max_length=500)
+        street = sanitize_input(request.form.get("street", "").strip(), max_length=255)
+        postcode = sanitize_input(request.form.get("postcode", "").strip(), max_length=32)
+        city = sanitize_input(request.form.get("city", "").strip(), max_length=100)
+        country = (request.form.get("country", "") or "").strip().upper()[:2] or None
+        vat_id = sanitize_input(request.form.get("vat_id", "").strip(), max_length=50)
         default_hourly_rate = request.form.get("default_hourly_rate", "").strip()
         prepaid_hours_input = request.form.get("prepaid_hours_monthly", "").strip()
         prepaid_reset_day_input = request.form.get("prepaid_reset_day", "").strip()
@@ -372,6 +377,11 @@ def create_client():
             email=email,
             phone=phone,
             address=address,
+            street=street or None,
+            postcode=postcode or None,
+            city=city or None,
+            country=country,
+            vat_id=vat_id or None,
             default_hourly_rate=default_hourly_rate,
             prepaid_hours_monthly=prepaid_hours_monthly,
             prepaid_reset_day=prepaid_reset_day,
@@ -609,6 +619,11 @@ def edit_client(client_id):
         email = request.form.get("email", "").strip()
         phone = request.form.get("phone", "").strip()
         address = request.form.get("address", "").strip()
+        street = request.form.get("street", "").strip()
+        postcode = request.form.get("postcode", "").strip()
+        city = request.form.get("city", "").strip()
+        country = (request.form.get("country", "") or "").strip().upper()[:2] or None
+        vat_id = request.form.get("vat_id", "").strip()
         default_hourly_rate = request.form.get("default_hourly_rate", "").strip()
         prepaid_hours_input = request.form.get("prepaid_hours_monthly", "").strip()
         prepaid_reset_day_input = request.form.get("prepaid_reset_day", "").strip()
@@ -713,6 +728,11 @@ def edit_client(client_id):
         client.email = email
         client.phone = phone
         client.address = address
+        client.street = street or None
+        client.postcode = postcode or None
+        client.city = city or None
+        client.country = country
+        client.vat_id = vat_id or None
         client.default_hourly_rate = default_hourly_rate
         client.prepaid_hours_monthly = prepaid_hours_monthly
         client.prepaid_reset_day = prepaid_reset_day

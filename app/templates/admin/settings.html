@@ -370,15 +370,40 @@
                         <input type="text" name="company_website" id="company_website" value="{{ settings.company_website }}" class="form-input">
                     </div>
                     <div class="md:col-span-2">
-                        <label for="company_address" class="form-label">Company Address</label>
+                        <label for="company_address" class="form-label">Company Address (free text / fallback)</label>
                         <textarea name="company_address" id="company_address" rows="3" class="form-input">{{ settings.company_address }}</textarea>
+                    </div>
+                    <div>
+                        <label for="company_street" class="form-label">{{ _('Street') }}</label>
+                        <input type="text" name="company_street" id="company_street" value="{{ getattr(settings, 'company_street', '') or '' }}" class="form-input" placeholder="{{ _('Street and number') }}">
+                    </div>
+                    <div>
+                        <label for="company_postcode" class="form-label">{{ _('Postcode') }}</label>
+                        <input type="text" name="company_postcode" id="company_postcode" value="{{ getattr(settings, 'company_postcode', '') or '' }}" class="form-input">
+                    </div>
+                    <div>
+                        <label for="company_city" class="form-label">{{ _('City') }}</label>
+                        <input type="text" name="company_city" id="company_city" value="{{ getattr(settings, 'company_city', '') or '' }}" class="form-input">
+                    </div>
+                    <div>
+                        <label for="company_country" class="form-label">{{ _('Country (ISO 3166-1 alpha-2)') }}</label>
+                        <input type="text" name="company_country" id="company_country" value="{{ getattr(settings, 'company_country', '') or '' }}" class="form-input" maxlength="2" placeholder="AT">
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Required for Factur-X / ZUGFeRD (seller country BT-40).') }}</p>
                     </div>
                     <div>
                         <label for="company_tax_id" class="form-label">Tax ID (optional)</label>
                         <input type="text" name="company_tax_id" id="company_tax_id" value="{{ settings.company_tax_id }}" class="form-input">
                     </div>
                     <div>
-                        <label for="company_bank_info" class="form-label">Bank Information (optional)</label>
+                        <label for="company_iban" class="form-label">{{ _('IBAN') }}</label>
+                        <input type="text" name="company_iban" id="company_iban" value="{{ getattr(settings, 'company_iban', '') or '' }}" class="form-input" placeholder="AT00 0000 0000 0000 0000">
+                    </div>
+                    <div>
+                        <label for="company_bic" class="form-label">{{ _('BIC') }}</label>
+                        <input type="text" name="company_bic" id="company_bic" value="{{ getattr(settings, 'company_bic', '') or '' }}" class="form-input" placeholder="BKAUATWW">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="company_bank_info" class="form-label">Bank Information (optional, free text)</label>
                         <textarea name="company_bank_info" id="company_bank_info" rows="3" class="form-input">{{ settings.company_bank_info }}</textarea>
                     </div>
                 </div>
@@ -508,6 +533,37 @@
                     <div class="md:col-span-2">
                         <label for="invoices_verapdf_path" class="form-label">veraPDF executable path</label>
                         <input type="text" name="invoices_verapdf_path" id="invoices_verapdf_path" value="{{ getattr(settings, 'invoices_verapdf_path', '') or '' }}" class="form-input" placeholder="e.g. /usr/bin/verapdf or C:\verapdf\verapdf.exe">
+                    </div>
+
+                    <div>
+                        <label for="invoices_default_vat_category" class="form-label">{{ _('Default VAT category (Factur-X)') }}</label>
+                        <select name="invoices_default_vat_category" id="invoices_default_vat_category" class="form-input">
+                            {% set vat_cat = getattr(settings, 'invoices_default_vat_category', 'S') or 'S' %}
+                            <option value="S" {% if vat_cat == 'S' %}selected{% endif %}>S — Standard rate</option>
+                            <option value="Z" {% if vat_cat == 'Z' %}selected{% endif %}>Z — Zero rated</option>
+                            <option value="E" {% if vat_cat == 'E' %}selected{% endif %}>E — Exempt</option>
+                            <option value="AE" {% if vat_cat == 'AE' %}selected{% endif %}>AE — Reverse charge</option>
+                            <option value="K" {% if vat_cat == 'K' %}selected{% endif %}>K — Intra-Community</option>
+                            <option value="G" {% if vat_cat == 'G' %}selected{% endif %}>G — Export outside EU</option>
+                            <option value="O" {% if vat_cat == 'O' %}selected{% endif %}>O — Not subject to VAT</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="vat_exemption_preset" class="form-label">{{ _('Exemption preset') }}</label>
+                        <select id="vat_exemption_preset" class="form-input" onchange="applyVatExemptionPreset(this.value)">
+                            <option value="">{{ _('— Select preset —') }}</option>
+                            <option value="at_kleinunternehmer">AT Kleinunternehmer §6 Abs. 1 Z 27 UStG</option>
+                            <option value="de_kleinunternehmer">DE Kleinunternehmer §19 UStG</option>
+                            <option value="reverse_charge">Reverse charge (VATEX-EU-AE)</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="invoices_default_vat_exemption_reason" class="form-label">{{ _('Default VAT exemption reason') }}</label>
+                        <input type="text" name="invoices_default_vat_exemption_reason" id="invoices_default_vat_exemption_reason" value="{{ getattr(settings, 'invoices_default_vat_exemption_reason', '') or '' }}" class="form-input">
+                    </div>
+                    <div>
+                        <label for="invoices_default_vat_exemption_code" class="form-label">{{ _('Default VAT exemption code') }}</label>
+                        <input type="text" name="invoices_default_vat_exemption_code" id="invoices_default_vat_exemption_code" value="{{ getattr(settings, 'invoices_default_vat_exemption_code', '') or '' }}" class="form-input" placeholder="VATEX-EU-O">
                     </div>
 
                     <div>
@@ -1021,6 +1077,34 @@ document.addEventListener('DOMContentLoaded', function() {
         transportMode.addEventListener('change', togglePeppolTransport);
         togglePeppolTransport();
     }
+
+    window.applyVatExemptionPreset = function(preset) {
+        const presets = {
+            at_kleinunternehmer: {
+                category: 'E',
+                code: 'VATEX-EU-O',
+                reason: 'Kleinunternehmerregelung §6 Abs. 1 Z 27 UStG'
+            },
+            de_kleinunternehmer: {
+                category: 'E',
+                code: 'VATEX-EU-O',
+                reason: 'Steuerfreie Kleinunternehmerleistung gemäß §19 UStG'
+            },
+            reverse_charge: {
+                category: 'AE',
+                code: 'VATEX-EU-AE',
+                reason: 'Reverse charge'
+            }
+        };
+        const p = presets[preset];
+        if (!p) return;
+        const cat = document.getElementById('invoices_default_vat_category');
+        const code = document.getElementById('invoices_default_vat_exemption_code');
+        const reason = document.getElementById('invoices_default_vat_exemption_reason');
+        if (cat) cat.value = p.category;
+        if (code) code.value = p.code;
+        if (reason) reason.value = p.reason;
+    };
 
     const ldapTestBtn = document.getElementById('ldapTestConnectionBtn');
     const ldapTestResult = document.getElementById('ldapTestConnectionResult');

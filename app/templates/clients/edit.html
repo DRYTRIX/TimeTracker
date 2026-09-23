@@ -62,8 +62,30 @@
                         <input type="tel" id="phone" name="phone" value="{{ request.form.get('phone', client.phone or '') }}" placeholder="{{ _('+1 (555) 123-4567') }}" class="form-input">
                     </div>
                     <div>
-                        <label for="address" class="form-label">{{ _('Address') }}</label>
+                        <label for="address" class="form-label">{{ _('Address (free text / fallback)') }}</label>
                         <textarea id="address" name="address" rows="2" placeholder="{{ _('Client address') }}" class="form-input">{{ request.form.get('address', client.address or '') }}</textarea>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label for="street" class="form-label">{{ _('Street') }}</label>
+                        <input type="text" id="street" name="street" value="{{ request.form.get('street', client.street or '') }}" class="form-input" placeholder="{{ _('Street and number') }}">
+                    </div>
+                    <div>
+                        <label for="postcode" class="form-label">{{ _('Postcode') }}</label>
+                        <input type="text" id="postcode" name="postcode" value="{{ request.form.get('postcode', client.postcode or '') }}" class="form-input">
+                    </div>
+                    <div>
+                        <label for="city" class="form-label">{{ _('City') }}</label>
+                        <input type="text" id="city" name="city" value="{{ request.form.get('city', client.city or '') }}" class="form-input">
+                    </div>
+                    <div>
+                        <label for="country" class="form-label">{{ _('Country (ISO alpha-2)') }}</label>
+                        <input type="text" id="country" name="country" value="{{ request.form.get('country', client.country or '') }}" class="form-input" maxlength="2" placeholder="AT">
+                    </div>
+                    <div>
+                        <label for="vat_id" class="form-label">{{ _('VAT ID') }}</label>
+                        <input type="text" id="vat_id" name="vat_id" value="{{ request.form.get('vat_id', client.vat_id or '') }}" class="form-input" placeholder="ATU12345678">
                     </div>
                 </div>
 

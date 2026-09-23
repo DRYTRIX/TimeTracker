@@ -94,6 +94,13 @@ class Settings(db.Model):
     company_logo_filename = db.Column(db.String(255), default="", nullable=True)  # Changed from company_logo_path
     company_tax_id = db.Column(db.String(100), default="", nullable=True)
     company_bank_info = db.Column(db.Text, default="", nullable=True)
+    # Structured company address for e-invoicing (EN 16931 / Factur-X)
+    company_street = db.Column(db.String(255), default="", nullable=True)
+    company_postcode = db.Column(db.String(32), default="", nullable=True)
+    company_city = db.Column(db.String(100), default="", nullable=True)
+    company_country = db.Column(db.String(2), default="", nullable=True)  # ISO 3166-1 alpha-2
+    company_iban = db.Column(db.String(34), default="", nullable=True)
+    company_bic = db.Column(db.String(11), default="", nullable=True)
 
     # PDF template customization
     invoice_pdf_template_html = db.Column(db.Text, default="", nullable=True)
@@ -137,6 +144,10 @@ class Settings(db.Model):
     # Optional: run veraPDF after export and show summary (does not block export)
     invoices_validate_export = db.Column(db.Boolean, default=False, nullable=False)
     invoices_verapdf_path = db.Column(db.String(500), default="", nullable=True)
+    # Default VAT category for Factur-X / ZUGFeRD (S, Z, E, AE, K, G, O)
+    invoices_default_vat_category = db.Column(db.String(5), default="S", nullable=False)
+    invoices_default_vat_exemption_reason = db.Column(db.Text, default="", nullable=True)
+    invoices_default_vat_exemption_code = db.Column(db.String(50), default="", nullable=True)
 
     # Privacy and analytics settings
     allow_analytics = db.Column(db.Boolean, default=True, nullable=False)  # Controls system info sharing for analytics
@@ -302,6 +313,12 @@ class Settings(db.Model):
         self.company_logo_filename = kwargs.get("company_logo_filename", "")
         self.company_tax_id = kwargs.get("company_tax_id", "")
         self.company_bank_info = kwargs.get("company_bank_info", "")
+        self.company_street = kwargs.get("company_street", "")
+        self.company_postcode = kwargs.get("company_postcode", "")
+        self.company_city = kwargs.get("company_city", "")
+        self.company_country = kwargs.get("company_country", "")
+        self.company_iban = kwargs.get("company_iban", "")
+        self.company_bic = kwargs.get("company_bic", "")
 
         # PDF template customization
         self.invoice_pdf_template_html = kwargs.get("invoice_pdf_template_html", "")
@@ -339,6 +356,9 @@ class Settings(db.Model):
         self.invoices_pdfa3_compliant = kwargs.get("invoices_pdfa3_compliant", False)
         self.invoices_validate_export = kwargs.get("invoices_validate_export", False)
         self.invoices_verapdf_path = kwargs.get("invoices_verapdf_path", "")
+        self.invoices_default_vat_category = kwargs.get("invoices_default_vat_category", "S")
+        self.invoices_default_vat_exemption_reason = kwargs.get("invoices_default_vat_exemption_reason", "")
+        self.invoices_default_vat_exemption_code = kwargs.get("invoices_default_vat_exemption_code", "")
 
         # Kiosk mode defaults
         self.kiosk_mode_enabled = kwargs.get("kiosk_mode_enabled", False)
@@ -640,6 +660,12 @@ class Settings(db.Model):
             "has_logo": self.has_logo(),
             "company_tax_id": self.company_tax_id,
             "company_bank_info": self.company_bank_info,
+            "company_street": getattr(self, "company_street", "") or "",
+            "company_postcode": getattr(self, "company_postcode", "") or "",
+            "company_city": getattr(self, "company_city", "") or "",
+            "company_country": getattr(self, "company_country", "") or "",
+            "company_iban": getattr(self, "company_iban", "") or "",
+            "company_bic": getattr(self, "company_bic", "") or "",
             "invoice_prefix": self.invoice_prefix,
             "invoice_number_pattern": self.invoice_number_pattern,
             "invoice_start_number": self.invoice_start_number,
@@ -666,6 +692,15 @@ class Settings(db.Model):
             "invoices_pdfa3_compliant": getattr(self, "invoices_pdfa3_compliant", False),
             "invoices_validate_export": getattr(self, "invoices_validate_export", False),
             "invoices_verapdf_path": getattr(self, "invoices_verapdf_path", "") or "",
+            "invoices_default_vat_category": getattr(self, "invoices_default_vat_category", "S") or "S",
+            "invoices_default_vat_exemption_reason": getattr(
+                self, "invoices_default_vat_exemption_reason", ""
+            )
+            or "",
+            "invoices_default_vat_exemption_code": getattr(
+                self, "invoices_default_vat_exemption_code", ""
+            )
+            or "",
             "invoice_pdf_template_html": self.invoice_pdf_template_html,
             "invoice_pdf_template_css": self.invoice_pdf_template_css,
             "invoice_pdf_design_json": self.invoice_pdf_design_json,

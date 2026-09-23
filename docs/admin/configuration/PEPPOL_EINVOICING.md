@@ -152,25 +152,39 @@ When the setting is on **and** the client has Peppol endpoint details, the invoi
 In **Admin → Settings → Peppol e-Invoicing** you can enable **Embed Factur-X / ZUGFeRD CII XML in invoice PDFs (EN 16931)**. When this is on:
 
 - **Exported invoice PDFs** (Export PDF) and **invoice emails** (PDF attachment) use the same pipeline: when these settings are on, the attachment contains an embedded file `factur-x.xml` with a CII (Cross-Industry Invoice) XML conforming to the Factur-X EN 16931 profile.
-- The embedded XML is attached as an **Associated File** with relationship **Data** (primary structured invoice), MIME type **text/xml**, and Factur-X XMP metadata is written so validators recognize the document.
+- The embedded XML is attached as an **Associated File** with relationship **Data** (primary structured invoice), MIME type **text/xml**, catalog `/AF` entry, embedded-file `/Params` (ModDate/Size), and Factur-X XMP metadata including the **pdfaExtension** schema so validators recognize the document.
+- Invoice PDFs embed **Liberation** TrueType fonts (metric-compatible with Helvetica/Times/Courier) so PDF/A validators do not reject unembedded base-14 fonts.
 - The PDF remains human-readable; the embedded XML makes it machine-readable (e.g. for automated booking or archiving).
 - **Strict behaviour:** If embedding is enabled and the embed step fails (e.g. missing pikepdf, invalid PDF), the export is **aborted** and the user sees an error; the PDF is not returned without the XML.
+- **Pre-export checks** block PDF download when seller or buyer country is missing, or when VAT category AE is used without a buyer VAT ID.
 
-Party data (seller/buyer) is taken from Settings and the invoice's client (including endpoint fields and VAT). For full EN 16931 compliance, configure seller and client data including addresses and country codes.
+### Structured addresses and VAT category
+
+For EN 16931 compliance, configure:
+
+| Where | Fields |
+|---|---|
+| **Admin → Company Branding** | Street, postcode, city, country (ISO alpha-2), IBAN, BIC |
+| **Client** | Street, postcode, city, country, VAT ID |
+| **Admin → Peppol e-Invoicing** | Default VAT category (S/Z/E/AE/K/G/O) and exemption reason/code; presets for AT/DE Kleinunternehmer and reverse charge |
+| **Invoice** (optional) | Per-invoice VAT category / exemption override |
+
+Seller country falls back to Peppol Sender Country if Company Country is empty. Client country/VAT fall back to custom fields `peppol_country` / `vat_id` when structured fields are empty.
 
 **Validation:** Validate the embedded XML with [b2brouter](https://app.b2brouter.net/de/validation) or [portinvoice.com](https://www.portinvoice.com/). You can optionally enable **Run veraPDF after export** in Admin → Peppol e-Invoicing and set the veraPDF executable path to get a validation summary after each export (does not block the download).
 
 ### Factur-X and PDF/A-3
 
-You can enable **Normalize Factur-X PDFs to PDF/A-3b** in Admin → Peppol e-Invoicing. When this is on (and Factur-X embedding is enabled), exported and emailed PDFs are normalized to PDF/A-3b:
+You can enable **Normalize Factur-X PDFs to PDF/A-3b** in Admin → Peppol e-Invoicing. When this is on (and Factur-X embedding is enabled), embed and PDF/A-3 run in a **single pikepdf pass**:
 
 - XMP identification (`pdfaid:part=3`, `pdfaid:conformance=B`)
+- Factur-X `fx:` properties plus `pdfaExtension` schema declaration
 - Embedded sRGB ICC color profile (`DestOutputProfile`) using a bundled compact sRGB profile under `app/resources/icc/`, or override with environment variable **`INVOICE_SRGB_ICC_PATH`** pointing to a full `.icc` file on the server
 - GTS_PDFA1 output intent
 
 If conversion fails, export (or sending the invoice email) is aborted and the user sees an error.
 
-**veraPDF and fonts:** ReportLab invoice templates often use standard fonts without full PDF/A font embedding; veraPDF may still report failures until templates embed fonts or you use an external PDF/A conversion pipeline. **Ghostscript** and similar tools can help but may strip embedded XML if run after Factur-X embedding; prefer tools that preserve associated files, or re-embed `factur-x.xml` after conversion.
+**veraPDF:** With embedded Liberation fonts and PDF/A-3 metadata, exports should pass veraPDF PDF/A-3b checks for font embedding and identification. Set `INVOICE_VERAPDF_PATH` (or the Admin path field) and enable **Run veraPDF after export** to surface a summary. A smoke test runs automatically when that env var is set: `pytest tests/test_zugferd.py -k verapdf`.
 
 ### UBL validation
 
@@ -178,7 +192,7 @@ When exporting or sending UBL via Peppol, the generated XML is checked for struc
 
 ### CII validation
 
-When embedding Factur-X CII XML, the generated XML is checked for EN 16931 structural requirements (required elements, party data, line items, monetary totals).
+When embedding Factur-X CII XML, the generated XML is checked for EN 16931 structural requirements (required elements, party data, line items, monetary totals). Unit tests optionally validate against the official Factur-X XSD via the `factur-x` package (`requirements-test.txt`).
 
 ## Migrations
 
@@ -194,11 +208,12 @@ This applies (among others):
 - `113_add_invoice_buyer_reference` (adds `invoices.buyer_reference`)
 - `128_add_invoices_zugferd_pdf` (adds `settings.invoices_zugferd_pdf` for Factur-X PDF embedding)
 - `130_add_peppol_transport_mode_and_native` (adds `peppol_transport_mode`, `peppol_sml_url`, `peppol_native_cert_path`, `peppol_native_key_path`, `invoices_pdfa3_compliant`, `invoices_validate_export`, `invoices_verapdf_path`)
+- `196_add_einvoice_address_and_vat_category` (structured company/client addresses, IBAN/BIC, default and per-invoice VAT category)
 
 ## Testing
 
 With your virtual environment activated:
 
 ```bash
-pytest tests/test_peppol_service.py tests/test_peppol_identifiers.py tests/test_zugferd.py tests/test_pdfa3.py tests/test_invoice_pdf_postprocess.py tests/test_invoice_validators.py -v
+pytest tests/test_peppol_service.py tests/test_peppol_identifiers.py tests/test_zugferd.py tests/test_pdfa3.py tests/test_invoice_pdf_postprocess.py tests/test_invoice_validators.py tests/test_cii_invoice.py -v --override-ini="addopts="
 ```

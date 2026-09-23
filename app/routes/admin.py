@@ -1455,6 +1455,16 @@ def settings():
         settings_obj.company_website = request.form.get("company_website", "www.yourcompany.com")
         settings_obj.company_tax_id = request.form.get("company_tax_id", "")
         settings_obj.company_bank_info = request.form.get("company_bank_info", "")
+        try:
+            settings_obj.company_street = (request.form.get("company_street", "") or "").strip()
+            settings_obj.company_postcode = (request.form.get("company_postcode", "") or "").strip()
+            settings_obj.company_city = (request.form.get("company_city", "") or "").strip()
+            country = (request.form.get("company_country", "") or "").strip().upper()[:2]
+            settings_obj.company_country = country
+            settings_obj.company_iban = (request.form.get("company_iban", "") or "").strip().replace(" ", "")
+            settings_obj.company_bic = (request.form.get("company_bic", "") or "").strip().replace(" ", "")
+        except AttributeError:
+            current_app.logger.debug("Company structured address columns not available", exc_info=True)
 
         # Update invoice defaults
         invoice_prefix_form = sanitize_invoice_prefix(request.form.get("invoice_prefix", ""))
@@ -1566,6 +1576,16 @@ def settings():
             settings_obj.invoices_pdfa3_compliant = request.form.get("invoices_pdfa3_compliant") == "on"
             settings_obj.invoices_validate_export = request.form.get("invoices_validate_export") == "on"
             settings_obj.invoices_verapdf_path = (request.form.get("invoices_verapdf_path", "") or "").strip()
+            vat_cat = (request.form.get("invoices_default_vat_category", "S") or "S").strip().upper()
+            if vat_cat not in ("S", "Z", "E", "AE", "K", "G", "O", "L", "M"):
+                vat_cat = "S"
+            settings_obj.invoices_default_vat_category = vat_cat
+            settings_obj.invoices_default_vat_exemption_reason = (
+                request.form.get("invoices_default_vat_exemption_reason", "") or ""
+            ).strip()
+            settings_obj.invoices_default_vat_exemption_code = (
+                request.form.get("invoices_default_vat_exemption_code", "") or ""
+            ).strip()
         except AttributeError:
             # Peppol columns don't exist yet (migration not run)
             pass

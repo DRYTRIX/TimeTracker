@@ -9,7 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Factur-X / ZUGFeRD compliance (Discussion #433)** — Structured company and client addresses (street, postcode, city, country), IBAN/BIC, default and per-invoice VAT category (S/Z/E/AE/K/G/O) with AT/DE Kleinunternehmer and reverse-charge presets (migration **196**). Invoice PDFs embed Liberation TrueType fonts for PDF/A font compliance. Single-pass Factur-X embed + PDF/A-3b (catalog `/AF`, pdfaExtension XMP, OutputIntent). CII XML fixes for EN 16931 (element order, currencyID only on TaxTotalAmount, correct VAT exemptions, Peppol endpoint as URIID, payment means, prepaid amounts). Pre-export validation blocks missing seller/buyer country or AE without buyer VAT ID.
+
+
 - **Idle unanswered action (#722)** — Admin setting `idle_unanswered_action` (`review` default, or `auto_stop`) controls what happens when the "Still working?" grace window expires unanswered. Auto-stop credits last activity plus the idle timeout across the server sweep, web, browser extension, desktop, and mobile clients.
+
+
+### Documentation
+
+- **Factur-X / ZUGFeRD** — [PEPPOL_EINVOICING.md](docs/admin/configuration/PEPPOL_EINVOICING.md) updated for structured addresses, VAT categories, embedded fonts, single-pass PDF/A-3, and migration **196**.
 
 ## [5.16.0] - 2026-09-18
 
