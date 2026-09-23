@@ -225,6 +225,7 @@ def api_info():
 
 
 @api_v1_bp.route("/health", methods=["GET"])
+@limiter.exempt
 def health_check():
     """API health check endpoint
     ---

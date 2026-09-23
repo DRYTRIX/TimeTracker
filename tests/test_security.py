@@ -234,16 +234,16 @@ def test_path_traversal_in_file_download(authenticated_client):
 @pytest.mark.security
 @pytest.mark.slow
 def test_api_rate_limiting(client):
-    """Test API rate limiting (if implemented)."""
-    # Make many requests in quick succession
+    """Test that burst traffic against a rate-limited route does not crash the app.
+
+    Health probes are exempt from the default limit; use a normal public page.
+    """
     responses = []
     for i in range(100):
-        response = client.get("/_health")
+        response = client.get("/about")
         responses.append(response.status_code)
 
-    # If rate limiting is implemented, should get 429 responses
-    # If not implemented, all should be 200
-    # This test just checks the system doesn't crash
+    # May be 200 or 429 depending on limit state; must not error
     assert all(code in [200, 429] for code in responses)
 
 

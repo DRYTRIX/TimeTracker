@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.17.1] - 2026-09-23
+
+### Fixed
+
+- **Health probes rate-limited** — `/_health`, `/_ready`, `/api/health`, and `/api/v1/health` are now exempt from the default rate limit. Render probes `/_health` every 5s from a single IP, which exceeded the default limit, returned 429, and caused the instance to be marked unhealthy and restarted (surfacing as 502s).
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.17.1**; `VERSION` and desktop/browser-extension/mobile client versions aligned.
+
 ## [5.17.0] - 2026-09-23
 
 ### Added
