@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header %}
+{% from "components/ui.html" import page_header, empty_state %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -79,13 +79,12 @@
         </table>
     </div>
     {% else %}
-    <div class="text-center py-12">
-        <i class="fas fa-link text-4xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
-        <p class="text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('No link templates found.') }}</p>
-        <a href="{{ url_for('link_templates.create_link_template') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors inline-block">
+    {% set actions %}
+        <a href="{{ url_for('link_templates.create_link_template') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
             <i class="fas fa-plus mr-2"></i>{{ _('Create Link Template') }}
         </a>
-    </div>
+    {% endset %}
+    {{ empty_state('fas fa-link', 'No Link Templates Yet', 'Create URL templates to turn custom field values into quick links.', actions, type='no-data') }}
     {% endif %}
 </div>
 

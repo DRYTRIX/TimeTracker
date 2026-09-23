@@ -194,7 +194,7 @@
         <!-- OIDC Status -->
         <div class="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-lg">
             <div class="w-10 h-10 {% if oidc_configured %}bg-green-500/10 dark:bg-green-500/20{% else %}bg-gray-500/10 dark:bg-gray-500/20{% endif %} rounded-full flex items-center justify-center">
-                <i class="fas fa-shield-alt {% if oidc_configured %}text-green-500{% else %}text-gray-500{% endif %}"></i>
+                <i class="fas fa-shield-alt {% if oidc_configured %}text-green-500{% else %}text-gray-500 dark:text-gray-400{% endif %}"></i>
             </div>
             <div>
                 <div class="text-sm font-medium text-text-light dark:text-text-dark">{{ _('OIDC Authentication') }}</div>

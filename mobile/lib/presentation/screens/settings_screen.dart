@@ -336,7 +336,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ListTile(
             leading: const Icon(Icons.key),
             title: const Text('API Token'),
-            subtitle: Text(_hasToken ? 'Configured' : 'Not set'),
+            subtitle: Text(
+              _hasToken
+                  ? 'Configured'
+                  : 'Not set — required for OIDC-only servers (Admin → API tokens)',
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: _showEditApiTokenDialog,
           ),

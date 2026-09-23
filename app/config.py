@@ -51,6 +51,9 @@ class Config:
     ROUNDING_ENFORCE_GLOBAL = os.getenv("ROUNDING_ENFORCE_GLOBAL", "false").lower() == "true"
     SINGLE_ACTIVE_TIMER = os.getenv("SINGLE_ACTIVE_TIMER", "true").lower() == "true"
     IDLE_TIMEOUT_MINUTES = int(os.getenv("IDLE_TIMEOUT_MINUTES", 30))
+    # "review" (default) or "auto_stop" — what happens when "Still working?" is unanswered
+    _idle_unanswered = (os.getenv("IDLE_UNANSWERED_ACTION", "review") or "review").strip().lower()
+    IDLE_UNANSWERED_ACTION = _idle_unanswered if _idle_unanswered in ("review", "auto_stop") else "review"
 
     # Web Push (VAPID) — required for browser push notifications ("Still working?"
     # idle alerts with the tab closed, smart reminders). Generate e.g. with py_vapid.
@@ -277,7 +280,8 @@ class Config:
     PERF_QUERY_PROFILE = os.getenv("PERF_QUERY_PROFILE", "false").lower() == "true"
 
     # Rate limiting
-    RATELIMIT_DEFAULT = os.getenv("RATELIMIT_DEFAULT", "")  # e.g., "200 per day;50 per hour"
+    # Sensible default when unset; override via RATELIMIT_DEFAULT (semicolon/comma-separated).
+    RATELIMIT_DEFAULT = os.getenv("RATELIMIT_DEFAULT", "200 per day;50 per hour")
     RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
 
     # Redis configuration
@@ -349,6 +353,10 @@ class Config:
         "AI_SYSTEM_PROMPT",
         "You are TimeTracker's AI helper. Be concise, explain assumptions, and return suggested actions only when the user asks for changes.",
     ).strip()
+
+    # SCIM 2.0 user provisioning (stub routes; see docs/design/SAML_SCIM.md)
+    SCIM_ENABLED = os.getenv("SCIM_ENABLED", "false").lower() == "true"
+    SCIM_BEARER_TOKEN = os.getenv("SCIM_BEARER_TOKEN", "").strip()
 
     # Password reset
     PASSWORD_RESET_TOKEN_MAX_AGE_SECONDS = max(300, int(os.getenv("PASSWORD_RESET_TOKEN_MAX_AGE_SECONDS", "3600")))

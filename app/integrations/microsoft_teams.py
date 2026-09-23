@@ -202,6 +202,25 @@ class MicrosoftTeamsConnector(BaseConnector):
         except Exception as e:
             return {"success": False, "message": f"Connection test failed: {str(e)}"}
 
+    def handle_bot_command(self, activity: Dict[str, Any]) -> Dict[str, Any]:
+        """Stub for Teams bot slash-command parity with Slack ``/tt``.
+
+        See docs/design/TEAMS_BOT.md. Bot Framework JWT validation and subcommands are phase 2.
+        """
+        text = ""
+        if isinstance(activity, dict):
+            text = (activity.get("text") or "").strip()
+        return {
+            "status": 501,
+            "body": {
+                "type": "message",
+                "text": (
+                    "TimeTracker Teams bot commands are not enabled yet "
+                    f"(received: {text or 'empty'}). See docs/design/TEAMS_BOT.md."
+                ),
+            },
+        }
+
     def send_message(self, channel_id: str, message: str) -> Dict[str, Any]:
         """Send a message to a Teams channel."""
         token = self.get_access_token()

@@ -8,7 +8,7 @@
     <div class="row">
         <div class="col-12">
             {% set actions %}
-            <select id="timeRange" class="form-select form-select-sm" style="width: auto; font-size: 0.875rem;">
+            <select id="timeRange" class="form-input form-input-sm" style="width: auto; font-size: 0.875rem;">
                 <option value="7">7d</option>
                 <option value="30" selected>30d</option>
                 <option value="90">90d</option>
@@ -25,7 +25,7 @@
     <div class="row mb-3">
         <div class="col-6 mb-2">
             <div class="card text-center h-100">
-                <div class="card-body py-2">
+                <div class="p-6 py-2">
                     <i class="fas fa-clock fa-lg text-primary mb-1"></i>
                     <h6 class="text-primary mb-0" id="totalHours">-</h6>
                     <small class="text-muted">{{ _('Total Hours') }}</small>
@@ -34,7 +34,7 @@
         </div>
         <div class="col-6 mb-2">
             <div class="card text-center h-100">
-                <div class="card-body py-2">
+                <div class="p-6 py-2">
                     <i class="fas fa-dollar-sign fa-lg text-success mb-1"></i>
                     <h6 class="text-success mb-0" id="billableHours">-</h6>
                     <small class="text-muted">{{ _('Billable') }}</small>
@@ -43,7 +43,7 @@
         </div>
         <div class="col-6 mb-2">
             <div class="card text-center h-100">
-                <div class="card-body py-2">
+                <div class="p-6 py-2">
                     <i class="fas fa-project-diagram fa-lg text-info mb-1"></i>
                     <h6 class="text-info mb-0" id="activeProjects">-</h6>
                     <small class="text-muted">{{ _('Projects') }}</small>
@@ -52,7 +52,7 @@
         </div>
         <div class="col-6 mb-2">
             <div class="card text-center h-100">
-                <div class="card-body py-2">
+                <div class="p-6 py-2">
                     <i class="fas fa-chart-line fa-lg text-warning mb-1"></i>
                     <h6 class="text-warning mb-0" id="avgDailyHours">-</h6>
                     <small class="text-muted">{{ _('Daily Avg') }}</small>
@@ -70,7 +70,7 @@
                         <i class="fas fa-chart-area"></i> {{ _('Daily Hours') }}
                     </h6>
                 </div>
-                <div class="card-body">
+                <div class="p-6">
                     <div class="chart-container" style="position: relative; height: 250px; width: 100%;">
                         <canvas id="dailyHoursChart"></canvas>
                     </div>
@@ -85,7 +85,7 @@
                         <i class="fas fa-chart-pie"></i> {{ _('Billable vs Non-Billable') }}
                     </h6>
                 </div>
-                <div class="card-body">
+                <div class="p-6">
                     <div class="chart-container" style="position: relative; height: 250px; width: 100%;">
                         <canvas id="billableChart"></canvas>
                     </div>
@@ -100,7 +100,7 @@
                         <i class="fas fa-chart-bar"></i> {{ _('Top Projects') }}
                     </h6>
                 </div>
-                <div class="card-body">
+                <div class="p-6">
                     <div class="chart-container" style="position: relative; height: 250px; width: 100%;">
                         <canvas id="projectChart"></canvas>
                     </div>
@@ -115,7 +115,7 @@
                         <i class="fas fa-clock"></i> {{ _('Hours by Time of Day') }}
                     </h6>
                 </div>
-                <div class="card-body">
+                <div class="p-6">
                     <div class="chart-container" style="position: relative; height: 250px; width: 100%;">
                         <canvas id="hourlyChart"></canvas>
                     </div>
@@ -131,7 +131,7 @@
                         <i class="fas fa-users"></i> {{ _('User Performance') }}
                     </h6>
                 </div>
-                <div class="card-body">
+                <div class="p-6">
                     <div class="chart-container" style="position: relative; height: 250px;">
                         <canvas id="userChart"></canvas>
                     </div>

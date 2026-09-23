@@ -235,6 +235,96 @@ class LLMService:
     def context_preview(self, user: User) -> Dict[str, Any]:
         return self.context_preview_from_context(self.build_context(user))
 
+    def summarize_time_entries(
+        self,
+        user: User,
+        date_range: Dict[str, Any],
+        *,
+        target_user_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Summarize completed time entries for a user over a date range using the configured LLM."""
+        self.ensure_enabled()
+
+        subject = user
+        if target_user_id is not None and target_user_id != user.id:
+            if not user.is_admin:
+                raise AIServiceError("You cannot summarize another user's entries.", "forbidden", 403)
+            subject = User.query.get(target_user_id)
+            if not subject:
+                raise AIServiceError("User not found.", "not_found", 404)
+
+        start_dt, end_dt = self._parse_date_range(date_range)
+        entries = (
+            TimeEntry.query.options(joinedload(TimeEntry.project), joinedload(TimeEntry.task))
+            .filter(
+                TimeEntry.user_id == subject.id,
+                TimeEntry.end_time.isnot(None),
+                TimeEntry.start_time >= start_dt,
+                TimeEntry.start_time <= end_dt,
+            )
+            .order_by(TimeEntry.start_time.asc())
+            .limit(500)
+            .all()
+        )
+
+        total_seconds = sum(entry.duration_seconds or 0 for entry in entries)
+        compact_lines = []
+        for entry in entries:
+            project_name = entry.project.name if entry.project else "—"
+            task_name = entry.task.name if entry.task else ""
+            label = f"{project_name}" + (f" / {task_name}" if task_name else "")
+            hours = round((entry.duration_seconds or 0) / 3600, 2)
+            note = (entry.notes or "").strip()
+            compact_lines.append(
+                f"- {entry.start_time.date().isoformat()}: {label}, {hours}h"
+                + (f" — {note[:120]}" if note else "")
+            )
+
+        entries_text = "\n".join(compact_lines) if compact_lines else "(no completed entries in range)"
+        prompt = (
+            f"Summarize this user's tracked work from {start_dt.date().isoformat()} "
+            f"to {end_dt.date().isoformat()} for a weekly status report. "
+            "Group by project, note totals, and call out anything billable or notable. "
+            "Use concise bullet points.\n\n"
+            f"User: {subject.username}\n"
+            f"Entry count: {len(entries)}\n"
+            f"Total hours: {round(total_seconds / 3600, 2)}\n\n"
+            f"Entries:\n{entries_text}"
+        )
+        provider_response = self._chat_completion(
+            [
+                {
+                    "role": "system",
+                    "content": "You summarize timesheets for managers. Be factual; do not invent projects or hours.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=900,
+        )
+        summary = provider_response.get("content", "").strip()
+        return {
+            "summary": summary,
+            "user_id": subject.id,
+            "entry_count": len(entries),
+            "total_hours": round(total_seconds / 3600, 2),
+            "date_range": {"start": start_dt.isoformat(), "end": end_dt.isoformat()},
+            "provider": self.config.public_dict(),
+        }
+
+    def _parse_date_range(self, date_range: Dict[str, Any]) -> Tuple[datetime, datetime]:
+        if not date_range or not isinstance(date_range, dict):
+            raise AIServiceError("date_range with start and end is required.", "validation_error", 400)
+        start_dt = self._parse_datetime(date_range.get("start"))
+        end_dt = self._parse_datetime(date_range.get("end"))
+        if not start_dt or not end_dt:
+            raise AIServiceError("date_range.start and date_range.end must be ISO datetimes.", "validation_error", 400)
+        if end_dt < start_dt:
+            raise AIServiceError("date_range.end must be on or after date_range.start.", "validation_error", 400)
+        max_span = timedelta(days=366)
+        if end_dt - start_dt > max_span:
+            raise AIServiceError("date_range cannot exceed 366 days.", "validation_error", 400)
+        return start_dt, end_dt
+
     def context_preview_from_context(self, context: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "summary": context.get("summary", {}),

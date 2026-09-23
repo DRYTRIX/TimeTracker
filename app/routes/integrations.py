@@ -10,7 +10,7 @@ from flask import Blueprint, flash, jsonify, redirect, render_template, request,
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
 
-from app import db
+from app import csrf, db
 from app.models import Integration, IntegrationCredential
 from app.services.integration_service import IntegrationService
 from app.utils.db import safe_commit
@@ -1345,8 +1345,14 @@ def activitywatch_setup():
 
 
 @integrations_bp.route("/integrations/<provider>/webhook", methods=["POST"])
+@csrf.exempt
 def integration_webhook(provider):
-    """Handle incoming webhooks from integration providers."""
+    """Handle incoming webhooks from integration providers.
+
+    CSRF-exempt (machine-to-machine). Authentication relies on each
+    connector's signature verification inside ``handle_webhook``. Prefer
+    the newer ``/api/integrations/<provider>/webhook`` routes when available.
+    """
     service = IntegrationService()
 
     # Check if provider is available

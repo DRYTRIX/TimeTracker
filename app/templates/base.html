@@ -125,6 +125,7 @@
 
         {% if current_user.is_authenticated %}
         <meta name="idle-timeout-minutes" content="{{ settings.idle_timeout_minutes if settings else 30 }}">
+        <meta name="idle-unanswered-action" content="{{ settings.idle_unanswered_action if settings and settings.idle_unanswered_action else 'review' }}">
         <meta name="vapid-public-key" content="{{ config.VAPID_PUBLIC_KEY if config.VAPID_PUBLIC_KEY else '' }}">
         <meta name="long-entry-threshold-hours" content="8">
         {% endif %}
@@ -245,6 +246,9 @@
     <script src="{{ url_for('static', filename='vendor/animejs/anime.min.js') }}"></script>
     <script src="{{ url_for('static', filename='vendor/flatpickr/flatpickr.min.js') }}"></script>
     <script src="{{ asset_url('core-a1') }}"></script>
+    {# Source fallbacks when dist bundles are not rebuilt yet (confirm/unsaved live in core-a1 after build). #}
+    <script src="{{ static_url('js/confirm-dialog.js') }}"></script>
+    <script src="{{ static_url('js/unsaved-changes.js') }}"></script>
     {% if current_user.is_authenticated and support_ui_json %}
     <script src="{{ asset_url('core-support') }}"></script>
     {% endif %}
@@ -296,6 +300,18 @@
                 // flagged for review — show the review banner in any open tab.
                 socket.on('timer_needs_review', function(data){
                     try { window.__ttShowNeedsReview && window.__ttShowNeedsReview(); } catch (e) {}
+                });
+                // Server auto-stopped due to unanswered idle prompt (auto_stop mode).
+                socket.on('timer_stopped', function(data){
+                    try {
+                        if (data && data.reason === 'idle_auto_stop') {
+                            if (window.__ttOnIdleAutoStop) window.__ttOnIdleAutoStop();
+                            var msg = (data && data.message) || (window.i18n && window.i18n.messages && window.i18n.messages.timerStoppedInactivity) || 'Timer stopped due to inactivity';
+                            if (window.toastManager && window.toastManager.warning) {
+                                window.toastManager.warning(msg, '', 5000);
+                            }
+                        }
+                    } catch (e) {}
                 });
             } catch (e) {
                 console.error('Mention socket init failed', e);
@@ -998,65 +1014,7 @@
     <script src="{{ asset_url('core-e') }}"></script>
     
     <script nonce="{{ csp_nonce() }}">
-        // Global helpers for bulk menus and confirmation using custom modal (no native confirm)
-        window.showConfirm = function(message, opts){
-            try {
-                const options = Object.assign({
-                    title: '',
-                    confirmText: 'Confirm',
-                    cancelText: 'Cancel',
-                    variant: 'primary' // 'primary' | 'danger' | 'warning'
-                }, opts || {});
-                return new Promise((resolve) => {
-                    // Build overlay
-                    const overlay = document.createElement('div');
-                    overlay.className = 'fixed inset-0 z-[2000] flex items-center justify-center';
-                    overlay.innerHTML = `
-                        <div class="absolute inset-0 bg-black/50" data-close></div>
-                        <div class="relative bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-xl w-full max-w-md mx-4">
-                            <div class="p-6">
-                                <div class="flex items-start gap-3">
-                                    <div class="w-12 h-12 rounded-full ${options.variant==='danger' ? 'bg-rose-100 dark:bg-rose-900/30' : (options.variant==='warning' ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-sky-100 dark:bg-sky-900/30')} flex items-center justify-center flex-shrink-0">
-                                        <i class="fas fa-exclamation-triangle ${options.variant==='danger' ? 'text-rose-600 dark:text-rose-400' : (options.variant==='warning' ? 'text-amber-600 dark:text-amber-400' : 'text-sky-600 dark:text-sky-400')}"></i>
-                                    </div>
-                                    <div class="flex-1">
-                                        ${options.title ? `<h3 class="text-lg font-semibold mb-1">${options.title}</h3>` : ''}
-                                        <p class="text-sm">${message || ''}</p>
-                                    </div>
-                                </div>
-                                <div class="mt-6 flex justify-end gap-3">
-                                    <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg" data-cancel>${options.cancelText}</button>
-                                    <button type="button" class="px-4 py-2 ${options.variant==='danger' ? 'bg-rose-600 hover:bg-rose-700' : (options.variant==='warning' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-primary hover:bg-primary/90')} text-white rounded-lg" data-confirm>${options.confirmText}</button>
-                                </div>
-                            </div>
-                        </div>`;
-
-                    function cleanup(result){
-                        try { document.body.removeChild(overlay); } catch(_) {}
-                        resolve(result);
-                    }
-
-                    overlay.addEventListener('click', (e) => {
-                        if (e.target.hasAttribute('data-close')) cleanup(false);
-                        if (e.target.hasAttribute('data-cancel')) cleanup(false);
-                        if (e.target.hasAttribute('data-confirm')) cleanup(true);
-                    });
-                    document.addEventListener('keydown', function onKey(e){
-                        if (e.key === 'Escape'){ cleanup(false); document.removeEventListener('keydown', onKey); }
-                        if (e.key === 'Enter'){ cleanup(true); document.removeEventListener('keydown', onKey); }
-                    });
-                    document.body.appendChild(overlay);
-                    // Focus confirm button
-                    setTimeout(() => { try { overlay.querySelector('[data-confirm]').focus(); } catch(_) {} }, 0);
-                });
-            } catch(_) {
-                // Absolute fallback if anything goes wrong
-                try { return Promise.resolve(window.confirm(message)); } catch(__) { return Promise.resolve(false); }
-            }
-        };
-        window.showAlert = window.showAlert || function(message){
-            try { window.alert(message); } catch(_) {}
-        };
+        // ttConfirm / ttAlert loaded from confirm-dialog.js (core-a1 bundle).
         function closeAllMenus(){
             try { document.querySelectorAll('.bulk-menu').forEach(m => m.classList.add('hidden')); } catch(_) {}
         }

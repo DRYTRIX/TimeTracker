@@ -19,7 +19,7 @@
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
-    <form method="POST" action="{{ url_for('quotes.edit_quote', quote_id=quote.id) }}" novalidate id="quote-form">
+    <form method="POST" action="{{ url_for('quotes.edit_quote', quote_id=quote.id) }}" novalidate id="quote-form" data-unsaved-guard>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <!-- Basic Information Section -->
@@ -265,7 +265,7 @@
                 </div>
                 <div class="min-w-0">
                     <label for="valid_until" class="form-label">{{ _('Valid Until') }}</label>
-                    <input type="date" id="valid_until" name="valid_until" value="{{ quote.valid_until.strftime('%Y-%m-%d') if quote.valid_until else '' }}" class="form-input">
+                    <input type="date" id="valid_until" name="valid_until" value="{{ quote.valid_until.strftime('%Y-%m-%d') if quote.valid_until else '' }}" class="form-input user-date-input">
                 </div>
             </div>
         </div>

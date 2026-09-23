@@ -35,8 +35,8 @@ faker==22.0.0  # Fake data generation
 requests-mock==1.11.0  # Mock HTTP requests
 responses==0.24.1  # Mock HTTP responses
 
-# Performance testing
-pytest-benchmark==4.0.0  # Performance benchmarking
+# Optional Factur-X XSD validation (Akretion factur-x)
+factur-x>=3.0
 
 # Database testing
 sqlalchemy-utils==0.41.1  # Database utilities for testing

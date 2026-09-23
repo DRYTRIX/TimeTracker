@@ -4,9 +4,9 @@
  * Polls powerMonitor.getSystemIdleTime() every 60s. When an active timer is
  * running and the OS idle time exceeds idle_timeout_minutes, shows a
  * "Still working?" notification and notifies the renderer. If the 5-minute
- * grace window expires unanswered, the timer KEEPS RUNNING and is flagged
- * for review (server sets idle_flagged_at) — recorded time is never
- * silently truncated.
+ * grace window expires unanswered:
+ * - review (default): the timer KEEPS RUNNING and is flagged for review
+ * - auto_stop: stop credited to last_active + idle_timeout (Issue #722)
  */
 
 const { powerMonitor, Notification, net } = require('electron');
@@ -21,12 +21,18 @@ function clampIdleTimeoutMinutes(value) {
   return Math.min(480, Math.floor(n));
 }
 
+function normalizeUnansweredAction(value) {
+  const v = String(value || 'review').trim().toLowerCase();
+  return v === 'auto_stop' ? 'auto_stop' : 'review';
+}
+
 function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
   let checkInterval = null;
   let graceTimer = null;
   let promptShown = false;
   let timerActive = false;
   let idleTimeoutMinutes = DEFAULT_IDLE_TIMEOUT_MINUTES;
+  let unansweredAction = 'review';
   let stopAtMs = null;
   let needsReviewNotifiedFor = null;
 
@@ -91,9 +97,13 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
   function showStillWorkingNotification() {
     try {
       if (!Notification.isSupported()) return;
+      const autoStop = unansweredAction === 'auto_stop';
+      const body = autoStop
+        ? 'Answer within 5 minutes or the timer will be stopped and the idle time kept.'
+        : 'Answer within 5 minutes or the timer will be flagged for review (it keeps running).';
       const notification = new Notification({
         title: 'Still working?',
-        body: 'Answer within 5 minutes or the timer will be flagged for review (it keeps running).',
+        body,
         urgency: 'critical',
       });
       notification.on('click', () => {
@@ -136,16 +146,25 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
   function beginGrace() {
     if (promptShown || !timerActive) return;
     promptShown = true;
-    stopAtMs = Date.now() - idleTimeoutMinutes * 60 * 1000;
+    // OS idle already equals the threshold; credit that window (≈ now).
+    stopAtMs = Date.now();
     showStillWorkingNotification();
     sendToMainWindow('idle:prompt', {
       stopAtMs,
       graceMs: GRACE_MS,
       idleTimeoutMinutes,
+      idleUnansweredAction: unansweredAction,
     });
     focusMainWindow();
     graceTimer = setTimeout(() => {
-      flagNeedsReview();
+      if (unansweredAction === 'auto_stop') {
+        const at = stopAtMs || Date.now();
+        clearGrace();
+        timerActive = false;
+        stopTimerAt(at).catch(() => {});
+      } else {
+        flagNeedsReview();
+      }
     }, GRACE_MS);
   }
 
@@ -156,7 +175,7 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
   }
 
   async function confirmStop() {
-    const at = stopAtMs || Date.now() - idleTimeoutMinutes * 60 * 1000;
+    const at = stopAtMs || Date.now();
     clearGrace();
     timerActive = false;
     await stopTimerAt(at);
@@ -167,6 +186,9 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
     timerActive = active;
     if (data && data.idle_timeout_minutes != null) {
       idleTimeoutMinutes = clampIdleTimeoutMinutes(data.idle_timeout_minutes);
+    }
+    if (data && data.idle_unanswered_action != null) {
+      unansweredAction = normalizeUnansweredAction(data.idle_unanswered_action);
     }
     if (!active) {
       clearGrace();

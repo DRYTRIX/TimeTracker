@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header, button %}
+{% from "components/ui.html" import page_header, button, empty_state %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -16,6 +16,7 @@
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    {% if recurring_invoices %}
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 enhanced-table responsive-cards">
             <thead class="bg-background-light dark:bg-background-dark">
@@ -66,14 +67,18 @@
                         </form>
                     </td>
                 </tr>
-                {% else %}
-                <tr>
-                    <td colspan="7" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">No recurring invoices found. <a href="{{ url_for('recurring_invoices.create_recurring_invoice') }}" class="text-primary">Create one</a> to get started.</td>
-                </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+    {% else %}
+    {% set actions %}
+        <a href="{{ url_for('recurring_invoices.create_recurring_invoice') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <i class="fas fa-plus mr-2"></i>{{ _('Create Recurring Invoice') }}
+        </a>
+    {% endset %}
+    {{ empty_state('fas fa-sync-alt', 'No Recurring Invoices Yet', 'Automate invoice generation for subscription or repeat billing. Create your first recurring invoice template to get started!', actions, type='no-data') }}
+    {% endif %}
 </div>
 
 <script nonce="{{ csp_nonce() }}">

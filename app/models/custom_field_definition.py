@@ -14,6 +14,9 @@ class CustomFieldDefinition(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     field_key = db.Column(db.String(100), unique=True, nullable=False, index=True)  # Unique key (e.g., 'debtor_number')
+    entity_type = db.Column(
+        db.String(30), nullable=False, default="client", server_default="client", index=True
+    )  # client, project, task, time_entry
     label = db.Column(db.String(200), nullable=False)  # Display label (e.g., 'Debtor Number')
     description = db.Column(db.Text, nullable=True)  # Help text for the field
     is_mandatory = db.Column(db.Boolean, default=False, nullable=False)  # Whether field is required
@@ -34,6 +37,7 @@ class CustomFieldDefinition(db.Model):
         return {
             "id": self.id,
             "field_key": self.field_key,
+            "entity_type": getattr(self, "entity_type", None) or "client",
             "label": self.label,
             "description": self.description,
             "is_mandatory": self.is_mandatory,

@@ -39,6 +39,8 @@ class TimesheetPeriod(db.Model):
 
     approved_at = db.Column(db.DateTime, nullable=True)
     approved_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+    secondary_approved_at = db.Column(db.DateTime, nullable=True)
+    secondary_approved_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
 
     rejected_at = db.Column(db.DateTime, nullable=True)
     rejected_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
@@ -54,6 +56,7 @@ class TimesheetPeriod(db.Model):
     user = db.relationship("User", foreign_keys=[user_id], backref=db.backref("timesheet_periods", lazy="dynamic"))
     submitter = db.relationship("User", foreign_keys=[submitted_by])
     approver = db.relationship("User", foreign_keys=[approved_by])
+    secondary_approver = db.relationship("User", foreign_keys=[secondary_approved_by])
     rejector = db.relationship("User", foreign_keys=[rejected_by])
     closer = db.relationship("User", foreign_keys=[closed_by])
 
@@ -86,6 +89,8 @@ class TimesheetPeriod(db.Model):
             "submitted_by": self.submitted_by,
             "approved_at": self.approved_at.isoformat() if self.approved_at else None,
             "approved_by": self.approved_by,
+            "secondary_approved_at": self.secondary_approved_at.isoformat() if self.secondary_approved_at else None,
+            "secondary_approved_by": self.secondary_approved_by,
             "rejected_at": self.rejected_at.isoformat() if self.rejected_at else None,
             "rejected_by": self.rejected_by,
             "rejection_reason": self.rejection_reason,

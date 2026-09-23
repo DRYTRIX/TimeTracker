@@ -134,8 +134,55 @@ export class ApiClient {
       }
       return { ok: true, token };
     } catch (error) {
+      const data = error?.response?.data;
+      if (error?.response?.status === 403 && data?.requires_2fa && data?.temp_token) {
+        return {
+          ok: false,
+          code: 'REQUIRES_2FA',
+          requires_2fa: true,
+          temp_token: String(data.temp_token),
+          message: data.error || 'Two-factor authentication required.',
+        };
+      }
       return classifyAxiosError(error);
     }
+  }
+
+  static async verifyLogin2fa(baseUrl, tempToken, code) {
+    const normalized = ApiClient.normalizeBaseUrl(normalizeServerUrlInput(baseUrl));
+    try {
+      const response = await axios.post(
+        `${normalized}/api/v1/auth/2fa/verify`,
+        { temp_token: tempToken, code },
+        { timeout: 15000, headers: { Accept: 'application/json', 'Content-Type': 'application/json' } },
+      );
+      const token = response.data?.token;
+      if (typeof token !== 'string' || !token.startsWith('tt_')) {
+        return { ok: false, code: 'INVALID_RESPONSE', message: 'Verification did not return a valid desktop token.' };
+      }
+      return { ok: true, token };
+    } catch (error) {
+      const data = error?.response?.data;
+      if (data?.error) {
+        return { ok: false, code: 'UNAUTHORIZED', message: String(data.error) };
+      }
+      return classifyAxiosError(error);
+    }
+  }
+
+  static async connectWithApiToken(baseUrl, token) {
+    const normalized = ApiClient.normalizeBaseUrl(normalizeServerUrlInput(baseUrl));
+    const trimmed = String(token || '').trim();
+    if (!normalized) {
+      return { ok: false, code: 'NO_URL', message: 'Please enter a server URL.' };
+    }
+    if (!trimmed.startsWith('tt_')) {
+      return { ok: false, code: 'BAD_TOKEN', message: 'API token must start with tt_.' };
+    }
+    const client = new ApiClient(normalized, trimmed);
+    const session = await client.validateSession();
+    if (!session.ok) return session;
+    return { ok: true, token: trimmed };
   }
 
   async validateSession() {
@@ -186,8 +233,14 @@ export class ApiClient {
   updateTask(id, data) { return this.unwrap(this.client.patch(`/api/v1/tasks/${id}`, data)); }
   createTask(data) { return this.unwrap(this.client.post('/api/v1/tasks', data)); }
   getTimeEntries(params = {}) { return this.unwrap(this.client.get('/api/v1/time-entries', { params })); }
-  createTimeEntry(data) { return this.unwrap(this.client.post('/api/v1/time-entries', data)); }
-  updateTimeEntry(id, data) { return this.unwrap(this.client.put(`/api/v1/time-entries/${id}`, data)); }
+  createTimeEntry(data, { idempotencyKey } = {}) {
+    const headers = {};
+    if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+    return this.unwrap(this.client.post('/api/v1/time-entries', data, { headers }));
+  }
+  updateTimeEntry(id, data) {
+    return this.unwrap(this.client.patch(`/api/v1/time-entries/${id}`, data));
+  }
   deleteTimeEntry(id) { return this.unwrap(this.client.delete(`/api/v1/time-entries/${id}`)); }
   getInvoices(params = {}) { return this.unwrap(this.client.get('/api/v1/invoices', { params })); }
   getInvoice(id) { return this.unwrap(this.client.get(`/api/v1/invoices/${id}`)); }

@@ -15,70 +15,70 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             
             <!-- Title -->
-            <div class="form-group mb-4">
+            <div class="mb-4">
                 <label for="title" class="form-label required">{{ _('Title') }}</label>
                 <input type="text" 
                        id="title" 
                        name="title" 
-                       class="form-control" 
+                       class="form-input" 
                        required
                        value="{% if event %}{{ event.title }}{% endif %}">
             </div>
             
             <!-- Description -->
-            <div class="form-group mb-4">
+            <div class="mb-4">
                 <label for="description" class="form-label">{{ _('Description') }}</label>
                 <textarea id="description" 
                           name="description" 
-                          class="form-control" 
+                          class="form-input" 
                           rows="3">{% if event %}{{ event.description or '' }}{% endif %}</textarea>
             </div>
             
             <!-- Date and Time -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div class="form-group">
+                <div class="">
                     <label for="startDate" class="form-label required">{{ _('Start Date') }}</label>
                     <input type="date" 
                            id="startDate" 
                            name="startDate" 
-                           class="form-control" 
+                           class="form-input" 
                            required
                            value="{% if event %}{{ event.start_time|user_date('%Y-%m-%d') }}{% elif initial_date %}{{ initial_date.strftime('%Y-%m-%d') }}{% endif %}">
                 </div>
                 
-                <div class="form-group">
+                <div class="">
                     <label for="startTime" class="form-label">{{ _('Start Time') }}</label>
                     <input type="time" 
                            id="startTime" 
                            name="startTime" 
-                           class="form-control user-time-input"
+                           class="form-input user-time-input"
                            value="{% if event %}{{ event.start_time|user_time('%H:%M') }}{% elif initial_time %}{{ initial_time.strftime('%H:%M') }}{% else %}09:00{% endif %}">
                 </div>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div class="form-group">
+                <div class="">
                     <label for="endDate" class="form-label required">{{ _('End Date') }}</label>
                     <input type="date" 
                            id="endDate" 
                            name="endDate" 
-                           class="form-control" 
+                           class="form-input" 
                            required
                            value="{% if event %}{{ event.end_time|user_date('%Y-%m-%d') }}{% elif initial_date %}{{ initial_date.strftime('%Y-%m-%d') }}{% endif %}">
                 </div>
                 
-                <div class="form-group">
+                <div class="">
                     <label for="endTime" class="form-label">{{ _('End Time') }}</label>
                     <input type="time" 
                            id="endTime" 
                            name="endTime" 
-                           class="form-control user-time-input"
+                           class="form-input user-time-input"
                            value="{% if event %}{{ event.end_time|user_time('%H:%M') }}{% else %}10:00{% endif %}">
                 </div>
             </div>
             
             <!-- All Day Event -->
-            <div class="form-group mb-4">
+            <div class="mb-4">
                 <label class="inline-flex items-center">
                     <input type="checkbox" 
                            id="allDay" 
@@ -90,19 +90,19 @@
             </div>
             
             <!-- Location -->
-            <div class="form-group mb-4">
+            <div class="mb-4">
                 <label for="location" class="form-label">{{ _('Location') }}</label>
                 <input type="text" 
                        id="location" 
                        name="location" 
-                       class="form-control"
+                       class="form-input"
                        value="{% if event %}{{ event.location or '' }}{% endif %}">
             </div>
             
             <!-- Event Type -->
-            <div class="form-group mb-4">
+            <div class="mb-4">
                 <label for="eventType" class="form-label">{{ _('Event Type') }}</label>
-                <select id="eventType" name="eventType" class="form-control">
+                <select id="eventType" name="eventType" class="form-input">
                     <option value="event" {% if event and event.event_type == 'event' %}selected{% endif %}>{{ _('Event') }}</option>
                     <option value="meeting" {% if event and event.event_type == 'meeting' %}selected{% endif %}>{{ _('Meeting') }}</option>
                     <option value="appointment" {% if event and event.event_type == 'appointment' %}selected{% endif %}>{{ _('Appointment') }}</option>
@@ -112,9 +112,9 @@
             </div>
             
             <!-- Associated Project -->
-            <div class="form-group mb-4">
+            <div class="mb-4">
                 <label for="projectId" class="form-label">{{ _('Project') }}</label>
-                <select id="projectId" name="projectId" class="form-control">
+                <select id="projectId" name="projectId" class="form-input">
                     <option value="">{{ _('-- None --') }}</option>
                     {% for project in projects %}
                     <option value="{{ project.id }}" {% if event and event.project_id == project.id %}selected{% endif %}>
@@ -125,9 +125,9 @@
             </div>
             
             <!-- Associated Task -->
-            <div class="form-group mb-4">
+            <div class="mb-4">
                 <label for="taskId" class="form-label">{{ _('Task') }}</label>
-                <select id="taskId" name="taskId" class="form-control">
+                <select id="taskId" name="taskId" class="form-input">
                     <option value="">{{ _('-- None --') }}</option>
                     {% for task in tasks %}
                     <option value="{{ task.id }}" {% if event and event.task_id == task.id %}selected{% endif %}>
@@ -138,9 +138,9 @@
             </div>
             
             <!-- Associated Client -->
-            <div class="form-group mb-4">
+            <div class="mb-4">
                 <label for="clientId" class="form-label">{{ _('Client') }}</label>
-                <select id="clientId" name="clientId" class="form-control">
+                <select id="clientId" name="clientId" class="form-input">
                     <option value="">{{ _('-- None --') }}</option>
                     {% for client in clients %}
                     <option value="{{ client.id }}" {% if event and event.client_id == client.id %}selected{% endif %}>
@@ -151,9 +151,9 @@
             </div>
             
             <!-- Reminder -->
-            <div class="form-group mb-4">
+            <div class="mb-4">
                 <label for="reminderMinutes" class="form-label">{{ _('Reminder') }}</label>
-                <select id="reminderMinutes" name="reminderMinutes" class="form-control">
+                <select id="reminderMinutes" name="reminderMinutes" class="form-input">
                     <option value="">{{ _('No reminder') }}</option>
                     <option value="5" {% if event and event.reminder_minutes == 5 %}selected{% endif %}>{{ _('5 minutes before') }}</option>
                     <option value="15" {% if event and event.reminder_minutes == 15 %}selected{% endif %}>{{ _('15 minutes before') }}</option>
@@ -164,20 +164,20 @@
             </div>
             
             <!-- Color -->
-            <div class="form-group mb-4">
+            <div class="mb-4">
                 <label for="color" class="form-label">{{ _('Color') }}</label>
                 <div class="flex gap-2 items-center">
                     <input type="color" 
                            id="color" 
                            name="color" 
-                           class="form-control w-20 h-10"
+                           class="form-input w-20 h-10"
                            value="{% if event and event.color %}{{ event.color }}{% else %}#3b82f6{% endif %}">
                     <span class="text-sm text-muted">{{ _('Choose a color for this event') }}</span>
                 </div>
             </div>
             
             <!-- Private Event -->
-            <div class="form-group mb-4">
+            <div class="mb-4">
                 <label class="inline-flex items-center">
                     <input type="checkbox" 
                            id="isPrivate" 
@@ -193,7 +193,7 @@
             <div class="border-t border-border-light dark:border-border-dark pt-4 mt-6 mb-4">
                 <h3 class="text-lg font-semibold mb-3">{{ _('Recurring Event') }}</h3>
                 
-                <div class="form-group mb-4">
+                <div class="mb-4">
                     <label class="inline-flex items-center">
                         <input type="checkbox" 
                                id="isRecurring" 
@@ -205,23 +205,23 @@
                 </div>
                 
                 <div id="recurringOptions" style="{% if not event or not event.is_recurring %}display: none;{% endif %}">
-                    <div class="form-group mb-4">
+                    <div class="mb-4">
                         <label for="recurrenceRule" class="form-label">{{ _('Recurrence Pattern') }}</label>
                         <input type="text" 
                                id="recurrenceRule" 
                                name="recurrenceRule" 
-                               class="form-control"
+                               class="form-input"
                                placeholder="FREQ=WEEKLY;BYDAY=MO,WE,FR"
                                value="{% if event %}{{ event.recurrence_rule or '' }}{% endif %}">
                         <p class="text-sm text-muted mt-1">{{ _('Use RRULE format (e.g., FREQ=WEEKLY;BYDAY=MO,WE,FR)') }}</p>
                     </div>
                     
-                    <div class="form-group mb-4">
+                    <div class="mb-4">
                         <label for="recurrenceEndDate" class="form-label">{{ _('Recurrence End Date') }}</label>
                         <input type="date" 
                                id="recurrenceEndDate" 
                                name="recurrenceEndDate" 
-                               class="form-control"
+                               class="form-input"
                                value="{% if event and event.recurrence_end_date %}{{ event.recurrence_end_date.strftime('%Y-%m-%d') }}{% endif %}">
                     </div>
                 </div>

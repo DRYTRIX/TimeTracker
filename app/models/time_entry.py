@@ -296,6 +296,24 @@ class TimeEntry(db.Model):
         self.idle_flagged_at = None
         self.updated_at = local_now()
 
+    def idle_credited_stop_time(self, idle_minutes, now=None):
+        """Stop time credited after idle: last activity + idle window, capped at now.
+
+        Used by timer/review trim, the unanswered auto_stop path, and the
+        review-mode safety cap so all three agree on the credited end time.
+        """
+        now = now if now is not None else local_now()
+        if getattr(now, "tzinfo", None) is not None:
+            now = now.replace(tzinfo=None)
+        last_active = self.last_heartbeat_at or self.start_time
+        if getattr(last_active, "tzinfo", None) is not None:
+            last_active = last_active.replace(tzinfo=None)
+        minutes = max(1, min(480, int(idle_minutes or 30)))
+        stop_at = last_active + timedelta(minutes=minutes) if last_active else now
+        if stop_at > now:
+            stop_at = now
+        return stop_at
+
     def stop_timer(self, end_time=None):
         """Stop an active timer"""
         if self.end_time:

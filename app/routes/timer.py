@@ -61,6 +61,19 @@ def _parse_and_validate_start_override(raw_value, now_local):
     return parsed, None
 
 
+def _redirect_after_start_error():
+    """Redirect back to the submitting page when the referrer is same-host; else dashboard."""
+    from urllib.parse import urlparse
+
+    referrer = request.referrer
+    if referrer:
+        ref = urlparse(referrer)
+        host = urlparse(request.host_url)
+        if ref.scheme in ("http", "https") and ref.netloc == host.netloc:
+            return redirect(referrer)
+    return redirect(url_for("main.dashboard"))
+
+
 def _active_users_for_admin():
     """Active users for admin booking dropdown; empty for non-admins."""
     if not current_user.is_admin:
@@ -255,7 +268,7 @@ def start_timer():
     resolved_start, start_err = _parse_and_validate_start_override(start_time_override, now_local)
     if start_err:
         flash(start_err, "error")
-        return redirect(url_for("timer.timer_page"))
+        return _redirect_after_start_error()
     start_time = resolved_start if resolved_start is not None else now_local
 
     new_timer = TimeEntry(
@@ -879,10 +892,25 @@ def set_timer_start():
 @login_required
 def timer_status():
     """Get current timer status as JSON"""
+    from app.models import Settings
+
+    settings = Settings.get_settings()
+    idle_timeout_minutes = getattr(settings, "idle_timeout_minutes", 30) or 30
+    idle_unanswered_action = getattr(settings, "idle_unanswered_action", "review") or "review"
+    if idle_unanswered_action not in ("review", "auto_stop"):
+        idle_unanswered_action = "review"
+
     active_timer = current_user.active_timer
 
     if not active_timer:
-        return jsonify({"active": False, "timer": None})
+        return jsonify(
+            {
+                "active": False,
+                "timer": None,
+                "idle_timeout_minutes": idle_timeout_minutes,
+                "idle_unanswered_action": idle_unanswered_action,
+            }
+        )
 
     return jsonify(
         {
@@ -899,7 +927,13 @@ def timer_status():
                 "paused_at": active_timer.paused_at.isoformat() if active_timer.paused_at else None,
                 "break_seconds": getattr(active_timer, "break_seconds", None) or 0,
                 "break_formatted": getattr(active_timer, "break_formatted", "00:00:00"),
+                "idle_notified": bool(active_timer.idle_notified_at),
+                "needs_review": bool(active_timer.idle_flagged_at),
             },
+            "idle_timeout_minutes": idle_timeout_minutes,
+            "idle_unanswered_action": idle_unanswered_action,
+            "idle_notified": bool(active_timer.idle_notified_at),
+            "needs_review": bool(active_timer.idle_flagged_at),
         }
     )
 

@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.17.0
+
+**Minor (5.17.0):** **Factur-X / ZUGFeRD (#433)** — structured addresses, VAT categories, PDF/A-3 embed, and EN 16931 CII fixes. **Idle unanswered action (#722)** — admin choice of review vs auto-stop when Still working? expires. **Phase 4 gap roadmap** — GDPR erasure, weekly goals / recurring tasks / project templates API, estimates vs actuals report, multi-level timesheet approval, XRechnung helper, Mollie skeleton. **Phase 5 foundations** — OAuth app models, SCIM Users stub, AI summarize-entries, Teams bot stub, and design docs. **UI / hygiene** — shared confirm dialogs, empty states, command palette expansion, security rate limits, and dead-code cleanup. See [CHANGELOG.md](CHANGELOG.md#5170---2026-09-23).
+
 ### ✨ Highlights of v5.16.0
 
 **Minor (5.16.0):** **Client–team messaging** — bidirectional in-portal messaging between team and client contacts with thread UI on both sides. **Gmail & Outlook sync** — email threads pulled from Gmail API and Microsoft Graph and linked to CRM clients, leads, and deals. **Payroll sync (Gusto & ADP)** — time entries aggregated into payroll batches and pushed to Gusto and ADP Workforce Now. **DATEV export** — EXTF Buchungsstapel CSV generator for direct DATEV import. **Sage integration** — invoices, contacts, and payments synced with Sage Business Cloud. **Integration wizards** — guided setup wizards for ADP, DATEV, Gmail, Gusto, Outlook Email, and Sage. **Visual workflow builder** — drag-and-drop canvas for building automation workflows. **Portal custom domains** — white-label client portal host resolution. **Client Portal API** — new authenticated REST blueprint for portal sessions and data access. See [CHANGELOG.md](CHANGELOG.md#5160---2026-09-18).

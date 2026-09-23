@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header %}
+{% from "components/ui.html" import page_header, empty_state %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -52,7 +52,12 @@
         </div>
     </div>
     {% else %}
-    <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No milestones yet.') }}</p>
+    {% set actions %}
+    {% if current_user.is_admin or has_permission('edit_projects') %}
+    <a href="{{ url_for('milestones.create_milestone', project_id=project.id) }}" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>{{ _('New Milestone') }}</a>
+    {% endif %}
+    {% endset %}
+    {{ empty_state('fas fa-flag', 'No Milestones Yet', 'Break the project into milestones to track progress and due dates.', actions, type='no-data') }}
     {% endfor %}
 </div>
 {% endblock %}

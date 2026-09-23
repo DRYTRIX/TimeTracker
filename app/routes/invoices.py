@@ -102,6 +102,11 @@ def create_invoice():
         client_email = request.form.get("client_email", "").strip()
         client_address = request.form.get("client_address", "").strip()
         buyer_reference = (request.form.get("buyer_reference", "") or "").strip() or None
+        vat_category = (request.form.get("vat_category", "") or "").strip().upper() or None
+        if vat_category and vat_category not in ("S", "Z", "E", "AE", "K", "G", "O", "L", "M"):
+            vat_category = None
+        vat_exemption_reason = (request.form.get("vat_exemption_reason", "") or "").strip() or None
+        vat_exemption_code = (request.form.get("vat_exemption_code", "") or "").strip() or None
         due_date_str = request.form.get("due_date", "").strip()
         tax_rate = request.form.get("tax_rate", "0").strip()
         notes = request.form.get("notes", "").strip()
@@ -180,6 +185,9 @@ def create_invoice():
             notes=notes,
             terms=terms,
             currency_code=currency_code,
+            vat_category=vat_category,
+            vat_exemption_reason=vat_exemption_reason,
+            vat_exemption_code=vat_exemption_code,
         )
 
         db.session.add(invoice)
@@ -390,6 +398,12 @@ def edit_invoice(invoice_id):
         invoice.client_address = request.form.get("client_address", "").strip()
         _br = request.form.get("buyer_reference", "").strip()
         invoice.buyer_reference = _br if _br else None
+        _vc = (request.form.get("vat_category", "") or "").strip().upper() or None
+        if _vc and _vc not in ("S", "Z", "E", "AE", "K", "G", "O", "L", "M"):
+            _vc = None
+        invoice.vat_category = _vc
+        invoice.vat_exemption_reason = (request.form.get("vat_exemption_reason", "") or "").strip() or None
+        invoice.vat_exemption_code = (request.form.get("vat_exemption_code", "") or "").strip() or None
         invoice.due_date = datetime.strptime(request.form.get("due_date"), "%Y-%m-%d").date()
         invoice.tax_rate = Decimal(request.form.get("tax_rate", "0"))
         invoice.notes = request.form.get("notes", "").strip()
@@ -1252,6 +1266,15 @@ def export_invoice_pdf(invoice_id):
         from app.utils.pdf_generator import InvoicePDFGenerator
 
         settings = Settings.get_settings()
+        if getattr(settings, "invoices_zugferd_pdf", False):
+            from app.utils.invoice_validators import validate_facturx_prerequisites
+
+            ok, fx_issues = validate_facturx_prerequisites(invoice, settings)
+            if not ok:
+                for msg in fx_issues[:5]:
+                    flash(msg, "error")
+                return redirect(request.referrer or url_for("invoices.view_invoice", invoice_id=invoice.id))
+
         current_app.logger.info(
             f"[PDF_EXPORT] Creating InvoicePDFGenerator - PageSize: '{page_size}', InvoiceID: {invoice_id}"
         )

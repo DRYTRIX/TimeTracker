@@ -20,8 +20,12 @@ def _make_invoice(**overrides):
         tax_rate=Decimal("21.00"),
         tax_amount=Decimal("42.00"),
         total_amount=Decimal("242.00"),
+        amount_paid=Decimal("0"),
         notes="Test invoice notes",
         buyer_reference="PO-99",
+        vat_category=None,
+        vat_exemption_reason=None,
+        vat_exemption_code=None,
         project=None,
         client=None,
         client_name="Buyer Inc",
@@ -42,6 +46,7 @@ def _make_seller(**overrides):
         name="Seller GmbH",
         tax_id="DE123456789",
         address_line="Hauptstr. 1",
+        street="Hauptstr. 1",
         city="Berlin",
         postcode="10115",
         country_code="DE",
@@ -49,6 +54,8 @@ def _make_seller(**overrides):
         phone="+49 30 12345",
         endpoint_id="9930:DE123456789",
         endpoint_scheme_id="9930",
+        iban=None,
+        bic=None,
     )
     defaults.update(overrides)
     return CIIParty(**defaults)
@@ -208,11 +215,14 @@ def test_cii_includes_seller_tax_registration():
 
 
 @pytest.mark.unit
-def test_cii_includes_seller_legal_organization():
+def test_cii_includes_seller_endpoint_as_uri():
     seller = _make_seller(endpoint_id="0088:123456", endpoint_scheme_id="0088")
     xml, _ = build_cii_invoice_xml(_make_invoice(), seller, _make_buyer())
-    assert "SpecifiedLegalOrganization" in xml
+    assert "URIUniversalCommunication" in xml
     assert "0088:123456" in xml
+    assert 'schemeID="0088"' in xml
+    # Peppol endpoint must NOT be in SpecifiedLegalOrganization
+    assert "SpecifiedLegalOrganization" not in xml
 
 
 @pytest.mark.unit
@@ -225,22 +235,104 @@ def test_cii_sha256_changes_with_content():
 
 
 @pytest.mark.unit
-def test_cii_handles_zero_tax():
+def test_cii_handles_zero_tax_as_exempt():
+    """Zero tax_rate without override uses category E with exemption reason (not Z+VATEX-EU-O)."""
     invoice = _make_invoice(tax_rate=Decimal("0"), tax_amount=Decimal("0"))
-    xml, _ = build_cii_invoice_xml(invoice, _make_seller(), _make_buyer())
-    # Zero-rated tax should use category Z
-    assert "CategoryCode" in xml
+    settings = SimpleNamespace(
+        invoices_default_vat_category="E",
+        invoices_default_vat_exemption_reason="Kleinunternehmerregelung §6 Abs. 1 Z 27 UStG",
+        invoices_default_vat_exemption_code="VATEX-EU-O",
+    )
+    xml, _ = build_cii_invoice_xml(invoice, _make_seller(), _make_buyer(), settings=settings)
+    assert ">E<" in xml or ">E</" in xml
     assert "ExemptionReason" in xml
     assert "VATEX-EU-O" in xml
+    # currencyID only on TaxTotalAmount
     assert 'currencyID="EUR"' in xml
-    # Should still produce valid CII
+    assert xml.count('currencyID="EUR"') == 1
     passed, issues = validate_cii_en16931(xml)
     assert passed is True, f"Failed: {issues}"
 
 
 @pytest.mark.unit
-def test_cii_monetary_elements_have_currency_id():
+def test_cii_zero_rated_z_has_no_exemption():
+    invoice = _make_invoice(tax_rate=Decimal("0"), tax_amount=Decimal("0"), vat_category="Z")
+    xml, _ = build_cii_invoice_xml(invoice, _make_seller(), _make_buyer())
+    assert ">Z<" in xml or ">Z</" in xml
+    # Header tax must not include ExemptionReason for Z
+    assert "ExemptionReason" not in xml
+    passed, issues = validate_cii_en16931(xml)
+    assert passed is True, f"Failed: {issues}"
+
+
+@pytest.mark.unit
+def test_cii_reverse_charge_ae():
+    invoice = _make_invoice(tax_rate=Decimal("0"), tax_amount=Decimal("0"), vat_category="AE")
+    xml, _ = build_cii_invoice_xml(invoice, _make_seller(), _make_buyer())
+    assert ">AE<" in xml or ">AE</" in xml
+    assert "Reverse charge" in xml
+    assert "VATEX-EU-AE" in xml
+
+
+@pytest.mark.unit
+def test_cii_tax_total_has_currency_id_only():
     invoice = _make_invoice(currency_code="USD")
     xml, _ = build_cii_invoice_xml(invoice, _make_seller(), _make_buyer())
     assert 'currencyID="USD"' in xml
-    assert xml.count('currencyID="USD"') >= 5
+    assert xml.count('currencyID="USD"') == 1
+
+
+@pytest.mark.unit
+def test_cii_postal_address_order():
+    xml, _ = build_cii_invoice_xml(_make_invoice(), _make_seller(), _make_buyer())
+    # PostcodeCode must appear before LineOne in PostalTradeAddress
+    idx_pc = xml.find("PostcodeCode")
+    idx_lo = xml.find("LineOne")
+    assert idx_pc != -1 and idx_lo != -1
+    assert idx_pc < idx_lo
+
+
+@pytest.mark.unit
+def test_cii_payment_means_when_iban():
+    seller = _make_seller(iban="DE89370400440532013000", bic="COBADEFFXXX")
+    xml, _ = build_cii_invoice_xml(_make_invoice(), seller, _make_buyer())
+    assert "SpecifiedTradeSettlementPaymentMeans" in xml
+    assert "DE89370400440532013000" in xml
+    assert "COBADEFFXXX" in xml
+    assert ">58<" in xml
+
+
+@pytest.mark.unit
+def test_cii_prepaid_amount():
+    invoice = _make_invoice(amount_paid=Decimal("50.00"), total_amount=Decimal("242.00"))
+    xml, _ = build_cii_invoice_xml(invoice, _make_seller(), _make_buyer())
+    assert "TotalPrepaidAmount" in xml
+    assert "50.00" in xml
+    assert "192.00" in xml  # due payable
+
+
+@pytest.mark.unit
+def test_cii_address_fallback_to_line_one():
+    seller = _make_seller(street=None, address_line="Fallback Street 9", postcode="1010", city="Wien")
+    xml, _ = build_cii_invoice_xml(_make_invoice(), seller, _make_buyer())
+    assert "Fallback Street 9" in xml
+
+
+@pytest.mark.unit
+def test_cii_lines_before_header_agreement():
+    xml, _ = build_cii_invoice_xml(_make_invoice(), _make_seller(), _make_buyer())
+    assert xml.find("IncludedSupplyChainTradeLineItem") < xml.find("ApplicableHeaderTradeAgreement")
+
+
+@pytest.mark.unit
+def test_cii_passes_facturx_xsd():
+    """Validate generated CII against official Factur-X EN16931 XSD (factur-x package)."""
+    pytest.importorskip("facturx")
+    from facturx import xml_check_xsd
+
+    invoice = _make_invoice()
+    seller = _make_seller(iban="DE89370400440532013000", bic="COBADEFFXXX")
+    buyer = _make_buyer()
+    xml, _ = build_cii_invoice_xml(invoice, seller, buyer)
+    # Raises on failure
+    xml_check_xsd(xml.encode("utf-8"), flavor="factur-x", level="en16931")

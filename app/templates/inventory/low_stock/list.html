@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header %}
+{% from "components/ui.html" import page_header, empty_state %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -14,8 +14,9 @@
     breadcrumbs=breadcrumbs
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     {% if low_stock_items %}
+    <div class="overflow-x-auto">
     <table class="table table-zebra w-full text-left responsive-cards">
         <thead>
             <tr>
@@ -50,10 +51,9 @@
             {% endfor %}
         </tbody>
     </table>
-    {% else %}
-    <div class="p-8 text-center text-gray-500">
-        {{ _('No low stock alerts. All items are above reorder point.') }}
     </div>
+    {% else %}
+    {{ empty_state('fas fa-check-circle', 'No Low Stock Alerts', 'All tracked items are above their reorder points.', None, type='success') }}
     {% endif %}
 </div>
 {% endblock %}

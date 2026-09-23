@@ -96,9 +96,7 @@ Centralized constants and enums for all status types, sources, and configuration
 - **`FINAL_IMPLEMENTATION_SUMMARY.md`** - Final summary
 
 ### Examples
-- **`app/routes/projects_refactored_example.py`** - Projects example
-- **`app/routes/timer_refactored.py`** - Timer example
-- **`app/routes/invoices_refactored.py`** - Invoice example
+- See [ARCHITECTURE_MIGRATION_GUIDE.md](ARCHITECTURE_MIGRATION_GUIDE.md) for the thin-route pattern (former `*_refactored*.py` examples were removed).
 
 ---
 

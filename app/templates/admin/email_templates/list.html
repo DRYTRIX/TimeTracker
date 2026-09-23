@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header %}
+{% from "components/ui.html" import page_header, empty_state %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -59,12 +59,13 @@
     </div>
 </div>
 {% else %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm text-center text-text-muted-light dark:text-text-muted-dark">
-    <p class="text-lg">{{ _('No email templates found.') }}</p>
-    <p class="mt-2">{{ _('Create your first email template to customize invoice emails.') }}</p>
-    <a href="{{ url_for('admin.create_email_template') }}" class="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary/90">
-        <i class="fas fa-plus mr-2"></i>{{ _('Create Email Template') }}
-    </a>
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    {% set actions %}
+        <a href="{{ url_for('admin.create_email_template') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <i class="fas fa-plus mr-2"></i>{{ _('Create Email Template') }}
+        </a>
+    {% endset %}
+    {{ empty_state('fas fa-envelope', 'No Email Templates Yet', 'Create templates to customize invoice and notification emails.', actions, type='no-data') }}
 </div>
 {% endif %}
 

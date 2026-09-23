@@ -10,6 +10,46 @@
   --danger-hover: #b91c1c;
   --radius: 8px;
   --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --field-bg: #fff;
+  --btn-secondary-bg: #fff;
+  --btn-secondary-hover: #f1f5f9;
+  --error-bg: #fef2f2;
+  --error-border: #fecaca;
+  --success-bg: #f0fdf4;
+  --success-border: #bbf7d0;
+  --success-text: #166534;
+  --paused-badge-bg: #fef3c7;
+  --paused-badge-border: #fcd34d;
+  --paused-badge-text: #92400e;
+  --picker-hover: #f0fdfa;
+  --picker-selected: #ccfbf1;
+  --shadow: rgba(15, 23, 42, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --border: #334155;
+    --accent: #2dd4bf;
+    --accent-hover: #5eead4;
+    --field-bg: #0f172a;
+    --btn-secondary-bg: #1e293b;
+    --btn-secondary-hover: #334155;
+    --error-bg: #450a0a;
+    --error-border: #7f1d1d;
+    --success-bg: #052e16;
+    --success-border: #166534;
+    --success-text: #86efac;
+    --paused-badge-bg: #422006;
+    --paused-badge-border: #854d0e;
+    --paused-badge-text: #fcd34d;
+    --picker-hover: #134e4a;
+    --picker-selected: #115e59;
+    --shadow: rgba(0, 0, 0, 0.45);
+  }
 }
 
 * {
@@ -75,8 +115,8 @@ body {
 
 .error {
   color: var(--danger);
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
   border-radius: var(--radius);
   padding: 8px 10px;
   margin-bottom: 10px;
@@ -84,9 +124,9 @@ body {
 }
 
 .success {
-  color: #166534;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  color: var(--success-text);
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
   border-radius: var(--radius);
   padding: 8px 10px;
   margin-bottom: 10px;
@@ -119,9 +159,9 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #92400e;
-  background: #fef3c7;
-  border: 1px solid #fcd34d;
+  color: var(--paused-badge-text);
+  background: var(--paused-badge-bg);
+  border: 1px solid var(--paused-badge-border);
 }
 
 .running-actions {
@@ -168,7 +208,7 @@ body {
   padding: 7px 9px;
   font: inherit;
   color: var(--text);
-  background: #fff;
+  background: var(--field-bg);
 }
 
 .field input:focus,
@@ -225,13 +265,13 @@ body {
 }
 
 .btn-secondary {
-  background: #fff;
+  background: var(--btn-secondary-bg);
   color: var(--text);
   border: 1px solid var(--border);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: #f1f5f9;
+  background: var(--btn-secondary-hover);
 }
 
 .btn-block {
@@ -256,7 +296,7 @@ body {
 .tabs button {
   flex: 1;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--btn-secondary-bg);
   border-radius: 6px;
   padding: 6px;
   font: inherit;
@@ -269,7 +309,7 @@ body {
   border-color: var(--accent);
   color: var(--accent);
   font-weight: 600;
-  background: color-mix(in srgb, var(--accent) 8%, white);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
 }
 
 .hidden {
@@ -334,7 +374,7 @@ hr.sep {
   border-radius: 6px;
   padding: 7px 9px;
   font: inherit;
-  background: #fff;
+  background: var(--field-bg);
   color: var(--text);
 }
 
@@ -353,10 +393,10 @@ hr.sep {
   max-height: 180px;
   overflow: auto;
   list-style: none;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 8px 20px var(--shadow);
 }
 
 .tt-picker-list.hidden {
@@ -373,11 +413,11 @@ hr.sep {
 
 .tt-picker-option:hover,
 .tt-picker-create:hover {
-  background: #f0fdfa;
+  background: var(--picker-hover);
 }
 
 .tt-picker-option.is-selected {
-  background: #ccfbf1;
+  background: var(--picker-selected);
   font-weight: 600;
 }
 

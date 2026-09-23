@@ -45,6 +45,33 @@ class SyncService {
     await LocalStorage.setSyncQueue(q);
   }
 
+  /// Queue timer start (offline). Processed before manual entry creates when syncing.
+  static Future<void> queueTimerStart({
+    required int projectId,
+    int? taskId,
+    String? notes,
+  }) async {
+    final q = await LocalStorage.getSyncQueue();
+    q.add({
+      'op': 'timer_start',
+      'project_id': projectId,
+      if (taskId != null) 'task_id': taskId,
+      if (notes != null && notes.isNotEmpty) 'notes': notes,
+      'start_time': DateTime.now().toUtc().toIso8601String(),
+    });
+    await LocalStorage.setSyncQueue(q);
+  }
+
+  /// Queue timer stop (offline). Server creates the time entry on sync.
+  static Future<void> queueTimerStop({String? stopTime}) async {
+    final q = await LocalStorage.getSyncQueue();
+    q.add({
+      'op': 'timer_stop',
+      if (stopTime != null) 'stop_time': stopTime,
+    });
+    await LocalStorage.setSyncQueue(q);
+  }
+
   static Future<void> queueDeleteTimeEntry(int entryId) async {
     final q = await LocalStorage.getSyncQueue();
     q.add({
@@ -123,6 +150,17 @@ class SyncService {
             tags: op['tags']?.toString(),
             billable: op['billable'] as bool?,
             ifUpdatedAt: op['if_updated_at']?.toString(),
+          );
+        } else if (type == 'timer_start') {
+          await api.startTimer(
+            projectId: (op['project_id'] as num).toInt(),
+            taskId: (op['task_id'] as num?)?.toInt(),
+            notes: op['notes']?.toString(),
+          );
+        } else if (type == 'timer_stop') {
+          final rawStop = op['stop_time']?.toString();
+          await api.stopTimer(
+            stopTime: rawStop != null ? DateTime.tryParse(rawStop) : null,
           );
         } else {
           remaining.add(op);

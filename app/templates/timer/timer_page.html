@@ -515,7 +515,7 @@ if (timerStartForm) {
             if (window.toastManager && typeof window.toastManager.error === 'function') {
                 window.toastManager.error(errorMsg, '{{ _("Error") }}', 5000);
             } else {
-                alert(errorMsg);
+                ttAlert(errorMsg);
             }
             if (submitBtn && originalButtonHTML) {
                 submitBtn.innerHTML = originalButtonHTML;
@@ -677,7 +677,7 @@ function formatStartDisplay(isoString) {
             if (window.toastManager && typeof window.toastManager.error === 'function') {
                 window.toastManager.error(err.message, '{{ _("Error") }}', 5000);
             } else {
-                alert(err.message);
+                ttAlert(err.message);
             }
         }
     });
@@ -751,7 +751,7 @@ window.applyTemplate = async function(templateId) {
         
     } catch (error) {
         console.error('Error applying template:', error);
-        alert('Failed to load template. Please try again.');
+        ttAlert('Failed to load template. Please try again.');
     }
 };
 </script>
@@ -882,7 +882,7 @@ window.applyTemplate = async function(templateId) {
             };
             const data = await api('/api/focus-sessions/start', 'POST', body);
             applySession(data.session);
-        } catch (e) { alert(e.message); }
+        } catch (e) { ttAlert(e.message); }
     });
 
     els.cycle.addEventListener('click', async () => {
@@ -897,7 +897,7 @@ window.applyTemplate = async function(templateId) {
             els.cycle.disabled = true;
             startTick(breakLength);
             render();
-        } catch (e) { alert(e.message); }
+        } catch (e) { ttAlert(e.message); }
     });
 
     els.interrupt.addEventListener('click', async () => {
@@ -906,7 +906,7 @@ window.applyTemplate = async function(templateId) {
             const data = await api('/api/focus-sessions/' + session.id + '/interrupt', 'POST', {});
             session = data.session;
             render();
-        } catch (e) { alert(e.message); }
+        } catch (e) { ttAlert(e.message); }
     });
 
     els.finish.addEventListener('click', async () => {
@@ -914,7 +914,7 @@ window.applyTemplate = async function(templateId) {
         try {
             await api('/api/focus-sessions/finish', 'POST', { session_id: session.id });
             applySession(null);
-        } catch (e) { alert(e.message); }
+        } catch (e) { ttAlert(e.message); }
     });
 
     api('/api/focus-sessions/active').then(data => {

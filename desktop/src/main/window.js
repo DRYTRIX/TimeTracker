@@ -40,7 +40,7 @@ function createWindow(options = {}) {
   loadWindowState();
 
   // Create splash screen first (only if splash.html exists)
-  const splashPath = path.join(__dirname, '../renderer/splash.html');
+  const splashPath = path.join(__dirname, 'splash/splash.html');
   const showSplash = options.showSplash !== false;
   
   if (showSplash && fs.existsSync(splashPath)) {
@@ -148,16 +148,14 @@ function createWindow(options = {}) {
     saveWindowState();
   });
 
-  // Load the Vite-built React renderer. The old renderer source remains in src/renderer
-  // during the migration, but Electron loads dist-renderer.
   const isDev = process.argv.includes('--dev');
   const rendererIndex = path.join(__dirname, '../../dist-renderer/index.html');
-  const legacyIndex = path.join(__dirname, '../renderer/index.html');
+  if (!fs.existsSync(rendererIndex)) {
+    throw new Error('dist-renderer/index.html is missing. Run npm run build:renderer.');
+  }
+  mainWindow.loadFile(rendererIndex);
   if (isDev) {
-    mainWindow.loadFile(fs.existsSync(rendererIndex) ? rendererIndex : legacyIndex);
     mainWindow.webContents.openDevTools();
-  } else {
-    mainWindow.loadFile(fs.existsSync(rendererIndex) ? rendererIndex : legacyIndex);
   }
 
   return mainWindow;

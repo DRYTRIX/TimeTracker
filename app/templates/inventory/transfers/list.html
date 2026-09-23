@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header %}
+{% from "components/ui.html" import page_header, empty_state %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -31,7 +31,9 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    {% if transfer_groups %}
+    <div class="overflow-x-auto">
     <table class="table table-zebra w-full text-left responsive-cards">
         <thead>
             <tr>
@@ -71,15 +73,24 @@
                     </tr>
                     {% endif %}
                 {% endif %}
-            {% else %}
-            <tr>
-                <td colspan="6" class="p-8 text-center text-gray-500">
-                    {{ _('No transfers found.') }}
-                </td>
-            </tr>
             {% endfor %}
         </tbody>
     </table>
+    </div>
+    {% else %}
+    {% set actions %}
+    {% if current_user.is_admin or has_permission('transfer_stock') %}
+    <a href="{{ url_for('inventory.new_transfer') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+        <i class="fas fa-plus mr-2"></i>{{ _('Create Transfer') }}
+    </a>
+    {% endif %}
+    {% endset %}
+    {% if date_from or date_to %}
+        {{ empty_state('fas fa-dolly', 'No Transfers Match Your Filters', 'Try adjusting your filters to see more results.', actions, type='no-results') }}
+    {% else %}
+        {{ empty_state('fas fa-dolly', 'No Transfers Yet', 'Transfer stock between warehouses to balance inventory.', actions, type='no-data') }}
+    {% endif %}
+    {% endif %}
 </div>
 {% endblock %}
 

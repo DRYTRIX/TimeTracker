@@ -2,6 +2,7 @@ from .activity import Activity
 from .activitywatch_rule import ActivityWatchRule, PendingActivity
 from .api_idempotency_key import ApiIdempotencyKey
 from .api_token import ApiToken
+from .oauth_app import OAuthApplication, OAuthAuthorizationCode
 from .attendance_compliance import (
     AttendanceBreak,
     AttendanceBreakType,
@@ -180,6 +181,8 @@ __all__ = [
     "Role",
     "ApiIdempotencyKey",
     "ApiToken",
+    "OAuthApplication",
+    "OAuthAuthorizationCode",
     "CalendarEvent",
     "BudgetAlert",
     "DataImport",

@@ -13,7 +13,7 @@ import os
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 # ---- UBL Validation ----
 
@@ -259,22 +259,40 @@ def validate_cii_en16931(cii_xml: str) -> Tuple[bool, List[str]]:
             gta = summation.find("ram:GrandTotalAmount", ns)
             if gta is None:
                 issues.append("Missing GrandTotalAmount")
-            elif not (gta.get("currencyID") or "").strip():
-                issues.append("GrandTotalAmount missing currencyID attribute")
+            # currencyID is required on TaxTotalAmount only (EN 16931 / Factur-X)
+            tta = summation.find("ram:TaxTotalAmount", ns)
+            if tta is not None and not (tta.get("currencyID") or "").strip():
+                issues.append("TaxTotalAmount missing currencyID attribute")
             if summation.find("ram:DuePayableAmount", ns) is None:
                 issues.append("Missing DuePayableAmount")
-            else:
-                dpa = summation.find("ram:DuePayableAmount", ns)
-                if dpa is not None and not (dpa.get("currencyID") or "").strip():
-                    issues.append("DuePayableAmount missing currencyID attribute")
 
         header_tax = settlement.find("ram:ApplicableTradeTax", ns)
         if header_tax is not None:
             cat = header_tax.find("ram:CategoryCode", ns)
             cat_txt = (cat.text or "").strip() if cat is not None else ""
-            if cat_txt == "Z":
+            # Categories E, AE, K, G, O require exemption reason; Z must NOT have one
+            if cat_txt in ("E", "AE", "K", "G", "O"):
                 if header_tax.find("ram:ExemptionReason", ns) is None:
-                    issues.append("CategoryCode Z requires ExemptionReason (BT-120)")
+                    issues.append(f"CategoryCode {cat_txt} requires ExemptionReason (BT-120)")
+            if cat_txt == "Z" and header_tax.find("ram:ExemptionReason", ns) is not None:
+                issues.append("CategoryCode Z must not have ExemptionReason (BR-Z-10)")
+
+            # Seller/buyer country required when address present — strengthen BR-09/BR-11
+            seller = None
+            buyer = None
+            if agreement is not None:
+                seller = agreement.find("ram:SellerTradeParty", ns)
+                buyer = agreement.find("ram:BuyerTradeParty", ns)
+            for party, label, bt in ((seller, "Seller", "BT-40"), (buyer, "Buyer", "BT-55")):
+                if party is None:
+                    continue
+                addr = party.find("ram:PostalTradeAddress", ns)
+                if addr is None:
+                    issues.append(f"{label} missing PostalTradeAddress ({bt})")
+                else:
+                    cid = addr.find("ram:CountryID", ns)
+                    if cid is None or not (cid.text or "").strip():
+                        issues.append(f"{label} missing CountryID ({bt})")
 
     # Line items
     lines = txn.findall("ram:IncludedSupplyChainTradeLineItem", ns)
@@ -289,6 +307,63 @@ def validate_cii_en16931(cii_xml: str) -> Tuple[bool, List[str]]:
             qty = delivery.find("ram:BilledQuantity", ns)
             if qty is not None and not qty.get("unitCode"):
                 issues.append(f"Line {i}: BilledQuantity missing unitCode attribute")
+
+    return len(issues) == 0, issues
+
+
+def validate_facturx_prerequisites(invoice: Any, settings: Any) -> Tuple[bool, List[str]]:
+    """
+    Pre-export checks for Factur-X / ZUGFeRD when embedding is enabled.
+    Returns (passed, list of human-readable issues). Does not block when
+    Factur-X is disabled.
+    """
+    from app.utils.cii_invoice import resolve_vat_category
+
+    if not getattr(settings, "invoices_zugferd_pdf", False):
+        return True, []
+
+    issues: List[str] = []
+
+    seller_country = (
+        (getattr(settings, "company_country", None) or "").strip()
+        or (getattr(settings, "peppol_sender_country", None) or "").strip()
+    )
+    if not seller_country:
+        issues.append(
+            "Seller country is missing. Set Company Country in Admin → Settings → Company Branding "
+            "(or Peppol Sender Country)."
+        )
+
+    client = getattr(invoice, "client", None)
+    buyer_country = None
+    buyer_vat = None
+    if client is not None:
+        buyer_country = (getattr(client, "country", None) or "").strip() or None
+        if not buyer_country:
+            buyer_country = (client.get_custom_field("peppol_country", "") or "").strip() or None
+        if not buyer_country:
+            buyer_country = (
+                client.get_custom_field("country", "") or client.get_custom_field("country_code", "") or ""
+            ).strip() or None
+        buyer_vat = (getattr(client, "vat_id", None) or "").strip() or None
+        if not buyer_vat:
+            buyer_vat = (
+                client.get_custom_field("vat_id", "") or client.get_custom_field("tax_id", "") or ""
+            ).strip() or None
+
+    if not buyer_country:
+        issues.append(
+            "Buyer country is missing. Set the client's Country (ISO alpha-2) for Factur-X compliance."
+        )
+
+    category, _, _, _ = resolve_vat_category(invoice, settings)
+    if category == "AE" and not buyer_vat:
+        issues.append(
+            "VAT category AE (reverse charge) requires the buyer's VAT ID on the client."
+        )
+
+    if not (getattr(settings, "company_name", None) or "").strip():
+        issues.append("Company name is missing in Admin → Settings.")
 
     return len(issues) == 0, issues
 

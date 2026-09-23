@@ -17,12 +17,14 @@ from reportlab.pdfgen import canvas
 from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from app.models import Settings
+from app.utils.pdf_fonts import ensure_pdf_fonts_registered, resolve_font
 
 
 class InvoicePDFGeneratorFallback:
     """Generate PDF invoices with company branding using ReportLab"""
 
     def __init__(self, invoice, settings=None):
+        ensure_pdf_fonts_registered()
         self.invoice = invoice
         self.settings = settings or Settings.get_settings()
         self.styles = getSampleStyleSheet()
@@ -34,6 +36,7 @@ class InvoicePDFGeneratorFallback:
             ParagraphStyle(
                 name="CompanyName",
                 parent=self.styles["Heading1"],
+                fontName=resolve_font("Helvetica-Bold"),
                 fontSize=18,
                 spaceAfter=12,
                 textColor=colors.HexColor("#007bff"),
@@ -44,6 +47,7 @@ class InvoicePDFGeneratorFallback:
             ParagraphStyle(
                 name="InvoiceTitle",
                 parent=self.styles["Heading1"],
+                fontName=resolve_font("Helvetica-Bold"),
                 fontSize=24,
                 spaceAfter=20,
                 textColor=colors.HexColor("#007bff"),
@@ -55,13 +59,22 @@ class InvoicePDFGeneratorFallback:
             ParagraphStyle(
                 name="SectionHeader",
                 parent=self.styles["Heading2"],
+                fontName=resolve_font("Helvetica-Bold"),
                 fontSize=14,
                 spaceAfter=8,
                 textColor=colors.HexColor("#007bff"),
             )
         )
 
-        self.styles.add(ParagraphStyle(name="NormalText", parent=self.styles["Normal"], fontSize=10, spaceAfter=6))
+        self.styles.add(
+            ParagraphStyle(
+                name="NormalText",
+                parent=self.styles["Normal"],
+                fontName=resolve_font("Helvetica"),
+                fontSize=10,
+                spaceAfter=6,
+            )
+        )
 
     def generate_pdf(self):
         """Generate PDF content and return as bytes"""
@@ -325,11 +338,11 @@ class InvoicePDFGeneratorFallback:
                     ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#475569")),
                     ("ALIGN", (0, 0), (-1, -1), "LEFT"),
                     ("ALIGN", (1, 1), (-1, -1), "RIGHT"),
-                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTNAME", (0, 0), (-1, 0), resolve_font("Helvetica-Bold")),
                     ("FONTSIZE", (0, 0), (-1, 0), 12),
                     ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
                     ("BACKGROUND", (0, -3), (-1, -1), colors.HexColor("#eef2ff")),
-                    ("FONTNAME", (0, -3), (-1, -1), "Helvetica-Bold"),
+                    ("FONTNAME", (0, -3), (-1, -1), resolve_font("Helvetica-Bold")),
                     ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
                     ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#e2e8f0")),
                 ]
@@ -356,7 +369,7 @@ class InvoicePDFGeneratorFallback:
         page_height = doc.pagesize[1]
 
         canv.saveState()
-        canv.setFont("Helvetica", 9)
+        canv.setFont(resolve_font("Helvetica"), 9)
         try:
             canv.setFillColor(colors.HexColor("#666666"))
         except Exception:
@@ -424,6 +437,7 @@ class QuotePDFGeneratorFallback:
     """Generate PDF quotes with company branding using ReportLab"""
 
     def __init__(self, quote, settings=None):
+        ensure_pdf_fonts_registered()
         self.quote = quote
         self.settings = settings or Settings.get_settings()
         self.styles = getSampleStyleSheet()
@@ -435,6 +449,7 @@ class QuotePDFGeneratorFallback:
             ParagraphStyle(
                 name="CompanyName",
                 parent=self.styles["Heading1"],
+                fontName=resolve_font("Helvetica-Bold"),
                 fontSize=18,
                 spaceAfter=12,
                 textColor=colors.HexColor("#007bff"),
@@ -445,6 +460,7 @@ class QuotePDFGeneratorFallback:
             ParagraphStyle(
                 name="QuoteTitle",
                 parent=self.styles["Heading1"],
+                fontName=resolve_font("Helvetica-Bold"),
                 fontSize=24,
                 spaceAfter=20,
                 textColor=colors.HexColor("#007bff"),
@@ -456,13 +472,22 @@ class QuotePDFGeneratorFallback:
             ParagraphStyle(
                 name="SectionHeader",
                 parent=self.styles["Heading2"],
+                fontName=resolve_font("Helvetica-Bold"),
                 fontSize=14,
                 spaceAfter=8,
                 textColor=colors.HexColor("#007bff"),
             )
         )
 
-        self.styles.add(ParagraphStyle(name="NormalText", parent=self.styles["Normal"], fontSize=10, spaceAfter=6))
+        self.styles.add(
+            ParagraphStyle(
+                name="NormalText",
+                parent=self.styles["Normal"],
+                fontName=resolve_font("Helvetica"),
+                fontSize=10,
+                spaceAfter=6,
+            )
+        )
 
     def generate_pdf(self):
         """Generate PDF content and return as bytes"""
@@ -592,7 +617,7 @@ class QuotePDFGeneratorFallback:
                     ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
                     ("ALIGN", (0, 0), (-1, -1), "LEFT"),
                     ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
-                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTNAME", (0, 0), (-1, 0), resolve_font("Helvetica-Bold")),
                     ("FONTSIZE", (0, 0), (-1, 0), 10),
                     ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
                     ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
@@ -626,7 +651,7 @@ class QuotePDFGeneratorFallback:
             TableStyle(
                 [
                     ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
-                    ("FONTNAME", (-1, -1), (-1, -1), "Helvetica-Bold"),
+                    ("FONTNAME", (-1, -1), (-1, -1), resolve_font("Helvetica-Bold")),
                     ("FONTSIZE", (-1, -1), (-1, -1), 12),
                     ("TOPPADDING", (0, 0), (-1, -1), 6),
                     ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
@@ -669,7 +694,7 @@ class QuotePDFGeneratorFallback:
         page_height = doc.pagesize[1]
 
         canv.saveState()
-        canv.setFont("Helvetica", 9)
+        canv.setFont(resolve_font("Helvetica"), 9)
         # Ensure page number is within page boundaries
         x = min(page_width - 2 * cm, page_width - 10)
         y = max(1 * cm, 10)

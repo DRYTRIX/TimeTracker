@@ -47,6 +47,10 @@ export function SettingsView(props) {
           >
             Save settings
           </button>
+          <p className="hint">
+            OIDC-only servers do not accept username/password API login. Sign out, then paste an API token from Admin →
+            API tokens on the sign-in screen.
+          </p>
         </Panel>
         <Panel title="Appearance">
           <ThemeSwitch theme={theme} setTheme={setTheme} expanded />

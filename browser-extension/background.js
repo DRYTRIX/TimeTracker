@@ -68,6 +68,11 @@ function clampIdleTimeoutMinutes(value) {
   return Math.min(480, Math.floor(n));
 }
 
+function normalizeUnansweredAction(value) {
+  const v = String(value || 'review').trim().toLowerCase();
+  return v === 'auto_stop' ? 'auto_stop' : 'review';
+}
+
 async function applyIdleDetectionInterval(idleTimeoutMinutes) {
   const minutes = clampIdleTimeoutMinutes(idleTimeoutMinutes);
   const seconds = Math.max(MIN_IDLE_DETECTION_SECONDS, minutes * 60);
@@ -94,7 +99,10 @@ async function clearIdleGraceState() {
 }
 
 async function beginIdleGrace(stopAtMs) {
-  const { last_timer_status } = await chrome.storage.local.get('last_timer_status');
+  const { last_timer_status, idle_unanswered_action } = await chrome.storage.local.get([
+    'last_timer_status',
+    'idle_unanswered_action',
+  ]);
   if (!last_timer_status?.active || !last_timer_status?.timer) {
     return;
   }
@@ -111,12 +119,17 @@ async function beginIdleGrace(stopAtMs) {
 
   chrome.alarms.create(IDLE_STOP_ALARM, { delayInMinutes: GRACE_MINUTES });
 
+  const autoStop = normalizeUnansweredAction(idle_unanswered_action) === 'auto_stop';
+  const message = autoStop
+    ? `Answer within ${GRACE_MINUTES} minutes or the timer will be stopped and the idle time kept.`
+    : `Answer within ${GRACE_MINUTES} minutes or the timer will be flagged for review (it keeps running).`;
+
   try {
     await chrome.notifications.create(IDLE_NOTIFICATION_ID, {
       type: 'basic',
       iconUrl: 'icons/running-128.png',
       title: 'Still working?',
-      message: `Answer within ${GRACE_MINUTES} minutes or the timer will be flagged for review (it keeps running).`,
+      message,
       priority: 2,
       requireInteraction: true,
       buttons: [
@@ -209,7 +222,9 @@ async function refreshTimerStatus({ force = false } = {}) {
     const status = await client.getTimerStatus();
     const active = Boolean(status?.active && status?.timer);
     const idleTimeoutMinutes = clampIdleTimeoutMinutes(status?.idle_timeout_minutes);
+    const idleUnansweredAction = normalizeUnansweredAction(status?.idle_unanswered_action);
     await applyIdleDetectionInterval(idleTimeoutMinutes);
+    await chrome.storage.local.set({ idle_unanswered_action: idleUnansweredAction });
 
     if (active) {
       setRunningUi(status.timer);
@@ -256,6 +271,7 @@ async function refreshTimerStatus({ force = false } = {}) {
       active,
       timer: status?.timer || null,
       idle_timeout_minutes: idleTimeoutMinutes,
+      idle_unanswered_action: idleUnansweredAction,
       error: null,
       force,
     });
@@ -303,9 +319,17 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     return;
   }
   if (alarm.name === IDLE_STOP_ALARM) {
-    // Grace expired unanswered: keep the timer running, flag for review.
+    const { idle_unanswered_action, last_timer_status } = await chrome.storage.local.get([
+      'idle_unanswered_action',
+      'last_timer_status',
+    ]);
+    if (normalizeUnansweredAction(idle_unanswered_action) === 'auto_stop') {
+      // Grace expired unanswered: stop credited to idle_grace_stop_at.
+      await stopTimerForIdle();
+      return;
+    }
+    // review mode: keep the timer running, flag for review.
     await clearIdleGraceState();
-    const { last_timer_status } = await chrome.storage.local.get('last_timer_status');
     if (last_timer_status?.active && last_timer_status?.timer) {
       await notifyNeedsReview(last_timer_status.timer);
     }

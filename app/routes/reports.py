@@ -2113,3 +2113,44 @@ def utilization_report():
         non_billable_hours=non_billable,
         can_view_all=can_view_all,
     )
+
+
+@reports_bp.route("/reports/estimates-vs-actuals")
+@login_required
+@module_enabled("reports")
+def estimates_vs_actuals():
+    """Compare task/project estimates to logged hours."""
+    from app.services.estimate_actuals_service import EstimateActualsService
+
+    project_id = request.args.get("project_id", type=int)
+    service = EstimateActualsService()
+    data = service.get_report(
+        project_id=project_id,
+        user_id=current_user.id,
+        is_admin=current_user.is_admin,
+    )
+    projects = Project.query.order_by(Project.name).all() if current_user.is_admin else None
+    log_event("report.viewed", user_id=current_user.id, report_type="estimates_vs_actuals")
+    return render_template(
+        "reports/estimates_vs_actuals.html",
+        project_rows=data["projects"],
+        task_rows=data["tasks"],
+        project_id=project_id,
+        projects=projects,
+    )
+
+
+@reports_bp.route("/reports/api/estimates-vs-actuals")
+@login_required
+@module_enabled("reports")
+def estimates_vs_actuals_json():
+    """JSON estimates vs actuals (session auth)."""
+    from app.services.estimate_actuals_service import EstimateActualsService
+
+    project_id = request.args.get("project_id", type=int)
+    data = EstimateActualsService().get_report(
+        project_id=project_id,
+        user_id=current_user.id,
+        is_admin=current_user.is_admin,
+    )
+    return jsonify(data)

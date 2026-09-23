@@ -41,18 +41,33 @@ class TimeTrackingRepository {
   }
 
   /// Timer status plus idle metadata from `/api/v1/timer/status`.
-  Future<({Timer? timer, int? idleTimeoutMinutes, bool idleNotified})>
-      getTimerStatusDetailed() async {
+  Future<
+      ({
+        Timer? timer,
+        int? idleTimeoutMinutes,
+        bool idleNotified,
+        String idleUnansweredAction,
+      })> getTimerStatusDetailed() async {
     if (apiClient == null) {
       final cached = await LocalStorage.getTimer();
-      return (timer: cached, idleTimeoutMinutes: null, idleNotified: false);
+      return (
+        timer: cached,
+        idleTimeoutMinutes: null,
+        idleNotified: false,
+        idleUnansweredAction: 'review',
+      );
     }
 
     try {
       final isOnline = await _isOnline();
       if (!isOnline) {
         final cached = await LocalStorage.getTimer();
-        return (timer: cached, idleTimeoutMinutes: null, idleNotified: false);
+        return (
+          timer: cached,
+          idleTimeoutMinutes: null,
+          idleNotified: false,
+          idleUnansweredAction: 'review',
+        );
       }
 
       final response = await apiClient!.getTimerStatus();
@@ -60,6 +75,10 @@ class TimeTrackingRepository {
       final idleNotified = response['idle_notified'] == true ||
           (response['timer'] is Map &&
               (response['timer'] as Map)['idle_notified'] == true);
+      final rawAction =
+          (response['idle_unanswered_action'] as String?)?.trim().toLowerCase();
+      final idleUnansweredAction =
+          rawAction == 'auto_stop' ? 'auto_stop' : 'review';
       if (response['active'] == true && response['timer'] != null) {
         final timer = Timer.fromJson(response['timer'] as Map<String, dynamic>);
         await LocalStorage.saveTimer(timer);
@@ -67,6 +86,7 @@ class TimeTrackingRepository {
           timer: timer,
           idleTimeoutMinutes: idleTimeout,
           idleNotified: idleNotified,
+          idleUnansweredAction: idleUnansweredAction,
         );
       }
       await LocalStorage.clearTimer();
@@ -74,10 +94,16 @@ class TimeTrackingRepository {
         timer: null,
         idleTimeoutMinutes: idleTimeout,
         idleNotified: false,
+        idleUnansweredAction: idleUnansweredAction,
       );
     } catch (e) {
       final cached = await LocalStorage.getTimer();
-      return (timer: cached, idleTimeoutMinutes: null, idleNotified: false);
+      return (
+        timer: cached,
+        idleTimeoutMinutes: null,
+        idleNotified: false,
+        idleUnansweredAction: 'review',
+      );
     }
   }
 
@@ -99,14 +125,13 @@ class TimeTrackingRepository {
     try {
       final isOnline = await _isOnline();
       if (!isOnline) {
-        // Queue for sync (project-backed offline path; client-only needs connectivity)
+        // Queue timer_start (not a manual time entry) for sync when back online.
         if (projectId == null) {
           throw Exception('Client-only timers require a network connection');
         }
-        await SyncService.queueCreateTimeEntry(
+        await SyncService.queueTimerStart(
           projectId: projectId,
           taskId: taskId,
-          startTime: DateTime.now().toIso8601String(),
           notes: notes,
         );
         // Create a local timer representation
@@ -151,6 +176,34 @@ class TimeTrackingRepository {
       throw Exception('Not connected to server');
     }
     try {
+      final isOnline = await _isOnline();
+      if (!isOnline) {
+        final cached = await LocalStorage.getTimer();
+        if (cached == null) {
+          throw TimerAlreadyStoppedException('No active timer');
+        }
+        final end = stopTime ?? DateTime.now();
+        await SyncService.queueTimerStop(stopTime: end.toUtc().toIso8601String());
+        await LocalStorage.clearTimer();
+        final entry = TimeEntry(
+          id: DateTime.now().millisecondsSinceEpoch,
+          userId: cached.userId,
+          projectId: cached.projectId,
+          clientId: cached.clientId,
+          taskId: cached.taskId,
+          startTime: cached.startTime,
+          endTime: end,
+          notes: cached.notes,
+          billable: true,
+          paid: false,
+          source: 'auto',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        await LocalStorage.saveTimeEntry(entry);
+        return entry;
+      }
+
       final response = await runMobileSpan(
         'mobile.timer.stop',
         () => apiClient!.stopTimer(stopTime: stopTime),

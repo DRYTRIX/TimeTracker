@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header %}
+{% from "components/ui.html" import page_header, empty_state %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -34,7 +34,9 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    {% if suppliers %}
+    <div class="overflow-x-auto">
     <table class="table table-zebra w-full text-left enhanced-table responsive-cards">
         <thead class="bg-background-light dark:bg-background-dark">
             <tr>
@@ -89,15 +91,24 @@
                     {% endif %}
                 </td>
             </tr>
-            {% else %}
-            <tr>
-                <td colspan="7" class="p-8 text-center text-gray-500">
-                    {{ _('No suppliers found.') }}
-                </td>
-            </tr>
             {% endfor %}
         </tbody>
     </table>
+    </div>
+    {% else %}
+    {% set actions %}
+    {% if current_user.is_admin or has_permission('manage_suppliers') %}
+    <a href="{{ url_for('inventory.new_supplier') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+        <i class="fas fa-plus mr-2"></i>{{ _('Create Supplier') }}
+    </a>
+    {% endif %}
+    {% endset %}
+    {% if search %}
+        {{ empty_state('fas fa-truck', 'No Suppliers Match Your Filters', 'Try adjusting your filters to see more results.', actions, type='no-results') }}
+    {% else %}
+        {{ empty_state('fas fa-truck', 'No Suppliers Yet', 'Add suppliers to link purchase orders and receiving.', actions, type='no-data') }}
+    {% endif %}
+    {% endif %}
 </div>
 {% endblock %}
 

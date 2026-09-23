@@ -53,6 +53,11 @@ class Invoice(db.Model):
         db.String(20), nullable=False, default="unpaid"
     )  # 'unpaid', 'partially_paid', 'fully_paid', 'overpaid'
 
+    # Per-invoice VAT category override for Factur-X / ZUGFeRD (nullable = use settings default)
+    vat_category = db.Column(db.String(5), nullable=True)
+    vat_exemption_reason = db.Column(db.Text, nullable=True)
+    vat_exemption_code = db.Column(db.String(50), nullable=True)
+
     # Metadata
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -100,6 +105,9 @@ class Invoice(db.Model):
         self.payment_notes = kwargs.get("payment_notes")
         self.amount_paid = Decimal(str(kwargs.get("amount_paid", 0)))
         self.payment_status = kwargs.get("payment_status", "unpaid")
+        self.vat_category = kwargs.get("vat_category")
+        self.vat_exemption_reason = kwargs.get("vat_exemption_reason")
+        self.vat_exemption_code = kwargs.get("vat_exemption_code")
 
     def __repr__(self):
         return f"<Invoice {self.invoice_number} ({self.client_name})>"
@@ -267,6 +275,9 @@ class Invoice(db.Model):
             "tax_rate": float(self.tax_rate),
             "tax_amount": float(self.tax_amount),
             "total_amount": float(self.total_amount),
+            "vat_category": getattr(self, "vat_category", None),
+            "vat_exemption_reason": getattr(self, "vat_exemption_reason", None),
+            "vat_exemption_code": getattr(self, "vat_exemption_code", None),
             "notes": self.notes,
             "terms": self.terms,
             "created_by": self.created_by,

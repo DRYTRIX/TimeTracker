@@ -1,0 +1,26 @@
+{
+  "nav": {
+    "groups": {
+      "work": "Work",
+      "crm": "CRM",
+      "finance": "Finance",
+      "workforce": "Workforce",
+      "app": "App"
+    },
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "entries": "Time Entries",
+    "kanban": "Kanban",
+    "reports": "Reports",
+    "crm": "CRM",
+    "invoices": "Invoices",
+    "expenses": "Expenses",
+    "payments": "Payments",
+    "mileage": "Mileage",
+    "quotes": "Quotes",
+    "recurring": "Recurring",
+    "credit": "Credit notes",
+    "workforce": "Workforce",
+    "settings": "Settings"
+  }
+}

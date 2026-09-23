@@ -284,8 +284,52 @@ class ApiClient {
       }
       return { ok: true, token };
     } catch (error) {
+      const data = error?.response?.data;
+      if (error?.response?.status === 403 && data?.requires_2fa && data?.temp_token) {
+        return {
+          ok: false,
+          code: 'REQUIRES_2FA',
+          requires_2fa: true,
+          temp_token: String(data.temp_token),
+          message: data.error || 'Two-factor authentication required.',
+        };
+      }
       const { code, message } = classifyAxiosError(error);
       return { ok: false, code, message };
+    }
+  }
+
+  static async verifyLogin2fa(baseUrl, tempToken, code) {
+    const normalized = ApiClient.normalizeBaseUrl(baseUrl);
+    const plain = axios.create({
+      baseURL: normalized,
+      timeout: 15000,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+    });
+    try {
+      const response = await plain.post('/api/v1/auth/2fa/verify', {
+        temp_token: tempToken,
+        code,
+      });
+      const token = response.data && response.data.token;
+      if (response.status !== 200 || typeof token !== 'string' || !token.startsWith('tt_')) {
+        return {
+          ok: false,
+          code: 'INVALID_RESPONSE',
+          message: 'Verification did not return a valid app token.',
+        };
+      }
+      return { ok: true, token };
+    } catch (error) {
+      const data = error?.response?.data;
+      if (data?.error) {
+        return { ok: false, code: 'UNAUTHORIZED', message: String(data.error) };
+      }
+      const { code: errCode, message } = classifyAxiosError(error);
+      return { ok: false, code: errCode, message };
     }
   }
 

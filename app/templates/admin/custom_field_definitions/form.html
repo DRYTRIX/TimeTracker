@@ -27,9 +27,20 @@
             </div>
 
             <div>
+                <label for="entity_type" class="form-label">{{ _('Applies to') }}</label>
+                {% set current_entity = request.form.get('entity_type', definition.entity_type if definition else 'client') %}
+                <select id="entity_type" name="entity_type" class="form-input w-full">
+                    <option value="client" {% if current_entity == 'client' %}selected{% endif %}>{{ _('Client') }}</option>
+                    <option value="project" {% if current_entity == 'project' %}selected{% endif %}>{{ _('Project') }}</option>
+                    <option value="task" {% if current_entity == 'task' %}selected{% endif %}>{{ _('Task') }}</option>
+                    <option value="time_entry" {% if current_entity == 'time_entry' %}selected{% endif %}>{{ _('Time entry') }}</option>
+                </select>
+            </div>
+
+            <div>
                 <label for="label" class="form-label">{{ _('Label') }} *</label>
                 <input type="text" id="label" name="label" required value="{{ request.form.get('label', definition.label if definition else '') }}" placeholder="{{ _('e.g., Debtor Number') }}" class="form-input w-full">
-                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Display name shown in client forms') }}</p>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Display name shown on forms for the selected entity') }}</p>
             </div>
 
             <div>

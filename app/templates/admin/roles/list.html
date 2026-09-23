@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, button, filter_badge, empty_state %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -84,7 +84,9 @@
     </div>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    {% if roles %}
+    <div class="overflow-x-auto">
     <table class="w-full text-left enhanced-table responsive-cards">
         <thead class="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
             <tr>
@@ -189,13 +191,20 @@
                     </div>
                 </td>
             </tr>
-            {% else %}
-            <tr>
-                <td colspan="6" class="p-4 text-center text-text-muted-light dark:text-text-muted-dark">{{ _('No roles found.') }}</td>
-            </tr>
             {% endfor %}
         </tbody>
     </table>
+    </div>
+    {% else %}
+    {% set actions %}
+    {% if current_user.is_admin or has_permission('manage_roles') %}
+        <a href="{{ url_for('permissions.create_role') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <i class="fas fa-plus mr-2"></i>{{ _('Create Role') }}
+        </a>
+    {% endif %}
+    {% endset %}
+    {{ empty_state('fas fa-shield-alt', 'No Roles Yet', 'Create roles to group permissions and assign them to users.', actions, type='no-data') }}
+    {% endif %}
 </div>
 
 <div class="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">

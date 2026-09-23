@@ -42,6 +42,24 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Ensure single Alembic head
+        env:
+          FLASK_APP: app.py
+          FLASK_ENV: testing
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+        run: |
+          set -e
+          echo "🔍 Checking for a single Alembic migration head..."
+          HEADS=$(flask db heads 2>/dev/null | sed '/^$/d' | wc -l)
+          echo "Alembic heads found: $HEADS"
+          flask db heads || true
+          if [ "$HEADS" -ne 1 ]; then
+            echo "❌ Expected exactly one Alembic head, found $HEADS"
+            echo "Create a merge migration before merging this PR."
+            exit 1
+          fi
+          echo "✅ Single Alembic head confirmed"
+
       - name: Check for migration changes
         id: migration_check
         run: |

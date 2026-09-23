@@ -27,6 +27,9 @@ Slack
     POST  /api/integrations/slack/test       (login_required)
     GET   /api/integrations/slack/status     (login_required)
 
+Microsoft Teams
+    POST  /api/integrations/teams/bot/messages (Bot Framework stub — see docs/design/TEAMS_BOT.md)
+
 Slack Attendance (workspace-level)
     POST  /api/integrations/slack/attendance          (M2M, signature-verified)
     POST  /api/integrations/slack-attendance/config   (admin)
@@ -371,6 +374,23 @@ def slack_status():
             "events_url": url_for("integrations_webhooks.slack_events", _external=True),
         }
     )
+
+
+# =====================================================================
+# Microsoft Teams bot (slash-command parity stub — see docs/design/TEAMS_BOT.md)
+# =====================================================================
+@integrations_webhooks_bp.route("/api/integrations/teams/bot/messages", methods=["POST"])
+@csrf.exempt
+def teams_bot_messages():
+    """Receive Bot Framework activities (stub; JWT validation in a later phase)."""
+    payload = request.get_json(silent=True) or {}
+    from app.integrations.microsoft_teams import MicrosoftTeamsConnector
+
+    connector = MicrosoftTeamsConnector(integration=None)
+    result = connector.handle_bot_command(payload)
+    status = int(result.get("status") or 501)
+    body = result.get("body") or {}
+    return jsonify(body), status
 
 
 # =====================================================================

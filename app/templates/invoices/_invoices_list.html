@@ -24,6 +24,7 @@
             {% endif %}
         </div>
     </div>
+    <div class="overflow-x-auto">
     <table class="table table-zebra w-full text-left enhanced-table responsive-cards" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
         <thead class="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
             <tr>
@@ -138,6 +139,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
     {% if not invoices %}
     {% from "components/ui.html" import empty_state %}
     {% set actions %}

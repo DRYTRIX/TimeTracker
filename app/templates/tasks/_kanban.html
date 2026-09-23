@@ -1333,8 +1333,8 @@ window.openTaskModal = async function(taskId) {
           </div>
 
           <!-- Quick Stats -->
-          <div class="row g-3 mb-3">
-            <div class="col-6 col-md-3">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+            <div>
               <div class="task-modal-stat">
                 <div class="task-modal-stat-icon bg-primary-subtle">
                   <i class="fas fa-clock text-primary"></i>
@@ -1345,7 +1345,7 @@ window.openTaskModal = async function(taskId) {
                 </div>
               </div>
             </div>
-            <div class="col-6 col-md-3" id="taskModalEstimatedSection2">
+            <div id="taskModalEstimatedSection2">
               <div class="task-modal-stat">
                 <div class="task-modal-stat-icon bg-info-subtle">
                   <i class="fas fa-hourglass-half text-info"></i>
@@ -1356,7 +1356,7 @@ window.openTaskModal = async function(taskId) {
                 </div>
               </div>
             </div>
-            <div class="col-6 col-md-3">
+            <div>
               <div class="task-modal-stat">
                 <div class="task-modal-stat-icon bg-success-subtle">
                   <i class="fas fa-calendar-plus text-success"></i>
@@ -1367,7 +1367,7 @@ window.openTaskModal = async function(taskId) {
                 </div>
               </div>
             </div>
-            <div class="col-6 col-md-3" id="taskModalCompletedSection" style="display: none;">
+            <div id="taskModalCompletedSection" style="display: none;">
               <div class="task-modal-stat">
                 <div class="task-modal-stat-icon bg-success-subtle">
                   <i class="fas fa-check-circle text-success"></i>

@@ -107,9 +107,50 @@ class WorkforceGovernanceService:
             return {"success": False, "message": "Timesheet period not found"}
         if period.status not in (TimesheetPeriodStatus.SUBMITTED, TimesheetPeriodStatus.REJECTED):
             return {"success": False, "message": "Only submitted/rejected periods can be approved"}
+
+        policy = self.get_or_create_default_policy()
+        approvers = policy.get_approver_ids()
+        multi_level = bool(policy.enable_multi_level_approval and len(approvers) >= 2)
+
+        if multi_level:
+            if period.approved_by is None:
+                if approver_id != approvers[0]:
+                    return {
+                        "success": False,
+                        "message": "This period is awaiting primary approver sign-off",
+                    }
+                period.approved_by = approver_id
+                period.approved_at = local_now()
+                period.secondary_approved_by = None
+                period.secondary_approved_at = None
+                if comment:
+                    period.close_reason = comment
+                db.session.commit()
+                return {
+                    "success": True,
+                    "message": "Primary approval recorded; awaiting secondary approver",
+                    "period": period,
+                    "pending_secondary": True,
+                }
+            if period.secondary_approved_by is None:
+                if approver_id != approvers[1]:
+                    return {
+                        "success": False,
+                        "message": "Only the secondary approver may complete this approval",
+                    }
+                period.secondary_approved_by = approver_id
+                period.secondary_approved_at = local_now()
+                period.status = TimesheetPeriodStatus.APPROVED
+                if comment:
+                    period.close_reason = comment
+                db.session.commit()
+                return {"success": True, "period": period}
+
         period.status = TimesheetPeriodStatus.APPROVED
         period.approved_by = approver_id
         period.approved_at = local_now()
+        period.secondary_approved_by = None
+        period.secondary_approved_at = None
         if comment:
             period.close_reason = comment
         db.session.commit()
@@ -125,6 +166,10 @@ class WorkforceGovernanceService:
         period.rejected_by = approver_id
         period.rejected_at = local_now()
         period.rejection_reason = reason
+        period.approved_by = None
+        period.approved_at = None
+        period.secondary_approved_by = None
+        period.secondary_approved_at = None
         db.session.commit()
         return {"success": True, "period": period}
 

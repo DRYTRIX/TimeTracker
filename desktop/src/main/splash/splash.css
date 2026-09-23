@@ -95,7 +95,6 @@ body {
   font-weight: 400;
 }
 
-/* Fade out animation */
 .splash-container.fade-out {
   animation: fadeOut 0.5s ease-out forwards;
 }

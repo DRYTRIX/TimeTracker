@@ -30,11 +30,11 @@
         </div>
         <div>
             <label for="start_date" class="form-label">{{ _('From') }}</label>
-            <input type="date" name="start_date" id="start_date" value="{{ start_date or '' }}" class="form-input">
+            <input type="date" name="start_date" id="start_date" value="{{ start_date or '' }}" class="form-input user-date-input">
         </div>
         <div>
             <label for="end_date" class="form-label">{{ _('To') }}</label>
-            <input type="date" name="end_date" id="end_date" value="{{ end_date or '' }}" class="form-input">
+            <input type="date" name="end_date" id="end_date" value="{{ end_date or '' }}" class="form-input user-date-input">
         </div>
         <div class="md:col-span-4">
             <button type="submit" class="btn btn-primary">{{ _('Filter') }}</button>
@@ -51,7 +51,7 @@
         <table class="w-full text-left">
             <thead class="border-b border-border-light dark:border-border-dark">
                 <tr>
-                    <th class="p-3"><input type="checkbox" id="selectAllApprovals"></th>
+                    <th class="p-3"><input type="checkbox" id="selectAllApprovals" aria-label="{{ _('Select all expenses') }}"></th>
                     <th class="p-3">{{ _('Date') }}</th>
                     <th class="p-3">{{ _('Submitter') }}</th>
                     <th class="p-3">{{ _('Title') }}</th>
@@ -80,9 +80,9 @@
                             <form method="POST" action="{{ url_for('expenses.approve_expense', expense_id=expense.id) }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="next" value="approvals">
-                                <button type="submit" class="text-green-600 hover:text-green-800" title="{{ _('Approve') }}"><i class="fas fa-check"></i></button>
+                                <button type="submit" class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300" title="{{ _('Approve') }}" aria-label="{{ _('Approve') }}"><i class="fas fa-check" aria-hidden="true"></i></button>
                             </form>
-                            <button type="button" class="text-red-600 hover:text-red-800" title="{{ _('Reject') }}" onclick="openReject({{ expense.id }})"><i class="fas fa-times"></i></button>
+                            <button type="button" class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300" title="{{ _('Reject') }}" aria-label="{{ _('Reject') }}" onclick="openReject({{ expense.id }})"><i class="fas fa-times" aria-hidden="true"></i></button>
                         </div>
                     </td>
                 </tr>

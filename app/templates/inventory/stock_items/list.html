@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header %}
+{% from "components/ui.html" import page_header, empty_state %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -42,7 +42,9 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    {% if items %}
+    <div class="overflow-x-auto">
     <table class="table table-zebra w-full text-left enhanced-table responsive-cards">
         <thead class="bg-background-light dark:bg-background-dark">
             <tr>
@@ -102,15 +104,24 @@
                     {% endif %}
                 </td>
             </tr>
-            {% else %}
-            <tr>
-                <td colspan="8" class="p-8 text-center text-gray-500">
-                    {{ _('No stock items found.') }}
-                </td>
-            </tr>
             {% endfor %}
         </tbody>
     </table>
+    </div>
+    {% else %}
+    {% set actions %}
+    {% if current_user.is_admin or has_permission('manage_stock_items') %}
+    <a href="{{ url_for('inventory.new_stock_item') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+        <i class="fas fa-plus mr-2"></i>{{ _('Create Stock Item') }}
+    </a>
+    {% endif %}
+    {% endset %}
+    {% if search or category %}
+        {{ empty_state('fas fa-cubes', 'No Stock Items Match Your Filters', 'Try adjusting your filters to see more results.', actions, type='no-results') }}
+    {% else %}
+        {{ empty_state('fas fa-cubes', 'No Stock Items Yet', 'Create stock items to track quantities, locations, and movements.', actions, type='no-data') }}
+    {% endif %}
+    {% endif %}
 </div>
 {% endblock %}
 

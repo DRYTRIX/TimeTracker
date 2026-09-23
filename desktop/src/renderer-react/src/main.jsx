@@ -49,6 +49,10 @@ function App() {
   const [serverUrl, setServerUrl] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [authPhase, setAuthPhase] = useState('credentials');
+  const [totpCode, setTotpCode] = useState('');
+  const [loginTempToken, setLoginTempToken] = useState('');
+  const [apiTokenPaste, setApiTokenPaste] = useState('');
   const [authError, setAuthError] = useState('');
   const [authInfo, setAuthInfo] = useState('');
   const [diagnostics, setDiagnostics] = useState(null);
@@ -293,6 +297,7 @@ function App() {
       timer,
       elapsedLabel,
       idle_timeout_minutes: timerPayload?.idle_timeout_minutes,
+      idle_unanswered_action: timerPayload?.idle_unanswered_action,
     });
   }, []);
 
@@ -300,9 +305,11 @@ function App() {
     if (!apiClient || !window.electronAPI?.onIdlePrompt) return undefined;
 
     const unsubPrompt = window.electronAPI.onIdlePrompt((payload) => {
-      const ok = window.confirm(
-        'Still working? If you do not confirm, the timer keeps running and will be flagged for review.\n\nPress OK if you are still working, or Cancel to stop the timer now.',
-      );
+      const autoStop = payload?.idleUnansweredAction === 'auto_stop';
+      const msg = autoStop
+        ? 'Still working? If you do not confirm, the timer will be stopped and the idle time kept.\n\nPress OK if you are still working, or Cancel to stop the timer now.'
+        : 'Still working? If you do not confirm, the timer keeps running and will be flagged for review.\n\nPress OK if you are still working, or Cancel to stop the timer now.';
+      const ok = window.confirm(msg);
       if (ok) {
         window.electronAPI.idleStillWorking();
         apiClient.sendHeartbeat().catch(() => {});
@@ -362,6 +369,57 @@ function App() {
     setAuthStep('credentials');
   };
 
+  const finalizeAuthenticatedSession = async (normalized, loginUsername, token) => {
+    const client = new ApiClient(normalized, token);
+    const session = await client.validateSession();
+    if (!session.ok) {
+      setAuthError(session.message || 'The account cannot access the desktop API.');
+      setDiagnostics(buildDiagnostics(normalized, session));
+      setConnection({ state: 'error', serverUrl: normalized, message: session.message || 'Session failed', lastOk: null });
+      return false;
+    }
+
+    await storeSet('server_url', normalized);
+    await storeSet('username', loginUsername.trim());
+    await storeSet('api_token', token);
+    await storeSet('api_token_server_url', normalized);
+    setUsername(loginUsername.trim());
+    setPassword('');
+    setTotpCode('');
+    setLoginTempToken('');
+    setAuthPhase('credentials');
+    setApiClient(client);
+    setConnection({ state: 'connected', serverUrl: normalized, message: 'Connected', lastOk: Date.now() });
+    showToast('Signed in successfully', 'success');
+    return true;
+  };
+
+  const handleConnectWithToken = async () => {
+    const normalized = ApiClient.normalizeBaseUrl(normalizeServerUrlInput(serverUrl));
+    setAuthError('');
+    setDiagnostics(null);
+    if (!normalized) {
+      setAuthError('Enter your TimeTracker server URL.');
+      return;
+    }
+    setConnection({ state: 'connecting', serverUrl: normalized, message: 'Validating token…', lastOk: null });
+    const info = await ApiClient.testPublicServerInfo(normalized);
+    if (!info.ok) {
+      setAuthError(info.message);
+      setDiagnostics(buildDiagnostics(normalized, info));
+      setConnection({ state: 'error', serverUrl: normalized, message: info.message, lastOk: null });
+      return;
+    }
+    const result = await ApiClient.connectWithApiToken(normalized, apiTokenPaste);
+    if (!result.ok) {
+      setAuthError(result.message || 'Token validation failed.');
+      setDiagnostics(buildDiagnostics(normalized, result));
+      setConnection({ state: 'error', serverUrl: normalized, message: result.message || 'Token failed', lastOk: null });
+      return;
+    }
+    await finalizeAuthenticatedSession(normalized, username, result.token);
+  };
+
   const handleLogin = async (event, overrides = {}) => {
     event.preventDefault();
     const loginServerUrl = overrides.serverUrl ?? serverUrl;
@@ -370,6 +428,29 @@ function App() {
     const normalized = ApiClient.normalizeBaseUrl(normalizeServerUrlInput(loginServerUrl));
     setAuthError('');
     setDiagnostics(null);
+
+    if (authPhase === '2fa') {
+      if (!normalized || !loginTempToken || !totpCode.trim()) {
+        setAuthError('Enter your authentication code.');
+        return;
+      }
+      setConnection({ state: 'connecting', serverUrl: normalized, message: 'Verifying code…', lastOk: null });
+      const verified = await ApiClient.verifyLogin2fa(normalized, loginTempToken, totpCode.trim());
+      if (!verified.ok) {
+        setAuthError(verified.message || 'Invalid authentication code.');
+        setDiagnostics(buildDiagnostics(normalized, verified));
+        setConnection({
+          state: 'error',
+          serverUrl: normalized,
+          message: verified.message || 'Verification failed',
+          lastOk: null,
+        });
+        return;
+      }
+      await finalizeAuthenticatedSession(normalized, loginUsername, verified.token);
+      return;
+    }
+
     if (!normalized || !loginUsername || !loginPassword) {
       setAuthError('Enter server URL, username, and password.');
       return;
@@ -386,30 +467,21 @@ function App() {
 
     const login = await ApiClient.loginWithPassword(normalized, loginUsername, loginPassword);
     if (!login.ok) {
+      if (login.code === 'REQUIRES_2FA' && login.temp_token) {
+        setLoginTempToken(login.temp_token);
+        setAuthPhase('2fa');
+        setTotpCode('');
+        setAuthInfo('Enter the code from your authenticator app.');
+        setConnection({ state: 'connected', serverUrl: normalized, message: 'Two-factor required', lastOk: Date.now() });
+        return;
+      }
       setAuthError(login.message || 'Login failed.');
       setDiagnostics(buildDiagnostics(normalized, login));
       setConnection({ state: 'error', serverUrl: normalized, message: login.message || 'Login failed', lastOk: null });
       return;
     }
 
-    const client = new ApiClient(normalized, login.token);
-    const session = await client.validateSession();
-    if (!session.ok) {
-      setAuthError(session.message || 'The account cannot access the desktop API.');
-      setDiagnostics(buildDiagnostics(normalized, session));
-      setConnection({ state: 'error', serverUrl: normalized, message: session.message || 'Session failed', lastOk: null });
-      return;
-    }
-
-    await storeSet('server_url', normalized);
-    await storeSet('username', loginUsername.trim());
-    await storeSet('api_token', login.token);
-    await storeSet('api_token_server_url', normalized);
-    setUsername(loginUsername.trim());
-    setPassword('');
-    setApiClient(client);
-    setConnection({ state: 'connected', serverUrl: normalized, message: 'Connected', lastOk: Date.now() });
-    showToast('Signed in successfully', 'success');
+    await finalizeAuthenticatedSession(normalized, loginUsername, login.token);
   };
 
   const handleLogout = async () => {
@@ -638,6 +710,18 @@ function App() {
         connection={connection}
         onTestServer={handleServerTest}
         onLogin={handleLogin}
+        authPhase={authPhase}
+        totpCode={totpCode}
+        setTotpCode={setTotpCode}
+        onBackFrom2fa={() => {
+          setAuthPhase('credentials');
+          setLoginTempToken('');
+          setTotpCode('');
+          setAuthError('');
+        }}
+        apiTokenPaste={apiTokenPaste}
+        setApiTokenPaste={setApiTokenPaste}
+        onConnectWithToken={handleConnectWithToken}
         theme={theme}
         setTheme={setTheme}
       />

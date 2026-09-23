@@ -109,3 +109,17 @@ module = ["app.services.task_service", "app.services.quote_service", "app.servic
 disable_error_code = ["arg-type"]
 
 # Pytest config is in pytest.ini (single source of truth to avoid duplicate config warning)
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["migrations", "venv", ".venv", "htmlcov", "node_modules"]
+
+[tool.ruff.lint]
+# Prefer extend-select so default rules stay off until CI adopts full ruff.
+# S110 flags try/except/pass (silent exception swallowing).
+extend-select = ["S110"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S110"]
+"scripts/**" = ["S110"]

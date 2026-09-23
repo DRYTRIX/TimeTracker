@@ -8,6 +8,12 @@
     return (isNaN(mins) || mins < 1 ? 30 : Math.min(480, mins)) * 60 * 1000;
   }
 
+  function getIdleUnansweredAction(){
+    const meta = document.querySelector('meta[name="idle-unanswered-action"]');
+    const v = meta ? (meta.getAttribute('content') || '').trim().toLowerCase() : 'review';
+    return v === 'auto_stop' ? 'auto_stop' : 'review';
+  }
+
   const CHECK_INTERVAL_MS = 60 * 1000; // 1 minute
   const GRACE_MS = 5 * 60 * 1000; // 5 minutes to answer "Still working?"
 
@@ -212,9 +218,13 @@
     closeIdleNotification();
     try {
       const title = window.i18n?.messages?.stillWorkingTitle || 'Still working?';
+      const autoStop = getIdleUnansweredAction() === 'auto_stop';
       const body = window.i18n?.messages?.stillWorkingPrompt ||
-        ('You seem inactive since ' + formatTime(new Date(stopTs)) +
-         '. Click to confirm you are still working, or the timer will be flagged for review.');
+        (autoStop
+          ? ('You seem inactive since ' + formatTime(new Date(stopTs)) +
+             '. Click to confirm you are still working, or the timer will be stopped and the idle time kept.')
+          : ('You seem inactive since ' + formatTime(new Date(stopTs)) +
+             '. Click to confirm you are still working, or the timer will be flagged for review.'));
       const n = new Notification(title, {
         body: body,
         tag: 'tt-still-working',
@@ -241,9 +251,13 @@
     const yesLabel = window.i18n?.messages?.stillWorkingYes || 'Yes, still working';
     const noLabel = window.i18n?.messages?.stillWorkingNo || 'No, stop timer';
     const trimLabel = window.i18n?.messages?.stillWorkingTrim || 'Keep until idle';
+    const autoStop = getIdleUnansweredAction() === 'auto_stop';
     const baseMsg = window.i18n?.messages?.stillWorkingPrompt ||
-      ('Still working? You seem inactive since ' + formatTime(new Date(stopTs)) +
-       '. If you do not answer, the timer keeps running and is flagged for review.');
+      (autoStop
+        ? ('Still working? You seem inactive since ' + formatTime(new Date(stopTs)) +
+           '. If you do not answer, the timer will be stopped and the idle time kept.')
+        : ('Still working? You seem inactive since ' + formatTime(new Date(stopTs)) +
+           '. If you do not answer, the timer keeps running and is flagged for review.'));
 
     const deadline = Date.now() + GRACE_MS;
 
@@ -264,13 +278,18 @@
       }, 1000);
 
       graceTimerId = setTimeout(function(){
-        // Unanswered prompt: the timer KEEPS RUNNING and is flagged for review
-        // (server sets idle_flagged_at). Never silently truncate recorded time.
         clearGraceTimers();
         closeIdleNotification();
         promptShown = false;
         try { toastEl.remove(); } catch(e){}
-        showNeedsReviewBanner(null);
+        if (autoStop) {
+          // Credit last activity + idle window (Issue #722).
+          stopAt(stopTs + getIdleThresholdMs());
+        } else {
+          // Unanswered prompt: the timer KEEPS RUNNING and is flagged for review
+          // (server sets idle_flagged_at). Never silently truncate recorded time.
+          showNeedsReviewBanner(null);
+        }
       }, GRACE_MS);
     }
 
@@ -626,6 +645,12 @@
   };
   window.__ttShowNeedsReview = function(){
     showNeedsReviewBanner();
+  };
+  window.__ttOnIdleAutoStop = function(){
+    clearGraceTimers();
+    closeIdleNotification();
+    promptShown = false;
+    refreshTimerUiAfterStop();
   };
 })();
 

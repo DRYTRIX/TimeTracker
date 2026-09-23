@@ -28,8 +28,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _serverUrlController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _totpController = TextEditingController();
+  final _apiTokenController = TextEditingController();
   final _storage = const FlutterSecureStorage();
   bool _isLoading = false;
+  bool _awaiting2fa = false;
+  String? _loginTempToken;
+  String? _pendingServerUrl;
   String? _error;
   ConnectionDiagnostics? _connectionDiag;
 
@@ -51,7 +56,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _serverUrlController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
+    _totpController.dispose();
+    _apiTokenController.dispose();
     super.dispose();
+  }
+
+  Future<void> _completeLogin(String serverUrl, String token) async {
+    final trustedHosts = await AppConfig.getTrustedInsecureHosts();
+    final apiClient = ApiClient(baseUrl: serverUrl, trustedInsecureHosts: trustedHosts);
+    await apiClient.setAuthToken(token);
+    final validationResponse = await runMobileSpan(
+      'mobile.login.validate_token',
+      () => apiClient.validateTokenRaw(),
+    );
+    final status = validationResponse.statusCode;
+    if (status != 200) {
+      setState(() {
+        if (status == 401) {
+          _error =
+              'Login succeeded, but the server rejected the session (401 Unauthorized). Check that the Server URL points to the correct TimeTracker instance.';
+        } else {
+          _error =
+              'Login succeeded, but the server returned HTTP ${status ?? '—'} while validating the connection.';
+        }
+        _isLoading = false;
+      });
+      return;
+    }
+
+    await AppConfig.setServerUrl(serverUrl);
+    await _storage.write(key: 'api_token', value: token);
+
+    unawaited(SyncUseCase.shared.startPeriodicSync());
+    unawaited(NotificationService.instance.registerDeviceToken(apiClient));
+
+    if (mounted) {
+      Navigator.of(context).pushReplacementNamed(AppConstants.routeHome);
+    }
   }
 
   /// True if host is likely local/emulator (self-signed cert is common).
@@ -73,8 +114,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return 'https://$trimmed';
   }
 
+  Future<void> _connectWithApiToken() async {
+    final rawUrl = _serverUrlController.text.trim();
+    final serverUrl = _normalizeServerUrl(rawUrl);
+    final token = _apiTokenController.text.trim();
+    if (serverUrl.isEmpty || token.isEmpty) {
+      setState(() => _error = 'Enter server URL and API token');
+      return;
+    }
+    if (!token.startsWith('tt_')) {
+      setState(() => _error = 'API token must start with tt_');
+      return;
+    }
+    setState(() {
+      _isLoading = true;
+      _error = null;
+      _connectionDiag = null;
+    });
+    try {
+      final trustedHosts = await AppConfig.getTrustedInsecureHosts();
+      final infoResult = await probeServerInfo(
+        serverUrl,
+        trustedInsecureHosts: trustedHosts,
+      );
+      if (!infoResult.ok) {
+        setState(() {
+          _error = infoResult.message ?? 'Could not reach TimeTracker server';
+          _isLoading = false;
+        });
+        return;
+      }
+      await _completeLogin(serverUrl, token);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _error = 'Could not validate API token on this server.';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) {
+    if (!_awaiting2fa && !_formKey.currentState!.validate()) {
+      return;
+    }
+    if (_awaiting2fa && _totpController.text.trim().isEmpty) {
+      setState(() => _error = 'Enter your authentication code');
       return;
     }
 
@@ -113,6 +199,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ));
       configureDioTrustedHosts(dio, trustedHosts);
 
+      if (_awaiting2fa && _loginTempToken != null) {
+        final code = _totpController.text.trim().replaceAll(' ', '');
+        final response = await dio.post<Map<String, dynamic>>(
+          '/api/v1/auth/2fa/verify',
+          data: {'temp_token': _loginTempToken, 'code': code},
+        );
+        final token = response.data?['token'] as String?;
+        if (token == null || token.isEmpty) {
+          setState(() {
+            _error = 'Invalid authentication code';
+            _isLoading = false;
+          });
+          return;
+        }
+        await _completeLogin(_pendingServerUrl ?? serverUrl, token);
+        return;
+      }
+
       final response = await dio.post<Map<String, dynamic>>(
         '/api/v1/auth/login',
         data: {'username': username, 'password': password},
@@ -127,42 +231,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         return;
       }
 
-      final apiClient = ApiClient(baseUrl: serverUrl, trustedInsecureHosts: trustedHosts);
-      await apiClient.setAuthToken(token);
-      final validationResponse = await runMobileSpan(
-        'mobile.login.validate_token',
-        () => apiClient.validateTokenRaw(),
-      );
-      final status = validationResponse.statusCode;
-      if (status != 200) {
-        setState(() {
-          if (status == 401) {
-            _error =
-                'Login succeeded, but the server rejected the session (401 Unauthorized). Check that the Server URL points to the correct TimeTracker instance.';
-          } else {
-            _error =
-                'Login succeeded, but the server returned HTTP ${status ?? '—'} while validating the connection.';
-          }
-          _isLoading = false;
-        });
-        return;
-      }
-
-      // Only persist configuration after we know the connection works.
-      await AppConfig.setServerUrl(serverUrl);
-      await _storage.write(key: 'api_token', value: token);
-
-      // Kick off background periodic sync after a successful login.
-      unawaited(SyncUseCase.shared.startPeriodicSync());
-
-      // Register FCM device token for idle wake-up when Firebase is configured.
-      unawaited(
-        NotificationService.instance.registerDeviceToken(apiClient),
-      );
-
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed(AppConstants.routeHome);
-      }
+      await _completeLogin(serverUrl, token);
     } on DioException catch (e) {
       final host = e.requestOptions.uri.host;
       final isConnectionFailure = e.type == DioExceptionType.connectionError ||
@@ -220,7 +289,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       final statusCode = e.response?.statusCode;
-      final message = e.response?.data is Map ? (e.response!.data as Map)['error'] as String? : null;
+      final responseData = e.response?.data;
+      if (statusCode == 403 &&
+          responseData is Map &&
+          responseData['requires_2fa'] == true &&
+          responseData['temp_token'] is String) {
+        final normalizedUrl = _normalizeServerUrl(_serverUrlController.text.trim());
+        if (mounted) {
+          setState(() {
+            _awaiting2fa = true;
+            _loginTempToken = responseData['temp_token'] as String;
+            _pendingServerUrl = normalizedUrl;
+            _error = null;
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      final message = responseData is Map ? responseData['error'] as String? : null;
       final errMsg = (statusCode == 401)
           ? (message ?? 'Invalid username or password')
           : (message ?? diag.summary);
@@ -408,39 +495,91 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _usernameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Username',
-                      hintText: 'Your web login username',
-                      prefixIcon: Icon(Icons.person),
+                  if (_awaiting2fa) ...[
+                    Text(
+                      'Enter the 6-digit code from your authenticator app.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
                     ),
-                    textCapitalization: TextCapitalization.none,
-                    autocorrect: false,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter username';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _passwordController,
-                    decoration: const InputDecoration(
-                      labelText: 'Password',
-                      hintText: 'Your web login password',
-                      prefixIcon: Icon(Icons.lock),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _totpController,
+                      decoration: const InputDecoration(
+                        labelText: 'Authentication code',
+                        hintText: '123456',
+                        prefixIcon: Icon(Icons.pin),
+                      ),
+                      keyboardType: TextInputType.number,
+                      autofocus: true,
                     ),
-                    obscureText: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter password';
-                      }
-                      return null;
-                    },
-                  ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: _isLoading
+                          ? null
+                          : () {
+                              setState(() {
+                                _awaiting2fa = false;
+                                _loginTempToken = null;
+                                _totpController.clear();
+                              });
+                            },
+                      child: const Text('Back to password'),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _usernameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Username',
+                        hintText: 'Your web login username',
+                        prefixIcon: Icon(Icons.person),
+                      ),
+                      textCapitalization: TextCapitalization.none,
+                      autocorrect: false,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter username';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _passwordController,
+                      decoration: const InputDecoration(
+                        labelText: 'Password',
+                        hintText: 'Your web login password',
+                        prefixIcon: Icon(Icons.lock),
+                      ),
+                      obscureText: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter password';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'OIDC-only servers: create an API token in Admin → API tokens and paste it below.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _apiTokenController,
+                      decoration: const InputDecoration(
+                        labelText: 'Or paste API token',
+                        hintText: 'tt_…',
+                        prefixIcon: Icon(Icons.key),
+                      ),
+                      obscureText: true,
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      onPressed: _isLoading ? null : _connectWithApiToken,
+                      child: const Text('Connect with token'),
+                    ),
+                  ],
                   if (_error != null) ...[
                     const SizedBox(height: 16),
                     Container(
@@ -497,7 +636,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Login'),
+                        : Text(_awaiting2fa ? 'Verify code' : 'Login'),
                   ),
                 ],
               ),

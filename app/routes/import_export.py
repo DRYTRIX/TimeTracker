@@ -235,6 +235,36 @@ def import_history():
 # ============================================================================
 
 
+@import_export_bp.route("/api/erase-account", methods=["POST"])
+@login_required
+@module_enabled("import_export")
+def erase_account_gdpr():
+    """Self-service GDPR erasure (anonymize current user)."""
+    from app.services.user_gdpr_service import UserGdprService
+
+    data = request.get_json(silent=True) or {}
+    if not data.get("confirm"):
+        return jsonify({"error": 'Confirmation required. Send JSON {"confirm": true}.'}), 400
+
+    result = UserGdprService().anonymize_user(
+        user_id=current_user.id,
+        actor_id=current_user.id,
+        reason=data.get("reason"),
+    )
+    if not result.get("success"):
+        status = 400
+        if result.get("error") == "not_found":
+            status = 404
+        return jsonify(result), status
+
+    from flask import session
+    from flask_login import logout_user
+
+    logout_user()
+    session.clear()
+    return jsonify({"success": True, "message": "Account anonymized"}), 200
+
+
 @import_export_bp.route("/api/export/gdpr", methods=["POST"])
 @login_required
 @module_enabled("import_export")

@@ -15,7 +15,7 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 pb-28 sm:pb-6">
     <div class="lg:col-span-2 min-w-0">
         <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
-            <form method="POST" id="editInvoiceForm" novalidate data-validate-form>
+            <form method="POST" id="editInvoiceForm" novalidate data-validate-form data-unsaved-guard>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 min-w-0">
                     <div class="min-w-0">
@@ -41,6 +41,28 @@
                     <div class="md:col-span-2 min-w-0">
                         <label for="buyer_reference" class="form-label">{{ _('Buyer reference (PEPPOL BT-10)') }}</label>
                         <input type="text" name="buyer_reference" id="buyer_reference" value="{{ invoice.buyer_reference or '' }}" class="form-input" placeholder="{{ _('Optional; used in PEPPOL UBL') }}">
+                    </div>
+                    <div class="min-w-0">
+                        <label for="vat_category" class="form-label">{{ _('VAT category (Factur-X override)') }}</label>
+                        <select name="vat_category" id="vat_category" class="form-input text-base min-h-[44px]">
+                            <option value="">{{ _('Use default from settings') }}</option>
+                            {% set vc = invoice.vat_category or '' %}
+                            <option value="S" {% if vc == 'S' %}selected{% endif %}>S — Standard</option>
+                            <option value="Z" {% if vc == 'Z' %}selected{% endif %}>Z — Zero rated</option>
+                            <option value="E" {% if vc == 'E' %}selected{% endif %}>E — Exempt</option>
+                            <option value="AE" {% if vc == 'AE' %}selected{% endif %}>AE — Reverse charge</option>
+                            <option value="K" {% if vc == 'K' %}selected{% endif %}>K — Intra-Community</option>
+                            <option value="G" {% if vc == 'G' %}selected{% endif %}>G — Export</option>
+                            <option value="O" {% if vc == 'O' %}selected{% endif %}>O — Not subject to VAT</option>
+                        </select>
+                    </div>
+                    <div class="min-w-0">
+                        <label for="vat_exemption_code" class="form-label">{{ _('VAT exemption code') }}</label>
+                        <input type="text" name="vat_exemption_code" id="vat_exemption_code" value="{{ invoice.vat_exemption_code or '' }}" class="form-input" placeholder="VATEX-EU-O">
+                    </div>
+                    <div class="md:col-span-2 min-w-0">
+                        <label for="vat_exemption_reason" class="form-label">{{ _('VAT exemption reason') }}</label>
+                        <input type="text" name="vat_exemption_reason" id="vat_exemption_reason" value="{{ invoice.vat_exemption_reason or '' }}" class="form-input">
                     </div>
                     <div class="md:col-span-2 min-w-0">
                         <label for="notes" class="form-label">{{ _('Notes') }}</label>

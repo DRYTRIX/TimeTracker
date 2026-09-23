@@ -18,7 +18,9 @@
 
     function initializeWizard() {
         // Set up event listeners
-        document.getElementById('next-btn').addEventListener('click', handleNext);
+        document.getElementById('next-btn').addEventListener('click', function () {
+            void handleNext();
+        });
         document.getElementById('prev-btn').addEventListener('click', handlePrevious);
         document.getElementById('test-connection-btn').addEventListener('click', handleTestConnection);
         document.getElementById('generate-config-btn').addEventListener('click', handleGenerateConfig);
@@ -36,8 +38,8 @@
         updateStepUI();
     }
 
-    function handleNext() {
-        if (validateCurrentStep()) {
+    async function handleNext() {
+        if (await validateCurrentStep()) {
             if (currentStep < totalSteps) {
                 currentStep++;
                 updateStepUI();
@@ -52,12 +54,12 @@
         }
     }
 
-    function validateCurrentStep() {
+    async function validateCurrentStep() {
         switch (currentStep) {
             case 1:
                 return validateStep1();
             case 2:
-                return validateStep2();
+                return await validateStep2();
             case 3:
                 return validateStep3();
             case 4:
@@ -111,17 +113,17 @@
         return true;
     }
 
-    function validateStep2() {
+    async function validateStep2() {
         // Step 2 validation is handled by connection test
         if (!connectionTestResult) {
-            alert('Please test the connection before proceeding.');
+            ttAlert('Please test the connection before proceeding.');
             return false;
         }
         if (!connectionTestResult.success) {
-            const proceed = confirm(
-                'Connection test failed. You can still proceed, but OIDC may not work correctly. Continue anyway?'
+            return await ttConfirm(
+                'Connection test failed. You can still proceed, but OIDC may not work correctly. Continue anyway?',
+                { variant: 'warning', confirmText: 'Continue' }
             );
-            return proceed;
         }
         return true;
     }
@@ -220,7 +222,7 @@
         const issuer = document.getElementById('issuer').value.trim();
         
         if (!issuer) {
-            alert('Please enter an Issuer URL first.');
+            ttAlert('Please enter an Issuer URL first.');
             return;
         }
 
@@ -337,10 +339,10 @@
                 generatedConfig = result;
                 displayConfigResults(result);
             } else {
-                alert('Failed to generate configuration: ' + (result.error || 'Unknown error'));
+                ttAlert('Failed to generate configuration: ' + (result.error || 'Unknown error'));
             }
         } catch (error) {
-            alert('Network error: ' + error.message);
+            ttAlert('Network error: ' + error.message);
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalText;
@@ -375,7 +377,7 @@
                 }, 2000);
             }).catch(err => {
                 console.error('Failed to copy:', err);
-                alert('Failed to copy to clipboard');
+                ttAlert('Failed to copy to clipboard');
             });
         } else {
             // Fallback for older browsers
@@ -393,7 +395,7 @@
                     button.innerHTML = originalText;
                 }, 2000);
             } catch (err) {
-                alert('Failed to copy to clipboard');
+                ttAlert('Failed to copy to clipboard');
             }
             document.body.removeChild(textarea);
         }

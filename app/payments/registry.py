@@ -5,6 +5,7 @@ from typing import Dict, Type
 
 from app.models.payment_gateway import PaymentGateway
 from app.payments.base import PaymentProvider
+from app.payments.mollie_provider import MollieProvider
 from app.payments.paypal_provider import PayPalProvider
 from app.payments.stripe_provider import StripeProvider
 from app.utils.secret_crypto import decrypt_if_needed
@@ -12,6 +13,7 @@ from app.utils.secret_crypto import decrypt_if_needed
 PROVIDERS: Dict[str, Type[PaymentProvider]] = {
     "stripe": StripeProvider,
     "paypal": PayPalProvider,
+    "mollie": MollieProvider,
 }
 
 

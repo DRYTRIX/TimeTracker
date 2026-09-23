@@ -16,7 +16,7 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
                 <label class="text-xs">{{ _('Project') }}</label>
-                <select id="gpsProjectId" class="form-select">
+                <select id="gpsProjectId" class="form-input">
                     <option value="">{{ _('None') }}</option>
                     {% for p in projects %}
                     <option value="{{ p.id }}">{{ p.name }}</option>

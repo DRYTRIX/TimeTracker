@@ -24,6 +24,16 @@ function isInfoPayload(data) {
   return data && typeof data === 'object' && data.api_version === 'v1' && typeof data.endpoints === 'object';
 }
 
+/** Build JSON API headers including optional Bearer token (for tests and request()). */
+export function buildAuthHeaders(token, extra = {}) {
+  const headers = {
+    Accept: 'application/json',
+    ...extra,
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
 export function classifyError(error, response, data) {
   if (response) {
     const status = response.status;
@@ -96,11 +106,7 @@ export class ApiClient {
   async request(method, path, body = undefined) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-    const headers = {
-      Accept: 'application/json',
-    };
-    if (body !== undefined) headers['Content-Type'] = 'application/json';
-    if (this.token) headers.Authorization = `Bearer ${this.token}`;
+    const headers = buildAuthHeaders(this.token, body !== undefined ? { 'Content-Type': 'application/json' } : {});
 
     try {
       const response = await fetch(`${this.baseUrl}${path}`, {
@@ -180,12 +186,41 @@ export class ApiClient {
       }
       return { ok: true, token };
     } catch (error) {
+      const data = error.data;
+      if (error.status === 403 && data?.requires_2fa && data?.temp_token) {
+        return {
+          ok: false,
+          code: 'REQUIRES_2FA',
+          requires_2fa: true,
+          temp_token: String(data.temp_token),
+          message: data.error || 'Two-factor authentication required.',
+        };
+      }
       return {
         ok: false,
         code: error.code || 'NETWORK',
         message: error.message || 'Login failed.',
         status: error.status,
       };
+    }
+  }
+
+  static async verifyLogin2fa(baseUrl, tempToken, code) {
+    const normalized = normalizeServerUrl(baseUrl);
+    const client = new ApiClient(normalized);
+    try {
+      const data = await client.request('POST', '/api/v1/auth/2fa/verify', {
+        temp_token: tempToken,
+        code,
+      });
+      const token = data?.token;
+      if (typeof token !== 'string' || !token.startsWith('tt_')) {
+        return { ok: false, code: 'INVALID_RESPONSE', message: 'Verification did not return a valid API token.' };
+      }
+      return { ok: true, token };
+    } catch (error) {
+      const msg = error.data?.error || error.message || 'Verification failed.';
+      return { ok: false, code: error.code || 'UNAUTHORIZED', message: msg };
     }
   }
 

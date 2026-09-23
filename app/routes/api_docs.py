@@ -553,7 +553,11 @@ Example: `2024-01-15T14:30:00Z`
                 "get": {
                     "tags": ["Timer"],
                     "summary": "Get timer status",
-                    "description": "Get the current timer status for the authenticated user",
+                    "description": (
+                        "Get the current timer status for the authenticated user. "
+                        "Also returns idle_timeout_minutes and idle_unanswered_action "
+                        "(review | auto_stop) so clients can enforce the idle policy."
+                    ),
                     "responses": {"200": {"description": "Timer status"}},
                 }
             },

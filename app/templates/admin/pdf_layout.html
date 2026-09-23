@@ -2426,7 +2426,7 @@
 </div>
 
 <!-- Hidden Save Form -->
-<form id="form-save" method="POST" class="hidden">
+<form id="form-save" method="POST" class="hidden" data-unsaved-guard>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="page_size" id="save-page-size" value="{{ page_size }}">
     <textarea id="save-html" name="invoice_pdf_template_html"></textarea>
@@ -4556,13 +4556,13 @@ async function initializePDFEditor() {
                         }
                     }, function(error) {
                         console.error('Konva failed to load image:', error);
-                        alert('Failed to load image into canvas. The image URL is saved but may not display correctly.');
+                        ttAlert('Failed to load image into canvas. The image URL is saved but may not display correctly.');
                     });
                 };
                 
                 tempImg.onerror = function() {
                     console.error('Failed to load image (onerror):', imageUrl);
-                    alert('Failed to load image. Please check the image URL: ' + imageUrl);
+                    ttAlert('Failed to load image. Please check the image URL: ' + imageUrl);
                 };
                 
                 tempImg.src = imageUrl;
@@ -4664,13 +4664,13 @@ async function initializePDFEditor() {
                 // Validate file type
                 const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
                 if (!allowedTypes.includes(file.type)) {
-                    alert('{{ _("Only image files (PNG, JPG, JPEG, GIF, WEBP) are allowed") }}');
+                    ttAlert('{{ _("Only image files (PNG, JPG, JPEG, GIF, WEBP) are allowed") }}');
                     return;
                 }
                 
                 // Validate file size (5MB)
                 if (file.size > 5 * 1024 * 1024) {
-                    alert('{{ _("File size must be less than 5MB") }}');
+                    ttAlert('{{ _("File size must be less than 5MB") }}');
                     return;
                 }
                 
@@ -4706,15 +4706,15 @@ async function initializePDFEditor() {
                             }, 1000);
                         } else {
                             console.error('updateDecorativeImageElement function not found or invalid element');
-                            alert('{{ _("Error: Image update function not found") }}');
+                            ttAlert('{{ _("Error: Image update function not found") }}');
                         }
                     } else {
-                        alert(data.error || '{{ _("Failed to upload image") }}');
+                        ttAlert(data.error || '{{ _("Failed to upload image") }}');
                     }
                 })
                 .catch(error => {
                     console.error('Upload error:', error);
-                    alert('{{ _("Failed to upload image") }}');
+                    ttAlert('{{ _("Failed to upload image") }}');
                 })
                 .finally(() => {
                     const currentBtnUpload = document.getElementById('btn-upload-decorative-image');
@@ -4738,12 +4738,13 @@ async function initializePDFEditor() {
                     // Silently return - button might exist in DOM from previous selection
                     return;
                 }
-                if (confirm('{{ _("Are you sure you want to remove this image?") }}')) {
+                ttConfirm('{{ _("Are you sure you want to remove this image?") }}', { variant: 'danger', confirmText: '{{ _("Remove") }}' }).then(function (ok) {
+                    if (!ok) return;
                     if (window.updateDecorativeImageElement) {
                         window.updateDecorativeImageElement(selectedElement, null);
                     }
                     updatePropertiesPanel(selectedElement);
-                }
+                });
             });
         }
         
@@ -5658,15 +5659,17 @@ async function initializePDFEditor() {
     if (previewPageSizeSelect) {
         previewPageSizeSelect.addEventListener('change', (e) => {
             const newSize = e.target.value;
-            if (confirm('{{ _("Changing page size will reload the preview with the template for that size. Continue?") }}')) {
-                const mainPageSizeSelector = document.getElementById('page-size-selector');
-                if (mainPageSizeSelector) {
-                    mainPageSizeSelector.value = newSize;
+            ttConfirm('{{ _("Changing page size will reload the preview with the template for that size. Continue?") }}', { confirmText: '{{ _("Continue") }}' }).then(function (ok) {
+                if (ok) {
+                    const mainPageSizeSelector = document.getElementById('page-size-selector');
+                    if (mainPageSizeSelector) {
+                        mainPageSizeSelector.value = newSize;
+                    }
+                    loadPreview(newSize);
+                } else {
+                    e.target.value = previewState.pageSize;
                 }
-                loadPreview(newSize);
-            } else {
-                e.target.value = previewState.pageSize;
-            }
+            });
         });
     }
     
@@ -5710,7 +5713,7 @@ async function initializePDFEditor() {
         const btnPreview = document.getElementById('btn-preview');
         if (btnPreview) {
             btnPreview.addEventListener('click', function() {
-                alert('{{ _("Preview functionality is currently unavailable. Please check the browser console for errors.") }}');
+                ttAlert('{{ _("Preview functionality is currently unavailable. Please check the browser console for errors.") }}');
             });
         }
     }
@@ -6983,12 +6986,12 @@ table tr:last-child td {
         // Ensure JSON is always present and valid
         if (gcSave.ok === false) {
             console.error('generateCode failed on save:', gcSave.errorMessage);
-            alert({{ _('Error: Could not generate template from the canvas. Fix any issues shown in the browser console, then try again.')|tojson }} + (gcSave.errorMessage ? '\n\n' + gcSave.errorMessage : ''));
+            ttAlert({{ _('Error: Could not generate template from the canvas. Fix any issues shown in the browser console, then try again.')|tojson }} + (gcSave.errorMessage ? '\n\n' + gcSave.errorMessage : ''));
             return;
         }
         if (!json || !json.trim()) {
             console.error('No JSON generated from template!');
-            alert('Error: Could not generate template JSON. Please try again.');
+            ttAlert('Error: Could not generate template JSON. Please try again.');
             return;
         }
         
@@ -6997,7 +7000,7 @@ table tr:last-child td {
             JSON.parse(json);
         } catch (e) {
             console.error('Invalid JSON generated:', e);
-            alert('Error: Generated template JSON is invalid. Please try again.');
+            ttAlert('Error: Generated template JSON is invalid. Please try again.');
             return;
         }
         
@@ -7104,6 +7107,7 @@ table tr:last-child td {
         if (dateFormatInput) {
             document.getElementById('save-date-format').value = dateFormatInput.value;
         }
+        try { window.dispatchEvent(new CustomEvent('tt:unsaved-clean')); } catch (_) {}
         document.getElementById('form-save').submit();
     });
     
@@ -8429,6 +8433,7 @@ table tr:last-child td {
 
     function scheduleInvoiceEditorHistoryPush() {
         if (invoiceEditorHistorySuspended) return;
+        try { window.dispatchEvent(new CustomEvent('tt:unsaved-dirty')); } catch (_) {}
         clearTimeout(invoiceEditorHistoryDebounceTimer);
         invoiceEditorHistoryDebounceTimer = setTimeout(function() {
             pushInvoiceEditorHistory();
@@ -8692,7 +8697,7 @@ document.getElementById('import-json-file')?.addEventListener('change', function
     })
     .catch(error => {
         console.error('Import error:', error);
-        alert('{{ _("Error importing template") }}: ' + error.message);
+        ttAlert('{{ _("Error importing template") }}: ' + error.message);
     })
     .finally(() => {
         // Reset file input

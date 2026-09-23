@@ -90,6 +90,22 @@
     </div>
 {% endif %}
 
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+    <h2 class="text-sm font-semibold mb-2">{{ _('Quick presets') }}</h2>
+    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mb-4">
+        {{ _('Apply a module preset (e.g. Solo focus disables CRM, inventory, and other non-essential areas).') }}
+    </p>
+    <div class="flex flex-wrap gap-2">
+        {% for preset in ['solo', 'team', 'compliance', 'everything'] %}
+        <form method="POST" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="apply_module_preset" value="{{ preset }}">
+            <button type="submit" class="btn btn-secondary text-sm">{{ preset|replace('_', ' ')|title }}</button>
+        </form>
+        {% endfor %}
+    </div>
+</div>
+
 <!-- Main Module Management Form -->
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     {% if modules_by_category is defined and modules_by_category %}

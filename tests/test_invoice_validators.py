@@ -169,34 +169,6 @@ def _minimal_cii_en16931() -> str:
     </ram:IssueDateTime>
   </rsm:ExchangedDocument>
   <rsm:SupplyChainTradeTransaction>
-    <ram:ApplicableHeaderTradeAgreement>
-      <ram:SellerTradeParty>
-        <ram:Name>Seller Company</ram:Name>
-      </ram:SellerTradeParty>
-      <ram:BuyerTradeParty>
-        <ram:Name>Buyer Company</ram:Name>
-      </ram:BuyerTradeParty>
-    </ram:ApplicableHeaderTradeAgreement>
-    <ram:ApplicableHeaderTradeDelivery/>
-    <ram:ApplicableHeaderTradeSettlement>
-      <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
-      <ram:ApplicableTradeTax>
-        <ram:CalculatedAmount currencyID="EUR">0.00</ram:CalculatedAmount>
-        <ram:TypeCode>VAT</ram:TypeCode>
-        <ram:BasisAmount currencyID="EUR">100.00</ram:BasisAmount>
-        <ram:CategoryCode>Z</ram:CategoryCode>
-        <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
-        <ram:ExemptionReason>Not subject to VAT</ram:ExemptionReason>
-        <ram:ExemptionReasonCode>VATEX-EU-O</ram:ExemptionReasonCode>
-      </ram:ApplicableTradeTax>
-      <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
-        <ram:LineTotalAmount currencyID="EUR">100.00</ram:LineTotalAmount>
-        <ram:TaxBasisTotalAmount currencyID="EUR">100.00</ram:TaxBasisTotalAmount>
-        <ram:TaxTotalAmount currencyID="EUR">0.00</ram:TaxTotalAmount>
-        <ram:GrandTotalAmount currencyID="EUR">100.00</ram:GrandTotalAmount>
-        <ram:DuePayableAmount currencyID="EUR">100.00</ram:DuePayableAmount>
-      </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
-    </ram:ApplicableHeaderTradeSettlement>
     <ram:IncludedSupplyChainTradeLineItem>
       <ram:AssociatedDocumentLineDocument>
         <ram:LineID>1</ram:LineID>
@@ -206,7 +178,7 @@ def _minimal_cii_en16931() -> str:
       </ram:SpecifiedTradeProduct>
       <ram:SpecifiedLineTradeAgreement>
         <ram:NetPriceProductTradePrice>
-          <ram:ChargeAmount currencyID="EUR">100.00</ram:ChargeAmount>
+          <ram:ChargeAmount>100.00</ram:ChargeAmount>
         </ram:NetPriceProductTradePrice>
       </ram:SpecifiedLineTradeAgreement>
       <ram:SpecifiedLineTradeDelivery>
@@ -215,16 +187,54 @@ def _minimal_cii_en16931() -> str:
       <ram:SpecifiedLineTradeSettlement>
         <ram:ApplicableTradeTax>
           <ram:TypeCode>VAT</ram:TypeCode>
-          <ram:CategoryCode>Z</ram:CategoryCode>
+          <ram:CategoryCode>E</ram:CategoryCode>
           <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
-          <ram:ExemptionReason>Not subject to VAT</ram:ExemptionReason>
-          <ram:ExemptionReasonCode>VATEX-EU-O</ram:ExemptionReasonCode>
         </ram:ApplicableTradeTax>
         <ram:SpecifiedTradeSettlementLineMonetarySummation>
-          <ram:LineTotalAmount currencyID="EUR">100.00</ram:LineTotalAmount>
+          <ram:LineTotalAmount>100.00</ram:LineTotalAmount>
         </ram:SpecifiedTradeSettlementLineMonetarySummation>
       </ram:SpecifiedLineTradeSettlement>
     </ram:IncludedSupplyChainTradeLineItem>
+    <ram:ApplicableHeaderTradeAgreement>
+      <ram:SellerTradeParty>
+        <ram:Name>Seller Company</ram:Name>
+        <ram:PostalTradeAddress>
+          <ram:PostcodeCode>1010</ram:PostcodeCode>
+          <ram:LineOne>Main St 1</ram:LineOne>
+          <ram:CityName>Vienna</ram:CityName>
+          <ram:CountryID>AT</ram:CountryID>
+        </ram:PostalTradeAddress>
+      </ram:SellerTradeParty>
+      <ram:BuyerTradeParty>
+        <ram:Name>Buyer Company</ram:Name>
+        <ram:PostalTradeAddress>
+          <ram:PostcodeCode>10115</ram:PostcodeCode>
+          <ram:LineOne>Buyer Ave 2</ram:LineOne>
+          <ram:CityName>Berlin</ram:CityName>
+          <ram:CountryID>DE</ram:CountryID>
+        </ram:PostalTradeAddress>
+      </ram:BuyerTradeParty>
+    </ram:ApplicableHeaderTradeAgreement>
+    <ram:ApplicableHeaderTradeDelivery/>
+    <ram:ApplicableHeaderTradeSettlement>
+      <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
+      <ram:ApplicableTradeTax>
+        <ram:CalculatedAmount>0.00</ram:CalculatedAmount>
+        <ram:TypeCode>VAT</ram:TypeCode>
+        <ram:ExemptionReason>VAT exempt</ram:ExemptionReason>
+        <ram:BasisAmount>100.00</ram:BasisAmount>
+        <ram:CategoryCode>E</ram:CategoryCode>
+        <ram:ExemptionReasonCode>VATEX-EU-O</ram:ExemptionReasonCode>
+        <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
+      </ram:ApplicableTradeTax>
+      <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+        <ram:LineTotalAmount>100.00</ram:LineTotalAmount>
+        <ram:TaxBasisTotalAmount>100.00</ram:TaxBasisTotalAmount>
+        <ram:TaxTotalAmount currencyID="EUR">0.00</ram:TaxTotalAmount>
+        <ram:GrandTotalAmount>100.00</ram:GrandTotalAmount>
+        <ram:DuePayableAmount>100.00</ram:DuePayableAmount>
+      </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+    </ram:ApplicableHeaderTradeSettlement>
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>"""
 
@@ -237,10 +247,10 @@ def test_validate_cii_en16931_accepts_valid():
 
 @pytest.mark.unit
 def test_validate_cii_en16931_detects_missing_seller():
-    cii = _minimal_cii_en16931().replace(
-        "<ram:SellerTradeParty>\n        <ram:Name>Seller Company</ram:Name>\n      </ram:SellerTradeParty>",
-        "",
-    )
+    cii = _minimal_cii_en16931()
+    start = cii.index("<ram:SellerTradeParty>")
+    end = cii.index("</ram:SellerTradeParty>") + len("</ram:SellerTradeParty>")
+    cii = cii[:start] + cii[end:]
     passed, issues = validate_cii_en16931(cii)
     assert passed is False
     assert any("Seller" in i for i in issues)
@@ -270,8 +280,30 @@ def test_validate_cii_en16931_detects_missing_line_items():
 @pytest.mark.unit
 def test_validate_cii_en16931_detects_missing_grand_total():
     cii = _minimal_cii_en16931().replace(
-        '<ram:GrandTotalAmount currencyID="EUR">100.00</ram:GrandTotalAmount>', ""
+        "<ram:GrandTotalAmount>100.00</ram:GrandTotalAmount>", ""
     )
     passed, issues = validate_cii_en16931(cii)
     assert passed is False
     assert any("GrandTotal" in i for i in issues)
+
+
+@pytest.mark.unit
+def test_validate_facturx_prerequisites_requires_countries():
+    from types import SimpleNamespace
+
+    from app.utils.invoice_validators import validate_facturx_prerequisites
+
+    settings = SimpleNamespace(
+        invoices_zugferd_pdf=True,
+        company_name="Co",
+        company_country="",
+        peppol_sender_country="",
+        invoices_default_vat_category="S",
+        invoices_default_vat_exemption_reason="",
+        invoices_default_vat_exemption_code="",
+    )
+    invoice = SimpleNamespace(client=None, vat_category=None, tax_rate=20)
+    ok, issues = validate_facturx_prerequisites(invoice, settings)
+    assert ok is False
+    assert any("Seller country" in i for i in issues)
+    assert any("Buyer country" in i for i in issues)

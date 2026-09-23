@@ -3,15 +3,15 @@
 
 {% block content %}
 {% set breadcrumbs = [
-    {'text': 'Expense Categories'}
+    {'text': _('Expense Categories')}
 ] %}
 
 {{ page_header(
     icon_class='fas fa-tags',
-    title_text='Expense Categories',
-    subtitle_text='Manage expense categories and budgets',
+    title_text=_('Expense Categories'),
+    subtitle_text=_('Manage expense categories and budgets'),
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("expense_categories.create_category") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Category</a>'
+    actions_html='<a href="' + url_for("expense_categories.create_category") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>' + _('New Category') + '</a>'
 ) }}
 
 <!-- Summary Stats -->
@@ -19,7 +19,7 @@
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Total Categories</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">{{ _('Total Categories') }}</p>
                 <p class="text-2xl font-bold">{{ categories|length }}</p>
             </div>
             <div class="text-primary text-3xl">
@@ -31,7 +31,7 @@
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Active Categories</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">{{ _('Active Categories') }}</p>
                 <p class="text-2xl font-bold">{{ categories|selectattr('is_active')|list|length }}</p>
             </div>
             <div class="text-green-500 text-3xl">
@@ -43,7 +43,7 @@
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm text-gray-600 dark:text-gray-400">With Budgets</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">{{ _('With Budgets') }}</p>
                 <p class="text-2xl font-bold">{{ categories|selectattr('monthly_budget')|list|length }}</p>
             </div>
             <div class="text-blue-500 text-3xl">
@@ -59,12 +59,12 @@
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 enhanced-table responsive-cards">
             <thead class="bg-background-light dark:bg-background-dark">
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Code</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Monthly Budget</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Utilization</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Category') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Code') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Monthly Budget') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Utilization') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Status') }}</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ _('Actions') }}</th>
                 </tr>
             </thead>
             <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
@@ -101,7 +101,7 @@
                             {% if category.monthly_budget %}
                             €{{ '%.2f'|format(category.monthly_budget) }}
                             {% else %}
-                            <span class="text-gray-400">No budget</span>
+                            <span class="text-gray-400 dark:text-gray-500">{{ _('No budget') }}</span>
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm" data-label="Utilization">
@@ -120,21 +120,21 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm" data-label="Status">
                             {% if category.is_active %}
                             <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                Active
+                                {{ _('Active') }}
                             </span>
                             {% else %}
                             <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-                                Inactive
+                                {{ _('Inactive') }}
                             </span>
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" data-label="Actions">
                             <div class="flex items-center justify-end gap-2">
-                                <a href="{{ url_for('expense_categories.view_category', category_id=category.id) }}" class="text-primary hover:text-primary/80" title="View">
-                                    <i class="fas fa-eye"></i>
+                                <a href="{{ url_for('expense_categories.view_category', category_id=category.id) }}" class="text-primary hover:text-primary/80" title="{{ _('View') }}" aria-label="{{ _('View') }}">
+                                    <i class="fas fa-eye" aria-hidden="true"></i>
                                 </a>
-                                <a href="{{ url_for('expense_categories.edit_category', category_id=category.id) }}" class="text-blue-600 hover:text-blue-800" title="Edit">
-                                    <i class="fas fa-edit"></i>
+                                <a href="{{ url_for('expense_categories.edit_category', category_id=category.id) }}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" title="{{ _('Edit') }}" aria-label="{{ _('Edit') }}">
+                                    <i class="fas fa-edit" aria-hidden="true"></i>
                                 </a>
                             </div>
                         </td>
@@ -142,11 +142,11 @@
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">
-                            <i class="fas fa-tags text-4xl mb-2 opacity-50"></i>
-                            <p>No expense categories found</p>
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-tags text-4xl mb-2 opacity-50" aria-hidden="true"></i>
+                            <p>{{ _('No expense categories found') }}</p>
                             <a href="{{ url_for('expense_categories.create_category') }}" class="text-primary hover:underline mt-2 inline-block">
-                                Create your first category
+                                {{ _('Create your first category') }}
                             </a>
                         </td>
                     </tr>

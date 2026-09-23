@@ -557,6 +557,7 @@ class TestTimer:
 
         settings = Settings.get_settings()
         settings.idle_timeout_minutes = 30
+        settings.idle_unanswered_action = "review"
         db.session.commit()
 
         start = local_now() - timedelta(hours=2)
@@ -587,6 +588,48 @@ class TestTimer:
         assert flagged.end_time is None
         assert flagged.idle_flagged_at is not None
 
+    def test_check_idle_timers_auto_stop_mode(self, client, api_token, test_user, test_project, app):
+        """With idle_unanswered_action=auto_stop, grace expiry stops at credited time."""
+        from datetime import timedelta
+
+        from app.models import Settings
+        from app.models.time_entry import local_now
+        from app.utils.scheduled_tasks import check_idle_timers
+
+        settings = Settings.get_settings()
+        settings.idle_timeout_minutes = 30
+        settings.idle_unanswered_action = "auto_stop"
+        settings.idle_auto_stop_hours = 0
+        db.session.commit()
+
+        start = local_now() - timedelta(hours=2)
+        last_hb = local_now() - timedelta(hours=1)
+        timer = TimeEntry(
+            user_id=int(test_user),
+            project_id=test_project.id,
+            start_time=start,
+            end_time=None,
+            source="api",
+            billable=True,
+        )
+        timer.last_heartbeat_at = last_hb
+        timer.idle_notified_at = local_now() - timedelta(minutes=6)
+        db.session.add(timer)
+        db.session.commit()
+        timer_id = timer.id
+
+        check_idle_timers()
+        stopped = db.session.get(TimeEntry, timer_id)
+        assert stopped.end_time is not None
+        assert stopped.idle_flagged_at is None
+        expected_stop = last_hb + timedelta(minutes=30)
+        if getattr(expected_stop, "tzinfo", None) is not None:
+            expected_stop = expected_stop.replace(tzinfo=None)
+        end = stopped.end_time
+        if getattr(end, "tzinfo", None) is not None:
+            end = end.replace(tzinfo=None)
+        assert abs((end - expected_stop).total_seconds()) < 5
+
     def test_check_idle_timers_safety_cap_stops_and_keeps_flag(self, client, api_token, test_user, test_project, app):
         """With the safety cap enabled, an unanswered flagged timer is stopped
         credited to last activity but stays flagged for review."""
@@ -598,6 +641,7 @@ class TestTimer:
 
         settings = Settings.get_settings()
         settings.idle_timeout_minutes = 30
+        settings.idle_unanswered_action = "review"
         settings.idle_auto_stop_hours = 1
         db.session.commit()
 
