@@ -61,6 +61,20 @@ def _parse_and_validate_start_override(raw_value, now_local):
     return parsed, None
 
 
+
+def _redirect_after_start_error():
+    """Redirect back to the submitting page when the referrer is same-host; else dashboard."""
+    from urllib.parse import urlparse
+
+    referrer = request.referrer
+    if referrer:
+        ref = urlparse(referrer)
+        host = urlparse(request.host_url)
+        if ref.scheme in ("http", "https") and ref.netloc == host.netloc:
+            return redirect(referrer)
+    return redirect(url_for("main.dashboard"))
+
+
 def _active_users_for_admin():
     """Active users for admin booking dropdown; empty for non-admins."""
     if not current_user.is_admin:
@@ -255,7 +269,7 @@ def start_timer():
     resolved_start, start_err = _parse_and_validate_start_override(start_time_override, now_local)
     if start_err:
         flash(start_err, "error")
-        return redirect(url_for("timer.timer_page"))
+        return _redirect_after_start_error()
     start_time = resolved_start if resolved_start is not None else now_local
 
     new_timer = TimeEntry(
