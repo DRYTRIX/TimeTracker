@@ -990,13 +990,15 @@ def check_idle_timers():
     is older than ``settings.idle_timeout_minutes``:
 
     1. First pass: set ``idle_notified_at`` and send a browser push "Still working?".
-    2. Second pass (after 5-minute grace): flag the timer ``needs_review``
-       (``idle_flagged_at``) and KEEP IT RUNNING — a missed notification must never
-       silently truncate recorded time. Users resolve the flag via
-       ``POST /api/v1/timer/review`` (trim / keep / continue).
-    3. Optional safety cap: if ``settings.idle_auto_stop_hours`` > 0 and the timer
-       stays flagged (and running) beyond that many hours, stop it credited to
-       ``last_active + idle_timeout`` and keep the review flag set.
+    2. Second pass (after 5-minute grace), depending on
+       ``settings.idle_unanswered_action``:
+       - ``review`` (default): flag the timer ``needs_review`` (``idle_flagged_at``)
+         and KEEP IT RUNNING. Users resolve via ``POST /api/v1/timer/review``.
+       - ``auto_stop``: stop credited to ``last_active + idle_timeout`` and clear
+         idle flags (Issue #722).
+    3. Optional safety cap (review mode only): if ``settings.idle_auto_stop_hours``
+       > 0 and the timer stays flagged beyond that many hours, stop it credited
+       to ``last_active + idle_timeout`` and keep the review flag set.
 
     Clients that keep sending heartbeats keep ``last_heartbeat_at`` fresh and
     clear ``idle_notified_at`` / ``idle_flagged_at``, so active users are never flagged.
@@ -1008,7 +1010,13 @@ def check_idle_timers():
         settings = Settings.get_settings()
         idle_minutes = int(getattr(settings, "idle_timeout_minutes", None) or 30)
         idle_minutes = max(1, min(480, idle_minutes))
+        unanswered_action = (getattr(settings, "idle_unanswered_action", None) or "review").strip().lower()
+        if unanswered_action not in ("review", "auto_stop"):
+            unanswered_action = "review"
         auto_stop_hours = int(getattr(settings, "idle_auto_stop_hours", 0) or 0)
+        # Safety cap only applies in review mode
+        if unanswered_action != "review":
+            auto_stop_hours = 0
         threshold = timedelta(minutes=idle_minutes)
         grace = timedelta(minutes=5)
         cap = timedelta(hours=auto_stop_hours) if auto_stop_hours > 0 else None
@@ -1038,13 +1046,14 @@ def check_idle_timers():
 
         notified = 0
         flagged = 0
+        auto_stops = 0
         capped_stops = 0
         for entry in stale:
             try:
                 if entry.idle_notified_at is None:
                     entry.idle_notified_at = now
                     entry.updated_at = now
-                    _send_idle_push(entry)
+                    _send_idle_push(entry, unanswered_action=unanswered_action)
                     notified += 1
                     logger.info(
                         "Idle notify for timer %s user=%s (stale since heartbeat/start)",
@@ -1055,65 +1064,89 @@ def check_idle_timers():
                     notified_at = entry.idle_notified_at
                     if getattr(notified_at, "tzinfo", None) is not None:
                         notified_at = notified_at.replace(tzinfo=None)
-                    if (now - notified_at) >= grace:
-                        if entry.idle_flagged_at is None:
+                    if (now - notified_at) < grace:
+                        continue
+
+                    if unanswered_action == "auto_stop":
+                        stop_at = entry.idle_credited_stop_time(idle_minutes, now=now)
+                        entry_id = entry.id
+                        user_id = entry.user_id
+                        entry.stop_timer(end_time=stop_at)
+                        # stop_timer clears idle flags and commits
+                        auto_stops += 1
+                        logger.info(
+                            "Idle auto-stop for timer %s user=%s at %s",
+                            entry_id,
+                            user_id,
+                            stop_at,
+                        )
+                        _emit_timer_event(
+                            "timer_stopped",
+                            {
+                                "user_id": user_id,
+                                "timer_id": entry_id,
+                                "duration": entry.duration_formatted,
+                                "reason": "idle_auto_stop",
+                            },
+                            user_id=user_id,
+                        )
+                        _send_idle_stopped_push(entry, user_id=user_id)
+                        continue
+
+                    # review mode
+                    if entry.idle_flagged_at is None:
+                        entry.idle_flagged_at = now
+                        entry.updated_at = now
+                        flagged += 1
+                        logger.info(
+                            "Idle needs-review flag set for timer %s user=%s (timer keeps running)",
+                            entry.id,
+                            entry.user_id,
+                        )
+                        _emit_timer_event(
+                            "timer_needs_review",
+                            {
+                                "user_id": entry.user_id,
+                                "timer_id": entry.id,
+                                "reason": "idle_needs_review",
+                                "message": (
+                                    "Your timer kept running while you were idle and now needs review. "
+                                    "Trim it to your last activity or keep the time."
+                                ),
+                            },
+                            user_id=entry.user_id,
+                        )
+                    elif cap is not None:
+                        flagged_at = entry.idle_flagged_at
+                        if getattr(flagged_at, "tzinfo", None) is not None:
+                            flagged_at = flagged_at.replace(tzinfo=None)
+                        if (now - flagged_at) >= cap:
+                            # Safety cap: credit the configured idle window and stop,
+                            # but keep the review flag so the user can adjust afterwards.
+                            stop_at = entry.idle_credited_stop_time(idle_minutes, now=now)
+                            entry_id = entry.id
+                            user_id = entry.user_id
+                            entry.stop_timer(end_time=stop_at)
                             entry.idle_flagged_at = now
                             entry.updated_at = now
-                            flagged += 1
+                            db.session.commit()
+                            capped_stops += 1
                             logger.info(
-                                "Idle needs-review flag set for timer %s user=%s (timer keeps running)",
-                                entry.id,
-                                entry.user_id,
+                                "Idle safety-cap stop for timer %s user=%s at %s (still needs review)",
+                                entry_id,
+                                user_id,
+                                stop_at,
                             )
                             _emit_timer_event(
-                                "timer_needs_review",
+                                "timer_stopped",
                                 {
-                                    "user_id": entry.user_id,
-                                    "timer_id": entry.id,
-                                    "reason": "idle_needs_review",
-                                    "message": (
-                                        "Your timer kept running while you were idle and now needs review. "
-                                        "Trim it to your last activity or keep the time."
-                                    ),
+                                    "user_id": user_id,
+                                    "timer_id": entry_id,
+                                    "duration": entry.duration_formatted,
+                                    "reason": "idle_auto_stop_cap",
                                 },
-                                user_id=entry.user_id,
+                                user_id=user_id,
                             )
-                        elif cap is not None:
-                            flagged_at = entry.idle_flagged_at
-                            if getattr(flagged_at, "tzinfo", None) is not None:
-                                flagged_at = flagged_at.replace(tzinfo=None)
-                            if (now - flagged_at) >= cap:
-                                # Safety cap: credit the configured idle window and stop,
-                                # but keep the review flag so the user can adjust afterwards.
-                                last_active = entry.last_heartbeat_at or entry.start_time
-                                if getattr(last_active, "tzinfo", None) is not None:
-                                    last_active = last_active.replace(tzinfo=None)
-                                stop_at = last_active + threshold if last_active else now
-                                if stop_at > now:
-                                    stop_at = now
-                                entry_id = entry.id
-                                user_id = entry.user_id
-                                entry.stop_timer(end_time=stop_at)
-                                entry.idle_flagged_at = now
-                                entry.updated_at = now
-                                db.session.commit()
-                                capped_stops += 1
-                                logger.info(
-                                    "Idle safety-cap stop for timer %s user=%s at %s (still needs review)",
-                                    entry_id,
-                                    user_id,
-                                    stop_at,
-                                )
-                                _emit_timer_event(
-                                    "timer_stopped",
-                                    {
-                                        "user_id": user_id,
-                                        "timer_id": entry_id,
-                                        "duration": entry.duration_formatted,
-                                        "reason": "idle_auto_stop_cap",
-                                    },
-                                    user_id=user_id,
-                                )
             except Exception as e:
                 logger.warning(
                     "Idle check failed for entry %s: %s",
@@ -1128,11 +1161,15 @@ def check_idle_timers():
             logger.warning("Idle check commit failed: %s", e)
             db.session.rollback()
 
-        if notified or flagged or capped_stops:
+        if notified or flagged or auto_stops or capped_stops:
             logger.info(
-                "Idle check: notified=%d flagged=%d cap_stopped=%d", notified, flagged, capped_stops
+                "Idle check: notified=%d flagged=%d auto_stopped=%d cap_stopped=%d",
+                notified,
+                flagged,
+                auto_stops,
+                capped_stops,
             )
-        return notified + flagged + capped_stops
+        return notified + flagged + auto_stops + capped_stops
     except Exception as e:
         logger.error("Error in check_idle_timers: %s", e)
         try:
@@ -1156,7 +1193,7 @@ def _emit_timer_event(event, payload, user_id=None):
         logger.debug("socketio emit %s failed: %s", event, e)
 
 
-def _send_idle_push(entry):
+def _send_idle_push(entry, unanswered_action="review"):
     """Notify the user that their timer is idle ("Still working?").
 
     Channels (Issue #722):
@@ -1175,14 +1212,25 @@ def _send_idle_push(entry):
     if not user:
         return
 
+    if unanswered_action == "auto_stop":
+        message = (
+            "Your timer has been idle. Confirm you are still working or the timer "
+            "will be stopped and the idle time kept."
+        )
+    else:
+        message = (
+            "Your timer has been idle. Confirm you are still working or it will be flagged for review."
+        )
+
     note = {
         "kind": "idle_timeout",
         "title": "Still working?",
-        "message": "Your timer has been idle. Confirm you are still working or it will be flagged for review.",
+        "message": message,
         "type": "warning",
         "action": {"url": "/", "label": "Open TimeTracker"},
         "timer_id": entry.id,
         "idle_notified_at": entry.idle_notified_at.isoformat() if entry.idle_notified_at else None,
+        "idle_unanswered_action": unanswered_action,
     }
 
     # Real-time notify any connected web/desktop Socket.IO clients
@@ -1210,6 +1258,37 @@ def _send_idle_push(entry):
         _deliver_push_to_subscriptions(user, subscriptions, note)
     except Exception as e:
         logger.debug("Idle push failed for user %s: %s", getattr(user, "username", user.id), e)
+
+
+def _send_idle_stopped_push(entry, user_id=None):
+    """Notify the user via Web Push that their timer was auto-stopped (socket already emitted)."""
+    uid = user_id or getattr(entry, "user_id", None)
+    if not uid:
+        return
+    try:
+        user = getattr(entry, "user", None) or User.query.get(uid)
+    except Exception:
+        return
+    if not user:
+        return
+
+    note = {
+        "kind": "idle_auto_stop",
+        "title": "Timer stopped",
+        "message": "Your timer was stopped due to inactivity. The idle window was kept on the entry.",
+        "type": "warning",
+        "action": {"url": "/time-entries", "label": "View entries"},
+        "timer_id": getattr(entry, "id", None),
+    }
+
+    try:
+        from app.models import PushSubscription
+
+        subscriptions = PushSubscription.get_user_subscriptions(user.id)
+        if subscriptions:
+            _deliver_push_to_subscriptions(user, subscriptions, note)
+    except Exception as e:
+        logger.debug("Idle stop push failed for user %s: %s", getattr(user, "username", user.id), e)
 
 
 def send_smart_reminder_push_notifications():

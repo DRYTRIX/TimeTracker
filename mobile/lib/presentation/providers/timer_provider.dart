@@ -23,6 +23,7 @@ class TimerState {
   final String? error;
   final int? idleTimeoutMinutes;
   final bool idleNotified;
+  final String idleUnansweredAction;
 
   TimerState({
     this.timer,
@@ -30,6 +31,7 @@ class TimerState {
     this.error,
     this.idleTimeoutMinutes,
     this.idleNotified = false,
+    this.idleUnansweredAction = 'review',
   });
 
   TimerState copyWith({
@@ -38,6 +40,7 @@ class TimerState {
     String? error,
     int? idleTimeoutMinutes,
     bool? idleNotified,
+    String? idleUnansweredAction,
     bool clearTimer = false,
     bool clearError = false,
   }) {
@@ -47,6 +50,8 @@ class TimerState {
       error: clearError ? null : (error ?? this.error),
       idleTimeoutMinutes: idleTimeoutMinutes ?? this.idleTimeoutMinutes,
       idleNotified: idleNotified ?? this.idleNotified,
+      idleUnansweredAction:
+          idleUnansweredAction ?? this.idleUnansweredAction,
     );
   }
 
@@ -100,11 +105,13 @@ class TimerNotifier extends StateNotifier<TimerState> {
         clearTimer: timer == null,
         idleTimeoutMinutes: status.idleTimeoutMinutes,
         idleNotified: status.idleNotified,
+        idleUnansweredAction: status.idleUnansweredAction,
       );
       await IdleDetectionService.instance.updateFromTimerStatus(
         active: timer != null && !(timer.isPaused),
         idleTimeoutMinutes: status.idleTimeoutMinutes,
         idleNotified: status.idleNotified,
+        idleUnansweredAction: status.idleUnansweredAction,
       );
       await _syncNotificationWithState();
     } catch (e) {

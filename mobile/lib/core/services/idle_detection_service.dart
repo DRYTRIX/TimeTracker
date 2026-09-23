@@ -12,7 +12,10 @@ import 'package:timetracker_mobile/domain/repositories/time_tracking_repository.
 /// While a timer is active and the app is in the foreground, sends a heartbeat
 /// every 60 seconds. Tracks last resume / interaction time; after
 /// [idleTimeoutMinutes] of no activity shows a "Still working?" notification
-/// with a 5-minute grace window, then auto-stops the timer.
+/// with a 5-minute grace window. When the grace expires unanswered:
+/// - ``auto_stop``: stop the timer credited to last activity + idle window
+/// - ``review`` (default): leave the timer running, stop heartbeats so the
+///   server flags it, and show a needs-review notification
 ///
 /// When the app is backgrounded, polls the server for ``idle_notified`` (nudged
 /// by the Android foreground task) so the local notification still fires.
@@ -27,6 +30,7 @@ class IdleDetectionService with WidgetsBindingObserver {
   static final IdleDetectionService instance = IdleDetectionService._();
 
   static const String prefsIdleTimeoutKey = 'idle_timeout_minutes';
+  static const String prefsUnansweredActionKey = 'idle_unanswered_action';
   static const int defaultIdleTimeoutMinutes = 30;
   static const Duration heartbeatInterval = Duration(seconds: 60);
   static const Duration checkInterval = Duration(seconds: 30);
@@ -38,6 +42,7 @@ class IdleDetectionService with WidgetsBindingObserver {
   Timer? _graceTimer;
   DateTime _lastActivity = DateTime.now();
   int _idleTimeoutMinutes = defaultIdleTimeoutMinutes;
+  String _unansweredAction = 'review';
   bool _promptShown = false;
   bool _started = false;
   bool _timerActive = false;
@@ -55,6 +60,9 @@ class IdleDetectionService with WidgetsBindingObserver {
     final prefs = await SharedPreferences.getInstance();
     _idleTimeoutMinutes =
         prefs.getInt(prefsIdleTimeoutKey) ?? defaultIdleTimeoutMinutes;
+    final storedAction = prefs.getString(prefsUnansweredActionKey);
+    _unansweredAction =
+        storedAction == 'auto_stop' ? 'auto_stop' : 'review';
     _lastActivity = DateTime.now();
     _heartbeatTimer =
         Timer.periodic(heartbeatInterval, (_) => _sendHeartbeat());
@@ -88,12 +96,19 @@ class IdleDetectionService with WidgetsBindingObserver {
     required bool active,
     int? idleTimeoutMinutes,
     bool idleNotified = false,
+    String? idleUnansweredAction,
   }) async {
     _timerActive = active;
     if (idleTimeoutMinutes != null && idleTimeoutMinutes >= 1) {
       _idleTimeoutMinutes = idleTimeoutMinutes.clamp(1, 480);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(prefsIdleTimeoutKey, _idleTimeoutMinutes);
+    }
+    if (idleUnansweredAction != null) {
+      _unansweredAction =
+          idleUnansweredAction == 'auto_stop' ? 'auto_stop' : 'review';
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(prefsUnansweredActionKey, _unansweredAction);
     }
     if (!active) {
       _cancelGrace();
@@ -115,6 +130,10 @@ class IdleDetectionService with WidgetsBindingObserver {
   /// Server FCM idle_timeout wake-up (Issue #722): stop heartbeats and start grace.
   void _onIdlePushFromServer(Map<String, dynamic> data) {
     if (!_timerActive || _promptShown) return;
+    final action = (data['idle_unanswered_action'] as String?)?.trim().toLowerCase();
+    if (action == 'auto_stop' || action == 'review') {
+      _unansweredAction = action!;
+    }
     _idleStopAt = _creditedStopAt(_lastActivity);
     unawaited(_showPrompt());
   }
@@ -155,6 +174,20 @@ class IdleDetectionService with WidgetsBindingObserver {
       debugPrint('IdleDetectionService stop failed: $e');
     }
     _timerActive = false;
+  }
+
+  /// Grace expired unanswered: either auto-stop or leave running for review.
+  Future<void> _onGraceExpired() async {
+    await NotificationService.instance.cancelIdlePrompt();
+    if (_unansweredAction == 'auto_stop') {
+      await respondToIdlePrompt(IdlePromptAction.stop);
+      return;
+    }
+    // review mode: keep the timer running, stop heartbeats so the server
+    // can flag needs_review, and surface a local notification.
+    _promptShown = false;
+    _idleStopAt = null;
+    await NotificationService.instance.showNeedsReviewNotification();
   }
 
   /// last_active + idle_timeout, capped at now (Issue #722 — not 0 min).
@@ -236,6 +269,7 @@ class IdleDetectionService with WidgetsBindingObserver {
         active: active,
         idleTimeoutMinutes: status.idleTimeoutMinutes,
         idleNotified: status.idleNotified,
+        idleUnansweredAction: status.idleUnansweredAction,
       );
     } catch (e) {
       debugPrint('IdleDetectionService background poll failed: $e');
@@ -247,10 +281,11 @@ class IdleDetectionService with WidgetsBindingObserver {
     _promptShown = true;
     await NotificationService.instance.showIdlePrompt(
       graceMinutes: gracePeriod.inMinutes,
+      autoStop: _unansweredAction == 'auto_stop',
     );
     _graceTimer?.cancel();
     _graceTimer = Timer(gracePeriod, () {
-      respondToIdlePrompt(IdlePromptAction.stop);
+      unawaited(_onGraceExpired());
     });
   }
 

@@ -421,15 +421,19 @@ class NotificationService {
   ///
   /// Failures are swallowed so a plugin/R8 regression cannot blank the Timer
   /// screen (see GitHub issue #731).
-  Future<void> showIdlePrompt({int graceMinutes = 5}) async {
+  Future<void> showIdlePrompt({
+    int graceMinutes = 5,
+    bool autoStop = false,
+  }) async {
     try {
       if (!_initialized) {
         await initialize();
       }
 
       const title = 'Still working?';
-      final body =
-          'Your timer will stop in $graceMinutes minutes if you do not answer.';
+      final body = autoStop
+          ? 'Your timer will stop in $graceMinutes minutes if you do not answer (idle time kept).'
+          : 'Answer within $graceMinutes minutes or the timer will be flagged for review (it keeps running).';
 
       final details = NotificationDetails(
         android: AndroidNotificationDetails(
@@ -473,6 +477,40 @@ class NotificationService {
       _idlePromptShowing = true;
     } catch (e, st) {
       debugPrint('NotificationService.showIdlePrompt failed: $e\n$st');
+    }
+  }
+
+  /// Notify that an unanswered idle prompt left the timer running for review.
+  Future<void> showNeedsReviewNotification() async {
+    try {
+      if (!_initialized) {
+        await initialize();
+      }
+      final details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          AppConstants.idleReminderChannelId,
+          AppConstants.idleReminderChannelName,
+          channelDescription: AppConstants.idleReminderChannelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+          category: AndroidNotificationCategory.alarm,
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          interruptionLevel: InterruptionLevel.timeSensitive,
+        ),
+      );
+      await _localNotifications.show(
+        AppConstants.notificationNeedsReview,
+        'Timer needs review',
+        'You were idle and did not answer. Your timer kept running — open TimeTracker to trim or stop it.',
+        details,
+        payload: 'needs_review',
+      );
+    } catch (e, st) {
+      debugPrint('NotificationService.showNeedsReviewNotification failed: $e\n$st');
     }
   }
 

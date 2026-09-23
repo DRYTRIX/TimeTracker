@@ -317,10 +317,26 @@ def api_version_dismiss():
 @deprecated_session_api("/api/v1/timer/status")
 def timer_status():
     """Get current timer status"""
+    from app.models import Settings
+
+    settings = Settings.get_settings()
+    idle_timeout_minutes = getattr(settings, "idle_timeout_minutes", 30) or 30
+    idle_unanswered_action = getattr(settings, "idle_unanswered_action", "review") or "review"
+    if idle_unanswered_action not in ("review", "auto_stop"):
+        idle_unanswered_action = "review"
+
     active_timer = current_user.active_timer
 
     if not active_timer:
-        return jsonify({"active": False, "timer": None})
+        return jsonify(
+            {
+                "active": False,
+                "timer": None,
+                "idle_timeout_minutes": idle_timeout_minutes,
+                "idle_unanswered_action": idle_unanswered_action,
+                "idle_notified": False,
+            }
+        )
 
     return jsonify(
         {
@@ -339,6 +355,10 @@ def timer_status():
                     active_timer.last_heartbeat_at.isoformat() if active_timer.last_heartbeat_at else None
                 ),
             },
+            "idle_timeout_minutes": idle_timeout_minutes,
+            "idle_unanswered_action": idle_unanswered_action,
+            "idle_notified": bool(active_timer.idle_notified_at),
+            "needs_review": bool(active_timer.idle_flagged_at),
         }
     )
 
@@ -441,13 +461,7 @@ def api_timer_review():
         elif action == "trim":
             settings = Settings.get_settings()
             idle_minutes = max(1, min(480, int(getattr(settings, "idle_timeout_minutes", 30) or 30)))
-            last_active = active_timer.last_heartbeat_at or active_timer.start_time
-            if getattr(last_active, "tzinfo", None) is not None:
-                last_active = last_active.replace(tzinfo=None)
-            stop_at = last_active + timedelta(minutes=idle_minutes)
-            now = local_now()
-            if stop_at > now:
-                stop_at = now
+            stop_at = active_timer.idle_credited_stop_time(idle_minutes)
             active_timer.stop_timer(end_time=stop_at)
         else:  # keep at now
             active_timer.stop_timer()

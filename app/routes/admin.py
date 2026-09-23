@@ -1435,6 +1435,8 @@ def settings():
         settings_obj.single_active_timer = request.form.get("single_active_timer") == "on"
         settings_obj.allow_self_register = request.form.get("allow_self_register") == "on"
         settings_obj.idle_timeout_minutes = int(request.form.get("idle_timeout_minutes", 30))
+        unanswered = (request.form.get("idle_unanswered_action") or "review").strip().lower()
+        settings_obj.idle_unanswered_action = unanswered if unanswered in ("review", "auto_stop") else "review"
         try:
             settings_obj.idle_auto_stop_hours = max(
                 0, min(168, int(request.form.get("idle_auto_stop_hours", 0) or 0))

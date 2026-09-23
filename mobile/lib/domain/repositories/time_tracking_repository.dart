@@ -41,18 +41,33 @@ class TimeTrackingRepository {
   }
 
   /// Timer status plus idle metadata from `/api/v1/timer/status`.
-  Future<({Timer? timer, int? idleTimeoutMinutes, bool idleNotified})>
-      getTimerStatusDetailed() async {
+  Future<
+      ({
+        Timer? timer,
+        int? idleTimeoutMinutes,
+        bool idleNotified,
+        String idleUnansweredAction,
+      })> getTimerStatusDetailed() async {
     if (apiClient == null) {
       final cached = await LocalStorage.getTimer();
-      return (timer: cached, idleTimeoutMinutes: null, idleNotified: false);
+      return (
+        timer: cached,
+        idleTimeoutMinutes: null,
+        idleNotified: false,
+        idleUnansweredAction: 'review',
+      );
     }
 
     try {
       final isOnline = await _isOnline();
       if (!isOnline) {
         final cached = await LocalStorage.getTimer();
-        return (timer: cached, idleTimeoutMinutes: null, idleNotified: false);
+        return (
+          timer: cached,
+          idleTimeoutMinutes: null,
+          idleNotified: false,
+          idleUnansweredAction: 'review',
+        );
       }
 
       final response = await apiClient!.getTimerStatus();
@@ -60,6 +75,10 @@ class TimeTrackingRepository {
       final idleNotified = response['idle_notified'] == true ||
           (response['timer'] is Map &&
               (response['timer'] as Map)['idle_notified'] == true);
+      final rawAction =
+          (response['idle_unanswered_action'] as String?)?.trim().toLowerCase();
+      final idleUnansweredAction =
+          rawAction == 'auto_stop' ? 'auto_stop' : 'review';
       if (response['active'] == true && response['timer'] != null) {
         final timer = Timer.fromJson(response['timer'] as Map<String, dynamic>);
         await LocalStorage.saveTimer(timer);
@@ -67,6 +86,7 @@ class TimeTrackingRepository {
           timer: timer,
           idleTimeoutMinutes: idleTimeout,
           idleNotified: idleNotified,
+          idleUnansweredAction: idleUnansweredAction,
         );
       }
       await LocalStorage.clearTimer();
@@ -74,10 +94,16 @@ class TimeTrackingRepository {
         timer: null,
         idleTimeoutMinutes: idleTimeout,
         idleNotified: false,
+        idleUnansweredAction: idleUnansweredAction,
       );
     } catch (e) {
       final cached = await LocalStorage.getTimer();
-      return (timer: cached, idleTimeoutMinutes: null, idleNotified: false);
+      return (
+        timer: cached,
+        idleTimeoutMinutes: null,
+        idleNotified: false,
+        idleUnansweredAction: 'review',
+      );
     }
   }
 

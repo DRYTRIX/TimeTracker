@@ -169,6 +169,14 @@ def stop_timer():
 @login_required
 def api_timer_status():
     """Get timer status - REFACTORED VERSION"""
+    from app.models import Settings
+
+    settings = Settings.get_settings()
+    idle_timeout_minutes = getattr(settings, "idle_timeout_minutes", 30) or 30
+    idle_unanswered_action = getattr(settings, "idle_unanswered_action", "review") or "review"
+    if idle_unanswered_action not in ("review", "auto_stop"):
+        idle_unanswered_action = "review"
+
     service = TimeTrackingService()
     timer = service.get_active_timer(current_user.id)
 
@@ -184,11 +192,24 @@ def api_timer_status():
                     "task_name": timer.task.name if timer.task else None,
                     "start_time": timer.start_time.isoformat(),
                     "notes": timer.notes,
+                    "idle_notified": bool(getattr(timer, "idle_notified_at", None)),
+                    "needs_review": bool(getattr(timer, "idle_flagged_at", None)),
                 },
+                "idle_timeout_minutes": idle_timeout_minutes,
+                "idle_unanswered_action": idle_unanswered_action,
+                "idle_notified": bool(getattr(timer, "idle_notified_at", None)),
+                "needs_review": bool(getattr(timer, "idle_flagged_at", None)),
             }
         )
     else:
-        return success_response(data={"active": False})
+        return success_response(
+            data={
+                "active": False,
+                "idle_timeout_minutes": idle_timeout_minutes,
+                "idle_unanswered_action": idle_unanswered_action,
+                "idle_notified": False,
+            }
+        )
 
 
 @timer_bp.route("/api/timer/start", methods=["POST"])

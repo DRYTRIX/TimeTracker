@@ -120,12 +120,20 @@
                     <div>
                         <label for="idle_timeout_minutes" class="form-label">Idle Timeout (Minutes)</label>
                         <input type="number" name="idle_timeout_minutes" id="idle_timeout_minutes" value="{{ settings.idle_timeout_minutes }}" required class="form-input">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('After this much inactivity, clients are asked "Still working?" and unanswered timers are flagged for review (they keep running).') }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('After this much inactivity, clients ask "Still working?" with a 5-minute window to answer.') }}</p>
+                    </div>
+                    <div>
+                        <label for="idle_unanswered_action" class="form-label">{{ _('When "Still working?" is not answered') }}</label>
+                        <select name="idle_unanswered_action" id="idle_unanswered_action" class="form-input">
+                            <option value="review" {% if (settings.idle_unanswered_action or 'review') == 'review' %}selected{% endif %}>{{ _('Flag for review (timer keeps running)') }}</option>
+                            <option value="auto_stop" {% if settings.idle_unanswered_action == 'auto_stop' %}selected{% endif %}>{{ _('Stop timer and keep the idle window') }}</option>
+                        </select>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Review mode never silently truncates time. Auto-stop credits last activity plus the idle timeout (Issue #722).') }}</p>
                     </div>
                     <div>
                         <label for="idle_auto_stop_hours" class="form-label">{{ _('Idle Safety Cap (Hours)') }}</label>
                         <input type="number" name="idle_auto_stop_hours" id="idle_auto_stop_hours" value="{{ settings.idle_auto_stop_hours or 0 }}" min="0" max="168" class="form-input">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Auto-stop a flagged timer after this many hours unanswered (credited to last activity, entry stays flagged for review). 0 disables the cap.') }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Only applies in review mode: auto-stop a flagged timer after this many hours unanswered (credited to last activity, entry stays flagged). 0 disables the cap.') }}</p>
                     </div>
                     <div>
                         <label for="rounding_method" class="form-label">{{ _('Rounding Method') }}</label>

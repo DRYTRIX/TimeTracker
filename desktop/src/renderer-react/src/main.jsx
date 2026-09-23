@@ -293,6 +293,7 @@ function App() {
       timer,
       elapsedLabel,
       idle_timeout_minutes: timerPayload?.idle_timeout_minutes,
+      idle_unanswered_action: timerPayload?.idle_unanswered_action,
     });
   }, []);
 
@@ -300,9 +301,11 @@ function App() {
     if (!apiClient || !window.electronAPI?.onIdlePrompt) return undefined;
 
     const unsubPrompt = window.electronAPI.onIdlePrompt((payload) => {
-      const ok = window.confirm(
-        'Still working? If you do not confirm, the timer keeps running and will be flagged for review.\n\nPress OK if you are still working, or Cancel to stop the timer now.',
-      );
+      const autoStop = payload?.idleUnansweredAction === 'auto_stop';
+      const msg = autoStop
+        ? 'Still working? If you do not confirm, the timer will be stopped and the idle time kept.\n\nPress OK if you are still working, or Cancel to stop the timer now.'
+        : 'Still working? If you do not confirm, the timer keeps running and will be flagged for review.\n\nPress OK if you are still working, or Cancel to stop the timer now.';
+      const ok = window.confirm(msg);
       if (ok) {
         window.electronAPI.idleStillWorking();
         apiClient.sendHeartbeat().catch(() => {});

@@ -73,8 +73,13 @@ class Settings(db.Model):
     single_active_timer = db.Column(db.Boolean, default=True, nullable=False)
     allow_self_register = db.Column(db.Boolean, default=True, nullable=False)
     idle_timeout_minutes = db.Column(db.Integer, default=30, nullable=False)
+    # What happens when the "Still working?" grace window expires unanswered:
+    # "review" = keep running and flag for review (default); "auto_stop" =
+    # stop credited to last_active + idle_timeout (Issue #722).
+    idle_unanswered_action = db.Column(db.String(16), default="review", nullable=False)
     # Safety cap: auto-stop a running timer flagged for review after N hours
     # unanswered (credited back to last activity). 0 disables the cap.
+    # Only applies when idle_unanswered_action == "review".
     idle_auto_stop_hours = db.Column(db.Integer, default=0, nullable=False)
     backup_retention_days = db.Column(db.Integer, default=30, nullable=False)
     backup_time = db.Column(db.String(5), default="02:00", nullable=False)  # HH:MM format
@@ -280,6 +285,9 @@ class Settings(db.Model):
         self.single_active_timer = kwargs.get("single_active_timer", Config.SINGLE_ACTIVE_TIMER)
         self.allow_self_register = kwargs.get("allow_self_register", Config.ALLOW_SELF_REGISTER)
         self.idle_timeout_minutes = kwargs.get("idle_timeout_minutes", Config.IDLE_TIMEOUT_MINUTES)
+        self.idle_unanswered_action = kwargs.get(
+            "idle_unanswered_action", getattr(Config, "IDLE_UNANSWERED_ACTION", "review")
+        )
         self.idle_auto_stop_hours = kwargs.get("idle_auto_stop_hours", 0)
         self.backup_retention_days = kwargs.get("backup_retention_days", Config.BACKUP_RETENTION_DAYS)
         self.backup_time = kwargs.get("backup_time", Config.BACKUP_TIME)
@@ -617,6 +625,7 @@ class Settings(db.Model):
             "single_active_timer": self.single_active_timer,
             "allow_self_register": self.allow_self_register,
             "idle_timeout_minutes": self.idle_timeout_minutes,
+            "idle_unanswered_action": getattr(self, "idle_unanswered_action", "review") or "review",
             "idle_auto_stop_hours": getattr(self, "idle_auto_stop_hours", 0),
             "backup_retention_days": self.backup_retention_days,
             "backup_time": self.backup_time,
@@ -956,6 +965,7 @@ class Settings(db.Model):
             "SINGLE_ACTIVE_TIMER": "single_active_timer",
             "ALLOW_SELF_REGISTER": "allow_self_register",
             "IDLE_TIMEOUT_MINUTES": "idle_timeout_minutes",
+            "IDLE_UNANSWERED_ACTION": "idle_unanswered_action",
             "IDLE_AUTO_STOP_HOURS": "idle_auto_stop_hours",
             "BACKUP_RETENTION_DAYS": "backup_retention_days",
             "BACKUP_TIME": "backup_time",

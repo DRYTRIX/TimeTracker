@@ -26064,3 +26064,27 @@ msgstr ""
 msgid "Please log in to access this page"
 msgstr ""
 
+
+#: app/templates/admin/settings.html
+msgid "After this much inactivity, clients ask \"Still working?\" with a 5-minute window to answer."
+msgstr ""
+
+#: app/templates/admin/settings.html
+msgid "When \"Still working?\" is not answered"
+msgstr ""
+
+#: app/templates/admin/settings.html
+msgid "Flag for review (timer keeps running)"
+msgstr ""
+
+#: app/templates/admin/settings.html
+msgid "Stop timer and keep the idle window"
+msgstr ""
+
+#: app/templates/admin/settings.html
+msgid "Review mode never silently truncates time. Auto-stop credits last activity plus the idle timeout (Issue #722)."
+msgstr ""
+
+#: app/templates/admin/settings.html
+msgid "Only applies in review mode: auto-stop a flagged timer after this many hours unanswered (credited to last activity, entry stays flagged). 0 disables the cap."
+msgstr ""

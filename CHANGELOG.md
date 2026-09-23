@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Idle unanswered action (#722)** — Admin setting `idle_unanswered_action` (`review` default, or `auto_stop`) controls what happens when the "Still working?" grace window expires unanswered. Auto-stop credits last activity plus the idle timeout across the server sweep, web, browser extension, desktop, and mobile clients.
+
 ## [5.16.0] - 2026-09-18
 
 ### Added
