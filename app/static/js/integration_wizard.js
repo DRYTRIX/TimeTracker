@@ -343,11 +343,11 @@
                         window.location.href = `/integrations/${this.provider}/manage`;
                     }
                 } else {
-                    alert(result.message || 'Failed to save configuration. Please try again.');
+                    ttAlert(result.message || 'Failed to save configuration. Please try again.');
                 }
             } catch (error) {
                 console.error('Form submission error:', error);
-                alert('An error occurred while saving. Please try again.');
+                ttAlert('An error occurred while saving. Please try again.');
             }
         }
 
@@ -377,7 +377,7 @@
                     }, 2000);
                 }).catch(err => {
                     console.error('Failed to copy:', err);
-                    alert('Failed to copy to clipboard');
+                    ttAlert('Failed to copy to clipboard');
                 });
             } else {
                 // Fallback for older browsers
@@ -395,7 +395,7 @@
                         button.innerHTML = originalText;
                     }, 2000);
                 } catch (err) {
-                    alert('Failed to copy to clipboard');
+                    ttAlert('Failed to copy to clipboard');
                 }
                 document.body.removeChild(textarea);
             }

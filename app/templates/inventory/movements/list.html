@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header %}
+{% from "components/ui.html" import page_header, empty_state %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -47,7 +47,9 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    {% if movements %}
+    <div class="overflow-x-auto">
     <table class="table table-zebra w-full text-left responsive-cards">
         <thead>
             <tr>
@@ -144,15 +146,20 @@
                 <td class="p-4" data-label="{{ _('Reason') }}">{{ movement.reason or '—' }}</td>
                 <td class="p-4" data-label="{{ _('User') }}">{{ movement.moved_by_user.username if movement.moved_by_user else '—' }}</td>
             </tr>
-            {% else %}
-            <tr>
-                <td colspan="9" class="p-8 text-center text-gray-500">
-                    {{ _('No stock movements found.') }}
-                </td>
-            </tr>
             {% endfor %}
         </tbody>
     </table>
+    </div>
+    {% else %}
+    {% set actions %}
+
+    {% endset %}
+    {% if movement_type or reference_type %}
+        {{ empty_state('fas fa-exchange-alt', 'No Movements Match Your Filters', 'Try adjusting your filters to see more results.', actions, type='no-results') }}
+    {% else %}
+        {{ empty_state('fas fa-exchange-alt', 'No Stock Movements Yet', 'Stock movements appear when you receive, transfer, or adjust inventory.', actions, type='no-data') }}
+    {% endif %}
+    {% endif %}
 </div>
 {% endblock %}
 

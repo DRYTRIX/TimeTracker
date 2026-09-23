@@ -125,14 +125,13 @@ class TimeTrackingRepository {
     try {
       final isOnline = await _isOnline();
       if (!isOnline) {
-        // Queue for sync (project-backed offline path; client-only needs connectivity)
+        // Queue timer_start (not a manual time entry) for sync when back online.
         if (projectId == null) {
           throw Exception('Client-only timers require a network connection');
         }
-        await SyncService.queueCreateTimeEntry(
+        await SyncService.queueTimerStart(
           projectId: projectId,
           taskId: taskId,
-          startTime: DateTime.now().toIso8601String(),
           notes: notes,
         );
         // Create a local timer representation
@@ -177,6 +176,34 @@ class TimeTrackingRepository {
       throw Exception('Not connected to server');
     }
     try {
+      final isOnline = await _isOnline();
+      if (!isOnline) {
+        final cached = await LocalStorage.getTimer();
+        if (cached == null) {
+          throw TimerAlreadyStoppedException('No active timer');
+        }
+        final end = stopTime ?? DateTime.now();
+        await SyncService.queueTimerStop(stopTime: end.toUtc().toIso8601String());
+        await LocalStorage.clearTimer();
+        final entry = TimeEntry(
+          id: DateTime.now().millisecondsSinceEpoch,
+          userId: cached.userId,
+          projectId: cached.projectId,
+          clientId: cached.clientId,
+          taskId: cached.taskId,
+          startTime: cached.startTime,
+          endTime: end,
+          notes: cached.notes,
+          billable: true,
+          paid: false,
+          source: 'auto',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        await LocalStorage.saveTimeEntry(entry);
+        return entry;
+      }
+
       final response = await runMobileSpan(
         'mobile.timer.stop',
         () => apiClient!.stopTimer(stopTime: stopTime),

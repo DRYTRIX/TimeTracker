@@ -13,6 +13,8 @@ from app.utils.permissions import admin_or_permission_required
 
 custom_field_definitions_bp = Blueprint("custom_field_definitions", __name__)
 
+ALLOWED_CUSTOM_FIELD_ENTITY_TYPES = ("client", "project", "task", "time_entry")
+
 
 @custom_field_definitions_bp.route("/admin/custom-field-definitions")
 @login_required
@@ -38,6 +40,10 @@ def create_custom_field_definition():
         is_mandatory = request.form.get("is_mandatory") == "on"
         is_active = request.form.get("is_active") == "on"
         order = request.form.get("order", "0", type=int)
+        entity_type = (request.form.get("entity_type") or "client").strip().lower()
+        if entity_type not in ALLOWED_CUSTOM_FIELD_ENTITY_TYPES:
+            flash(_("Invalid entity type"), "error")
+            return render_template("admin/custom_field_definitions/form.html", definition=None)
 
         # Validate required fields
         if not field_key:
@@ -62,6 +68,7 @@ def create_custom_field_definition():
         # Create definition
         definition = CustomFieldDefinition(
             field_key=field_key,
+            entity_type=entity_type,
             label=label,
             description=description,
             is_mandatory=is_mandatory,
@@ -95,6 +102,10 @@ def edit_custom_field_definition(definition_id):
         is_mandatory = request.form.get("is_mandatory") == "on"
         is_active = request.form.get("is_active") == "on"
         order = request.form.get("order", "0", type=int)
+        entity_type = (request.form.get("entity_type") or getattr(definition, "entity_type", None) or "client").strip().lower()
+        if entity_type not in ALLOWED_CUSTOM_FIELD_ENTITY_TYPES:
+            flash(_("Invalid entity type"), "error")
+            return render_template("admin/custom_field_definitions/form.html", definition=definition)
 
         # Validate required fields
         if not field_key:
@@ -121,6 +132,7 @@ def edit_custom_field_definition(definition_id):
         # Update definition
         definition.field_key = field_key
         definition.label = label
+        definition.entity_type = entity_type
         definition.description = description
         definition.is_mandatory = is_mandatory
         definition.is_active = is_active

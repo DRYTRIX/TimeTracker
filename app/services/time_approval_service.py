@@ -33,6 +33,15 @@ class TimeApprovalService:
 
         # Get approvers from policy or provided list
         if not approver_ids:
+            from app.models.timesheet_policy import TimesheetPolicy
+
+            ts_policy = TimesheetPolicy.query.order_by(TimesheetPolicy.id.asc()).first()
+            if ts_policy and ts_policy.enable_multi_level_approval:
+                chain = ts_policy.get_approver_ids()
+                if len(chain) >= 2:
+                    approver_ids = chain[:2]
+
+        if not approver_ids:
             approver_ids = self._get_approvers_for_entry(time_entry)
 
         if not approver_ids:

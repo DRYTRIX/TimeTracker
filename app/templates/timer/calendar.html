@@ -58,18 +58,18 @@
           
           <!-- Filters Row -->
           <div class="calendar-filters mt-3">
-            <select id="filterProject" class="form-select form-select-sm calendar-filter-project">
+            <select id="filterProject" class="form-input form-input-sm calendar-filter-project">
               <option value="">{{ _('All Projects') }}</option>
               {% for p in projects %}
               <option value="{{ p.id }}">{{ p.name }} ({{ p.client.name if p.client else 'No Client' }})</option>
               {% endfor %}
             </select>
             
-            <select id="filterTask" class="form-select form-select-sm calendar-filter-task">
+            <select id="filterTask" class="form-input form-input-sm calendar-filter-task">
               <option value="">{{ _('All Tasks') }}</option>
             </select>
             
-            <input type="text" id="filterTags" class="form-control form-control-sm calendar-filter-tags" placeholder="{{ _('Filter by tags...') }}">
+            <input type="text" id="filterTags" class="form-input text-sm py-2 calendar-filter-tags" placeholder="{{ _('Filter by tags...') }}">
             
             <!-- Quick Filter: Billable Only -->
             <button class="btn btn-sm btn-outline-success" id="filterBillableOnly" title="{{ _('Show billable entries only') }}">
@@ -80,7 +80,7 @@
               <i class="fas fa-times me-1"></i>{{ _('Clear') }}
             </button>
             
-            <select id="assignProject" class="form-select form-select-sm calendar-assign">
+            <select id="assignProject" class="form-input form-input-sm calendar-assign">
               <option value="">{{ _('Assign to project for new events...') }}</option>
               {% for p in projects %}
               <option value="{{ p.id }}">{{ p.name }} ({{ p.client.name if p.client else 'No Client' }})</option>
@@ -95,7 +95,7 @@
           </div>
         </div>
         
-        <div class="card-body position-relative">
+        <div class="p-6 position-relative">
           <!-- Loading Indicator -->
           <div class="calendar-loading" id="calendarLoading">
             <div class="calendar-spinner"></div>
@@ -146,7 +146,7 @@
       <div class="event-modal-body">
         <div class="mb-3">
           <label class="form-label">{{ _('Project') }} <span class="text-danger">*</span></label>
-          <select class="form-select" id="createProject" required>
+          <select class="form-input" id="createProject" required>
             <option value="">{{ _('Select a project...') }}</option>
             {% for p in projects %}
             <option value="{{ p.id }}">{{ p.name }} ({{ p.client.name if p.client else 'No Client' }})</option>
@@ -156,41 +156,41 @@
         
         <div class="mb-3">
           <label class="form-label">{{ _('Task') }}</label>
-          <select class="form-select" id="createTask">
+          <select class="form-input" id="createTask">
             <option value="">{{ _('No task') }}</option>
           </select>
         </div>
         
-        <div class="row">
-          <div class="col-md-6 mb-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+          <div>
             <label class="form-label">{{ _('Start Date') }} <span class="text-danger">*</span></label>
-            <input type="date" class="form-control user-date-input" id="createStartDate" required>
+            <input type="date" class="form-input user-date-input" id="createStartDate" required>
           </div>
-          <div class="col-md-6 mb-3">
+          <div>
             <label class="form-label">{{ _('Start Time') }} <span class="text-danger">*</span></label>
-            <input type="time" class="form-control user-time-input" id="createStartTime" required>
+            <input type="time" class="form-input user-time-input" id="createStartTime" required>
           </div>
         </div>
         
-        <div class="row">
-          <div class="col-md-6 mb-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+          <div>
             <label class="form-label">{{ _('End Date') }} <span class="text-danger">*</span></label>
-            <input type="date" class="form-control user-date-input" id="createEndDate" required>
+            <input type="date" class="form-input user-date-input" id="createEndDate" required>
           </div>
-          <div class="col-md-6 mb-3">
+          <div>
             <label class="form-label">{{ _('End Time') }} <span class="text-danger">*</span></label>
-            <input type="time" class="form-control user-time-input" id="createEndTime" required>
+            <input type="time" class="form-input user-time-input" id="createEndTime" required>
           </div>
         </div>
         
         <div class="mb-3">
           <label class="form-label">{{ _('Notes') }}</label>
-          <textarea class="form-control" id="createNotes" rows="3"></textarea>
+          <textarea class="form-input" id="createNotes" rows="3"></textarea>
         </div>
         
         <div class="mb-3">
           <label class="form-label">{{ _('Tags') }}</label>
-          <input type="text" class="form-control" id="createTags" placeholder="{{ _('Comma-separated tags') }}">
+          <input type="text" class="form-input" id="createTags" placeholder="{{ _('Comma-separated tags') }}">
         </div>
         
         <div class="form-check">

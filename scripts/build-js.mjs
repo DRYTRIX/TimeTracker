@@ -54,7 +54,14 @@ const HEAD_SCRIPTS = ['pwa-enhancements.js'];
  */
 const CORE_GROUPS = {
   // Ungated: loaded for anonymous and authenticated users alike.
-  'core-a1': ['date-picker-init.js', 'enhanced-search.js', 'form-validation.js', 'toast-notifications.js'],
+  'core-a1': [
+    'js/confirm-dialog.js',
+    'date-picker-init.js',
+    'js/unsaved-changes.js',
+    'enhanced-search.js',
+    'form-validation.js',
+    'toast-notifications.js',
+  ],
   // Gated on `current_user.is_authenticated and support_ui_json`.
   'core-support': ['support-ui.js'],
   // Ungated.

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header %}
+{% from "components/ui.html" import page_header, empty_state %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -40,7 +40,9 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    {% if stock_levels %}
+    <div class="overflow-x-auto">
     <table class="table table-zebra w-full text-left responsive-cards">
         <thead>
             <tr>
@@ -71,15 +73,18 @@
                 </td>
                 <td class="p-4" data-label="{{ _('Location') }}">{{ stock.location or '—' }}</td>
             </tr>
-            {% else %}
-            <tr>
-                <td colspan="6" class="p-8 text-center text-gray-500">
-                    {{ _('No stock levels found.') }}
-                </td>
-            </tr>
             {% endfor %}
         </tbody>
     </table>
+    </div>
+    {% else %}
+    {% set actions %}{% endset %}
+    {% if selected_warehouse_id or selected_category %}
+        {{ empty_state('fas fa-layer-group', 'No Stock Levels Match Your Filters', 'Try adjusting your filters to see more results.', actions, type='no-results') }}
+    {% else %}
+        {{ empty_state('fas fa-layer-group', 'No Stock Levels Yet', 'Stock levels appear once items are received into warehouses.', actions, type='no-data') }}
+    {% endif %}
+    {% endif %}
 </div>
 {% endblock %}
 

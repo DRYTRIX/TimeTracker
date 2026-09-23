@@ -69,7 +69,7 @@ For detailed instructions, see [Windows Code Signing Guide](../../docs/WINDOWS_C
 
 ### Renderer (React + Vite)
 
-The primary UI lives in [`src/renderer-react/`](src/renderer-react/) and builds to [`dist-renderer/`](dist-renderer/) via Vite (`npm run build:renderer`). Electron loads `dist-renderer/index.html`, with the legacy [`src/renderer/`](src/renderer/) bundle kept only as a fallback.
+The primary UI lives in [`src/renderer-react/`](src/renderer-react/) and builds to [`dist-renderer/`](dist-renderer/) via Vite (`npm run build:renderer`). Electron loads `dist-renderer/index.html` only (run `build:renderer` before `start`). Legacy [`src/renderer/js/`](src/renderer/) modules remain for unit tests; see [`src/renderer/README.md`](src/renderer/README.md). Splash screen: [`src/main/splash/`](src/main/splash/).
 
 ### Run in Development Mode
 

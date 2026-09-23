@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header, breadcrumb_nav, badge %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, badge, empty_state, pagination_nav %}
 
 {% block title %}{{ _('Audit Logs') }} - {{ config.APP_NAME }}{% endblock %}
 
@@ -169,35 +169,22 @@
         </table>
     </div>
     
-    <!-- Pagination -->
-    {% if pagination and pagination.pages > 1 %}
-    <div class="bg-gray-50 dark:bg-gray-800 px-6 py-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
-        <div class="text-sm text-gray-700 dark:text-gray-300">
-            Showing {{ (pagination.page - 1) * pagination.per_page + 1 }} to 
-            {{ pagination.page * pagination.per_page if pagination.page * pagination.per_page < pagination.total else pagination.total }} 
-            of {{ pagination.total }} results
-        </div>
-        <div class="flex gap-2">
-            {% if pagination.has_prev %}
-            <a href="{{ url_for('audit_logs.list_audit_logs', page=pagination.prev_num, entity_type=entity_type, entity_id=entity_id, user_id=user_id, action=action, days=days) }}" 
-               class="px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600">
-                Previous
-            </a>
-            {% endif %}
-            {% if pagination.has_next %}
-            <a href="{{ url_for('audit_logs.list_audit_logs', page=pagination.next_num, entity_type=entity_type, entity_id=entity_id, user_id=user_id, action=action, days=days) }}" 
-               class="px-3 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600">
-                Next
-            </a>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
+    {{ pagination_nav(pagination, 'audit_logs.list_audit_logs', {
+        'entity_type': entity_type,
+        'entity_id': entity_id,
+        'user_id': user_id,
+        'action': action,
+        'days': days
+    }, aria_label=_('Audit log pagination')) }}
     {% else %}
-    <div class="p-12 text-center">
-        <i class="fas fa-history text-4xl text-gray-400 mb-4"></i>
-        <p class="text-gray-500 dark:text-gray-400">No audit logs found matching your filters.</p>
-    </div>
+    {% set actions %}
+        <a href="{{ url_for('audit_logs.list_audit_logs') }}" class="btn btn-secondary btn-sm">{{ _('Clear Filters') }}</a>
+    {% endset %}
+    {% if entity_type or entity_id or user_id or action or days != 30 %}
+        {{ empty_state('fas fa-search', 'No Audit Logs Match Your Filters', 'Try adjusting your filters or time range to see more activity.', actions, type='no-results') }}
+    {% else %}
+        {{ empty_state('fas fa-history', 'No Audit Logs Yet', 'Changes to records will appear here once activity is logged.', None, type='no-data') }}
+    {% endif %}
     {% endif %}
 </div>
 {% endblock %}

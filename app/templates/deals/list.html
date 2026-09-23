@@ -1,19 +1,19 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header, breadcrumb_nav %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, empty_state %}
 
-{% block title %}Deals - {{ config.APP_NAME }}{% endblock %}
+{% block title %}{{ _('Deals') }} - {{ config.APP_NAME }}{% endblock %}
 
 {% block content %}
 {% set breadcrumbs = [
-    {'text': 'Deals'}
+    {'text': _('Deals')}
 ] %}
 
 {{ page_header(
     icon_class='fas fa-handshake',
-    title_text='Deals',
-    subtitle_text='Manage your sales pipeline',
+    title_text=_('Deals'),
+    subtitle_text=_('Manage your sales pipeline'),
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("deals.create_deal") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Deal</a> <a href="' + url_for("deals.pipeline_view") + '" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-columns mr-2"></i>Pipeline View</a>'
+    actions_html='<a href="' + url_for("deals.create_deal") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>' + _('New Deal') + '</a> <a href="' + url_for("deals.pipeline_view") + '" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-columns mr-2"></i>' + _('Pipeline View') + '</a>'
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
@@ -86,13 +86,16 @@
         </table>
     </div>
     {% else %}
-    <div class="text-center py-12">
-        <i class="fas fa-handshake text-4xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No deals found') }}</p>
-        <a href="{{ url_for('deals.create_deal') }}" class="mt-4 inline-block bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
-            {{ _('Create First Deal') }}
+    {% set actions %}
+        <a href="{{ url_for('deals.create_deal') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <i class="fas fa-plus mr-2"></i>{{ _('Create First Deal') }}
         </a>
-    </div>
+    {% endset %}
+    {% if stage %}
+        {{ empty_state('fas fa-search', 'No Deals Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new deal that matches your criteria.', actions, type='no-results') }}
+    {% else %}
+        {{ empty_state('fas fa-handshake', 'No Deals Yet', 'Deals help you manage your sales pipeline from first contact to close. Create your first deal to get started!', actions, type='no-data') }}
+    {% endif %}
     {% endif %}
 </div>
 {% endblock %}

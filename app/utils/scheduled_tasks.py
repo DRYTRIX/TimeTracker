@@ -847,7 +847,7 @@ def register_scheduled_tasks(scheduler, app=None):
 
                     send_base_heartbeat()
                 except Exception:
-                    pass
+                    logger.debug("Base telemetry heartbeat failed", exc_info=True)
 
         scheduler.add_job(
             func=send_base_telemetry_heartbeat_with_app,
@@ -972,7 +972,7 @@ def register_scheduled_tasks(scheduler, app=None):
                     elif event.code == EVENT_JOB_EXECUTED:
                         record_background_job_outcome(event.job_id, True)
                 except Exception:
-                    pass
+                    logger.debug("OpenTelemetry APScheduler listener callback failed", exc_info=True)
 
             scheduler.add_listener(_otel_apscheduler_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
             logger.info("Registered OpenTelemetry APScheduler listener")
@@ -1175,7 +1175,7 @@ def check_idle_timers():
         try:
             db.session.rollback()
         except Exception:
-            pass
+            logger.debug("db.session.rollback failed after check_idle_timers error", exc_info=True)
         return 0
 
 
@@ -1405,7 +1405,7 @@ def _deliver_push_to_subscriptions(user, subscriptions, note) -> int:
             try:
                 sub.update_last_used()
             except Exception:
-                pass
+                logger.debug("Web push subscription update_last_used failed", exc_info=True)
             delivered += 1
         except WebPushException as e:
             status = getattr(getattr(e, "response", None), "status_code", None)
@@ -1777,7 +1777,9 @@ def sync_integrations():
                                 logger.debug(f"Skipping integration {integration.id}: sync interval not elapsed")
                                 continue
                         except (ValueError, TypeError):
-                            pass
+                            logger.debug(
+                                "Invalid last_scheduled_sync_at for integration %s", integration.id, exc_info=True
+                            )
                 elif sync_interval == "daily" and datetime.utcnow().hour != 2:
                     logger.debug(f"Skipping integration {integration.id}: daily sync not due")
                     continue

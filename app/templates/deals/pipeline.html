@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 {% from "components/ui.html" import page_header, breadcrumb_nav %}
 
-{% block title %}Sales Pipeline - {{ config.APP_NAME }}{% endblock %}
+{% block title %}{{ _('Sales Pipeline') }} - {{ config.APP_NAME }}{% endblock %}
 
 {% block content %}
 {% set breadcrumbs = [
-    {'text': 'Deals', 'url': url_for('deals.list_deals')},
-    {'text': 'Pipeline View'}
+    {'text': _('Deals'), 'url': url_for('deals.list_deals')},
+    {'text': _('Pipeline View')}
 ] %}
 
 {{ page_header(
     icon_class='fas fa-columns',
-    title_text='Sales Pipeline',
-    subtitle_text='Visual pipeline view of all deals',
+    title_text=_('Sales Pipeline'),
+    subtitle_text=_('Visual pipeline view of all deals'),
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("deals.create_deal") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Deal</a>'
+    actions_html='<a href="' + url_for("deals.create_deal") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>' + _('New Deal') + '</a>'
 ) }}
 
 <div class="overflow-x-auto">

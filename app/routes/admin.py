@@ -1,6 +1,4 @@
 import os
-import shutil
-import threading
 import time
 import uuid
 from datetime import datetime
@@ -40,9 +38,8 @@ from app.models import (
     UserClient,
 )
 from app.utils.auth_method import auth_includes_ldap, auth_includes_oidc, normalize_auth_method
-from app.utils.backup import create_backup, get_backup_root_dir, restore_backup
 from app.utils.db import safe_commit
-from app.utils.error_handling import safe_file_remove, safe_log
+from app.utils.error_handling import safe_log
 from app.utils.installation import get_installation_config
 from app.utils.invoice_numbering import sanitize_invoice_pattern, sanitize_invoice_prefix, validate_invoice_pattern
 from app.utils.permissions import admin_or_permission_required
@@ -112,9 +109,6 @@ def _ldap_admin_display():
 def _inject_ldap_admin_display():
     return {"ldap_settings": _ldap_admin_display()}
 
-
-# In-memory restore progress tracking (simple, per-process)
-RESTORE_PROGRESS = {}
 
 # Allowed file extensions for logos
 # Avoid SVG due to XSS risk unless sanitized server-side
@@ -1095,6 +1089,30 @@ def edit_user(user_id):
     )
 
 
+@admin_bp.route("/admin/users/<int:user_id>/erase", methods=["POST"])
+@login_required
+@admin_or_permission_required("delete_users")
+def erase_user_gdpr(user_id):
+    """GDPR anonymize/erase a user while retaining historical time entries."""
+    from app.services.user_gdpr_service import UserGdprService
+
+    if user_id == current_user.id:
+        flash(_("Use account settings or the API to erase your own account"), "error")
+        return redirect(url_for("admin.list_users"))
+
+    result = UserGdprService().anonymize_user(
+        user_id=user_id,
+        actor_id=current_user.id,
+        reason=(request.form.get("reason") or "").strip() or None,
+    )
+    if not result.get("success"):
+        flash(_(result.get("message", "Could not anonymize user")), "error")
+        return redirect(url_for("admin.list_users"))
+
+    flash(_("User anonymized successfully (GDPR erasure)"), "success")
+    return redirect(url_for("admin.list_users"))
+
+
 @admin_bp.route("/admin/users/<int:user_id>/delete", methods=["POST"])
 @login_required
 @admin_or_permission_required("delete_users")
@@ -1247,6 +1265,22 @@ def manage_modules():
             modules_by_category[cat] = mods
 
     if request.method == "POST":
+        preset_action = (request.form.get("apply_module_preset") or "").strip()
+        if preset_action:
+            from app.utils.module_registry import ModulePreset
+
+            if preset_action not in {p.value for p in ModulePreset}:
+                flash(_("Unknown module preset"), "error")
+            elif hasattr(settings_obj, "disabled_module_ids"):
+                settings_obj.disabled_module_ids = ModuleRegistry.get_disabled_ids_for_preset(preset_action)
+                if settings_obj not in db.session:
+                    db.session.add(settings_obj)
+                if safe_commit("admin_apply_module_preset"):
+                    flash(_("Module preset applied successfully"), "success")
+                else:
+                    flash(_("Could not apply module preset due to a database error."), "error")
+            return redirect(url_for("admin.manage_modules"))
+
         # Locked client: allow admin to lock the instance to a single client
         locked_client_id_raw = (request.form.get("locked_client_id") or "").strip()
         if locked_client_id_raw:
@@ -1507,7 +1541,7 @@ def settings():
             with open(log_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(log_data) + "\n")
         except (OSError, IOError, TypeError, ValueError):
-            pass
+            current_app.logger.debug("Debug agent log write failed (invoice settings)", exc_info=True)
         # #endregion
         settings_obj.invoice_prefix = invoice_prefix_form
         settings_obj.invoice_number_pattern = invoice_number_pattern_form
@@ -1587,8 +1621,7 @@ def settings():
                 request.form.get("invoices_default_vat_exemption_code", "") or ""
             ).strip()
         except AttributeError:
-            # Peppol columns don't exist yet (migration not run)
-            pass
+            current_app.logger.debug("Peppol settings columns not available (migration not run)", exc_info=True)
 
         # Update kiosk mode settings (if columns exist)
         try:
@@ -1600,8 +1633,7 @@ def settings():
             )
             settings_obj.kiosk_default_movement_type = request.form.get("kiosk_default_movement_type", "adjustment")
         except AttributeError:
-            # Kiosk columns don't exist yet (migration not run)
-            pass
+            current_app.logger.debug("Kiosk settings columns not available (migration not run)", exc_info=True)
 
         # Update time entry requirements (if columns exist)
         try:
@@ -1610,7 +1642,7 @@ def settings():
             min_len = int(request.form.get("time_entry_description_min_length", 20))
             settings_obj.time_entry_description_min_length = max(1, min(500, min_len))
         except AttributeError:
-            pass
+            current_app.logger.debug("Time entry requirement columns not available", exc_info=True)
 
         # Update default daily working hours (overtime) for new users
         try:
@@ -1618,7 +1650,7 @@ def settings():
             if val is not None and 0.5 <= val <= 24:
                 settings_obj.default_daily_working_hours = val
         except (AttributeError, ValueError, TypeError):
-            pass
+            current_app.logger.debug("Could not update default daily working hours setting", exc_info=True)
 
         # Working time limits
         try:
@@ -1717,7 +1749,7 @@ def settings():
                 settings_obj.ai_context_limit = None
             settings_obj.ai_system_prompt = (request.form.get("ai_system_prompt") or "").strip()
         except AttributeError:
-            pass
+            current_app.logger.debug("AI settings columns not available", exc_info=True)
 
         # Update privacy and analytics settings
         allow_analytics = request.form.get("allow_analytics") == "on"
@@ -1774,7 +1806,7 @@ def settings():
             with open(log_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(log_data) + "\n")
         except (OSError, IOError, TypeError, ValueError):
-            pass
+            current_app.logger.debug("Debug agent log write failed (after settings commit)", exc_info=True)
         # #endregion
         flash(_("Settings updated successfully"), "success")
         return redirect(url_for("admin.settings"))
@@ -3130,7 +3162,7 @@ def pdf_layout_preview():
         try:
             setattr(invoice_wrapper, attr, getattr(invoice, attr))
         except AttributeError:
-            pass
+            current_app.logger.debug("Invoice preview wrapper missing attribute %s", attr, exc_info=True)
 
     # Copy relationship attributes (project, client)
     _invoice_id = getattr(invoice, "id", None)
@@ -3832,7 +3864,7 @@ def quote_pdf_layout_preview():
         try:
             setattr(quote_wrapper, attr, getattr(quote, attr))
         except AttributeError:
-            pass
+            current_app.logger.debug("Quote preview wrapper missing attribute %s", attr, exc_info=True)
 
     # Copy relationship attributes (project, client)
     try:
@@ -4383,7 +4415,7 @@ def upload_logo():
                 try:
                     os.remove(old_logo_path)
                 except OSError:
-                    pass  # Ignore errors when removing old file
+                    current_app.logger.debug("Could not remove old company logo file", exc_info=True)
 
         settings_obj.company_logo_filename = unique_filename
         if not safe_commit("admin_upload_logo"):
@@ -4416,7 +4448,7 @@ def remove_logo():
             try:
                 os.remove(logo_path)
             except OSError:
-                pass  # Ignore errors when removing file
+                current_app.logger.debug("Could not remove company logo file", exc_info=True)
 
         # Clear filename from database
         settings_obj.company_logo_filename = ""
@@ -4516,178 +4548,6 @@ def serve_uploaded_logo(filename):
     except Exception as e:
         current_app.logger.error(f"Error serving logo {filename}: {str(e)}")
         return "Error serving logo", 500
-
-
-@admin_bp.route("/admin/backups")
-@login_required
-@admin_or_permission_required("manage_backups")
-def backups_management():
-    """Backups management page"""
-    # Get list of existing backups
-    backups_dir = get_backup_root_dir(current_app)
-    backups = []
-
-    if os.path.exists(backups_dir):
-        for filename in os.listdir(backups_dir):
-            if filename.endswith(".zip") and not filename.startswith("restore_"):
-                filepath = os.path.join(backups_dir, filename)
-                stat = os.stat(filepath)
-                backups.append(
-                    {
-                        "filename": filename,
-                        "size": stat.st_size,
-                        "created": datetime.fromtimestamp(stat.st_mtime),
-                        "size_mb": round(stat.st_size / (1024 * 1024), 2),
-                    }
-                )
-
-    # Sort by creation date (newest first)
-    backups.sort(key=lambda x: x["created"], reverse=True)
-
-    return render_template("admin/backups.html", backups=backups, backups_dir=backups_dir)
-
-
-@admin_bp.route("/admin/backup/create", methods=["POST"])
-@login_required
-@admin_or_permission_required("manage_backups")
-def create_backup_manual():
-    """Create manual backup and return the archive for download."""
-    try:
-        archive_path = create_backup(current_app)
-        if not archive_path or not os.path.exists(archive_path):
-            flash(_("Backup failed: archive not created"), "error")
-            return redirect(url_for("admin.backups_management"))
-        # Stream file to user
-        return send_file(archive_path, as_attachment=True)
-    except Exception as e:
-        flash(_("Backup failed: %(error)s", error=str(e)), "error")
-        return redirect(url_for("admin.backups_management"))
-
-
-@admin_bp.route("/admin/backup/download/<filename>")
-@login_required
-@admin_or_permission_required("manage_backups")
-def download_backup(filename):
-    """Download an existing backup file"""
-    # Security: only allow downloading .zip files, no path traversal
-    filename = secure_filename(filename)
-    if not filename.endswith(".zip"):
-        flash(_("Invalid file type"), "error")
-        return redirect(url_for("admin.backups_management"))
-
-    backups_dir = get_backup_root_dir(current_app)
-    filepath = os.path.join(backups_dir, filename)
-
-    if not os.path.exists(filepath):
-        flash(_("Backup file not found"), "error")
-        return redirect(url_for("admin.backups_management"))
-
-    return send_file(filepath, as_attachment=True)
-
-
-@admin_bp.route("/admin/backup/delete/<filename>", methods=["POST"])
-@login_required
-@admin_or_permission_required("manage_backups")
-def delete_backup(filename):
-    """Delete a backup file"""
-    # Security: only allow deleting .zip files, no path traversal
-    filename = secure_filename(filename)
-    if not filename.endswith(".zip"):
-        flash(_("Invalid file type"), "error")
-        return redirect(url_for("admin.backups_management"))
-
-    backups_dir = get_backup_root_dir(current_app)
-    filepath = os.path.join(backups_dir, filename)
-
-    try:
-        if os.path.exists(filepath):
-            os.remove(filepath)
-            flash(_('Backup "%(filename)s" deleted successfully', filename=filename), "success")
-        else:
-            flash(_("Backup file not found"), "error")
-    except Exception as e:
-        flash(_("Failed to delete backup: %(error)s", error=str(e)), "error")
-
-    return redirect(url_for("admin.backups_management"))
-
-
-@admin_bp.route("/admin/restore", methods=["GET", "POST"])
-@admin_bp.route("/admin/restore/<filename>", methods=["POST"])
-@limiter.limit("3 per minute", methods=["POST"])  # heavy operation
-@login_required
-@admin_or_permission_required("manage_backups")
-def restore(filename=None):
-    """Restore from an uploaded backup archive or existing backup file."""
-    if request.method == "POST":
-        backups_dir = get_backup_root_dir(current_app)
-
-        # If restoring from an existing backup file
-        if filename:
-            filename = secure_filename(filename)
-            if not filename.lower().endswith(".zip"):
-                flash(_("Invalid file type. Please select a .zip backup archive."), "error")
-                return redirect(url_for("admin.backups_management"))
-            temp_path = os.path.join(backups_dir, filename)
-            if not os.path.exists(temp_path):
-                flash(_("Backup file not found."), "error")
-                return redirect(url_for("admin.backups_management"))
-            # Copy to temp location for processing
-            actual_restore_path = os.path.join(backups_dir, f"restore_{uuid.uuid4().hex[:8]}_{filename}")
-            shutil.copy2(temp_path, actual_restore_path)
-            temp_path = actual_restore_path
-        # If uploading a new backup file
-        elif "backup_file" in request.files and request.files["backup_file"].filename != "":
-            file = request.files["backup_file"]
-            uploaded_filename = secure_filename(file.filename)
-            if not uploaded_filename.lower().endswith(".zip"):
-                flash(_("Invalid file type. Please upload a .zip backup archive."), "error")
-                return redirect(url_for("admin.restore"))
-            # Save temporarily under project backups
-            os.makedirs(backups_dir, exist_ok=True)
-            temp_path = os.path.join(backups_dir, f"restore_{uuid.uuid4().hex[:8]}_{uploaded_filename}")
-            file.save(temp_path)
-        else:
-            flash(_("No backup file provided"), "error")
-            return redirect(url_for("admin.restore"))
-
-        # Initialize progress state
-        token = uuid.uuid4().hex[:8]
-        RESTORE_PROGRESS[token] = {"status": "starting", "percent": 0, "message": "Queued"}
-
-        def progress_cb(label, percent):
-            RESTORE_PROGRESS[token] = {"status": "running", "percent": int(percent), "message": label}
-
-        # Capture the real Flask app object for use in a background thread
-        app_obj = current_app._get_current_object()
-
-        def _do_restore():
-            try:
-                RESTORE_PROGRESS[token] = {"status": "running", "percent": 5, "message": "Starting restore"}
-                success, message = restore_backup(app_obj, temp_path, progress_callback=progress_cb)
-                RESTORE_PROGRESS[token] = {
-                    "status": "done" if success else "error",
-                    "percent": 100 if success else RESTORE_PROGRESS[token].get("percent", 0),
-                    "message": message,
-                }
-            except Exception as e:
-                RESTORE_PROGRESS[token] = {
-                    "status": "error",
-                    "percent": RESTORE_PROGRESS[token].get("percent", 0),
-                    "message": str(e),
-                }
-            finally:
-                safe_file_remove(temp_path, app_obj.logger)
-
-        # Run restore in background to keep request responsive
-        t = threading.Thread(target=_do_restore, daemon=True)
-        t.start()
-
-        flash(_("Restore started. You can monitor progress on this page."), "info")
-        return redirect(url_for("admin.restore", token=token))
-    # GET
-    token = request.args.get("token")
-    progress = RESTORE_PROGRESS.get(token) if token else None
-    return render_template("admin/restore.html", progress=progress, token=token)
 
 
 @admin_bp.route("/admin/system")
@@ -5489,116 +5349,6 @@ def ldap_wizard_generate_config():
     )
 
 
-# ==================== API Token Management ====================
-
-
-@admin_bp.route("/admin/api-tokens")
-@login_required
-@admin_or_permission_required("manage_api_tokens")
-def api_tokens():
-    """API tokens management page"""
-    from app.models import ApiToken
-
-    tokens = ApiToken.query.order_by(ApiToken.created_at.desc()).all()
-    users = User.query.filter_by(is_active=True).order_by(User.username).all()
-
-    return render_template("admin/api_tokens.html", tokens=tokens, users=users, now=datetime.utcnow())
-
-
-@admin_bp.route("/admin/api-tokens", methods=["POST"])
-@login_required
-@admin_or_permission_required("manage_api_tokens")
-def create_api_token():
-    """Create a new API token"""
-    from app.models import ApiToken
-
-    data = request.get_json() or {}
-
-    # Validate input
-    if not data.get("name"):
-        return jsonify({"error": "Token name is required"}), 400
-    if not data.get("user_id"):
-        return jsonify({"error": "User ID is required"}), 400
-    if not data.get("scopes"):
-        return jsonify({"error": "At least one scope is required"}), 400
-
-    # Verify user exists
-    user = User.query.get(data["user_id"])
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-    if not user:
-        return jsonify({"error": "Invalid user"}), 400
-
-    # Create token
-    try:
-        api_token, plain_token = ApiToken.create_token(
-            user_id=data["user_id"],
-            name=data["name"],
-            description=data.get("description", ""),
-            scopes=data["scopes"],
-            expires_days=data.get("expires_days"),
-        )
-
-        db.session.add(api_token)
-        db.session.commit()
-
-        current_app.logger.info(
-            f"API token '{data['name']}' created for user {user.username} by {current_user.username}"
-        )
-
-        return (
-            jsonify({"message": "API token created successfully", "token": plain_token, "token_id": api_token.id}),
-            201,
-        )
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Failed to create API token: {e}")
-        return jsonify({"error": "Failed to create token"}), 500
-
-
-@admin_bp.route("/admin/api-tokens/<int:token_id>/toggle", methods=["POST"])
-@login_required
-@admin_or_permission_required("manage_api_tokens")
-def toggle_api_token(token_id):
-    """Toggle API token active status"""
-    from app.models import ApiToken
-
-    token = ApiToken.query.get_or_404(token_id)
-    token.is_active = not token.is_active
-
-    try:
-        db.session.commit()
-        status = "activated" if token.is_active else "deactivated"
-        current_app.logger.info(f"API token '{token.name}' {status} by {current_user.username}")
-        return jsonify({"message": f"Token {status} successfully"})
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Failed to toggle API token: {e}")
-        return jsonify({"error": "Failed to update token"}), 500
-
-
-@admin_bp.route("/admin/api-tokens/<int:token_id>", methods=["DELETE"])
-@login_required
-@admin_or_permission_required("manage_api_tokens")
-def delete_api_token(token_id):
-    """Delete an API token"""
-    from app.models import ApiToken
-
-    token = ApiToken.query.get_or_404(token_id)
-    token_name = token.name
-
-    try:
-        db.session.delete(token)
-        db.session.commit()
-        current_app.logger.info(f"API token '{token_name}' deleted by {current_user.username}")
-        return jsonify({"message": "Token deleted successfully"})
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Failed to delete API token: {e}")
-        return jsonify({"error": "Failed to delete token"}), 500
-
-
 # ==================== Email Configuration Management ====================
 
 
@@ -6231,3 +5981,14 @@ def delete_geofence(geofence_id):
     else:
         flash(_("Could not delete geofence"), "error")
     return redirect(url_for("admin.geofences"))
+
+
+def _register_admin_route_modules():
+    """Load admin route slices (same blueprint, side-effect registration)."""
+    from importlib import import_module
+
+    import_module("app.routes.admin_api_tokens")
+    import_module("app.routes.admin_backups")
+
+
+_register_admin_route_modules()

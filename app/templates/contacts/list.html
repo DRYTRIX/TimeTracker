@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header, breadcrumb_nav %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, empty_state %}
 
 {% block title %}Contacts - {{ client.name }} - {{ config.APP_NAME }}{% endblock %}
 
@@ -71,13 +71,12 @@
         </table>
     </div>
     {% else %}
-    <div class="text-center py-12">
-        <i class="fas fa-address-book text-4xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No contacts found') }}</p>
-        <a href="{{ url_for('contacts.create_contact', client_id=client.id) }}" class="mt-4 inline-block bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
-            {{ _('Add First Contact') }}
+    {% set actions %}
+        <a href="{{ url_for('contacts.create_contact', client_id=client.id) }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <i class="fas fa-plus mr-2"></i>{{ _('Add First Contact') }}
         </a>
-    </div>
+    {% endset %}
+    {{ empty_state('fas fa-address-book', 'No Contacts Yet', 'Add contacts for this client to keep billing and project communication organized.', actions, type='no-data') }}
     {% endif %}
 </div>
 {% endblock %}

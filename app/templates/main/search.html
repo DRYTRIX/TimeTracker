@@ -11,7 +11,7 @@
                     <i class="fas fa-search text-primary"></i> {{ _('Search Results') }}
                 </h1>
                 <form method="GET" class="d-flex" action="{{ url_for('main.search') }}">
-                    <input type="text" class="form-control me-2" name="q" placeholder="{{ _('Search notes or tags') }}" value="{{ query }}">
+                    <input type="text" class="form-input me-2" name="q" placeholder="{{ _('Search notes or tags') }}" value="{{ query }}">
                     <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i></button>
                 </form>
             </div>
@@ -24,7 +24,7 @@
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-list me-1"></i> {{ _('Results') }}</h5>
                 </div>
-                <div class="card-body">
+                <div class="p-6">
                     {% if entries and entries.items %}
                     <div class="table-responsive">
                         <table class="table table-hover table-zebra" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
@@ -88,26 +88,20 @@
                     </div>
 
                     <!-- Pagination -->
-                    <nav aria-label="Search pagination" class="mt-3">
-                        <ul class="pagination">
-                            {% if entries.has_prev %}
-                            <li class="page-item">
-                                <a class="page-link" href="{{ url_for('main.search', q=query, page=entries.prev_num) }}">{{ _('Previous') }}</a>
-                            </li>
-                            {% else %}
-                            <li class="page-item disabled"><span class="page-link">Previous</span></li>
-                            {% endif %}
+                    <nav aria-label="Search pagination" class="mt-3 flex flex-wrap items-center justify-center gap-2">
+                        {% if entries.has_prev %}
+                        <a class="btn btn-secondary btn-sm" href="{{ url_for('main.search', q=query, page=entries.prev_num) }}">{{ _('Previous') }}</a>
+                        {% else %}
+                        <span class="btn btn-secondary btn-sm opacity-50 pointer-events-none">{{ _('Previous') }}</span>
+                        {% endif %}
 
-                            <li class="page-item disabled"><span class="page-link">{{ _('Page') }} {{ entries.page }} {{ _('of') }} {{ entries.pages }}</span></li>
+                        <span class="px-3 py-1.5 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Page') }} {{ entries.page }} {{ _('of') }} {{ entries.pages }}</span>
 
-                            {% if entries.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="{{ url_for('main.search', q=query, page=entries.next_num) }}">{{ _('Next') }}</a>
-                            </li>
-                            {% else %}
-                            <li class="page-item disabled"><span class="page-link">Next</span></li>
-                            {% endif %}
-                        </ul>
+                        {% if entries.has_next %}
+                        <a class="btn btn-secondary btn-sm" href="{{ url_for('main.search', q=query, page=entries.next_num) }}">{{ _('Next') }}</a>
+                        {% else %}
+                        <span class="btn btn-secondary btn-sm opacity-50 pointer-events-none">{{ _('Next') }}</span>
+                        {% endif %}
                     </nav>
                     {% else %}
                     <div class="text-center py-5">

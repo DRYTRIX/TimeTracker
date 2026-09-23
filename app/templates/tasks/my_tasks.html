@@ -26,10 +26,10 @@
     </div>
 
     <!-- Summary Cards (Invoices-style) -->
-    <div class="row mb-4">
-        <div class="col-md-3 col-sm-6 mb-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <div>
             <div class="card border-0 shadow-sm h-100 summary-card">
-                <div class="card-body p-3">
+                <div class="p-3">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
                             <div class="summary-icon bg-primary bg-opacity-10 text-primary">
@@ -44,9 +44,9 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6 mb-3">
+        <div>
             <div class="card border-0 shadow-sm h-100 summary-card">
-                <div class="card-body p-3">
+                <div class="p-3">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
                             <div class="summary-icon bg-warning bg-opacity-10 text-warning">
@@ -61,9 +61,9 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6 mb-3">
+        <div>
             <div class="card border-0 shadow-sm h-100 summary-card">
-                <div class="card-body p-3">
+                <div class="p-3">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
                             <div class="summary-icon bg-info bg-opacity-10 text-info">
@@ -78,9 +78,9 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6 mb-3">
+        <div>
             <div class="card border-0 shadow-sm h-100 summary-card">
-                <div class="card-body p-3">
+                <div class="p-3">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
                             <div class="summary-icon bg-success bg-opacity-10 text-success">
@@ -109,24 +109,24 @@
                 </button>
             </div>
         </div>
-        <div class="card-body" id="filterBody">
-            <form method="GET" class="row g-3">
-                <div class="col-md-4 col-sm-6">
+        <div class="p-6" id="filterBody">
+            <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                <div class="sm:col-span-2 lg:col-span-2">
                     <label for="my-tasks-filter-search" class="form-label">{{ _('Search') }}</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-search"></i></span>
-                        <input type="text" class="form-control" id="my-tasks-filter-search" name="search" 
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted-light dark:text-text-muted-dark pointer-events-none"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-input pl-10" id="my-tasks-filter-search" name="search" 
                                value="{{ search }}" placeholder="{{ _('Task name or description') }}">
                     </div>
                 </div>
-                <div class="col-md-2 col-sm-6">
+                <div>
                     <label for="tags" class="form-label">{{ _('Tags') }}</label>
-                    <input type="text" class="form-control" id="tags" name="tags" 
+                    <input type="text" class="form-input" id="tags" name="tags" 
                            value="{{ tags }}" placeholder="{{ _('e.g. bug, frontend') }}">
                 </div>
-                <div class="col-md-2 col-sm-6">
+                <div>
                     <label for="status" class="form-label">{{ _('Status') }}</label>
-                    <select class="form-select" id="status" name="status">
+                    <select class="form-input" id="status" name="status">
                         <option value="">{{ _('All Statuses') }}</option>
                         <option value="todo" {% if status == 'todo' %}selected{% endif %}>{{ _('To Do') }}</option>
                         <option value="in_progress" {% if status == 'in_progress' %}selected{% endif %}>{{ _('In Progress') }}</option>
@@ -135,9 +135,9 @@
                         <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>{{ _('Cancelled') }}</option>
                     </select>
                 </div>
-                <div class="col-md-2 col-sm-6">
+                <div>
                     <label for="priority" class="form-label">{{ _('Priority') }}</label>
-                    <select class="form-select" id="priority" name="priority">
+                    <select class="form-input" id="priority" name="priority">
                         <option value="">{{ _('All Priorities') }}</option>
                         <option value="low" {% if priority == 'low' %}selected{% endif %}>{{ _('Low') }}</option>
                         <option value="medium" {% if priority == 'medium' %}selected{% endif %}>{{ _('Medium') }}</option>
@@ -145,9 +145,9 @@
                         <option value="urgent" {% if priority == 'urgent' %}selected{% endif %}>{{ _('Urgent') }}</option>
                     </select>
                 </div>
-                <div class="col-md-2 col-sm-6">
+                <div>
                     <label for="project_id" class="form-label">{{ _('Project') }}</label>
-                    <select class="form-select" id="project_id" name="project_id">
+                    <select class="form-input" id="project_id" name="project_id">
                         <option value="">{{ _('All Projects') }}</option>
                         {% for project in projects %}
                         <option value="{{ project.id }}" {% if project_id == project.id %}selected{% endif %}>
@@ -156,23 +156,21 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-2 col-sm-6">
+                <div>
                     <label for="task_type" class="form-label">{{ _('Task Type') }}</label>
-                    <select class="form-select" id="task_type" name="task_type">
+                    <select class="form-input" id="task_type" name="task_type">
                         <option value="">{{ _('All Types') }}</option>
                         <option value="assigned" {% if task_type == 'assigned' %}selected{% endif %}>{{ _('Assigned to Me') }}</option>
                         <option value="created" {% if task_type == 'created' %}selected{% endif %}>{{ _('Created by Me') }}</option>
                     </select>
                 </div>
-                <div class="col-md-2 col-sm-6 d-flex align-items-end">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="1" id="overdue" name="overdue" {% if overdue %}checked{% endif %}>
-                        <label class="form-check-label" for="overdue">
-                            {{ _('Show overdue only') }}
-                        </label>
-                    </div>
+                <div class="flex items-end">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input class="rounded border-gray-300 text-primary focus:ring-primary" type="checkbox" value="1" id="overdue" name="overdue" {% if overdue %}checked{% endif %}>
+                        <span class="text-sm">{{ _('Show overdue only') }}</span>
+                    </label>
                 </div>
-                <div class="col-12">
+                <div class="col-span-full">
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-search me-2"></i>{{ _('Apply Filters') }}
@@ -188,9 +186,9 @@
 
     <!-- Tasks Grid -->
     {% if tasks %}
-    <div class="row g-4">
+    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
         {% for task in tasks %}
-        <div class="col-xl-4 col-lg-6 col-md-6">
+        <div>
             <div class="card mobile-card task-card h-100 {{ task.priority_class }}">
                 <!-- Card Header -->
                 <div class="card-header border-0 pb-0">
@@ -220,7 +218,7 @@
                 </div>
 
                 <!-- Card Body -->
-                <div class="card-body pt-0">
+                <div class="p-6 pt-0">
                     <h5 class="card-title">
                         <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="text-decoration-none text-dark">
                             {{ task.name }}
@@ -350,42 +348,30 @@
 
     <!-- Pagination -->
     {% if pagination.pages > 1 %}
-    <nav aria-label="{{ _('My tasks pagination') }}" class="mt-5">
-        <ul class="pagination justify-content-center">
+    <nav aria-label="{{ _('My tasks pagination') }}" class="mt-5 flex flex-wrap items-center justify-center gap-2">
             {% if pagination.has_prev %}
-            <li class="page-item">
-                <a class="page-link" href="{{ url_for('tasks.my_tasks', page=pagination.prev_num, **request.args) }}">
-                    <i class="fas fa-chevron-left"></i> {{ _('Previous') }}
-                </a>
-            </li>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('tasks.my_tasks', page=pagination.prev_num, **request.args) }}">
+                <i class="fas fa-chevron-left"></i> {{ _('Previous') }}
+            </a>
             {% endif %}
             
             {% for page_num in pagination.iter_pages() %}
                 {% if page_num %}
                     {% if page_num != pagination.page %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('tasks.my_tasks', page=page_num, **request.args) }}">{{ page_num }}</a>
-                    </li>
+                    <a class="btn btn-ghost btn-sm" href="{{ url_for('tasks.my_tasks', page=page_num, **request.args) }}">{{ page_num }}</a>
                     {% else %}
-                    <li class="page-item active">
-                        <span class="page-link">{{ page_num }}</span>
-                    </li>
+                    <span class="px-3 py-1.5 bg-primary text-white rounded-lg text-sm font-medium" aria-current="page">{{ page_num }}</span>
                     {% endif %}
                 {% else %}
-                <li class="page-item disabled">
-                    <span class="page-link">{{ _('...') }}</span>
-                </li>
+                <span class="px-3 py-1.5 text-text-muted-light dark:text-text-muted-dark">...</span>
                 {% endif %}
             {% endfor %}
             
             {% if pagination.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="{{ url_for('tasks.my_tasks', page=pagination.next_num, **request.args) }}">
-                    {{ _('Next') }} <i class="fas fa-chevron-right"></i>
-                </a>
-            </li>
+            <a class="btn btn-secondary btn-sm" href="{{ url_for('tasks.my_tasks', page=pagination.next_num, **request.args) }}">
+                {{ _('Next') }} <i class="fas fa-chevron-right"></i>
+            </a>
             {% endif %}
-        </ul>
     </nav>
     {% endif %}
     {% else %}
@@ -393,7 +379,7 @@
     <div class="row">
         <div class="col-12">
             <div class="card mobile-card">
-                <div class="card-body text-center py-5">
+                <div class="p-6 text-center py-5">
                     <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-4" style="width: 80px; height: 80px;">
                         <i class="fas fa-user fa-2x text-muted"></i>
                     </div>
@@ -542,7 +528,7 @@
         padding: 1rem 1rem 0.5rem 1rem;
     }
     
-    .card-body {
+    .task-card .p-6 {
         padding: 0.75rem 1rem;
     }
     

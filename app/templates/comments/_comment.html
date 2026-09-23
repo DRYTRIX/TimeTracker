@@ -109,7 +109,7 @@
                       enctype="multipart/form-data" class="d-flex gap-2 align-items-end">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="flex-grow-1">
-                        <input type="file" name="file" class="form-control form-control-sm" required 
+                        <input type="file" name="file" class="form-input text-sm py-2" required 
                                accept=".png,.jpg,.jpeg,.gif,.pdf,.doc,.docx,.txt,.xls,.xlsx,.zip,.rar">
                         <small class="text-muted">{{ _('Max 10 MB. Images, PDFs, documents, spreadsheets, archives') }}</small>
                     </div>
@@ -130,7 +130,7 @@
         <form method="POST" action="{{ url_for('comments.edit_comment', comment_id=comment.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-3">
-                <textarea name="content" class="form-control" rows="3" required>{{ comment.content }}</textarea>
+                <textarea name="content" class="form-input" rows="3" required>{{ comment.content }}</textarea>
             </div>
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-primary btn-sm">
@@ -154,7 +154,7 @@
             {% endif %}
             <input type="hidden" name="parent_id" value="{{ comment.id }}">
             <div class="mb-3">
-                <textarea name="content" class="form-control" rows="3" data-mentions placeholder="{{ _('Write your reply...') }}" required></textarea>
+                <textarea name="content" class="form-input" rows="3" data-mentions placeholder="{{ _('Write your reply...') }}" required></textarea>
             </div>
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-primary btn-sm">

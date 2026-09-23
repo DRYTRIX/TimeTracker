@@ -9,6 +9,14 @@
   data-new-time-entry-url="{{ url_for('timer.manual_entry') }}"
   data-new-project-url="{{ url_for('projects.create_project') }}"
   data-new-invoice-url="{{ url_for('invoices.create_invoice') }}"
+  data-projects-url="{{ url_for('projects.list_projects') }}"
+  data-tasks-url="{{ url_for('tasks.list_tasks') }}"
+  data-invoices-url="{{ url_for('invoices.list_invoices') }}"
+  data-analytics-url="{{ url_for('analytics.analytics_dashboard') }}"
+  data-calendar-url="{{ url_for('calendar.view_calendar') }}"
+  data-expenses-url="{{ url_for('expenses.list_expenses') }}"
+  data-time-entries-url="{{ url_for('timer.time_entries_overview') }}"
+  data-settings-url="{{ url_for('user.settings') }}"
 >
   <div class="absolute inset-0 bg-black/50" data-tt-cp-close></div>
 
@@ -25,8 +33,8 @@
           <kbd class="px-1.5 py-0.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded text-[11px]">Enter</kbd>
           <span class="hidden sm:inline">to run</span>
         </div>
-        <button id="ttCommandPaletteClose" type="button" class="px-2 py-1 text-sm rounded hover:bg-background-light dark:hover:bg-background-dark">
-          Close
+        <button id="ttCommandPaletteClose" type="button" class="px-2 py-1 text-sm rounded hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Close') }}">
+          {{ _('Close') }}
         </button>
       </div>
 

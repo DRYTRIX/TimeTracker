@@ -1,5 +1,8 @@
 import React from 'react';
 import { ConnectionPill, DiagnosticsPanel, ThemeSwitch } from '../components/ui.jsx';
+import { t } from '../i18n/i18n.js';
+
+const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
 
 export function AuthFlow(props) {
   const {
@@ -17,6 +20,13 @@ export function AuthFlow(props) {
     connection,
     onTestServer,
     onLogin,
+    authPhase,
+    totpCode,
+    setTotpCode,
+    onBackFrom2fa,
+    apiTokenPaste,
+    setApiTokenPaste,
+    onConnectWithToken,
     theme,
     setTheme,
   } = props;
@@ -46,34 +56,76 @@ export function AuthFlow(props) {
               Test server
             </button>
           </div>
-        ) : (
+        ) : authPhase === '2fa' ? (
           <form className="form-grid" onSubmit={onLogin}>
+            <p className="hint">Enter the 6-digit code from your authenticator app.</p>
             <label>
-              Server URL
-              <input value={serverUrl} onChange={(e) => setServerUrl(e.target.value)} />
-            </label>
-            <label>
-              Username
-              <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
-            </label>
-            <label>
-              Password
+              Authentication code
               <input
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                type="password"
-                autoComplete="current-password"
+                value={totpCode}
+                onChange={(e) => setTotpCode(e.target.value)}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="123456"
               />
             </label>
             <div className="button-row">
-              <button type="button" className="btn ghost" onClick={() => setStep('server')}>
+              <button type="button" className="btn ghost" onClick={onBackFrom2fa}>
                 Back
               </button>
               <button className="btn primary" type="submit">
-                Sign in
+                Verify
               </button>
             </div>
           </form>
+        ) : (
+          <>
+            <form className="form-grid" onSubmit={onLogin}>
+              <label>
+                Server URL
+                <input value={serverUrl} onChange={(e) => setServerUrl(e.target.value)} />
+              </label>
+              <label>
+                Username
+                <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
+              </label>
+              <label>
+                Password
+                <input
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  type="password"
+                  autoComplete="current-password"
+                />
+              </label>
+              <div className="button-row">
+                <button type="button" className="btn ghost" onClick={() => setStep('server')}>
+                  Back
+                </button>
+                <button className="btn primary" type="submit">
+                  Sign in
+                </button>
+              </div>
+            </form>
+            <div className="form-grid auth-token-paste">
+              <p className="hint">
+                OIDC-only servers: create an API token in the web admin (Admin → API tokens) and paste it below.
+              </p>
+              <label>
+                Or paste API token
+                <input
+                  value={apiTokenPaste}
+                  onChange={(e) => setApiTokenPaste(e.target.value)}
+                  type="password"
+                  placeholder="tt_…"
+                  autoComplete="off"
+                />
+              </label>
+              <button type="button" className="btn" onClick={onConnectWithToken}>
+                Connect with token
+              </button>
+            </div>
+          </>
         )}
         {info && <div className="message success">{info}</div>}
         {error && <div className="message error">{error}</div>}
@@ -98,38 +150,38 @@ export function AuthFlow(props) {
 
 export const NAV_GROUPS = [
   {
-    label: 'Work',
+    labelKey: 'nav.groups.work',
     items: [
-      { id: 'dashboard', label: 'Dashboard' },
-      { id: 'projects', label: 'Projects' },
-      { id: 'entries', label: 'Time Entries' },
-      { id: 'kanban', label: 'Kanban' },
-      { id: 'reports', label: 'Reports' },
+      { id: 'dashboard', labelKey: 'nav.dashboard' },
+      { id: 'projects', labelKey: 'nav.projects' },
+      { id: 'entries', labelKey: 'nav.entries' },
+      { id: 'kanban', labelKey: 'nav.kanban' },
+      { id: 'reports', labelKey: 'nav.reports' },
     ],
   },
   {
-    label: 'CRM',
-    items: [{ id: 'crm', label: 'CRM' }],
+    labelKey: 'nav.groups.crm',
+    items: [{ id: 'crm', labelKey: 'nav.crm' }],
   },
   {
-    label: 'Finance',
+    labelKey: 'nav.groups.finance',
     items: [
-      { id: 'invoices', label: 'Invoices' },
-      { id: 'expenses', label: 'Expenses' },
-      { id: 'payments', label: 'Payments' },
-      { id: 'mileage', label: 'Mileage' },
-      { id: 'quotes', label: 'Quotes' },
-      { id: 'recurring', label: 'Recurring' },
-      { id: 'credit', label: 'Credit notes' },
+      { id: 'invoices', labelKey: 'nav.invoices' },
+      { id: 'expenses', labelKey: 'nav.expenses' },
+      { id: 'payments', labelKey: 'nav.payments' },
+      { id: 'mileage', labelKey: 'nav.mileage' },
+      { id: 'quotes', labelKey: 'nav.quotes' },
+      { id: 'recurring', labelKey: 'nav.recurring' },
+      { id: 'credit', labelKey: 'nav.credit' },
     ],
   },
   {
-    label: 'Workforce',
-    items: [{ id: 'workforce', label: 'Workforce' }],
+    labelKey: 'nav.groups.workforce',
+    items: [{ id: 'workforce', labelKey: 'nav.workforce' }],
   },
   {
-    label: 'App',
-    items: [{ id: 'settings', label: 'Settings' }],
+    labelKey: 'nav.groups.app',
+    items: [{ id: 'settings', labelKey: 'nav.settings' }],
   },
 ];
 
@@ -140,13 +192,13 @@ export function Sidebar({ activeView, onChange }) {
         <img src="../assets/logo.svg" alt="" />
         <div>
           <strong>TimeTracker</strong>
-          <span>Desktop 5.9.3</span>
+          <span>{`Desktop ${APP_VERSION}`}</span>
         </div>
       </div>
       <nav>
         {NAV_GROUPS.map((group) => (
-          <div className="nav-group" key={group.label}>
-            <p className="nav-group-label">{group.label}</p>
+          <div className="nav-group" key={group.labelKey}>
+            <p className="nav-group-label">{t(group.labelKey)}</p>
             {group.items.map((view) => (
               <button
                 key={view.id}
@@ -154,7 +206,7 @@ export function Sidebar({ activeView, onChange }) {
                 onClick={() => onChange(view.id)}
                 aria-current={activeView === view.id ? 'page' : undefined}
               >
-                {view.label}
+                {t(view.labelKey)}
               </button>
             ))}
           </div>

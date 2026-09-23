@@ -8,12 +8,10 @@
 /* Bulk Entry alignment tweaks (light/dark consistent) */
 .bulk-entry .form-label { color: var(--text-primary); }
 .bulk-entry .card { border: 1px solid var(--border-color); }
-.bulk-entry .card-body .form-control,
-.bulk-entry .card-body .form-select { background: #ffffff; }
-[data-theme="dark"] .bulk-entry .card-body .form-control,
-[data-theme="dark"] .bulk-entry .card-body .form-select { background: #0f172a; color: var(--text-primary); border-color: var(--border-color); }
-.bulk-entry .form-control::placeholder { color: var(--text-muted); }
-[data-theme="dark"] .bulk-entry .form-control::placeholder { color: #64748b; }
+.bulk-entry .p-6 .form-input { background: #ffffff; }
+[data-theme="dark"] .bulk-entry .p-6 .form-input { background: #0f172a; color: var(--text-primary); border-color: var(--border-color); }
+.bulk-entry .form-input::placeholder { color: var(--text-muted); }
+[data-theme="dark"] .bulk-entry .form-input::placeholder { color: #64748b; }
 .bulk-entry .form-check-input { cursor: pointer; }
 
 /* Date range preview */
@@ -93,17 +91,17 @@
                         </a>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="p-6">
                     <form method="POST" action="{{ url_for('timer.bulk_entry') }}" id="bulkEntryForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         {% if current_user.is_admin and users %}
-                        <div class="row">
-                            <div class="col-md-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
                                 <div class="mb-3">
                                     <label for="user_id" class="form-label fw-semibold">
                                         <i class="fas fa-user me-1"></i>{{ _('Log time for') }}
                                     </label>
-                                    <select class="form-select" id="user_id" name="user_id">
+                                    <select class="form-input" id="user_id" name="user_id">
                                         {% for user in users %}
                                         <option value="{{ user.id }}" {% if selected_user_id is not none and (selected_user_id|string) == (user.id|string) %}selected{% elif selected_user_id is none and user.id == current_user.id %}selected{% endif %}>{{ user.display_name }}</option>
                                         {% endfor %}
@@ -113,8 +111,8 @@
                             </div>
                         </div>
                         {% endif %}
-                        <div class="row">
-                            <div class="col-md-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
                                 <div class="mb-3">
                                     <label for="client_id" class="form-label fw-semibold">
                                         <i class="fas fa-building me-1"></i>{{ _('Client') }}
@@ -123,13 +121,13 @@
                                     <div class="form-text">{{ _('Select a client first to filter projects. Type to search or create.') }}</div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div>
                                 <div class="mb-3">
                                     <label for="project_id" class="form-label fw-semibold">
                                         <i class="fas fa-project-diagram me-1"></i>{{ _('Project') }} *
                                     </label>
                                     {% set selected_project_id = (request.form.get('project_id') or selected_project_id or '') %}
-                                    <select class="form-select" id="project_id" name="project_id" required
+                                    <select class="form-input" id="project_id" name="project_id" required
                                             data-inline-project-select
                                             data-searchable-select="project"
                                             data-filter-by="client_id"
@@ -143,13 +141,13 @@
                                     <div class="form-text">{{ _('Filtered by client. Required for bulk entries.') }}</div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div>
                                 {% set preselected_task_id = request.form.get('task_id') or selected_task_id %}
                                 <div class="mb-3">
                                     <label for="task_id" class="form-label fw-semibold">
                                         <i class="fas fa-tasks me-1"></i>{{ _('Task (optional)') }}
                                     </label>
-                                    <select class="form-select" id="task_id" name="task_id"
+                                    <select class="form-input" id="task_id" name="task_id"
                                             data-selected-task-id="{{ preselected_task_id or '' }}"
                                             data-searchable-select="task"
                                             data-inline-task-select
@@ -168,18 +166,18 @@
                         <div class="row g-3 mb-3">
                             <div class="col-12">
                                 <div class="card border-0 shadow-sm">
-                                    <div class="card-body">
+                                    <div class="p-6">
                                         <div class="mb-3 fw-semibold text-primary">
                                             <i class="fas fa-calendar-alt me-1"></i>{{ _('Date Range') }} *
                                         </div>
-                                        <div class="row g-2">
-                                            <div class="col-md-6">
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
                                                 <label for="start_date" class="form-label fw-semibold">{{ _('Start Date') }}</label>
-                                                <input type="date" class="form-control user-date-input" name="start_date" id="start_date" required value="{{ request.form.get('start_date','') }}">
+                                                <input type="date" class="form-input user-date-input" name="start_date" id="start_date" required value="{{ request.form.get('start_date','') }}">
                                             </div>
-                                            <div class="col-md-6">
+                                            <div>
                                                 <label for="end_date" class="form-label fw-semibold">{{ _('End Date') }}</label>
-                                                <input type="date" class="form-control user-date-input" name="end_date" id="end_date" required value="{{ request.form.get('end_date','') }}">
+                                                <input type="date" class="form-input user-date-input" name="end_date" id="end_date" required value="{{ request.form.get('end_date','') }}">
                                             </div>
                                         </div>
                                         <div class="form-check form-switch mt-2">
@@ -203,21 +201,21 @@
                         </div>
 
                         <!-- Time Range -->
-                        <div class="row g-3">
-                            <div class="col-12 col-md-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
                                 <div class="card border-0 shadow-sm">
-                                    <div class="card-body">
+                                    <div class="p-6">
                                         <div class="mb-2 fw-semibold text-primary"><i class="fas fa-play me-1"></i>{{ _('Start Time') }} *</div>
-                                        <input type="time" class="form-control user-time-input" name="start_time" id="start_time" required value="{{ request.form.get('start_time','') }}">
+                                        <input type="time" class="form-input user-time-input" name="start_time" id="start_time" required value="{{ request.form.get('start_time','') }}">
                                         <div class="form-text">{{ _('Same start time for all days') }}</div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-12 col-md-6">
+                            <div>
                                 <div class="card border-0 shadow-sm">
-                                    <div class="card-body">
+                                    <div class="p-6">
                                         <div class="mb-2 fw-semibold text-primary"><i class="fas fa-stop me-1"></i>{{ _('End Time') }} *</div>
-                                        <input type="time" class="form-control user-time-input" name="end_time" id="end_time" required value="{{ request.form.get('end_time','') }}">
+                                        <input type="time" class="form-input user-time-input" name="end_time" id="end_time" required value="{{ request.form.get('end_time','') }}">
                                         <div class="form-text">{{ _('Same end time for all days') }}</div>
                                     </div>
                                 </div>
@@ -228,20 +226,20 @@
                             <label for="notes" class="form-label fw-semibold">
                                 <i class="fas fa-sticky-note me-1"></i>{{ _('Notes') }}
                             </label>
-                            <textarea class="form-control" id="notes" name="notes" style="height: 100px" placeholder="{{ _('What did you work on? (same notes for all entries)') }}">{{ request.form.get('notes','') }}</textarea>
+                            <textarea class="form-input" id="notes" name="notes" style="height: 100px" placeholder="{{ _('What did you work on? (same notes for all entries)') }}">{{ request.form.get('notes','') }}</textarea>
                         </div>
 
-                        <div class="row g-3 align-items-center">
-                            <div class="col-12 col-md-8">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                            <div class="md:col-span-2">
                                 <div class="mb-3 mb-md-0">
                                     <label for="tags" class="form-label fw-semibold">
                                         <i class="fas fa-tags me-1"></i>{{ _('Tags') }}
                                     </label>
-                                    <input type="text" class="form-control" id="tags" name="tags" placeholder="{{ _('tag1, tag2, tag3') }}" value="{{ request.form.get('tags','') }}">
+                                    <input type="text" class="form-input" id="tags" name="tags" placeholder="{{ _('tag1, tag2, tag3') }}" value="{{ request.form.get('tags','') }}">
                                     <div class="form-text">{{ _('Separate tags with commas (same for all entries)') }}</div>
                                 </div>
                             </div>
-                            <div class="col-12 col-md-4">
+                            <div>
                                 <div class="mb-3 mb-md-0">
                                     <label class="form-label fw-semibold d-block" for="billable">
                                         <i class="fas fa-dollar-sign me-1"></i>{{ _('Billable') }}
@@ -279,7 +277,7 @@
                         <i class="fas fa-lightbulb me-2 text-warning"></i>{{ _('Bulk Entry Tips') }}
                     </h6>
                 </div>
-                <div class="card-body">
+                <div class="p-6">
                     <div class="tip-item mb-3 d-flex gap-3">
                         <div class="tip-icon text-primary"><i class="fas fa-calendar-alt"></i></div>
                         <div class="tip-content">
@@ -321,10 +319,10 @@
     background-color: transparent;
     color: var(--text-secondary);
 }
-.form-floating > .form-control:focus ~ label,
-.form-floating > .form-control:not(:placeholder-shown) ~ label,
-.form-floating > .form-select:focus ~ label,
-.form-floating > .form-select:not([value=""]) ~ label {
+.form-floating > .form-input:focus ~ label,
+.form-floating > .form-input:not(:placeholder-shown) ~ label,
+.form-floating > .form-input:focus ~ label,
+.form-floating > .form-input:not([value=""]) ~ label {
     color: var(--primary-color);
 }
 
@@ -334,7 +332,7 @@
     color: var(--primary-color) !important;
 }
 
-.form-control:focus, .form-select:focus {
+.form-input:focus, .form-input:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15);
 }
@@ -407,7 +405,7 @@ document.addEventListener('DOMContentLoaded', function() {
         form.classList.add('mobile-form');
         
         // Improve touch targets
-        const inputs = document.querySelectorAll('.form-control, .form-select');
+        const inputs = document.querySelectorAll('.form-input, .form-input');
         inputs.forEach(input => {
             input.classList.add('touch-target');
         });

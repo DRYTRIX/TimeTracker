@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Reports'), 'url': url_for('reports.reports')},
+    {'text': _('Estimates vs Actuals')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-balance-scale',
+    title_text=_('Estimates vs Actuals'),
+    subtitle_text=_('Compare estimated hours on tasks and projects with time logged'),
+    breadcrumbs=breadcrumbs
+) }}
+
+{% if projects %}
+<form method="GET" class="mb-6 flex flex-wrap items-end gap-3">
+    <div>
+        <label for="project_id" class="form-label">{{ _('Project') }}</label>
+        <select name="project_id" id="project_id" class="form-input">
+            <option value="">{{ _('All projects') }}</option>
+            {% for p in projects %}
+            <option value="{{ p.id }}" {% if project_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">{{ _('Filter') }}</button>
+</form>
+{% endif %}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+    <h2 class="text-lg font-semibold mb-4">{{ _('By project') }}</h2>
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+            <thead>
+                <tr class="text-left text-text-muted-light dark:text-text-muted-dark border-b border-border-light dark:border-border-dark">
+                    <th class="py-2 pr-4">{{ _('Project') }}</th>
+                    <th class="py-2 pr-4">{{ _('Estimated (h)') }}</th>
+                    <th class="py-2 pr-4">{{ _('Actual (h)') }}</th>
+                    <th class="py-2">{{ _('Variance (h)') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in project_rows %}
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-2 pr-4">{{ row.project_name }}</td>
+                    <td class="py-2 pr-4">{{ row.estimated_hours if row.estimated_hours is not none else '—' }}</td>
+                    <td class="py-2 pr-4">{{ row.actual_hours }}</td>
+                    <td class="py-2">{{ row.variance_hours if row.variance_hours is not none else '—' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" class="py-4 text-text-muted-light dark:text-text-muted-dark">{{ _('No data') }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    <h2 class="text-lg font-semibold mb-4">{{ _('By task') }}</h2>
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+            <thead>
+                <tr class="text-left text-text-muted-light dark:text-text-muted-dark border-b border-border-light dark:border-border-dark">
+                    <th class="py-2 pr-4">{{ _('Task') }}</th>
+                    <th class="py-2 pr-4">{{ _('Estimated (h)') }}</th>
+                    <th class="py-2 pr-4">{{ _('Actual (h)') }}</th>
+                    <th class="py-2">{{ _('Variance (h)') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in task_rows %}
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="py-2 pr-4">{{ row.task_name }}</td>
+                    <td class="py-2 pr-4">{{ row.estimated_hours if row.estimated_hours is not none else '—' }}</td>
+                    <td class="py-2 pr-4">{{ row.actual_hours }}</td>
+                    <td class="py-2">{{ row.variance_hours if row.variance_hours is not none else '—' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" class="py-4 text-text-muted-light dark:text-text-muted-dark">{{ _('No tasks') }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

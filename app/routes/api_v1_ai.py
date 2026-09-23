@@ -48,6 +48,24 @@ def ai_chat():
         return _ai_error_response(exc)
 
 
+@api_v1_ai_bp.route("/ai/summarize-entries", methods=["POST"])
+@require_api_token("read:ai")
+def ai_summarize_entries():
+    data = request.get_json(silent=True) or {}
+    try:
+        service = LLMService()
+        if not service.is_enabled():
+            return _ai_disabled_response()
+        result = service.summarize_time_entries(
+            g.api_user,
+            data.get("date_range") or {},
+            target_user_id=data.get("user_id"),
+        )
+        return jsonify({"success": True, **result})
+    except AIServiceError as exc:
+        return _ai_error_response(exc)
+
+
 @api_v1_ai_bp.route("/ai/actions/confirm", methods=["POST"])
 @require_api_token("write:ai")
 def ai_confirm_action():

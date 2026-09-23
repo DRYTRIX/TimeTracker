@@ -184,7 +184,7 @@
                     {% if active_timer.project %}
                         <i class="fas fa-folder text-blue-600 dark:text-blue-400 mr-2"></i>{{ active_timer.project.name }}
                     {% elif active_timer.client %}
-                        <i class="fas fa-building text-blue-600 dark:text-blue-400 mr-2"></i>{{ active_timer.client.name }} <span class="text-xs text-gray-500">({{ _('Direct') }})</span>
+                        <i class="fas fa-building text-blue-600 dark:text-blue-400 mr-2"></i>{{ active_timer.client.name }} <span class="text-xs text-gray-500 dark:text-gray-400">({{ _('Direct') }})</span>
                     {% else %}
                         {{ _('No project') }}
                     {% endif %}
@@ -680,7 +680,7 @@
                             <td colspan="4" class="p-12 text-center">
                                 <div class="flex flex-col items-center justify-center">
                                     <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-                                        <i class="fas fa-inbox text-3xl text-gray-400"></i>
+                                        <i class="fas fa-inbox text-3xl text-gray-400 dark:text-gray-500" aria-hidden="true"></i>
                                     </div>
                                     <p class="text-text-muted-light dark:text-text-muted-dark font-medium mb-1">{{ _('No recent entries found.') }}</p>
                                     <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Start tracking time to see entries here.') }}</p>
@@ -707,8 +707,8 @@
                         </div>
                         <h2 class="text-lg font-semibold">{{ _('Weekly Goal') }}</h2>
                     </div>
-                    <a href="{{ url_for('weekly_goals.index') }}" class="text-white/80 hover:text-white transition-colors">
-                        <i class="fas fa-external-link-alt"></i>
+                    <a href="{{ url_for('weekly_goals.index') }}" class="text-white/80 hover:text-white transition-colors" aria-label="{{ _('View weekly goals') }}">
+                        <i class="fas fa-external-link-alt" aria-hidden="true"></i>
                     </a>
                 </div>
                 <div class="mb-4">
@@ -742,7 +742,7 @@
             <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 animated-card border-2 border-dashed border-gray-300 dark:border-gray-600">
                 <div class="text-center py-2">
                     <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-                        <i class="fas fa-bullseye text-3xl text-gray-400"></i>
+                        <i class="fas fa-bullseye text-3xl text-gray-400 dark:text-gray-500" aria-hidden="true"></i>
                     </div>
                     <h3 class="text-base font-semibold text-text-light dark:text-text-dark mb-2">
                         {{ _('No Weekly Goal') }}
@@ -875,7 +875,7 @@
             {% else %}
             <div class="flex flex-col items-center justify-center py-8 text-center">
                 <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-4 w-16 h-16 flex items-center justify-center mb-3">
-                    <i class="fas fa-chart-bar text-2xl text-gray-400"></i>
+                    <i class="fas fa-chart-bar text-2xl text-gray-400 dark:text-gray-500" aria-hidden="true"></i>
                 </div>
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No time logged in the last 7 days.') }}</p>
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Start tracking to see distribution here.') }}</p>
@@ -925,7 +925,7 @@
             {% else %}
                 <div class="text-center py-8">
                     <div class="bg-gray-100 dark:bg-gray-800 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-                        <i class="fas fa-folder-open text-3xl text-gray-400"></i>
+                        <i class="fas fa-folder-open text-3xl text-gray-400 dark:text-gray-500" aria-hidden="true"></i>
                     </div>
                     <p class="text-text-muted-light dark:text-text-muted-dark font-medium mb-1">{{ _('No activity in the last 30 days.') }}</p>
                     <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Start tracking time on projects to see them here.') }}</p>
@@ -1639,7 +1639,7 @@
                         if (window.toastManager && typeof window.toastManager.error === 'function') {
                             window.toastManager.error(errorMsg, errorTitleText, 5000);
                         } else {
-                            alert(errorMsg);
+                            ttAlert(errorMsg);
                         }
                         return false;
                     }
@@ -1654,7 +1654,7 @@
                         if (window.toastManager && typeof window.toastManager.error === 'function') {
                             window.toastManager.error(msg, errorTitleText, 5000);
                         } else {
-                            alert(msg);
+                            ttAlert(msg);
                         }
                         return false;
                     }
@@ -1669,7 +1669,7 @@
                             if (window.toastManager && typeof window.toastManager.error === 'function') {
                                 window.toastManager.error(msg, errorTitleText, 5000);
                             } else {
-                                alert(msg);
+                                ttAlert(msg);
                             }
                             return false;
                         }
@@ -1678,7 +1678,7 @@
                             if (window.toastManager && typeof window.toastManager.error === 'function') {
                                 window.toastManager.error(msg, errorTitleText, 5000);
                             } else {
-                                alert(msg);
+                                ttAlert(msg);
                             }
                             return false;
                         }
@@ -1807,7 +1807,7 @@
                 
             } catch (error) {
                 console.error('Error applying template:', error);
-                alert('Failed to apply template. Please try again.');
+                ttAlert('Failed to apply template. Please try again.');
             }
         };
 
@@ -2028,7 +2028,7 @@
             });
             
             if (validFiles.length === 0) {
-                alert('{{ _("No valid image files selected. Please select PNG, JPG, GIF, or WebP images.") }}');
+                ttAlert('{{ _("No valid image files selected. Please select PNG, JPG, GIF, or WebP images.") }}');
                 dashboardFileInput.value = '';
                 return;
             }
@@ -2103,7 +2103,7 @@
                             const showToast = window.showToast || window.showNotification;
                             showToast(warningMsg, 'warning');
                         } else {
-                            alert(warningMsg);
+                            ttAlert(warningMsg);
                         }
                     }
                 } else {
@@ -2112,14 +2112,14 @@
                     if (loadingIndicator && typeof loadingIndicator.remove === 'function') {
                         loadingIndicator.remove();
                     }
-                    alert(errorMsg);
+                    ttAlert(errorMsg);
                 }
             } catch (error) {
                 console.error('Multiple image upload error', error);
                 if (loadingIndicator && typeof loadingIndicator.remove === 'function') {
                     loadingIndicator.remove();
                 }
-                alert('{{ _("Failed to upload images. Please check your connection and try again.") }}');
+                ttAlert('{{ _("Failed to upload images. Please check your connection and try again.") }}');
             }
             
             // Reset file input

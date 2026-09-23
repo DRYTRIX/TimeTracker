@@ -17,10 +17,14 @@ test('desktop package builds the React renderer with Vite', () => {
   assert.ok(pkg.build.files.includes('dist-renderer/**/*'));
 });
 
-test('Electron loads the built renderer with legacy fallback', () => {
+test('Electron loads only the built React renderer', () => {
   const windowSource = fs.readFileSync(path.join(root, 'src/main/window.js'), 'utf8');
   assert.match(windowSource, /dist-renderer\/index\.html/);
-  assert.match(windowSource, /legacyIndex/);
+  assert.match(windowSource, /build:renderer/);
+  assert.doesNotMatch(windowSource, /legacyIndex/);
+  assert.match(windowSource, /splash\/splash\.html/);
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  assert.ok(pkg.build.files.some((f) => String(f).includes('!src/renderer')));
 });
 
 test('main process store IPC is limited to known desktop settings', () => {

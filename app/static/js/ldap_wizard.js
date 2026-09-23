@@ -316,7 +316,7 @@
             const valJson = await valRes.json();
             if (!valJson.valid) {
                 const msg = (valJson.errors && valJson.errors[0] && valJson.errors[0].message) || 'Validation failed';
-                alert(msg);
+                ttAlert(msg);
                 return;
             }
 
@@ -330,10 +330,10 @@
                 generatedConfig = result;
                 displayConfigResults(result);
             } else {
-                alert(result.error || 'Failed to generate configuration');
+                ttAlert(result.error || 'Failed to generate configuration');
             }
         } catch (err) {
-            alert('Network error: ' + err.message);
+            ttAlert('Network error: ' + err.message);
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalText;

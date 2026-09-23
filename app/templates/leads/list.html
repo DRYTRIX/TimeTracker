@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header, breadcrumb_nav %}
+{% from "components/ui.html" import page_header, breadcrumb_nav, empty_state %}
 
 {% block title %}Leads - {{ config.APP_NAME }}{% endblock %}
 
@@ -90,13 +90,16 @@
         </table>
     </div>
     {% else %}
-    <div class="text-center py-12">
-        <i class="fas fa-user-plus text-4xl text-text-muted-light dark:text-text-muted-dark mb-4"></i>
-        <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('No leads found') }}</p>
-        <a href="{{ url_for('leads.create_lead') }}" class="mt-4 inline-block bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
-            {{ _('Create First Lead') }}
+    {% set actions %}
+        <a href="{{ url_for('leads.create_lead') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+            <i class="fas fa-plus mr-2"></i>{{ _('Create First Lead') }}
         </a>
-    </div>
+    {% endset %}
+    {% if search or status or source %}
+        {{ empty_state('fas fa-search', 'No Leads Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new lead that matches your criteria.', actions, type='no-results') }}
+    {% else %}
+        {{ empty_state('fas fa-user-plus', 'No Leads Yet', 'Leads help you track potential clients before they become customers. Create your first lead to get started!', actions, type='no-data') }}
+    {% endif %}
     {% endif %}
 </div>
 {% endblock %}

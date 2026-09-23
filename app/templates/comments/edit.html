@@ -4,8 +4,8 @@
 
 {% block content %}
 <div class="container-fluid px-3 px-md-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
+    <div class="flex justify-center">
+        <div class="w-full max-w-3xl">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="h3 mb-0">
                     <i class="fas fa-edit text-primary me-2"></i>
@@ -17,7 +17,7 @@
             </div>
             
             <div class="card shadow-sm">
-                <div class="card-body">
+                <div class="p-6">
                     <!-- Comment context -->
                     <div class="alert alert-info mb-4">
                         <div class="d-flex align-items-center">
@@ -69,7 +69,7 @@
                             <label for="content" class="form-label">
                                 <i class="fas fa-comment me-1"></i>{{ _('Comment Content') }}
                             </label>
-                            <textarea name="content" id="content" class="form-control" rows="6" required>{{ comment.content }}</textarea>
+                            <textarea name="content" id="content" class="form-input" rows="6" required>{{ comment.content }}</textarea>
                             <div class="form-text">
                                 {{ _('You can use line breaks to format your comment.') }}
                             </div>

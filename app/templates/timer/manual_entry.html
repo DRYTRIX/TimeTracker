@@ -481,7 +481,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                 if (window.toastManager && typeof window.toastManager.error === 'function') {
                     window.toastManager.error(sessionExpiredMsg, {{ _("Error")|tojson }}, 6000);
                 } else {
-                    alert(sessionExpiredMsg);
+                    ttAlert(sessionExpiredMsg);
                 }
                 taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
                 taskSelect.disabled = true;
@@ -494,7 +494,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                     if (window.toastManager && typeof window.toastManager.error === 'function') {
                         window.toastManager.error(projectNotFoundText, {{ _("Error")|tojson }}, 5000);
                     } else {
-                        alert(projectNotFoundText);
+                        ttAlert(projectNotFoundText);
                     }
                     taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
                     taskSelect.disabled = true;
@@ -532,7 +532,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                 } else if (window.toastManager && typeof window.toastManager.show === 'function') {
                     window.toastManager.show(msg, 'error');
                 } else {
-                    alert(msg);
+                    ttAlert(msg);
                 }
             } catch (_) {}
             if (typeof console !== 'undefined' && console.error) {
@@ -618,7 +618,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                         if (window.toastManager && typeof window.toastManager.error === 'function') {
                             window.toastManager.error(errorMsg, {{ _("Error")|tojson }}, 5000);
                         } else {
-                            alert(errorMsg);
+                            ttAlert(errorMsg);
                         }
                         // After showing error, ensure button is still in correct state
                         if (submitBtn && originalButtonHTML) {
@@ -645,7 +645,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                     if (window.toastManager && typeof window.toastManager.error === 'function') {
                         window.toastManager.error(errorMsg, {{ _("Error")|tojson }}, 5000);
                     } else {
-                        alert(errorMsg);
+                        ttAlert(errorMsg);
                     }
                     return false;
                 }
@@ -668,7 +668,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                     if (window.toastManager && typeof window.toastManager.error === 'function') {
                         window.toastManager.error(errorMsg, {{ _("Error")|tojson }}, 5000);
                     } else {
-                        alert(errorMsg);
+                        ttAlert(errorMsg);
                     }
                     return false;
                 }
@@ -683,7 +683,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                     if (window.toastManager && typeof window.toastManager.error === 'function') {
                         window.toastManager.error(errorMsg, {{ _("Error")|tojson }}, 5000);
                     } else {
-                        alert(errorMsg);
+                        ttAlert(errorMsg);
                     }
                     return false;
                 }
@@ -709,7 +709,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                 if (window.toastManager && typeof window.toastManager.error === 'function') {
                     window.toastManager.error(errorMsg, {{ _("Error")|tojson }}, 5000);
                 } else {
-                    alert(errorMsg);
+                    ttAlert(errorMsg);
                 }
                 return false;
             }
@@ -735,7 +735,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                         if (window.toastManager && typeof window.toastManager.error === 'function') {
                             window.toastManager.error(errorMsg, {{ _("Error")|tojson }}, 5000);
                         } else {
-                            alert(errorMsg);
+                            ttAlert(errorMsg);
                         }
                         // After showing error, ensure button is still in correct state
                         if (submitBtn && originalButtonHTML) {
@@ -1068,7 +1068,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             if (validFiles.length === 0) {
-                alert({{ _("No valid image files selected. Please select PNG, JPG, GIF, or WebP images.")|tojson }});
+                ttAlert({{ _("No valid image files selected. Please select PNG, JPG, GIF, or WebP images.")|tojson }});
                 fileInput.value = '';
                 return;
             }
@@ -1143,7 +1143,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             const showToast = window.showToast || window.showNotification;
                             showToast(warningMsg, 'warning');
                         } else {
-                            alert(warningMsg);
+                            ttAlert(warningMsg);
                         }
                     }
                 } else {
@@ -1152,14 +1152,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (loadingIndicator && typeof loadingIndicator.remove === 'function') {
                         loadingIndicator.remove();
                     }
-                    alert(errorMsg);
+                    ttAlert(errorMsg);
                 }
             } catch (error) {
                 console.error('Multiple image upload error', error);
                 if (loadingIndicator && typeof loadingIndicator.remove === 'function') {
                     loadingIndicator.remove();
                 }
-                alert({{ _("Failed to upload images. Please check your connection and try again.")|tojson }});
+                ttAlert({{ _("Failed to upload images. Please check your connection and try again.")|tojson }});
             }
             
             // Reset file input

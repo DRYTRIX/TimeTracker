@@ -13,7 +13,6 @@ from app import db, limiter
 from app.models import (
     Activity,
     ApiToken,
-    AuditLog,
     BudgetAlert,
     CalendarEvent,
     Client,
@@ -241,6 +240,22 @@ def health_check():
 # ==================== Auth (unauthenticated) ====================
 
 
+def _issue_app_login_api_token(user: User) -> str:
+    """Mint a broad-scope API token for desktop/mobile/extension login."""
+    scopes = "admin:all" if user.is_admin else "read:*,write:*"
+    expiry_days = current_app.config.get("API_TOKEN_DEFAULT_EXPIRY_DAYS", 90)
+    api_token, plain_token = ApiToken.create_token(
+        user_id=user.id,
+        name=f"App login - {user.username}",
+        description="Token issued via desktop/mobile app login",
+        scopes=scopes,
+        expires_days=expiry_days if expiry_days else None,
+    )
+    db.session.add(api_token)
+    db.session.commit()
+    return plain_token
+
+
 @api_v1_bp.route("/auth/login", methods=["POST"])
 @limiter.limit("5 per minute", methods=["POST"])
 def auth_login():
@@ -248,6 +263,8 @@ def auth_login():
 
     Accepts JSON: { "username": "...", "password": "..." }.
     Returns 200 with { "token": "tt_..." } or 401 with { "error": "..." }.
+    When the user has TOTP 2FA enabled, returns 403 with
+    { "requires_2fa": true, "temp_token": "..." } instead of a full API token.
     Admin users receive admin scope; regular users receive broad read/write API scopes.
     """
     current_app.logger.info(
@@ -265,18 +282,64 @@ def auth_login():
     if not user or not user.check_password(password):
         return jsonify({"error": "Invalid username or password"}), 401
 
-    scopes = "admin:all" if user.is_admin else "read:*,write:*"
-    expiry_days = current_app.config.get("API_TOKEN_DEFAULT_EXPIRY_DAYS", 90)
-    api_token, plain_token = ApiToken.create_token(
-        user_id=user.id,
-        name=f"App login - {user.username}",
-        description="Token issued via desktop/mobile app login",
-        scopes=scopes,
-        expires_days=expiry_days if expiry_days else None,
-    )
-    db.session.add(api_token)
-    db.session.commit()
+    if not user.is_active:
+        return jsonify({"error": "Invalid username or password"}), 401
 
+    if getattr(user, "two_factor_enabled", False):
+        from app.utils.api_auth_2fa import make_api_2fa_temp_token
+
+        return (
+            jsonify(
+                {
+                    "requires_2fa": True,
+                    "temp_token": make_api_2fa_temp_token(user.id),
+                    "error": "Two-factor authentication required",
+                }
+            ),
+            403,
+        )
+
+    plain_token = _issue_app_login_api_token(user)
+    return jsonify({"token": plain_token})
+
+
+@api_v1_bp.route("/auth/2fa/verify", methods=["POST"])
+@limiter.limit("10 per minute", methods=["POST"])
+def auth_2fa_verify():
+    """Complete app login after TOTP verification.
+
+    Accepts JSON: { "temp_token": "...", "code": "123456" }.
+    Returns 200 with { "token": "tt_..." } on success.
+    """
+    from app.utils.api_auth_2fa import load_api_2fa_user_id
+
+    data = request.get_json(silent=True) or {}
+    temp_token = (data.get("temp_token") or "").strip()
+    code = (data.get("code") or "").strip().replace(" ", "")
+
+    if not temp_token or not code:
+        return jsonify({"error": "temp_token and code are required"}), 400
+
+    user_id = load_api_2fa_user_id(temp_token)
+    if not user_id:
+        return jsonify({"error": "Invalid or expired login challenge. Sign in again."}), 401
+
+    user = User.query.get(user_id)
+    if not user or not user.is_active or not getattr(user, "two_factor_enabled", False):
+        return jsonify({"error": "Invalid or expired login challenge. Sign in again."}), 401
+
+    try:
+        import pyotp
+
+        totp = pyotp.TOTP(user.get_two_factor_secret())
+        ok = totp.verify(code, valid_window=1)
+    except Exception:
+        ok = False
+
+    if not ok:
+        return jsonify({"error": "Invalid authentication code"}), 401
+
+    plain_token = _issue_app_login_api_token(user)
     return jsonify({"token": plain_token})
 
 
@@ -2407,28 +2470,6 @@ def remove_favorite_project(project_id):
     return jsonify({"message": "Favorite removed successfully"})
 
 
-# ==================== Audit Logs (Admin) ====================
-
-
-@api_v1_bp.route("/audit-logs", methods=["GET"])
-@require_api_token("admin:all")
-def list_audit_logs():
-    """List audit logs (admin)"""
-    entity_type = request.args.get("entity_type")
-    user_id = request.args.get("user_id", type=int)
-    action = request.args.get("action")
-    limit = request.args.get("limit", type=int) or 100
-    q = AuditLog.query
-    if entity_type:
-        q = q.filter(AuditLog.entity_type == entity_type)
-    if user_id:
-        q = q.filter(AuditLog.user_id == user_id)
-    if action:
-        q = q.filter(AuditLog.action == action)
-    logs = q.order_by(AuditLog.created_at.desc()).limit(limit).all()
-    return jsonify({"audit_logs": [l.to_dict() for l in logs]})
-
-
 # ==================== Activities ====================
 
 
@@ -3007,6 +3048,44 @@ def report_summary():
 
 
 # ==================== Users ====================
+
+
+@api_v1_bp.route("/reports/estimates-vs-actuals", methods=["GET"])
+@require_api_token("read:reports")
+def api_estimates_vs_actuals():
+    """JSON estimates vs actuals report."""
+    from app.services.estimate_actuals_service import EstimateActualsService
+
+    project_id = request.args.get("project_id", type=int)
+    data = EstimateActualsService().get_report(
+        project_id=project_id,
+        user_id=g.api_user.id,
+        is_admin=g.api_user.is_admin,
+    )
+    return jsonify(data)
+
+
+@api_v1_bp.route("/users/me/erase", methods=["POST"])
+@require_api_token("read:users")
+def erase_current_user_api():
+    """GDPR erasure for the authenticated API user."""
+    from app.services.user_gdpr_service import UserGdprService
+
+    data = request.get_json(silent=True) or {}
+    if not data.get("confirm"):
+        return jsonify({"error": 'Confirmation required. Send JSON {"confirm": true}.'}), 400
+
+    result = UserGdprService().anonymize_user(
+        user_id=g.api_user.id,
+        actor_id=g.api_user.id,
+        reason=data.get("reason"),
+    )
+    if not result.get("success"):
+        code = 400
+        if result.get("error") == "not_found":
+            code = 404
+        return jsonify(result), code
+    return jsonify(result), 200
 
 
 @api_v1_bp.route("/users/me", methods=["GET"])

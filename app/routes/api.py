@@ -12,7 +12,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.utils import secure_filename
 
-from app import db, socketio
+from app import db, limiter, socketio
 from app.models import (
     Client,
     FocusSession,
@@ -270,6 +270,7 @@ def _effective_user_for_version_api():
 
 
 @api_bp.route("/api/version/check")
+@limiter.limit("30 per minute")
 def api_version_check():
     """Admin only: compare installed version to latest GitHub release (cached)."""
     user = _effective_user_for_version_api()
@@ -283,6 +284,7 @@ def api_version_check():
 
 
 @api_bp.route("/api/version/dismiss", methods=["POST"])
+@limiter.limit("20 per minute")
 def api_version_dismiss():
     """Admin only: remember not to show update popup for this normalized release version."""
     user = _effective_user_for_version_api()

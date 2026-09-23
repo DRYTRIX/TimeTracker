@@ -432,7 +432,7 @@
                         {% if current_user.is_admin or has_permission('edit_projects') %}
                         <form method="POST" action="{{ url_for('projects.delete_project_attachment', attachment_id=attachment.id) }}" class="ml-2" onsubmit="event.preventDefault(); window.showConfirm('{{ _('Are you sure you want to delete this attachment?') }}', { title: '{{ _('Delete Attachment') }}', confirmText: '{{ _('Delete') }}', variant: 'danger' }).then(ok=>{ if(ok) this.submit(); });">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="text-red-500 hover:text-red-700 p-1" title="{{ _('Delete') }}">
+                            <button type="submit" class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1" title="{{ _('Delete') }}" aria-label="{{ _('Delete') }}">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </form>

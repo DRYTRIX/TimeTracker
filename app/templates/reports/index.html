@@ -355,7 +355,7 @@ function showComparisonView(period) {
         })
         .catch(error => {
             console.error('Error loading comparison:', error);
-            alert('Failed to load comparison data');
+            ttAlert('Failed to load comparison data');
         });
 }
 
@@ -366,7 +366,7 @@ function exportReport() {
     const endDate = document.getElementById('endDate').value;
 
     if (!startDate || !endDate) {
-        alert('{{ _("Please set a date range") }}');
+        ttAlert('{{ _("Please set a date range") }}');
         return;
     }
 
@@ -455,7 +455,7 @@ function showAddScheduledReportForm() {
         .then(data => {
             const savedViews = data.saved_views || [];
             if (savedViews.length === 0) {
-                alert('{{ _("You need to create a saved report view first. Please create one from the reports page.") }}');
+                ttAlert('{{ _("You need to create a saved report view first. Please create one from the reports page.") }}');
                 return;
             }
             
@@ -510,7 +510,7 @@ function showAddScheduledReportForm() {
         })
         .catch(error => {
             console.error('Error loading saved views:', error);
-            alert('{{ _("Failed to load report views") }}');
+            ttAlert('{{ _("Failed to load report views") }}');
         });
 }
 
@@ -550,14 +550,14 @@ function createScheduledReport(event) {
                 window.showToast('{{ _("Scheduled report created successfully") }}', 'success');
             }
         } else {
-            alert(data.error || '{{ _("Failed to create scheduled report") }}');
+            ttAlert(data.error || '{{ _("Failed to create scheduled report") }}');
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalText;
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('{{ _("Failed to create scheduled report") }}');
+        ttAlert('{{ _("Failed to create scheduled report") }}');
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;
     });
@@ -575,17 +575,17 @@ function toggleSchedule(scheduleId, newActive) {
         if (data.success) {
             loadScheduledReports();
         } else {
-            alert(data.error || '{{ _("Failed to update schedule") }}');
+            ttAlert(data.error || '{{ _("Failed to update schedule") }}');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('{{ _("Failed to update schedule") }}');
+        ttAlert('{{ _("Failed to update schedule") }}');
     });
 }
 
-function deleteSchedule(scheduleId) {
-    if (!confirm('{{ _("Are you sure you want to delete this scheduled report?") }}')) {
+async function deleteSchedule(scheduleId) {
+    if (!(await ttConfirm('{{ _("Are you sure you want to delete this scheduled report?") }}', { variant: 'danger', confirmText: '{{ _("Delete") }}' }))) {
         return;
     }
     
@@ -603,12 +603,12 @@ function deleteSchedule(scheduleId) {
                 window.showToast('{{ _("Scheduled report deleted successfully") }}', 'success');
             }
         } else {
-            alert(data.error || '{{ _("Failed to delete scheduled report") }}');
+            ttAlert(data.error || '{{ _("Failed to delete scheduled report") }}');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('{{ _("Failed to delete scheduled report") }}');
+        ttAlert('{{ _("Failed to delete scheduled report") }}');
     });
 }
 

@@ -10,7 +10,7 @@ This document captures a concise architecture audit of the TimeTracker repositor
 - **Existing repository layer**: `app/repositories/` provides `BaseRepository` and dedicated repos for TimeEntry, Project, Task, Client, Invoice, Expense, Payment, User, Comment with sensible methods (e.g. `TimeEntryRepository.get_active_timer`, `get_by_date_range`, `get_total_duration`).
 - **Central API response helpers**: `app/utils/api_responses.py` defines `success_response`, `error_response`, `validation_error_response`, `paginated_response`, etc.; error handlers in `app/utils/error_handlers.py` use them for JSON/API.
 - **Blueprint registry**: Single registration point in `app/blueprint_registry.py` keeps app init clean.
-- **Refactor examples**: The migration guide gives a clear "after" pattern. (Historical note: previously unregistered modules `timer_refactored.py`, `projects_refactored_example.py`, `invoices_refactored.py` have been merged or removed.)
+- **Refactor examples**: The migration guide gives a clear "after" pattern. Unregistered reference modules (`timer_refactored.py`, `projects_refactored_example.py`, `invoices_refactored.py`, `offers.py`) were deleted; use active routes (`timer.py`, `projects.py`, `invoices.py`, `quotes.py`) and the Architecture Migration Guide.
 - **Validation and schemas**: Marshmallow used for time-entry API v1; `app/utils/validation.py` and `app/utils/time_entry_validation.py` exist; `app/schemas/` has schemas for several resources (underused in routes).
 
 ---
@@ -25,7 +25,7 @@ This document captures a concise architecture audit of the TimeTracker repositor
 6. **Logic in models**: `app/models/recurring_invoice.py` `generate_invoice()` does full workflow. `app/models/expense.py`, `app/models/lead.py`, `app/models/issue.py`, `app/models/project.py` contain state transitions and query/aggregation methods that belong in services/repositories.
 7. **Template logic**: Budget and status rules in project view/list templates; task counts via `selectattr` in tasks list/my_tasks/kanban; totals and filters in inventory, client portal, expense_categories. Better to precompute in views.
 8. **Missing repositories**: No repository for FocusSession, Activity, AuditLog, StockItem/inventory, RecurringInvoice, and others; services and routes use `Model.query` / `db.session` directly.
-9. **Unused/refactor-only code**: (Historical: `timer_refactored.py`, `projects_refactored_example.py`, `invoices_refactored.py` are no longer present; refactors were merged or removed.)
+9. **Unused/refactor-only code**: Removed dead unregistered route modules (`timer_refactored.py`, `projects_refactored_example.py`, `invoices_refactored.py`, `offers.py`). Prefer services/repositories over new fat routes.
 
 ---
 

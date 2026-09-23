@@ -436,7 +436,7 @@
 {# ============================================
    MODAL WRAPPER
    ============================================ #}
-{% macro modal(id, title, content_html, footer_html=None, size="md") %}
+{% macro modal(id, title, content_html, footer_html=None, size="md", cancel_text=None, confirm_text=None, confirm_variant="primary") %}
 {% set size_classes = {
     'sm': 'max-w-md',
     'md': 'max-w-lg',
@@ -463,6 +463,17 @@
             {% if footer_html %}
             <div class="bg-gray-50 dark:bg-gray-800 px-6 py-4 flex justify-end gap-3">
                 {{ footer_html|safe }}
+            </div>
+            {% elif confirm_text %}
+            <div class="bg-gray-50 dark:bg-gray-800 px-6 py-4 flex justify-end gap-3">
+                {% if cancel_text %}
+                <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" data-modal-cancel>
+                    {{ _(cancel_text) }}
+                </button>
+                {% endif %}
+                <button type="button" class="px-4 py-2 {% if confirm_variant == 'danger' %}bg-red-600 hover:bg-red-700{% else %}bg-primary hover:bg-primary/90{% endif %} text-white rounded-lg transition-colors" data-modal-confirm>
+                    {{ _(confirm_text) }}
+                </button>
             </div>
             {% endif %}
         </div>

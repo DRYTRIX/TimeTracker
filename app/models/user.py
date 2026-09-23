@@ -22,6 +22,7 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), default="user", nullable=False)  # 'user' or 'admin'
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     last_login = db.Column(db.DateTime, nullable=True)
+    anonymized_at = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     theme_preference = db.Column(db.String(10), default=None, nullable=True)  # 'light' | 'dark' | None=system
     preferred_language = db.Column(db.String(8), default=None, nullable=True)  # e.g., 'en', 'de'

@@ -100,7 +100,7 @@ def get_receipt_upload_folder():
             try:
                 os.chmod(upload_folder, 0o755)
             except OSError:
-                pass
+                current_app.logger.debug("Could not chmod expense upload folder", exc_info=True)
 
         return upload_folder
     except OSError as e:
@@ -166,14 +166,14 @@ def list_expenses():
             start = datetime.strptime(start_date, "%Y-%m-%d").date()
             query = query.filter(Expense.expense_date >= start)
         except ValueError:
-            pass
+            current_app.logger.debug("Invalid expense date filter ignored", exc_info=True)
 
     if end_date:
         try:
             end = datetime.strptime(end_date, "%Y-%m-%d").date()
             query = query.filter(Expense.expense_date <= end)
         except ValueError:
-            pass
+            current_app.logger.debug("Invalid expense date filter ignored", exc_info=True)
 
     if search:
         like = f"%{search}%"
@@ -236,13 +236,13 @@ def list_expenses():
                 start = datetime.strptime(start_date, "%Y-%m-%d").date()
                 total_query = total_query.filter(Expense.expense_date >= start)
             except ValueError:
-                pass
+                current_app.logger.debug("Invalid expense date filter ignored", exc_info=True)
         if end_date:
             try:
                 end = datetime.strptime(end_date, "%Y-%m-%d").date()
                 total_query = total_query.filter(Expense.expense_date <= end)
             except ValueError:
-                pass
+                current_app.logger.debug("Invalid expense date filter ignored", exc_info=True)
 
         # Non-admin users restriction
         if not current_user.is_admin:
@@ -372,7 +372,7 @@ def create_expense():
             try:
                 payment_date_obj = datetime.strptime(payment_date, "%Y-%m-%d").date()
             except ValueError:
-                pass
+                current_app.logger.debug("Invalid expense date filter ignored", exc_info=True)
 
         # Handle file upload
         receipt_path = None
@@ -1077,13 +1077,13 @@ def export_expenses():
             start = datetime.strptime(start_date, "%Y-%m-%d").date()
             query = query.filter(Expense.expense_date >= start)
         except ValueError:
-            pass
+            current_app.logger.debug("Invalid expense date filter ignored", exc_info=True)
     if end_date:
         try:
             end = datetime.strptime(end_date, "%Y-%m-%d").date()
             query = query.filter(Expense.expense_date <= end)
         except ValueError:
-            pass
+            current_app.logger.debug("Invalid expense date filter ignored", exc_info=True)
 
     expenses = query.order_by(Expense.expense_date.desc()).all()
 
@@ -1176,13 +1176,13 @@ def dashboard():
         try:
             start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
         except ValueError:
-            pass
+            current_app.logger.debug("Invalid expense date filter ignored", exc_info=True)
 
     if end_date_str:
         try:
             end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
         except ValueError:
-            pass
+            current_app.logger.debug("Invalid expense date filter ignored", exc_info=True)
 
     # Build base query
     if current_user.is_admin:
@@ -1270,13 +1270,13 @@ def api_list_expenses():
             start = datetime.strptime(start_date, "%Y-%m-%d").date()
             query = query.filter(Expense.expense_date >= start)
         except ValueError:
-            pass
+            current_app.logger.debug("Invalid expense date filter ignored", exc_info=True)
     if end_date:
         try:
             end = datetime.strptime(end_date, "%Y-%m-%d").date()
             query = query.filter(Expense.expense_date <= end)
         except ValueError:
-            pass
+            current_app.logger.debug("Invalid expense date filter ignored", exc_info=True)
 
     expenses = query.order_by(Expense.expense_date.desc()).all()
 

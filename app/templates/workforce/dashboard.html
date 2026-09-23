@@ -19,7 +19,7 @@
     <form method="get" class="card p-4 flex gap-2 items-end">
         <div>
             <label class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('User') }}</label>
-            <select name="user_id" class="form-select">
+            <select name="user_id" class="form-input">
                 {% for u in users %}
                     <option value="{{ u.id }}" {% if u.id == selected_user_id %}selected{% endif %}>{{ u.username }}</option>
                 {% endfor %}
@@ -82,7 +82,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div>
             <label class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Provider') }}</label>
-            <select name="provider" class="form-select">
+            <select name="provider" class="form-input">
                 <option value="gusto">Gusto</option>
                 <option value="adp">ADP</option>
             </select>
@@ -222,7 +222,7 @@
             <h2 class="text-lg font-semibold">{{ _('Time-Off Requests') }}</h2>
             <form id="time-off-request-form" method="post" action="{{ url_for('workforce.create_time_off_request') }}" class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <select name="leave_type_id" class="form-select js-leave-type-select" required>
+                <select name="leave_type_id" class="form-input js-leave-type-select" required>
                     <option value="">{{ _('Select leave type') }}</option>
                     {% for lt in leave_types %}
                         {% if lt.enabled %}

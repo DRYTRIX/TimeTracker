@@ -2181,7 +2181,7 @@
 </div>
 
 <!-- Hidden Save Form -->
-<form id="form-save" method="POST" action="{{ url_for('admin.quote_pdf_layout') }}" class="hidden">
+<form id="form-save" method="POST" action="{{ url_for('admin.quote_pdf_layout') }}" class="hidden" data-unsaved-guard>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="page_size" id="save-page-size" value="{{ page_size }}">
     <textarea id="save-html" name="quote_pdf_template_html"></textarea>
@@ -6274,6 +6274,7 @@ table tr:last-child td {
         if (dateFormatInput) {
             document.getElementById('save-date-format').value = dateFormatInput.value;
         }
+        try { window.dispatchEvent(new CustomEvent('tt:unsaved-clean')); } catch (_) {}
         document.getElementById('form-save').submit();
     });
     
@@ -7536,6 +7537,7 @@ table tr:last-child td {
 
     function scheduleQuoteEditorHistoryPush() {
         if (quoteEditorHistorySuspended) return;
+        try { window.dispatchEvent(new CustomEvent('tt:unsaved-dirty')); } catch (_) {}
         clearTimeout(quoteEditorHistoryDebounceTimer);
         quoteEditorHistoryDebounceTimer = setTimeout(function() {
             pushQuoteEditorHistory();

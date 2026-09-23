@@ -24,6 +24,7 @@
                 {% set admin_data_open = ep == 'expense_categories.list_categories' or ep == 'per_diem.list_rates' or ep.startswith('time_entry_templates.') or ep.startswith('custom_field_definitions.') or ep.startswith('link_templates.') %}
                 {% set admin_maintenance_open = ep == 'admin.system_info' or ep == 'admin.backups_management' or ep == 'admin.telemetry_dashboard' %}
                 {% set pdf_open = ep == 'admin.pdf_layout' or ep == 'admin.quote_pdf_layout' %}
+                {# Primary destinations are also reachable via Ctrl+K (command palette). #}
                 <div class="sidebar-toolbar flex items-center justify-between mb-3">
                     <span class="text-xs font-medium text-text-muted-light dark:text-text-muted-dark uppercase tracking-wider sidebar-label">{{ _('Navigation') }}</span>
                     <button

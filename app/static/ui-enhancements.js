@@ -150,10 +150,11 @@
                 break;
             case 'delete':
                 if (action.confirm) {
-                    const confirmed = confirm(action.confirm);
-                    if (confirmed && action.url) {
-                        submitForm(action.url, action.method || 'POST');
-                    }
+                    ttConfirm(action.confirm, { variant: 'danger', confirmText: 'Delete' }).then(function (confirmed) {
+                        if (confirmed && action.url) {
+                            submitForm(action.url, action.method || 'POST');
+                        }
+                    });
                 } else if (action.url) {
                     submitForm(action.url, action.method || 'POST');
                 }

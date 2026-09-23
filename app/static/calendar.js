@@ -260,11 +260,11 @@ class Calendar {
             if (!resp.ok) {
                 const data = await resp.json().catch(() => ({}));
                 console.error('Calendar move/resize failed', data);
-                alert(data.error || 'Failed to update event');
+                ttAlert(data.error || 'Failed to update event');
             }
         } catch (err) {
             console.error(err);
-            alert('Failed to update event');
+            ttAlert('Failed to update event');
         }
     }
 
@@ -473,11 +473,11 @@ class Calendar {
             if (resp.ok && data.success) {
                 this.loadEvents();
             } else {
-                alert(data.error || 'Failed to save calendar colors');
+                ttAlert(data.error || 'Failed to save calendar colors');
             }
         } catch (e) {
             console.error('Save calendar colors failed', e);
-            alert('Failed to save calendar colors');
+            ttAlert('Failed to save calendar colors');
         }
     }
     

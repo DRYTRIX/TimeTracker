@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header %}
+{% from "components/ui.html" import page_header, empty_state %}
 
 {% block content %}
 {% set breadcrumbs = [
@@ -49,7 +49,9 @@
     </form>
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    {% if adjustments %}
+    <div class="overflow-x-auto">
     <table class="table table-zebra w-full text-left responsive-cards">
         <thead>
             <tr>
@@ -81,15 +83,20 @@
                 <td class="p-4" data-label="{{ _('Reason') }}">{{ adjustment.reason or '—' }}</td>
                 <td class="p-4" data-label="{{ _('User') }}">{{ adjustment.moved_by_user.username if adjustment.moved_by_user else '—' }}</td>
             </tr>
-            {% else %}
-            <tr>
-                <td colspan="6" class="p-8 text-center text-gray-500">
-                    {{ _('No adjustments found.') }}
-                </td>
-            </tr>
             {% endfor %}
         </tbody>
     </table>
+    </div>
+    {% else %}
+    {% set actions %}
+    {% if current_user.is_admin or has_permission('manage_stock_movements') %}
+    <a href="{{ url_for('inventory.new_adjustment') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+        <i class="fas fa-plus mr-2"></i>{{ _('Create Adjustment') }}
+    </a>
+    {% endif %}
+    {% endset %}
+    {{ empty_state('fas fa-sliders-h', 'No Adjustments Yet', 'Record inventory adjustments when counts differ from system quantities.', actions, type='no-data') }}
+    {% endif %}
 </div>
 {% endblock %}
 

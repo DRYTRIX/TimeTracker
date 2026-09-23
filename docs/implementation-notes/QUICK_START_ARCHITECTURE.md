@@ -242,7 +242,7 @@ def test_get_active_timer(db_session, user, project):
 
 - **Full Documentation:** See `IMPLEMENTATION_SUMMARY.md`
 - **API Documentation:** See `docs/API_ENHANCEMENTS.md`
-- **Example Code:** See `app/routes/projects_refactored_example.py`
+- **Example Code:** See `ARCHITECTURE_MIGRATION_GUIDE.md` (thin-route pattern)
 - **Test Examples:** See `tests/test_services/` and `tests/test_repositories/`
 
 ---

@@ -17,7 +17,7 @@
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold">{{ _('Filter Projects') }}</h2>
-        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
+        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}" aria-label="{{ _('Toggle Filters') }}">
             <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
         </button>
     </div>
@@ -87,10 +87,10 @@
         <div class="flex items-center gap-2">
             <!-- View Toggle -->
             <div class="flex items-center gap-1 bg-background-light dark:bg-background-dark rounded-lg p-1">
-                <button type="button" id="listViewBtn" onclick="setViewMode('list')" class="px-3 py-1.5 text-sm rounded transition-colors view-mode-btn active" data-view="list" title="{{ _('List View') }}">
+                <button type="button" id="listViewBtn" onclick="setViewMode('list')" class="px-3 py-1.5 text-sm rounded transition-colors view-mode-btn active" data-view="list" title="{{ _('List View') }}" aria-label="{{ _('List View') }}">
                     <i class="fas fa-list"></i>
                 </button>
-                <button type="button" id="gridViewBtn" onclick="setViewMode('grid')" class="px-3 py-1.5 text-sm rounded transition-colors view-mode-btn" data-view="grid" title="{{ _('Grid View') }}">
+                <button type="button" id="gridViewBtn" onclick="setViewMode('grid')" class="px-3 py-1.5 text-sm rounded transition-colors view-mode-btn" data-view="grid" title="{{ _('Grid View') }}" aria-label="{{ _('Grid View') }}">
                     <i class="fas fa-th"></i>
                 </button>
             </div>

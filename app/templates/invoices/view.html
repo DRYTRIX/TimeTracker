@@ -577,7 +577,7 @@ function sendInvoiceEmail(event) {
       if (window.toastManager) {
         window.toastManager.success('Invoice email sent successfully!');
       } else {
-        alert('Invoice email sent successfully!');
+        ttAlert('Invoice email sent successfully!');
       }
       hideSendEmailModal();
       // Optionally reload the page to show updated status
@@ -588,7 +588,7 @@ function sendInvoiceEmail(event) {
       if (window.toastManager) {
         window.toastManager.error('Error: ' + errorMsg);
       } else {
-        alert('Error: ' + errorMsg);
+        ttAlert('Error: ' + errorMsg);
       }
       submitBtn.disabled = false;
       submitBtn.textContent = originalText;
@@ -600,7 +600,7 @@ function sendInvoiceEmail(event) {
     if (window.toastManager) {
       window.toastManager.error(errorMsg);
     } else {
-      alert(errorMsg);
+      ttAlert(errorMsg);
     }
     submitBtn.disabled = false;
     submitBtn.textContent = originalText;
@@ -621,8 +621,8 @@ function hideDeleteModal() {
   if (modal) modal.classList.add('hidden');
 }
 
-function resendInvoiceEmail(invoiceId, emailId, recipientEmail) {
-  if (!confirm(`Resend invoice email to ${recipientEmail}?`)) {
+async function resendInvoiceEmail(invoiceId, emailId, recipientEmail) {
+  if (!(await ttConfirm(`Resend invoice email to ${recipientEmail}?`, { confirmText: 'Resend' }))) {
     return;
   }
   
@@ -674,7 +674,7 @@ function resendInvoiceEmail(invoiceId, emailId, recipientEmail) {
             if (window.toastManager) {
               window.toastManager.success('Invoice email resent successfully!');
             } else {
-              alert('Invoice email resent successfully!');
+              ttAlert('Invoice email resent successfully!');
             }
             hideSendEmailModal();
             setTimeout(() => window.location.reload(), 1000);
@@ -684,7 +684,7 @@ function resendInvoiceEmail(invoiceId, emailId, recipientEmail) {
             if (window.toastManager) {
               window.toastManager.error('Error: ' + errorMsg);
             } else {
-              alert('Error: ' + errorMsg);
+              ttAlert('Error: ' + errorMsg);
             }
             submitBtn.disabled = false;
             submitBtn.textContent = originalText;
@@ -696,7 +696,7 @@ function resendInvoiceEmail(invoiceId, emailId, recipientEmail) {
           if (window.toastManager) {
             window.toastManager.error('Error: ' + errorMsg);
           } else {
-            alert('Error: ' + errorMsg);
+            ttAlert('Error: ' + errorMsg);
           }
           submitBtn.disabled = false;
           submitBtn.textContent = originalText;
@@ -711,13 +711,13 @@ function resendInvoiceEmail(invoiceId, emailId, recipientEmail) {
   }
 }
 
-function sendInvoicePeppol() {
+async function sendInvoicePeppol() {
   // Hard guard if button is disabled by template state
   {% if not peppol_recipient_ready %}
   return;
   {% endif %}
 
-  if (!confirm('Send this invoice via Peppol?')) {
+  if (!(await ttConfirm('Send this invoice via Peppol?', { confirmText: 'Send' }))) {
     return;
   }
 
@@ -742,7 +742,7 @@ function sendInvoicePeppol() {
       if (window.toastManager) {
         window.toastManager.success(data.message || 'Sent via Peppol');
       } else {
-        alert(data.message || 'Sent via Peppol');
+        ttAlert(data.message || 'Sent via Peppol');
       }
       setTimeout(() => window.location.reload(), 800);
     } else {
@@ -750,7 +750,7 @@ function sendInvoicePeppol() {
       if (window.toastManager) {
         window.toastManager.error(errorMsg);
       } else {
-        alert('Error: ' + errorMsg);
+        ttAlert('Error: ' + errorMsg);
       }
     }
   })
@@ -759,7 +759,7 @@ function sendInvoicePeppol() {
     if (window.toastManager) {
       window.toastManager.error(msg);
     } else {
-      alert('Error: ' + msg);
+      ttAlert('Error: ' + msg);
     }
   });
 }
