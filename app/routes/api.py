@@ -43,6 +43,7 @@ def _ai_error_response(exc: AIServiceError):
 
 
 @api_bp.route("/api/health")
+@limiter.exempt
 @deprecated_session_api("/api/v1/health")
 def health_check():
     """Health check endpoint for monitoring and error handling"""

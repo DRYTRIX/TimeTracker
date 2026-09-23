@@ -585,12 +585,14 @@ def productivity_dashboard():
 
 
 @main_bp.route("/_health")
+@limiter.exempt
 def health_check():
     """Liveness probe: shallow checks only, no DB access"""
     return {"status": "healthy"}, 200
 
 
 @main_bp.route("/_ready")
+@limiter.exempt
 def readiness_check():
     """Readiness probe: verify DB connectivity and critical dependencies"""
     try:
