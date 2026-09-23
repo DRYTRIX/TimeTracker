@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.17.0] - 2026-09-23
+
 ### Added
 
 - **Factur-X / ZUGFeRD compliance (Discussion #433)** — Structured company and client addresses (street, postcode, city, country), IBAN/BIC, default and per-invoice VAT category (S/Z/E/AE/K/G/O) with AT/DE Kleinunternehmer and reverse-charge presets (migration **196**). Invoice PDFs embed Liberation TrueType fonts for PDF/A font compliance. Single-pass Factur-X embed + PDF/A-3b (catalog `/AF`, pdfaExtension XMP, OutputIntent). CII XML fixes for EN 16931 (element order, currencyID only on TaxTotalAmount, correct VAT exemptions, Peppol endpoint as URIID, payment means, prepaid amounts). Pre-export validation blocks missing seller/buyer country or AE without buyer VAT ID.
@@ -17,13 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Security / hygiene** — Legacy integration webhook CSRF-exempt; default `RATELIMIT_DEFAULT`; rate limits on version check/dismiss; hot-path silent `except`/`pass` replaced with logged handling; Ruff S110 enabled; admin API tokens/backups and API v1 audit-logs extracted from god files.
-- **UI consistency** — Bootstrap leftover class cleanup; shared `ttConfirm`/`ttAlert` dialogs; empty states on major list pages; expanded command palette; client versions aligned to **5.16.0**.
+- **UI consistency** — Bootstrap leftover class cleanup; shared `ttConfirm`/`ttAlert` dialogs; empty states on major list pages; expanded command palette; client versions aligned to **5.17.0**.
 - **Dead code** — Removed unregistered `timer_refactored.py`, `invoices_refactored.py`, `projects_refactored_example.py`, `offers.py`.
 
 ### Documentation
 
 - **Factur-X / ZUGFeRD** — [PEPPOL_EINVOICING.md](docs/admin/configuration/PEPPOL_EINVOICING.md) updated for structured addresses, VAT categories, embedded fonts, single-pass PDF/A-3, and migration **196**.
 - **Gap roadmap** — `docs/GAP_ROADMAP.md` tracks Phases 0–5 remediation status.
+- **Version** — Bumped `setup.py` to **5.17.0** (single source of truth for the application version).
+
 ## [5.16.0] - 2026-09-18
 
 ### Added
