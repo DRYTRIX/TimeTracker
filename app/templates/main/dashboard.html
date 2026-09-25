@@ -1372,7 +1372,11 @@
         // Soft refresh dashboard timer hero when timer stops externally (idle detection, floating bar)
         document.addEventListener('tt:timer-status-changed', async function() {
             try {
-                var res = await fetch('/timer/status', { credentials: 'same-origin' });
+                var res = await fetch('/timer/status', {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json' },
+                });
+                if (!res.ok) return;
                 var data = await res.json();
                 var hero = document.querySelector('[data-timer-start]');
                 if (!data.active && hero) {

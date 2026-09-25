@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Idle dashboard 429 Too Many Requests (#767)** — Global `RATELIMIT_DEFAULT` was too strict (`50 per hour` per IP) for background timer polling. Default is now `5000 per day;1000 per hour`, keyed per logged-in user (IP for anonymous). Polling endpoints (`/timer/status`, `/api/timer/status`, `/api/timer/heartbeat`, `/api/notifications`, `/service-worker.js`, `/offline`) are exempt. JSON `Accept` / API requests get a JSON 429 body; floating timer bar and idle pollers back off on 429 and skip while the tab is hidden.
+
 ## [5.17.1] - 2026-09-23
 
 ### Fixed

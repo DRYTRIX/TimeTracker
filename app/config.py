@@ -280,8 +280,9 @@ class Config:
     PERF_QUERY_PROFILE = os.getenv("PERF_QUERY_PROFILE", "false").lower() == "true"
 
     # Rate limiting
-    # Sensible default when unset; override via RATELIMIT_DEFAULT (semicolon/comma-separated).
-    RATELIMIT_DEFAULT = os.getenv("RATELIMIT_DEFAULT", "200 per day;50 per hour")
+    # Generous default for authenticated dashboards with background polling (Issue #767).
+    # Override via RATELIMIT_DEFAULT (semicolon/comma-separated). Keyed per user when logged in.
+    RATELIMIT_DEFAULT = os.getenv("RATELIMIT_DEFAULT", "5000 per day;1000 per hour")
     RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
 
     # Redis configuration

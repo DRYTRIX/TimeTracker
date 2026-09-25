@@ -45,6 +45,25 @@ class PathExemptCSRFProtect(CSRFProtect):
         return super().protect()
 
 
+def _rate_limit_key():
+    """Key rate limits per authenticated user; fall back to IP for anonymous.
+
+    Logged-in users behind a shared NAT/proxy get separate buckets so one
+    colleague's dashboard polling cannot exhaust another's limit (Issue #767).
+    Unauthenticated routes (login, etc.) still key by IP.
+    """
+    try:
+        from flask_login import current_user
+
+        if current_user is not None and getattr(current_user, "is_authenticated", False):
+            user_id = getattr(current_user, "id", None)
+            if user_id is not None:
+                return f"user:{user_id}"
+    except Exception:
+        pass
+    return get_remote_address()
+
+
 # Initialize extensions
 db = SQLAlchemy()
 migrate = Migrate()
@@ -52,7 +71,7 @@ login_manager = LoginManager()
 socketio = SocketIO()
 babel = Babel()
 csrf = PathExemptCSRFProtect()
-limiter = Limiter(key_func=get_remote_address, default_limits=[])
+limiter = Limiter(key_func=_rate_limit_key, default_limits=[])
 oauth = OAuth()
 
 # Initialize Mail (will be configured in create_app)
