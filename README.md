@@ -105,6 +105,10 @@ TimeTracker has been continuously enhanced with powerful new features! Here's wh
 
 **Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
 
+### ✨ Highlights of v5.17.2
+
+**Patch (5.17.2):** **Idle dashboard no longer hits 429 (#767)** — higher per-user rate limit default, exempt timer/notification polling, and client back-off on 429. **OpenTelemetry opt-in** — export to the shared telemetry backend now requires the telemetry opt-in; operator-configured `OTEL_EXPORTER_OTLP_*` backends are unaffected. See [CHANGELOG.md](CHANGELOG.md#5172---2026-09-25).
+
 ### ✨ Highlights of v5.17.1
 
 **Patch (5.17.1):** **Health probes exempt from rate limiting** — `/_health`, `/_ready`, and the API health endpoints no longer return 429 under frequent liveness checks, fixing Render restart loops and 502s. See [CHANGELOG.md](CHANGELOG.md#5171---2026-09-23).

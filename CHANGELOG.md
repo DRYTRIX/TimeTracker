@@ -7,9 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.17.2] - 2026-09-25
+
 ### Fixed
 
 - **Idle dashboard 429 Too Many Requests (#767)** — Global `RATELIMIT_DEFAULT` was too strict (`50 per hour` per IP) for background timer polling. Default is now `5000 per day;1000 per hour`, keyed per logged-in user (IP for anonymous). Polling endpoints (`/timer/status`, `/api/timer/status`, `/api/timer/heartbeat`, `/api/notifications`, `/service-worker.js`, `/offline`) are exempt. JSON `Accept` / API requests get a JSON 429 body; floating timer bar and idle pollers back off on 429 and skip while the tab is hidden.
+- **OpenTelemetry export respects telemetry opt-in** — OTLP export to the baked-in shared Grafana Cloud tenant now requires the telemetry opt-in (`ENABLE_TELEMETRY` / admin toggle). Operator-owned backends configured via explicit `OTEL_EXPORTER_OTLP_ENDPOINT` + `OTEL_EXPORTER_OTLP_TOKEN` still export without the opt-in. Metric attributes are normalized (status class, environment) and `http.server.duration` histogram buckets are tightened.
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.17.2**; `VERSION` and desktop/browser-extension/mobile client versions aligned.
 
 ## [5.17.1] - 2026-09-23
 
