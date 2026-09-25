@@ -376,6 +376,10 @@
   }
 
   async function tick(){
+    // Skip status polling while the tab is hidden to avoid burning rate-limit
+    // budget when the user is idle on another tab (Issue #767). Heartbeats still
+    // fire from markActive() / sendHeartbeat() when the user returns.
+    if (document.hidden) return;
     const active = await getTimer();
     hasActiveTimer = !!active;
     if (!active) return;

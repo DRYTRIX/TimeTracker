@@ -6,7 +6,7 @@ Provides consistent error handling across the application.
 import sys
 from typing import Any, Dict, Optional
 
-from flask import current_app, jsonify, request
+from flask import current_app, make_response, render_template, request
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from werkzeug.exceptions import HTTPException
@@ -66,6 +66,51 @@ def register_error_handlers(app):
         if request.is_json or request.path.startswith("/api/"):
             return error_response(message="Unprocessable entity", error_code="unprocessable_entity", status_code=422)
         return error, 422
+
+    @app.errorhandler(429)
+    def too_many_requests(error):
+        """Handle 429 Too Many Requests — JSON for API/fetch clients (Issue #767)."""
+        wants_json = (
+            request.is_json
+            or request.path.startswith("/api/")
+            or bool(request.headers.get("X-Requested-With"))
+            or "application/json" in (request.headers.get("Accept") or "")
+        )
+        retry_after = None
+        try:
+            if hasattr(error, "get_response"):
+                retry_after = error.get_response().headers.get("Retry-After")
+        except Exception:
+            retry_after = None
+        if not retry_after and getattr(error, "response", None) is not None:
+            try:
+                retry_after = error.response.headers.get("Retry-After")
+            except Exception:
+                pass
+
+        message = (
+            str(error.description)
+            if getattr(error, "description", None)
+            else "Too many requests. Please wait a moment and try again."
+        )
+
+        if wants_json:
+            response, status = error_response(message=message, error_code="rate_limited", status_code=429)
+            if retry_after:
+                response.headers["Retry-After"] = retry_after
+            return response, status
+
+        html_resp = make_response(
+            render_template(
+                "errors/generic.html",
+                error=error,
+                error_info={"title": "Too Many Requests", "message": message},
+            ),
+            429,
+        )
+        if retry_after:
+            html_resp.headers["Retry-After"] = retry_after
+        return html_resp
 
     @app.errorhandler(ValidationError)
     def handle_marshmallow_validation_error(error):

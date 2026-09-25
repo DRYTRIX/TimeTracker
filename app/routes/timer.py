@@ -7,7 +7,7 @@ from flask_login import current_user, login_required
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import ProgrammingError
 
-from app import db, log_event, socketio, track_event
+from app import db, limiter, log_event, socketio, track_event
 from app.constants import TimeEntrySource
 from app.models import Activity, Client, Project, Settings, Task, TimeEntry, User
 from app.services.client_service import ClientService
@@ -890,6 +890,7 @@ def set_timer_start():
 
 @timer_bp.route("/timer/status")
 @login_required
+@limiter.exempt
 def timer_status():
     """Get current timer status as JSON"""
     from app.models import Settings

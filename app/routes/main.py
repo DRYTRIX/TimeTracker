@@ -932,6 +932,7 @@ def manifest():
 
 
 @main_bp.route("/offline")
+@limiter.exempt
 def offline_page():
     """Public offline fallback for PWA (no login required)."""
     resp = make_response(render_template("offline.html"))
@@ -940,6 +941,7 @@ def offline_page():
 
 
 @main_bp.route("/service-worker.js")
+@limiter.exempt
 def service_worker():
     """Site-scoped service worker; implementation lives in app/static/js/sw.js."""
     return send_from_directory(current_app.static_folder, "js/sw.js", mimetype="application/javascript")

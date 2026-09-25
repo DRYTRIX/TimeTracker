@@ -317,6 +317,7 @@ def api_version_dismiss():
 
 @api_bp.route("/api/timer/status")
 @login_required
+@limiter.exempt
 @deprecated_session_api("/api/v1/timer/status")
 def timer_status():
     """Get current timer status"""
@@ -402,6 +403,7 @@ def timer_notes_suggestions():
 
 @api_bp.route("/api/timer/heartbeat", methods=["POST"])
 @login_required
+@limiter.exempt
 @deprecated_session_api("/api/v1/timer/heartbeat")
 def api_timer_heartbeat():
     """Record activity for the active timer (idle timeout safety net)."""
@@ -2488,6 +2490,7 @@ def summary_today():
 
 @api_bp.route("/api/notifications")
 @login_required
+@limiter.exempt
 def api_smart_notifications():
     """Smart in-app notification candidates (respects preferences, dismissals, caps)."""
     from app.services.notification_service import NotificationService

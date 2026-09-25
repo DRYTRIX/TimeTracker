@@ -6,6 +6,8 @@
     'use strict';
 
     const POLL_INTERVAL_MS = 30000;
+    const FOCUS_REFETCH_THROTTLE_MS = 10000;
+    const DEFAULT_429_BACKOFF_MS = 60000;
 
     function syncFabDesktopHide(timerData) {
         try {
@@ -29,6 +31,8 @@
             this.switchLabel = 'Switch project';
             this.projectsCache = null;
             this.switchPopover = null;
+            this.backoffUntil = 0;
+            this.lastFocusFetch = 0;
             this.init();
         }
 
@@ -44,7 +48,12 @@
             this.render();
             this.fetchStatus();
             this.pollTimer = setInterval(() => this.fetchStatus(), POLL_INTERVAL_MS);
-            window.addEventListener('focus', () => this.fetchStatus());
+            window.addEventListener('focus', () => {
+                const now = Date.now();
+                if (now - this.lastFocusFetch < FOCUS_REFETCH_THROTTLE_MS) return;
+                this.lastFocusFetch = now;
+                this.fetchStatus();
+            });
             document.addEventListener('click', (evt) => {
                 if (!this.switchPopover || this.switchPopover.classList.contains('hidden')) return;
                 if (this.switchPopover.contains(evt.target)) return;
@@ -151,8 +160,26 @@
         }
 
         async fetchStatus() {
+            if (document.hidden) return;
+            if (Date.now() < this.backoffUntil) return;
             try {
-                const res = await fetch('/timer/status', { credentials: 'same-origin' });
+                const res = await fetch('/timer/status', {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json' },
+                });
+                if (res.status === 429) {
+                    const retryAfter = parseInt(res.headers.get('Retry-After'), 10);
+                    const waitMs = (!isNaN(retryAfter) && retryAfter > 0)
+                        ? retryAfter * 1000
+                        : DEFAULT_429_BACKOFF_MS;
+                    this.backoffUntil = Date.now() + waitMs;
+                    console.warn('FloatingTimerBar: rate limited, backing off', waitMs, 'ms');
+                    return;
+                }
+                if (!res.ok) {
+                    console.warn('FloatingTimerBar: fetch status failed', res.status);
+                    return;
+                }
                 const data = await res.json();
                 if (data.active && data.timer) {
                     this.timerData = data.timer;
