@@ -779,9 +779,14 @@
                 </ul>
                 <!-- App Version -->
                 <div class="mt-4 pt-3 border-t border-border-light dark:border-border-dark">
-                    <div class="sidebar-version-row flex items-center justify-center px-2 py-1 text-xs text-text-muted-light dark:text-text-muted-dark" title="v{{ app_version }}">
-                        <i class="fas fa-code-branch w-4 text-center shrink-0" aria-hidden="true"></i>
-                        <span class="ml-2 sidebar-version-text truncate">v{{ app_version }}</span>
+                    <div class="sidebar-version-row flex items-center justify-center gap-2 px-2 py-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                        <span class="inline-flex items-center truncate" title="v{{ app_version }}">
+                            <i class="fas fa-code-branch w-4 text-center shrink-0" aria-hidden="true"></i>
+                            <span class="ml-2 sidebar-version-text truncate">v{{ app_version }}</span>
+                        </span>
+                        <a href="https://github.com/drytrix/TimeTracker" target="_blank" rel="noopener" class="shrink-0 p-1 rounded hover:text-amber-500 hover:bg-background-light dark:hover:bg-background-dark transition-colors" title="{{ _('Star us on GitHub') }}" aria-label="{{ _('Star us on GitHub') }}">
+                            <i class="fas fa-star" aria-hidden="true"></i>
+                        </a>
                     </div>
                 </div>
             </div>
