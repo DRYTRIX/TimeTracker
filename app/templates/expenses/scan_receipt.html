@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{{ page_header(
+    icon_class='fas fa-camera',
+    title_text=_('Scan Receipt'),
+    subtitle_text=_('Upload a receipt image or PDF and extract expense details with OCR'),
+    breadcrumbs=[
+        {'text': _('Expenses'), 'url': url_for('expenses.list_expenses')},
+        {'text': _('Scan Receipt')}
+    ]
+) }}
+
+<div class="max-w-2xl mx-auto">
+    {% if not ocr_available %}
+    <div class="mb-6 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-4 text-amber-800 dark:text-amber-200">
+        <div class="flex items-start gap-3">
+            <i class="fas fa-exclamation-triangle mt-1"></i>
+            <div>
+                <p class="font-medium">{{ _('OCR is not available') }}</p>
+                <p class="text-sm mt-1">{{ _('Receipt scanning requires OCR support on the server. You can still create expenses manually.') }}</p>
+                <a href="{{ url_for('expenses.create_expense') }}" class="inline-block mt-3 text-sm text-primary hover:underline">
+                    {{ _('Create expense manually') }}
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm" {% if not ocr_available %}aria-disabled="true"{% endif %}>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-upload mr-2"></i>{{ _('Receipt File') }}
+            </h3>
+            <label for="receipt_file" class="form-label">
+                {{ _('Upload receipt') }} <span class="text-red-500">*</span>
+            </label>
+            <input type="file" name="receipt_file" id="receipt_file" required
+                   accept=".png,.jpg,.jpeg,.gif,.pdf,image/*,application/pdf"
+                   class="form-input"
+                   {% if not ocr_available %}disabled{% endif %}>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
+                {{ _('Allowed types: PNG, JPG, JPEG, GIF, PDF') }}
+            </p>
+        </div>
+
+        <div class="mb-6">
+            <label for="lang" class="form-label">{{ _('OCR Language') }}</label>
+            <select name="lang" id="lang" class="form-input" {% if not ocr_available %}disabled{% endif %}>
+                <option value="eng">{{ _('English') }}</option>
+                <option value="deu">{{ _('German') }}</option>
+                <option value="fra">{{ _('French') }}</option>
+                <option value="nld">{{ _('Dutch') }}</option>
+                <option value="spa">{{ _('Spanish') }}</option>
+                <option value="ita">{{ _('Italian') }}</option>
+            </select>
+        </div>
+
+        <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <a href="{{ url_for('expenses.list_expenses') }}" class="btn btn-secondary text-center">{{ _('Cancel') }}</a>
+            <button type="submit" class="btn btn-primary" {% if not ocr_available %}disabled{% endif %}>
+                <i class="fas fa-magic mr-2"></i>{{ _('Scan Receipt') }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

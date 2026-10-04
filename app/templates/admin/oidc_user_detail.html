@@ -57,17 +57,16 @@
     <h2 class="text-lg font-semibold mb-4"><i class="fas fa-chart-line mr-2"></i>{{ _('Activity Statistics') }}</h2>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
         <div>
-            <div class="text-2xl font-semibold">{{ user.projects.count() }}</div>
+            <div class="text-2xl font-semibold">{{ project_count }}</div>
             <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Projects') }}</div>
         </div>
         <div>
-            <div class="text-2xl font-semibold">{{ user.time_entries.count() }}</div>
+            <div class="text-2xl font-semibold">{{ time_entry_count }}</div>
             <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Time Entries') }}</div>
         </div>
         <div>
             <div class="text-2xl font-semibold">
-                {% set active_timer = user.time_entries.filter_by(end_time=None).first() %}
-                {% if active_timer %}
+                {% if has_active_timer %}
                     <span class="inline-flex items-center rounded px-1.5 py-0.5 bg-green-100 text-green-700 text-xs">{{ _('Active') }}</span>
                 {% else %}
                     <span class="inline-flex items-center rounded px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 text-xs">{{ _('None') }}</span>
@@ -76,7 +75,7 @@
             <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Active Timer') }}</div>
         </div>
         <div>
-            <div class="text-2xl font-semibold">{{ user.created_tasks.count() }}</div>
+            <div class="text-2xl font-semibold">{{ task_count }}</div>
             <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Tasks Created') }}</div>
         </div>
     </div>

@@ -44,6 +44,36 @@ def chat_index():
     return render_template("chat/index.html", channels=channels, direct_channels=direct_channels)
 
 
+@team_chat_bp.route("/chat/channels/create", methods=["POST"])
+@login_required
+@module_enabled("team_chat")
+def create_channel():
+    """Create a channel via HTML form submission."""
+    name = (request.form.get("name") or "").strip()
+    description = (request.form.get("description") or "").strip() or None
+    is_private = request.form.get("is_private") in ("on", "true", "1", "yes")
+
+    if not name:
+        flash(_("Channel name is required"), "error")
+        return redirect(url_for("team_chat.chat_index"))
+
+    channel = ChatChannel(
+        name=name,
+        description=description,
+        channel_type="private" if is_private else "public",
+        created_by=current_user.id,
+    )
+    db.session.add(channel)
+    db.session.flush()
+
+    member = ChatChannelMember(channel_id=channel.id, user_id=current_user.id, is_admin=True)
+    db.session.add(member)
+    db.session.commit()
+
+    flash(_("Channel created successfully"), "success")
+    return redirect(url_for("team_chat.chat_channel", channel_id=channel.id))
+
+
 @team_chat_bp.route("/chat/channels/<int:channel_id>")
 @login_required
 @module_enabled("team_chat")

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, empty_state %}
+
+{% block content %}
+{{ page_header(
+    icon_class='fas fa-stream',
+    title_text=_('Activity Feed'),
+    subtitle_text=_('Recent actions across the system'),
+    breadcrumbs=[
+        {'text': _('Activity')}
+    ]
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-4 md:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+    <form method="GET" action="{{ url_for('activity_feed.activity_feed') }}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+            <label for="entity_type" class="form-label">{{ _('Entity Type') }}</label>
+            <select name="entity_type" id="entity_type" class="form-input">
+                <option value="">{{ _('All types') }}</option>
+                {% for et in entity_types %}
+                {% if et %}
+                <option value="{{ et }}" {% if filters.entity_type == et %}selected{% endif %}>{{ et|replace('_', ' ')|title }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="action" class="form-label">{{ _('Action') }}</label>
+            <select name="action" id="action" class="form-input">
+                <option value="">{{ _('All actions') }}</option>
+                {% for a in actions %}
+                {% if a %}
+                <option value="{{ a }}" {% if filters.action == a %}selected{% endif %}>{{ a|replace('_', ' ')|title }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="start_date" class="form-label">{{ _('Start Date') }}</label>
+            <input type="date" name="start_date" id="start_date" value="{{ filters.start_date or '' }}" class="form-input user-date-input">
+        </div>
+        <div>
+            <label for="end_date" class="form-label">{{ _('End Date') }}</label>
+            <input type="date" name="end_date" id="end_date" value="{{ filters.end_date or '' }}" class="form-input user-date-input">
+        </div>
+        <div class="md:col-span-2 lg:col-span-4 flex flex-wrap gap-2">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                <i class="fas fa-filter mr-2"></i>{{ _('Apply Filters') }}
+            </button>
+            <a href="{{ url_for('activity_feed.activity_feed') }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                {{ _('Clear') }}
+            </a>
+        </div>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark p-4 md:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    {% if activities %}
+    <div class="space-y-3">
+        {% for activity in activities %}
+        <div class="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition">
+            <div class="flex-shrink-0 mt-1">
+                <i class="{{ activity.get_icon() }}"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm">
+                    <span class="font-medium text-text-light dark:text-text-dark">
+                        {% if activity.user %}
+                            {{ activity.user.display_name if activity.user.display_name else activity.user.username }}
+                        {% else %}
+                            {{ _('Unknown user') }}
+                        {% endif %}
+                    </span>
+                    <span class="text-text-muted-light dark:text-text-muted-dark">
+                        {{ activity.description or (activity.action ~ ' ' ~ activity.entity_type) }}
+                    </span>
+                </p>
+                <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <span class="inline-flex items-center rounded px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700">{{ activity.entity_type|replace('_', ' ')|title }}</span>
+                    <span class="inline-flex items-center rounded px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700">{{ activity.action|replace('_', ' ')|title }}</span>
+                    {% if activity.entity_name %}
+                    <span>{{ activity.entity_name }}</span>
+                    {% endif %}
+                    <span class="ml-auto">{{ activity.created_at|user_datetime if activity.created_at else '—' }}</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if pagination and pagination.pages > 1 %}
+    <div class="mt-6 flex items-center justify-between border-t border-border-light dark:border-border-dark pt-4">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+            {{ _('Page %(page)s of %(pages)s', page=pagination.page, pages=pagination.pages) }}
+        </p>
+        <div class="flex gap-2">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('activity_feed.activity_feed', page=pagination.prev_num, entity_type=filters.entity_type or None, action=filters.action or None, start_date=filters.start_date or None, end_date=filters.end_date or None, user_id=filters.user_id or None) }}"
+               class="px-3 py-1.5 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark text-sm">
+                {{ _('Previous') }}
+            </a>
+            {% endif %}
+            {% if pagination.has_next %}
+            <a href="{{ url_for('activity_feed.activity_feed', page=pagination.next_num, entity_type=filters.entity_type or None, action=filters.action or None, start_date=filters.start_date or None, end_date=filters.end_date or None, user_id=filters.user_id or None) }}"
+               class="px-3 py-1.5 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark text-sm">
+                {{ _('Next') }}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    {% else %}
+    {{ empty_state('fas fa-stream', _('No Activity Yet'), _('Activity will appear here as users create and update records.'), '', type='no-data') }}
+    {% endif %}
+</div>
+{% endblock %}

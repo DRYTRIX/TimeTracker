@@ -35,7 +35,7 @@ def keyboard_shortcuts():
 def profile():
     """User profile settings"""
     track_page_view("settings_profile")
-    return redirect(url_for("profile.index"))
+    return redirect(url_for("auth.profile"))
 
 
 @settings_bp.route("/settings/preferences")

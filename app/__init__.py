@@ -1114,17 +1114,38 @@ def create_app(config=None):
             except Exception:
                 flash("Your session expired or the page was open too long. Please try again.", "warning")
 
-            # Redirect back to a safe same-origin referrer if available, else to dashboard
-            dest = url_for("main.dashboard")
+            # Prefer login redirect for unauthenticated users / login CSRF failures
+            dest = None
             try:
-                ref = request.referrer
-                if ref:
-                    ref_host = urlparse(ref).netloc
-                    cur_host = urlparse(request.host_url).netloc
-                    if ref_host and ref_host == cur_host:
-                        dest = ref
+                from flask_login import current_user as _cu
+
+                is_authed = bool(getattr(_cu, "is_authenticated", False))
             except Exception:
-                app.logger.debug("CSRF redirect referrer parse failed", exc_info=True)
+                is_authed = False
+
+            if (not is_authed) or request.endpoint == "auth.login" or request.path.rstrip("/").endswith("/login"):
+                next_url = request.args.get("next") or request.form.get("next")
+                if next_url:
+                    dest = url_for("auth.login", next=next_url)
+                else:
+                    dest = url_for("auth.login")
+            else:
+                dest = url_for("main.dashboard")
+                try:
+                    # Prefer returning to the same path that failed when no referrer is present
+                    if request.path:
+                        dest = request.path
+                except Exception:
+                    pass
+                try:
+                    ref = request.referrer
+                    if ref:
+                        ref_host = urlparse(ref).netloc
+                        cur_host = urlparse(request.host_url).netloc
+                        if ref_host and ref_host == cur_host:
+                            dest = ref
+                except Exception:
+                    app.logger.debug("CSRF redirect referrer parse failed", exc_info=True)
             return redirect(dest)
 
         # JSON/XHR fall-through
@@ -1145,7 +1166,21 @@ def create_app(config=None):
             flash(_("Your session expired or the page was open too long. Please try again."), "warning")
         except Exception:
             flash("Your session expired or the page was open too long. Please try again.", "warning")
-        dest = url_for("main.dashboard")
+
+        try:
+            from flask_login import current_user as _cu
+
+            is_authed = bool(getattr(_cu, "is_authenticated", False))
+        except Exception:
+            is_authed = False
+
+        if (not is_authed) or request.endpoint == "auth.login" or request.path.rstrip("/").endswith("/login"):
+            next_url = request.args.get("next") or request.form.get("next")
+            if next_url:
+                return redirect(url_for("auth.login", next=next_url))
+            return redirect(url_for("auth.login"))
+
+        dest = request.path or url_for("main.dashboard")
         try:
             ref = request.referrer
             if ref:

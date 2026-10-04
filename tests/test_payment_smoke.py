@@ -3,9 +3,11 @@
 import pytest
 from datetime import date, timedelta
 from decimal import Decimal
+from unittest.mock import patch
+
 from app import db
 from app.models import Payment, Invoice, User, Project, Client
-from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, PaymentFactory
+from factories import UserFactory, ClientFactory, ProjectFactory, PaymentFactory
 
 
 @pytest.fixture
@@ -25,18 +27,22 @@ def setup_payment_test_data(app):
 
         # Create project
         project = ProjectFactory(client_id=client.id, billable=True, hourly_rate=Decimal("100.00"))
+        project.created_by = user.id
         db.session.flush()
 
-        # Create invoice
-        invoice = InvoiceFactory(
+        # Create invoice directly (avoid InvoiceFactory SubFactory / numbering side effects)
+        invoice = Invoice(
+            invoice_number=f"PAY-SMOKE-{user.id}-{project.id}",
             project_id=project.id,
             client_name=client.name,
             client_id=client.id,
             created_by=user.id,
             due_date=(date.today() + timedelta(days=30)),
+            status="sent",
+            tax_rate=Decimal("21.00"),
+            currency_code="EUR",
         )
         invoice.subtotal = Decimal("1000.00")
-        invoice.tax_rate = Decimal("21.00")
         invoice.tax_amount = Decimal("210.00")
         invoice.total_amount = Decimal("1210.00")
         db.session.add(invoice)
@@ -51,6 +57,25 @@ def setup_payment_test_data(app):
         db.session.delete(client)
         db.session.delete(user)
         db.session.commit()
+
+
+@pytest.fixture(autouse=True)
+def _mock_payment_side_effects():
+    """Prevent SMTP / socket / survey outbound work from hanging smoke tests."""
+    with (
+        patch("app.utils.email.send_template_email", return_value=True),
+        patch("app.utils.email.send_email", return_value=True),
+        patch(
+            "app.services.client_notification_service.ClientNotificationService.notify_invoice_paid",
+            return_value=None,
+        ),
+        patch(
+            "app.services.client_survey_service.ClientSurveyService.on_invoice_paid",
+            return_value=None,
+        ),
+        patch("app.utils.workflow_bridge.fire_invoice_paid_workflow", return_value=None),
+    ):
+        yield
 
 
 @pytest.mark.smoke

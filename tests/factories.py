@@ -101,18 +101,18 @@ class TimeEntryFactory(_SessionFactory):
 class InvoiceFactory(_SessionFactory):
     class Meta:
         model = Invoice
+        exclude = ("project_fk",)
 
+    # Related project used only to populate FKs; excluded from model kwargs.
+    # Prefer passing project_id/client_id/created_by explicitly in tests.
     project_fk = factory.SubFactory(ProjectFactory)
-    invoice_number = factory.LazyFunction(
-        lambda: (
-            Invoice.generate_invoice_number()
-            if hasattr(Invoice, "generate_invoice_number")
-            else f"INV-{_dt.datetime.utcnow().strftime('%Y%m%d')}-001"
-        )
+    # Avoid Invoice.generate_invoice_number() (locks Settings / can roll back the session).
+    invoice_number = factory.Sequence(lambda n: f"INV-TEST-{n:05d}")
+    project_id = factory.LazyAttribute(lambda o: o.project_fk.id)
+    client_id = factory.LazyAttribute(lambda o: o.project_fk.client_id)
+    client_name = factory.LazyAttribute(
+        lambda o: (db.session.get(Client, o.client_id).name if o.client_id else "Client")
     )
-    project_id = factory.SelfAttribute("project_fk.id")
-    client_id = factory.SelfAttribute("project_fk.client_id")
-    client_name = factory.LazyAttribute(lambda o: db.session.get(Client, o.client_id).name if o.client_id else "Client")
     created_by = factory.LazyAttribute(lambda o: UserFactory().id)
     tax_rate = Decimal("20.00")
     issue_date = factory.LazyFunction(lambda: _dt.date.today())

@@ -123,8 +123,8 @@
     {% else %}
     {% set actions %}
     {% if current_user.is_admin or has_permission('manage_stock_reservations') %}
-    <a href="{{ url_for('inventory.new_reservation') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
-        <i class="fas fa-plus mr-2"></i>{{ _('Create Reservation') }}
+    <a href="{{ url_for('inventory.list_stock_items') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+        <i class="fas fa-boxes mr-2"></i>{{ _('Browse Stock Items') }}
     </a>
     {% endif %}
     {% endset %}

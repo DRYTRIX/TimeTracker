@@ -115,8 +115,8 @@ class UnpaidHoursService:
         for entry in entries:
             # Get client from entry (via project or direct)
             client = None
-            if entry.project and entry.project.client:
-                client = entry.project.client
+            if entry.project and getattr(entry.project, "client_obj", None):
+                client = entry.project.client_obj
             elif entry.client:
                 client = entry.client
 
@@ -210,8 +210,8 @@ class UnpaidHoursService:
         for entry in entries:
             # Get client from entry
             client = None
-            if entry.project and entry.project.client:
-                client = entry.project.client
+            if entry.project and getattr(entry.project, "client_obj", None):
+                client = entry.project.client_obj
             elif entry.client:
                 client = entry.client
 

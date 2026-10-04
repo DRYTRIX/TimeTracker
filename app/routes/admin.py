@@ -812,7 +812,7 @@ def admin_dashboard():
 
 
 # Compatibility alias for code/templates that might reference 'admin.dashboard'
-@admin_bp.route("/admin/dashboard")
+@admin_bp.route("/admin/dashboard", endpoint="dashboard")
 @login_required
 @admin_or_permission_required("access_admin")
 def admin_dashboard_alias():
@@ -4877,9 +4877,22 @@ def oidc_test():
 @admin_or_permission_required("view_users")
 def oidc_user_detail(user_id):
     """View OIDC details for a specific user"""
-    user = User.query.get_or_404(user_id)
+    from app.models import Project, Task
 
-    return render_template("admin/oidc_user_detail.html", user=user)
+    user = User.query.get_or_404(user_id)
+    project_count = Project.query.filter_by(created_by=user.id).count()
+    time_entry_count = user.time_entries.count()
+    task_count = Task.query.filter_by(created_by=user.id).count()
+    has_active_timer = user.time_entries.filter_by(end_time=None).first() is not None
+
+    return render_template(
+        "admin/oidc_user_detail.html",
+        user=user,
+        project_count=project_count,
+        time_entry_count=time_entry_count,
+        task_count=task_count,
+        has_active_timer=has_active_timer,
+    )
 
 
 # ==================== OIDC Setup Wizard ====================

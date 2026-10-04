@@ -208,12 +208,10 @@ def get_note(note_id):
     # Explicit auth check to avoid redirect behavior from login_required for JSON flows
     if not getattr(current_user, "is_authenticated", False):
         return jsonify({"error": "Authentication required"}), 401
-    try:
-        note = ClientNote.query.get_or_404(note_id)
-        return jsonify({"success": True, "note": note.to_dict()})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    note = ClientNote.query.get(note_id)
+    if not note:
+        return jsonify({"error": "Client note not found", "success": False}), 404
+    return jsonify({"success": True, "note": note.to_dict()})
 
 
 @client_notes_bp.route("/api/client-notes/important")

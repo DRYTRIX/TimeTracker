@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "workflows/_form.html" import workflow_form %}
+{% from "workflows/_form.html" import workflow_form with context %}
 
 {% block title %}{{ _('Edit Workflow') }} - {{ config.APP_NAME }}{% endblock %}
 
