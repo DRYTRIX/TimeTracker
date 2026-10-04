@@ -16,7 +16,7 @@ dockerfilePath = "Dockerfile"
 # the image in Railway dashboard: ghcr.io/drytrix/timetracker:latest
 
 [deploy]
-healthcheckPath = "/_health"
+healthcheckPath = "/_ready"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3

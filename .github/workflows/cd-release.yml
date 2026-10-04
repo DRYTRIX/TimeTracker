@@ -823,7 +823,7 @@ jobs:
                     periodSeconds: 10
                   readinessProbe:
                     httpGet:
-                      path: /_health
+                      path: /_ready
                       port: 8080
                     initialDelaySeconds: 5
                     periodSeconds: 5

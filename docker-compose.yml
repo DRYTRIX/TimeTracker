@@ -77,10 +77,18 @@ services:
       - PREFERRED_URL_SCHEME=${PREFERRED_URL_SCHEME:-https}
       - APP_BASE_URL=${APP_BASE_URL:-}
       - WTF_CSRF_TRUSTED_ORIGINS=${WTF_CSRF_TRUSTED_ORIGINS:-https://localhost}
-      - DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-timetracker}@redis:6379/0
+      # POSTGRES_PASSWORD is required (same as db service). Wire credentials into DATABASE_URL.
+      - POSTGRES_DB=${POSTGRES_DB:-timetracker}
+      - POSTGRES_USER=${POSTGRES_USER:-timetracker}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a strong password}
+      - POSTGRES_HOST=db
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-timetracker}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-timetracker}
+      # Redis is opt-in: docker compose --profile redis up -d
       - REDIS_ENABLED=${REDIS_ENABLED:-false}
+      - REDIS_URL=${REDIS_URL:-}
       - LOG_FILE=/app/logs/timetracker.log
+      # Protect /metrics when scraping externally (header X-Metrics-Token or ?token=)
+      - METRICS_TOKEN=${METRICS_TOKEN:-}
       # Analytics & Monitoring (optional)
       # See docs/analytics.md for configuration details
       - SENTRY_DSN=${SENTRY_DSN:-}
@@ -112,8 +120,18 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+    mem_limit: 1g
+    cpus: 1.0
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
     healthcheck:
-      test: ["CMD", "curl", "-f", "-s", "-o", "/dev/null", "http://localhost:8080/_health"]
+      test: ["CMD", "curl", "-f", "-s", "-o", "/dev/null", "http://localhost:8080/_ready"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -193,7 +211,7 @@ services:
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-timetracker}
       - POSTGRES_USER=${POSTGRES_USER:-timetracker}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-timetracker}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a strong password}
       - TZ=${TZ:-Europe/Brussels}
     volumes:
       - db_data:/var/lib/postgresql/data
@@ -204,65 +222,84 @@ services:
       retries: 5
       start_period: 30s
     restart: unless-stopped
+    mem_limit: 1g
+    cpus: 1.0
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
 
-  # Redis - Caching and session storage
-  # Disabled - comment out to re-enable
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: timetracker-redis
-  #   command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-timetracker}
-  #   volumes:
-  #     - redis_data:/data
-  #   ports:
-  #     - "6379:6379"
-  #   healthcheck:
-  #     test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-  #     interval: 10s
-  #     timeout: 3s
-  #     retries: 5
-  #   restart: unless-stopped
+  # Redis - Caching and session storage (opt-in)
+  # Start with: docker compose --profile redis up -d
+  # Then set REDIS_ENABLED=true and REDIS_URL=redis://:${REDIS_PASSWORD:-timetracker}@redis:6379/0
+  redis:
+    profiles:
+      - redis
+    image: redis:7-alpine
+    container_name: timetracker-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-timetracker}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-timetracker}", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
 
   # Analytics & Monitoring Services
-  # All services start by default for complete monitoring
-  # See docs/analytics.md and ANALYTICS_QUICK_START.md for details
+  # Disabled by default. Enable with: docker compose --profile monitoring up -d
+  # Prometheus scrapes the app service at app:8080 (see prometheus/prometheus.yml).
+  # See docs/admin/monitoring/ANALYTICS_QUICK_START.md for details.
 
   # Prometheus - Metrics collection and storage
-  # Disabled - comment out to re-enable
-  # prometheus:
-  #   image: prom/prometheus:latest
-  #   container_name: timetracker-prometheus
-  #   volumes:
-  #     - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-  #     - prometheus_data:/prometheus
-  #   command:
-  #     - '--config.file=/etc/prometheus/prometheus.yml'
-  #     - '--storage.tsdb.path=/prometheus'
-  #     - '--storage.tsdb.retention.time=30d'
-  #   ports:
-  #     - "9090:9090"
-  #   restart: unless-stopped
+  prometheus:
+    profiles:
+      - monitoring
+    image: prom/prometheus:latest
+    container_name: timetracker-prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    ports:
+      - "9090:9090"
+    depends_on:
+      - app
+    restart: unless-stopped
 
   # Grafana - Metrics visualization and dashboards
-  # Disabled - comment out to re-enable
-  # grafana:
-  #   image: grafana/grafana:latest
-  #   container_name: timetracker-grafana
-  #   environment:
-  #     - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
-  #     - GF_USERS_ALLOW_SIGN_UP=false
-  #     - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL:-http://localhost:3000}
-  #   volumes:
-  #     - grafana_data:/var/lib/grafana
-  #     - ./grafana/provisioning:/etc/grafana/provisioning
-  #   ports:
-  #     - "3000:3000"
-  #   depends_on:
-  #     - prometheus
-  #   restart: unless-stopped
+  grafana:
+    profiles:
+      - monitoring
+    image: grafana/grafana:latest
+    container_name: timetracker-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL:-http://localhost:3000}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
 
-  # Loki - Log aggregation
-  # Disabled - comment out to re-enable
+  # Loki - Log aggregation (optional; enable with --profile logging)
   # loki:
+  #   profiles:
+  #     - logging
   #   image: grafana/loki:latest
   #   container_name: timetracker-loki
   #   volumes:
@@ -274,8 +311,9 @@ services:
   #   restart: unless-stopped
 
   # Promtail - Log shipping to Loki
-  # Disabled - comment out to re-enable
   # promtail:
+  #   profiles:
+  #     - logging
   #   image: grafana/promtail:latest
   #   container_name: timetracker-promtail
   #   volumes:

@@ -12,6 +12,11 @@ class Config:
     FLASK_ENV = os.getenv("FLASK_ENV", "production")
     FLASK_DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
 
+    # Secure cookies by default unless running in development/debug.
+    _env_lower = (FLASK_ENV or "").strip().lower()
+    _is_dev_like = _env_lower in ("development", "dev") or FLASK_DEBUG
+    _secure_cookie_default = "false" if _is_dev_like else "true"
+
     # Database settings (default to PostgreSQL)
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL", "postgresql+psycopg2://timetracker:timetracker@localhost:5432/timetracker"
@@ -20,17 +25,19 @@ class Config:
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,
         "pool_recycle": 300,
+        "pool_size": int(os.getenv("DB_POOL_SIZE", "5")),
+        "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "10")),
     }
 
     # Session settings
-    SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
+    SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", _secure_cookie_default).lower() == "true"
     SESSION_COOKIE_HTTPONLY = os.getenv("SESSION_COOKIE_HTTPONLY", "true").lower() == "true"
     SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
     PERMANENT_SESSION_LIFETIME = timedelta(seconds=int(os.getenv("PERMANENT_SESSION_LIFETIME", 86400)))
 
     # Flask-Login remember cookie settings
     REMEMBER_COOKIE_DURATION = timedelta(days=int(os.getenv("REMEMBER_COOKIE_DAYS", 365)))
-    REMEMBER_COOKIE_SECURE = os.getenv("REMEMBER_COOKIE_SECURE", "false").lower() == "true"
+    REMEMBER_COOKIE_SECURE = os.getenv("REMEMBER_COOKIE_SECURE", _secure_cookie_default).lower() == "true"
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = os.getenv("REMEMBER_COOKIE_SAMESITE", "Lax")
 
@@ -285,6 +292,11 @@ class Config:
     RATELIMIT_DEFAULT = os.getenv("RATELIMIT_DEFAULT", "5000 per day;1000 per hour")
     RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
 
+    # Prometheus /metrics endpoint token (optional).
+    # When set, scrapers must send X-Metrics-Token header or ?token= query param.
+    # Production should set METRICS_TOKEN; when unset the endpoint stays open but a startup warning is logged.
+    METRICS_TOKEN = (os.getenv("METRICS_TOKEN") or "").strip()
+
     # Redis configuration
     REDIS_ENABLED = os.getenv("REDIS_ENABLED", "true").lower() == "true"
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -341,6 +353,10 @@ class Config:
     SMART_NOTIFY_MISSED_CLOCK_IN_AT = os.getenv("SMART_NOTIFY_MISSED_CLOCK_IN_AT", "09:30").strip()
     # Fire time-based kinds only during the first N minutes of the configured hour (same idea as email remind-to-log).
     SMART_NOTIFY_SCHEDULER_SLOT_MINUTES = max(1, min(59, int(os.getenv("SMART_NOTIFY_SCHEDULER_SLOT_MINUTES", "30"))))
+
+    # BackgroundScheduler (APScheduler). Set false on web-only replicas when a dedicated
+    # worker runs jobs. With Postgres, only one process acquires the advisory lock.
+    SCHEDULER_ENABLED = os.getenv("SCHEDULER_ENABLED", "true").lower() == "true"
 
     # AI helper (server-side provider configuration; keys are never sent to clients)
     AI_ENABLED = os.getenv("AI_ENABLED", "false").lower() == "true"
@@ -423,6 +439,17 @@ class ProductionConfig(Config):
 
             warnings.warn(
                 "SECURITY WARNING: SECRET_KEY is too short. " "Use a key of at least 32 characters for production.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+        storage_uri = (self.RATELIMIT_STORAGE_URI or "").strip().lower()
+        if storage_uri.startswith("memory://"):
+            import warnings
+
+            warnings.warn(
+                "SECURITY WARNING: RATELIMIT_STORAGE_URI is memory://. "
+                "In-memory rate limits are not shared across workers/replicas and reset on restart. "
+                "Use Redis (e.g. redis://...) for production deployments.",
                 RuntimeWarning,
                 stacklevel=2,
             )
