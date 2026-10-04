@@ -7,7 +7,7 @@ Flask-SocketIO==5.6.1
 
 # OAuth / OIDC
 Authlib==1.6.12
-PyJWT==2.13.0
+PyJWT==2.15.0
 
 # LDAP (directory authentication)
 ldap3==2.9.1
