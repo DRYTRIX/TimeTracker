@@ -90,8 +90,19 @@
     }
 
     if (typeof MutationObserver !== 'undefined') {
+        var initGuardsScheduled = false;
         var observer = new MutationObserver(function () {
-            initGuards();
+            if (initGuardsScheduled) return;
+            initGuardsScheduled = true;
+            var run = function () {
+                initGuardsScheduled = false;
+                initGuards();
+            };
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(run);
+            } else {
+                setTimeout(run, 0);
+            }
         });
         observer.observe(document.body, { childList: true, subtree: true });
     }
