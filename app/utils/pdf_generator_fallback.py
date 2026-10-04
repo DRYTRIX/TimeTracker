@@ -18,6 +18,7 @@ from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Tabl
 
 from app.models import Settings
 from app.utils.pdf_fonts import ensure_pdf_fonts_registered, resolve_font
+from app.utils.pdf_watermark import make_page_callback, should_draw_watermark
 
 
 class InvoicePDFGeneratorFallback:
@@ -94,8 +95,9 @@ class InvoicePDFGeneratorFallback:
             # Build the story (content)
             story = self._build_story()
 
-            # Build the PDF with page numbers
-            doc.build(story, onFirstPage=self._add_page_number, onLaterPages=self._add_page_number)
+            # Build the PDF with page numbers and optional TimeTracker watermark
+            page_cb = make_page_callback(self._add_page_number, enabled=should_draw_watermark(self.settings))
+            doc.build(story, onFirstPage=page_cb, onLaterPages=page_cb)
 
             # Read the generated PDF
             with open(tmp_path, "rb") as f:
@@ -503,7 +505,8 @@ class QuotePDFGeneratorFallback:
             )
 
             story = self._build_story()
-            doc.build(story, onFirstPage=self._add_page_number, onLaterPages=self._add_page_number)
+            page_cb = make_page_callback(self._add_page_number, enabled=should_draw_watermark(self.settings))
+            doc.build(story, onFirstPage=page_cb, onLaterPages=page_cb)
 
             with open(tmp_path, "rb") as f:
                 pdf_bytes = f.read()

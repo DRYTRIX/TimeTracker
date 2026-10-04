@@ -6,11 +6,12 @@ Uses ReportLab (same as time_entries_pdf).
 from io import BytesIO
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+from app.utils.pdf_watermark import make_page_callback, should_draw_watermark
 
 # Colors (aligned with time_entries_pdf)
 BRAND_COLOR = colors.HexColor("#1e3a5f")
@@ -74,7 +75,7 @@ def build_summary_report_pdf(today_hours, week_hours, month_hours, project_stats
             [
                 ("BACKGROUND", (0, 0), (-1, 0), HEADER_BG),
                 ("TEXTCOLOR", (0, 0), (-1, 0), HEADER_FG),
-                ("ALIGN", (0, 0), (-1, -1), TA_CENTER),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTSIZE", (0, 0), (-1, 0), 10),
                 ("FONTNAME", (0, 1), (-1, 1), "Helvetica"),
@@ -115,7 +116,7 @@ def build_summary_report_pdf(today_hours, week_hours, month_hours, project_stats
                 [
                     ("BACKGROUND", (0, 0), (-1, 0), HEADER_BG),
                     ("TEXTCOLOR", (0, 0), (-1, 0), HEADER_FG),
-                    ("ALIGN", (0, 0), (0, -1), TA_LEFT),
+                    ("ALIGN", (0, 0), (0, -1), "LEFT"),
                     ("ALIGN", (1, 0), (1, -1), "RIGHT"),
                     ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                     ("FONTSIZE", (0, 0), (-1, 0), 10),
@@ -139,5 +140,6 @@ def build_summary_report_pdf(today_hours, week_hours, month_hours, project_stats
         )
         elements.append(Paragraph("No project data for the last 30 days.", no_data_style))
 
-    doc.build(elements)
+    page_cb = make_page_callback(enabled=should_draw_watermark())
+    doc.build(elements, onFirstPage=page_cb, onLaterPages=page_cb)
     return buffer.getvalue()

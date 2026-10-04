@@ -19,6 +19,9 @@
             <p class="text-sm text-emerald-800 dark:text-emerald-200 mt-2">
                 {{ _('Your contribution helps keep TimeTracker free and actively maintained. You will see your Supporter badge in the app, and support prompts are minimized for everyone on this instance.') }}
             </p>
+            <p class="text-sm text-emerald-800 dark:text-emerald-200 mt-1">
+                {{ _("Removes the 'Generated with TimeTracker' line from exported PDFs.") }}
+            </p>
         </div>
         <p class="flex items-center gap-2 text-green-600 dark:text-green-400">
             <i class="fas fa-check-circle" aria-hidden="true"></i>
@@ -31,7 +34,7 @@
             {{ _('Not yet a Supporter') }}
         </p>
         <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
-            {{ _('Become a Supporter with a one-time €25 contribution. You keep full access either way — supporters get a visible badge and fewer prompts.') }}
+            {{ _('Become a Supporter with a one-time €25 contribution. You keep full access either way — supporters get a visible badge, fewer prompts, and no "Generated with TimeTracker" line on exported PDFs.') }}
         </p>
         <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-md text-sm font-medium transition">
             <i class="fas fa-star" aria-hidden="true"></i>{{ _('Support TimeTracker (€25)') }} <i class="fas fa-external-link-alt text-xs" aria-hidden="true"></i>

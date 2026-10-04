@@ -10,6 +10,7 @@ from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from app.models import Settings
+from app.utils.pdf_watermark import make_page_callback, should_draw_watermark
 
 BRAND_COLOR = colors.HexColor("#1e3a5f")
 HEADER_BG = colors.HexColor("#1e3a5f")
@@ -83,7 +84,10 @@ class PurchaseOrderPDFGenerator:
             topMargin=1.5 * cm,
             bottomMargin=1.5 * cm,
         )
-        doc.build(self._build_story(), onFirstPage=self._footer, onLaterPages=self._footer)
+        page_cb = make_page_callback(
+            self._footer, enabled=should_draw_watermark(self.settings)
+        )
+        doc.build(self._build_story(), onFirstPage=page_cb, onLaterPages=page_cb)
         return buffer.getvalue()
 
     def _footer(self, canvas, doc):
