@@ -197,6 +197,18 @@ class TestRequestIDAttachment:
                     # Request ID should be set in g
                     # Note: This test might need adjustment based on context handling
 
+    def test_request_id_echoed_on_response(self, client):
+        """X-Request-ID from the client is echoed on the response."""
+        response = client.get("/metrics", headers={"X-Request-ID": "client-req-abc"})
+        assert response.headers.get("X-Request-ID") == "client-req-abc"
+
+    def test_request_id_generated_when_absent(self, client):
+        """A request ID is generated and returned when the client omits the header."""
+        response = client.get("/metrics")
+        rid = response.headers.get("X-Request-ID")
+        assert rid
+        assert len(rid) >= 8
+
 
 class TestAnalyticsEventSchema:
     """Tests to ensure analytics events follow the documented schema"""

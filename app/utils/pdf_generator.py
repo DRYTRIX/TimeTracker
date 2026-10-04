@@ -325,7 +325,9 @@ class InvoicePDFGenerator:
         import hashlib
 
         template_json_hash = (
-            hashlib.md5(template_json_to_use.encode("utf-8")).hexdigest()[:16] if template_json_to_use else "none"
+            hashlib.md5(template_json_to_use.encode("utf-8"), usedforsecurity=False).hexdigest()[:16]
+            if template_json_to_use
+            else "none"
         )
         current_app.logger.info(
             f"[PDF_EXPORT] Template retrieved - PageSize: '{template.page_size}', TemplateID: {template.id}, HasJSON: {bool(template_json_to_use)}, JSONLength: {template_json_length}, JSONHash: {template_json_hash}, JSONPreview: {template_json_preview}, UpdatedAt: {template.updated_at}, InvoiceID: {invoice_id}"
@@ -1801,7 +1803,9 @@ class QuotePDFGenerator:
         import hashlib
 
         template_json_hash = (
-            hashlib.md5(template_json_to_use.encode("utf-8")).hexdigest()[:16] if template_json_to_use else "none"
+            hashlib.md5(template_json_to_use.encode("utf-8"), usedforsecurity=False).hexdigest()[:16]
+            if template_json_to_use
+            else "none"
         )
         current_app.logger.info(
             f"[PDF_EXPORT] Quote template retrieved - PageSize: '{template.page_size}', TemplateID: {template.id}, HasJSON: {bool(template_json_to_use)}, JSONLength: {template_json_length}, JSONHash: {template_json_hash}, JSONPreview: {template_json_preview}, UpdatedAt: {template.updated_at}, QuoteID: {quote_id}"

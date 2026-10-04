@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 import sentry_sdk
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
-from flask import Flask, flash, g, jsonify, redirect, request, session, url_for
+from flask import Flask, abort, flash, g, jsonify, redirect, request, session, url_for
 from flask_babel import Babel, _
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -222,6 +222,24 @@ def create_app(config=None):
             "Set the SECRET_KEY environment variable to a secure random value."
         )
 
+    # Production: warn when rate-limit storage is process-local memory
+    if (
+        not app.config.get("TESTING")
+        and (app.config.get("FLASK_ENV") or os.getenv("FLASK_ENV", "production")) == "production"
+    ):
+        storage_uri = str(app.config.get("RATELIMIT_STORAGE_URI") or "").strip().lower()
+        if storage_uri.startswith("memory://"):
+            app.logger.warning(
+                "SECURITY WARNING: RATELIMIT_STORAGE_URI is memory://. "
+                "Rate limits are not shared across workers/replicas and reset on restart. "
+                "Set RATELIMIT_STORAGE_URI to a Redis URL for production."
+            )
+        if not (app.config.get("METRICS_TOKEN") or "").strip():
+            app.logger.warning(
+                "METRICS_TOKEN is unset: /metrics is publicly reachable. "
+                "Set METRICS_TOKEN in production and pass X-Metrics-Token (or ?token=) when scraping."
+            )
+
     # Special handling for SQLite in-memory DB during tests:
     # ensure a single shared connection so objects don't disappear after commit.
     try:
@@ -387,23 +405,33 @@ def create_app(config=None):
 
     init_mail(app)
 
-    # Initialize and start background scheduler (disabled in tests).
+    # Initialize and start background scheduler (disabled in tests / when SCHEDULER_ENABLED=false).
     # Skip during bootstrap/migration runs to avoid background DB work during migrations.
+    # With Postgres, only one process acquires the advisory leadership lock and starts jobs.
     if bootstrap_mode != "migrate":
-        if (not app.config.get("TESTING")) and (not scheduler.running):
+        scheduler_enabled = app.config.get("SCHEDULER_ENABLED", True)
+        if scheduler_enabled and (not app.config.get("TESTING")) and (not scheduler.running):
             from app.utils.scheduled_tasks import register_scheduled_tasks
+            from app.utils.scheduler_lock import try_acquire_scheduler_leadership
 
-            scheduler.start()
-            # Register tasks after app context is available, passing app instance
-            with app.app_context():
-                register_scheduled_tasks(scheduler, app=app)
-                # Base telemetry: send first_seen once per install (idempotent)
-                try:
-                    from app.telemetry.service import send_base_first_seen
+            if try_acquire_scheduler_leadership(app):
+                scheduler.start()
+                # Register tasks after app context is available, passing app instance
+                with app.app_context():
+                    register_scheduled_tasks(scheduler, app=app)
+                    # Base telemetry: send first_seen once per install (idempotent)
+                    try:
+                        from app.telemetry.service import send_base_first_seen
 
-                    send_base_first_seen()
-                except Exception:
-                    logger.debug("send_base_first_seen failed", exc_info=True)
+                        send_base_first_seen()
+                    except Exception:
+                        logger.debug("send_base_first_seen failed", exc_info=True)
+            else:
+                app.logger.info(
+                    "BackgroundScheduler not started (SCHEDULER_ENABLED but leadership lock not acquired)"
+                )
+        elif not scheduler_enabled:
+            app.logger.info("BackgroundScheduler disabled via SCHEDULER_ENABLED=false")
 
     # Only initialize CSRF protection if enabled
     if app.config.get("WTF_CSRF_ENABLED"):
@@ -744,6 +772,16 @@ def create_app(config=None):
             g.request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         except Exception:
             app.logger.debug("attach_request_id failed", exc_info=True)
+
+    @app.after_request
+    def set_request_id_header(response):
+        try:
+            request_id = getattr(g, "request_id", None)
+            if request_id:
+                response.headers["X-Request-ID"] = request_id
+        except Exception:
+            app.logger.debug("set_request_id_header failed", exc_info=True)
+        return response
 
     @app.before_request
     def handle_api_cors_preflight():
@@ -1399,6 +1437,7 @@ def create_app(config=None):
                     id="oidc_metadata_refresh",
                     replace_existing=True,
                     max_instances=1,
+                    coalesce=True,
                 )
                 app.logger.info("Scheduled OIDC metadata refresh every %d seconds", refresh_interval)
             except Exception as e:
@@ -1407,7 +1446,23 @@ def create_app(config=None):
     # Prometheus metrics endpoint
     @app.route("/metrics")
     def metrics():
-        """Expose Prometheus metrics"""
+        """Expose Prometheus metrics.
+
+        When METRICS_TOKEN is set, require a matching X-Metrics-Token header
+        or ?token= query parameter. When unset the endpoint is open (a production
+        startup warning is logged — set METRICS_TOKEN in production).
+        """
+        import secrets as _secrets
+
+        expected = (app.config.get("METRICS_TOKEN") or "").strip()
+        if expected:
+            provided = (request.headers.get("X-Metrics-Token") or request.args.get("token") or "").strip()
+            # compare_digest requires equal length; unequal => unauthorized
+            authorized = bool(provided) and len(provided) == len(expected) and _secrets.compare_digest(
+                provided, expected
+            )
+            if not authorized:
+                abort(401)
         return generate_latest(), 200, {"Content-Type": CONTENT_TYPE_LATEST}
 
     # Register error handlers
