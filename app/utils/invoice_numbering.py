@@ -87,6 +87,51 @@ def _extract_seq_width(pattern):
     return max(3, len(re.findall(r"\{SEQ\}", pattern)))
 
 
+def _db_dialect_name():
+    from app import db
+
+    bind = db.session.get_bind()
+    return (bind.dialect.name if bind else "") or ""
+
+
+def _lock_settings_for_numbering():
+    """Serialize document number allocation via the Settings singleton row.
+
+    PostgreSQL: ``SELECT ... FOR UPDATE`` on the Settings row (held until the
+    current transaction commits/rolls back).
+
+    SQLite: best-effort ``BEGIN IMMEDIATE`` when no transaction is active;
+    ``with_for_update`` is a no-op on SQLite, so callers should also use
+    ``generate_next_invoice_number_with_retry`` when inserting under concurrency.
+    """
+    from sqlalchemy import text
+
+    from app import db
+    from app.models import Settings
+
+    dialect = _db_dialect_name()
+    if dialect == "sqlite":
+        try:
+            # Only start IMMEDIATE when the session has not already begun a txn.
+            if not db.session.in_transaction():
+                db.session.execute(text("BEGIN IMMEDIATE"))
+        except Exception:
+            # Best-effort; unique constraint + retry covers residual races.
+            import logging
+
+            logging.getLogger(__name__).debug(
+                "SQLite BEGIN IMMEDIATE for invoice numbering failed; continuing",
+                exc_info=True,
+            )
+
+    settings = Settings.query.with_for_update().first()
+    if settings is None:
+        settings = Settings.get_settings()
+        db.session.flush()
+        settings = Settings.query.with_for_update().filter_by(id=settings.id).first() or settings
+    return settings
+
+
 def generate_next_document_number(
     document_model,
     number_field,
@@ -95,8 +140,17 @@ def generate_next_document_number(
     start_number,
     document_query=None,
     now=None,
+    *,
+    lock_settings=False,
 ):
-    """Generate next document number for the given pattern and settings values."""
+    """Generate next document number for the given pattern and settings values.
+
+    When ``lock_settings`` is True (PostgreSQL/SQLite numbering paths), acquires a
+    row lock on Settings before scanning existing numbers to reduce TOCTOU races.
+    """
+    if lock_settings:
+        _lock_settings_for_numbering()
+
     now = now or datetime.utcnow()
     prefix = sanitize_invoice_prefix(prefix)
     start_number = _normalize_start_number(start_number)
@@ -142,11 +196,15 @@ def generate_next_document_number(
 
 
 def generate_next_invoice_number(invoice_model, invoice_query=None, settings=None, now=None):
-    """Generate next invoice number for the current pattern and settings."""
-    if settings is None:
-        from app.models import Settings
+    """Generate next invoice number for the current pattern and settings.
 
-        settings = Settings.get_settings()
+    Locks the Settings singleton before scanning invoice numbers (see
+    ``_lock_settings_for_numbering``) so concurrent allocators serialize.
+    Prefer ``allocate_next_invoice_number`` at call sites that insert.
+    """
+    locked_settings = _lock_settings_for_numbering()
+    if settings is None:
+        settings = locked_settings
 
     now = now or datetime.utcnow()
     prefix = sanitize_invoice_prefix(getattr(settings, "invoice_prefix", ""))
@@ -161,15 +219,80 @@ def generate_next_invoice_number(invoice_model, invoice_query=None, settings=Non
         start_number,
         document_query=invoice_query,
         now=now,
+        lock_settings=False,  # already locked above
     )
 
 
-def generate_next_quote_number(quote_model, quote_query=None, settings=None, now=None):
-    """Generate next quote number for the current pattern and settings."""
-    if settings is None:
-        from app.models import Settings
+def allocate_next_invoice_number(invoice_model, invoice_query=None, settings=None, now=None):
+    """Lock Settings, compute the next invoice number, and return it.
 
-        settings = Settings.get_settings()
+    Callers are responsible for inserting the invoice (ideally in the same
+    transaction so the Settings row lock covers the insert).
+    """
+    return generate_next_invoice_number(
+        invoice_model,
+        invoice_query=invoice_query,
+        settings=settings,
+        now=now,
+    )
+
+
+def generate_next_invoice_number_with_retry(
+    create_fn,
+    *,
+    invoice_model=None,
+    max_attempts=5,
+    invoice_query=None,
+    settings=None,
+    now=None,
+):
+    """Allocate an invoice number and call ``create_fn(number)``, retrying on conflict.
+
+    Retries up to ``max_attempts`` times when ``create_fn`` raises
+    ``IntegrityError`` (typically a unique ``invoice_number`` collision under
+    SQLite or a race that slipped the Settings lock). The session is rolled
+    back before each retry.
+
+    ``create_fn`` should insert the invoice (flush/commit as appropriate) and
+    return whatever the caller needs.
+    """
+    from sqlalchemy.exc import IntegrityError
+
+    from app import db
+
+    if invoice_model is None:
+        from app.models import Invoice
+
+        invoice_model = Invoice
+
+    last_error = None
+    for _ in range(max_attempts):
+        try:
+            number = allocate_next_invoice_number(
+                invoice_model,
+                invoice_query=invoice_query,
+                settings=settings,
+                now=now,
+            )
+            return create_fn(number)
+        except IntegrityError as exc:
+            last_error = exc
+            db.session.rollback()
+            continue
+
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("Invoice number allocation failed with no attempts")
+
+
+def generate_next_quote_number(quote_model, quote_query=None, settings=None, now=None):
+    """Generate next quote number for the current pattern and settings.
+
+    Locks Settings before scanning, same as invoice numbering.
+    """
+    locked_settings = _lock_settings_for_numbering()
+    if settings is None:
+        settings = locked_settings
 
     if now is None:
         from app.utils.timezone import now_in_app_timezone
@@ -188,4 +311,5 @@ def generate_next_quote_number(quote_model, quote_query=None, settings=None, now
         start_number,
         document_query=quote_query,
         now=now,
+        lock_settings=False,
     )

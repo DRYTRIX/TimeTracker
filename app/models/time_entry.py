@@ -222,6 +222,14 @@ class TimeEntry(db.Model):
         try:
             user = self.user
         except Exception:
+            # DetachedInstanceError / missing relationship on transient instances is expected.
+            import logging
+
+            logging.getLogger(__name__).debug(
+                "Could not resolve time entry user via relationship (user_id=%s)",
+                getattr(self, "user_id", None),
+                exc_info=True,
+            )
             user = None
         if user is None and self.user_id:
             from app.models.user import User
@@ -314,8 +322,14 @@ class TimeEntry(db.Model):
             stop_at = now
         return stop_at
 
-    def stop_timer(self, end_time=None):
-        """Stop an active timer"""
+    def stop_timer(self, end_time=None, *, commit=True):
+        """Stop an active timer.
+
+        Mutates this instance only. When ``commit`` is True (default, for
+        backwards compatibility with route/call-site expectations), commits the
+        session. Service-layer callers that manage their own transaction should
+        pass ``commit=False`` and commit via ``safe_commit`` / ``@transactional``.
+        """
         if self.end_time:
             raise ValueError("Timer is already stopped")
 
@@ -330,20 +344,28 @@ class TimeEntry(db.Model):
         self.calculate_duration()
         self.updated_at = local_now()
 
-        db.session.commit()
+        if commit:
+            db.session.commit()
 
-    def pause_timer(self):
-        """Pause an active timer (clock stops; break accumulates on resume)."""
+    def pause_timer(self, *, commit=True):
+        """Pause an active timer (clock stops; break accumulates on resume).
+
+        See ``stop_timer`` for the ``commit`` parameter.
+        """
         if self.end_time:
             raise ValueError("Timer is already stopped")
         if self.paused_at:
             raise ValueError("Timer is already paused")
         self.paused_at = local_now()
         self.updated_at = local_now()
-        db.session.commit()
+        if commit:
+            db.session.commit()
 
-    def resume_timer(self):
-        """Resume a paused timer (accumulate time since paused_at into break_seconds)."""
+    def resume_timer(self, *, commit=True):
+        """Resume a paused timer (accumulate time since paused_at into break_seconds).
+
+        See ``stop_timer`` for the ``commit`` parameter.
+        """
         if self.end_time:
             raise ValueError("Timer is already stopped")
         if not self.paused_at:
@@ -355,28 +377,32 @@ class TimeEntry(db.Model):
             self.break_seconds = (self.break_seconds or 0) + added_break
         self.paused_at = None
         self.updated_at = local_now()
-        db.session.commit()
+        if commit:
+            db.session.commit()
 
-    def update_notes(self, notes):
-        """Update notes for this entry"""
+    def update_notes(self, notes, *, commit=True):
+        """Update notes for this entry. See ``stop_timer`` for ``commit``."""
         self.notes = notes.strip() if notes else None
         self.updated_at = local_now()
-        db.session.commit()
+        if commit:
+            db.session.commit()
 
-    def update_tags(self, tags):
-        """Update tags for this entry"""
+    def update_tags(self, tags, *, commit=True):
+        """Update tags for this entry. See ``stop_timer`` for ``commit``."""
         self.tags = tags.strip() if tags else None
         self.updated_at = local_now()
-        db.session.commit()
+        if commit:
+            db.session.commit()
 
-    def set_billable(self, billable):
-        """Set billable status"""
+    def set_billable(self, billable, *, commit=True):
+        """Set billable status. See ``stop_timer`` for ``commit``."""
         self.billable = billable
         self.updated_at = local_now()
-        db.session.commit()
+        if commit:
+            db.session.commit()
 
-    def set_paid(self, paid, invoice_number=None):
-        """Set paid status and optional invoice number"""
+    def set_paid(self, paid, invoice_number=None, *, commit=True):
+        """Set paid status and optional invoice number. See ``stop_timer`` for ``commit``."""
         self.paid = paid
         if invoice_number:
             self.invoice_number = invoice_number.strip() if invoice_number else None
@@ -384,7 +410,8 @@ class TimeEntry(db.Model):
             # Clear invoice number when marking as unpaid
             self.invoice_number = None
         self.updated_at = local_now()
-        db.session.commit()
+        if commit:
+            db.session.commit()
 
     def to_dict(self):
         """Convert time entry to dictionary for API responses"""

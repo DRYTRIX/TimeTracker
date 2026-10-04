@@ -32,6 +32,46 @@ from app.utils.urls import external_url_context
 logger = logging.getLogger(__name__)
 
 
+def _parse_hhmm(value, default_hour=2, default_minute=0):
+    """Parse HH:MM into (hour, minute); fall back to defaults on bad input."""
+    try:
+        text = (value or "").strip()
+        if not text or ":" not in text:
+            return default_hour, default_minute
+        hour_s, minute_s = text.split(":", 1)
+        hour, minute = int(hour_s), int(minute_s)
+        if 0 <= hour <= 23 and 0 <= minute <= 59:
+            return hour, minute
+    except (TypeError, ValueError):
+        pass
+    return default_hour, default_minute
+
+
+def run_scheduled_backup():
+    """Create a full backup archive and prune archives past retention.
+
+    Uses Settings.backup_retention_days (fallback: Config / BACKUP_RETENTION_DAYS).
+    Call within an app context (see register_scheduled_tasks wrappers).
+    """
+    try:
+        from app.models.settings import Settings
+        from app.utils.backup import create_backup, prune_old_backups
+
+        app = current_app._get_current_object()
+        logger.info("Starting scheduled backup...")
+        archive_path = create_backup(app)
+        logger.info("Scheduled backup created: %s", archive_path)
+
+        settings = Settings.get_settings()
+        retention = int(getattr(settings, "backup_retention_days", None) or app.config.get("BACKUP_RETENTION_DAYS", 30))
+        removed = prune_old_backups(app, retention_days=retention)
+        logger.info("Scheduled backup prune removed %d old archive(s) (retention=%d days)", removed, retention)
+        return archive_path
+    except Exception as e:
+        logger.error("Scheduled backup failed: %s", e, exc_info=True)
+        return None
+
+
 def check_overdue_invoices():
     """Check for overdue invoices and send notifications
 
@@ -41,10 +81,12 @@ def check_overdue_invoices():
     Note: Call within an app/external URL context (see register_scheduled_tasks wrappers).
     """
     try:
+        from app.utils.timezone import now_in_app_timezone
+
         logger.info("Checking for overdue invoices...")
 
-        # Get all invoices that are overdue and not paid/cancelled
-        today = datetime.utcnow().date()
+        # Calendar "today" in app timezone (not UTC / host local)
+        today = now_in_app_timezone().date()
         overdue_invoices = Invoice.query.filter(
             Invoice.due_date < today, Invoice.status.in_(["draft", "sent"])
         ).all()
@@ -121,10 +163,12 @@ def send_weekly_summaries():
             is_active=True, email_notifications=True, notification_weekly_summary=True
         ).all()
 
+        from app.utils.timezone import now_in_app_timezone
+
         logger.info(f"Found {len(users)} users with weekly summaries enabled")
 
-        # Calculate date range (last 7 days)
-        end_date = datetime.utcnow().date()
+        # Calculate date range (last 7 days) in app timezone
+        end_date = now_in_app_timezone().date()
         start_date = end_date - timedelta(days=7)
 
         summaries_sent = 0
@@ -239,13 +283,14 @@ def check_task_deadline_approaching():
 
     Note: Call within an app/external URL context (see register_scheduled_tasks wrappers).
     """
-    from datetime import date, timedelta
+    from datetime import timedelta
 
     from app.models import Task
+    from app.utils.timezone import now_in_app_timezone
     from app.utils.workflow_bridge import fire_deadline_approaching_workflow
 
     try:
-        target_date = date.today() + timedelta(days=1)
+        target_date = now_in_app_timezone().date() + timedelta(days=1)
         tasks = Task.query.filter(
             Task.due_date == target_date,
             Task.status.notin_(["done", "cancelled"]),
@@ -269,10 +314,12 @@ def generate_recurring_invoices():
     Use generate_recurring_invoices_with_app() wrapper for scheduled tasks.
     """
     try:
+        from app.utils.timezone import now_in_app_timezone
+
         logger.info("Generating recurring invoices...")
 
-        # Get all active recurring invoices that should generate today
-        today = datetime.utcnow().date()
+        # Calendar "today" in app timezone (matches Settings.timezone / TZ)
+        today = now_in_app_timezone().date()
         recurring_invoices = RecurringInvoice.query.filter(
             RecurringInvoice.is_active == True, RecurringInvoice.next_run_date <= today
         ).all()
@@ -284,6 +331,12 @@ def generate_recurring_invoices():
 
         for recurring in recurring_invoices:
             try:
+                # Serialize per-template generation (Postgres FOR UPDATE; SQLite best-effort)
+                locked = RecurringInvoice.query.filter_by(id=recurring.id).with_for_update().first()
+                if not locked:
+                    continue
+                recurring = locked
+
                 # Check if we've reached the end date
                 if recurring.end_date and today > recurring.end_date:
                     logger.info(f"Recurring invoice {recurring.id} has reached end date, deactivating")
@@ -437,6 +490,19 @@ def send_monthly_unpaid_hours_reports():
         return 0
 
 
+def _add_job(scheduler, **kwargs):
+    """Register a job with safe defaults (single instance, coalesce missed runs)."""
+    kwargs.setdefault("max_instances", 1)
+    kwargs.setdefault("coalesce", True)
+    func = kwargs.get("func")
+    job_id = kwargs.get("id") or getattr(func, "__name__", None) or "unknown"
+    if callable(func):
+        from app.utils.hardening_metrics import wrap_scheduler_job
+
+        kwargs["func"] = wrap_scheduler_job(func, str(job_id))
+    return scheduler.add_job(**kwargs)
+
+
 def register_scheduled_tasks(scheduler, app=None):
     """Register all scheduled tasks with APScheduler
 
@@ -457,7 +523,7 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 return check_overdue_invoices()
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=check_overdue_invoices_with_app,
             trigger="cron",
             hour=9,
@@ -480,7 +546,7 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 return send_weekly_summaries()
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=send_weekly_summaries_with_app,
             trigger="cron",
             day_of_week="mon",
@@ -506,7 +572,7 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 return check_project_budget_alerts()
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=check_project_budget_alerts_with_app,
             trigger="cron",
             hour="*/6",
@@ -528,7 +594,7 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 return check_task_deadline_approaching()
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=check_task_deadline_approaching_with_app,
             trigger="cron",
             hour=8,
@@ -554,7 +620,7 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 generate_recurring_invoices()
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=generate_recurring_invoices_with_app,
             trigger="cron",
             hour=8,
@@ -576,7 +642,7 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 generate_recurring_project_costs()
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=generate_recurring_project_costs_with_app,
             trigger="cron",
             hour=8,
@@ -600,7 +666,7 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 send_monthly_unpaid_hours_reports()
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=send_monthly_unpaid_hours_reports_with_app,
             trigger="cron",
             day=1,
@@ -634,7 +700,7 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 retry_failed_webhooks()
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=retry_failed_webhooks_with_app,
             trigger="cron",
             minute="*/5",
@@ -659,7 +725,7 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 check_expiring_quotes()
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=check_expiring_quotes_with_app,
             trigger="cron",
             hour=9,
@@ -684,7 +750,7 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 sync_integrations()
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=sync_integrations_with_app,
             trigger="cron",
             minute=0,  # Every hour at minute 0
@@ -709,7 +775,7 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 process_scheduled_reports()
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=process_scheduled_reports_with_app,
             trigger="cron",
             minute=0,
@@ -731,7 +797,7 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 process_remind_to_log()
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=process_remind_to_log_with_app,
             trigger="cron",
             minute=0,
@@ -752,7 +818,7 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 process_missed_clock_in()
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=process_missed_clock_in_with_app,
             trigger="cron",
             minute=0,
@@ -777,7 +843,7 @@ def register_scheduled_tasks(scheduler, app=None):
                 except Exception as e:
                     logger.warning("Smart reminder push job failed: %s", e)
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=send_smart_reminder_push_with_app,
             trigger="interval",
             minutes=15,
@@ -802,7 +868,7 @@ def register_scheduled_tasks(scheduler, app=None):
                 except Exception as e:
                     logger.warning("Idle timer check job failed: %s", e)
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=check_idle_timers_with_app,
             trigger="interval",
             minutes=5,
@@ -823,7 +889,7 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 check_working_time_limits()
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=check_working_time_limits_with_app,
             trigger="interval",
             minutes=15,
@@ -849,7 +915,7 @@ def register_scheduled_tasks(scheduler, app=None):
                 except Exception:
                     logger.debug("Base telemetry heartbeat failed", exc_info=True)
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=send_base_telemetry_heartbeat_with_app,
             trigger="cron",
             hour=3,
@@ -873,7 +939,7 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 sync_google_calendar_for_all_users()
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=sync_google_calendar_for_all_users_with_app,
             trigger="interval",
             minutes=30,
@@ -894,7 +960,7 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 sync_email_threads()
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=sync_email_threads_with_app,
             trigger="interval",
             minutes=30,
@@ -917,7 +983,7 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 post_slack_daily_summaries()
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=post_slack_daily_summaries_with_app,
             trigger="interval",
             minutes=30,
@@ -949,7 +1015,7 @@ def register_scheduled_tasks(scheduler, app=None):
                 except Exception:
                     logger.debug("Gamification leaderboard job failed", exc_info=True)
 
-        scheduler.add_job(
+        _add_job(scheduler,
             func=recalculate_gamification_leaderboards_with_app,
             trigger="cron",
             hour=3,
@@ -959,6 +1025,48 @@ def register_scheduled_tasks(scheduler, app=None):
             replace_existing=True,
         )
         logger.info("Registered gamification leaderboard task")
+
+        # Daily full backup + retention prune at Settings.backup_time (HH:MM)
+        backup_hour, backup_minute = 2, 0
+        try:
+            app_for_backup = app
+            if app_for_backup is None:
+                app_for_backup = current_app._get_current_object()
+            with app_for_backup.app_context():
+                from app.models.settings import Settings
+
+                settings = Settings.get_settings()
+                backup_time = (
+                    (getattr(settings, "backup_time", None) if settings else None)
+                    or app_for_backup.config.get("BACKUP_TIME")
+                    or "02:00"
+                )
+                backup_hour, backup_minute = _parse_hhmm(backup_time)
+        except Exception:
+            logger.debug("Could not read Settings.backup_time; using 02:00", exc_info=True)
+
+        def run_scheduled_backup_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for scheduled backup")
+                    return
+            with app_instance.app_context():
+                return run_scheduled_backup()
+
+        _add_job(
+            scheduler,
+            func=run_scheduled_backup_with_app,
+            trigger="cron",
+            hour=backup_hour,
+            minute=backup_minute,
+            id="scheduled_backup",
+            name="Daily backup and prune old archives",
+            replace_existing=True,
+        )
+        logger.info("Registered scheduled backup task at %02d:%02d", backup_hour, backup_minute)
 
         try:
             from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
@@ -1588,9 +1696,11 @@ def check_working_time_limits():
         if getattr(settings, "compliance_enabled", False):
             from app.services.attendance_compliance_service import AttendanceComplianceService
 
+            from app.utils.timezone import now_in_app_timezone
+
             svc = AttendanceComplianceService()
             svc.sync_all_approved_time_off()
-            today = datetime.utcnow().date()
+            today = now_in_app_timezone().date()
             svc.sync_company_holidays(today - timedelta(days=7), today + timedelta(days=365))
 
         return emails_sent

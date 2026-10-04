@@ -1,4 +1,9 @@
-"""Tests for Settings.single_active_timer enforcement (DB) vs env defaults."""
+"""Tests for Settings.single_active_timer enforcement (DB) vs env defaults.
+
+The DB partial unique index (migration 010) always enforces one active timer
+per user. Application code always checks for an active timer regardless of
+``Settings.single_active_timer``.
+"""
 
 import json
 from datetime import datetime
@@ -63,7 +68,8 @@ def test_single_timer_enforced_when_setting_on(app, client, user, project, api_t
     assert data.get("error_code") == "timer_already_running"
 
 
-def test_multiple_timers_allowed_when_setting_off(app, client, user, project, api_token):
+def test_single_timer_enforced_even_when_setting_off(app, client, user, project, api_token):
+    """Setting False is dishonest under the DB unique index; app always enforces."""
     _, plain_token = api_token
     p2 = _second_project(project.client_id, user.id)
     db.session.commit()
@@ -77,15 +83,18 @@ def test_multiple_timers_allowed_when_setting_off(app, client, user, project, ap
     assert r1.status_code == 201
 
     r2 = client.post("/api/v1/timer/start", json={"project_id": p2.id}, headers=_api_headers(plain_token))
-    assert r2.status_code == 201
+    assert r2.status_code == 409
+    data = json.loads(r2.data)
+    assert data.get("success") is False
+    assert data.get("error_code") == "timer_already_running"
 
     with app.app_context():
         active = TimeEntry.query.filter_by(user_id=user.id, end_time=None).all()
-        assert len(active) == 2
+        assert len(active) == 1
 
 
-def test_setting_read_from_db_not_env(app, client, user, project, api_token):
-    """DB single_active_timer=False must allow a second timer even if env default is restrictive."""
+def test_setting_off_still_blocks_second_timer_via_service(app, client, user, project, api_token):
+    """DB single_active_timer=False must still block a second timer (index + can_start_timer)."""
     _, plain_token = api_token
     p2 = _second_project(project.client_id, user.id)
     db.session.commit()
@@ -111,12 +120,12 @@ def test_setting_read_from_db_not_env(app, client, user, project, api_token):
         json={"project_id": p2.id},
         headers=_api_headers(plain_token),
     )
-    assert resp.status_code == 201
+    assert resp.status_code == 409
     with app.app_context():
-        assert TimeEntry.query.filter_by(user_id=user.id, end_time=None).count() == 2
+        assert TimeEntry.query.filter_by(user_id=user.id, end_time=None).count() == 1
 
 
-def test_both_web_and_api_routes_respect_setting(app, authenticated_client, user, project, api_token):
+def test_both_web_and_api_routes_enforce_single_timer(app, authenticated_client, user, project, api_token):
     _, plain_token = api_token
     p2 = _second_project(project.client_id, user.id)
     db.session.commit()
@@ -138,8 +147,8 @@ def test_both_web_and_api_routes_respect_setting(app, authenticated_client, user
         json={"project_id": p2.id},
         headers=_api_headers(plain_token),
     )
-    assert api_resp.status_code == 201
+    assert api_resp.status_code == 409
 
     with app.app_context():
         active = TimeEntry.query.filter_by(user_id=user.id, end_time=None).all()
-        assert len(active) == 2
+        assert len(active) == 1

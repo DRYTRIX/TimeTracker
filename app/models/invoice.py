@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from app import db
-from app.utils.invoice_numbering import generate_next_invoice_number
+from app.utils.invoice_numbering import allocate_next_invoice_number
 
 
 class Invoice(db.Model):
@@ -208,11 +208,8 @@ class Invoice(db.Model):
 
     def calculate_totals(self):
         """Calculate invoice totals from items, extra goods, and expenses"""
-        # Optionally apply tax rules before totals
-        try:
-            self._apply_tax_rules_if_any()
-        except Exception:
-            pass
+        # Optionally apply tax rules before totals (failures logged inside helper)
+        self._apply_tax_rules_if_any()
         items_total = sum(item.total_amount for item in self.items)
         goods_total = sum(good.total_amount for good in self.extra_goods)
         expenses_total = sum(expense.total_amount for expense in self.expenses)
@@ -252,9 +249,23 @@ class Invoice(db.Model):
                 # prefer highest rate if multiple
                 candidates.sort(key=lambda r: float(r.rate_percent), reverse=True)
                 self.tax_rate = Decimal(str(candidates[0].rate_percent))
-        except Exception:
-            # Best-effort only
-            pass
+        except Exception as exc:
+            import logging
+
+            from sqlalchemy.exc import SQLAlchemyError
+
+            logging.getLogger(__name__).warning(
+                "Best-effort tax rule lookup failed for invoice %s",
+                getattr(self, "id", None),
+                exc_info=True,
+            )
+            if isinstance(exc, SQLAlchemyError):
+                try:
+                    db.session.rollback()
+                except Exception:
+                    logging.getLogger(__name__).debug(
+                        "Rollback after tax-rule DB error also failed", exc_info=True
+                    )
 
     def to_dict(self):
         """Convert invoice to dictionary for API responses"""
@@ -300,8 +311,8 @@ class Invoice(db.Model):
 
     @classmethod
     def generate_invoice_number(cls):
-        """Generate a unique invoice number"""
-        return generate_next_invoice_number(cls)
+        """Allocate a unique invoice number (locks Settings; caller still inserts)."""
+        return allocate_next_invoice_number(cls)
 
 
 class InvoiceItem(db.Model):

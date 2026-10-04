@@ -291,7 +291,12 @@ def start_timer():
             "task_id": task_id,
         },
     ):
-        flash(_("Could not start timer due to a database error. Please check server logs."), "error")
+        # Partial unique index may reject a concurrent second active timer
+        ok, conflict_msg = TimeTrackingService().can_start_timer(current_user.id)
+        if not ok:
+            flash(_(conflict_msg or "You already have an active timer. Stop it before starting a new one."), "error")
+        else:
+            flash(_("Could not start timer due to a database error. Please check server logs."), "error")
         return redirect(url_for("main.dashboard"))
     current_app.logger.info(
         "Started new timer id=%s for user=%s project_id=%s client_id=%s task_id=%s",
@@ -462,7 +467,11 @@ def start_timer_from_template(template_id):
     template.record_usage()
 
     if not safe_commit("start_timer_from_template", {"template_id": template_id}):
-        flash(_("Could not start timer due to a database error. Please check server logs."), "error")
+        ok, conflict_msg = TimeTrackingService().can_start_timer(current_user.id)
+        if not ok:
+            flash(_(conflict_msg or "You already have an active timer. Stop it before starting a new one."), "error")
+        else:
+            flash(_("Could not start timer due to a database error. Please check server logs."), "error")
         return redirect(url_for("time_entry_templates.list_templates"))
 
     from app.telemetry.otel_setup import business_span
@@ -550,7 +559,11 @@ def start_timer_for_project(project_id):
     if not safe_commit(
         "start_timer_for_project", {"user_id": current_user.id, "project_id": project_id, "task_id": task_id}
     ):
-        flash(_("Could not start timer due to a database error. Please check server logs."), "error")
+        ok, conflict_msg = TimeTrackingService().can_start_timer(current_user.id)
+        if not ok:
+            flash(_(conflict_msg or "You already have an active timer. Stop it before starting a new one."), "error")
+        else:
+            flash(_("Could not start timer due to a database error. Please check server logs."), "error")
         return redirect(url_for("main.dashboard"))
     current_app.logger.info(
         "Started new timer id=%s for user=%s project_id=%s task_id=%s",
@@ -736,7 +749,15 @@ def stop_timer():
         flash(_("Cannot stop timer: %(error)s", error=str(e)), "error")
         return redirect(url_for("main.dashboard"))
     except Exception as e:
-        current_app.logger.exception("Error stopping timer: %s", e)
+        from app.utils.error_reporting import log_and_capture
+
+        log_and_capture(
+            current_app.logger,
+            "Error stopping timer: %s",
+            e,
+            exc=e,
+            level="exception",
+        )
         flash(
             _("Could not stop timer due to an error. Please try again or contact support if the problem persists."),
             "error",
@@ -1290,6 +1311,14 @@ def view_timer(timer_id):
             ).first()
             can_request_approval = pending is None
         except Exception:
+            current_app.logger.warning(
+                "Failed to check pending time-entry approval for timer %s", timer.id, exc_info=True
+            )
+            # Avoid poisoning the request session if the approvals query failed.
+            try:
+                db.session.rollback()
+            except Exception:
+                current_app.logger.debug("Rollback after approval check failure also failed", exc_info=True)
             can_request_approval = False
 
     return render_template(
@@ -2598,7 +2627,8 @@ def time_entries_overview():
             start_dt = datetime.strptime(start_date, "%Y-%m-%d")
             query = query.filter(TimeEntry.start_time >= start_dt)
         except ValueError:
-            pass
+            # Invalid filter date from query string — ignore start_date filter.
+            current_app.logger.debug("Ignoring invalid start_date filter %r", start_date, exc_info=True)
 
     if end_date:
         try:
@@ -2607,7 +2637,8 @@ def time_entries_overview():
             end_dt = end_dt.replace(hour=23, minute=59, second=59)
             query = query.filter(TimeEntry.start_time <= end_dt)
         except ValueError:
-            pass
+            # Invalid filter date from query string — ignore end_date filter.
+            current_app.logger.debug("Ignoring invalid end_date filter %r", end_date, exc_info=True)
 
     # Filter by paid status
     if paid_filter == "true":
@@ -2793,6 +2824,13 @@ def time_entries_overview():
             ).all()
             entry_ids_with_pending_approval = {a.time_entry_id for a in pending}
         except Exception:
+            current_app.logger.warning(
+                "Failed to load pending time-entry approvals for list view", exc_info=True
+            )
+            try:
+                db.session.rollback()
+            except Exception:
+                current_app.logger.debug("Rollback after pending-approvals query failure also failed", exc_info=True)
             entry_ids_with_pending_approval = set()
 
     # Check if this is an AJAX request
@@ -2940,13 +2978,15 @@ def export_time_entries_csv():
             start_dt = datetime.strptime(start_date, "%Y-%m-%d")
             query = query.filter(TimeEntry.start_time >= start_dt)
         except ValueError:
-            pass
+            # Invalid filter date from query string — ignore start_date filter.
+            current_app.logger.debug("Ignoring invalid start_date filter %r", start_date, exc_info=True)
     if end_date:
         try:
             end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
             query = query.filter(TimeEntry.start_time <= end_dt)
         except ValueError:
-            pass
+            # Invalid filter date from query string — ignore end_date filter.
+            current_app.logger.debug("Ignoring invalid end_date filter %r", end_date, exc_info=True)
 
     # Paid/billable
     if paid_filter == "true":
@@ -3152,13 +3192,15 @@ def export_time_entries_pdf():
             start_dt = datetime.strptime(start_date, "%Y-%m-%d")
             query = query.filter(TimeEntry.start_time >= start_dt)
         except ValueError:
-            pass
+            # Invalid filter date from query string — ignore start_date filter.
+            current_app.logger.debug("Ignoring invalid start_date filter %r", start_date, exc_info=True)
     if end_date:
         try:
             end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
             query = query.filter(TimeEntry.start_time <= end_dt)
         except ValueError:
-            pass
+            # Invalid filter date from query string — ignore end_date filter.
+            current_app.logger.debug("Ignoring invalid end_date filter %r", end_date, exc_info=True)
 
     # Paid/billable
     if paid_filter == "true":
@@ -3294,9 +3336,9 @@ def bulk_mark_paid():
 
         # Update paid status with invoice reference if provided
         if is_paid and invoice_reference:
-            entry.set_paid(is_paid, invoice_number=invoice_reference)
+            entry.set_paid(is_paid, invoice_number=invoice_reference, commit=False)
         else:
-            entry.set_paid(is_paid)
+            entry.set_paid(is_paid, commit=False)
         updated_count += 1
 
         # Log activity

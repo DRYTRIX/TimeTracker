@@ -161,9 +161,11 @@
                         </label>
                     </div>
                     <div class="md:col-span-2 flex items-center">
-                        <input type="checkbox" name="single_active_timer" id="single_active_timer" {% if settings.single_active_timer %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        <label for="single_active_timer" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">Allow only one active timer per user</label>
+                        <input type="checkbox" name="single_active_timer" id="single_active_timer" checked disabled class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <input type="hidden" name="single_active_timer" value="on">
+                        <label for="single_active_timer" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">{{ _('Allow only one active timer per user') }}</label>
                     </div>
+                    <p class="md:col-span-2 text-xs text-text-muted-light dark:text-text-muted-dark -mt-2">{{ _('Always enforced by the database (one running timer per user). This setting cannot be turned off.') }}</p>
                 </div>
             </div>
 

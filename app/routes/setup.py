@@ -107,7 +107,8 @@ def initial_setup():
         if rounding_minimum in (0, 5, 10, 15, 30, 60):
             settings.rounding_minimum_minutes = rounding_minimum
         settings.rounding_enforce_global = request.form.get("rounding_enforce_global") == "on"
-        settings.single_active_timer = request.form.get("single_active_timer") == "on"
+        # DB partial unique index always enforces one active timer per user
+        settings.single_active_timer = True
         settings.idle_timeout_minutes = idle_timeout
 
         # Google Calendar OAuth

@@ -154,7 +154,12 @@ def create_invoice():
                         if due_date_str:
                             due_date = datetime.strptime(due_date_str, "%Y-%m-%d").date()
                     except ValueError:
-                        pass  # Use calculated date if parsing fails
+                        # User-supplied due_date invalid; keep calculated date from payment terms.
+                        current_app.logger.debug(
+                            "Ignoring invalid due_date %r; using quote payment-terms date",
+                            due_date_str,
+                            exc_info=True,
+                        )
 
         # Generate invoice number
         invoice_number = Invoice.generate_invoice_number()
@@ -298,9 +303,19 @@ def view_invoice(invoice_id):
                 client and client.get_custom_field("peppol_endpoint_id") and client.get_custom_field("peppol_scheme_id")
             )
         except Exception:
+            current_app.logger.debug(
+                "Could not determine Peppol recipient readiness for invoice %s",
+                invoice_id,
+                exc_info=True,
+            )
             peppol_recipient_ready = False
     except Exception:
         # Migration might not be applied yet; don't block invoice view.
+        current_app.logger.debug(
+            "Peppol history unavailable for invoice %s (migration may be pending)",
+            invoice_id,
+            exc_info=True,
+        )
         peppol_history = []
 
     # PEPPOL compliance warnings when invoices_peppol_compliant is on
@@ -438,7 +453,12 @@ def edit_invoice(invoice_id):
                                 total_seconds = sum(e.duration_seconds or 0 for e in entries)
                                 quantity = Decimal(str(round(total_seconds / 3600, 2)))
                         except (ValueError, TypeError):
-                            pass
+                            # Malformed time_entry_ids CSV — keep submitted quantity.
+                            current_app.logger.debug(
+                                "Could not recalculate quantity from time_entry_ids %r",
+                                time_entry_ids_val,
+                                exc_info=True,
+                            )
 
                     # Get stock item info if provided
                     stock_item_id = request.form.getlist("item_stock_item_id[]")
@@ -802,7 +822,9 @@ def update_invoice_status(invoice_id):
             new_status=new_status,
         )
     except Exception:
-        pass
+        current_app.logger.warning(
+            "Failed to log invoice.status_changed for invoice %s", invoice.id, exc_info=True
+        )
 
     return jsonify({"success": True, "status": new_status})
 
@@ -870,6 +892,13 @@ def bulk_delete_invoices():
             deleted_count += 1
 
         except Exception as e:
+            current_app.logger.warning(
+                "Skipping invoice %s during bulk delete", invoice_id_str, exc_info=True
+            )
+            try:
+                db.session.rollback()
+            except Exception:
+                current_app.logger.debug("Rollback after bulk delete skip also failed", exc_info=True)
             skipped_count += 1
             errors.append(f"ID {invoice_id_str}: {str(e)}")
 
@@ -939,6 +968,13 @@ def bulk_update_status():
             updated_count += 1
 
         except Exception:
+            current_app.logger.warning(
+                "Skipping invoice %s during bulk status update", invoice_id_str, exc_info=True
+            )
+            try:
+                db.session.rollback()
+            except Exception:
+                current_app.logger.debug("Rollback after bulk status skip also failed", exc_info=True)
             skipped_count += 1
 
     if updated_count > 0:
@@ -1207,7 +1243,15 @@ def export_invoice_ubl(invoice_id):
         flash(_("Cannot generate UBL: %(msg)s", msg=str(e)), "error")
         return redirect(url_for("invoices.view_invoice", invoice_id=invoice_id))
     except Exception as e:
-        current_app.logger.exception("UBL export failed for invoice %s", invoice_id)
+        from app.utils.error_reporting import log_and_capture
+
+        log_and_capture(
+            current_app.logger,
+            "UBL export failed for invoice %s",
+            invoice_id,
+            exc=e,
+            level="exception",
+        )
         flash(_("UBL export failed: %(msg)s", msg=str(e)), "error")
         return redirect(url_for("invoices.view_invoice", invoice_id=invoice_id))
 
@@ -1764,7 +1808,8 @@ def upload_invoice_image(invoice_id):
         try:
             os.remove(file_path)
         except OSError:
-            pass
+            # Best-effort cleanup of orphaned upload after DB failure.
+            current_app.logger.debug("Could not remove orphaned invoice image %s", file_path, exc_info=True)
         return redirect(url_for("invoices.edit_invoice", invoice_id=invoice_id))
 
     log_event(

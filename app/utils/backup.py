@@ -221,6 +221,51 @@ def create_backup(app) -> str:
             logger.debug("Backup temp dir cleanup failed: %s", e)
 
 
+def prune_old_backups(app, retention_days: int | None = None) -> int:
+    """Delete backup archives older than ``retention_days``.
+
+    Only removes ``timetracker_backup_*.zip`` files under the backup root
+    (skips restore_* temporary archives). Returns the number of files removed.
+    """
+    if retention_days is None:
+        try:
+            from app.models.settings import Settings
+
+            settings = Settings.get_settings()
+            retention_days = int(getattr(settings, "backup_retention_days", None) or 30)
+        except Exception:
+            retention_days = int(
+                (app.config.get("BACKUP_RETENTION_DAYS") if getattr(app, "config", None) else None)
+                or os.getenv("BACKUP_RETENTION_DAYS", 30)
+            )
+
+    retention_days = max(1, int(retention_days))
+    backups_dir = get_backup_root_dir(app)
+    cutoff = datetime.now().timestamp() - (retention_days * 86400)
+    removed = 0
+
+    try:
+        for name in os.listdir(backups_dir):
+            if not name.endswith(".zip") or name.startswith("restore_"):
+                continue
+            if not name.startswith("timetracker_backup_"):
+                continue
+            path = os.path.join(backups_dir, name)
+            if not os.path.isfile(path):
+                continue
+            try:
+                if os.path.getmtime(path) < cutoff:
+                    os.remove(path)
+                    removed += 1
+                    logger.info("Removed old backup: %s", name)
+            except OSError as e:
+                logger.warning("Failed to remove old backup %s: %s", name, e)
+    except OSError as e:
+        logger.warning("Could not list backups for prune: %s", e)
+
+    return removed
+
+
 def restore_backup(app, archive_path: str, progress_callback=None) -> tuple[bool, str]:
     """Restore a backup archive.
 

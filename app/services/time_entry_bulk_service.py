@@ -59,7 +59,7 @@ def apply_bulk_time_entry_actions(
         for e in entries:
             if e.is_active:
                 continue
-            e.set_paid(flag)
+            e.set_paid(flag, commit=False)
             affected += 1
     elif action in {"add_tag", "remove_tag"}:
         tag = (value or "").strip() if value is not None else ""
