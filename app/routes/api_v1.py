@@ -3234,15 +3234,13 @@ def create_webhook():
     if not data.get("events") or not isinstance(data.get("events"), list):
         return jsonify({"error": "events must be a non-empty list"}), 400
 
-    # Validate URL
+    # Validate URL (scheme + SSRF protections)
     try:
-        from urllib.parse import urlparse
+        from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
 
-        parsed = urlparse(data["url"])
-        if not parsed.scheme or not parsed.netloc:
-            return validation_error_response({"url": ["Invalid URL format."]}, message="Invalid URL format")
-        if parsed.scheme not in ["http", "https"]:
-            return validation_error_response({"url": ["URL must use http or https."]}, message="Invalid URL format")
+        data["url"] = validate_outbound_url(data["url"])
+    except UnsafeOutboundURL as exc:
+        return validation_error_response({"url": [str(exc)]}, message="Invalid URL")
     except (KeyError, ValueError, AttributeError, TypeError):
         return validation_error_response({"url": ["Invalid URL format."]}, message="Invalid URL format")
 
@@ -3347,15 +3345,13 @@ def update_webhook(webhook_id):
     if "description" in data:
         webhook.description = data["description"]
     if "url" in data:
-        # Validate URL
+        # Validate URL (scheme + SSRF protections)
         try:
-            from urllib.parse import urlparse
+            from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
 
-            parsed = urlparse(data["url"])
-            if not parsed.scheme or not parsed.netloc:
-                return validation_error_response({"url": ["Invalid URL format."]}, message="Invalid URL format")
-            if parsed.scheme not in ["http", "https"]:
-                return validation_error_response({"url": ["URL must use http or https."]}, message="Invalid URL format")
+            data["url"] = validate_outbound_url(data["url"])
+        except UnsafeOutboundURL as exc:
+            return validation_error_response({"url": [str(exc)]}, message="Invalid URL")
         except (ValueError, AttributeError, TypeError):
             return validation_error_response({"url": ["Invalid URL format."]}, message="Invalid URL format")
         webhook.url = data["url"]

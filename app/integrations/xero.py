@@ -92,6 +92,7 @@ class XeroConnector(BaseConnector):
             token_url,
             headers={"Authorization": f"Basic {auth_b64}", "Content-Type": "application/x-www-form-urlencoded"},
             data={"grant_type": "authorization_code", "code": code, "redirect_uri": redirect_uri},
+            timeout=(5, 30),
         )
 
         response.raise_for_status()
@@ -106,7 +107,8 @@ class XeroConnector(BaseConnector):
         if "access_token" in data:
             try:
                 tenants_response = requests.get(
-                    f"{self.BASE_URL}/connections", headers={"Authorization": f"Bearer {data['access_token']}"}
+                    f"{self.BASE_URL}/connections", headers={"Authorization": f"Bearer {data['access_token']}"},
+                    timeout=(5, 30),
                 )
                 if tenants_response.status_code == 200:
                     tenants = tenants_response.json()
@@ -149,6 +151,7 @@ class XeroConnector(BaseConnector):
             token_url,
             headers={"Authorization": f"Basic {auth_b64}", "Content-Type": "application/x-www-form-urlencoded"},
             data={"grant_type": "refresh_token", "refresh_token": self.credentials.refresh_token},
+            timeout=(5, 30),
         )
 
         response.raise_for_status()

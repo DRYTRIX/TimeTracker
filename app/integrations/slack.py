@@ -57,6 +57,7 @@ class SlackConnector(BaseConnector):
         response = requests.post(
             token_url,
             data={"client_id": client_id, "client_secret": client_secret, "code": code, "redirect_uri": redirect_uri},
+            timeout=(5, 30),
         )
 
         response.raise_for_status()
@@ -106,6 +107,7 @@ class SlackConnector(BaseConnector):
                 "grant_type": "refresh_token",
                 "refresh_token": self.credentials.refresh_token,
             },
+            timeout=(5, 30),
         )
 
         response.raise_for_status()
@@ -133,7 +135,7 @@ class SlackConnector(BaseConnector):
         api_url = "https://slack.com/api/auth.test"
 
         try:
-            response = requests.post(api_url, headers={"Authorization": f"Bearer {token}"})
+            response = requests.post(api_url, headers={"Authorization": f"Bearer {token}"}, timeout=(5, 30))
 
             response.raise_for_status()
             data = response.json()
@@ -160,6 +162,7 @@ class SlackConnector(BaseConnector):
                 "https://slack.com/api/conversations.list",
                 headers={"Authorization": f"Bearer {token}"},
                 params={"types": "public_channel,private_channel", "exclude_archived": "true"},
+                timeout=(5, 30),
             )
 
             if channels_response.status_code == 200:
@@ -180,7 +183,8 @@ class SlackConnector(BaseConnector):
 
             # Get users
             users_response = requests.get(
-                "https://slack.com/api/users.list", headers={"Authorization": f"Bearer {token}"}
+                "https://slack.com/api/users.list", headers={"Authorization": f"Bearer {token}"},
+                timeout=(5, 30),
             )
 
             if users_response.status_code == 200:
@@ -262,6 +266,7 @@ class SlackConnector(BaseConnector):
             api_url,
             headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
             json={"channel": channel, "text": text},
+            timeout=(5, 30),
         )
 
         response.raise_for_status()

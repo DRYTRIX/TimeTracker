@@ -6,12 +6,27 @@ Provides consistent error handling across the application.
 import sys
 from typing import Any, Dict, Optional
 
-from flask import current_app, make_response, render_template, request
+from flask import current_app, flash, make_response, redirect, render_template, request, url_for
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from werkzeug.exceptions import HTTPException
 
+from app import db
 from app.utils.api_responses import error_response, handle_validation_error, validation_error_response
+
+
+def _rollback_session():
+    """Roll back a failed DB session so later work in the same request is not poisoned."""
+    try:
+        db.session.rollback()
+    except Exception as e:
+        current_app.logger.exception("Failed to roll back database session after error")
+        try:
+            from app.utils.error_reporting import capture_exception
+
+            capture_exception(e)
+        except Exception:
+            pass
 
 
 def register_error_handlers(app):
@@ -126,26 +141,40 @@ def register_error_handlers(app):
     @app.errorhandler(IntegrityError)
     def handle_integrity_error(error):
         """Handle database integrity errors"""
+        _rollback_session()
         current_app.logger.error(f"Integrity error: {error}")
 
-        if request.is_json or request.path.startswith("/api/"):
-            # Try to extract meaningful error message
-            error_msg = "Database integrity error"
-            if "UNIQUE constraint" in str(error.orig):
-                error_msg = "Duplicate entry - this record already exists"
-            elif "FOREIGN KEY constraint" in str(error.orig):
-                error_msg = "Referenced record does not exist"
+        error_msg = "Database integrity error"
+        orig = str(getattr(error, "orig", error) or error)
+        if "UNIQUE constraint" in orig or "unique constraint" in orig.lower() or "Duplicate entry" in orig:
+            error_msg = "Duplicate entry - this record already exists"
+        elif "FOREIGN KEY constraint" in orig or "foreign key" in orig.lower():
+            error_msg = "Referenced record does not exist"
 
+        if request.is_json or request.path.startswith("/api/"):
             return error_response(message=error_msg, error_code="integrity_error", status_code=409)
 
-        from flask import flash
-
-        flash("Database error occurred", "error")
-        return error, 409
+        flash(error_msg, "error")
+        # Prefer returning to the referrer when safe; otherwise home/dashboard.
+        referrer = request.referrer
+        if referrer and referrer.startswith(request.host_url):
+            return redirect(referrer)
+        try:
+            return redirect(url_for("main.dashboard"))
+        except Exception:
+            return (
+                render_template(
+                    "errors/generic.html",
+                    error=error,
+                    error_info={"title": "Conflict", "message": error_msg},
+                ),
+                409,
+            )
 
     @app.errorhandler(SQLAlchemyError)
     def handle_sqlalchemy_error(error):
         """Handle SQLAlchemy errors"""
+        _rollback_session()
         current_app.logger.exception("SQLAlchemy error: %s", error)
         try:
             sys.stderr.write(f"SQLAlchemy error: {error}\n")
@@ -155,8 +184,6 @@ def register_error_handlers(app):
 
         if request.is_json or request.path.startswith("/api/"):
             return error_response(message="Database error occurred", error_code="database_error", status_code=500)
-
-        from flask import flash, render_template
 
         flash("Database error occurred", "error")
         return (
@@ -177,7 +204,6 @@ def register_error_handlers(app):
             return error_response(
                 message=error.description or "An error occurred", error_code=error.code, status_code=error.code
             )
-        from flask import render_template
 
         return (
             render_template(
@@ -191,7 +217,14 @@ def register_error_handlers(app):
     @app.errorhandler(Exception)
     def handle_generic_exception(error):
         """Handle all other exceptions"""
+        _rollback_session()
         current_app.logger.exception(f"Unhandled exception: {error}")
+        try:
+            from app.utils.error_reporting import capture_exception
+
+            capture_exception(error)
+        except Exception:
+            pass
 
         if request.is_json or request.path.startswith("/api/"):
             # Don't expose internal error details in production
@@ -206,8 +239,6 @@ def register_error_handlers(app):
                 return error_response(
                     message="An internal error occurred", error_code="internal_error", status_code=500
                 )
-
-        from flask import flash, render_template
 
         flash("An error occurred. Please try again.", "error")
         return (

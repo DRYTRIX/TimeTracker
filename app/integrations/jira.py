@@ -81,6 +81,7 @@ class JiraConnector(BaseConnector):
                 "code": code,
                 "redirect_uri": redirect_uri,
             },
+            timeout=(5, 30),
         )
 
         response.raise_for_status()
@@ -122,6 +123,7 @@ class JiraConnector(BaseConnector):
                 "client_secret": client_secret,
                 "refresh_token": self.credentials.refresh_token,
             },
+            timeout=(5, 30),
         )
 
         response.raise_for_status()
@@ -147,7 +149,7 @@ class JiraConnector(BaseConnector):
         api_url = f"{base_url}/rest/api/3/myself"
 
         try:
-            response = requests.get(api_url, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"})
+            response = requests.get(api_url, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"}, timeout=(5, 30))
 
             if response.status_code == 200:
                 user_data = response.json()
@@ -282,6 +284,7 @@ class JiraConnector(BaseConnector):
                     "maxResults": 100,
                     "fields": "summary,description,status,assignee,project,created,updated",
                 },
+                timeout=(5, 30),
             )
 
             if response.status_code != 200:
@@ -343,6 +346,7 @@ class JiraConnector(BaseConnector):
                 api_url,
                 headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
                 params={"fields": fields},
+                timeout=(5, 30),
             )
 
             if response.status_code == 404:

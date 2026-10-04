@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from app import db
 from app.models import Webhook, WebhookDelivery
 from app.utils.db import safe_commit
+from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
 from app.utils.permissions import admin_or_permission_required
 from app.utils.webhook_service import WebhookService
 
@@ -49,6 +50,14 @@ def create_webhook():
                 "admin/webhooks/form.html", webhook=None, available_events=WebhookService.get_available_events()
             )
 
+        try:
+            validated_url = validate_outbound_url(data["url"])
+        except UnsafeOutboundURL as exc:
+            flash(_("Invalid webhook URL: %(error)s", error=str(exc)), "error")
+            return render_template(
+                "admin/webhooks/form.html", webhook=None, available_events=WebhookService.get_available_events()
+            )
+
         # Parse events
         events = request.form.getlist("events")
         if not events:
@@ -61,7 +70,7 @@ def create_webhook():
         webhook = Webhook(
             name=data["name"],
             description=data.get("description"),
-            url=data["url"],
+            url=validated_url,
             events=events,
             http_method=data.get("http_method", "POST"),
             content_type=data.get("content_type", "application/json"),
@@ -132,7 +141,14 @@ def edit_webhook(webhook_id):
         # Update fields
         webhook.name = data.get("name", webhook.name)
         webhook.description = data.get("description", webhook.description)
-        webhook.url = data.get("url", webhook.url)
+        if data.get("url"):
+            try:
+                webhook.url = validate_outbound_url(data["url"])
+            except UnsafeOutboundURL as exc:
+                flash(_("Invalid webhook URL: %(error)s", error=str(exc)), "error")
+                return render_template(
+                    "admin/webhooks/form.html", webhook=webhook, available_events=WebhookService.get_available_events()
+                )
         webhook.events = request.form.getlist("events") or webhook.events
         webhook.http_method = data.get("http_method", webhook.http_method)
         webhook.content_type = data.get("content_type", webhook.content_type)

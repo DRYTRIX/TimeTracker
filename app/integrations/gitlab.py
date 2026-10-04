@@ -82,6 +82,7 @@ class GitLabConnector(BaseConnector):
                 "grant_type": "authorization_code",
                 "redirect_uri": redirect_uri,
             },
+            timeout=(5, 30),
         )
 
         response.raise_for_status()
@@ -96,7 +97,8 @@ class GitLabConnector(BaseConnector):
         if "access_token" in data:
             try:
                 user_response = requests.get(
-                    f"{base_url}/api/v4/user", headers={"Authorization": f"Bearer {data['access_token']}"}
+                    f"{base_url}/api/v4/user", headers={"Authorization": f"Bearer {data['access_token']}"},
+                    timeout=(5, 30),
                 )
                 if user_response.status_code == 200:
                     user_data = user_response.json()
@@ -145,6 +147,7 @@ class GitLabConnector(BaseConnector):
                 "refresh_token": self.credentials.refresh_token,
                 "grant_type": "refresh_token",
             },
+            timeout=(5, 30),
         )
 
         response.raise_for_status()
@@ -179,7 +182,7 @@ class GitLabConnector(BaseConnector):
         api_url = f"{base_url}/api/v4/user"
 
         try:
-            response = requests.get(api_url, headers={"Authorization": f"Bearer {token}"})
+            response = requests.get(api_url, headers={"Authorization": f"Bearer {token}"}, timeout=(5, 30))
 
             if response.status_code == 200:
                 user_data = response.json()

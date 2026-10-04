@@ -98,6 +98,7 @@ class QuickBooksConnector(BaseConnector):
                 "Content-Type": "application/x-www-form-urlencoded",
             },
             data={"grant_type": "authorization_code", "code": code, "redirect_uri": redirect_uri},
+            timeout=(5, 30),
         )
 
         response.raise_for_status()
@@ -155,6 +156,7 @@ class QuickBooksConnector(BaseConnector):
                 "Content-Type": "application/x-www-form-urlencoded",
             },
             data={"grant_type": "refresh_token", "refresh_token": self.credentials.refresh_token},
+            timeout=(5, 30),
         )
 
         response.raise_for_status()

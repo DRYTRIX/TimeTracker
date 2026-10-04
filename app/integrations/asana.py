@@ -66,6 +66,7 @@ class AsanaConnector(BaseConnector):
                 "code": code,
                 "redirect_uri": redirect_uri,
             },
+            timeout=(5, 30),
         )
 
         response.raise_for_status()
@@ -80,7 +81,8 @@ class AsanaConnector(BaseConnector):
         if "access_token" in data:
             try:
                 user_response = requests.get(
-                    f"{self.BASE_URL}/users/me", headers={"Authorization": f"Bearer {data['access_token']}"}
+                    f"{self.BASE_URL}/users/me", headers={"Authorization": f"Bearer {data['access_token']}"},
+                    timeout=(5, 30),
                 )
                 if user_response.status_code == 200:
                     user_data = user_response.json().get("data", {})
@@ -126,6 +128,7 @@ class AsanaConnector(BaseConnector):
                 "client_secret": client_secret,
                 "refresh_token": self.credentials.refresh_token,
             },
+            timeout=(5, 30),
         )
 
         response.raise_for_status()
@@ -149,7 +152,7 @@ class AsanaConnector(BaseConnector):
         """Test connection to Asana."""
         try:
             headers = {"Authorization": f"Bearer {self.get_access_token()}"}
-            response = requests.get(f"{self.BASE_URL}/users/me", headers=headers)
+            response = requests.get(f"{self.BASE_URL}/users/me", headers=headers, timeout=(5, 30))
 
             if response.status_code == 200:
                 user_data = response.json().get("data", {})
@@ -192,6 +195,7 @@ class AsanaConnector(BaseConnector):
                 f"{self.BASE_URL}/projects",
                 headers=headers,
                 params={"workspace": workspace_gid, "opt_fields": "name,notes,archived"},
+                timeout=(5, 30),
             )
 
             if projects_response.status_code == 200:
@@ -229,6 +233,7 @@ class AsanaConnector(BaseConnector):
                             f"{self.BASE_URL}/projects/{asana_project.get('gid')}/tasks",
                             headers=headers,
                             params={"opt_fields": "name,notes,completed,due_on"},
+                            timeout=(5, 30),
                         )
 
                         if tasks_response.status_code == 200:
@@ -243,6 +248,7 @@ class AsanaConnector(BaseConnector):
                                         f"{self.BASE_URL}/tasks/{at_gid}",
                                         headers=headers,
                                         params={"opt_fields": "name,notes,completed,due_on,assignee"},
+                                        timeout=(5, 30),
                                     )
 
                                     if task_response.status_code == 200:

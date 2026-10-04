@@ -91,6 +91,7 @@ class MicrosoftTeamsConnector(BaseConnector):
                 "grant_type": "authorization_code",
                 "scope": " ".join(self.SCOPES),
             },
+            timeout=(5, 30),
         )
 
         response.raise_for_status()
@@ -105,7 +106,8 @@ class MicrosoftTeamsConnector(BaseConnector):
         if "access_token" in data:
             try:
                 user_response = requests.get(
-                    f"{self.GRAPH_BASE_URL}/me", headers={"Authorization": f"Bearer {data['access_token']}"}
+                    f"{self.GRAPH_BASE_URL}/me", headers={"Authorization": f"Bearer {data['access_token']}"},
+                    timeout=(5, 30),
                 )
                 if user_response.status_code == 200:
                     user_data = user_response.json()
@@ -157,6 +159,7 @@ class MicrosoftTeamsConnector(BaseConnector):
                 "grant_type": "refresh_token",
                 "scope": " ".join(self.SCOPES),
             },
+            timeout=(5, 30),
         )
 
         response.raise_for_status()
@@ -189,7 +192,7 @@ class MicrosoftTeamsConnector(BaseConnector):
 
         try:
             # Get user info
-            response = requests.get(f"{self.GRAPH_BASE_URL}/me", headers={"Authorization": f"Bearer {token}"})
+            response = requests.get(f"{self.GRAPH_BASE_URL}/me", headers={"Authorization": f"Bearer {token}"}, timeout=(5, 30))
 
             if response.status_code == 200:
                 user_data = response.json()
@@ -233,6 +236,7 @@ class MicrosoftTeamsConnector(BaseConnector):
                 f"{self.GRAPH_BASE_URL}/teams/{channel_id}/channels/{channel_id}/messages",
                 headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
                 json={"body": {"contentType": "text", "content": message}},
+                timeout=(5, 30),
             )
 
             if response.status_code in [200, 201]:
@@ -251,7 +255,8 @@ class MicrosoftTeamsConnector(BaseConnector):
         try:
             # Get teams
             response = requests.get(
-                f"{self.GRAPH_BASE_URL}/me/joinedTeams", headers={"Authorization": f"Bearer {token}"}
+                f"{self.GRAPH_BASE_URL}/me/joinedTeams", headers={"Authorization": f"Bearer {token}"},
+                timeout=(5, 30),
             )
 
             if response.status_code == 200:

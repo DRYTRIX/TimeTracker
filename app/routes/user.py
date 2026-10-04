@@ -12,6 +12,7 @@ from app.models import Activity, Settings, User
 from app.utils.db import safe_commit
 from app.utils.donate_hide_code import system_id_log_prefix, verify_supporter_code
 from app.utils.license_utils import is_license_activated
+from app.utils.safe_redirect import safe_redirect_target
 from app.utils.timezone import get_available_timezones
 
 HEX_COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
@@ -518,7 +519,7 @@ def set_language_direct(language):
             flash(_("Language updated to %(language)s", language=available_languages[language]), "success")
 
         # Redirect back to referring page or dashboard
-        next_page = request.referrer or url_for("main.dashboard")
+        next_page = safe_redirect_target(request.referrer, allow_absolute_same_host=True)
         return redirect(next_page)
 
     flash(_("Invalid language"), "error")

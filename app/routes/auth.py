@@ -30,6 +30,7 @@ from app.utils.config_manager import ConfigManager
 from app.utils.db import safe_commit
 from app.utils.deleted_usernames import is_username_reserved
 from app.utils.posthog_funnels import track_onboarding_started
+from app.utils.safe_redirect import is_safe_next_url
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -94,7 +95,8 @@ def _verify_password_reset_token(token: str, *, max_age_seconds: int) -> User | 
         return None
     try:
         uid = int(data.get("uid"))
-    except Exception:
+    except (TypeError, ValueError):
+        # Malformed token payload — treat as invalid token.
         return None
     ph = (data.get("ph") or "").strip()
     user = User.query.get(uid)
@@ -109,10 +111,10 @@ def _verify_password_reset_token(token: str, *, max_age_seconds: int) -> User | 
 def _resolve_post_login_url(user: User, next_page: str | None) -> str:
     """Resolve redirect target after successful login."""
     if getattr(user, "portal_only", False) and user.is_client_portal_user:
-        if next_page and next_page.startswith("/client-portal"):
+        if next_page and is_safe_next_url(next_page, allowed_prefixes=("/client-portal",)):
             return next_page
         return url_for("client_portal.dashboard")
-    if not next_page or not next_page.startswith("/"):
+    if not next_page or not is_safe_next_url(next_page):
         return url_for("main.dashboard")
     return next_page
 
@@ -159,7 +161,7 @@ def _try_client_portal_login(username: str, password: str):
     flash(_("Welcome, %(client_name)s!", client_name=client.name), "success")
 
     next_page = request.form.get("next") or request.args.get("next")
-    if not next_page or not next_page.startswith("/client-portal"):
+    if not next_page or not is_safe_next_url(next_page, allowed_prefixes=("/client-portal",)):
         next_page = url_for("client_portal.dashboard")
     return redirect(next_page)
 
@@ -169,7 +171,7 @@ def _finalize_login_after_verification(user: User, *, log_auth_method: str):
     if getattr(user, "two_factor_enabled", False):
         session["pre_2fa_user_id"] = user.id
         next_page = request.args.get("next")
-        if next_page and next_page.startswith("/"):
+        if next_page and is_safe_next_url(next_page):
             session["pre_2fa_next"] = next_page
         else:
             session.pop("pre_2fa_next", None)
@@ -211,6 +213,8 @@ def _finalize_login_after_verification(user: User, *, log_auth_method: str):
     try:
         require_admin_2fa = bool(getattr(Config, "REQUIRE_2FA_FOR_ADMINS", False))
     except Exception:
+        # Unexpected Config access failure; default to not forcing 2FA setup redirect.
+        current_app.logger.warning("Failed to read REQUIRE_2FA_FOR_ADMINS", exc_info=True)
         require_admin_2fa = False
     if require_admin_2fa and user.role == "admin" and not getattr(user, "two_factor_enabled", False):
         flash(_("Administrator accounts must enable two-factor authentication."), "warning")
@@ -233,6 +237,7 @@ def forgot_password():
     try:
         auth_method = normalize_auth_method(current_app.config.get("AUTH_METHOD", "local"))
     except Exception:
+        current_app.logger.warning("Failed to normalize AUTH_METHOD; defaulting to local", exc_info=True)
         auth_method = "local"
     if not forgot_password_available(auth_method):
         flash(_("Password reset is not available for this authentication method."), "warning")
@@ -255,6 +260,7 @@ def forgot_password():
 
             identifier = sanitize_input(identifier, max_length=200).strip().lower()
         except Exception:
+            current_app.logger.warning("Failed to sanitize password-reset identifier", exc_info=True)
             identifier = (identifier or "").strip().lower()
 
         user = None
@@ -329,6 +335,7 @@ def reset_password(token: str):
             return redirect(url_for("auth.login"))
         except Exception:
             db.session.rollback()
+            current_app.logger.warning("Password reset commit failed", exc_info=True)
             flash(_("Could not reset password due to a database error."), "error")
             return render_template("auth/reset_password.html", token=token)
 
@@ -360,6 +367,7 @@ def login():
     try:
         auth_method = normalize_auth_method(current_app.config.get("AUTH_METHOD", "local"))
     except Exception:
+        current_app.logger.warning("Failed to normalize AUTH_METHOD; defaulting to local", exc_info=True)
         auth_method = "local"
 
     requires_password = requires_password_form(auth_method)
@@ -436,6 +444,7 @@ def login():
             try:
                 admin_usernames = [u.strip().lower() for u in (Config.ADMIN_USERNAMES or [])]
             except Exception:
+                current_app.logger.warning("Failed to parse ADMIN_USERNAMES; defaulting to ['admin']", exc_info=True)
                 admin_usernames = ["admin"]
 
             # Check if user exists
@@ -650,6 +659,9 @@ def two_factor():
             totp = pyotp.TOTP(user.get_two_factor_secret())
             ok = bool(code) and totp.verify(code, valid_window=1)
         except Exception:
+            from app.utils.error_reporting import log_and_capture
+
+            log_and_capture(current_app.logger, "2FA verification failed unexpectedly")
             ok = False
 
         if not ok:
@@ -692,6 +704,7 @@ def two_factor_setup():
                 totp = pyotp.TOTP(current_user.get_two_factor_secret())
                 ok = bool(code) and totp.verify(code, valid_window=1)
             except Exception:
+                current_app.logger.warning("2FA enable verification failed unexpectedly", exc_info=True)
                 ok = False
 
             if not ok:
@@ -707,6 +720,9 @@ def two_factor_setup():
                 flash(_("Two-factor authentication enabled."), "success")
             except Exception:
                 db.session.rollback()
+                from app.utils.error_reporting import log_and_capture
+
+                log_and_capture(current_app.logger, "Failed to enable 2FA in database")
                 flash(_("Could not enable two-factor authentication due to a database error."), "error")
             return redirect(url_for("auth.two_factor_setup"))
 
@@ -720,6 +736,7 @@ def two_factor_setup():
                 totp = pyotp.TOTP(current_user.get_two_factor_secret())
                 ok = bool(code) and totp.verify(code, valid_window=1)
             except Exception:
+                current_app.logger.warning("2FA disable verification failed unexpectedly", exc_info=True)
                 ok = False
 
             if not ok:
@@ -736,6 +753,7 @@ def two_factor_setup():
                 flash(_("Two-factor authentication disabled."), "success")
             except Exception:
                 db.session.rollback()
+                current_app.logger.warning("Failed to disable 2FA in database", exc_info=True)
                 flash(_("Could not disable two-factor authentication due to a database error."), "error")
             return redirect(url_for("auth.two_factor_setup"))
 
@@ -750,6 +768,7 @@ def two_factor_setup():
                 name=current_user.username, issuer_name="TimeTracker"
             )
         except Exception:
+            current_app.logger.warning("Failed to build 2FA provisioning URI", exc_info=True)
             provisioning_uri = ""
 
     return render_template(
@@ -778,6 +797,7 @@ def logout():
     try:
         auth_method = normalize_auth_method(current_app.config.get("AUTH_METHOD", "local"))
     except Exception:
+        current_app.logger.warning("Failed to normalize AUTH_METHOD; defaulting to local", exc_info=True)
         auth_method = "local"
 
     # Backwards compatibility: older versions stored the full id_token in the cookie session.
@@ -853,6 +873,7 @@ def edit_profile():
     try:
         auth_method = normalize_auth_method(current_app.config.get("AUTH_METHOD", "local"))
     except Exception:
+        current_app.logger.warning("Failed to normalize AUTH_METHOD; defaulting to local", exc_info=True)
         auth_method = "local"
 
     requires_password = requires_password_form(auth_method)
@@ -895,6 +916,7 @@ def edit_profile():
         try:
             file = request.files.get("avatar")
         except Exception:
+            current_app.logger.warning("Failed to read avatar upload from request", exc_info=True)
             file = None
 
         if file and getattr(file, "filename", ""):
@@ -911,6 +933,7 @@ def edit_profile():
                 img.verify()
                 file.stream.seek(0)
             except Exception:
+                current_app.logger.warning("Avatar image validation failed", exc_info=True)
                 flash(_("Invalid image file."), "error")
                 return redirect(url_for("auth.edit_profile"))
 
@@ -925,6 +948,7 @@ def edit_profile():
             try:
                 file.save(file_path)
             except Exception:
+                current_app.logger.warning("Failed to save avatar file", exc_info=True)
                 flash(_("Failed to save avatar on server."), "error")
                 return redirect(url_for("auth.edit_profile"))
 
@@ -947,6 +971,7 @@ def edit_profile():
             flash(_("Profile updated successfully"), "success")
         except Exception:
             db.session.rollback()
+            current_app.logger.warning("Profile update commit failed", exc_info=True)
             flash(_("Could not update your profile due to a database error."), "error")
         return redirect(url_for("auth.profile"))
 
@@ -1000,6 +1025,7 @@ def change_password():
             return redirect(url_for("main.dashboard"))
         except Exception:
             db.session.rollback()
+            current_app.logger.warning("Password change commit failed", exc_info=True)
             flash(_("Could not update password due to a database error."), "error")
             return render_template("auth/change_password.html")
 
@@ -1026,6 +1052,7 @@ def remove_avatar():
         flash(_("Avatar removed"), "success")
     except Exception:
         db.session.rollback()
+        current_app.logger.warning("Failed to remove avatar", exc_info=True)
         flash(_("Failed to remove avatar."), "error")
     return redirect(url_for("auth.edit_profile"))
 
@@ -1044,6 +1071,8 @@ def update_theme_preference():
     try:
         value = (request.json.get("theme") if request.is_json else request.form.get("theme") or "").strip().lower()
     except Exception:
+        # Non-JSON body or missing theme key — fall back to form.
+        current_app.logger.debug("Theme preference parse fell back to form", exc_info=True)
         value = (request.form.get("theme") or "").strip().lower()
 
     if value not in ("light", "dark", "system"):
@@ -1055,6 +1084,7 @@ def update_theme_preference():
         db.session.commit()
     except Exception:
         db.session.rollback()
+        current_app.logger.warning("Failed to save theme preference", exc_info=True)
         return ({"error": "failed to save preference"}, 500)
 
     return ({"ok": True, "theme": value}, 200)
@@ -1073,6 +1103,7 @@ def login_oidc():
     try:
         auth_method = normalize_auth_method(current_app.config.get("AUTH_METHOD", "local"))
     except Exception:
+        current_app.logger.warning("Failed to normalize AUTH_METHOD; defaulting to local", exc_info=True)
         auth_method = "local"
 
     if not auth_includes_oidc(auth_method):
@@ -1201,7 +1232,7 @@ def login_oidc():
 
     # Preserve next redirect
     next_page = request.args.get("next")
-    if next_page and next_page.startswith("/"):
+    if next_page and is_safe_next_url(next_page):
         session["oidc_next"] = next_page
 
     # Determine redirect URI
@@ -1601,6 +1632,8 @@ def oidc_callback():
                         getattr(current_app.config.get("PERMANENT_SESSION_LIFETIME"), "total_seconds", lambda: 86400)()
                     )
                 except Exception:
+                    # Expected when PERMANENT_SESSION_LIFETIME is missing or not a timedelta.
+                    current_app.logger.debug("OIDC id_token cache TTL defaulted to 86400", exc_info=True)
                     ttl = 86400
 
                 cache = get_cache()

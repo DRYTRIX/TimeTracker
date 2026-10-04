@@ -24,6 +24,7 @@ from app import db
 from app.models import Activity, KanbanColumn, Milestone, Project, Task, TaskActivity, TaskChecklistItem, TaskDependency, TimeEntry, User
 from app.utils.db import safe_commit
 from app.utils.pagination import get_pagination_params
+from app.utils.safe_redirect import is_safe_next_url
 from app.utils.timezone import convert_app_datetime_to_user, now_in_app_timezone
 
 tasks_bp = Blueprint("tasks", __name__)
@@ -33,14 +34,7 @@ ALLOWED_NEXT_PREFIXES = ("/kanban", "/gantt", "/tasks", "/projects")
 
 def _is_safe_next_url(next_url):
     """Validate next URL to avoid open redirects. Allow relative paths with allowed prefixes."""
-    if not next_url or not isinstance(next_url, str):
-        return False
-    next_url = next_url.strip()
-    if not next_url.startswith("/") or next_url.startswith("//"):
-        return False
-    return any(
-        next_url == p or next_url.startswith(p + "?") or next_url.startswith(p + "#") for p in ALLOWED_NEXT_PREFIXES
-    )
+    return is_safe_next_url(next_url, allowed_prefixes=ALLOWED_NEXT_PREFIXES)
 
 
 @tasks_bp.route("/tasks")
