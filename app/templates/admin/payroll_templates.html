@@ -3,7 +3,7 @@
 
 {% block content %}
 {% set breadcrumbs = [
-    {'text': _('Admin'), 'url': url_for('admin.dashboard')},
+    {'text': _('Admin'), 'url': url_for('admin.admin_dashboard')},
     {'text': _('Payroll Templates')}
 ] %}
 {{ page_header(icon_class='fas fa-file-csv', title_text=_('Payroll Export Templates'), subtitle_text=_('Configure column sets and grouping for payroll downloads'), breadcrumbs=breadcrumbs) }}

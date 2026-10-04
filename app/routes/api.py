@@ -2593,10 +2593,10 @@ def get_activity_stats():
     user_activity = []
     if current_user.is_admin:
         user_activity = (
-            db.session.query(User.username, User.display_name, func.count(Activity.id).label("count"))
+            db.session.query(User.username, User.full_name, func.count(Activity.id).label("count"))
             .join(Activity, User.id == Activity.user_id)
             .filter(Activity.created_at >= since)
-            .group_by(User.id, User.username, User.display_name)
+            .group_by(User.id, User.username, User.full_name)
             .order_by(func.count(Activity.id).desc())
             .limit(10)
             .all()
@@ -2607,7 +2607,9 @@ def get_activity_stats():
             "total_activities": query.count(),
             "entity_counts": {entity: count for entity, count in entity_counts},
             "action_counts": {action: count for action, count in action_counts},
-            "user_activity": [{"username": u[0], "display_name": u[1], "count": u[2]} for u in user_activity],
+            "user_activity": [
+                {"username": u[0], "display_name": (u[1] or u[0]), "count": u[2]} for u in user_activity
+            ],
             "period_days": days,
         }
     )

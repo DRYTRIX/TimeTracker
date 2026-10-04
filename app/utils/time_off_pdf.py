@@ -13,6 +13,8 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from app.utils.pdf_watermark import make_page_callback, should_draw_watermark
+
 BRAND_COLOR = colors.HexColor("#1e3a5f")
 MUTED_TEXT = colors.HexColor("#64748b")
 GRID_LIGHT = colors.HexColor("#dde3ea")
@@ -212,5 +214,6 @@ def build_time_off_pdf(request, settings=None) -> bytes:
         )
     )
 
-    doc.build(elements)
+    page_cb = make_page_callback(enabled=should_draw_watermark())
+    doc.build(elements, onFirstPage=page_cb, onLaterPages=page_cb)
     return buffer.getvalue()

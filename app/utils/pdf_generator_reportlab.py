@@ -37,6 +37,7 @@ from app.utils.pdf_template_schema import (
     get_page_dimensions_points,
     validate_template_json,
 )
+from app.utils.pdf_watermark import make_page_callback, should_draw_watermark
 
 
 class AbsolutePositionedFlowable(Flowable):
@@ -286,7 +287,8 @@ class ReportLabTemplateRenderer:
             except Exception:
                 pass
 
-            doc.build(story, onFirstPage=self._on_page, onLaterPages=self._on_page)
+            page_cb = make_page_callback(self._on_page, enabled=should_draw_watermark())
+            doc.build(story, onFirstPage=page_cb, onLaterPages=page_cb)
 
             # Read PDF bytes
             with open(tmp_path, "rb") as f:

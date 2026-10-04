@@ -37,12 +37,11 @@ class TimeTrackingService:
     def can_start_timer(self, user_id: int) -> tuple[bool, Optional[str]]:
         """Return (True, None) if the user may start a new timer, else (False, message).
 
-        Reads ``Settings.get_settings()`` at call time (DB), not ``Config.SINGLE_ACTIVE_TIMER``
-        alone—env seeds new installs; admin UI updates the row users expect at runtime.
+        Always enforces a single active timer per user. Migration 010 creates a
+        partial unique index (``ux_time_entries_one_active_per_user``) that the
+        database always enforces; ``Settings.single_active_timer`` is kept for
+        display/compatibility but is not consulted for enforcement.
         """
-        settings = Settings.get_settings()
-        if not settings.single_active_timer:
-            return True, None
         if self.time_entry_repo.get_active_timer(user_id):
             return False, "You already have an active timer. Stop it before starting a new one."
         return True, None
@@ -171,6 +170,13 @@ class TimeTrackingService:
         if client_id:
             commit_data["client_id"] = client_id
         if not safe_commit("start_timer", commit_data):
+            # Partial unique index (ux_time_entries_one_active_per_user) may reject a race
+            if self.time_entry_repo.get_active_timer(user_id):
+                return {
+                    "success": False,
+                    "message": "You already have an active timer. Stop it before starting a new one.",
+                    "error": "timer_already_running",
+                }
             return {
                 "success": False,
                 "message": "Could not start timer due to a database error",
@@ -252,7 +258,7 @@ class TimeTrackingService:
         if entry.user_id != user_id:
             return {"success": False, "message": "You can only pause your own timer", "error": "unauthorized"}
         try:
-            entry.pause_timer()
+            entry.pause_timer(commit=False)
         except ValueError as e:
             return {"success": False, "message": str(e), "error": "invalid_state"}
         if not safe_commit("pause_timer", {"user_id": user_id, "entry_id": entry.id}):
@@ -267,7 +273,7 @@ class TimeTrackingService:
         if entry.user_id != user_id:
             return {"success": False, "message": "You can only resume your own timer", "error": "unauthorized"}
         try:
-            entry.resume_timer()
+            entry.resume_timer(commit=False)
         except ValueError as e:
             return {"success": False, "message": str(e), "error": "invalid_state"}
         if not safe_commit("resume_timer", {"user_id": user_id, "entry_id": entry.id}):
@@ -385,7 +391,7 @@ class TimeTrackingService:
         if duration_seconds is not None:
             try:
                 duration_seconds = int(duration_seconds)
-            except Exception:
+            except (TypeError, ValueError):
                 return {"success": False, "message": "Invalid duration", "error": "invalid_duration"}
             if duration_seconds <= 0:
                 return {"success": False, "message": "Duration must be positive", "error": "invalid_duration"}

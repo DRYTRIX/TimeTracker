@@ -86,7 +86,7 @@
         <label for="actions" class="form-label">{{ _('Actions (JSON)') }} <span class="text-red-500">*</span></label>
         <textarea id="actions" name="actions" rows="6" required
                   class="w-full px-4 py-2 font-mono text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
-                  placeholder='[{"type": "send_notification", "title": "Task done", "message": "{{task.name}} completed"}]'>{{ workflow.actions | tojson if workflow and workflow.actions else '[{"type": "send_notification", "title": "Workflow triggered", "message": "A workflow rule was triggered."}]' }}</textarea>
+                  placeholder='[{"type": "send_notification", "title": "Task done", "message": "{{ "{{task.name}}" }} completed"}]'>{{ workflow.actions | tojson if workflow and workflow.actions else '[{"type": "send_notification", "title": "Workflow triggered", "message": "A workflow rule was triggered."}]' }}</textarea>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {{ _('Available action types:') }}
             {% for a in action_types %}{{ a.value }}{% if not loop.last %}, {% endif %}{% endfor %}

@@ -50,11 +50,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     bash \
     dos2unix \
     gosu \
-    # Network tools for debugging
-    iproute2 \
-    net-tools \
-    iputils-ping \
-    dnsutils \
     # WeasyPrint dependencies
     libgdk-pixbuf2.0-0 \
     libpango-1.0-0 \
@@ -169,8 +164,8 @@ USER timetracker
 # Expose port
 EXPOSE 8080
 
-# Note: Health check is configured in docker-compose.yml
-# This allows different healthcheck settings per environment
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://127.0.0.1:8080/_ready || exit 1
 
 # Set the entrypoint
 ENTRYPOINT ["/app/docker/entrypoint_fixed.sh"]

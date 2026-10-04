@@ -380,7 +380,7 @@
             <div>
                 <p class="text-sm text-gray-700 dark:text-gray-300">
                     Showing <span class="font-medium">{{ ((pagination.page - 1) * pagination.per_page) + 1 }}</span>
-                    to <span class="font-medium">{{ min(pagination.page * pagination.per_page, pagination.total) }}</span>
+                    to <span class="font-medium">{{ [pagination.page * pagination.per_page, pagination.total] | min }}</span>
                     of <span class="font-medium">{{ pagination.total }}</span> results
                 </p>
             </div>

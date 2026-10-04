@@ -157,9 +157,18 @@
         return hours12 + ':' + mm + ' ' + meridiem;
     }
 
+    // Prefer Flatpickr's custom UI on mobile too. Native pickers ignore
+    // userPrefs.dateFormat / timeFormat, and Flatpickr's mobile mode copies
+    // our selector classes onto a new input — which used to re-trigger this
+    // initializer via MutationObserver and freeze Android Chromium (#771).
+    var DATE_INPUT_SELECTOR = 'input.user-date-input[type="date"]:not(.flatpickr-mobile)';
+    var TIME_INPUT_SELECTOR = 'input.user-time-input[type="time"]:not(.flatpickr-mobile)';
+    var DATETIME_INPUT_SELECTOR = 'input.user-datetime-input[type="datetime-local"]:not(.flatpickr-mobile)';
+    var RELEVANT_INPUT_SELECTOR = '.user-date-input, .user-time-input, .user-datetime-input';
+
     function initUserDateInputs() {
         if (typeof flatpickr === 'undefined') return;
-        var inputs = document.querySelectorAll('input.user-date-input[type="date"]');
+        var inputs = document.querySelectorAll(DATE_INPUT_SELECTOR);
         var altFormat = getFlatpickrAltFormat();
         var firstDay = getFirstDayOfWeek();
         inputs.forEach(function (el) {
@@ -172,6 +181,7 @@
                 altFormat: altFormat,
                 altInputClass: altClass,
                 allowInput: false,
+                disableMobile: true,
                 locale: { firstDayOfWeek: firstDay }
             });
         });
@@ -179,7 +189,7 @@
 
     function initUserTimeInputs() {
         if (typeof flatpickr === 'undefined') return;
-        var inputs = document.querySelectorAll('input.user-time-input[type="time"]');
+        var inputs = document.querySelectorAll(TIME_INPUT_SELECTOR);
         var use24hr = timePickerUses24hr();
         var altFormat = getTimeAltFormat();
         inputs.forEach(function (el) {
@@ -195,6 +205,7 @@
                 altFormat: altFormat,
                 altInputClass: altClass,
                 allowInput: true,
+                disableMobile: true,
                 parseDate: parseTimeDate,
                 formatDate: formatTimeDate,
                 // type=time fights Flatpickr; hide the native control, show altInput.
@@ -215,7 +226,7 @@
      */
     function initUserDateTimeInputs() {
         if (typeof flatpickr === 'undefined') return;
-        var inputs = document.querySelectorAll('input.user-datetime-input[type="datetime-local"]');
+        var inputs = document.querySelectorAll(DATETIME_INPUT_SELECTOR);
         var altFormat = getDateTimeAltFormat();
         var use24hr = timePickerUses24hr();
         var firstDay = getFirstDayOfWeek();
@@ -237,6 +248,7 @@
                 altFormat: altFormat,
                 altInputClass: altClass,
                 allowInput: false,
+                disableMobile: true,
                 minDate: minDate,
                 maxDate: maxDate,
                 locale: { firstDayOfWeek: firstDay },
@@ -260,12 +272,63 @@
     window.__timePickerUses24hr = timePickerUses24hr;
     window.__parseUserTimeInput = parseUserTimeInput;
 
+    function nodeLooksLikeFlatpickrOwn(node) {
+        if (!node || node.nodeType !== 1) return false;
+        if (node.classList) {
+            if (node.classList.contains('flatpickr-calendar')) return true;
+            if (node.classList.contains('flatpickr-mobile')) return true;
+        }
+        return false;
+    }
+
+    function nodeNeedsDatePickerInit(node) {
+        if (!node || node.nodeType !== 1) return false;
+        if (nodeLooksLikeFlatpickrOwn(node)) return false;
+        if (node.matches && node.matches(RELEVANT_INPUT_SELECTOR) &&
+            !node.classList.contains('flatpickr-mobile') && !node._flatpickr) {
+            return true;
+        }
+        if (node.querySelector) {
+            var candidates = node.querySelectorAll(RELEVANT_INPUT_SELECTOR);
+            for (var i = 0; i < candidates.length; i++) {
+                var el = candidates[i];
+                if (!el.classList.contains('flatpickr-mobile') && !el._flatpickr) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    function mutationsNeedDatePickerInit(mutations) {
+        for (var i = 0; i < mutations.length; i++) {
+            var added = mutations[i].addedNodes;
+            for (var j = 0; j < added.length; j++) {
+                if (nodeNeedsDatePickerInit(added[j])) return true;
+            }
+        }
+        return false;
+    }
+
     function onReady() {
         initAll();
-        // Re-run when new content is added (e.g. modals)
+        // Re-run when new content is added (e.g. modals). Batch + filter so
+        // Flatpickr's own DOM inserts cannot re-enter initAll (#771).
         if (typeof MutationObserver !== 'undefined') {
-            var observer = new MutationObserver(function () {
-                initAll();
+            var initScheduled = false;
+            var observer = new MutationObserver(function (mutations) {
+                if (initScheduled) return;
+                if (!mutationsNeedDatePickerInit(mutations)) return;
+                initScheduled = true;
+                var run = function () {
+                    initScheduled = false;
+                    initAll();
+                };
+                if (typeof requestAnimationFrame === 'function') {
+                    requestAnimationFrame(run);
+                } else {
+                    setTimeout(run, 0);
+                }
             });
             observer.observe(document.body, { childList: true, subtree: true });
         }

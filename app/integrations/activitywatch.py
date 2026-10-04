@@ -270,7 +270,7 @@ class ActivityWatchConnector(BaseConnector):
                         notes = "ActivityWatch: (no app/title)"
 
                     data_str = (app or "") + "|" + (title or "") + (url or "")
-                    h = hashlib.md5(data_str.encode("utf-8")).hexdigest()[:16]
+                    h = hashlib.md5(data_str.encode("utf-8"), usedforsecurity=False).hexdigest()[:16]
                     external_uid = f"{bucket_id}|{ts}|{dur_sec}|{h}"[:255]
 
                     parsed_events.append(

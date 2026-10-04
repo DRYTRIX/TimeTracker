@@ -153,6 +153,27 @@ def test_date_picker_init_covers_datetime_local_inputs():
     assert "removeAttribute('max')" in src
 
 
+def test_date_picker_init_disables_flatpickr_mobile_mode():
+    """Android Chromium must not enter Flatpickr mobile mode (#771).
+
+    Flatpickr mobile mode copies our selector classes onto a native input.
+    Combined with a body MutationObserver that re-runs initAll(), that used
+    to create an infinite init loop and freeze the browser.
+    """
+    src = Path("app/static/date-picker-init.js").read_text(encoding="utf-8")
+    # One disableMobile per date / time / datetime-local initializer
+    assert src.count("disableMobile: true") == 3
+    # Defensive selectors must exclude Flatpickr's own mobile inputs
+    assert ':not(.flatpickr-mobile)' in src
+    assert src.count(":not(.flatpickr-mobile)") >= 3
+    # Observer must batch + filter rather than calling initAll() synchronously
+    assert "initScheduled" in src
+    assert "mutationsNeedDatePickerInit" in src
+    assert "requestAnimationFrame" in src
+    # Bare synchronous re-init in the observer callback must not remain
+    assert "new MutationObserver(function () {\n                initAll();\n            })" not in src
+
+
 def test_workday_modals_use_user_datetime_input():
     """Both "Forgot to end your workday?" modals must use the prefs-aware picker."""
     for name in (

@@ -24,6 +24,7 @@ from app.models import Activity, Client, Invoice, Milestone, Project, Settings, 
 from app.models.time_entry import local_now
 from app.utils.license_utils import is_license_activated
 from app.utils.posthog_segmentation import update_user_segments_if_needed
+from app.utils.safe_redirect import safe_redirect_target
 
 main_bp = Blueprint("main", __name__)
 
@@ -885,7 +886,8 @@ def set_language():
             current_app.logger.error("Rollback failed after settings save error", exc_info=True)
 
     # Redirect back if referer exists, add timestamp to force reload
-    next_url = request.headers.get("Referer") or url_for("main.dashboard")
+    referer = request.headers.get("Referer")
+    next_url = safe_redirect_target(referer, allow_absolute_same_host=True)
     # Add cache-busting parameter to ensure fresh page load
     import time
 

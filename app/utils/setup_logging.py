@@ -6,7 +6,21 @@ Extracted from app/__init__.py for clearer separation of concerns.
 import logging
 import os
 
-from flask import Flask
+from flask import Flask, g, has_request_context
+
+
+class RequestIdFilter(logging.Filter):
+    """Inject flask.g.request_id into log records when a request context exists."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            if has_request_context():
+                record.request_id = getattr(g, "request_id", None)  # type: ignore[attr-defined]
+            else:
+                record.request_id = None  # type: ignore[attr-defined]
+        except Exception:
+            record.request_id = None  # type: ignore[attr-defined]
+        return True
 
 
 def setup_logging(app: Flask) -> None:
@@ -23,6 +37,7 @@ def setup_logging(app: Flask) -> None:
         os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs", "app.jsonl")
     )
 
+    request_id_filter = RequestIdFilter()
     handlers = [logging.StreamHandler()]
 
     try:
@@ -43,6 +58,7 @@ def setup_logging(app: Flask) -> None:
     for handler in handlers:
         handler.setLevel(getattr(logging, log_level.upper()))
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"))
+        handler.addFilter(request_id_filter)
 
     app.logger.handlers.clear()
     app.logger.propagate = False
@@ -64,9 +80,10 @@ def setup_logging(app: Flask) -> None:
         from logging.handlers import RotatingFileHandler as _RotatingFileHandler
 
         json_handler = _RotatingFileHandler(json_log_path, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8")
-        json_formatter = jsonlogger.JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s")
+        json_formatter = jsonlogger.JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s %(request_id)s")
         json_handler.setFormatter(json_formatter)
         json_handler.setLevel(logging.INFO)
+        json_handler.addFilter(request_id_filter)
 
         json_logger = logging.getLogger("timetracker")
         json_logger.handlers.clear()

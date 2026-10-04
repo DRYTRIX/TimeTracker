@@ -23,7 +23,7 @@ help:
 	@echo "  make test-api       - Run API tests"
 	@echo "  make test-security  - Run security tests"
 	@echo "  make test-database  - Run database tests"
-	@echo "  make test-coverage  - Run tests with 50% coverage requirement"
+	@echo "  make test-coverage  - Run tests with 50% coverage requirement (CI full suite is 40; ratchet 40→50)"
 	@echo "  make test-coverage-report - Generate coverage report (no minimum)"
 	@echo "  make test-fast      - Run tests in parallel"
 	@echo "  make test-parallel  - Run tests with 4 workers"
@@ -85,6 +85,7 @@ test-models:
 test-api:
 	pytest -m api -v
 
+# Local aspirational gate is 50%. CI full-suite gate is currently 40 (Phase 4 ratchet: 35→40→50).
 test-coverage:
 	pytest --cov=app --cov-report=html --cov-report=term-missing --cov-report=xml --cov-fail-under=50
 	@echo "Coverage report: htmlcov/index.html"
@@ -125,8 +126,10 @@ format-check:
 	isort --check-only app/
 
 security-scan:
-	@echo "Running bandit..."
-	bandit -r app/
+	@echo "Running bandit (high severity, matches CI)..."
+	bandit -c pyproject.toml -r app/ -lll
+	@echo "Running pip-audit..."
+	bash scripts/ci/pip-audit.sh
 	@echo "Running safety..."
 	safety check --file requirements.txt
 

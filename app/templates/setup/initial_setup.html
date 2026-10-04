@@ -236,10 +236,11 @@
                                 </label>
                             </div>
                             <div class="flex items-start">
-                                <input type="checkbox" name="single_active_timer" id="single_active_timer" {% if not settings or settings.single_active_timer %}checked{% endif %} class="mt-1 h-4 w-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary">
+                                <input type="checkbox" name="single_active_timer" id="single_active_timer" checked disabled class="mt-1 h-4 w-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary">
+                                <input type="hidden" name="single_active_timer" value="on">
                                 <label for="single_active_timer" class="ml-3 text-sm">
                                     <span class="font-medium">{{ _('Single active timer per user') }}</span>
-                                    <span class="block text-text-muted-light dark:text-text-muted-dark mt-0.5">{{ _('Only one running timer at a time per user') }}</span>
+                                    <span class="block text-text-muted-light dark:text-text-muted-dark mt-0.5">{{ _('Always enforced by the database — only one running timer at a time per user') }}</span>
                                 </label>
                             </div>
                             <div>

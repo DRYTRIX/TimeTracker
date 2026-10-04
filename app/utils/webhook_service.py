@@ -210,8 +210,13 @@ class WebhookService:
             "headers": headers,
             "data": payload_json if webhook.content_type == "application/json" else payload_json,
             "timeout": webhook.timeout_seconds,
-            "allow_redirects": True,
+            "allow_redirects": False,
         }
+
+        # Re-validate URL at delivery time to catch DNS changes / SSRF
+        from app.utils.outbound_url import validate_outbound_url
+
+        validate_outbound_url(webhook.url)
 
         # Send request based on HTTP method
         if webhook.http_method.upper() == "POST":

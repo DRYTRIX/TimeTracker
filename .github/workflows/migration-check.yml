@@ -125,18 +125,15 @@ jobs:
           if [ -f "$MIGRATION_FILE" ]; then
             # Check if migration has actual changes
             if grep -q "op\." "$MIGRATION_FILE"; then
-              echo "⚠️ Migration inconsistency detected!"
+              echo "❌ Migration inconsistency detected!"
               echo "The database schema doesn't match the models."
               echo "Generated migration file: $MIGRATION_FILE"
               cat "$MIGRATION_FILE"
               
-              # For now, we'll treat this as a warning rather than a failure
-              # The schema drift existed before this PR and should be addressed separately
-              echo "📝 Note: This indicates existing schema drift that should be addressed in a separate PR."
-              echo "✅ Continuing with migration validation as the payment tracking changes are isolated."
-              
-              # Clean up test migration
+              # Clean up test migration before failing
               rm "$MIGRATION_FILE"
+              echo "Fix: generate and commit a real Alembic migration that brings models and schema in sync."
+              exit 1
             else
               echo "✅ Migration consistency validated - no schema drift detected"
               # Clean up test migration
@@ -358,15 +355,14 @@ jobs:
               if (success) {
                 commentBody += ':white_check_mark: **Migration validation passed!**\n\n';
                 commentBody += '**Completed checks:**\n';
-                commentBody += '- :white_check_mark: Migration consistency validation (with schema drift warnings)\n';
+                commentBody += '- :white_check_mark: Migration consistency validation (schema drift fails CI)\n';
                 commentBody += '- :white_check_mark: Rollback safety test\n';
                 commentBody += '- :white_check_mark: Data integrity verification\n\n';
-                commentBody += '**The database migrations are safe to apply.** :rocket:\n\n';
-                commentBody += ':memo: **Note:** Schema drift warnings indicate existing model/migration mismatches that existed before this PR. These should be addressed in a separate schema alignment PR.\n';
+                commentBody += '**The database migrations are safe to apply.** :rocket:\n';
               } else {
                 commentBody += ':x: **Migration validation failed!**\n\n';
                 commentBody += '**Issues detected:**\n';
-                commentBody += '- Migration consistency problems\n';
+                commentBody += '- Migration consistency / schema drift problems\n';
                 commentBody += '- Rollback safety issues\n';
                 commentBody += '- Data integrity concerns\n\n';
                 commentBody += '**Please review the migration files and fix the issues before merging.** :warning:\n';

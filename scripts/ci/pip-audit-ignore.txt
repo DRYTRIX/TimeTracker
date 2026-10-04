@@ -1,0 +1,7 @@
+# Known pip-audit findings that cannot be fixed without a coordinated
+# dependency upgrade. Each ID must be justified; remove when unblocked.
+#
+# PYSEC-2026-1805 (protobuf): opentelemetry-proto==1.27.0 requires
+# protobuf<5.0, while the fix versions are >=5.29.6. Clear by upgrading
+# the OpenTelemetry stack to a release that allows protobuf 5+.
+PYSEC-2026-1805

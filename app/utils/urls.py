@@ -27,6 +27,7 @@ _WARNED_MISSING_BASE = False
 _HEALTH_PATH_PREFIXES = (
     "/health",
     "/_health",
+    "/_ready",
     "/ready",
     "/live",
     "/ping",

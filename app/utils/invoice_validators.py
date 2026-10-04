@@ -391,6 +391,9 @@ def validate_pdfa_verapdf(
             tmp.flush()
             tmp_path = tmp.name
         except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning("Could not write temp PDF for veraPDF validation", exc_info=True)
             return False, [f"Could not write temp PDF: {e}"]
 
     try:
@@ -421,9 +424,15 @@ def validate_pdfa_verapdf(
     except FileNotFoundError:
         return False, [f"veraPDF not found at {path}"]
     except Exception as e:
+        import logging
+
+        logging.getLogger(__name__).warning("veraPDF validation failed unexpectedly", exc_info=True)
         return False, [str(e)]
     finally:
         try:
             os.unlink(tmp_path)
         except OSError:
-            pass
+            # Best-effort temp PDF cleanup.
+            import logging
+
+            logging.getLogger(__name__).debug("Could not remove temp PDF during validation", exc_info=True)

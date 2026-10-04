@@ -103,7 +103,7 @@ def validate_production_config() -> Tuple[bool, List[str]]:
     # Check HTTPS settings in production
     flask_env = os.getenv("FLASK_ENV", "production")
     if flask_env == "production":
-        session_secure = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
+        session_secure = os.getenv("SESSION_COOKIE_SECURE", "true").lower() == "true"
         if not session_secure:
             issues.append("SESSION_COOKIE_SECURE should be true in production")
 

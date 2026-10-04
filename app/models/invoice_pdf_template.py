@@ -109,6 +109,12 @@ class InvoicePDFTemplate(db.Model):
             db.session.commit()
         except Exception:
             db.session.rollback()
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "Failed to commit default invoice PDF templates",
+                exc_info=True,
+            )
 
     def to_dict(self):
         """Convert template to dictionary"""
@@ -132,7 +138,14 @@ class InvoicePDFTemplate(db.Model):
 
         try:
             return json.loads(self.template_json)
-        except Exception:
+        except (TypeError, ValueError, json.JSONDecodeError):
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "Invalid template_json on InvoicePdfTemplate id=%s",
+                getattr(self, "id", None),
+                exc_info=True,
+            )
             return None
 
     def set_template_json(self, template_dict):

@@ -2,342 +2,69 @@
 
 <div align="center">
 
-### Professional Time Tracking & Project Management for Teams
+<img src="app/static/images/timetracker-logo.svg" alt="TimeTracker" width="120">
 
-**Track time. Manage projects. Generate invoices. All in one place.**
+### Self-hosted time tracking, invoicing and Peppol e-invoicing for freelancers and teams — with no per-seat fees.
 
-[🆕 What's New](#-whats-new) • [📥 Download & Install](#-download--install) • [🚀 Quick Start](#-quick-start) • [✨ Features](#-features) • [📸 Screenshots](#-screenshots) • [📖 Getting Started](docs/GETTING_STARTED.md) • [📚 Documentation](docs/) • [🗑️ Uninstall](UNINSTALL.md) • [📋 Changelog](CHANGELOG.md) • [🐳 Deploy](#-deployment)
+[![GitHub stars](https://img.shields.io/github/stars/drytrix/TimeTracker?style=social)](https://github.com/drytrix/TimeTracker)
+[![Docker Pulls](https://img.shields.io/docker/pulls/drytrix/timetracker)](https://hub.docker.com/r/drytrix/timetracker)
+[![Latest Release](https://img.shields.io/github/v/release/drytrix/TimeTracker)](https://github.com/drytrix/TimeTracker/releases/latest)
+[![License: GPL-3.0](https://img.shields.io/github/license/drytrix/TimeTracker)](LICENSE)
 
----
+<img src="assets/screenshots/Dashboard.png" alt="TimeTracker Dashboard" width="800">
+
+**[Live demo](https://timetracker-demo.drytrix.com)** · **[Website](https://timetracker.drytrix.com)** · **[Docs](docs/README.md)** · **[Changelog](CHANGELOG.md)**
 
 </div>
 
-## 🎯 What is TimeTracker?
+---
+
+## Quick start (60 seconds)
+
+No git clone, no certificate warning — plain HTTP on port 8080 with bundled PostgreSQL:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/drytrix/TimeTracker/main/docker-compose.nas.yml
+echo "SECRET_KEY=$(openssl rand -hex 32)" > .env
+docker compose -f docker-compose.nas.yml up -d
+# open http://localhost:8080 — first login creates the admin
+```
+
+**Latest release: v5.18.0** — see [CHANGELOG.md](CHANGELOG.md).
+
+More install paths (HTTPS production, NAS UI paste, cloud): [Install options](#install-options).
+
+---
+
+## Why TimeTracker?
+
+- **Peppol & EN 16931 e-invoicing** — Send invoices yourself via the bundled [Peppol Bridge](docs/admin/configuration/PEPPOL_BRIDGE.md); embed Factur-X / ZUGFeRD XML in PDFs. No paid SaaS middleman for e-invoicing.
+- **Self-hosted** — Your timers, clients, and invoices stay on your server (Docker, NAS, VPS, or Raspberry Pi).
+- **GPL-3.0 open source** — Free to use, modify, and run commercially; features are never locked behind a paywall.
+- **No per-user pricing** — Unlimited users and projects; optional one-time supporter key only hides donate prompts.
+
+| Feature | TimeTracker | Traditional Time Trackers |
+|---------|-------------|---------------------------|
+| **Self-Hosted** | ✅ Complete data control | ❌ Cloud-only, subscription fees |
+| **Open Source** | ✅ Free to use & modify | ❌ Proprietary, locked features |
+| **Persistent Timers** | ✅ Runs server-side | ❌ Browser-dependent |
+| **Docker Ready** | ✅ Deploy anywhere | ⚠️ Complex setup |
+| **Invoicing Built-in** | ✅ Track to bill workflow | ❌ Requires integration |
+| **No User Limits** | ✅ Unlimited users | ❌ Per-user pricing |
+
+---
+
+## What is TimeTracker?
 
 TimeTracker is a **self-hosted, web-based time tracking application** designed for freelancers, teams, and businesses who need professional time management with complete control over their data.
 
 **Perfect for:**
-- 💼 **Freelancers** tracking billable hours across multiple clients
-- 👥 **Small Teams** managing projects and tracking productivity
-- 🏢 **Agencies** needing detailed reporting and client billing
-- 🔒 **Privacy-focused organizations** wanting self-hosted solutions
-
-You can [support the project and purchase a key](https://timetracker.drytrix.com/support.html) to hide donate prompts in your instance.
-
----
-
-## 📥 Download & Install
-
-| Method | Best for | Get started |
-|--------|----------|-------------|
-| **Docker image** | Servers, VPS, homelab | `docker pull ghcr.io/drytrix/timetracker:latest` or [Docker Hub](https://hub.docker.com/r/drytrix/timetracker) (`drytrix/timetracker`) |
-| **NAS compose** | QNAP, Synology, Portainer | Paste [`docker-compose.nas.yml`](docker-compose.nas.yml) — [NAS guide](docs/admin/deployment/NAS_DEPLOYMENT.md) |
-| **GitHub Release** | Compose files + desktop/mobile | [Releases](https://github.com/drytrix/TimeTracker/releases) |
-| **Cloud (Render)** | Managed hosting | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/drytrix/TimeTracker) |
-
-**Full list of install paths:** [Distribution Guide](docs/admin/deployment/DISTRIBUTION.md) (Portainer templates, Unraid, Railway, Fly.io, Coolify, [Docker Hub](https://hub.docker.com/r/drytrix/timetracker))
-
-> **Docker Hub namespace:** images are published at [`drytrix/timetracker`](https://hub.docker.com/r/drytrix/timetracker) (formerly `driesp/timetracker`).
-
----
-
-## 🛠️ Technology Stack
-
-TimeTracker is built with modern, reliable technologies:
-
-### Backend
-- **Python 3.11+** — Core programming language
-- **Flask 3.0.0** — Web framework
-- **SQLAlchemy 2.0.23** — ORM and database toolkit
-- **Flask-SocketIO 5.6.1** — WebSocket support for real-time updates
-- **Flask-Migrate 4.0.5** — Database migrations
-- **Flask-Babel 4.0.0** — Internationalization (i18n)
-
-### Frontend
-- **HTML5, JavaScript (ES6+)** — Modern web standards
-- **Tailwind CSS 3.3.5** — Utility-first CSS framework
-- **Chart.js** — Interactive data visualization
-- **Command Palette (cmdk)** — Keyboard-driven navigation
-- **Framer Motion** — Smooth animations and transitions
-
-### Database
-- **PostgreSQL** — Production database (recommended)
-- **SQLite** — Development and testing database
-
-### Deployment & Infrastructure
-- **Docker & Docker Compose** — Containerization and orchestration
-- **Nginx** — Reverse proxy and HTTPS termination
-- **Gunicorn** — Production WSGI server
-- **Eventlet** — Async networking library
-
-### Key Libraries & Tools
-- **WeasyPrint** — PDF generation for invoices
-- **Flask-WTF** — Form handling and CSRF protection
-- **Authlib** — OAuth/OIDC authentication
-- **APScheduler** — Background task scheduling
-- **Prometheus Client** — Metrics collection
-- **Sentry SDK** — Error monitoring (optional)
-- **Grafana OTLP** — Telemetry sink (optional)
-
-### Development & Testing
-- **pytest** — Testing framework
-- **black** — Code formatting
-- **flake8** — Linting
-- **coverage** — Test coverage analysis
-
-**📖 Documentation:** [Architecture overview](docs/ARCHITECTURE.md) · [Project Structure](docs/development/PROJECT_STRUCTURE.md) · [UI Guidelines](docs/UI_GUIDELINES.md)
-
----
-
-## 🖥️ UI overview
-
-The web app uses a **single main layout** with a sidebar and top header. Content is centered with a max width for readability. **Getting around:** **Dashboard** — overview, today’s stats, and the main **Timer** widget (start/stop, quick start, repeat last). **Timer** and **Time entries** are first-class in the sidebar for fast access. **Time entries** is the place to filter, review, and export all logged time. **Reports** (time, project, finance) are available from the sidebar (top-level **Reports** link or **Finance & Expenses → Reports** for Report Builder, Saved Views, Scheduled Reports). **Projects**, **Finance**, and **Settings** are available from the sidebar and navigation.
-
-On **narrow viewports** (below the `md` breakpoint), the sidebar is hidden in favor of a **fixed bottom navigation bar** (inline Heroicons): Dashboard, Timer, Time entries, Projects, and **More** (slide-up sheet for Invoices, Clients, Reports, and user Settings when those modules or routes apply). The hamburger control still opens the full sidebar overlay if you need every menu item. For design and component conventions, see [UI Guidelines](docs/UI_GUIDELINES.md).
-
----
-
-## 🆕 What's New
-
-TimeTracker has been continuously enhanced with powerful new features! Here's what's been added recently:
-
-> **📋 For complete release history, see [CHANGELOG.md](CHANGELOG.md)**
-
-**Current version** is defined in `setup.py` (single source of truth). See [CHANGELOG.md](CHANGELOG.md) for versioned release history.
-
-### ✨ Highlights of v5.17.2
-
-**Patch (5.17.2):** **Idle dashboard no longer hits 429 (#767)** — higher per-user rate limit default, exempt timer/notification polling, and client back-off on 429. **OpenTelemetry opt-in** — export to the shared telemetry backend now requires the telemetry opt-in; operator-configured `OTEL_EXPORTER_OTLP_*` backends are unaffected. See [CHANGELOG.md](CHANGELOG.md#5172---2026-09-25).
-
-### ✨ Highlights of v5.17.1
-
-**Patch (5.17.1):** **Health probes exempt from rate limiting** — `/_health`, `/_ready`, and the API health endpoints no longer return 429 under frequent liveness checks, fixing Render restart loops and 502s. See [CHANGELOG.md](CHANGELOG.md#5171---2026-09-23).
-
-### ✨ Highlights of v5.17.0
-
-**Minor (5.17.0):** **Factur-X / ZUGFeRD (#433)** — structured addresses, VAT categories, PDF/A-3 embed, and EN 16931 CII fixes. **Idle unanswered action (#722)** — admin choice of review vs auto-stop when Still working? expires. **Phase 4 gap roadmap** — GDPR erasure, weekly goals / recurring tasks / project templates API, estimates vs actuals report, multi-level timesheet approval, XRechnung helper, Mollie skeleton. **Phase 5 foundations** — OAuth app models, SCIM Users stub, AI summarize-entries, Teams bot stub, and design docs. **UI / hygiene** — shared confirm dialogs, empty states, command palette expansion, security rate limits, and dead-code cleanup. See [CHANGELOG.md](CHANGELOG.md#5170---2026-09-23).
-
-### ✨ Highlights of v5.16.0
-
-**Minor (5.16.0):** **Client–team messaging** — bidirectional in-portal messaging between team and client contacts with thread UI on both sides. **Gmail & Outlook sync** — email threads pulled from Gmail API and Microsoft Graph and linked to CRM clients, leads, and deals. **Payroll sync (Gusto & ADP)** — time entries aggregated into payroll batches and pushed to Gusto and ADP Workforce Now. **DATEV export** — EXTF Buchungsstapel CSV generator for direct DATEV import. **Sage integration** — invoices, contacts, and payments synced with Sage Business Cloud. **Integration wizards** — guided setup wizards for ADP, DATEV, Gmail, Gusto, Outlook Email, and Sage. **Visual workflow builder** — drag-and-drop canvas for building automation workflows. **Portal custom domains** — white-label client portal host resolution. **Client Portal API** — new authenticated REST blueprint for portal sessions and data access. See [CHANGELOG.md](CHANGELOG.md#5160---2026-09-18).
-
-### ✨ Highlights of v5.15.0
-
-**Minor (5.15.0):** **Timer start override (#760)** — start or adjust a running timer at a custom time. **Pomodoro sessions** — focus blocks tracked via timer API and UI. **Expense lifecycle** — full mobile/desktop expense CRUD. **Payroll templates** — configurable export templates. **QuickBooks & Xero** — deeper accounting sync. **ActivityWatch inbox** — rules, merge filters, and sync-error review. **Gamification** — badges, leaderboards, and award hooks. **Calendar DnD** — drag-to-move and resize events. **Recurring costs** — automatic recurring project cost engine. **Shareable reports** — public tokenized report links. **Geofencing** — location-based attendance clock-in policies. See [CHANGELOG.md](CHANGELOG.md#5150---2026-09-16).
-
-### ✨ Highlights of v5.14.1
-
-**Patch (5.14.1):** **Docker base images** — Node 20 and Python Bookworm replace expired Bullseye bases so fresh CI/image builds succeed. See [CHANGELOG.md](CHANGELOG.md#5141---2026-09-09).
-
-### ✨ Highlights of v5.14.0
-
-**Minor (5.14.0):** **OrcaRouter AI provider** — `orcarouter` is now a named AI provider option (OpenAI-compatible endpoint, Bearer-token auth). Select it in System Settings → AI Helper or set `AI_PROVIDER=orcarouter` with `AI_BASE_URL=https://api.orcarouter.ai`. See [CHANGELOG.md](CHANGELOG.md#5140---2026-09-09).
-
-### ✨ Highlights of v5.13.5
-
-**Patch (5.13.5):** **Timezone `local_date`** — date-only values (e.g. task due dates) no longer crash the dashboard filter. **Idle skip paused (#752)** — paused timers are excluded from idle notify / needs-review / auto-stop. **Manual entry single-client (#753)** — restores the readonly pre-filled client lock when the org has one client. See [CHANGELOG.md](CHANGELOG.md#5135---2026-09-08).
-
-### ✨ Highlights of v5.13.4
-
-**Patch (5.13.4):** **Alembic multiple heads** — merge migration `184_merge_183_heads` rejoins the parallel `183` device-token and idle needs-review branches so `flask db upgrade` has a single head. See [CHANGELOG.md](CHANGELOG.md#5134---2026-09-04).
-
-### ✨ Highlights of v5.13.3
-
-**Patch (5.13.3):** **Tracked hours on tasks (#745)** — list, detail, and CSV export show aggregated tracked time. **Idle needs-review** — unanswered idle timers are flagged for review (banner, push, API) instead of lost. **Idle timeout (#722)** — extension heartbeats and mobile FCM wake-up keep Still working? reliable. **Graceful offline (#746)** — JSON offline API responses, toast dedupe, and chat backoff when the backend drops. **Onboarding tour** — skip confirmation stays dismissible. **Datetime format** — workday and CRM fields honor the chosen time format via Flatpickr. See [CHANGELOG.md](CHANGELOG.md#5133---2026-09-02).
-
-### ✨ Highlights of v5.13.2
-
-**Patch (5.13.2):** **Linear setup wizard** — guided API-key setup matching other integrations. **Web manual entry (#728)** — cascading client → project → task pickers with inline create and dark-mode comboboxes. **Mobile start timer** — unified searchable pickers, project-first with client auto-fill, crash/selection/flicker fixes. **Android signing** — stable CI keystore for release APKs. See [CHANGELOG.md](CHANGELOG.md#5132---2026-08-27).
-
-### ✨ Highlights of v5.13.1
-
-**Patch (5.13.1):** **Projects by last used (#738)** — pickers and API lists surface recent work first. **Idle timeout (#722)** — auto-stop records the configured duration and surfaces Still working? on web, extension, and mobile. **Picker fixes (#728)** — blur resets typed-but-unselected text, Create project requires a client, translated Create labels. **Extension release zip** — Chromium extension package attached to GitHub Releases. See [CHANGELOG.md](CHANGELOG.md#5131---2026-08-26).
-
-### ✨ Highlights of v5.13.0
-
-**Minor (5.13.0):** **Daily progress widget** — compact strip on the dashboard with today's hours vs target and a quick-start timer. **Quick-log & tasks due today** — one-click log form and due-today task widget without leaving home. **Timer long-run warning** — alert when a timer exceeds the configurable threshold, with workday progress. **Navigation declutter** — sidebar and mobile More drawer reorganised with key destinations promoted. **Recurring tasks list** — status filters, pause/resume/run-now inline actions. **Floating timer bar & idle-stop** — redesigned compact bar and smoother idle boundary. **Fixes** — productivity heatmap, invoice tax rate/currency resolution, swallowed errors (#736), timer heartbeats (#736), portal admin template, recurring tasks CRUD. See [CHANGELOG.md](CHANGELOG.md#5130---2026-08-23).
-
-### ✨ Highlights of v5.12.0
-
-**Minor (5.12.0):** **Task dependencies & Gantt links** — blockers between tasks with arrows on the chart. **Milestones** — named due-date checkpoints and project timeline. **Utilization report** — billable vs total hours by user or project. **Expense approvals** — manager queue with bulk-approve and pending badge. **Quote signatures** — in-portal sign/accept with PDF embed. **Resource scheduling** — weekly capacity swimlanes. **Project health** — budget burn, completion, milestones, and overdue work in one view. **Fixes** — dashboard Start Timer modal (#734), PostgreSQL approval status enum case. See [CHANGELOG.md](CHANGELOG.md#5120---2026-08-20).
-
-### ✨ Highlights of v5.11.5
-
-**Patch (5.11.5):** **Global rounding policy (#725)** — admin interval, method, and minimum with enforce-for-all; unset personal fields inherit defaults. **Client-only timers (#728)** — API, extension, mobile, and desktop can start against a client without a project; remaining timer pages use searchable comboboxes. **Fixes** — boundary rounding on duration overrides, email absolute links / `APP_BASE_URL`, kiosk stop duration, quote approval and client-portal quote emails, dead Jinja blocks, desktop manual-entry payload, extension idle notifications, Android Timer crash under R8 (#731). See [CHANGELOG.md](CHANGELOG.md#5115---2026-08-15).
-
-### ✨ Highlights of v5.11.4
-
-**Patch (5.11.4):** **Boundary rounding & minimum duration (#725)** — start/end boundary rounding, per-user minimum billable time, and admin interval fallback; rounding applied on remaining write paths. **Searchable client/project combobox (#728)** — filterable selects with inline create; client-only edits preserved. **Idle heartbeats (#722)** — server-side auto-stop and “Still working?” across web, extension, mobile, and desktop. **Fixes** — Approve button submit (#709), extension picker races (#700), idle-tab 503 toasts (#703), client API joinedload (#716). See [CHANGELOG.md](CHANGELOG.md#5114---2026-08-13).
-
-### ✨ Highlights of v5.11.3
-
-**Patch (5.11.3):** **Manual-entry rounding (#725)** — replaced deprecated `User.query.get` with `db.session.get` when resolving the rounding user, silencing the SQLAlchemy 2.x deprecation warning. Added integration tests for the start-timer 409 payload (#700), `calculate_duration` rounding, and explicit manual-entry duration rounding. See [CHANGELOG.md](CHANGELOG.md#5113---2026-08-11).
-
-### ✨ Highlights of v5.11.2
-
-**Patch (5.11.2):** **Attendance Approve (#709)** — correction review no longer treats a missing decision as Reject. **Extension task picker (#700)** — custom Kanban and on-hold tasks appear in the timer dropdown. **Idle auto-stop** — unanswered “Still working?” prompts stop the timer after a grace window. See [CHANGELOG.md](CHANGELOG.md#5112---2026-08-09).
-
-### ✨ Highlights of v5.11.1
-
-**Patch (5.11.1):** **Client version sync** — Electron desktop (`desktop/package.json`) and Flutter mobile (`mobile/pubspec.yaml`) bumped to match the webapp at **5.11.1**. See [CHANGELOG.md](CHANGELOG.md#5111---2026-08-06).
-
-### ✨ Highlights of v5.11.0
-
-**Minor (5.11.0):** **Auto-deduct break on clock-out** — admins can opt in to automatically inserting a meal break when a workday exceeds a configurable threshold, with smart deficit fill for partial manual breaks. **Mobile timer notification (#714)** — persistent Android/iOS notification shows project, task, and elapsed time while a timer runs. **Fixes** — overnight totals clipped (#706), extension task picker (#700), client projects API error (#716), OpenAPI Tasks/Clients endpoints. See [CHANGELOG.md](CHANGELOG.md#5110---2026-08-06).
-
-### ✨ Highlights of v5.10.1
-
-**Patch (5.10.1):** **Overnight clock-out (#706)** — prompt to correct leave time when a workday stays open past midnight. **Fixes** — Chrome extension connect (#700), compact time typing / edit date format (#704), dashboard “At work today” double-count. See [CHANGELOG.md](CHANGELOG.md#5101---2026-07-25).
-
-### ✨ Highlights of v5.10.0
-
-**Minor (5.10.0):** **Admins can book time for others (#701)** — manual, bulk, and API v1 creates. **Chromium timer extension (#700)** — toolbar start/stop with badge. **Self-hosted frontend** — vendored assets, esbuild pipeline, air-gapped-friendly CSP. **Fixes** — idle connection recovery (#702/#703), 24h time preference (#704), sidebar expand (#699). See [CHANGELOG.md](CHANGELOG.md#5100---2026-07-23).
-
-### ✨ Highlights of v5.9.4
-
-**Patch (5.9.4):** **Desktop & mobile catch-up** — timer pause/resume, workday/attendance, reports, Kanban, CRM, and deeper finance flows brought in line with the webapp. **API** — issues endpoints on REST API v1 for clients. See [CHANGELOG.md](CHANGELOG.md#594---2026-07-23).
-
-### ✨ Highlights of v5.9.3
-
-**Patch (5.9.3):** **Kanban** — per-column WIP limits, per-task checklists, and saveable board templates. **Comments** — @mention notifications for teammates. **Calendar** — holiday overlays in day/week views and fixed workday history dates. **Client portal** — native portal sessions stay in the portal UI ([#677](https://github.com/DRYTRIX/TimeTracker/issues/677)). **CI** — automated Docker Hub publishing with resilient credential handling. See [CHANGELOG.md](CHANGELOG.md#593---2026-07-16).
-
-### ✨ Highlights of v5.9.2
-
-**Patch (5.9.2):** **Distribution** — new distribution hub, Portainer/Unraid templates, Fly.io and Railway configs, and refreshed deploy scripts for installs without cloning the repo. **Docker Hub** — images now publish to `drytrix/timetracker` (replacing `driesp/timetracker`). See [CHANGELOG.md](CHANGELOG.md#592---2026-07-13).
-
-### ✨ Highlights of v5.9.1
-
-**Patch (5.9.1):** **Calendar** — restored holiday and time-off overlays with correct date handling and a dedicated `/api/calendar/data` feed. **Dashboard** — working-time limit banner only for pending justifications. **Compliance** — fixed attendance relationship eager-loading regression. **Deployment** — NAS-friendly compose stack and guide for QNAP, Synology, and Portainer. See [CHANGELOG.md](CHANGELOG.md#591---2026-07-13).
-
-### ✨ Highlights of v5.9.0
-
-**Minor (5.9.0):** **Workforce & attendance** — Belgium 2027 compliance module, missed clock-in reminders, retroactive workday corrections, and time-off request PDFs. **Calendar** — company holidays and time-off overlays on main and timer views. **Mobile** — shared Workday card on Home and Timer screens. **Slack** — `/in`, `/brb`, `/back`, `/out` slash commands for clock-in/out and breaks. **Client portal** — unified login at `/login` and correct logout redirect ([#677](https://github.com/DRYTRIX/TimeTracker/issues/677)). See [CHANGELOG.md](CHANGELOG.md#590---2026-07-06).
-
-### ✨ Highlights of v5.8.6
-
-**Patch (5.8.6):** **Client portal** — internal user accounts can be restricted to portal-only access (no main app), with hardened access checks for inactive users/clients, gateway-aware payment confirmation, safer document downloads, and currency-aware summaries. **Security** — deleted usernames are reserved to block recreation via self-registration, OIDC, or LDAP. **Peppol** — Peppyrus now authenticates with the `X-Api-Key` header. See [CHANGELOG.md](CHANGELOG.md#586---2026-06-28).
-
-### ✨ Highlights of v5.8.5
-
-**Patch (5.8.5):** **Invoice time entries and expenses (#662)** — clearer separation of logged hours vs expense-module records, diagnostic hints on generate-from-time, and optional one line per time entry. **Manual time entry** — task dropdown loads correctly when a project is selected ([#675](https://github.com/DRYTRIX/TimeTracker/issues/675)). See [CHANGELOG.md](CHANGELOG.md#585---2026-06-25).
-
-### ✨ Highlights of v5.8.4
-
-**Patch (5.8.4):** **Workflow template migration** — migration 161 no longer fails on PostgreSQL when seeding starter workflow templates. See [CHANGELOG.md](CHANGELOG.md#584---2026-06-19).
-
-### ✨ Highlights of v5.8.3
-
-**Patch (5.8.3):** **Peppol bridge** — self-hosted adapter with setup wizard. **Payments** — provider registry and unified checkout. **Workflows** — template library and event bridge. **Analytics** — profitability dashboard and utilization forecast. **Desktop/mobile** — tray minimize, shortcuts, invoice detail screen, and expanded finance APIs. See [CHANGELOG.md](CHANGELOG.md#583---2026-06-19).
-
-### ✨ Highlights of v5.8.2
-
-**Patch (5.8.2):** **Invoice expenses** — billable expenses from the Expenses module link to the invoice Expenses section (not invoice items), stay separate with their descriptions, and are no longer wiped when adding expenses to an existing invoice. See [CHANGELOG.md](CHANGELOG.md#582---2026-06-15).
-
-### ✨ Highlights of v5.8.1
-
-**Patch (5.8.1):** **Quote email** — sending a quote no longer flashes a false error after the email is delivered; fixes the follow-up regression to #652. See [CHANGELOG.md](CHANGELOG.md#581---2026-06-10).
-
-### ✨ Highlights of v5.8.0
-
-**Minor (5.8.0):** **Configurable quote numbering** — prefix, pattern, and start number in admin settings (migration **159**). **Quote email** fix — send from the web form without “recipient required” errors. **Invoice/payment fixes** — correct totals when creating invoices from time entries and when deleting payments. **Audit listener** fix — prevents duplicate flush callbacks in long test runs. See [CHANGELOG.md](CHANGELOG.md#580---2026-06-07).
-
-### ✨ Highlights of v5.7.0
-
-**Minor (5.7.0):** **Workday sessions** — clock in/out without a project; workday hours and project hours shown separately on the dashboard. **Working time limits** — configurable daily/weekly caps with email alerts and employee justification workflow. REST API and kiosk endpoints included. Run migration `158` after upgrade. See [CHANGELOG.md](CHANGELOG.md#570---2026-05-25) and [docs/features/WORKDAY_SESSIONS.md](docs/features/WORKDAY_SESSIONS.md).
-
-### ✨ Highlights of v5.6.3
-
-**Patch (5.6.3):** Comment API — v1 update/delete endpoints fixed (no more 500 on PATCH/DELETE), and comment edits persist correctly when settings are not yet seeded. Updated German translations. See [CHANGELOG.md](CHANGELOG.md#563---2026-05-24).
-
-**Patch (5.6.2):** Invoice PDF designer — items/expenses tables export at template page coordinates (fixes misalignment vs preview), **Generate Preview** uses the same ReportLab bytes as export, and table JSON uses `getClientRect()` after move/scale. See [CHANGELOG.md](CHANGELOG.md#562---2026-05-20).
-
-**Patch (5.6.1):** Dependency and Docker build fixes — `pydyf` for WeasyPrint 68, `PyJWT` 2.12.1 and `markdown` 3.8.1 security updates, `.dockerignore` for leaner image builds. See [CHANGELOG.md](CHANGELOG.md#561---2026-05-20).
-
-**Release (5.6.0):**
-
-- 🔌 **Personal integration connectors** — Per-user, opt-in **GitHub**, **Google Calendar**, and **Slack** connectors with signature-verified webhooks, OAuth, scheduled syncs, and a `/tt` Slack slash command ([GitHub](docs/integrations/GITHUB_CONNECTOR.md) · [Google Calendar](docs/integrations/GOOGLE_CALENDAR.md) · [Slack](docs/integrations/SLACK.md))
-- 🎨 **Custom themes** — Per-user theme picker with 8 built-in themes plus independent accent, sidebar, text-size, and corner-radius overrides ([docs](docs/features/CUSTOM_THEMES.md))
-- 📊 **Personal productivity dashboard** — New **My productivity** page with streaks, 14-day hours chart, project doughnut, focus stats, and a 12-week activity heatmap ([docs](docs/features/PRODUCTIVITY_DASHBOARD.md))
-- 🤖 **AI time entry suggestions** — Deterministic (and optional LLM-rich) project/task/notes suggestions in the Start Timer modal and manual entry **Autofill**
-- 🔮 **Project forecast panel** — `ForecastService` and a self-contained forecast card on active projects with estimated hours or budget ([docs](docs/BUDGET_ALERTS_AND_FORECASTING.md))
-- ⏰ **Smart reminders: break & end-of-day** — Optional Pomodoro-style break nudges, end-of-day wrap-up toasts, and browser push for eligible users ([docs](docs/features/SMART_NOTIFICATIONS.md))
-
-See [CHANGELOG.md](CHANGELOG.md) for all release notes and version history.
-
-### 🎯 **Major Feature Additions**
-
-#### 🧾 **Complete Invoicing System**
-- **Professional Invoice Generation** — Convert tracked time directly into polished invoices
-- **PDF Export** — Generate beautiful, branded PDF invoices with your company logo
-- **Multi-Currency Support** — Invoice clients in their preferred currency
-- **Tax Calculations** — Automatic tax computation with configurable rates
-- **Invoice Status Tracking** — Monitor draft, sent, paid, and overdue invoices
-- **Recurring Invoices** — Automate regular billing cycles
-- **Email Integration** — Send invoices directly to clients from the platform
-- **Peppol & ZugFerd e-Invoicing (EN 16931)** — Send invoices via Peppol (recommended self-hosted flow uses the included **Peppol Bridge** + setup wizard); embed EN 16931 XML in invoice PDFs (ZugFerd/Factur-X); optional PDF/A-3 normalization and veraPDF validation ([setup guide](docs/admin/configuration/PEPPOL_EINVOICING.md) · [bridge](docs/admin/configuration/PEPPOL_BRIDGE.md))
-
-#### 📋 **Advanced Task Management**
-- **Full Task System** — Create, assign, and track tasks with priorities and due dates
-- **Kanban Board** — Visual drag-and-drop task management with customizable columns
-- **Task Comments** — Collaborate with threaded comments on tasks
-- **Task Activity Tracking** — See complete history of task changes and updates
-- **Bulk Task Operations** — Manage multiple tasks at once
-
-#### 💼 **Complete CRM Suite** 🆕
-- **Multiple Contacts per Client** — Manage unlimited contacts for each client
-- **Sales Pipeline** — Visual Kanban-style pipeline for tracking deals and opportunities
-- **Deal Management** — Track deal value, probability, stages, and close dates
-- **Lead Management** — Capture, score, and convert leads into clients or deals
-- **Communication History** — Track all emails, calls, meetings, and notes with contacts
-- **Deal & Lead Activities** — Complete activity tracking for sales processes
-
-#### ⏱️ **Enhanced Time Tracking**
-- **Calendar View** — Visual calendar interface for viewing and managing time entries
-- **Bulk Time Entry** — Create multiple time entries for consecutive days with weekend skipping
-- **Time Entry Templates** — Save and reuse common time entries for faster logging
-- **Real-time Updates** — See live timer updates across all devices via WebSocket
-
-#### 💰 **Financial Management**
-- **Expense Tracking** — Track business expenses with receipts, categories, and approval workflows
-- **Payment Tracking** — Monitor invoice payments with multiple payment methods
-- **Billable Expenses** — Mark expenses as billable and automatically include in invoices
-- **Reimbursement Management** — Handle expense approvals and reimbursements
-
-#### 🔐 **Enterprise Security & Access**
-- **Role-Based Access Control (RBAC)** — Granular permissions system with custom roles
-- **OIDC/SSO Authentication** — Enterprise authentication support (Azure AD, Authelia, etc.)
-- **API Tokens** — Generate secure tokens for API access and integrations
-- **Audit Logs** — Track all system activity and user actions
-
-#### ⌨️ **Productivity Power-Ups**
-- **Command Palette** — Keyboard-driven navigation (Ctrl+K / Cmd+K)
-- **Keyboard Shortcuts** — 50+ shortcuts for lightning-fast navigation
-- **Quick Search** — Fast search across projects, tasks, clients, and more (Ctrl+K)
-- **Saved Filters** — Save frequently used report filters for instant access
-
-#### ✏️ **Content & Formatting**
-- **Markdown Support** — Rich text formatting in project and task descriptions
-- **Enhanced UI Components** — Modern, accessible interface components
-- **Toast Notifications** — Beautiful in-app notifications for actions and updates
-
-#### 🎨 **Modern UX & Layout Enhancements** 🆕
-- **Enterprise-Grade Tables** — Sortable columns, bulk actions, inline editing, and CSV export
-- **Enhanced Search** — Instant search with autocomplete, recent searches, and categorized results (Ctrl+K)
-- **Data Visualization** — Interactive charts with Chart.js (6 chart types, responsive, exportable)
-- **Progressive Web App (PWA)** — Install as mobile app, offline support, background sync
-- **Accessibility Excellence** — WCAG 2.1 AA compliant, keyboard navigation, screen reader support
-- **Interactive Onboarding** — Step-by-step product tours for new users
-- **Advanced Forms** — Auto-save, form state persistence, inline validation, smart defaults
-- **Design System** — Unified component library with 20+ reusable UI components
-- **Loading States** — Skeleton components and loading indicators throughout
-- **Enhanced Empty States** — Beautiful, actionable empty states with guidance
-
-#### 🏗️ **Architecture & Performance Improvements** 🆕
-- **Service Layer Migration** — Routes migrated to service layer pattern for better maintainability
-- **Query Optimization** — Fixed N+1 query problems, reduced database queries by 80-90%
-- **Environment Validation** — Comprehensive startup validation with helpful error messages
-- **Base CRUD Service** — Reusable service classes reducing code duplication
-- **API Token Security** — Enhanced token management with rotation, expiration, and scoping
+- **Freelancers** tracking billable hours across multiple clients
+- **Small Teams** managing projects and tracking productivity
+- **Agencies** needing detailed reporting and client billing
+- **Privacy-focused organizations** wanting self-hosted solutions
+
+UI layout and navigation conventions: [UI Guidelines](docs/UI_GUIDELINES.md).
 
 ---
 
@@ -473,16 +200,11 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 
 ---
 
+---
+
 ## 📸 Screenshots
 
 <div align="center">
-
-### 🏠 Dashboard — Your Command Center
-<img src="assets/screenshots/Dashboard.png" alt="Dashboard" width="700">
-
-*Start timers, view recent entries, and see your productivity at a glance. **Daily workflow:** Start timer → work → stop → see recap toast with link to time entries; check dashboard for time-by-project chart (last 7 days) and weekly goal progress.*
-
----
 
 ### 🔐 Simple Login & User Management
 <div>
@@ -561,110 +283,80 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 
 ---
 
-## 🚀 Quick Start
+## Install options
+
+| Method | Best for | Get started |
+|--------|----------|-------------|
+| **One-command (above)** | Homelab, quick try | `docker-compose.nas.yml` + `SECRET_KEY` |
+| **Docker image** | Servers, VPS | `docker pull ghcr.io/drytrix/timetracker:latest` or [Docker Hub](https://hub.docker.com/r/drytrix/timetracker) |
+| **NAS compose** | QNAP, Synology, Portainer | Paste [`docker-compose.nas.yml`](docker-compose.nas.yml) — [NAS guide](docs/admin/deployment/NAS_DEPLOYMENT.md) |
+| **GitHub Release** | Compose files + desktop/mobile | [Releases](https://github.com/drytrix/TimeTracker/releases) |
+| **Cloud (Render)** | Managed hosting | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/drytrix/TimeTracker) |
+
+**Full list of install paths:** [Distribution Guide](docs/admin/deployment/DISTRIBUTION.md) (Portainer templates, Unraid, Railway, Fly.io, Coolify, [Docker Hub](https://hub.docker.com/r/drytrix/timetracker))
+
+> **Docker Hub namespace:** images are published at [`drytrix/timetracker`](https://hub.docker.com/r/drytrix/timetracker) (formerly `driesp/timetracker`).
 
 For a full step-by-step guide, see **[INSTALLATION.md](INSTALLATION.md)**.
 
 ### Prerequisites
 
-Before you begin, ensure you have:
-- **Docker** (20.10+) and **Docker Compose** (2.0+) installed
-- **Git** for cloning the repository
+- **Docker** (20.10+) and **Docker Compose** (2.0+)
 - **2GB+ RAM** available for Docker containers
-- **Port 80/443** (HTTPS) or **8080** (HTTP) available
+- **Port 8080** (HTTP) or **80/443** (HTTPS production)
 
-> **💡 New to Docker?** See [Docker Installation Guide](https://docs.docker.com/get-docker/) for your platform.
+> **New to Docker?** See [Docker Installation Guide](https://docs.docker.com/get-docker/) for your platform.
 
-### Option 1: Docker with HTTPS (Recommended for Production)
+### Option 1: NAS / one-file compose (recommended for first try)
 
-Get TimeTracker running in under 2 minutes with automatic HTTPS:
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/drytrix/TimeTracker.git
-cd TimeTracker
-
-# 2. Create your environment file from the template
-cp env.example .env
-
-# 3. IMPORTANT: Edit .env and set a strong SECRET_KEY
-# Generate one with: python -c "import secrets; print(secrets.token_hex(32))"
-# Also set your timezone (TZ) and currency (CURRENCY)
-nano .env  # or use any text editor
-
-# 4. Start with Docker Compose (includes HTTPS via nginx with self-signed cert)
-docker-compose up -d
-
-# 5. Access at https://localhost
-# Your browser will warn about the self-signed certificate - that's normal
-# Click "Advanced" → "Proceed to localhost" to continue
-```
-
-**First login creates the admin account** — just enter your username! For setup problems, see [INSTALLATION.md](INSTALLATION.md).
-
-**Default install (no bundled AI):** the main `docker-compose.yml` starts the app and PostgreSQL only. The optional **Ollama** stack is not started unless you opt in (see [AI Helper](#ai-helper-ollama-or-hosted) below).
-
-**📖 See the complete setup guide:** [`docs/admin/configuration/DOCKER_COMPOSE_SETUP.md`](docs/admin/configuration/DOCKER_COMPOSE_SETUP.md)
-
-**🗑️ Removing TimeTracker:** [UNINSTALL.md](UNINSTALL.md)
-
-**🔧 Troubleshooting:**
-- **Port already in use?** Change ports in `docker-compose.yml` or stop conflicting services
-- **Docker won't start?** See [Docker Startup Troubleshooting](docs/admin/configuration/DOCKER_STARTUP_TROUBLESHOOTING.md)
-- **CSRF errors?** See [CSRF Troubleshooting](docs/admin/security/CSRF_TROUBLESHOOTING.md)
-- **Database connection issues?** See [Database Troubleshooting](docker/TROUBLESHOOTING_DB_CONNECTION.md)
-
-### Option 2: Docker with Plain HTTP (Development/Testing)
-
-For local development or testing without HTTPS:
-
-```bash
-# 1. Clone and navigate to the repository
-git clone https://github.com/drytrix/TimeTracker.git
-cd TimeTracker
-
-# 2. Use the example compose file that exposes HTTP directly
-docker-compose -f docker-compose.example.yml up -d
-
-# 3. Access at http://localhost:8080
-```
-
-**Note:** This setup uses HTTP only. For production, use Option 1 with HTTPS.
-
-### Option 3: Quick Test with SQLite
-
-Want to try it out without any configuration? Perfect for quick testing:
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/drytrix/TimeTracker.git
-cd TimeTracker
-
-# 2. Start with the local test configuration (uses SQLite, no PostgreSQL)
-docker-compose -f docker/docker-compose.local-test.yml up --build
-
-# 3. Access at http://localhost:8080
-```
-
-**Benefits:**
-- ✅ No database setup required
-- ✅ No .env file configuration needed
-- ✅ Perfect for quick testing and evaluation
-- ⚠️ **Note:** SQLite is not recommended for production use
-
-**📖 Need help?** Check the [Getting Started Guide](docs/GETTING_STARTED.md) for detailed instructions.
-
-### Option 4: Install on a NAS (QNAP / Synology / Portainer)
-
-No git clone required — paste a single compose file into your NAS Docker UI:
-
-1. Copy [`docker-compose.nas.yml`](docker-compose.nas.yml) into Container Station, Synology Container Manager, or Portainer.
-2. Set **`SECRET_KEY`** — generate with: `openssl rand -hex 32`
-3. Deploy and open **`http://<your-nas-ip>:8080`**
+Same stack as [Quick start](#quick-start-60-seconds). Paste [`docker-compose.nas.yml`](docker-compose.nas.yml) into Container Station, Synology Container Manager, or Portainer; set `SECRET_KEY`; open `http://<host>:8080`.
 
 Works on **QNAP**, **Synology**, **Unraid/Portainer**, and other Docker-capable NAS devices (amd64 and arm64).
 
-**📖 Full step-by-step guide:** [NAS Deployment Guide](docs/admin/deployment/NAS_DEPLOYMENT.md)
+**Full guide:** [NAS Deployment Guide](docs/admin/deployment/NAS_DEPLOYMENT.md)
+
+### Option 2: Production with HTTPS
+
+Clone the repo and use the root compose file (nginx + self-signed cert):
+
+```bash
+git clone https://github.com/drytrix/TimeTracker.git
+cd TimeTracker
+cp env.example .env
+# Set a strong SECRET_KEY, TZ, and CURRENCY in .env
+docker compose up -d
+# Access at https://localhost — accept the self-signed certificate warning
+```
+
+**First login creates the admin account.** For setup problems, see [INSTALLATION.md](INSTALLATION.md).
+
+**Default install (no bundled AI):** the main `docker-compose.yml` starts the app and PostgreSQL only. Optional Ollama: see [AI Helper](#ai-helper-ollama-or-hosted).
+
+**Complete setup guide:** [`docs/admin/configuration/DOCKER_COMPOSE_SETUP.md`](docs/admin/configuration/DOCKER_COMPOSE_SETUP.md) · **Uninstall:** [UNINSTALL.md](UNINSTALL.md)
+
+**Troubleshooting:** [Docker Startup](docs/admin/configuration/DOCKER_STARTUP_TROUBLESHOOTING.md) · [CSRF](docs/admin/security/CSRF_TROUBLESHOOTING.md) · [Database](docker/TROUBLESHOOTING_DB_CONNECTION.md)
+
+### Option 3: Docker with plain HTTP (development)
+
+```bash
+git clone https://github.com/drytrix/TimeTracker.git
+cd TimeTracker
+docker compose -f docker-compose.example.yml up -d
+# Access at http://localhost:8080
+```
+
+### Option 4: Quick test with SQLite
+
+```bash
+git clone https://github.com/drytrix/TimeTracker.git
+cd TimeTracker
+docker compose -f docker/docker-compose.local-test.yml up --build
+# Access at http://localhost:8080
+```
+
+No PostgreSQL or `.env` required. SQLite is not recommended for production.
+
+**Need help?** [Getting Started Guide](docs/GETTING_STARTED.md)
 
 ---
 
@@ -741,19 +433,6 @@ Manage multiple clients and projects simultaneously. Track billable hours, gener
 
 ### For Personal Projects
 Even if you're not billing anyone, understanding where your time goes is valuable. Track personal projects, hobbies, and learning activities to optimize your time.
-
----
-
-## 🌟 Why TimeTracker?
-
-| Feature | TimeTracker | Traditional Time Trackers |
-|---------|-------------|---------------------------|
-| **Self-Hosted** | ✅ Complete data control | ❌ Cloud-only, subscription fees |
-| **Open Source** | ✅ Free to use & modify | ❌ Proprietary, locked features |
-| **Persistent Timers** | ✅ Runs server-side | ❌ Browser-dependent |
-| **Docker Ready** | ✅ Deploy anywhere | ⚠️ Complex setup |
-| **Invoicing Built-in** | ✅ Track to bill workflow | ❌ Requires integration |
-| **No User Limits** | ✅ Unlimited users | ❌ Per-user pricing |
 
 ---
 
@@ -1119,64 +798,12 @@ This starts:
 - 🤖 **Automation Rules** — Automated workflows and task assignments
 - 📈 **Advanced Forecasting** — AI-powered project timeline predictions
 
-### 🎉 Recently Added Features
 
-#### 💼 Business & CRM Features
-- ✅ **Complete CRM Suite** — Multiple contacts, sales pipeline, deal tracking, and lead management
-- ✅ **Invoice Generation** — Full invoicing system with PDF export, multi-currency, and tax calculations
-- ✅ **Expense Tracking** — Comprehensive expense management with receipts and categories
-- ✅ **Payment Tracking** — Monitor invoice payments with multiple payment methods
-- ✅ **Recurring Invoices** — Automate recurring billing cycles
+---
 
-#### 📋 Project & Task Management
-- ✅ **Task Management System** — Complete task tracking with priorities, assignments, and due dates
-- ✅ **Kanban Board** — Visual drag-and-drop task management with customizable columns
-- ✅ **Task Comments** — Threaded collaboration with comments on tasks
-- ✅ **Task Activity Tracking** — Complete history of all task changes
+## Technology stack
 
-#### ⏱️ Time Tracking Enhancements
-- ✅ **Calendar View** — Visual calendar interface for viewing and managing time entries
-- ✅ **Bulk Time Entry** — Create multiple entries for consecutive days with weekend skipping
-- ✅ **Time Entry Templates** — Save and reuse common time entries for faster logging
-- ✅ **Real-time Updates** — Live timer synchronization across all devices via WebSocket
-
-#### 🔐 Security & Access Control
-- ✅ **Role-Based Permissions (RBAC)** — Granular access control system with custom roles
-- ✅ **OIDC/SSO Authentication** — Enterprise authentication support (Azure AD, Authelia, etc.)
-- ✅ **API Tokens** — Secure token generation for API access and integrations
-- ✅ **Audit Logs** — Complete system activity and user action tracking
-
-#### ⌨️ Productivity Features
-- ✅ **Command Palette** — Keyboard-driven navigation (Ctrl+K / Cmd+K)
-- ✅ **Keyboard Shortcuts** — 50+ shortcuts for power users
-- ✅ **Quick Search** — Fast search across all entities (Ctrl+K)
-- ✅ **Saved Filters** — Save frequently used report filters for quick access
-
-#### ✨ User Experience
-- ✅ **Custom Themes** — Per-user theme picker with 8 built-in themes plus accent colour, sidebar style, text size and corner radius overrides ([Guide](docs/features/CUSTOM_THEMES.md))
-- ✅ **Modern UX & Layout** — Complete UI/UX overhaul with 16 major improvements
-- ✅ **Enterprise-Grade Tables** — Sortable, filterable, inline-editable tables with bulk actions
-- ✅ **Enhanced Search** — Instant search with autocomplete and categorized results
-- ✅ **Data Visualization** — Interactive charts with Chart.js integration
-- ✅ **Progressive Web App** — Full PWA capabilities with offline support
-- ✅ **Accessibility Excellence** — WCAG 2.1 AA compliant with full keyboard navigation
-- ✅ **Interactive Onboarding** — Step-by-step product tours for new users
-- ✅ **Design System** — Unified component library with 20+ reusable components
-- ✅ **Markdown Support** — Rich text formatting in descriptions
-- ✅ **Toast Notifications** — Beautiful in-app notification system
-- ✅ **Enhanced UI Components** — Modern, accessible interface elements
-
-#### 📱 Native Mobile & Desktop Apps
-- ✅ **Flutter Mobile App** — Native iOS and Android apps with time tracking, calendar view, offline sync, and API token authentication
-- ✅ **Electron Desktop App** — Windows, macOS, and Linux desktop app with system tray, time tracking, and offline support
-- ✅ **Build Scripts** — Cross-platform build scripts for mobile and desktop ([Build Guide](scripts/README-BUILD.md))
-
-#### 🏗️ Architecture & Performance
-- ✅ **Service Layer Migration** — Routes migrated to service layer pattern
-- ✅ **Query Optimization** — Fixed N+1 queries, reduced database queries by 80-90%
-- ✅ **Environment Validation** — Comprehensive startup validation
-- ✅ **Base CRUD Services** — Reusable service classes reducing code duplication
-- ✅ **API Token Security** — Enhanced token management with rotation and scoping
+Flask, SQLAlchemy, PostgreSQL/SQLite, Tailwind CSS, Docker — see [Architecture](docs/ARCHITECTURE.md) · [Project Structure](docs/development/PROJECT_STRUCTURE.md) · [UI Guidelines](docs/UI_GUIDELINES.md).
 
 ---
 
@@ -1234,26 +861,21 @@ This means you can:
 
 ---
 
-## 🆘 Support
+## Support
 
-- 💙 **Support the project & purchase key:** [Support & Purchase Key](https://timetracker.drytrix.com/support.html) — donate or purchase a one-time key to remove donate/support prompts in your instance
-- 📖 **Documentation**: Check the [`docs/`](docs/) directory
-- 🐛 **Bug Reports**: [Open an issue](https://github.com/drytrix/TimeTracker/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/drytrix/TimeTracker/discussions)
-- 📧 **Contact**: [Create an issue](https://github.com/drytrix/TimeTracker/issues) for support
+If TimeTracker saves you money, **[a star on GitHub](https://github.com/drytrix/TimeTracker) helps others find it.**
+
+- **Support the project / hide donate prompts:** [Support & Purchase Key](https://timetracker.drytrix.com/support.html) — donate or buy a one-time key to remove donate prompts in your instance
+- **Documentation:** [`docs/`](docs/)
+- **Bug reports:** [Open an issue](https://github.com/drytrix/TimeTracker/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/drytrix/TimeTracker/discussions)
 
 ---
-
-## ⭐ Star Us!
-
-If TimeTracker helps you track your time better, consider giving us a star on GitHub! It helps others discover the project.
 
 <div align="center">
 
-**[⭐ Star on GitHub](https://github.com/drytrix/TimeTracker)**
+**[★ Star on GitHub](https://github.com/drytrix/TimeTracker)**
 
----
-
-**Built with ❤️ for the time-tracking community**
+Built with care for the time-tracking community
 
 </div>

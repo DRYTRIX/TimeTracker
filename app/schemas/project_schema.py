@@ -46,6 +46,7 @@ class ProjectCreateSchema(Schema):
     hourly_rate = fields.Decimal(allow_none=True, places=2)
     billing_ref = fields.Str(allow_none=True, validate=validate.Length(max=100))
     code = fields.Str(allow_none=True, validate=validate.Length(max=20))
+    status = fields.Str(allow_none=True, validate=validate.OneOf([s.value for s in ProjectStatus]))
     estimated_hours = fields.Float(allow_none=True)
     budget_amount = fields.Decimal(allow_none=True, places=2)
     budget_threshold_percent = fields.Int(missing=80, validate=validate.Range(min=0, max=100))

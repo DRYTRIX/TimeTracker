@@ -25,6 +25,7 @@ from werkzeug.utils import secure_filename
 import app as app_module
 from app import db, limiter
 from app.config.analytics_defaults import get_analytics_config
+from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
 from app.models import (
     DonationInteraction,
     Invoice,
@@ -811,7 +812,7 @@ def admin_dashboard():
 
 
 # Compatibility alias for code/templates that might reference 'admin.dashboard'
-@admin_bp.route("/admin/dashboard")
+@admin_bp.route("/admin/dashboard", endpoint="dashboard")
 @login_required
 @admin_or_permission_required("access_admin")
 def admin_dashboard_alias():
@@ -1466,7 +1467,15 @@ def settings():
         if rounding_minimum in _VALID_ROUNDING_MINIMUMS:
             settings_obj.rounding_minimum_minutes = rounding_minimum
         settings_obj.rounding_enforce_global = request.form.get("rounding_enforce_global") == "on"
-        settings_obj.single_active_timer = request.form.get("single_active_timer") == "on"
+        settings_obj.single_active_timer = True  # DB unique index always enforces one active timer
+        if request.form.get("single_active_timer") != "on":
+            flash(
+                _(
+                    "Single active timer remains enabled: the database enforces "
+                    "one running timer per user and cannot be disabled."
+                ),
+                "warning",
+            )
         settings_obj.allow_self_register = request.form.get("allow_self_register") == "on"
         settings_obj.idle_timeout_minutes = int(request.form.get("idle_timeout_minutes", 30))
         unanswered = (request.form.get("idle_unanswered_action") or "review").strip().lower()
@@ -1878,6 +1887,11 @@ def admin_peppol_setup_wizard_check_bridge():
     bridge_token = (data.get("bridge_token") or "").strip()
     if not bridge_base_url:
         return jsonify({"ok": False, "error": "Missing bridge_base_url"}), 400
+
+    try:
+        bridge_base_url = validate_outbound_url(bridge_base_url).rstrip("/")
+    except UnsafeOutboundURL as exc:
+        return jsonify({"ok": False, "error": f"Invalid bridge URL: {exc}"}), 400
 
     headers = {"Accept": "application/json"}
     if bridge_token:
@@ -4863,9 +4877,22 @@ def oidc_test():
 @admin_or_permission_required("view_users")
 def oidc_user_detail(user_id):
     """View OIDC details for a specific user"""
-    user = User.query.get_or_404(user_id)
+    from app.models import Project, Task
 
-    return render_template("admin/oidc_user_detail.html", user=user)
+    user = User.query.get_or_404(user_id)
+    project_count = Project.query.filter_by(created_by=user.id).count()
+    time_entry_count = user.time_entries.count()
+    task_count = Task.query.filter_by(created_by=user.id).count()
+    has_active_timer = user.time_entries.filter_by(end_time=None).first() is not None
+
+    return render_template(
+        "admin/oidc_user_detail.html",
+        user=user,
+        project_count=project_count,
+        time_entry_count=time_entry_count,
+        task_count=task_count,
+        has_active_timer=has_active_timer,
+    )
 
 
 # ==================== OIDC Setup Wizard ====================

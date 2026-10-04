@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{{ page_header(
+    icon_class='fas fa-copy',
+    title_text=_('Create Quote Template'),
+    subtitle_text=_('Define reusable defaults for new quotes'),
+    breadcrumbs=[
+        {'text': _('Quotes'), 'url': url_for('quotes.list_quotes')},
+        {'text': _('Templates'), 'url': url_for('quotes.list_templates')},
+        {'text': _('Create')}
+    ]
+) }}
+
+<div class="max-w-4xl mx-auto">
+    <form method="POST" class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-info-circle mr-2"></i>{{ _('Basic Information') }}
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label for="name" class="form-label">{{ _('Template Name') }} <span class="text-red-500">*</span></label>
+                    <input type="text" name="name" id="name" required class="form-input" placeholder="{{ _('e.g., Standard consulting quote') }}">
+                </div>
+                <div class="md:col-span-2">
+                    <label for="description" class="form-label">{{ _('Description') }}</label>
+                    <textarea name="description" id="description" rows="3" class="form-input" placeholder="{{ _('Optional notes about when to use this template') }}"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <i class="fas fa-cog mr-2"></i>{{ _('Defaults') }}
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="default_currency_code" class="form-label">{{ _('Currency') }}</label>
+                    <input type="text" name="default_currency_code" id="default_currency_code" value="EUR" maxlength="3" class="form-input">
+                </div>
+                <div>
+                    <label for="default_tax_rate" class="form-label">{{ _('Tax Rate (%)') }}</label>
+                    <input type="number" name="default_tax_rate" id="default_tax_rate" value="0" min="0" step="0.01" class="form-input">
+                </div>
+                <div>
+                    <label for="default_valid_until_days" class="form-label">{{ _('Valid Until (days)') }}</label>
+                    <input type="number" name="default_valid_until_days" id="default_valid_until_days" value="30" min="1" class="form-input">
+                </div>
+                <div>
+                    <label for="default_payment_terms" class="form-label">{{ _('Payment Terms') }}</label>
+                    <input type="text" name="default_payment_terms" id="default_payment_terms" class="form-input" placeholder="{{ _('e.g., Net 30') }}">
+                </div>
+                <div class="md:col-span-2">
+                    <label for="default_terms" class="form-label">{{ _('Terms and Conditions') }}</label>
+                    <textarea name="default_terms" id="default_terms" rows="4" class="form-input"></textarea>
+                </div>
+                <div>
+                    <label for="default_approval_level" class="form-label">{{ _('Approval Level') }}</label>
+                    <input type="number" name="default_approval_level" id="default_approval_level" value="1" min="1" class="form-input">
+                </div>
+                <div class="flex flex-col justify-end gap-2">
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" name="default_requires_approval" value="true" class="form-checkbox">
+                        <span>{{ _('Requires approval') }}</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" name="is_public" value="true" class="form-checkbox">
+                        <span>{{ _('Make template public') }}</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold">
+                    <i class="fas fa-list mr-2"></i>{{ _('Default Items') }}
+                </h3>
+                <button type="button" id="add-template-item" class="text-sm text-primary hover:underline">
+                    <i class="fas fa-plus mr-1"></i>{{ _('Add Item') }}
+                </button>
+            </div>
+            <div id="template-items" class="space-y-3">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-2 template-item">
+                    <div class="md:col-span-5">
+                        <input type="text" name="item_description[]" class="form-input" placeholder="{{ _('Description') }}">
+                    </div>
+                    <div class="md:col-span-2">
+                        <input type="number" name="item_quantity[]" value="1" min="0" step="0.01" class="form-input" placeholder="{{ _('Qty') }}">
+                    </div>
+                    <div class="md:col-span-2">
+                        <input type="number" name="item_price[]" value="0" min="0" step="0.01" class="form-input" placeholder="{{ _('Price') }}">
+                    </div>
+                    <div class="md:col-span-2">
+                        <input type="text" name="item_unit[]" class="form-input" placeholder="{{ _('Unit') }}">
+                    </div>
+                    <div class="md:col-span-1 flex items-center">
+                        <button type="button" class="remove-template-item text-red-600 hover:underline text-sm" title="{{ _('Remove') }}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <a href="{{ url_for('quotes.list_templates') }}" class="btn btn-secondary text-center">{{ _('Cancel') }}</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save mr-2"></i>{{ _('Create Template') }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const container = document.getElementById('template-items');
+    const addBtn = document.getElementById('add-template-item');
+    if (!container || !addBtn) return;
+
+    function bindRemove(btn) {
+        btn.addEventListener('click', function () {
+            const rows = container.querySelectorAll('.template-item');
+            if (rows.length <= 1) {
+                rows[0].querySelectorAll('input').forEach(function (input) {
+                    if (input.name === 'item_quantity[]') input.value = '1';
+                    else if (input.name === 'item_price[]') input.value = '0';
+                    else input.value = '';
+                });
+                return;
+            }
+            btn.closest('.template-item').remove();
+        });
+    }
+
+    container.querySelectorAll('.remove-template-item').forEach(bindRemove);
+
+    addBtn.addEventListener('click', function () {
+        const first = container.querySelector('.template-item');
+        const clone = first.cloneNode(true);
+        clone.querySelectorAll('input').forEach(function (input) {
+            if (input.name === 'item_quantity[]') input.value = '1';
+            else if (input.name === 'item_price[]') input.value = '0';
+            else input.value = '';
+        });
+        container.appendChild(clone);
+        bindRemove(clone.querySelector('.remove-template-item'));
+    });
+})();
+</script>
+{% endblock %}

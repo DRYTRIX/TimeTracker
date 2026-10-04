@@ -15,6 +15,8 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from app.utils.pdf_watermark import make_page_callback, should_draw_watermark
+
 # ---------------------------------------------------------------------------
 # Color palette
 # ---------------------------------------------------------------------------
@@ -423,7 +425,8 @@ def build_time_entries_pdf(entries, start_date=None, end_date=None, filters=None
         story.extend(_build_summary_totals(entry_count, total_seconds, billable_seconds))
 
     # ── Build PDF ──────────────────────────────────────────────────────
-    doc.build(story, onFirstPage=_page_footer, onLaterPages=_page_footer)
+    page_cb = make_page_callback(_page_footer, enabled=should_draw_watermark())
+    doc.build(story, onFirstPage=page_cb, onLaterPages=page_cb)
     buffer.seek(0)
     return buffer.getvalue()
 

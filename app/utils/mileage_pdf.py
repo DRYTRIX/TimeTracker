@@ -13,6 +13,8 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from app.utils.pdf_watermark import make_page_callback, should_draw_watermark
+
 # Reuse same palette as time_entries_pdf
 BRAND_COLOR = colors.HexColor("#1e3a5f")
 HEADER_BG = colors.HexColor("#1e3a5f")
@@ -261,5 +263,6 @@ def build_mileage_pdf(entries, start_date=None, end_date=None, filters=None):
         table.setStyle(TableStyle(style))
         story.append(table)
 
-    doc.build(story, onFirstPage=_page_footer, onLaterPages=_page_footer)
+    page_cb = make_page_callback(_page_footer, enabled=should_draw_watermark())
+    doc.build(story, onFirstPage=page_cb, onLaterPages=page_cb)
     return buffer.getvalue()

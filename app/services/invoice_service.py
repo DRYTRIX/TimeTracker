@@ -4,7 +4,7 @@ Service for invoice business logic.
 
 import time
 from datetime import date, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional
 
 from app import db
@@ -13,6 +13,7 @@ from app.models import Invoice, InvoiceItem, TimeEntry
 from app.repositories import InvoiceRepository, ProjectRepository
 from app.utils.db import safe_commit
 from app.utils.event_bus import emit_event
+from app.utils.transactions import transactional
 
 
 class InvoiceService:
@@ -238,32 +239,38 @@ class InvoiceService:
         if not project:
             return {"success": False, "message": "Invalid project", "error": "invalid_project"}
 
-        # Generate invoice number if not provided
-        if not invoice_number:
-            invoice_number = self.invoice_repo.generate_invoice_number()
+        try:
+            invoice = self._create_invoice_row(
+                project_id=project_id,
+                client_id=client_id,
+                client_name=client_name,
+                due_date=due_date,
+                created_by=created_by,
+                invoice_number=invoice_number,
+                client_email=client_email,
+                client_address=client_address,
+                notes=notes,
+                terms=terms,
+                tax_rate=tax_rate,
+                currency_code=currency_code,
+                issue_date=issue_date,
+            )
+        except Exception:
+            import logging
 
-        # Create invoice
-        invoice = self.invoice_repo.create(
-            invoice_number=invoice_number,
-            project_id=project_id,
-            client_id=client_id,
-            client_name=client_name,
-            due_date=due_date,
-            created_by=created_by,
-            client_email=client_email,
-            client_address=client_address,
-            notes=notes,
-            terms=terms,
-            tax_rate=Decimal(str(tax_rate)) if tax_rate else Decimal("0.00"),
-            currency_code=currency_code or "EUR",
-            issue_date=issue_date or date.today(),
-            status=InvoiceStatus.DRAFT.value,
-            subtotal=Decimal("0.00"),
-            tax_amount=Decimal("0.00"),
-            total_amount=Decimal("0.00"),
-        )
-
-        if not safe_commit("create_invoice", {"project_id": project_id, "created_by": created_by}):
+            logging.getLogger(__name__).warning(
+                "Invoice create failed for project_id=%s created_by=%s",
+                project_id,
+                created_by,
+                exc_info=True,
+            )
+            # @transactional on _create_invoice_row should roll back; belt-and-suspenders:
+            try:
+                db.session.rollback()
+            except Exception:
+                logging.getLogger(__name__).debug(
+                    "Rollback after invoice create failure also failed", exc_info=True
+                )
             return {
                 "success": False,
                 "message": "Could not create invoice due to a database error",
@@ -303,6 +310,49 @@ class InvoiceService:
         record_invoice_duration_seconds(time.monotonic() - t0, "create")
 
         return {"success": True, "message": "Invoice created successfully", "invoice": invoice}
+
+    @transactional
+    def _create_invoice_row(
+        self,
+        project_id: int,
+        client_id: int,
+        client_name: str,
+        due_date: date,
+        created_by: int,
+        invoice_number: Optional[str] = None,
+        client_email: Optional[str] = None,
+        client_address: Optional[str] = None,
+        notes: Optional[str] = None,
+        terms: Optional[str] = None,
+        tax_rate: Optional[float] = None,
+        currency_code: Optional[str] = None,
+        issue_date: Optional[date] = None,
+    ):
+        """Persist a new invoice row inside a single transaction (number allocate + insert)."""
+        if not invoice_number:
+            invoice_number = self.invoice_repo.generate_invoice_number()
+
+        invoice = self.invoice_repo.create(
+            invoice_number=invoice_number,
+            project_id=project_id,
+            client_id=client_id,
+            client_name=client_name,
+            due_date=due_date,
+            created_by=created_by,
+            client_email=client_email,
+            client_address=client_address,
+            notes=notes,
+            terms=terms,
+            tax_rate=Decimal(str(tax_rate)) if tax_rate else Decimal("0.00"),
+            currency_code=currency_code or "EUR",
+            issue_date=issue_date or date.today(),
+            status=InvoiceStatus.DRAFT.value,
+            subtotal=Decimal("0.00"),
+            tax_amount=Decimal("0.00"),
+            total_amount=Decimal("0.00"),
+        )
+        db.session.flush()
+        return invoice
 
     def mark_as_sent(self, invoice_id: int) -> Dict[str, Any]:
         """Mark an invoice as sent and mark associated time entries as paid"""
@@ -1073,7 +1123,7 @@ class InvoiceService:
             try:
                 quantity = Decimal(str(row.get("quantity", 1)))
                 unit_price = Decimal(str(row.get("unit_price", 0)))
-            except Exception:
+            except (InvalidOperation, TypeError, ValueError):
                 return {"success": False, "message": "Invalid quantity or unit_price", "error": "validation"}
             item = InvoiceItem(
                 invoice_id=invoice.id,
@@ -1213,5 +1263,13 @@ class InvoiceService:
                     "filename": f"{invoice.invoice_number}.pdf",
                     "mimetype": "application/pdf",
                 }
-            except Exception:
+            except Exception as fallback_exc:
+                import logging
+
+                logging.getLogger(__name__).warning(
+                    "Invoice PDF fallback also failed (primary=%s): %s",
+                    exc,
+                    fallback_exc,
+                    exc_info=True,
+                )
                 return {"success": False, "message": str(exc), "error": "pdf_error"}

@@ -61,6 +61,7 @@ class GitHubConnector(BaseConnector):
             token_url,
             data={"client_id": client_id, "client_secret": client_secret, "code": code, "redirect_uri": redirect_uri},
             headers={"Accept": "application/json"},
+            timeout=(5, 30),
         )
 
         response.raise_for_status()
@@ -82,6 +83,7 @@ class GitHubConnector(BaseConnector):
                 user_response = requests.get(
                     "https://api.github.com/user",
                     headers={"Authorization": f"token {access_token}", "Accept": "application/vnd.github.v3+json"},
+                    timeout=(5, 30),
                 )
                 if user_response.status_code == 200:
                     user_info = user_response.json()
@@ -126,7 +128,8 @@ class GitHubConnector(BaseConnector):
 
         try:
             response = requests.get(
-                api_url, headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
+                api_url, headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"},
+                timeout=(5, 30),
             )
 
             if response.status_code == 200:

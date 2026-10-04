@@ -1,5 +1,9 @@
 # Prometheus configuration for TimeTracker
 # This file configures Prometheus to scrape metrics from the TimeTracker application
+#
+# Scrape target matches the docker-compose service name and internal port:
+#   app listens on 8080 (see docker-compose.yml healthcheck / Dockerfile).
+# Enable the Prometheus container with: docker compose --profile monitoring up -d
 
 global:
   scrape_interval: 15s  # Scrape targets every 15 seconds
@@ -12,7 +16,7 @@ scrape_configs:
   # TimeTracker application metrics
   - job_name: 'timetracker'
     static_configs:
-      - targets: ['timetracker:8000']  # Scrape from timetracker service
+      - targets: ['app:8080']  # Compose service `app` on internal port 8080
     metrics_path: '/metrics'
     scrape_interval: 30s  # Scrape every 30 seconds
     scrape_timeout: 10s
@@ -31,4 +35,3 @@ scrape_configs:
 #   alertmanagers:
 #     - static_configs:
 #         - targets: ['alertmanager:9093']
-

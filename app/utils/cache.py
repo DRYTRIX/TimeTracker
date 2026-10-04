@@ -211,7 +211,7 @@ def cache_key(*args, **kwargs) -> str:
     """Generate a cache key from arguments"""
     key_data = {"args": args, "kwargs": sorted(kwargs.items())}
     key_str = json.dumps(key_data, sort_keys=True, default=str)
-    return hashlib.md5(key_str.encode()).hexdigest()
+    return hashlib.md5(key_str.encode(), usedforsecurity=False).hexdigest()
 
 
 def cached(ttl: int = 3600, key_prefix: str = ""):

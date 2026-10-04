@@ -279,111 +279,151 @@ def run_migrations():
         except Exception:
             pass
 
+        # Distinct from scheduler leadership key (874512039) in app.utils.scheduler_lock
+        _MIGRATION_ADVISORY_LOCK_KEY = 874512040
+
         with app.app_context():
             _is_pg = os.getenv("DATABASE_URL", "").strip().lower().startswith("postgresql")
+            migration_lock_conn = None
 
-            # Check for corrupted database state BEFORE migrations
-            is_corrupted, reason = detect_corrupted_database_state(app)
-            if is_corrupted:
-                log(f"⚠ Detected corrupted database state: {reason}", "WARNING")
-                log("Attempting automatic cleanup...", "INFO")
-                
-                if cleanup_corrupted_database_state(app):
-                    log("✓ Database cleanup completed", "SUCCESS")
-                    log("Retrying migrations after cleanup...", "INFO")
-                else:
-                    log("Database cleanup was skipped or failed", "WARNING")
-                    log("Migrations will still be attempted, but may fail.", "WARNING")
-            
-            # Sanity: show which DB we're connected to before migrating
             try:
-                from app import db as _db
-                from sqlalchemy import text as _text
-
+                # Postgres: one replica runs upgrade; others block on the lock then
+                # re-check (upgrade is idempotent). SQLite / non-Postgres: no lock.
                 if _is_pg:
-                    cur_db = _db.session.execute(_text("select current_database()")).scalar()
-                    table_count = _db.session.execute(
-                        _text("select count(1) from information_schema.tables where table_schema='public'")
-                    ).scalar()
-                else:
-                    cur_db = "sqlite"
-                    table_count = _db.session.execute(
-                        _text("SELECT count(*) FROM sqlite_master WHERE type='table'")
-                    ).scalar() or 0
-                log(f"Pre-migration DB: {cur_db} (public tables={table_count})", "INFO")
-            except Exception as e:
-                log(f"Pre-migration DB probe failed: {e}", "WARNING")
+                    from app import db as _db
+                    from sqlalchemy import text as _text
 
-            # Use heads to handle branched histories safely
-            upgrade(revision="heads")
-
-            # CRITICAL: Verify migrations actually created tables (detect transaction rollback issues)
-            try:
-                from app import db as _db
-                from sqlalchemy import text as _text
-
-                if _is_pg:
-                    cur_db = _db.session.execute(_text("select current_database()")).scalar()
-                    table_count = _db.session.execute(
-                        _text("select count(1) from information_schema.tables where table_schema='public'")
-                    ).scalar()
-                    alembic_exists = _db.session.execute(
-                        _text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema='public' AND table_name='alembic_version')")
-                    ).scalar()
-                    core_tables_check = _db.session.execute(
-                        _text("""
-                            SELECT COUNT(*)
-                            FROM information_schema.tables
-                            WHERE table_schema='public'
-                            AND table_name IN ('users', 'projects', 'time_entries', 'settings', 'clients')
-                        """)
-                    ).scalar()
-                else:
-                    cur_db = "sqlite"
-                    table_count = _db.session.execute(
-                        _text("SELECT count(*) FROM sqlite_master WHERE type='table'")
-                    ).scalar() or 0
-                    alembic_exists = (
-                        _db.session.execute(
-                            _text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='alembic_version'")
-                        ).scalar()
-                        or 0
-                    ) > 0
-                    core_tables_check = (
-                        _db.session.execute(
-                            _text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('users','projects','time_entries','settings','clients')")
-                        ).scalar()
-                        or 0
+                    migration_lock_conn = _db.engine.connect()
+                    log(
+                        f"Waiting for migration advisory lock (key={_MIGRATION_ADVISORY_LOCK_KEY})...",
+                        "INFO",
                     )
-                log(f"Post-migration DB: {cur_db} (public tables={table_count})", "INFO")
-                
-                # Check if alembic_version table exists (migrations actually ran)
-                if not alembic_exists:
-                    log("✗ WARNING: alembic_version table missing after migrations!", "ERROR")
-                    log("Migrations reported success but alembic_version table was not created.", "ERROR")
-                    log("This indicates migrations did not actually run or were rolled back.", "ERROR")
-                    log("The database may be in an inconsistent state.", "ERROR")
-                    log("", "ERROR")
-                    log("RECOVERY OPTIONS:", "ERROR")
-                    log("1. Reset database: docker compose down -v && docker compose up -d", "ERROR")
-                    log("2. Or set TT_SKIP_DB_CLEANUP=false and restart to try automatic cleanup", "ERROR")
+                    migration_lock_conn.execute(
+                        _text("SELECT pg_advisory_lock(:key)"),
+                        {"key": _MIGRATION_ADVISORY_LOCK_KEY},
+                    )
+                    migration_lock_conn.commit()
+                    log("Acquired migration advisory lock", "INFO")
+
+                # Check for corrupted database state BEFORE migrations
+                is_corrupted, reason = detect_corrupted_database_state(app)
+                if is_corrupted:
+                    log(f"⚠ Detected corrupted database state: {reason}", "WARNING")
+                    log("Attempting automatic cleanup...", "INFO")
+
+                    if cleanup_corrupted_database_state(app):
+                        log("✓ Database cleanup completed", "SUCCESS")
+                        log("Retrying migrations after cleanup...", "INFO")
+                    else:
+                        log("Database cleanup was skipped or failed", "WARNING")
+                        log("Migrations will still be attempted, but may fail.", "WARNING")
+
+                # Sanity: show which DB we're connected to before migrating
+                try:
+                    from app import db as _db
+                    from sqlalchemy import text as _text
+
+                    if _is_pg:
+                        cur_db = _db.session.execute(_text("select current_database()")).scalar()
+                        table_count = _db.session.execute(
+                            _text("select count(1) from information_schema.tables where table_schema='public'")
+                        ).scalar()
+                    else:
+                        cur_db = "sqlite"
+                        table_count = _db.session.execute(
+                            _text("SELECT count(*) FROM sqlite_master WHERE type='table'")
+                        ).scalar() or 0
+                    log(f"Pre-migration DB: {cur_db} (public tables={table_count})", "INFO")
+                except Exception as e:
+                    log(f"Pre-migration DB probe failed: {e}", "WARNING")
+
+                # Use heads to handle branched histories safely
+                upgrade(revision="heads")
+
+                # CRITICAL: Verify migrations actually created tables (detect transaction rollback issues)
+                try:
+                    from app import db as _db
+                    from sqlalchemy import text as _text
+
+                    if _is_pg:
+                        cur_db = _db.session.execute(_text("select current_database()")).scalar()
+                        table_count = _db.session.execute(
+                            _text("select count(1) from information_schema.tables where table_schema='public'")
+                        ).scalar()
+                        alembic_exists = _db.session.execute(
+                            _text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema='public' AND table_name='alembic_version')")
+                        ).scalar()
+                        core_tables_check = _db.session.execute(
+                            _text("""
+                                SELECT COUNT(*)
+                                FROM information_schema.tables
+                                WHERE table_schema='public'
+                                AND table_name IN ('users', 'projects', 'time_entries', 'settings', 'clients')
+                            """)
+                        ).scalar()
+                    else:
+                        cur_db = "sqlite"
+                        table_count = _db.session.execute(
+                            _text("SELECT count(*) FROM sqlite_master WHERE type='table'")
+                        ).scalar() or 0
+                        alembic_exists = (
+                            _db.session.execute(
+                                _text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='alembic_version'")
+                            ).scalar()
+                            or 0
+                        ) > 0
+                        core_tables_check = (
+                            _db.session.execute(
+                                _text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('users','projects','time_entries','settings','clients')")
+                            ).scalar()
+                            or 0
+                        )
+                    log(f"Post-migration DB: {cur_db} (public tables={table_count})", "INFO")
+
+                    # Check if alembic_version table exists (migrations actually ran)
+                    if not alembic_exists:
+                        log("✗ WARNING: alembic_version table missing after migrations!", "ERROR")
+                        log("Migrations reported success but alembic_version table was not created.", "ERROR")
+                        log("This indicates migrations did not actually run or were rolled back.", "ERROR")
+                        log("The database may be in an inconsistent state.", "ERROR")
+                        log("", "ERROR")
+                        log("RECOVERY OPTIONS:", "ERROR")
+                        log("1. Reset database: docker compose down -v && docker compose up -d", "ERROR")
+                        log("2. Or set TT_SKIP_DB_CLEANUP=false and restart to try automatic cleanup", "ERROR")
+                        return None
+
+                    # Check if core tables exist
+                    if core_tables_check < 5:
+                        log(f"✗ WARNING: Only {core_tables_check}/5 core tables exist after migrations!", "ERROR")
+                        log("Migrations reported success but core tables are missing.", "ERROR")
+                        log("This indicates migrations did not complete successfully.", "ERROR")
+                        log("", "ERROR")
+                        log("RECOVERY OPTIONS:", "ERROR")
+                        log("1. Reset database: docker compose down -v && docker compose up -d", "ERROR")
+                        log("2. Check migration logs for errors", "ERROR")
+                        return None
+
+                except Exception as e:
+                    log(f"Post-migration verification failed: {e}", "ERROR")
+                    traceback.print_exc()
                     return None
-                
-                # Check if core tables exist
-                if core_tables_check < 5:
-                    log(f"✗ WARNING: Only {core_tables_check}/5 core tables exist after migrations!", "ERROR")
-                    log("Migrations reported success but core tables are missing.", "ERROR")
-                    log("This indicates migrations did not complete successfully.", "ERROR")
-                    log("", "ERROR")
-                    log("RECOVERY OPTIONS:", "ERROR")
-                    log("1. Reset database: docker compose down -v && docker compose up -d", "ERROR")
-                    log("2. Check migration logs for errors", "ERROR")
-                    return None
-                    
-            except Exception as e:
-                log(f"Post-migration verification failed: {e}", "ERROR")
-                traceback.print_exc()
-                return None
+            finally:
+                if migration_lock_conn is not None:
+                    try:
+                        from sqlalchemy import text as _text
+
+                        migration_lock_conn.execute(
+                            _text("SELECT pg_advisory_unlock(:key)"),
+                            {"key": _MIGRATION_ADVISORY_LOCK_KEY},
+                        )
+                        migration_lock_conn.commit()
+                        log("Released migration advisory lock", "INFO")
+                    except Exception as e:
+                        log(f"Failed to release migration advisory lock: {e}", "WARNING")
+                    try:
+                        migration_lock_conn.close()
+                    except Exception:
+                        pass
 
         log("Migrations applied and verified", "SUCCESS")
         return app
@@ -633,7 +673,9 @@ def main():
     log("=" * 60, "INFO")
     log("Starting application server", "INFO")
     log("=" * 60, "INFO")
-    # Start gunicorn with access logs (bind to PORT when set, e.g. by Render; default 8080 for docker-compose)
+    # Start gunicorn with access logs (bind to PORT when set, e.g. by Render; default 8080 for docker-compose).
+    # eventlet is limited to a single worker: do not raise --workers above 1 without
+    # switching worker class (multi-worker eventlet is unsupported / unsafe).
     port = os.environ.get('PORT', '8080')
     os.execv('/usr/local/bin/gunicorn', [
         'gunicorn',
@@ -641,6 +683,9 @@ def main():
         '--worker-class', 'eventlet',
         '--workers', '1',
         '--timeout', '120',
+        '--max-requests', '1000',
+        '--max-requests-jitter', '100',
+        '--graceful-timeout', '30',
         '--access-logfile', '-',
         '--error-logfile', '-',
         '--log-level', 'info',

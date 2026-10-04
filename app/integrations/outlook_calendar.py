@@ -91,6 +91,7 @@ class OutlookCalendarConnector(BaseConnector):
                 "grant_type": "authorization_code",
                 "scope": " ".join(self.SCOPES),
             },
+            timeout=(5, 30),
         )
 
         response.raise_for_status()
@@ -105,7 +106,8 @@ class OutlookCalendarConnector(BaseConnector):
         if "access_token" in data:
             try:
                 user_response = requests.get(
-                    f"{self.GRAPH_BASE_URL}/me", headers={"Authorization": f"Bearer {data['access_token']}"}
+                    f"{self.GRAPH_BASE_URL}/me", headers={"Authorization": f"Bearer {data['access_token']}"},
+                    timeout=(5, 30),
                 )
                 if user_response.status_code == 200:
                     user_data = user_response.json()
@@ -158,6 +160,7 @@ class OutlookCalendarConnector(BaseConnector):
                 "grant_type": "refresh_token",
                 "scope": " ".join(self.SCOPES),
             },
+            timeout=(5, 30),
         )
 
         response.raise_for_status()
@@ -190,7 +193,7 @@ class OutlookCalendarConnector(BaseConnector):
 
         try:
             # Get user info and calendars
-            response = requests.get(f"{self.GRAPH_BASE_URL}/me/calendars", headers={"Authorization": f"Bearer {token}"})
+            response = requests.get(f"{self.GRAPH_BASE_URL}/me/calendars", headers={"Authorization": f"Bearer {token}"}, timeout=(5, 30))
 
             if response.status_code == 200:
                 calendars = response.json().get("value", [])
@@ -300,6 +303,7 @@ class OutlookCalendarConnector(BaseConnector):
             f"{self.GRAPH_BASE_URL}/me/calendars/{calendar_id}/events",
             headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
             json=event,
+            timeout=(5, 30),
         )
 
         response.raise_for_status()
@@ -343,6 +347,7 @@ class OutlookCalendarConnector(BaseConnector):
             f"{self.GRAPH_BASE_URL}/me/calendars/{calendar_id}/events/{event_id}",
             headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
             json=event,
+            timeout=(5, 30),
         )
 
         response.raise_for_status()

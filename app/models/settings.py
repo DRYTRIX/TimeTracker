@@ -71,6 +71,8 @@ class Settings(db.Model):
     rounding_minimum_minutes = db.Column(db.Integer, default=0, nullable=False)
     rounding_enforce_global = db.Column(db.Boolean, default=False, nullable=False)
     single_active_timer = db.Column(db.Boolean, default=True, nullable=False)
+    # Note: always enforced in app + DB (partial unique index ux_time_entries_one_active_per_user).
+    # Setting False is ignored for can_start_timer; admin UI forces True.
     allow_self_register = db.Column(db.Boolean, default=True, nullable=False)
     idle_timeout_minutes = db.Column(db.Integer, default=30, nullable=False)
     # What happens when the "Still working?" grace window expires unanswered:
