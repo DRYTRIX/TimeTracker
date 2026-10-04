@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.18.0] - 2026-10-04
+
+### Added
+
+- **Observability** — Echo `X-Request-ID` on responses and in JSON logs; expose scheduler and outbound-HTTP Prometheus metrics; protect scrapes with `METRICS_TOKEN`; capture critical failures via optional Sentry hooks.
+- **PDF footer watermark** — Exported PDFs show a small TimeTracker footer; hidden when a supporter license key is activated.
+- **CI security gates** — Bandit (high-severity), pip-audit, and migration-drift checks; full-suite coverage floor raised from 35% to 40%.
+- **Instance audit report** — `docs/reports/INSTANCE_AUDIT_2026-10-04.md` records the 2026-10-04 running-instance crawl findings and remediations.
+
+### Changed
+
+- **Ops / production defaults** — Prefer `/_ready` for readiness, serialize startup migrations, recycle Gunicorn workers, require Postgres credentials, and default to secure cookies with optional metrics auth.
+- **README** — Restructured for conversion (pitch, badges, demo, one-command NAS quick start); in-app star prompts on About and sidebar. Version highlights deferred to this changelog.
+- **Dependencies** — `pyjwt` 2.15.0; desktop Electron 41.10.6.
+
+### Fixed
+
+- **Security** — Close open-redirect and webhook/Peppol SSRF holes; roll back failed DB sessions in global error handlers; require timeouts on integration HTTP calls.
+- **Data integrity** — Concurrency-safe invoice sequences; single active timer enforced honestly; TimeEntry commits kept in the service layer; background jobs start only on an elected scheduler leader.
+- **Instance audit 500s** — Clear broken template endpoints, missing pages, and Jinja/API bugs found in the 2026-10-04 crawl; harden CSRF/login and nginx header overlap; add regression coverage.
+- **Android Chromium Flatpickr freeze (#771)** — Disable Flatpickr mobile mode, harden date-input selectors, and batch MutationObserver work so pages stay usable.
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.18.0**; `VERSION` and desktop/browser-extension/mobile client versions aligned.
+
 ## [5.17.2] - 2026-09-25
 
 ### Fixed
