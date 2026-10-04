@@ -220,6 +220,27 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: bash scripts/ci/security-pytest.sh
+
+      # High-severity findings fail the job (medium/low are a later ratchet).
+      # Config: pyproject.toml [tool.bandit]. Report is an artifact, not committed.
+      - name: Run Bandit (blocking)
+        run: |
+          bandit -c pyproject.toml -r app/ -lll -f json -o bandit-report.json
+          python - <<'PY'
+          import json
+          data = json.load(open("bandit-report.json"))
+          results = data.get("results") or []
+          print(f"Bandit high-severity findings: {len(results)}")
+          for r in results:
+              loc = f"{r.get('filename')}:{r.get('line_number')}"
+              print(f"  [{r.get('test_id')}] {loc} — {r.get('issue_text', '')[:100]}")
+          totals = (data.get("metrics") or {}).get("_totals") or {}
+          if totals:
+              print("Severity totals:", totals.get("SEVERITY", totals))
+          PY
+
+      - name: Run pip-audit (blocking)
+        run: bash scripts/ci/pip-audit.sh
       
       - name: Run Safety dependency check
         run: |
@@ -238,7 +259,9 @@ jobs:
         with:
           name: security-reports
           path: |
+            bandit-report.json
             .test_installation_config/safety-report.json
+          if-no-files-found: warn
 
   # ============================================================================
   # Code Quality
@@ -275,8 +298,16 @@ jobs:
       - name: Run isort (import check)
         run: isort --check-only app/
       
-      - name: Run mypy
-        run: mypy app/ || true
+      # Blocking mypy on hardened modules + models (legacy app/ is too noisy).
+      # --follow-imports=silent type-checks imports but only fails on listed targets.
+      - name: Run mypy (blocking, focused)
+        run: |
+          mypy --follow-imports=silent \
+            app/models \
+            app/utils/safe_redirect.py \
+            app/utils/outbound_url.py \
+            app/utils/scheduler_lock.py \
+            app/utils/integration_http.py
 
       # Ratchets: these may improve but must never regress.
       - name: Check silent exception handlers
@@ -617,8 +648,9 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           INSTALLATION_CONFIG_DIR: ${{ github.workspace }}/.test_installation_config
         run: |
+          # Coverage ratchet: CI 40 (this step) → 50 (Makefile / next step).
           pytest -v -n auto --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing \
-                 --cov-fail-under=35 --junitxml=junit.xml --maxfail=5
+                 --cov-fail-under=40 --junitxml=junit.xml --maxfail=5
       
       - name: Upload full coverage
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238  # v4

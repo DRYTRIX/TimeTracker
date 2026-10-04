@@ -42,7 +42,7 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Unit test / coverage reports
+# Unit test / coverage reports (also under Test artifacts below; keep listed)
 htmlcov/
 .tox/
 .nox/
@@ -162,7 +162,7 @@ Thumbs.db
 *.tmp
 *.temp
 
-# Test artifacts
+# Test artifacts / CI reports (upload as Actions artifacts; do not commit)
 test.db
 test_*.db
 junit.xml
