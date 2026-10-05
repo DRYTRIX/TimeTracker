@@ -1,5 +1,7 @@
 # TimeTracker
 
+[![Deploy to Railyard](https://app.railyard.run/deploy/badge)](https://app.railyard.run/deploy?repo=https://github.com/DRYTRIX/TimeTracker)
+
 <div align="center">
 
 <img src="app/static/images/timetracker-logo.svg" alt="TimeTracker" width="120">
