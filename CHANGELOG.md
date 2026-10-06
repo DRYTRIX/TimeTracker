@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Gusto** — Requests now send `X-Gusto-API-Version` (default `2026-06-15`, overridable with `api_version` in the integration config) instead of falling back to the minimum API version set on the Gusto app.
+
 ## [5.18.0] - 2026-10-04
 
 ### Added
