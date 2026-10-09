@@ -391,22 +391,25 @@ class EnhancedErrorHandler {
     }
 
     async handleFetchException(error, url, options) {
-        // Network error
+        // Network error.
+        // The Response constructor only accepts statuses in [200, 599] — a status
+        // of 0 throws RangeError. Report 503 so callers get a non-ok Response
+        // (same contract as handleFetchError) instead of the handler crashing.
         if (!this.isOnline) {
             await this.queueForOffline(url, options);
             return new Response(JSON.stringify({ error: 'Offline' }), {
-                status: 0,
+                status: 503,
                 statusText: 'Offline'
             });
         }
-        
+
         const userFriendlyMessage = this.getUserFriendlyMessage(0, error);
         const errorId = this.showErrorWithRetry(userFriendlyMessage, 0, () => {
             return this.retryFetch(url, options);
         });
-        
+
         return new Response(JSON.stringify({ error: userFriendlyMessage }), {
-            status: 0,
+            status: 503,
             statusText: 'Network Error'
         });
     }

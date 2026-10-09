@@ -25,7 +25,9 @@ class PWAEnhancements {
                     });
                 });
                 setInterval(() => {
-                    this.serviceWorkerRegistration.update();
+                    // Update fails while the server is unreachable (restart, offline);
+                    // swallow it so the periodic check doesn't surface as an error.
+                    this.serviceWorkerRegistration.update().catch(() => {});
                 }, 60000);
             } catch (e) {
                 console.warn('Service worker ready failed:', e);
