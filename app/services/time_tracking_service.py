@@ -250,6 +250,112 @@ class TimeTrackingService:
 
         return {"success": True, "message": "Timer stopped successfully", "entry": entry}
 
+    def resolve_idle_prompt(
+        self,
+        user,
+        answer: str,
+        notified_at: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Resolve a "Still working?" idle prompt on the user's active timer.
+
+        Single authoritative entry point for every client (web, desktop,
+        extension, mobile, Issue #722): the first device to answer wins, and
+        stale answers (the check was already resolved by another device, a
+        heartbeat, or the server sweep) return ``already_resolved`` so callers
+        can dismiss silently instead of acting on outdated state.
+
+        Args:
+            user: the user owning the active timer
+            answer: "yes" (still working — reset the idle window), "stop"
+                (stop at now), or "trim" (stop credited to last activity +
+                idle timeout)
+            notified_at: the idle check token the client was shown
+                (``idle_notified_at`` as ISO). Clients that answer without a
+                token (e.g. the needs-review banner) skip the staleness check.
+
+        Returns:
+            dict with ``already_resolved``, ``stopped`` and, when stopped,
+            ``time_entry``.
+        """
+        if answer not in ("yes", "stop", "trim"):
+            raise ValueError("answer must be yes, stop or trim")
+
+        entry = self.time_entry_repo.get_active_timer(user.id)
+        if not entry or entry.user_id != user.id:
+            raise LookupError("no_active_timer")
+
+        token = self._parse_idle_token(notified_at)
+        if token is not None:
+            current = entry.idle_notified_at
+            if current is None:
+                return {"already_resolved": True, "stopped": False}
+            if getattr(current, "tzinfo", None) is not None:
+                current = current.replace(tzinfo=None)
+            if abs((current - token).total_seconds()) > 5:
+                return {"already_resolved": True, "stopped": False}
+
+        result: Dict[str, Any] = {"already_resolved": False}
+        if answer == "yes":
+            entry.record_heartbeat()
+            if not safe_commit("idle_response", {"user_id": user.id, "entry_id": entry.id}):
+                raise RuntimeError("database_error")
+            result["stopped"] = False
+        else:
+            if answer == "trim":
+                settings = Settings.get_settings()
+                idle_minutes = max(1, min(480, int(getattr(settings, "idle_timeout_minutes", 30) or 30)))
+                end_time = entry.idle_credited_stop_time(idle_minutes)
+            else:  # stop at now
+                end_time = None
+            try:
+                entry.stop_timer(end_time=end_time, commit=False)
+            except ValueError:
+                # Another device stopped the timer between the token check and
+                # here — treat this answer as stale rather than erroring.
+                db.session.rollback()
+                return {"already_resolved": True, "stopped": True}
+            if not safe_commit("idle_response", {"user_id": user.id, "entry_id": entry.id}):
+                db.session.rollback()
+                raise RuntimeError("database_error")
+            result["stopped"] = True
+            result["time_entry"] = entry
+
+        self._emit_idle_prompt_resolved(user, entry, notified_at, answer, result["stopped"])
+        return result
+
+    @staticmethod
+    def _parse_idle_token(raw: Optional[str]) -> Optional[datetime]:
+        """Parse the idle check token a client echoed back; None = absent/invalid."""
+        if not raw:
+            return None
+        try:
+            token = datetime.fromisoformat(str(raw))
+        except (TypeError, ValueError):
+            return None
+        if getattr(token, "tzinfo", None) is not None:
+            token = token.replace(tzinfo=None)
+        return token
+
+    @staticmethod
+    def _emit_idle_prompt_resolved(user, entry, notified_at: Optional[str], answer: str, stopped: bool) -> None:
+        """Tell every device of the user that the pending prompt was resolved."""
+        try:
+            from app import socketio
+
+            socketio.emit(
+                "idle_prompt_resolved",
+                {
+                    "user_id": user.id,
+                    "timer_id": entry.id,
+                    "notified_at": notified_at,
+                    "answer": answer,
+                    "stopped": stopped,
+                },
+                room=f"user_{user.id}",
+            )
+        except Exception:
+            pass
+
     def pause_timer(self, user_id: int) -> Dict[str, Any]:
         """Pause the active timer for a user. Clock stops; break accumulates on resume."""
         entry = self.time_entry_repo.get_active_timer(user_id)

@@ -154,7 +154,11 @@ self.addEventListener('push', (event) => {
     tag: 'tt-' + (data.kind || 'note'),
     requireInteraction: isIdle,
     renotify: true,
-    data: { url: (data.action && data.action.url) || '/', kind: data.kind || 'note' },
+    data: {
+      url: (data.action && data.action.url) || '/',
+      kind: data.kind || 'note',
+      idle_notified_at: data.idle_notified_at || null,
+    },
   };
   if (isIdle) {
     options.actions = [
@@ -178,7 +182,28 @@ self.addEventListener('notificationclick', (event) => {
       body: JSON.stringify({ action }),
     }).catch(() => {});
 
-  if (info.kind === 'idle_timeout' || info.kind === 'idle_needs_review') {
+  // Answer the idle check through the same idempotent endpoint as every other
+  // client; the payload carries the check token so first-answer-wins applies.
+  const resolveIdle = (answer, notifiedAt) =>
+    fetch('/api/timer/idle-response', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ answer, notified_at: notifiedAt }),
+    }).catch(() => {});
+
+  if (info.kind === 'idle_timeout') {
+    if (event.action === 'still-working') {
+      event.waitUntil(resolveIdle('yes', info.idle_notified_at));
+      return;
+    }
+    if (event.action === 'stop-timer') {
+      event.waitUntil(resolveIdle('stop', info.idle_notified_at));
+      return;
+    }
+  }
+
+  if (info.kind === 'idle_needs_review') {
     if (event.action === 'still-working') {
       event.waitUntil(resolveReview('continue'));
       return;

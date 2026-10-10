@@ -496,6 +496,48 @@ def timer_review():
         return error_response("Failed to resolve review", error_code="database_error", status_code=500)
 
 
+@api_v1_time_entries_bp.route("/timer/idle-response", methods=["POST"])
+@require_api_token("write:time_entries")
+def timer_idle_response():
+    """Answer the "Still working?" idle prompt (Issue #722).
+
+    Body: {"answer": "yes" | "stop" | "trim", "notified_at": optional ISO token}
+    - yes: record activity, keep the timer running (resets the idle window)
+    - stop: stop the timer at now
+    - trim: stop the timer credited to last activity + idle timeout
+
+    The first answer on any device wins: ``notified_at`` is the idle check
+    token the client was shown, and stale answers return
+    ``{"already_resolved": true}`` so callers dismiss instead of acting.
+    """
+    from app.services.time_tracking_service import TimeTrackingService
+
+    data = request.get_json(silent=True) or {}
+    answer = (data.get("answer") or "").strip().lower()
+    if answer not in ("yes", "stop", "trim"):
+        return error_response("answer must be yes, stop or trim", error_code="invalid_action", status_code=400)
+
+    try:
+        result = TimeTrackingService().resolve_idle_prompt(g.api_user, answer, notified_at=data.get("notified_at"))
+    except ValueError as e:
+        db.session.rollback()
+        return error_response(str(e), error_code="invalid_action", status_code=400)
+    except LookupError:
+        return error_response("No active timer", error_code="no_active_timer", status_code=400)
+    except RuntimeError:
+        db.session.rollback()
+        return error_response("Failed to resolve idle prompt", error_code="database_error", status_code=500)
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.warning("Idle response failed for user %s: %s", g.api_user.id, e)
+        return error_response("Failed to resolve idle prompt", error_code="database_error", status_code=500)
+
+    payload = {"ok": True, "already_resolved": result["already_resolved"], "stopped": result["stopped"]}
+    if result.get("time_entry") is not None:
+        payload["time_entry"] = result["time_entry"].to_dict()
+    return jsonify(payload)
+
+
 @api_v1_time_entries_bp.route("/timer/start", methods=["POST"])
 @require_api_token("write:time_entries")
 def start_timer():

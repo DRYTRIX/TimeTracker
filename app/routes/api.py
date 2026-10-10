@@ -354,6 +354,9 @@ def timer_status():
                 "current_duration": active_timer.current_duration_seconds,
                 "duration_formatted": active_timer.duration_formatted,
                 "idle_notified": bool(active_timer.idle_notified_at),
+                "idle_notified_at": (
+                    active_timer.idle_notified_at.isoformat() if active_timer.idle_notified_at else None
+                ),
                 "needs_review": bool(active_timer.idle_flagged_at),
                 "last_heartbeat_at": (
                     active_timer.last_heartbeat_at.isoformat() if active_timer.last_heartbeat_at else None
@@ -479,6 +482,44 @@ def api_timer_review():
         db.session.rollback()
         current_app.logger.warning("Timer review failed: %s", e)
         return jsonify({"error": "Failed to resolve review"}), 500
+
+
+@api_bp.route("/api/timer/idle-response", methods=["POST"])
+@login_required
+@deprecated_session_api("/api/v1/timer/idle-response")
+def api_timer_idle_response():
+    """Answer the "Still working?" idle prompt (Issue #722).
+
+    Body: {"answer": "yes" | "stop" | "trim", "notified_at": optional ISO token}
+    The first answer on any device wins; stale answers return
+    {"already_resolved": true} so clients dismiss instead of acting.
+    """
+    from app.services.time_tracking_service import TimeTrackingService
+
+    data = request.get_json(silent=True) or {}
+    answer = (data.get("answer") or "").strip().lower()
+    if answer not in ("yes", "stop", "trim"):
+        return jsonify({"error": "answer must be yes, stop or trim"}), 400
+
+    try:
+        result = TimeTrackingService().resolve_idle_prompt(current_user, answer, notified_at=data.get("notified_at"))
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+    except LookupError:
+        return jsonify({"error": "No active timer"}), 400
+    except RuntimeError:
+        db.session.rollback()
+        return jsonify({"error": "Failed to resolve idle prompt"}), 500
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.warning("Idle response failed: %s", e)
+        return jsonify({"error": "Failed to resolve idle prompt"}), 500
+
+    payload = {"ok": True, "already_resolved": result["already_resolved"], "stopped": result["stopped"]}
+    if result.get("time_entry") is not None:
+        payload["time_entry"] = result["time_entry"].to_dict()
+    return jsonify(payload)
 
 
 @api_bp.route("/api/tags")

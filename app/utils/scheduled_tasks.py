@@ -1179,6 +1179,7 @@ def check_idle_timers():
                         stop_at = entry.idle_credited_stop_time(idle_minutes, now=now)
                         entry_id = entry.id
                         user_id = entry.user_id
+                        notified_iso = entry.idle_notified_at.isoformat() if entry.idle_notified_at else None
                         entry.stop_timer(end_time=stop_at)
                         # stop_timer clears idle flags and commits
                         auto_stops += 1
@@ -1195,6 +1196,17 @@ def check_idle_timers():
                                 "timer_id": entry_id,
                                 "duration": entry.duration_formatted,
                                 "reason": "idle_auto_stop",
+                            },
+                            user_id=user_id,
+                        )
+                        _emit_timer_event(
+                            "idle_prompt_resolved",
+                            {
+                                "user_id": user_id,
+                                "timer_id": entry_id,
+                                "notified_at": notified_iso,
+                                "answer": "timeout",
+                                "stopped": True,
                             },
                             user_id=user_id,
                         )
@@ -1224,6 +1236,21 @@ def check_idle_timers():
                             },
                             user_id=entry.user_id,
                         )
+                        # The "Still working?" prompt is superseded by the
+                        # review banner — dismiss it on every device.
+                        _emit_timer_event(
+                            "idle_prompt_resolved",
+                            {
+                                "user_id": entry.user_id,
+                                "timer_id": entry.id,
+                                "notified_at": (
+                                    entry.idle_notified_at.isoformat() if entry.idle_notified_at else None
+                                ),
+                                "answer": "timeout",
+                                "stopped": False,
+                            },
+                            user_id=entry.user_id,
+                        )
                     elif cap is not None:
                         flagged_at = entry.idle_flagged_at
                         if getattr(flagged_at, "tzinfo", None) is not None:
@@ -1234,6 +1261,7 @@ def check_idle_timers():
                             stop_at = entry.idle_credited_stop_time(idle_minutes, now=now)
                             entry_id = entry.id
                             user_id = entry.user_id
+                            notified_iso = entry.idle_notified_at.isoformat() if entry.idle_notified_at else None
                             entry.stop_timer(end_time=stop_at)
                             entry.idle_flagged_at = now
                             entry.updated_at = now
@@ -1252,6 +1280,17 @@ def check_idle_timers():
                                     "timer_id": entry_id,
                                     "duration": entry.duration_formatted,
                                     "reason": "idle_auto_stop_cap",
+                                },
+                                user_id=user_id,
+                            )
+                            _emit_timer_event(
+                                "idle_prompt_resolved",
+                                {
+                                    "user_id": user_id,
+                                    "timer_id": entry_id,
+                                    "notified_at": notified_iso,
+                                    "answer": "timeout",
+                                    "stopped": True,
                                 },
                                 user_id=user_id,
                             )

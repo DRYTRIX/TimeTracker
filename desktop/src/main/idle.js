@@ -2,11 +2,13 @@
  * System idle detection for the Electron desktop app.
  *
  * Polls powerMonitor.getSystemIdleTime() every 60s. When an active timer is
- * running and the OS idle time exceeds idle_timeout_minutes, shows a
- * "Still working?" notification and notifies the renderer. If the 5-minute
- * grace window expires unanswered:
- * - review (default): the timer KEEPS RUNNING and is flagged for review
- * - auto_stop: stop credited to last_active + idle_timeout (Issue #722)
+ * running and the OS idle time exceeds idle_timeout_minutes (or the server
+ * flags the timer via timer status), shows a "Still working?" notification
+ * and notifies the renderer.
+ *
+ * The desktop app NEVER stops the timer itself: answers go through
+ * POST /api/v1/timer/idle-response (first answer on any device wins, #722),
+ * and an unanswered grace window is resolved by the server sweep.
  */
 
 const { powerMonitor, Notification, net } = require('electron');
@@ -116,14 +118,25 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
     }
   }
 
-  /** Grace expired unanswered: keep the timer running, flag for review. */
-  function flagNeedsReview() {
-    clearGrace();
-    if (!timerActive) return;
-    showNeedsReviewNotification();
-    sendToMainWindow('idle:needs-review', {
-      idleTimeoutMinutes,
-    });
+  /** Grace expired unanswered: the server sweep will resolve it — inform only. */
+  function showUnansweredNotification() {
+    try {
+      if (!Notification.isSupported()) return;
+      const autoStop = unansweredAction === 'auto_stop';
+      const body = autoStop
+        ? 'No answer received — the server will stop this timer (credited to your last activity) at its next check.'
+        : 'No answer received — the server will flag this timer for review at its next check.';
+      const notification = new Notification({
+        title: 'Timer idle — awaiting server',
+        body,
+      });
+      notification.on('click', () => {
+        focusMainWindow();
+      });
+      notification.show();
+    } catch (e) {
+      console.debug('[IdleMonitor] notification failed:', e.message);
+    }
   }
 
   function showNeedsReviewNotification() {
@@ -157,14 +170,11 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
     });
     focusMainWindow();
     graceTimer = setTimeout(() => {
-      if (unansweredAction === 'auto_stop') {
-        const at = stopAtMs || Date.now();
-        clearGrace();
-        timerActive = false;
-        stopTimerAt(at).catch(() => {});
-      } else {
-        flagNeedsReview();
-      }
+      // Never stop or flag locally: the SERVER sweep is the only actor that
+      // resolves an unanswered check (Issue #722). Another device may have
+      // answered already; acting here would race it.
+      clearGrace();
+      showUnansweredNotification();
     }, GRACE_MS);
   }
 

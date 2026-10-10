@@ -95,14 +95,14 @@ async function clearIdleGraceState() {
   } catch (_) {
     /* ignore */
   }
-  await chrome.storage.local.remove(['idle_grace_stop_at', 'idle_grace_active']);
+  await chrome.storage.local.remove(['idle_grace_stop_at', 'idle_grace_active', 'idle_prompt_token']);
 }
 
-async function beginIdleGrace(stopAtMs) {
-  const { last_timer_status, idle_unanswered_action } = await chrome.storage.local.get([
-    'last_timer_status',
-    'idle_unanswered_action',
-  ]);
+/** Prompt shown for a server-armed idle check. The extension never stops the
+ *  timer itself: answers go through POST /api/v1/timer/idle-response and the
+ *  server sweep resolves an unanswered check (Issue #722). */
+async function beginIdleGrace(idleNotifiedAt) {
+  const { last_timer_status } = await chrome.storage.local.get(['last_timer_status']);
   if (!last_timer_status?.active || !last_timer_status?.timer) {
     return;
   }
@@ -114,15 +114,12 @@ async function beginIdleGrace(stopAtMs) {
 
   await chrome.storage.local.set({
     idle_grace_active: true,
-    idle_grace_stop_at: stopAtMs,
+    idle_prompt_token: idleNotifiedAt || null,
   });
 
   chrome.alarms.create(IDLE_STOP_ALARM, { delayInMinutes: GRACE_MINUTES });
 
-  const autoStop = normalizeUnansweredAction(idle_unanswered_action) === 'auto_stop';
-  const message = autoStop
-    ? `Answer within ${GRACE_MINUTES} minutes or the timer will be stopped and the idle time kept.`
-    : `Answer within ${GRACE_MINUTES} minutes or the timer will be flagged for review (it keeps running).`;
+  const message = `Answer within ${GRACE_MINUTES} minutes, or the server will resolve this timer at its next check.`;
 
   try {
     await chrome.notifications.create(IDLE_NOTIFICATION_ID, {
@@ -142,6 +139,29 @@ async function beginIdleGrace(stopAtMs) {
   }
 }
 
+/** Answer the idle check via the server (first answer on any device wins). */
+async function answerIdlePrompt(answer) {
+  const { server_url, api_token, logged_out, idle_prompt_token } = await chrome.storage.local.get([
+    'server_url',
+    'api_token',
+    'logged_out',
+    'idle_prompt_token',
+  ]);
+  await clearIdleGraceState();
+
+  if (!server_url || !api_token || logged_out) {
+    return;
+  }
+
+  const client = new ApiClient(server_url, api_token);
+  try {
+    await client.idleResponse(answer, idle_prompt_token);
+  } catch (error) {
+    console.debug('[TimeTracker] idle response failed:', error);
+  }
+  await refreshTimerStatus({ force: true });
+}
+
 async function sendServerHeartbeat() {
   const { server_url, api_token, logged_out, last_timer_status } = await chrome.storage.local.get([
     'server_url',
@@ -157,11 +177,6 @@ async function sendServerHeartbeat() {
   } catch (error) {
     console.debug('[TimeTracker] heartbeat failed:', error);
   }
-}
-
-async function confirmStillWorking() {
-  await clearIdleGraceState();
-  await sendServerHeartbeat();
 }
 
 /** Idle grace expired unanswered: the timer KEEPS RUNNING server-side and is
@@ -183,29 +198,6 @@ async function notifyNeedsReview(timer) {
   } catch (error) {
     console.debug('[TimeTracker] needs-review notification failed:', error);
   }
-}
-
-async function stopTimerForIdle({ stopAtMs = null } = {}) {
-  const { server_url, api_token, logged_out, idle_grace_stop_at } = await chrome.storage.local.get([
-    'server_url',
-    'api_token',
-    'logged_out',
-    'idle_grace_stop_at',
-  ]);
-  await clearIdleGraceState();
-
-  if (!server_url || !api_token || logged_out) {
-    return;
-  }
-
-  const stopTime = new Date(stopAtMs || idle_grace_stop_at || Date.now()).toISOString();
-  const client = new ApiClient(server_url, api_token);
-  try {
-    await client.stopTimer({ stopTime });
-  } catch (error) {
-    console.debug('[TimeTracker] idle stop failed:', error);
-  }
-  await refreshTimerStatus({ force: true });
 }
 
 async function refreshTimerStatus({ force = false } = {}) {
@@ -237,9 +229,9 @@ async function refreshTimerStatus({ force = false } = {}) {
         status?.needs_review || status?.timer?.needs_review
       );
       if (idleNotified && !needsReview) {
-        // Credit the idle window (Issue #722): stop at last_active + threshold ≈ now
-        // when the server just notified, not at last_active alone (0 min).
-        await beginIdleGrace(Date.now());
+        // Server-armed idle check (#722): carry its token so answers race on
+        // first-answer-wins across devices.
+        await beginIdleGrace(status?.timer?.idle_notified_at || null);
       }
       if (needsReview) {
         await notifyNeedsReview(status.timer);
@@ -319,20 +311,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     return;
   }
   if (alarm.name === IDLE_STOP_ALARM) {
-    const { idle_unanswered_action, last_timer_status } = await chrome.storage.local.get([
-      'idle_unanswered_action',
-      'last_timer_status',
-    ]);
-    if (normalizeUnansweredAction(idle_unanswered_action) === 'auto_stop') {
-      // Grace expired unanswered: stop credited to idle_grace_stop_at.
-      await stopTimerForIdle();
-      return;
-    }
-    // review mode: keep the timer running, flag for review.
+    // Grace expired unanswered: the extension never stops the timer — the
+    // server sweep flags/stops it (per idle_unanswered_action) at its next
+    // poll. Clear local state and refresh so the UI follows the server.
     await clearIdleGraceState();
-    if (last_timer_status?.active && last_timer_status?.timer) {
-      await notifyNeedsReview(last_timer_status.timer);
-    }
+    await refreshTimerStatus({ force: true });
     return;
   }
 });
@@ -374,36 +357,22 @@ chrome.runtime.onConnect.addListener((port) => {
 
 chrome.idle.onStateChanged.addListener(async (newState) => {
   if (newState === 'active') {
-    // User returned before grace expired — cancel pending auto-stop and
-    // tell the server so the server-side grace window also resets.
+    // User returned: reset the server-side grace window via heartbeat. The
+    // extension never prompts from local OS-idle state — the prompt is armed
+    // by the server (idle_notified) so all devices share one check (#722).
     await clearIdleGraceState();
     await chrome.storage.local.remove('needs_review_notified_for');
     await sendServerHeartbeat();
     return;
   }
-  if (newState !== 'idle' && newState !== 'locked') {
-    return;
-  }
-
-  const { last_timer_status } = await chrome.storage.local.get([
-    'last_timer_status',
-  ]);
-  if (!last_timer_status?.active || !last_timer_status?.timer) {
-    return;
-  }
-
-  // chrome.idle already waited the detection interval; credit that window
-  // so auto-stop records idle_timeout minutes of work (Issue #722), not 0.
-  await beginIdleGrace(Date.now());
 });
 
 chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
   if (notificationId !== IDLE_NOTIFICATION_ID) return;
   if (buttonIndex === 0) {
-    await confirmStillWorking();
+    await answerIdlePrompt('yes');
   } else if (buttonIndex === 1) {
-    // "No" stops immediately (like web stopNow), not backdated to last activity.
-    await stopTimerForIdle({ stopAtMs: Date.now() });
+    await answerIdlePrompt('stop');
   }
 });
 
@@ -421,7 +390,7 @@ chrome.notifications.onClicked.addListener(async (notificationId) => {
   }
   if (notificationId !== IDLE_NOTIFICATION_ID) return;
   // Clicking the notification body counts as "still working".
-  await confirmStillWorking();
+  await answerIdlePrompt('yes');
 });
 
 ensureAlarm();

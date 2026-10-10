@@ -290,9 +290,25 @@
                             var meta = document.querySelector('meta[name="idle-timeout-minutes"]');
                             var mins = meta ? parseInt(meta.getAttribute('content'), 10) : 30;
                             if (!isNaN(mins) && mins >= 1) stopTs = Date.now() - mins * 60 * 1000;
-                            window.__ttShowIdlePrompt(stopTs);
+                            window.__ttShowIdlePrompt(stopTs, data && data.idle_notified_at);
                         } else if (window.toastManager && data) {
                             window.toastManager.warning(data.message || 'Still working?', data.title || 'Idle timer');
+                        }
+                    } catch (e) {}
+                });
+                // The prompt was answered on another device (or expired
+                // server-side): dismiss locally and refresh the timer UI.
+                socket.on('idle_prompt_resolved', function(data){
+                    try {
+                        if (window.__ttDismissIdlePrompt) window.__ttDismissIdlePrompt();
+                        if (data && data.stopped) {
+                            if (window.__ttOnIdleAutoStop) window.__ttOnIdleAutoStop();
+                            var msg = (window.i18n && window.i18n.messages && window.i18n.messages.timerStoppedInactivity) || 'Timer stopped due to inactivity';
+                            if (window.toastManager && window.toastManager.warning) {
+                                window.toastManager.warning(msg, '', 5000);
+                            }
+                        } else {
+                            document.dispatchEvent(new CustomEvent('tt:timer-status-changed'));
                         }
                     } catch (e) {}
                 });
