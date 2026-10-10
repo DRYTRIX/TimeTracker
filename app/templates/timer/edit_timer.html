@@ -163,22 +163,29 @@ document.addEventListener('DOMContentLoaded', function() {
             if (changes.length > 0) {
                 e.preventDefault();
 
+                function escapeHtml(value) {
+                    const div = document.createElement('div');
+                    div.textContent = value == null ? '' : String(value);
+                    return div.innerHTML;
+                }
+
                 let summaryHtml = changes.map(ch => `
                     <div class="mb-2 pb-2 border-b border-border-light dark:border-border-dark">
-                        <div class="text-sm text-text-muted-light dark:text-text-muted-dark mb-1">${ch.label}</div>
+                        <div class="text-sm text-text-muted-light dark:text-text-muted-dark mb-1">${escapeHtml(ch.label)}</div>
                         <div class="flex items-center gap-2">
-                            <span class="text-red-600 dark:text-red-400">${ch.from}</span>
+                            <span class="text-red-600 dark:text-red-400">${escapeHtml(ch.from)}</span>
                             <i class="fas fa-arrow-right text-text-muted-light dark:text-text-muted-dark"></i>
-                            <span class="text-green-600 dark:text-green-400">${ch.to}</span>
+                            <span class="text-green-600 dark:text-green-400">${escapeHtml(ch.to)}</span>
                         </div>
                     </div>
                 `).join('');
 
                 window.showConfirm(
-                    summaryHtml + '<div class="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded"><i class="fas fa-info-circle text-amber-600 dark:text-amber-400 me-2"></i>' + '{{ _("These updates will modify this time entry permanently.") }}' + '</div>',
+                    summaryHtml + '<div class="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded"><i class="fas fa-info-circle text-amber-600 dark:text-amber-400 me-2"></i>' + {{ _("These updates will modify this time entry permanently.")|tojson }} + '</div>',
                     {
-                        title: '{{ _("Confirm Changes") }}',
-                        confirmText: '{{ _("Confirm & Save") }}'
+                        title: {{ _("Confirm Changes")|tojson }},
+                        confirmText: {{ _("Confirm & Save")|tojson }},
+                        html: true
                     }
                 ).then(confirmed => {
                     if (confirmed) {

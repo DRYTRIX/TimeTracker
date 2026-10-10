@@ -4,6 +4,10 @@
  * Exports: window.ttConfirm, window.ttAlert
  * Back-compat: window.showConfirm, window.showAlert
  *
+ * Messages render as plain text by default. Pass `html: true` to render the
+ * message as HTML (e.g. formatted change summaries); the caller is then
+ * responsible for escaping any user-controlled interpolation.
+ *
  * Remaining native alert()/confirm() call sites should migrate to ttAlert/ttConfirm.
  */
 (function (global) {
@@ -44,6 +48,7 @@
       cancelText: options.cancelText || 'Cancel',
       variant: options.variant || 'primary',
       mode: options.mode || 'confirm',
+      html: Boolean(options.html),
     };
   }
 
@@ -139,8 +144,14 @@
 
       var msgEl = document.createElement('p');
       msgEl.id = descId;
-      msgEl.className = 'text-sm text-text-muted-light dark:text-text-muted-dark whitespace-pre-wrap';
-      msgEl.textContent = message != null ? String(message) : '';
+      msgEl.className =
+        'text-sm text-text-muted-light dark:text-text-muted-dark' +
+        (options.html ? '' : ' whitespace-pre-wrap');
+      if (options.html) {
+        msgEl.innerHTML = message != null ? String(message) : '';
+      } else {
+        msgEl.textContent = message != null ? String(message) : '';
+      }
       textCol.appendChild(msgEl);
 
       row.appendChild(iconWrap);
