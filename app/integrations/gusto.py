@@ -23,6 +23,11 @@ class GustoConnector(BaseConnector):
     AUTH_URL = "https://api.gusto.com/oauth/authorize"
     TOKEN_URL = "https://api.gusto.com/oauth/token"
     API_BASE = "https://api.gusto.com/v1"
+    # Without X-Gusto-API-Version, Gusto answers with the minimum API version set on the
+    # OAuth application in its Developer Portal, so responses can differ per installation.
+    # Override per integration with config["api_version"].
+    # https://docs.gusto.com/app-integrations/docs/getting-setup
+    API_VERSION = "2026-06-15"
 
     @property
     def provider_name(self) -> str:
@@ -100,6 +105,10 @@ class GustoConnector(BaseConnector):
         db.session.commit()
         return {"access_token": data["access_token"], "expires_at": expires_at.isoformat()}
 
+    def _headers(self, token: str, **extra: str) -> Dict[str, str]:
+        version = (self.integration.config or {}).get("api_version") or self.API_VERSION
+        return {"Authorization": f"Bearer {token}", "X-Gusto-API-Version": version, **extra}
+
     def test_connection(self) -> Dict[str, Any]:
         token = self.get_access_token()
         if not token:
@@ -109,7 +118,7 @@ class GustoConnector(BaseConnector):
             return {"success": False, "message": "Set company_uuid in integration config"}
         r = requests.get(
             f"{self.API_BASE}/companies/{company}",
-            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+            headers=self._headers(token, Accept="application/json"),
             timeout=20,
         )
         if r.status_code == 200:
@@ -133,7 +142,7 @@ class GustoConnector(BaseConnector):
         # Gusto payrolls API varies by partnership; post a summary payload for partner sandbox
         r = requests.post(
             f"{self.API_BASE}/companies/{company}/payrolls",
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            headers=self._headers(token, **{"Content-Type": "application/json"}),
             json={
                 "start_date": batch["period_start"],
                 "end_date": batch["period_end"],
