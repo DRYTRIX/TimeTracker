@@ -33,7 +33,9 @@ class AppConstants {
   static const String timerNotificationChannelDescription =
       'Shows while a time tracker is running';
 
-  static const String idleReminderChannelId = 'idle_reminder';
+  // v2: Android notification channels are immutable once created, so the id
+  // must be bumped for importance/heads-up changes to reach existing installs.
+  static const String idleReminderChannelId = 'idle_reminder_v2';
   static const String idleReminderChannelName = 'Idle reminder';
   static const String idleReminderChannelDescription =
       'Asks if you are still working when the timer is idle';

@@ -226,6 +226,11 @@ export class ApiClient {
     return this.unwrap(this.client.post('/api/v1/timer/stop', Object.keys(body).length ? body : undefined));
   }
   sendHeartbeat() { return this.unwrap(this.client.post('/api/v1/timer/heartbeat')); }
+  idleResponse(answer, notifiedAt = null) {
+    const body = { answer };
+    if (notifiedAt) body.notified_at = notifiedAt;
+    return this.unwrap(this.client.post('/api/v1/timer/idle-response', body));
+  }
   pauseTimer() { return this.unwrap(this.client.post('/api/v1/timer/pause')); }
   resumeTimer() { return this.unwrap(this.client.post('/api/v1/timer/resume')); }
   getProjects(params = {}) { return this.unwrap(this.client.get('/api/v1/projects', { params })); }

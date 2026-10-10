@@ -46,7 +46,9 @@ class TimeTrackingRepository {
         Timer? timer,
         int? idleTimeoutMinutes,
         bool idleNotified,
+        String? idleNotifiedAt,
         String idleUnansweredAction,
+        bool needsReview,
       })> getTimerStatusDetailed() async {
     if (apiClient == null) {
       final cached = await LocalStorage.getTimer();
@@ -54,7 +56,9 @@ class TimeTrackingRepository {
         timer: cached,
         idleTimeoutMinutes: null,
         idleNotified: false,
+        idleNotifiedAt: null,
         idleUnansweredAction: 'review',
+        needsReview: false,
       );
     }
 
@@ -66,15 +70,23 @@ class TimeTrackingRepository {
           timer: cached,
           idleTimeoutMinutes: null,
           idleNotified: false,
+          idleNotifiedAt: null,
           idleUnansweredAction: 'review',
+          needsReview: false,
         );
       }
 
       final response = await apiClient!.getTimerStatus();
       final idleTimeout = (response['idle_timeout_minutes'] as num?)?.toInt();
+      final timerMap =
+          response['timer'] is Map ? response['timer'] as Map : const {};
       final idleNotified = response['idle_notified'] == true ||
-          (response['timer'] is Map &&
-              (response['timer'] as Map)['idle_notified'] == true);
+          timerMap['idle_notified'] == true;
+      final idleNotifiedAt = (response['idle_notified_at'] ??
+              timerMap['idle_notified_at'])
+          as String?;
+      final needsReview = response['needs_review'] == true ||
+          timerMap['needs_review'] == true;
       final rawAction =
           (response['idle_unanswered_action'] as String?)?.trim().toLowerCase();
       final idleUnansweredAction =
@@ -86,7 +98,9 @@ class TimeTrackingRepository {
           timer: timer,
           idleTimeoutMinutes: idleTimeout,
           idleNotified: idleNotified,
+          idleNotifiedAt: idleNotifiedAt,
           idleUnansweredAction: idleUnansweredAction,
+          needsReview: needsReview,
         );
       }
       await LocalStorage.clearTimer();
@@ -94,7 +108,9 @@ class TimeTrackingRepository {
         timer: null,
         idleTimeoutMinutes: idleTimeout,
         idleNotified: false,
+        idleNotifiedAt: null,
         idleUnansweredAction: idleUnansweredAction,
+        needsReview: false,
       );
     } catch (e) {
       final cached = await LocalStorage.getTimer();
@@ -102,9 +118,23 @@ class TimeTrackingRepository {
         timer: cached,
         idleTimeoutMinutes: null,
         idleNotified: false,
+        idleNotifiedAt: null,
         idleUnansweredAction: 'review',
+        needsReview: false,
       );
     }
+  }
+
+  /// Answer the server-armed "Still working?" idle check (Issue #722).
+  ///
+  /// [answer] is "yes" (still working), "stop" (stop now) or "trim" (credit
+  /// only up to the idle window). [notifiedAt] is the check token the prompt
+  /// was shown with, so the first device to answer wins.
+  Future<void> idleResponse(String answer, {String? notifiedAt}) async {
+    if (apiClient == null) return;
+    final body = <String, dynamic>{'answer': answer};
+    if (notifiedAt != null) body['notified_at'] = notifiedAt;
+    await apiClient!.idleResponse(body);
   }
 
   /// Start a timer

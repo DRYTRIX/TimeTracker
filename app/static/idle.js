@@ -121,52 +121,49 @@
     } catch(e) {}
   }
 
-  async function stopNow(){
+  // ---------------------------------------------------------------------------
+  // Answers go through ONE idempotent endpoint for every client (Issue #722):
+  // the first device to answer wins; the server reports already_resolved for
+  // stale answers so this client just dismisses instead of acting on old state.
+  // ---------------------------------------------------------------------------
+  let currentIdleToken = null;
+
+  async function respondIdle(answer){
     clearGraceTimers();
     closeIdleNotification();
     promptShown = false;
+    try { const el = document.querySelector('[data-tt-idle-prompt]'); if (el) el.remove(); } catch(e) {}
+    const token = currentIdleToken;
+    currentIdleToken = null;
     try {
-      const r = await fetch('/api/timer/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, __ttQuiet: true });
+      const r = await fetch('/api/timer/idle-response', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answer: answer, notified_at: token }),
+        __ttQuiet: true,
+      });
       if (r.ok){
-        const msg = window.i18n?.messages?.timerStopped || 'Timer stopped';
-        if (window.toastManager && window.toastManager.success) {
-          window.toastManager.success(msg, '', 5000);
-        } else if (window.toastManager && window.toastManager.show) {
-          window.toastManager.show({ message: msg, type: 'success', duration: 5000 });
+        const j = await r.json().catch(function(){ return {}; });
+        if (!j.already_resolved){
+          const msg = j && j.stopped
+            ? (window.i18n?.messages?.timerStopped || 'Timer stopped')
+            : (window.i18n?.messages?.stillWorkingYes || 'Great — timer continues');
+          if (window.toastManager && window.toastManager.success) {
+            window.toastManager.success(msg, '', 5000);
+          }
         }
         await refreshTimerUiAfterStop();
       }
     } catch(e) {}
-  }
-
-  async function stopAt(ts){
-    clearGraceTimers();
-    closeIdleNotification();
-    promptShown = false;
-    try {
-      const r = await fetch('/api/timer/stop_at', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stop_time: new Date(ts).toISOString() }) });
-      if (r.ok){
-        const msg = window.i18n?.messages?.timerStoppedInactivity || 'Timer stopped due to inactivity';
-        if (window.toastManager && window.toastManager.warning) {
-          window.toastManager.warning(msg, '', 5000);
-        } else if (window.toastManager && window.toastManager.show) {
-          window.toastManager.show({ message: msg, type: 'warning', duration: 5000 });
-        } else {
-          alert(msg);
-        }
-        await refreshTimerUiAfterStop();
-      }
-    } catch(e) {}
-  }
-
-  function snoozeIdlePrompt(toastEl){
-    clearGraceTimers();
-    closeIdleNotification();
     lastActivity = Date.now();
-    promptShown = false;
-    lastHeartbeatSent = 0; // force immediate heartbeat so server clears idle_notified_at
-    sendHeartbeat();
-    try { if (toastEl) toastEl.remove(); } catch(e) {}
+  }
+
+  function showUnansweredNotice(){
+    const msg = window.i18n?.messages?.idleUnanswered ||
+      'No answer received — the server will flag or stop this timer at its next check.';
+    if (window.toastManager && window.toastManager.info) {
+      window.toastManager.info(msg, '', 6000);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -244,8 +241,9 @@
     } catch(e) {}
   }
 
-  function showIdlePrompt(stopTs){
+  function showIdlePrompt(stopTs, notifiedAt){
     if (promptShown) return; promptShown = true;
+    currentIdleToken = notifiedAt || null;
     clearGraceTimers();
 
     const yesLabel = window.i18n?.messages?.stillWorkingYes || 'Yes, still working';
@@ -269,9 +267,9 @@
       const yesBtn = toastEl.querySelector('[data-act="yes"]');
       const noBtn = toastEl.querySelector('[data-act="no"]');
       const trimBtn = toastEl.querySelector('[data-act="trim"]');
-      if (yesBtn) yesBtn.addEventListener('click', function(){ snoozeIdlePrompt(toastEl); });
-      if (noBtn) noBtn.addEventListener('click', function(){ try { toastEl.remove(); } catch(e){}; stopNow(); });
-      if (trimBtn) trimBtn.addEventListener('click', function(){ try { toastEl.remove(); } catch(e){}; stopAt(stopTs); });
+      if (yesBtn) yesBtn.addEventListener('click', function(){ respondIdle('yes'); });
+      if (noBtn) noBtn.addEventListener('click', function(){ respondIdle('stop'); });
+      if (trimBtn) trimBtn.addEventListener('click', function(){ respondIdle('trim'); });
 
       countdownIntervalId = setInterval(function(){
         if (countdownEl) countdownEl.textContent = buildMessage();
@@ -281,13 +279,16 @@
         clearGraceTimers();
         closeIdleNotification();
         promptShown = false;
+        currentIdleToken = null;
         try { toastEl.remove(); } catch(e){}
         if (autoStop) {
-          // Credit last activity + idle window (Issue #722).
-          stopAt(stopTs + getIdleThresholdMs());
+          // Unanswered: the SERVER sweep stops the timer (credited to last
+          // activity + idle window). Never stop locally — another device may
+          // have answered already (Issue #722).
+          showUnansweredNotice();
         } else {
-          // Unanswered prompt: the timer KEEPS RUNNING and is flagged for review
-          // (server sets idle_flagged_at). Never silently truncate recorded time.
+          // Review mode: the server flags the timer (idle_flagged_at) at its
+          // next check; show the banner now so the user can resolve early.
           showNeedsReviewBanner(null);
         }
       }, GRACE_MS);
@@ -295,8 +296,7 @@
 
     // Native OS notification so the prompt is visible from other tabs (#722)
     showNativeIdleNotification(stopTs, function(){
-      const toastEl = document.querySelector('[data-tt-idle-prompt]');
-      snoozeIdlePrompt(toastEl);
+      respondIdle('yes');
     });
 
     if (window.toastManager) {
@@ -403,11 +403,13 @@
     } else if (reviewShownForTimerId === active.id) {
       reviewShownForTimerId = null;
     }
-    const threshold = getIdleThresholdMs();
-    const idleFor = Date.now() - lastActivity;
-    if (idleFor >= threshold){
-      const stopTs = Date.now() - idleFor;
-      showIdlePrompt(stopTs);
+    // Prompt ONLY on the server signal (idle_notified, armed by the sweep) so
+    // every device sees the same check and answers race on one token (#722).
+    if (active.idle_notified && !promptShown){
+      const notifiedTs = active.idle_notified_at
+        ? new Date(active.idle_notified_at).getTime()
+        : (Date.now() - getIdleThresholdMs());
+      showIdlePrompt(isNaN(notifiedTs) ? Date.now() - getIdleThresholdMs() : notifiedTs, active.idle_notified_at);
     }
     try { await checkLongRunningTimer(active); } catch(e) {}
     // Break reminder follows the active timer state; check on every tick.
@@ -644,16 +646,21 @@
   setTimeout(checkNoTimerAndEndOfDayNudges, 5000);
 
   // Allow Socket.IO / other modules to trigger the same prompt (Issue #722)
-  window.__ttShowIdlePrompt = function(stopTs){
-    showIdlePrompt(stopTs || (Date.now() - getIdleThresholdMs()));
+  window.__ttShowIdlePrompt = function(stopTs, notifiedAt){
+    showIdlePrompt(stopTs || (Date.now() - getIdleThresholdMs()), notifiedAt);
   };
   window.__ttShowNeedsReview = function(){
     showNeedsReviewBanner();
   };
-  window.__ttOnIdleAutoStop = function(){
+  window.__ttDismissIdlePrompt = function(){
     clearGraceTimers();
     closeIdleNotification();
     promptShown = false;
+    currentIdleToken = null;
+    try { const el = document.querySelector('[data-tt-idle-prompt]'); if (el) el.remove(); } catch(e) {}
+  };
+  window.__ttOnIdleAutoStop = function(){
+    window.__ttDismissIdlePrompt();
     refreshTimerUiAfterStop();
   };
 })();

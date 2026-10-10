@@ -282,6 +282,18 @@ export class ApiClient {
     return this.request('POST', '/api/v1/timer/heartbeat');
   }
 
+  /**
+   * Answer the "Still working?" idle prompt (Issue #722).
+   * answer: "yes" | "stop" | "trim"; notifiedAt = the idle check token the
+   * extension was shown, so the server can apply first-answer-wins across
+   * devices (stale answers return { already_resolved: true }).
+   */
+  idleResponse(answer, notifiedAt = null) {
+    const body = { answer };
+    if (notifiedAt) body.notified_at = notifiedAt;
+    return this.request('POST', '/api/v1/timer/idle-response', body);
+  }
+
   getProjects(params = {}) {
     const qs = new URLSearchParams();
     if (params.status) qs.set('status', params.status);

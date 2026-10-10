@@ -75,6 +75,7 @@ function App() {
   const [newEntryOpen, setNewEntryOpen] = useState(false);
   const [attendance, setAttendance] = useState(null);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [idlePrompt, setIdlePrompt] = useState(null);
   const syncEngineRef = useRef(null);
 
   const showToast = useCallback((message, type = 'info') => {
@@ -301,21 +302,47 @@ function App() {
     });
   }, []);
 
+  const answerIdlePrompt = useCallback(
+    async (answer) => {
+      setIdlePrompt(null);
+      try {
+        // The check token comes from the latest status; sending it lets the
+        // server apply first-answer-wins across devices (Issue #722).
+        let notifiedAt = null;
+        try {
+          const status = await apiClient.getTimerStatus();
+          notifiedAt = status?.timer?.idle_notified_at || null;
+        } catch (e) {
+          /* token is best-effort */
+        }
+        const result = await apiClient.idleResponse(answer, notifiedAt);
+        if (!result?.already_resolved) {
+          showToast(
+            answer === 'yes' ? 'Great — timer continues' : 'Timer stopped',
+            answer === 'yes' ? 'success' : 'warning',
+          );
+        }
+        // Tell the main process the prompt is resolved so its local grace
+        // window and notification state clear (heartbeats are harmless).
+        try {
+          window.electronAPI?.idleStillWorking?.();
+        } catch (e) {
+          /* optional */
+        }
+        refreshCoreData();
+      } catch (e) {
+        /* no active timer or network issue — status refresh will reconcile */
+        refreshCoreData();
+      }
+    },
+    [apiClient, refreshCoreData, showToast],
+  );
+
   useEffect(() => {
     if (!apiClient || !window.electronAPI?.onIdlePrompt) return undefined;
 
     const unsubPrompt = window.electronAPI.onIdlePrompt((payload) => {
-      const autoStop = payload?.idleUnansweredAction === 'auto_stop';
-      const msg = autoStop
-        ? 'Still working? If you do not confirm, the timer will be stopped and the idle time kept.\n\nPress OK if you are still working, or Cancel to stop the timer now.'
-        : 'Still working? If you do not confirm, the timer keeps running and will be flagged for review.\n\nPress OK if you are still working, or Cancel to stop the timer now.';
-      const ok = window.confirm(msg);
-      if (ok) {
-        window.electronAPI.idleStillWorking();
-        apiClient.sendHeartbeat().catch(() => {});
-      } else {
-        window.electronAPI.idleStop();
-      }
+      setIdlePrompt(payload || {});
     });
     const unsubStopped = window.electronAPI.onIdleTimerStopped?.(() => {
       refreshCoreData();
@@ -924,6 +951,53 @@ function App() {
           onClose={() => setNewEntryOpen(false)}
           onSubmit={createTimeEntry}
         />
+      )}
+      {idlePrompt && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              background: 'var(--bg-primary, #fff)',
+              color: 'var(--text-primary, #0f172a)',
+              borderRadius: 12,
+              padding: '20px 24px',
+              maxWidth: 420,
+              width: '90%',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.35)',
+            }}
+          >
+            <h2 style={{ margin: '0 0 8px', fontSize: 18 }}>Still working?</h2>
+            <p style={{ margin: '0 0 16px', fontSize: 14, lineHeight: 1.5 }}>
+              {idlePrompt.idleUnansweredAction === 'auto_stop'
+                ? 'You seem inactive. If you do not answer, the timer will be stopped and the idle time kept.'
+                : 'You seem inactive. If you do not answer, the timer keeps running and will be flagged for review.'}
+            </p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => answerIdlePrompt('stop')}>
+                No, stop timer
+              </button>
+              <button type="button" onClick={() => answerIdlePrompt('trim')}>
+                Keep until idle
+              </button>
+              <button
+                type="button"
+                style={{ fontWeight: 600 }}
+                onClick={() => answerIdlePrompt('yes')}
+              >
+                Yes, still working
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       {toast && <Toast toast={toast} />}
     </div>
