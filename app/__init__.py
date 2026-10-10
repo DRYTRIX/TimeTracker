@@ -298,6 +298,43 @@ def create_app(config=None):
         pg_host = os.getenv("POSTGRES_HOST", "db")
         app.config["SQLALCHEMY_DATABASE_URI"] = f"postgresql+psycopg2://{pg_user}:{pg_pass}@{pg_host}:5432/{pg_db}"
 
+    # Bound PostgreSQL query/lock waits: libpq has no client-side timeout, so a
+    # stuck query or lock wait blocks the (single) eventlet worker until
+    # gunicorn's arbiter timeout kills it and every in-flight connection drops.
+    # Failing fast keeps the rest of the app responsive. Milliseconds; 0 disables
+    # a limit. Skipped during bootstrap migrations (TT_BOOTSTRAP_MODE=migrate) so
+    # long-running DDL is not cut off.
+    db_uri = str(app.config.get("SQLALCHEMY_DATABASE_URI") or "")
+    if db_uri.startswith("postgresql") and os.getenv("TT_BOOTSTRAP_MODE") != "migrate":
+        engine_opts = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS") or {})
+        engine_opts.setdefault(
+            "connect_args",
+            {
+                "options": " ".join(
+                    [
+                        f"-c statement_timeout={os.getenv('DB_STATEMENT_TIMEOUT_MS', '30000')}",
+                        f"-c lock_timeout={os.getenv('DB_LOCK_TIMEOUT_MS', '10000')}",
+                        f"-c idle_in_transaction_session_timeout={os.getenv('DB_IDLE_TX_TIMEOUT_MS', '30000')}",
+                    ]
+                )
+            },
+        )
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_opts
+
+    # Route psycopg2's socket waits through the eventlet hub: libpq uses its own C
+    # networking and bypasses eventlet's socket patching, so without this every
+    # query blocks the whole worker, not just the requesting greenlet. Only safe
+    # (and only useful) when eventlet is actually driving the process.
+    try:
+        import eventlet.patcher
+
+        if eventlet.patcher.is_monkey_patched("socket"):
+            import psycogreen.eventlet
+
+            psycogreen.eventlet.patch_psycopg()
+    except Exception as exc:
+        app.logger.warning("psycopg2/eventlet patch skipped (%s); DB calls may block the worker", exc)
+
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
