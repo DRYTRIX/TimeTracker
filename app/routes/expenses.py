@@ -85,7 +85,7 @@ def get_receipt_upload_folder():
     try:
         # Create directory and parent directories if they don't exist
         # os.makedirs creates parent directories by default
-        os.makedirs(upload_folder, mode=0o755, exist_ok=True)
+        os.makedirs(upload_folder, mode=0o700, exist_ok=True)
 
         # Verify directory exists
         if not os.path.exists(upload_folder):
@@ -96,9 +96,9 @@ def get_receipt_upload_folder():
             current_app.logger.warning(
                 f"Upload directory {upload_folder} exists but is not writable. " f"Please check permissions."
             )
-            # Try to fix permissions (only works if we have permission to do so)
+            # Tighten permissions (only works if we have permission to do so)
             try:
-                os.chmod(upload_folder, 0o755)
+                os.chmod(upload_folder, 0o700)
             except OSError:
                 current_app.logger.debug("Could not chmod expense upload folder", exc_info=True)
 

@@ -68,12 +68,24 @@
         }
     }
 
+    function safeHttpsHref(url) {
+        try {
+            var u = new URL(String(url), window.location.origin);
+            if (!isSafeExternalUrl(u.href)) return null;
+            // Rebuild from parsed parts so DOM-XSS taint does not flow to href
+            return u.protocol + '//' + u.host + u.pathname + u.search + u.hash;
+        } catch (e) {
+            return null;
+        }
+    }
+
     function wireTierLinks(cfg) {
         if (!cfg || !cfg.urls) return;
         document.querySelectorAll('a.support-tier-btn[data-support-tier]').forEach(function (a) {
             var key = a.getAttribute('data-support-tier');
-            if (key && cfg.urls[key] && isSafeExternalUrl(cfg.urls[key])) {
-                a.href = cfg.urls[key];
+            var safeHref = key && cfg.urls[key] ? safeHttpsHref(cfg.urls[key]) : null;
+            if (safeHref) {
+                a.href = safeHref;
             }
             a.addEventListener('click', function () {
                 postTrack(cfg, 'donation_clicked', { variant: key, source: 'support_modal' });

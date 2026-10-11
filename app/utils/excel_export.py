@@ -142,7 +142,13 @@ def create_time_entries_excel(entries, filename_prefix="timetracker_export", col
                 extractor = ALLOWED_TIME_ENTRY_EXPORT_COLUMNS[key][1]
                 data.append(extractor(entry))
             except Exception as e:
-                logger.debug(f"Error exporting column {key}: {e}")
+                from app.utils.error_handling import sanitize_log_value
+
+                logger.debug(
+                    "Error exporting column %s: %s",
+                    sanitize_log_value(key),
+                    sanitize_log_value(type(e).__name__),
+                )
                 data.append("")
 
         for col_num, value in enumerate(data, 1):

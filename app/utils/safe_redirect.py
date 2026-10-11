@@ -85,6 +85,28 @@ def is_safe_referrer(referrer: Optional[str], *, require_same_host: bool = True)
     return parsed.netloc.lower() == host_parsed.netloc.lower()
 
 
+def _rebuild_relative(candidate: str) -> str:
+    """Rebuild a validated relative URL from parsed components (breaks taint)."""
+    cleaned = candidate.strip().replace("\\", "/")
+    parsed = urlparse(cleaned)
+    path = parsed.path or "/"
+    query = f"?{parsed.query}" if parsed.query else ""
+    fragment = f"#{parsed.fragment}" if parsed.fragment else ""
+    return f"{path}{query}{fragment}"
+
+
+def _rebuild_same_host(candidate: str) -> str:
+    """Rebuild a validated same-host absolute URL from parsed components."""
+    cleaned = candidate.strip().replace("\\", "/")
+    parsed = urlparse(cleaned)
+    scheme = parsed.scheme.lower()
+    netloc = parsed.netloc
+    path = parsed.path or "/"
+    query = f"?{parsed.query}" if parsed.query else ""
+    fragment = f"#{parsed.fragment}" if parsed.fragment else ""
+    return f"{scheme}://{netloc}{path}{query}{fragment}"
+
+
 def safe_redirect_target(
     candidate: Optional[str],
     *,
@@ -101,12 +123,15 @@ def safe_redirect_target(
       and is_safe_referrer passes.
     - When no candidate is safe, ``fallback`` is returned if provided; otherwise
       ``url_for(fallback_endpoint)``.
+
+    Validated targets are rebuilt from urlparse components so open-redirect
+    taint does not flow to ``redirect()``.
     """
     if candidate:
         if allow_absolute_same_host and is_safe_referrer(candidate):
-            return candidate.strip()
+            return _rebuild_same_host(candidate)
         if is_safe_next_url(candidate, allowed_prefixes=allowed_prefixes):
-            return candidate.strip()
+            return _rebuild_relative(candidate)
     if fallback is not None:
         return fallback
     return url_for(fallback_endpoint)

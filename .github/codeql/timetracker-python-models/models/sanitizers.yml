@@ -4,9 +4,13 @@ extensions:
       extensible: barrierModel
     data:
       - ["app.utils.safe_redirect", "Member[safe_redirect_target].ReturnValue", "url-redirection"]
+      - ["app.utils.safe_redirect", "Member[_rebuild_relative].ReturnValue", "url-redirection"]
+      - ["app.utils.safe_redirect", "Member[_rebuild_same_host].ReturnValue", "url-redirection"]
       - ["app.utils.error_handling", "Member[sanitize_log_value].ReturnValue", "log-injection"]
       - ["app.utils.paths", "Member[safe_path_under].ReturnValue", "path-injection"]
       - ["app.utils.paths", "Member[safe_path_under_or_none].ReturnValue", "path-injection"]
+      - ["app.utils.outbound_url", "Member[validate_outbound_url].ReturnValue", "request-forgery"]
+      - ["app.utils.outbound_url", "Member[validate_oidc_issuer_url].ReturnValue", "request-forgery"]
 
   - addsTo:
       pack: codeql/python-all

@@ -708,7 +708,7 @@ TimeTracker - Time Tracking & Project Management
     except Exception as e:
         current_app.logger.error(f"[EMAIL TEST] ✗ Failed to send test email: {type(e).__name__}: {str(e)}")
         current_app.logger.exception("[EMAIL TEST] Full exception trace:")
-        return False, f"Failed to send test email: {str(e)}"
+        return False, "Failed to send test email"
 
 
 def _build_invoice_email_payload(invoice, email_template_id=None, custom_message=None):
@@ -916,7 +916,7 @@ def send_invoice_template_test_email(template_id, recipient_email, invoice_id=No
     except Exception as e:
         current_app.logger.error(f"[INVOICE TEMPLATE TEST] Failed: {e}")
         current_app.logger.exception("[INVOICE TEMPLATE TEST] Trace:")
-        return False, f"Failed to send test email: {str(e)}"
+        return False, "Failed to send test email"
 
 
 def send_invoice_email(invoice, recipient_email, sender_user=None, custom_message=None, email_template_id=None):
@@ -941,8 +941,8 @@ def send_invoice_email(invoice, recipient_email, sender_user=None, custom_messag
             pdf_bytes, html_body, text_body, subject = _build_invoice_email_payload(
                 invoice, email_template_id=email_template_id, custom_message=custom_message
             )
-        except ValueError as ve:
-            return False, None, str(ve)
+        except ValueError:
+            return False, None, "Failed to build invoice email"
 
         # Get sender user ID
         sender_id = sender_user.id if sender_user else None
@@ -1028,13 +1028,13 @@ def send_invoice_email(invoice, recipient_email, sender_user=None, custom_messag
                 subject=f"Invoice {invoice.invoice_number}",
                 sent_by=sender_id,
             )
-            invoice_email.mark_failed(str(e))
+            invoice_email.mark_failed(type(e).__name__)
             db.session.add(invoice_email)
             db.session.commit()
         except Exception:
             db.session.rollback()
 
-        return False, None, f"Failed to send invoice email: {str(e)}"
+        return False, None, "Failed to send invoice email"
 
 
 def send_quote_sent_notification(quote, user):
@@ -1398,7 +1398,7 @@ def send_quote_email(quote, recipient_email, sender_user=None, custom_message=No
         except Exception as pdf_error:
             current_app.logger.error(f"[QUOTE EMAIL] PDF generation failed: {pdf_error}")
             current_app.logger.exception("[QUOTE EMAIL] PDF generation error details:")
-            return False, f"PDF generation failed: {str(pdf_error)}"
+            return False, "PDF generation failed"
 
         # Get settings for email subject/body
         settings = Settings.get_settings()
@@ -1480,4 +1480,4 @@ Thank you for your interest!
     except Exception as e:
         current_app.logger.error(f"[QUOTE EMAIL] Exception in send_quote_email: {e}", exc_info=True)
         db.session.rollback()
-        return False, f"Failed to send email: {str(e)}"
+        return False, "Failed to send email"

@@ -149,8 +149,15 @@ class CalendarEvent(db.Model):
         print(f"  include_time_entries={include_time_entries} (type: {type(include_time_entries)})")
         print(f"{'*'*80}\n")
 
+        from app.utils.error_handling import sanitize_log_value
+
         logger.info(
-            f"get_events_in_range called: user_id={user_id}, start={start_date}, end={end_date}, include_tasks={include_tasks}, include_time_entries={include_time_entries}"
+            "get_events_in_range called: user_id=%s, start=%s, end=%s, include_tasks=%s, include_time_entries=%s",
+            sanitize_log_value(user_id),
+            sanitize_log_value(start_date),
+            sanitize_log_value(end_date),
+            sanitize_log_value(include_tasks),
+            sanitize_log_value(include_time_entries),
         )
 
         result = {"events": [], "tasks": [], "time_entries": []}
@@ -173,7 +180,7 @@ class CalendarEvent(db.Model):
         # Optionally include tasks with due dates
         if include_tasks:
             print(f"MODEL - Querying tasks for user {user_id}")
-            logger.info(f"Querying tasks for user {user_id}")
+            logger.info("Querying tasks for user %s", sanitize_log_value(user_id))
             tasks = Task.query.filter(
                 Task.assigned_to == user_id,
                 Task.due_date.isnot(None),
@@ -205,7 +212,7 @@ class CalendarEvent(db.Model):
         # Optionally include time entries
         if include_time_entries:
             print(f"MODEL - Querying time entries for user {user_id}")
-            logger.info(f"Querying time entries for user {user_id}")
+            logger.info("Querying time entries for user %s", sanitize_log_value(user_id))
             time_entries = (
                 TimeEntry.query.filter(
                     TimeEntry.user_id == user_id,

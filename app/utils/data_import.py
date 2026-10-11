@@ -165,7 +165,7 @@ def import_csv_time_entries(user_id, csv_content, import_record):
 
         except Exception as e:
             failed += 1
-            error_msg = f"Row {idx + 1}: {str(e)}"
+            error_msg = f"Row {idx + 1}: import failed"
             errors.append(error_msg)
             import_record.add_error(error_msg, row)
             db.session.rollback()
@@ -237,9 +237,16 @@ def import_from_toggl(user_id, api_token, workspace_id, start_date, end_date, im
 
     import_record.update_progress(total, 0, 0)
 
-    # Fetch projects from Toggl to map IDs
+    # Fetch projects from Toggl to map IDs (workspace_id must be numeric — blocks path injection / partial SSRF)
     try:
-        projects_url = f"https://api.track.toggl.com/api/v9/workspaces/{workspace_id}/projects"
+        workspace_id_safe = str(workspace_id).strip()
+        if not workspace_id_safe.isdigit():
+            raise ValueError("Invalid Toggl workspace_id")
+        projects_url = (
+            "https://api.track.toggl.com/api/v9/workspaces/"
+            + workspace_id_safe
+            + "/projects"
+        )
         projects_response = requests.get(projects_url, headers=headers, timeout=30)
         projects_response.raise_for_status()
         toggl_projects = {p["id"]: p for p in projects_response.json()}
@@ -337,7 +344,7 @@ def import_from_toggl(user_id, api_token, workspace_id, start_date, end_date, im
 
         except Exception as e:
             failed += 1
-            error_msg = f"Entry {idx + 1}: {str(e)}"
+            error_msg = f"Entry {idx + 1}: import failed"
             errors.append(error_msg)
             import_record.add_error(error_msg, entry)
             db.session.rollback()
@@ -538,7 +545,7 @@ def import_from_harvest(user_id, account_id, api_token, start_date, end_date, im
 
         except Exception as e:
             failed += 1
-            error_msg = f"Entry {idx + 1}: {str(e)}"
+            error_msg = f"Entry {idx + 1}: import failed"
             errors.append(error_msg)
             import_record.add_error(error_msg, entry)
             db.session.rollback()
@@ -899,7 +906,7 @@ def import_csv_clients(user_id, csv_content, import_record, skip_duplicates=True
 
         except Exception as e:
             failed += 1
-            error_msg = f"Row {idx + 1}: {str(e)}"
+            error_msg = f"Row {idx + 1}: import failed"
             errors.append(error_msg)
             import_record.add_error(error_msg, row)
             db.session.rollback()

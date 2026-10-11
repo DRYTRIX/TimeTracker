@@ -14,6 +14,7 @@ from app.models import ReportEmailSchedule, SalesmanEmailMapping, SavedReportVie
 from app.services.reporting_service import ReportingService
 from app.services.unpaid_hours_service import UnpaidHoursService
 from app.utils.email import send_email
+from app.utils.error_handling import sanitize_log_value
 from app.utils.timezone import now_in_app_timezone
 
 logger = logging.getLogger(__name__)
@@ -134,7 +135,7 @@ class ScheduledReportService:
 
             # Validate config before proceeding
             if not isinstance(config, dict):
-                logger.error(f"Invalid config for schedule {schedule_id}: config is not a dict")
+                logger.error("Invalid config for schedule %s: config is not a dict", sanitize_log_value(schedule_id))
                 return {
                     "success": False,
                     "message": "Invalid report configuration. Please check the saved report view.",

@@ -82,8 +82,8 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
             resolve({ status: response.statusCode, body: raw });
           });
         });
-        request.on('error', (err) => {
-          console.debug('[IdleMonitor] request failed:', err.message);
+        request.on('error', () => {
+          console.debug('[IdleMonitor] request failed');
           resolve(null);
         });
         if (body !== undefined) {
@@ -91,7 +91,7 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
         }
         request.end();
       } catch (e) {
-        console.debug('[IdleMonitor] request error:', e.message);
+        console.debug('[IdleMonitor] request error');
         resolve(null);
       }
     });

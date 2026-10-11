@@ -18,6 +18,8 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, Optional, Tuple
 from urllib.parse import urlparse
 
+from app.utils.error_handling import sanitize_log_value
+
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -40,7 +42,7 @@ class IPCache:
             if hostname in self._cache:
                 ip, expiry = self._cache[hostname]
                 if datetime.now() < expiry:
-                    logger.debug("IP cache hit for %s: %s", hostname, self._mask_ip(ip))
+                    logger.debug("IP cache hit for %s: %s", sanitize_log_value(hostname), self._mask_ip(ip))
                     return ip
                 else:
                     # Expired, remove it
@@ -53,7 +55,7 @@ class IPCache:
         expiry = datetime.now() + timedelta(seconds=ttl)
         with self._lock:
             self._cache[hostname] = (ip, expiry)
-            logger.debug("IP cached for %s: %s (TTL: %ds)", hostname, self._mask_ip(ip), ttl)
+            logger.debug("IP cached for %s: %s (TTL: %ds)", sanitize_log_value(hostname), self._mask_ip(ip), ttl)
 
     def clear(self, hostname: Optional[str] = None):
         """Clear cache entry or entire cache"""
@@ -134,17 +136,17 @@ def resolve_hostname_socket(hostname: str, timeout: int = 5) -> Tuple[bool, Opti
         socket.setdefaulttimeout(timeout)
         try:
             ip_address = socket.gethostbyname(hostname)
-            logger.debug("Socket DNS resolution successful for %s: %s", hostname, _ip_cache._mask_ip(ip_address))
+            logger.debug("Socket DNS resolution successful for %s: %s", sanitize_log_value(hostname), _ip_cache._mask_ip(ip_address))
             return True, ip_address, None
         finally:
             socket.setdefaulttimeout(old_timeout)
     except socket.gaierror as e:
-        error_msg = f"Socket DNS resolution failed for {hostname}: {str(e)}"
-        logger.debug(error_msg)
+        error_msg = f"Socket DNS resolution failed for {hostname}: {type(e).__name__}"
+        logger.debug("%s", sanitize_log_value(error_msg))
         return False, None, error_msg
     except Exception as e:
-        error_msg = f"Unexpected error during socket DNS resolution for {hostname}: {str(e)}"
-        logger.error(error_msg)
+        error_msg = f"Unexpected error during socket DNS resolution for {hostname}: {type(e).__name__}"
+        logger.error("%s", sanitize_log_value(error_msg))
         return False, None, error_msg
 
 
@@ -168,7 +170,7 @@ def resolve_hostname_getaddrinfo(hostname: str, timeout: int = 5) -> Tuple[bool,
             if addr_info:
                 ip_address = addr_info[0][4][0]
                 logger.debug(
-                    "getaddrinfo DNS resolution successful for %s: %s", hostname, _ip_cache._mask_ip(ip_address)
+                    "getaddrinfo DNS resolution successful for %s: %s", sanitize_log_value(hostname), _ip_cache._mask_ip(ip_address)
                 )
                 return True, ip_address, None
         finally:
@@ -176,12 +178,12 @@ def resolve_hostname_getaddrinfo(hostname: str, timeout: int = 5) -> Tuple[bool,
 
         return False, None, "No address found"
     except socket.gaierror as e:
-        error_msg = f"getaddrinfo DNS resolution failed for {hostname}: {str(e)}"
-        logger.debug(error_msg)
+        error_msg = f"getaddrinfo DNS resolution failed for {hostname}: {type(e).__name__}"
+        logger.debug("%s", sanitize_log_value(error_msg))
         return False, None, error_msg
     except Exception as e:
-        error_msg = f"Unexpected error during getaddrinfo DNS resolution for {hostname}: {str(e)}"
-        logger.error(error_msg)
+        error_msg = f"Unexpected error during getaddrinfo DNS resolution for {hostname}: {type(e).__name__}"
+        logger.error("%s", sanitize_log_value(error_msg))
         return False, None, error_msg
 
 
@@ -207,7 +209,7 @@ def resolve_hostname_multiple_strategies(
     if use_cache:
         cached_ip = _ip_cache.get(hostname)
         if cached_ip:
-            logger.debug("Using cached IP for %s", hostname)
+            logger.debug("Using cached IP for %s", sanitize_log_value(hostname))
             return True, cached_ip, None, "cache"
 
     strategies_to_try = []
@@ -235,14 +237,14 @@ def resolve_hostname_multiple_strategies(
                 _ip_cache.set(hostname, ip_address)
             logger.info(
                 "DNS resolution successful for %s using %s strategy: %s",
-                hostname,
-                strategy_name,
+                sanitize_log_value(hostname),
+                sanitize_log_value(strategy_name),
                 _ip_cache._mask_ip(ip_address),
             )
             return True, ip_address, None, strategy_name
         last_error = error
 
-    logger.warning("All DNS resolution strategies failed for %s. Last error: %s", hostname, last_error)
+    logger.warning("All DNS resolution strategies failed for %s. Last error: %s", sanitize_log_value(hostname), sanitize_log_value(last_error))
     return False, None, last_error or "All resolution strategies failed", "none"
 
 
@@ -347,7 +349,7 @@ def try_docker_internal_name(hostname: str, issuer_url: str) -> Optional[str]:
     if parsed.path:
         internal_url += parsed.path
 
-    logger.info("Attempting Docker internal URL: %s (original: %s)", internal_url, issuer_url)
+    logger.info("Attempting Docker internal URL: %s (original: %s)", sanitize_log_value(internal_url), sanitize_log_value(issuer_url))
     return internal_url
 
 
@@ -430,17 +432,22 @@ def fetch_oidc_metadata(
         "connection_pool_stats": {},
     }
 
-    # Parse the issuer URL
-    try:
-        parsed = urlparse(issuer_url)
-        if not parsed.scheme or not parsed.netloc:
-            return None, f"Invalid issuer URL format: {issuer_url}", diagnostics
+    # Parse and validate the issuer URL (https, or http for localhost; private OK for enterprise)
+    from app.utils.outbound_url import UnsafeOutboundURL, validate_oidc_issuer_url
 
-        hostname = parsed.netloc.split(":")[0]
-        original_metadata_url = f"{issuer_url.rstrip('/')}/.well-known/openid-configuration"
+    try:
+        safe_issuer = validate_oidc_issuer_url(issuer_url)
+        parsed = urlparse(safe_issuer)
+        if not parsed.scheme or not parsed.netloc:
+            return None, "Invalid issuer URL format", diagnostics
+
+        hostname = parsed.hostname or parsed.netloc.split(":")[0]
+        original_metadata_url = safe_issuer.rstrip("/") + "/.well-known/openid-configuration"
         metadata_url = original_metadata_url
-    except Exception as e:
-        return None, f"Failed to parse issuer URL: {str(e)}", diagnostics
+    except UnsafeOutboundURL:
+        return None, "Invalid or disallowed issuer URL", diagnostics
+    except Exception:
+        return None, "Failed to parse issuer URL", diagnostics
 
     # Test DNS resolution first if requested
     resolved_ip = None
@@ -462,13 +469,15 @@ def fetch_oidc_metadata(
             # TLS SNI and virtual hosting (IDPs typically require the domain in SNI/Host).
             metadata_url = original_metadata_url.replace(hostname, resolved_ip)
             logger.info(
-                "Using IP address directly for metadata fetch: %s -> %s", hostname, _ip_cache._mask_ip(resolved_ip)
+                "Using IP address directly for metadata fetch: %s -> %s",
+                sanitize_log_value(hostname),
+                _ip_cache._mask_ip(resolved_ip),
             )
         elif not dns_success:
             logger.warning(
                 "DNS resolution test failed for %s using %s strategy, but will attempt metadata fetch anyway",
-                hostname,
-                dns_strategy_used,
+                sanitize_log_value(hostname),
+                sanitize_log_value(dns_strategy_used),
             )
 
     # Create optimized session
@@ -492,10 +501,10 @@ def fetch_oidc_metadata(
         try:
             logger.info(
                 "Fetching OIDC metadata from %s (attempt %d/%d, strategy: %s)",
-                current_url,
+                sanitize_log_value(current_url),
                 attempt,
                 max_retries,
-                dns_strategy_used,
+                sanitize_log_value(dns_strategy_used),
             )
 
             # Prepare headers - include Host header for HTTPS with IP
@@ -529,16 +538,16 @@ def fetch_oidc_metadata(
 
             logger.info(
                 "Successfully fetched OIDC metadata from %s (issuer: %s, strategy: %s)",
-                current_url,
-                metadata.get("issuer"),
-                dns_strategy_used,
+                sanitize_log_value(current_url),
+                sanitize_log_value(metadata.get("issuer")),
+                sanitize_log_value(dns_strategy_used),
             )
             return metadata, None, diagnostics
 
         except requests.exceptions.Timeout as e:
             last_error_type = "timeout"
             last_error = f"Timeout fetching metadata from {current_url}: {str(e)}"
-            logger.warning("%s (attempt %d/%d)", last_error, attempt, max_retries)
+            logger.warning("%s (attempt %d/%d)", sanitize_log_value(last_error), attempt, max_retries)
 
         except requests.exceptions.ConnectionError as e:
             error_type = classify_error(e)
@@ -563,33 +572,33 @@ def fetch_oidc_metadata(
                         continue
             else:
                 last_error = f"Connection error fetching metadata from {current_url}: {error_str}"
-            logger.warning("%s (attempt %d/%d, error_type: %s)", last_error, attempt, max_retries, error_type)
+            logger.warning("%s (attempt %d/%d, error_type: %s)", sanitize_log_value(last_error), attempt, max_retries, sanitize_log_value(error_type))
 
         except requests.exceptions.HTTPError as e:
             last_error_type = "http"
             last_error = f"HTTP error fetching metadata from {current_url}: {str(e)}"
-            logger.warning("%s (attempt %d/%d)", last_error, attempt, max_retries)
+            logger.warning("%s (attempt %d/%d)", sanitize_log_value(last_error), attempt, max_retries)
             # Don't retry on HTTP errors (4xx, 5xx) - they're unlikely to resolve
             break
 
         except requests.exceptions.SSLError as e:
             last_error_type = "ssl"
             last_error = f"SSL/TLS error fetching metadata from {current_url}: {str(e)}"
-            logger.warning("%s (attempt %d/%d)", last_error, attempt, max_retries)
+            logger.warning("%s (attempt %d/%d)", sanitize_log_value(last_error), attempt, max_retries)
             # SSL errors usually don't resolve with retries
             break
 
         except ValueError as e:
             last_error_type = "validation"
             last_error = f"Invalid metadata response from {current_url}: {str(e)}"
-            logger.error("%s (attempt %d/%d)", last_error, attempt, max_retries)
+            logger.error("%s (attempt %d/%d)", sanitize_log_value(last_error), attempt, max_retries)
             # Don't retry on validation errors
             break
 
         except Exception as e:
             last_error_type = "unknown"
             last_error = f"Unexpected error fetching metadata from {current_url}: {str(e)}"
-            logger.error("%s (attempt %d/%d)", last_error, attempt, max_retries)
+            logger.error("%s (attempt %d/%d)", sanitize_log_value(last_error), attempt, max_retries)
 
         # Wait before retrying (exponential backoff)
         if attempt < max_retries:
@@ -600,5 +609,5 @@ def fetch_oidc_metadata(
     # All retries failed
     diagnostics["last_error_type"] = last_error_type
     error_message = f"Failed to fetch OIDC metadata after {max_retries} attempts. " f"Last error: {last_error}"
-    logger.error(error_message)
+    logger.error("%s", sanitize_log_value(error_message))
     return None, error_message, diagnostics

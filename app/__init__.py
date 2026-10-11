@@ -96,7 +96,11 @@ json_logger.setLevel(logging.INFO)
 def log_event(name: str, **kwargs):
     """Log an event with structured JSON format including request context"""
     try:
-        extra = {"request_id": getattr(g, "request_id", None), "event": name, **kwargs}
+        from app.utils.error_handling import sanitize_log_value
+
+        safe_name = sanitize_log_value(name, max_len=200)
+        safe_kwargs = {k: sanitize_log_value(v) for k, v in kwargs.items()}
+        extra = {"request_id": getattr(g, "request_id", None), "event": safe_name, **safe_kwargs}
         try:
             from app.telemetry.otel_setup import get_trace_context_for_logs, is_otel_tracing_active
 
@@ -104,9 +108,9 @@ def log_event(name: str, **kwargs):
                 extra.update(get_trace_context_for_logs())
         except Exception:
             logging.getLogger(__name__).debug("Could not attach trace context to log_event", exc_info=True)
-        json_logger.info(name, extra=extra)
+        json_logger.info(safe_name, extra=extra)
     except Exception as e:
-        logging.getLogger(__name__).debug("Structured log_event failed: %s", e)
+        logging.getLogger(__name__).debug("Structured log_event failed: %s", type(e).__name__)
 
 
 def identify_user(user_id, properties=None):

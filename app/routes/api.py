@@ -1083,7 +1083,7 @@ def project_forecast(project_id):
                     "narrative": ai_result.get("narrative"),
                     "risks": ai_result.get("risks") or [],
                     "recommendations": ai_result.get("recommendations") or [],
-                    "error": ai_result.get("error"),
+                    "error": ai_result.get("error_code") or ("ai_error" if not ai_result.get("ok") else None),
                     "error_code": ai_result.get("error_code"),
                 },
             }

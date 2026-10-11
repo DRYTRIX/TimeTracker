@@ -359,7 +359,8 @@ def restore_backup(app, archive_path: str, progress_callback=None) -> tuple[bool
                     last_err = e
                     sleep(0.2)
             if last_err:
-                return False, f"Failed to write SQLite database file: {last_err}"
+                logger.error("Failed to write SQLite database file: %s", type(last_err).__name__)
+                return False, "Failed to write SQLite database file"
             _progress("SQLite database restored", 60)
 
         elif db_type == "postgresql":
@@ -400,7 +401,8 @@ def restore_backup(app, archive_path: str, progress_callback=None) -> tuple[bool
                 return False, "pg_restore not found. Please install PostgreSQL client tools."
             except subprocess.CalledProcessError as e:
                 stderr = e.stderr.decode("utf-8", errors="ignore") if e.stderr else ""
-                return False, f"pg_restore failed: {stderr.strip() or e}"
+                logger.error("pg_restore failed: %s", stderr.strip() or type(e).__name__)
+                return False, "pg_restore failed"
             _progress("PostgreSQL database restored", 60)
         else:
             return False, "Unsupported or unknown database type for restore"
@@ -426,9 +428,10 @@ def restore_backup(app, archive_path: str, progress_callback=None) -> tuple[bool
             with app.app_context():
                 _progress("Running migrations", 90)
                 alembic_upgrade()
-        except Exception as e:
+        except Exception:
             # If migrations fail, report failure to caller for visibility
-            return False, f"Restore completed but migration failed: {e}"
+            logger.exception("Restore completed but migration failed")
+            return False, "Restore completed but migration failed"
 
         # Dispose connections once more after restore/migrate to ensure clean state
         try:

@@ -15,7 +15,12 @@ from app.models import Integration, IntegrationCredential
 from app.services.integration_service import IntegrationService
 from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
+from app.utils.error_handling import (
+    client_error_response,
+    client_error_payload,
+    DEFAULT_CLIENT_ERROR,
+    sanitize_log_value,
+)
 
 # Import registry to ensure connectors are registered
 try:
@@ -356,7 +361,7 @@ def oauth_callback(provider):
         return redirect(url_for("integrations.manage_integration", provider=provider))
 
     except Exception as e:
-        logger.error(f"Error in OAuth callback for {provider}: {e}")
+        logger.error("Error in OAuth callback for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
         flash(_("Error connecting integration. Please try again."), "error")
         return redirect(url_for("integrations.list_integrations"))
 
@@ -388,7 +393,7 @@ def manage_integration(provider):
         connector_class = MinimalConnector
 
         # Log warning but continue
-        logger.warning(f"Provider {provider} not found in registry, using defaults")
+        logger.warning("Provider %s not found in registry, using defaults", sanitize_log_value(provider))
 
     settings = Settings.get_settings()
 
@@ -492,7 +497,7 @@ def manage_integration(provider):
                         except AttributeError:
                             logger.warning(f"Settings attribute {secret_attr} does not exist, skipping")
                 else:
-                    logger.warning(f"Provider {provider} not in attr_map, cannot save OAuth credentials")
+                    logger.warning("Provider %s not in attr_map, cannot save OAuth credentials", sanitize_log_value(provider))
 
                 # Handle special fields (save even if empty to allow clearing)
                 if provider == "outlook_calendar":
@@ -650,7 +655,7 @@ def manage_integration(provider):
                     temp_connector = connector_class(integration_to_update, None)
                     config_schema = temp_connector.get_config_schema()
                 except Exception as e:
-                    logger.warning(f"Could not get config schema for {provider}: {e}")
+                    logger.warning("Could not get config schema for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
 
             # Update config from form
             if not integration_to_update.config:
@@ -811,13 +816,13 @@ def manage_integration(provider):
             try:
                 config_schema = connector.get_config_schema()
             except Exception as e:
-                logger.warning(f"Could not get config schema for {provider}: {e}")
+                logger.warning("Could not get config schema for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
         elif connector_class and hasattr(connector_class, "get_config_schema"):
             try:
                 temp_connector = connector_class(active_integration, None)
                 config_schema = temp_connector.get_config_schema()
             except Exception as e:
-                logger.warning(f"Could not get config schema for {provider}: {e}")
+                logger.warning("Could not get config schema for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
 
     return render_template(
         "integrations/manage.html",
@@ -1370,7 +1375,7 @@ def integration_webhook(provider):
 
     # Check if provider is available
     if provider not in service._connector_registry:
-        logger.warning(f"Webhook received for unknown provider: {provider}")
+        logger.warning("Webhook received for unknown provider: %s", sanitize_log_value(provider))
         return jsonify({"error": "Unknown provider"}), 404
 
     # Get webhook payload - preserve raw body for signature verification (GitHub, etc.)
@@ -1383,7 +1388,7 @@ def integration_webhook(provider):
     integrations = Integration.query.filter_by(provider=provider, is_active=True).all()
 
     if not integrations:
-        logger.warning(f"No active integrations found for provider: {provider}")
+        logger.warning("No active integrations found for provider: %s", sanitize_log_value(provider))
         return jsonify({"error": "No active integration found"}), 404
 
     results = []
@@ -1488,7 +1493,7 @@ def setup_wizard(provider):
                 temp_connector = connector_class(temp_integration, None)
                 config_schema = temp_connector.get_config_schema()
             except Exception as e:
-                logger.warning(f"Could not get config schema for {provider}: {e}")
+                logger.warning("Could not get config schema for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
 
         # Process form fields based on config schema
         if config_schema and "fields" in config_schema:
@@ -1619,7 +1624,7 @@ def setup_wizard(provider):
             temp_connector = connector_class(temp_integration, None)
             config_schema = temp_connector.get_config_schema()
         except Exception as e:
-            logger.warning(f"Could not get config schema for {provider}: {e}")
+            logger.warning("Could not get config schema for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
 
     # Determine step labels based on provider
     step_labels_map = {
@@ -1694,7 +1699,7 @@ def test_connection_wizard(provider):
         result = connector.test_connection()
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Connection test error for {provider}: {e}", exc_info=True)
+        logger.error("Connection test error for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__), exc_info=True)
         return jsonify({"success": False, **client_error_payload()}), 500
 
 

@@ -78,6 +78,7 @@ class ApiToken(db.Model):
         import hashlib
         import hmac
 
+        # codeql[py/weak-sensitive-data-hashing]: API token lookup HMAC, not password hashing
         return hmac.new(ApiToken._token_pepper(), token.encode("utf-8"), hashlib.sha256).hexdigest()
 
     @staticmethod
@@ -85,6 +86,7 @@ class ApiToken(db.Model):
         """Pre-HMAC SHA256 lookup hash (for verifying existing stored tokens)."""
         import hashlib
 
+        # codeql[py/weak-sensitive-data-hashing]: legacy API token lookup hash, not password hashing
         return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
     @classmethod

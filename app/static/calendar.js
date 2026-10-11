@@ -242,7 +242,7 @@ class Calendar {
         if (!base) return;
         const idNum = typeof eventId === 'number' ? eventId : parseInt(String(eventId), 10);
         if (!Number.isInteger(idNum) || idNum <= 0) {
-            console.error('Calendar move/resize rejected: invalid event id', eventId);
+            console.error('Calendar move/resize rejected: invalid event id');
             return;
         }
         // Template strips /0 from .../events/0/move → .../events/move; restore id before action

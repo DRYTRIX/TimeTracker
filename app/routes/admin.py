@@ -2050,7 +2050,15 @@ def admin_ldap_test():
     """Test LDAP connectivity (service bind + user subtree count). Returns JSON only."""
     from app.services.ldap_service import LDAPService
 
-    return jsonify(LDAPService.test_connection())
+    result = LDAPService.test_connection()
+    # Only return fixed/safe fields (never raw exception text)
+    return jsonify(
+        {
+            "success": bool(result.get("success")),
+            "message": result.get("message") if result.get("success") else (result.get("message") or "LDAP connection failed"),
+            "user_count": result.get("user_count"),
+        }
+    )
 
 
 @admin_bp.route("/admin/peppol/setup-wizard", methods=["GET"])
@@ -2096,32 +2104,36 @@ def admin_peppol_setup_wizard_check_bridge():
         headers["Authorization"] = f"Bearer {bridge_token}"
 
     timeout_s = 5
+    from urllib.parse import urljoin
+
+    health_url = urljoin(bridge_base_url + "/", "health")
+    test_url = urljoin(bridge_base_url + "/", "test")
     try:
-        health = requests.get(f"{bridge_base_url}/health", headers=headers, timeout=timeout_s)
+        health = requests.get(health_url, headers=headers, timeout=timeout_s)
         if health.status_code >= 400:
             return (
-                jsonify({"ok": False, "error": f"Bridge /health returned HTTP {health.status_code}: {health.text}"}),
+                jsonify({"ok": False, "error": f"Bridge /health returned HTTP {health.status_code}"}),
                 400,
             )
         health_json = health.json()
-    except Exception as e:
+    except Exception:
         return client_error_response("Failed to reach bridge /health", 400)
 
     try:
-        test = requests.post(f"{bridge_base_url}/test", headers=headers, timeout=timeout_s)
+        test = requests.post(test_url, headers=headers, timeout=timeout_s)
         if test.status_code >= 400:
             return (
                 jsonify(
                     {
                         "ok": False,
-                        "error": f"Bridge /test returned HTTP {test.status_code}: {test.text}",
+                        "error": f"Bridge /test returned HTTP {test.status_code}",
                         "health": health_json,
                     }
                 ),
                 400,
             )
         test_json = test.json()
-    except Exception as e:
+    except Exception:
         return jsonify({"ok": False, **client_error_payload("Failed to call bridge /test"), "health": health_json}), 400
 
     return jsonify({"ok": True, "health": health_json, "test": test_json})
@@ -2194,9 +2206,14 @@ def admin_peppol_setup_wizard_send_test():
         svc = PeppolService()
         success, tx, message = svc.send_invoice(invoice=invoice, triggered_by_user_id=current_user.id)
         if success:
-            return jsonify({"ok": True, "message": message, "peppol_tx_id": tx.id if tx else None})
-        return jsonify({"ok": False, "error": message, "peppol_tx_id": tx.id if tx else None}), 400
-    except Exception as e:
+            return jsonify(
+                {"ok": True, "message": "Invoice sent via Peppol", "peppol_tx_id": tx.id if tx else None}
+            )
+        current_app.logger.warning("Peppol wizard test send failed: %s", message)
+        return jsonify(
+            {"ok": False, "error": "Failed to send invoice via Peppol", "peppol_tx_id": tx.id if tx else None}
+        ), 400
+    except Exception:
         current_app.logger.exception("Peppol wizard test send failed")
         return client_error_response("Failed to send invoice via Peppol", 500)
 
@@ -5133,7 +5150,8 @@ def oidc_wizard_test_connection():
     result["dns_strategy"] = dns_strategy_used
     result["dns_ip"] = dns_ip  # Will be masked in response
     if not dns_success:
-        result["error"] = dns_error
+        current_app.logger.warning("OIDC wizard DNS failed for %s: %s", hostname, dns_error)
+        result["error"] = "DNS resolution failed"
         return jsonify(result), 200  # Return 200 but with success=False
 
     # Fetch metadata
@@ -5151,13 +5169,22 @@ def oidc_wizard_test_connection():
     )
 
     if diagnostics:
-        result["diagnostics"] = diagnostics
+        # Strip potentially sensitive/error-detail fields before returning to client
+        safe_diag = {
+            "dns_resolution": {
+                "success": (diagnostics.get("dns_resolution") or {}).get("success"),
+                "strategy": (diagnostics.get("dns_resolution") or {}).get("strategy"),
+            },
+            "strategies_tried_count": len(diagnostics.get("strategies_tried") or []),
+        }
+        result["diagnostics"] = safe_diag
 
     if metadata:
         result["success"] = True
         result["metadata"] = metadata
     else:
-        result["error"] = metadata_error
+        current_app.logger.warning("OIDC wizard metadata fetch failed: %s", metadata_error)
+        result["error"] = "Failed to fetch OIDC metadata"
 
     return jsonify(result), 200
 
@@ -5400,7 +5427,16 @@ def ldap_wizard_test_connection():
     data = request.get_json() or {}
     cfg = _ldap_wizard_cfg_from_json(data)
     result = LDAPService.test_connection(cfg)
-    return jsonify(result), 200
+    return (
+        jsonify(
+            {
+                "success": bool(result.get("success")),
+                "message": result.get("message") if result.get("success") else (result.get("message") or "LDAP connection failed"),
+                "user_count": result.get("user_count"),
+            }
+        ),
+        200,
+    )
 
 
 @admin_bp.route("/admin/ldap/setup-wizard/validate-config", methods=["POST"])
@@ -5587,9 +5623,9 @@ def test_email():
     app_module.track_event(current_user.id, "admin.email_test_sent", {"success": success, "configured": success})
 
     if success:
-        return jsonify({"success": True, "message": message}), 200
-    else:
-        return jsonify({"success": False, "message": message}), 500
+        return jsonify({"success": True, "message": "Test email sent successfully"}), 200
+    current_app.logger.warning("Email test failed: %s", message)
+    return jsonify({"success": False, "message": "Failed to send test email"}), 500
 
 
 @admin_bp.route("/admin/email/config-status", methods=["GET"])
@@ -5813,8 +5849,9 @@ def send_email_template_test(template_id):
     )
 
     if success:
-        return jsonify({"success": True, "message": message}), 200
-    return jsonify({"success": False, "message": message}), 500
+        return jsonify({"success": True, "message": "Test email sent successfully"}), 200
+    current_app.logger.warning("Invoice template test email failed: %s", message)
+    return jsonify({"success": False, "message": "Failed to send test email"}), 500
 
 
 @admin_bp.route("/admin/email-templates/<int:template_id>")

@@ -1792,12 +1792,12 @@ def send_quote_email(quote_id):
                 {"quote_id": quote.id, "quote_title": quote.title, "recipient_email": recipient_email},
             )
             if request.is_json:
-                return jsonify({"success": True, "message": message})
+                return jsonify({"success": True, "message": "Quote email sent successfully"})
             return redirect(url_for("quotes.view_quote", quote_id=quote_id))
         else:
             flash(_("Failed to send quote. Please try again."), "error")
             if request.is_json:
-                return jsonify({"error": message}), 400
+                return client_error_response("Failed to send quote email", 400)
             return redirect(url_for("quotes.view_quote", quote_id=quote_id))
     except Exception as e:
         current_app.logger.error(f"Error sending quote email: {e}", exc_info=True)

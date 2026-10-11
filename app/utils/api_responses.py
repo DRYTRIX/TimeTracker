@@ -8,6 +8,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from flask import Response, jsonify
 from marshmallow import ValidationError
 
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR
+
 # Flask views may return ``(body, status_code)`` tuples; the WSGI layer normalizes
 # them to a ``Response``. Annotate accordingly so callers and mypy agree.
 ApiResponse = Union[Response, Tuple[Response, int], Tuple[str, int]]
@@ -64,11 +66,16 @@ def error_response(
     Returns:
         Flask JSON response
     """
+    # Never echo exception/stack-trace text to clients. Callers must pass fixed messages.
+    safe_message = message if isinstance(message, str) and message.strip() else DEFAULT_CLIENT_ERROR
+    if "Traceback" in safe_message or "\n" in safe_message:
+        safe_message = DEFAULT_CLIENT_ERROR
+
     # error = user-facing message (backward compat); error_code = machine-readable
     response = {
         "success": False,
-        "error": message,
-        "message": message,
+        "error": safe_message,
+        "message": safe_message,
         "error_code": error_code or "error",
     }
 

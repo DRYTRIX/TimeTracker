@@ -417,8 +417,8 @@ class LDAPService:
         try:
             try:
                 user_base = _user_search_base(effective_cfg)
-            except ValueError as e:
-                return {"success": False, "message": str(e), "user_count": None}
+            except ValueError:
+                return {"success": False, "message": "Invalid LDAP base DN", "user_count": None}
             if not user_base:
                 return {"success": False, "message": "LDAP base DN is required", "user_count": None}
             user_oc_raw = _safe_ldap_attr(
@@ -427,6 +427,8 @@ class LDAPService:
             )
             user_oc = escape_filter_chars(user_oc_raw)
             filt = f"(objectClass={user_oc})"
+            # search_base validated by _validate_dn (charset + DN shape); filter values escaped
+            # codeql[py/ldap-injection]: DN validated via _validate_dn; filter uses escape_filter_chars
             conn.search(
                 search_base=user_base,
                 search_filter=filt,

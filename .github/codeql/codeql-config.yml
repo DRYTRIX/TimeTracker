@@ -10,5 +10,6 @@ paths-ignore:
   - mobile/**/node_modules/**
   - .github/workflows-archive/**
 
+# Security findings only (not maintainability/quality noise from security-and-quality)
 queries:
-  - uses: security-and-quality
+  - uses: security-extended

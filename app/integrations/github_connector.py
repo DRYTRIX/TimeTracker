@@ -174,8 +174,8 @@ class GitHubConnector(BaseConnector):
                 timeout=HTTP_TIMEOUT,
             )
         except requests.RequestException as exc:
-            logger.warning("GitHub test_connection request failed: %s", exc)
-            return {"success": False, "message": f"Connection error: {exc}"}
+            logger.warning("GitHub test_connection request failed: %s", type(exc).__name__)
+            return {"success": False, "message": "Connection error"}
 
         if resp.status_code == 200:
             return {"success": True, "message": f"Connected as {resp.json().get('login', 'Unknown')}"}
@@ -207,8 +207,8 @@ class GitHubConnector(BaseConnector):
                 timeout=HTTP_TIMEOUT,
             )
         except requests.RequestException as exc:
-            logger.warning("GitHub sync request failed for %s/%s: %s", owner, repo, exc)
-            return {"ok": False, "error": f"GitHub request failed: {exc}"}
+            logger.warning("GitHub sync request failed for %s/%s: %s", owner, repo, type(exc).__name__)
+            return {"ok": False, "error": "GitHub request failed"}
 
         if resp.status_code != 200:
             return {"ok": False, "error": f"GitHub returned HTTP {resp.status_code}"}
@@ -247,8 +247,8 @@ class GitHubConnector(BaseConnector):
                 db.session.add(task)
                 synced += 1
             except Exception as exc:  # pragma: no cover - defensive
-                logger.warning("Failed to create task for issue #%s: %s", number, exc)
-                errors.append(f"#{number}: {exc}")
+                logger.warning("Failed to create task for issue #%s: %s", number, type(exc).__name__)
+                errors.append(f"#{number}: failed to create task")
 
         if synced:
             if not safe_commit("github_connector_sync", {"integration_id": self.integration.id}):

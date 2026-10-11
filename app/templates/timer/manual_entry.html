@@ -771,9 +771,12 @@ document.addEventListener('DOMContentLoaded', async function(){
             if (!tpl) {
                 const params = new URLSearchParams(window.location.search);
                 const tplId = params.get('template');
-                if (tplId) {
+                // Only allow integer template ids; fixed same-origin path (blocks client-side request forgery)
+                if (tplId && /^\d+$/.test(tplId)) {
                     try {
-                        const resp = await fetch(`/api/templates/${tplId}`);
+                        const resp = await fetch(
+                            new URL('/api/templates/' + encodeURIComponent(tplId), window.location.origin).pathname
+                        );
                         if (resp.ok) tpl = await resp.json();
                     } catch(_) {}
                 }

@@ -452,5 +452,7 @@ def send_invoice_peppol_api(invoice_id):
         "attachment_filenames": service.last_attachment_filenames,
     }
     if success:
+        payload["message"] = "Invoice sent via Peppol"
         return jsonify(payload)
+    payload["message"] = "Failed to send via Peppol"
     return jsonify(payload), 400

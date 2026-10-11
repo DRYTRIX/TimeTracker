@@ -258,10 +258,12 @@ class InvoiceService:
         except Exception:
             import logging
 
+            from app.utils.error_handling import sanitize_log_value
+
             logging.getLogger(__name__).warning(
                 "Invoice create failed for project_id=%s created_by=%s",
-                project_id,
-                created_by,
+                sanitize_log_value(project_id),
+                sanitize_log_value(created_by),
                 exc_info=True,
             )
             # @transactional on _create_invoice_row should roll back; belt-and-suspenders:

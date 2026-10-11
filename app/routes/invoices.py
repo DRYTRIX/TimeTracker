@@ -1578,10 +1578,14 @@ def send_invoice_email_route(invoice_id):
         if success:
             flash(f"Invoice email sent successfully to {recipient_email}", "success")
             return jsonify(
-                {"success": True, "message": message, "invoice_email_id": invoice_email.id if invoice_email else None}
+                {
+                    "success": True,
+                    "message": "Invoice email sent successfully",
+                    "invoice_email_id": invoice_email.id if invoice_email else None,
+                }
             )
         else:
-            return jsonify({"error": message}), 500
+            return client_error_response("Failed to send invoice email", 500)
 
     except Exception as e:
         logger.error(f"Error sending invoice email: {type(e).__name__}: {str(e)}")
@@ -1605,9 +1609,13 @@ def send_invoice_peppol_route(invoice_id):
         service = PeppolService()
         success, tx, message = service.send_invoice(invoice=invoice, triggered_by_user_id=current_user.id)
         if success:
-            flash(message, "success")
-            return jsonify({"success": True, "message": message, "peppol_tx_id": tx.id if tx else None})
-        return jsonify({"error": message, "peppol_tx_id": tx.id if tx else None}), 400
+            flash("Invoice sent via Peppol", "success")
+            return jsonify(
+                {"success": True, "message": "Invoice sent via Peppol", "peppol_tx_id": tx.id if tx else None}
+            )
+        return jsonify(
+            {"error": "Failed to send invoice via Peppol", "peppol_tx_id": tx.id if tx else None}
+        ), 400
     except Exception as e:
         logger.error(f"Error sending invoice via Peppol: {type(e).__name__}: {str(e)}")
         logger.exception("Full error traceback:")
@@ -1686,10 +1694,14 @@ def resend_invoice_email(invoice_id, email_id):
         if success:
             flash(f"Invoice email resent successfully to {recipient_email}", "success")
             return jsonify(
-                {"success": True, "message": message, "invoice_email_id": invoice_email.id if invoice_email else None}
+                {
+                    "success": True,
+                    "message": "Invoice email resent successfully",
+                    "invoice_email_id": invoice_email.id if invoice_email else None,
+                }
             )
         else:
-            return jsonify({"error": message}), 500
+            return client_error_response("Failed to resend invoice email", 500)
 
     except Exception as e:
         logger.error(f"Error resending invoice email: {type(e).__name__}: {str(e)}")

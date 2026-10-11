@@ -536,13 +536,14 @@ def restore_backup():
             app_obj = current_app._get_current_object()
             success, message = restore_backup_archive(app_obj, filepath)
             if not success:
-                return jsonify({"error": message}), 400
+                current_app.logger.warning("Backup restore failed: %s", message)
+                return client_error_response("Backup restore failed", 400)
             return (
                 jsonify(
                     {
                         "success": True,
                         "import_id": None,
-                        "statistics": {"message": message},
+                        "statistics": {"message": "Backup restored successfully"},
                         "message": "Backup restored successfully",
                     }
                 ),
