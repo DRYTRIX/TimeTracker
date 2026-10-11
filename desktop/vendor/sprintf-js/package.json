@@ -1,0 +1,13 @@
+{
+  "name": "sprintf-js",
+  "version": "1.1.4",
+  "description": "JavaScript sprintf implementation (vendored; precision capped for GHSA-hp3w-g68c-fv3c)",
+  "author": "Alexandru Mărășteanu <hello@alexei.ro>",
+  "main": "src/sprintf.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alexei/sprintf.js.git"
+  },
+  "license": "BSD-3-Clause",
+  "readmeFilename": "README.md"
+}

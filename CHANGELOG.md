@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **Desktop (Dependabot #222)** — Override transitive `sprintf-js` with a vendored build that caps numeric precision (GHSA-hp3w-g68c-fv3c / CVE-2026-97058) until upstream publishes a fixed release.
+
 ## [5.18.1] - 2026-10-11
 
 ### Fixed
