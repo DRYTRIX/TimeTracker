@@ -299,21 +299,27 @@ function App() {
       elapsedLabel,
       idle_timeout_minutes: timerPayload?.idle_timeout_minutes,
       idle_unanswered_action: timerPayload?.idle_unanswered_action,
+      idle_notified: timerPayload?.idle_notified || timer?.idle_notified,
+      idle_notified_at: timerPayload?.idle_notified_at || timer?.idle_notified_at,
+      needs_review: timerPayload?.needs_review || timer?.needs_review,
     });
   }, []);
 
   const answerIdlePrompt = useCallback(
     async (answer) => {
+      const tokenFromPrompt = idlePrompt?.idleNotifiedAt || null;
       setIdlePrompt(null);
       try {
-        // The check token comes from the latest status; sending it lets the
-        // server apply first-answer-wins across devices (Issue #722).
-        let notifiedAt = null;
-        try {
-          const status = await apiClient.getTimerStatus();
-          notifiedAt = status?.timer?.idle_notified_at || null;
-        } catch (e) {
-          /* token is best-effort */
+        // Prefer the token the prompt was shown with; fall back to a fresh
+        // status fetch so first-answer-wins still applies (Issue #722).
+        let notifiedAt = tokenFromPrompt;
+        if (!notifiedAt) {
+          try {
+            const status = await apiClient.getTimerStatus();
+            notifiedAt = status?.timer?.idle_notified_at || null;
+          } catch (e) {
+            /* token is best-effort */
+          }
         }
         const result = await apiClient.idleResponse(answer, notifiedAt);
         if (!result?.already_resolved) {
@@ -322,10 +328,13 @@ function App() {
             answer === 'yes' ? 'success' : 'warning',
           );
         }
-        // Tell the main process the prompt is resolved so its local grace
-        // window and notification state clear (heartbeats are harmless).
+        // Heartbeat only for "yes"; stop/trim just clear main-process grace.
         try {
-          window.electronAPI?.idleStillWorking?.();
+          if (answer === 'yes') {
+            window.electronAPI?.idleStillWorking?.();
+          } else {
+            window.electronAPI?.idleDismiss?.();
+          }
         } catch (e) {
           /* optional */
         }
@@ -335,7 +344,7 @@ function App() {
         refreshCoreData();
       }
     },
-    [apiClient, refreshCoreData, showToast],
+    [apiClient, idlePrompt, refreshCoreData, showToast],
   );
 
   useEffect(() => {
@@ -349,7 +358,7 @@ function App() {
       showToast('Timer stopped due to inactivity', 'warning');
     });
     const unsubDismissed = window.electronAPI.onIdleDismissed?.(() => {
-      // no-op; heartbeat already sent from main
+      setIdlePrompt(null);
     });
     const unsubNeedsReview = window.electronAPI.onIdleNeedsReview?.(() => {
       refreshCoreData();

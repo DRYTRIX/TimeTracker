@@ -149,3 +149,57 @@ def test_invalid_answer_rejected(client_with_token, user, project):
         json={"answer": "maybe"},
     )
     assert response.status_code == 400
+
+
+def test_stop_fires_workflow_and_timer_stopped_emit(client_with_token, user, project, monkeypatch):
+    """Idle stop/trim must run the same side effects as /api/timer/stop."""
+    timer = _make_notified_timer(user, project)
+    workflow_calls = []
+    emit_calls = []
+
+    def fake_workflow(entry, user_id):
+        workflow_calls.append((entry.id, user_id))
+
+    def fake_emit(event, data, room=None, **kwargs):
+        emit_calls.append((event, data, room))
+
+    monkeypatch.setattr(
+        "app.utils.workflow_bridge.fire_time_logged_workflow",
+        fake_workflow,
+    )
+    monkeypatch.setattr("app.socketio.emit", fake_emit)
+
+    response = client_with_token.post(
+        "/api/v1/timer/idle-response",
+        json={"answer": "stop", "notified_at": _token_of(timer)},
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["stopped"] is True
+    assert workflow_calls == [(timer.id, user.id)]
+    stopped_emits = [c for c in emit_calls if c[0] == "timer_stopped"]
+    assert len(stopped_emits) == 1
+    assert stopped_emits[0][1]["timer_id"] == timer.id
+    assert stopped_emits[0][1]["reason"] == "idle_response"
+    resolved_emits = [c for c in emit_calls if c[0] == "idle_prompt_resolved"]
+    assert len(resolved_emits) == 1
+    assert resolved_emits[0][1]["stopped"] is True
+
+
+def test_yes_does_not_fire_stop_side_effects(client_with_token, user, project, monkeypatch):
+    timer = _make_notified_timer(user, project)
+    workflow_calls = []
+
+    monkeypatch.setattr(
+        "app.utils.workflow_bridge.fire_time_logged_workflow",
+        lambda *a, **k: workflow_calls.append(True),
+    )
+
+    response = client_with_token.post(
+        "/api/v1/timer/idle-response",
+        json={"answer": "yes", "notified_at": _token_of(timer)},
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["stopped"] is False
+    assert workflow_calls == []

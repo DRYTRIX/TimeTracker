@@ -319,6 +319,7 @@ class TimeTrackingService:
                 raise RuntimeError("database_error")
             result["stopped"] = True
             result["time_entry"] = entry
+            self._emit_idle_stop_side_effects(user, entry)
 
         self._emit_idle_prompt_resolved(user, entry, notified_at, answer, result["stopped"])
         return result
@@ -335,6 +336,40 @@ class TimeTrackingService:
         if getattr(token, "tzinfo", None) is not None:
             token = token.replace(tzinfo=None)
         return token
+
+    @staticmethod
+    def _emit_idle_stop_side_effects(user, entry) -> None:
+        """Mirror /api/timer/stop side effects after an idle stop/trim.
+
+        Best-effort: failures must not undo the already-committed stop.
+        """
+        try:
+            from app.utils.workflow_bridge import fire_time_logged_workflow
+
+            fire_time_logged_workflow(entry, user.id)
+        except Exception:
+            pass
+        try:
+            from app import socketio
+
+            socketio.emit(
+                "timer_stopped",
+                {
+                    "user_id": user.id,
+                    "timer_id": entry.id,
+                    "duration": entry.duration_formatted,
+                    "reason": "idle_response",
+                },
+                room=f"user_{user.id}",
+            )
+        except Exception:
+            pass
+        try:
+            from app.integrations.slack_connector import SlackConnector
+
+            SlackConnector.notify_for_user(user, entry, event="stop")
+        except Exception:
+            pass
 
     @staticmethod
     def _emit_idle_prompt_resolved(user, entry, notified_at: Optional[str], answer: str, stopped: bool) -> None:

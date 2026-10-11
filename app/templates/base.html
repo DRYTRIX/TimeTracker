@@ -303,9 +303,13 @@
                         if (window.__ttDismissIdlePrompt) window.__ttDismissIdlePrompt();
                         if (data && data.stopped) {
                             if (window.__ttOnIdleAutoStop) window.__ttOnIdleAutoStop();
-                            var msg = (window.i18n && window.i18n.messages && window.i18n.messages.timerStoppedInactivity) || 'Timer stopped due to inactivity';
-                            if (window.toastManager && window.toastManager.warning) {
-                                window.toastManager.warning(msg, '', 5000);
+                            // Skip toast when this tab answered — respondIdle already toasted.
+                            var localAnswer = window.__ttIdleLocalAnswerPending && window.__ttIdleLocalAnswerPending();
+                            if (!localAnswer) {
+                                var msg = (window.i18n && window.i18n.messages && window.i18n.messages.timerStoppedInactivity) || 'Timer stopped due to inactivity';
+                                if (window.toastManager && window.toastManager.warning) {
+                                    window.toastManager.warning(msg, '', 5000);
+                                }
                             }
                         } else {
                             document.dispatchEvent(new CustomEvent('tt:timer-status-changed'));

@@ -32,7 +32,7 @@ docker compose -f docker-compose.nas.yml up -d
 # open http://localhost:8080 — first login creates the admin
 ```
 
-**Latest release: v5.18.0** — see [CHANGELOG.md](CHANGELOG.md).
+**Latest release: v5.18.1** — see [CHANGELOG.md](CHANGELOG.md).
 
 More install paths (HTTPS production, NAS UI paste, cloud): [Install options](#install-options).
 

@@ -17,9 +17,10 @@ import 'package:timetracker_mobile/domain/repositories/time_tracking_repository.
 /// ``POST /api/v1/timer/idle-response`` endpoint carrying the check token, so
 /// the first device to answer wins and stale answers are ignored.
 ///
-/// While the app is in the foreground it heartbeats every 60 seconds (which
-/// keeps the server from arming a check); once backgrounded the heartbeats
-/// stop and the server takes over.
+/// Heartbeats are sent only while the user has been recently active (pointer
+/// / lifecycle). Unconditional foreground heartbeats would keep the server
+/// from ever arming ``idle_notified``. Once backgrounded, heartbeats stop and
+/// the server takes over.
 class IdleDetectionService with WidgetsBindingObserver {
   IdleDetectionService._();
 
@@ -44,6 +45,7 @@ class IdleDetectionService with WidgetsBindingObserver {
   bool _inForeground = true;
   bool _taskDataCallbackRegistered = false;
   bool _needsReview = false;
+  DateTime _lastActivity = DateTime.now();
 
   /// The server's idle check token (idle_notified_at) for the shown prompt.
   String? _idleNotifiedAt;
@@ -125,6 +127,12 @@ class IdleDetectionService with WidgetsBindingObserver {
       return;
     }
     _needsReview = needsReview;
+    if (needsReview && _promptShown) {
+      // Server moved to needs-review — dismiss the Still working? prompt.
+      _cancelGrace();
+      await NotificationService.instance.cancelIdlePrompt();
+      return;
+    }
     if (!idleNotified && _promptShown) {
       // The check was resolved elsewhere (another device answered or the
       // server acted) — dismiss the local prompt.
@@ -141,9 +149,13 @@ class IdleDetectionService with WidgetsBindingObserver {
     }
   }
 
-  /// External activity hint (pointer/timer events). The server decides
-  /// idleness via heartbeats, so this no longer drives local state.
-  void markActive() {}
+  /// Record real user activity so heartbeats only keep the idle window fresh
+  /// while someone is actually using the app.
+  void markActive() {
+    if (_promptShown) return;
+    _lastActivity = DateTime.now();
+    unawaited(_sendHeartbeat());
+  }
 
   /// Server FCM idle_timeout wake-up (Issue #722): render the armed check.
   void _onIdlePushFromServer(Map<String, dynamic> data) {
@@ -160,7 +172,7 @@ class IdleDetectionService with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _inForeground = true;
-      _sendHeartbeat();
+      markActive();
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden ||
@@ -190,9 +202,12 @@ class IdleDetectionService with WidgetsBindingObserver {
 
   /// Grace expired unanswered: the SERVER sweep resolves the check (flags in
   /// review mode, stops credited in auto_stop mode) — never act locally.
+  /// Keep ``_promptShown`` set so the next poll does not re-arm the prompt
+  /// until the server status changes (needs_review, cleared idle_notified).
   Future<void> _onGraceExpired() async {
     await NotificationService.instance.cancelIdlePrompt();
-    _promptShown = false;
+    _graceTimer?.cancel();
+    _graceTimer = null;
     if (_unansweredAction != 'auto_stop') {
       await NotificationService.instance.showNeedsReviewNotification();
     }
@@ -227,6 +242,12 @@ class IdleDetectionService with WidgetsBindingObserver {
 
   Future<void> _sendHeartbeat() async {
     if (!_timerActive || _repository == null || _promptShown || !_inForeground) {
+      return;
+    }
+    final idleThreshold = Duration(minutes: _idleTimeoutMinutes);
+    if (DateTime.now().difference(_lastActivity) >= idleThreshold) {
+      // User has been idle locally — stop refreshing the server window so the
+      // sweep can arm idle_notified.
       return;
     }
     await _sendHeartbeatForced();

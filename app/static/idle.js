@@ -127,6 +127,9 @@
   // stale answers so this client just dismisses instead of acting on old state.
   // ---------------------------------------------------------------------------
   let currentIdleToken = null;
+  // Set when this tab answered so the idle_prompt_resolved socket handler
+  // can skip the duplicate "stopped due to inactivity" toast.
+  let localAnswerPending = false;
 
   async function respondIdle(answer){
     clearGraceTimers();
@@ -135,6 +138,7 @@
     try { const el = document.querySelector('[data-tt-idle-prompt]'); if (el) el.remove(); } catch(e) {}
     const token = currentIdleToken;
     currentIdleToken = null;
+    localAnswerPending = true;
     try {
       const r = await fetch('/api/timer/idle-response', {
         method: 'POST',
@@ -155,6 +159,9 @@
         await refreshTimerUiAfterStop();
       }
     } catch(e) {}
+    // Clear after a short window so a late socket event from our own answer
+    // is suppressed, but a later remote/server stop can still toast.
+    setTimeout(function(){ localAnswerPending = false; }, 3000);
     lastActivity = Date.now();
   }
 
@@ -392,8 +399,12 @@
         try { window.__ttEnsurePushSubscription(); } catch(e) {}
       }
     }
-    // Send periodic heartbeat while tab is open (throttled to HEARTBEAT_THROTTLE_MS)
-    if (!promptShown) sendHeartbeat();
+    // Heartbeat only while the user has been active within the idle window.
+    // Unconditional tick heartbeats would keep last_heartbeat_at fresh forever
+    // and the server would never arm idle_notified (Issue #722).
+    if (!promptShown && (Date.now() - lastActivity) < getIdleThresholdMs()) {
+      sendHeartbeat();
+    }
     // Server flagged this timer for review (idle grace expired elsewhere): show banner.
     if (active.needs_review){
       if (reviewShownForTimerId !== active.id){
@@ -659,6 +670,8 @@
     currentIdleToken = null;
     try { const el = document.querySelector('[data-tt-idle-prompt]'); if (el) el.remove(); } catch(e) {}
   };
+  // True when this tab just answered the idle prompt (suppress duplicate toast).
+  window.__ttIdleLocalAnswerPending = function(){ return localAnswerPending; };
   window.__ttOnIdleAutoStop = function(){
     window.__ttDismissIdlePrompt();
     refreshTimerUiAfterStop();
