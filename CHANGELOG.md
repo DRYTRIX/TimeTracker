@@ -7,9 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.18.1] - 2026-10-11
+
 ### Fixed
 
-- **Gusto** — Requests now send `X-Gusto-API-Version` (default `2026-06-15`, overridable with `api_version` in the integration config) instead of falling back to the minimum API version set on the Gusto app.
+- **Idle detection (#722, #779, #781)** — Server-authoritative "Still working?" prompts with first-answer-wins tokens and idle-credit math. Client heartbeats only count real activity; stop side effects restored for idle responses. Mobile follows the same protocol; Android idle notification is actionable.
+- **Server stability** — A single eventlet worker no longer wedges on database waits; Postgres timeouts are tighter under eventlet.
+- **Edit Timer (#777)** — Confirm Changes summary renders as HTML in the edit dialog.
+- **Gusto (#778)** — Requests now send `X-Gusto-API-Version` (default `2026-06-15`, overridable with `api_version` in the integration config) instead of falling back to the minimum API version set on the Gusto app.
+
+### Changed
+
+- **CI/CD** — Release build runs only for `v*.*.*` tags on main.
+- **README** — Adds a Deploy to Railyard button (#774).
+- **Dependencies** — Werkzeug 3.1.9; desktop axios 1.20.0, undici 6.29.0, and related transitive bumps.
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.18.1**; `VERSION` and desktop/browser-extension/mobile client versions aligned.
 
 ## [5.18.0] - 2026-10-04
 
