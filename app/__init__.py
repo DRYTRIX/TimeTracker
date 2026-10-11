@@ -600,13 +600,23 @@ def create_app(config=None):
     def _handle_unauthorized():
         """Send portal sessions to the client portal login instead of the main app login."""
         from app.utils.client_portal_session import get_active_native_client_portal_id
+        from app.utils.safe_redirect import is_safe_relative_url
+
+        # Prefer a same-origin relative path for next= (never pass absolute request.url)
+        next_target = request.path or "/"
+        if request.query_string:
+            try:
+                next_target = f"{request.path}?{request.query_string.decode('utf-8', 'ignore')}"
+            except Exception:
+                next_target = request.path or "/"
+        next_kw = {"next": next_target} if is_safe_relative_url(next_target) else {}
 
         if get_active_native_client_portal_id() or request.path.startswith("/client-portal"):
             flash(_("Please log in to access the client portal."), "error")
-            return redirect(url_for("client_portal.login", next=request.url))
+            return redirect(url_for("client_portal.login", **next_kw))
 
         flash(login_manager.login_message, login_manager.login_message_category)
-        return redirect(url_for(login_manager.login_view, next=request.url))
+        return redirect(url_for(login_manager.login_view, **next_kw))
 
     # Internationalization selector handled via babel.init_app(locale_selector=...)
 
@@ -855,12 +865,14 @@ def create_app(config=None):
     def log_login_requests():
         try:
             if request.path == "/login":
+                from app.utils.error_handling import sanitize_log_value
+
                 app.logger.info(
                     "%s %s from %s UA=%s",
-                    request.method,
-                    request.path,
-                    request.headers.get("X-Forwarded-For") or request.remote_addr,
-                    request.headers.get("User-Agent"),
+                    sanitize_log_value(request.method),
+                    sanitize_log_value(request.path),
+                    sanitize_log_value(request.headers.get("X-Forwarded-For") or request.remote_addr),
+                    sanitize_log_value(request.headers.get("User-Agent")),
                 )
         except Exception:
             app.logger.debug("log_login_requests failed", exc_info=True)
@@ -889,12 +901,14 @@ def create_app(config=None):
         try:
             # Log write operations
             if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+                from app.utils.error_handling import sanitize_log_value
+
                 app.logger.info(
                     "%s %s -> %s from %s",
-                    request.method,
-                    request.path,
+                    sanitize_log_value(request.method),
+                    sanitize_log_value(request.path),
                     response.status_code,
-                    request.headers.get("X-Forwarded-For") or request.remote_addr,
+                    sanitize_log_value(request.headers.get("X-Forwarded-For") or request.remote_addr),
                 )
         except Exception:
             app.logger.debug("Write-operation request logging failed", exc_info=True)
@@ -1144,15 +1158,17 @@ def create_app(config=None):
                 user_id = getattr(_cu, "id", None) if getattr(_cu, "is_authenticated", False) else None
             except Exception:
                 user_id = None
+            from app.utils.error_handling import sanitize_log_value
+
             app.logger.warning(
                 "CSRF failure: path=%s method=%s form=%s json=%s ref=%s user=%s reason=%s",
-                request.path,
-                request.method,
+                sanitize_log_value(request.path),
+                sanitize_log_value(request.method),
                 bool(request.form),
                 request.is_json,
-                request.referrer,
+                sanitize_log_value(request.referrer),
                 user_id,
-                getattr(e, "description", ""),
+                sanitize_log_value(getattr(e, "description", "")),
             )
         except Exception:
             app.logger.debug("CSRF failure diagnostic logging failed", exc_info=True)
@@ -1224,21 +1240,21 @@ def create_app(config=None):
             is_authed = False
 
         if (not is_authed) or request.endpoint == "auth.login" or request.path.rstrip("/").endswith("/login"):
+            from app.utils.safe_redirect import is_safe_next_url
+
             next_url = request.args.get("next") or request.form.get("next")
-            if next_url:
+            if next_url and is_safe_next_url(next_url):
                 return redirect(url_for("auth.login", next=next_url))
             return redirect(url_for("auth.login"))
 
-        dest = request.path or url_for("main.dashboard")
-        try:
-            ref = request.referrer
-            if ref:
-                ref_host = urlparse(ref).netloc
-                cur_host = urlparse(request.host_url).netloc
-                if ref_host and ref_host == cur_host:
-                    dest = ref
-        except Exception:
-            app.logger.debug("CSRF redirect referrer parse failed", exc_info=True)
+        from app.utils.safe_redirect import safe_redirect_target
+
+        dest = safe_redirect_target(
+            request.referrer,
+            allow_absolute_same_host=True,
+            fallback=request.path if (request.path or "").startswith("/") else None,
+            fallback_endpoint="main.dashboard",
+        )
         return redirect(dest)
 
     # Expose csrf_token() in Jinja templates even without FlaskForm

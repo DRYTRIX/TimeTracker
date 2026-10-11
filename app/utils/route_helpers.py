@@ -15,6 +15,7 @@ from app.utils.api_responses import (
     success_response,
     unauthorized_response,
 )
+from app.utils.safe_redirect import safe_redirect_target
 
 
 def handle_service_result(
@@ -66,7 +67,7 @@ def handle_service_result(
             flash(message, "error")
             if error_redirect:
                 return redirect(error_redirect)
-            return redirect(request.referrer or url_for("main.dashboard"))
+            return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
 
 
 def json_api(f: Callable) -> Callable:

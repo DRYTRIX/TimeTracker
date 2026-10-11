@@ -11,6 +11,7 @@ from app.utils.config_manager import ConfigManager
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required, permission_required
 from app.utils.quote_access import quote_list_scope_user_id
+from app.utils.safe_redirect import safe_redirect_target
 
 quotes_bp = Blueprint("quotes", __name__)
 
@@ -1659,7 +1660,7 @@ def export_quote_pdf(quote_id):
             f"[PDF_EXPORT] Permission denied - QuoteID: {quote_id}, User: {current_user.username}"
         )
         flash(_("You do not have permission to export this quote"), "error")
-        return redirect(request.referrer or url_for("quotes.list_quotes"))
+        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("quotes.list_quotes")))
 
     # Get page size from query parameter, default to A4
     page_size_raw = request.args.get("size", "A4")

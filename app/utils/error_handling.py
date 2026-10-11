@@ -5,9 +5,22 @@ Use these where failures must not break the main flow (e.g. cache, cleanup, tele
 
 import logging
 import os
+import re
 from typing import Any, Optional
 
 _valid_log_levels = ("debug", "info", "warning", "error", "critical")
+_LOG_CRLF_RE = re.compile(r"[\r\n]+")
+
+
+def sanitize_log_value(value: Any, *, max_len: int = 500) -> str:
+    """Neutralize CR/LF (log injection) and truncate untrusted values for logging."""
+    if value is None:
+        return ""
+    text = str(value)
+    text = _LOG_CRLF_RE.sub(" ", text)
+    if len(text) > max_len:
+        text = text[: max_len - 3] + "..."
+    return text
 
 
 def safe_log(

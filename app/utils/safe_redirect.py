@@ -88,20 +88,25 @@ def is_safe_referrer(referrer: Optional[str], *, require_same_host: bool = True)
 def safe_redirect_target(
     candidate: Optional[str],
     *,
+    fallback: Optional[str] = None,
     fallback_endpoint: str = "main.dashboard",
     allowed_prefixes: Optional[Sequence[str]] = None,
     allow_absolute_same_host: bool = False,
 ) -> str:
     """
-    Return a safe redirect target, or the fallback endpoint URL.
+    Return a safe redirect target, or a fallback URL / endpoint.
 
     - Relative candidates use is_safe_next_url.
     - Absolute candidates are only allowed when allow_absolute_same_host is True
       and is_safe_referrer passes.
+    - When no candidate is safe, ``fallback`` is returned if provided; otherwise
+      ``url_for(fallback_endpoint)``.
     """
     if candidate:
         if allow_absolute_same_host and is_safe_referrer(candidate):
             return candidate.strip()
         if is_safe_next_url(candidate, allowed_prefixes=allowed_prefixes):
             return candidate.strip()
+    if fallback is not None:
+        return fallback
     return url_for(fallback_endpoint)

@@ -376,17 +376,22 @@ def login():
 
     # If OIDC-only mode, redirect to OIDC login start
     if auth_method == "oidc":
-        return redirect(url_for("auth.login_oidc", next=request.args.get("next")))
+        next_page = request.args.get("next")
+        if next_page and is_safe_next_url(next_page):
+            return redirect(url_for("auth.login_oidc", next=next_page))
+        return redirect(url_for("auth.login_oidc"))
 
     if request.method == "POST":
         try:
             username = request.form.get("username", "").strip().lower()
             password = request.form.get("password", "")
+            from app.utils.error_handling import sanitize_log_value
+
             current_app.logger.info(
                 "POST /login (username=%s, auth_method=%s) from %s",
-                username or "<empty>",
-                auth_method,
-                request.headers.get("X-Forwarded-For") or request.remote_addr,
+                sanitize_log_value(username or "<empty>"),
+                sanitize_log_value(auth_method),
+                sanitize_log_value(request.headers.get("X-Forwarded-For") or request.remote_addr),
             )
 
             # Validate username input
