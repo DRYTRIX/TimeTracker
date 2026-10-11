@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import Optional, Sequence
 from urllib.parse import urlparse
 
-from flask import request, url_for
+from flask import redirect, request, url_for
+from werkzeug.wrappers import Response
 
 
 def is_safe_relative_url(next_url: Optional[str]) -> bool:
@@ -13,7 +14,7 @@ def is_safe_relative_url(next_url: Optional[str]) -> bool:
     Return True if next_url is a same-origin relative path (not protocol-relative).
 
     Rejects empty values, absolute URLs, protocol-relative URLs (//evil.com),
-    and backslash tricks (/\evil.com).
+    and backslash tricks (/\\evil.com).
     """
     if not next_url or not isinstance(next_url, str):
         return False
@@ -135,3 +136,29 @@ def safe_redirect_target(
     if fallback is not None:
         return fallback
     return url_for(fallback_endpoint)
+
+
+def safe_redirect(
+    candidate: Optional[str] = None,
+    *,
+    fallback: Optional[str] = None,
+    fallback_endpoint: str = "main.dashboard",
+    allowed_prefixes: Optional[Sequence[str]] = None,
+    allow_absolute_same_host: bool = False,
+    code: int = 302,
+) -> Response:
+    """
+    Flask ``redirect()`` to a validated target.
+
+    Centralizes the redirect sink so open-redirect findings are handled in one place.
+    """
+    target = safe_redirect_target(
+        candidate,
+        fallback=fallback,
+        fallback_endpoint=fallback_endpoint,
+        allowed_prefixes=allowed_prefixes,
+        allow_absolute_same_host=allow_absolute_same_host,
+    )
+    # Validated/rebuilt by safe_redirect_target; single controlled sink for CodeQL.
+    # codeql[py/url-redirection]
+    return redirect(target, code=code)

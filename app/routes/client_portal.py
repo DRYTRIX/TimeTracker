@@ -24,7 +24,7 @@ from flask_babel import gettext as _
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db
-from app.utils.safe_redirect import safe_redirect_target
+from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 from app.models import (
     DEFAULT_WIDGET_ORDER,
     VALID_WIDGET_IDS,
@@ -442,13 +442,11 @@ def login():
 
     # Redirect to intended page or dashboard
     next_page = request.form.get("next") or request.args.get("next")
-    return redirect(
-        safe_redirect_target(
+    return safe_redirect(
             next_page,
             allowed_prefixes=("/client-portal",),
             fallback=url_for("client_portal.dashboard"),
         )
-    )
 
 
 @client_portal_bp.route("/client-portal/logout")

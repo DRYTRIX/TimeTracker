@@ -25,7 +25,7 @@ from app.models import Activity, KanbanColumn, Milestone, Project, Task, TaskAct
 from app.utils.db import safe_commit
 from app.utils.pagination import get_pagination_params
 from app.utils.error_handling import sanitize_log_value
-from app.utils.safe_redirect import safe_redirect_target
+from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 from app.utils.timezone import convert_app_datetime_to_user, now_in_app_timezone
 
 tasks_bp = Blueprint("tasks", __name__)
@@ -328,13 +328,11 @@ def create_task():
 
         flash(f'Task "{name}" created successfully', "success")
         next_url = request.form.get("next") or request.args.get("next")
-        return redirect(
-            safe_redirect_target(
+        return safe_redirect(
                 next_url,
                 allowed_prefixes=ALLOWED_NEXT_PREFIXES,
                 fallback=url_for("tasks.view_task", task_id=task.id),
             )
-        )
 
     # Get available projects and users for form
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()

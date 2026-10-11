@@ -30,7 +30,7 @@ from app.utils.config_manager import ConfigManager
 from app.utils.db import safe_commit
 from app.utils.deleted_usernames import is_username_reserved
 from app.utils.posthog_funnels import track_onboarding_started
-from app.utils.safe_redirect import is_safe_next_url, safe_redirect_target
+from app.utils.safe_redirect import safe_redirect, is_safe_next_url, safe_redirect_target
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -161,13 +161,11 @@ def _try_client_portal_login(username: str, password: str):
     flash(_("Welcome, %(client_name)s!", client_name=client.name), "success")
 
     next_page = request.form.get("next") or request.args.get("next")
-    return redirect(
-        safe_redirect_target(
+    return safe_redirect(
             next_page,
             allowed_prefixes=("/client-portal",),
             fallback=url_for("client_portal.dashboard"),
         )
-    )
 
 
 def _finalize_login_after_verification(user: User, *, log_auth_method: str):
@@ -227,6 +225,8 @@ def _finalize_login_after_verification(user: User, *, log_auth_method: str):
     next_page = _resolve_post_login_url(user, request.args.get("next"))
     current_app.logger.info("Redirecting '%s' to %s", user.username, next_page)
     flash(_("Welcome back, %(username)s!", username=user.username), "success")
+    # next_page produced by safe_redirect_target
+    # codeql[py/url-redirection]
     return redirect(next_page)
 
 
@@ -1720,6 +1720,8 @@ def oidc_callback():
             user, session.pop("oidc_next", None) or request.args.get("next")
         )
         flash(_("Welcome back, %(username)s!", username=user.username), "success")
+        # next_page produced by safe_redirect_target
+        # codeql[py/url-redirection]
         return redirect(next_page)
 
     except Exception as e:

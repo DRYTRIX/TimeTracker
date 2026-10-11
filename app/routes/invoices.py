@@ -37,7 +37,7 @@ from app.models import (
     User,
 )
 from app.utils.db import safe_commit
-from app.utils.safe_redirect import safe_redirect_target
+from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 from app.utils.excel_export import create_invoices_list_excel
 from app.utils.module_helpers import module_enabled
 from app.utils.posthog_funnels import (
@@ -1228,7 +1228,7 @@ def export_invoice_ubl(invoice_id):
     invoice = Invoice.query.get_or_404(invoice_id)
     if not current_user.is_admin and invoice.created_by != current_user.id:
         flash(_("You do not have permission to export this invoice"), "error")
-        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.list_invoices")))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.list_invoices"))
     try:
         from app.integrations.peppol import build_peppol_ubl_invoice_xml
         from app.services.peppol_service import PeppolService
@@ -1288,7 +1288,7 @@ def export_invoice_pdf(invoice_id):
             f"[PDF_EXPORT] Permission denied - InvoiceID: {invoice_id}, User: {current_user.username}"
         )
         flash(_("You do not have permission to export this invoice"), "error")
-        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.list_invoices")))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.list_invoices"))
 
     # Get page size from query parameter, default to A4
     page_size_raw = request.args.get("size", "A4")
@@ -1319,7 +1319,7 @@ def export_invoice_pdf(invoice_id):
             if not ok:
                 for msg in fx_issues[:5]:
                     flash(msg, "error")
-                return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id)))
+                return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
 
         current_app.logger.info(
             f"[PDF_EXPORT] Creating InvoicePDFGenerator - PageSize: '{page_size}', InvoiceID: {invoice_id}"
@@ -1351,7 +1351,7 @@ def export_invoice_pdf(invoice_id):
                 ),
                 "error",
             )
-            return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id)))
+            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
         if pdfa_err:
             current_app.logger.warning(
                 f"[PDF_EXPORT] PDF/A-3 conversion failed - InvoiceID: {invoice_id}, Error: {pdfa_err}"
@@ -1360,7 +1360,7 @@ def export_invoice_pdf(invoice_id):
                 _("PDF/A-3 normalization failed: %(err)s. Export aborted.", err=pdfa_err),
                 "error",
             )
-            return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id)))
+            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
         pdf_size_bytes = len(pdf_bytes)
         # Optional: run veraPDF and surface summary (does not block)
         if getattr(settings, "invoices_validate_export", False):
@@ -1419,10 +1419,10 @@ def export_invoice_pdf(invoice_id):
                     _("Factur-X embedding is enabled but failed: %(err)s. Export aborted.", err=embed_err),
                     "error",
                 )
-                return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id)))
+                return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
             if pdfa_err:
                 flash(_("PDF/A-3 normalization failed: %(err)s. Export aborted.", err=pdfa_err), "error")
-                return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id)))
+                return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
             pdf_size_bytes = len(pdf_bytes)
             current_app.logger.info(
                 f"[PDF_EXPORT] Fallback PDF generated successfully - PageSize: '{page_size}', InvoiceID: {invoice_id}, PDFSize: {pdf_size_bytes} bytes"
@@ -1438,7 +1438,7 @@ def export_invoice_pdf(invoice_id):
                 exc_info=True,
             )
             flash(_("PDF generation failed. Please try again."), "error")
-            return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id)))
+            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
 
 
 @invoices_bp.route("/invoices/<int:invoice_id>/duplicate")

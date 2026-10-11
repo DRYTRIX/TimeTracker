@@ -463,17 +463,10 @@ def fetch_oidc_metadata(
             "error": dns_error,
         }
 
-        if dns_success and resolved_ip and use_ip_directly and parsed.scheme == "http":
-            # Replace hostname with IP in URL (HTTP only).
-            # For HTTPS, we always use the original issuer hostname - using the IP breaks
-            # TLS SNI and virtual hosting (IDPs typically require the domain in SNI/Host).
-            metadata_url = original_metadata_url.replace(hostname, resolved_ip)
-            logger.info(
-                "Using IP address directly for metadata fetch: %s -> %s",
-                sanitize_log_value(hostname),
-                _ip_cache._mask_ip(resolved_ip),
-            )
-        elif not dns_success:
+        # Always fetch via the validated issuer hostname URL (never rewrite to a
+        # raw IP), so outbound requests cannot be steered to an attacker-controlled
+        # address via DNS/IP substitution.
+        if not dns_success:
             logger.warning(
                 "DNS resolution test failed for %s using %s strategy, but will attempt metadata fetch anyway",
                 sanitize_log_value(hostname),

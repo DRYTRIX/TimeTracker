@@ -36,7 +36,7 @@ from app.models import (
 from app.services import ProjectService
 from app.utils.db import safe_commit
 from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR, safe_log
-from app.utils.safe_redirect import safe_redirect_target
+from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 from app.utils.permissions import admin_or_permission_required, permission_required
 from app.utils.posthog_funnels import (
     track_onboarding_first_project,
@@ -1562,7 +1562,7 @@ def favorite_project(project_id):
         flash(_("Failed to add project to favorites"), "error")
 
     # Redirect back to referrer or project list
-    return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("projects.list_projects")))
+    return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("projects.list_projects"))
 
 
 @projects_bp.route("/projects/<int:project_id>/unfavorite", methods=["POST"])
@@ -1607,7 +1607,7 @@ def unfavorite_project(project_id):
         flash(_("Failed to remove project from favorites"), "error")
 
     # Redirect back to referrer or project list
-    return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("projects.list_projects")))
+    return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("projects.list_projects"))
 
 
 # ===== PROJECT COSTS ROUTES =====

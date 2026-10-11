@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
-from app.utils.safe_redirect import safe_redirect_target
+from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
@@ -29,17 +29,17 @@ def create_comment():
         # Validation
         if not content:
             flash(_("Comment content cannot be empty"), "error")
-            return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
         if not project_id and not task_id and not quote_id:
             flash(_("Comment must be associated with a project, task, or quote"), "error")
-            return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
         # Ensure only one target is set
         targets = [x for x in [project_id, task_id, quote_id] if x is not None]
         if len(targets) > 1:
             flash(_("Comment cannot be associated with multiple targets"), "error")
-            return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
         # Verify target exists
         if project_id:
@@ -63,7 +63,7 @@ def create_comment():
                 or (quote_id and parent_comment.quote_id != quote_id)
             ):
                 flash(_("Invalid parent comment"), "error")
-                return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+                return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
         # Create the comment
         comment = Comment(
@@ -101,7 +101,7 @@ def create_comment():
     elif quote_id:
         return redirect(url_for("quotes.view_quote", quote_id=quote_id))
     else:
-        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
 
 @comments_bp.route("/comments/<int:comment_id>/edit", methods=["GET", "POST"])
@@ -113,7 +113,7 @@ def edit_comment(comment_id):
     # Check permissions
     if not comment.can_edit(current_user):
         flash(_("You do not have permission to edit this comment"), "error")
-        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
     if request.method == "POST":
         try:
@@ -157,7 +157,7 @@ def delete_comment(comment_id):
     # Check permissions
     if not comment.can_delete(current_user):
         flash(_("You do not have permission to delete this comment"), "error")
-        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
     try:
         project_id = comment.project_id
@@ -186,7 +186,7 @@ def delete_comment(comment_id):
     except Exception:
         current_app.logger.exception("Error deleting comment %s", comment_id)
         flash(_("Error deleting comment. Please try again."), "error")
-        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
 
 @comments_bp.route("/api/comments")
@@ -284,7 +284,7 @@ def upload_comment_attachment(comment_id):
     # Check permissions - user must be able to edit the comment
     if not comment.can_edit(current_user):
         flash(_("You do not have permission to add attachments to this comment"), "error")
-        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
     # File upload configuration
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "pdf", "doc", "docx", "txt", "xls", "xlsx", "zip", "rar"}
@@ -296,16 +296,16 @@ def upload_comment_attachment(comment_id):
 
     if "file" not in request.files:
         flash(_("No file provided"), "error")
-        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
     file = request.files["file"]
     if file.filename == "":
         flash(_("No file selected"), "error")
-        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
     if not allowed_file(file.filename):
         flash(_("File type not allowed"), "error")
-        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
     # Check file size
     file.seek(0, os.SEEK_END)
@@ -314,7 +314,7 @@ def upload_comment_attachment(comment_id):
 
     if file_size > MAX_FILE_SIZE:
         flash(_("File size exceeds maximum allowed size (10 MB)"), "error")
-        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
     # Save file
     from app.utils.paths import PathEscapeError, safe_path_under
@@ -324,7 +324,7 @@ def upload_comment_attachment(comment_id):
     filename = secure_filename(f"{comment_id}_{timestamp}_{original_filename}")
     if not filename:
         flash(_("Invalid filename"), "error")
-        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
     # Ensure upload directory exists
     upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
@@ -335,7 +335,7 @@ def upload_comment_attachment(comment_id):
         file.save(file_path)
     except PathEscapeError:
         flash(_("Invalid upload path"), "error")
-        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
     # Get file info
     mime_type = file.content_type or "application/octet-stream"
@@ -361,7 +361,7 @@ def upload_comment_attachment(comment_id):
                 os.remove(file_path)
             except OSError as e:
                 current_app.logger.warning(f"Failed to remove uploaded file {file_path}: {e}")
-            return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
     except Exception:
         # Clean up uploaded file
         try:
@@ -370,10 +370,10 @@ def upload_comment_attachment(comment_id):
             current_app.logger.warning(f"Failed to remove uploaded file {file_path}: {cleanup_error}")
         flash(_("Error uploading attachment. Please try again."), "error")
         current_app.logger.error("Error uploading comment attachment", exc_info=True)
-        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
     flash(_("Attachment uploaded successfully"), "success")
-    return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+    return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
 
 @comments_bp.route("/comments/attachments/<int:attachment_id>/download")
@@ -405,7 +405,7 @@ def download_attachment(attachment_id):
 
     if not os.path.exists(file_path):
         flash(_("File not found"), "error")
-        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
     return send_file(
         file_path, as_attachment=True, download_name=attachment.original_filename, mimetype=attachment.mime_type
@@ -422,7 +422,7 @@ def delete_attachment(attachment_id):
     # Check permissions - user must be able to edit the comment
     if not comment.can_edit(current_user):
         flash(_("You do not have permission to delete this attachment"), "error")
-        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
     # Delete file
     file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
@@ -444,4 +444,4 @@ def delete_attachment(attachment_id):
         flash(_("Error deleting attachment. Please try again."), "error")
         current_app.logger.error("Error deleting comment attachment", exc_info=True)
 
-    return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
+    return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))

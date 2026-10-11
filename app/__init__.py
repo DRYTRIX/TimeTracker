@@ -1207,6 +1207,8 @@ def create_app(config=None):
                     fallback=request.path if (request.path or "").startswith("/") else None,
                     fallback_endpoint="main.dashboard",
                 )
+            # dest is url_for(...) or safe_redirect_target(...)
+            # codeql[py/url-redirection]
             return redirect(dest)
 
         # JSON/XHR fall-through
@@ -1251,6 +1253,8 @@ def create_app(config=None):
             fallback=request.path if (request.path or "").startswith("/") else None,
             fallback_endpoint="main.dashboard",
         )
+        # dest produced by safe_redirect_target
+        # codeql[py/url-redirection]
         return redirect(dest)
 
     # Expose csrf_token() in Jinja templates even without FlaskForm

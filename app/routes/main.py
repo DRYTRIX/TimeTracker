@@ -897,6 +897,8 @@ def set_language():
         allow_absolute_same_host=True,
         fallback=base_url,
     )
+    # next_url produced by safe_redirect_target
+    # codeql[py/url-redirection]
     response = make_response(redirect(next_url))
     # Ensure no caching
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"

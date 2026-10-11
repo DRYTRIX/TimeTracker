@@ -68,10 +68,28 @@
         }
     }
 
+    var ALLOWED_SUPPORT_HOSTS = {
+        'github.com': true,
+        'www.github.com': true,
+        'buymeacoffee.com': true,
+        'www.buymeacoffee.com': true,
+        'ko-fi.com': true,
+        'www.ko-fi.com': true,
+        'paypal.com': true,
+        'www.paypal.com': true,
+        'paypal.me': true,
+        'opencollective.com': true,
+        'www.opencollective.com': true
+    };
+
     function safeHttpsHref(url) {
         try {
             var u = new URL(String(url), window.location.origin);
             if (!isSafeExternalUrl(u.href)) return null;
+            var host = (u.hostname || '').toLowerCase();
+            if (!ALLOWED_SUPPORT_HOSTS[host] && u.origin !== window.location.origin) {
+                return null;
+            }
             // Rebuild from parsed parts so DOM-XSS taint does not flow to href
             return u.protocol + '//' + u.host + u.pathname + u.search + u.hash;
         } catch (e) {
@@ -85,7 +103,7 @@
             var key = a.getAttribute('data-support-tier');
             var safeHref = key && cfg.urls[key] ? safeHttpsHref(cfg.urls[key]) : null;
             if (safeHref) {
-                a.href = safeHref;
+                a.setAttribute('href', safeHref);
             }
             a.addEventListener('click', function () {
                 postTrack(cfg, 'donation_clicked', { variant: key, source: 'support_modal' });
