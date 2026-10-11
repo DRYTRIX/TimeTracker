@@ -446,6 +446,7 @@ def timer_review():
     """
     from datetime import datetime
 
+    from app import db
     from app.models import Settings
     from app.models.time_entry import local_now
     from app.utils.db import safe_commit
@@ -510,6 +511,7 @@ def timer_idle_response():
     token the client was shown, and stale answers return
     ``{"already_resolved": true}`` so callers dismiss instead of acting.
     """
+    from app import db
     from app.services.time_tracking_service import TimeTrackingService
 
     data = request.get_json(silent=True) or {}
