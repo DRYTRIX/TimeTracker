@@ -40,10 +40,13 @@ ENV TZ=Europe/Rome
 ENV DONATE_HIDE_PUBLIC_KEY_FILE=/app/donate_hide_public.pem
 LABEL org.opencontainers.image.description="Self-hosted time tracking web application for projects, clients, and reports."
 
-# Install all system dependencies in a single layer
+# Install all system dependencies in a single layer.
+# apt-get upgrade picks up security fixes for the slim-bookworm base image.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
+    apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends \
     # Core utilities
     curl \
     tzdata \
@@ -73,10 +76,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # Set work directory
 WORKDIR /app
 
-# Install Python dependencies with cache mount for pip
+# Upgrade pip/setuptools first (base image pins are often stale / CVE-flagged),
+# then install app requirements (includes Authlib pin from requirements.txt).
 COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir --upgrade "pip>=25.0" "setuptools>=78.1.1" wheel \
+    && pip install --no-cache-dir -r requirements.txt
 
 # Create non-root user early (before copying files)
 RUN useradd -m -u 1000 timetracker
