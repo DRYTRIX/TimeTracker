@@ -1,13 +1,14 @@
 /**
  * System idle detection for the Electron desktop app.
  *
- * Polls powerMonitor.getSystemIdleTime() every 60s. When an active timer is
- * running and the OS idle time exceeds idle_timeout_minutes (or the server
- * flags the timer via timer status), shows a "Still working?" notification
- * and notifies the renderer.
+ * Polls powerMonitor.getSystemIdleTime() every 60s to gate heartbeats: only
+ * send heartbeats while the OS reports the user as active. The "Still
+ * working?" prompt is shown ONLY when the server arms idle_notified (via
+ * timer status), never from local OS idle alone — otherwise the answer would
+ * race without a check token (Issue #722).
  *
  * The desktop app NEVER stops the timer itself: answers go through
- * POST /api/v1/timer/idle-response (first answer on any device wins, #722),
+ * POST /api/v1/timer/idle-response (first answer on any device wins),
  * and an unanswered grace window is resolved by the server sweep.
  */
 
@@ -36,6 +37,7 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
   let idleTimeoutMinutes = DEFAULT_IDLE_TIMEOUT_MINUTES;
   let unansweredAction = 'review';
   let stopAtMs = null;
+  let idleNotifiedAt = null;
   let needsReviewNotifiedFor = null;
 
   function clearGrace() {
@@ -45,6 +47,15 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
     }
     promptShown = false;
     stopAtMs = null;
+    idleNotifiedAt = null;
+  }
+
+  /** End the local grace countdown without re-arming the prompt. */
+  function endGraceCountdown() {
+    if (graceTimer) {
+      clearTimeout(graceTimer);
+      graceTimer = null;
+    }
   }
 
   async function apiRequest(method, path, body) {
@@ -156,9 +167,12 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
     }
   }
 
-  function beginGrace() {
+  function beginGrace(notifiedAt) {
     if (promptShown || !timerActive) return;
+    // Require the server check token so answers participate in first-wins.
+    if (!notifiedAt) return;
     promptShown = true;
+    idleNotifiedAt = notifiedAt;
     // OS idle already equals the threshold; credit that window (≈ now).
     stopAtMs = Date.now();
     showStillWorkingNotification();
@@ -167,13 +181,14 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
       graceMs: GRACE_MS,
       idleTimeoutMinutes,
       idleUnansweredAction: unansweredAction,
+      idleNotifiedAt: notifiedAt,
     });
     focusMainWindow();
     graceTimer = setTimeout(() => {
       // Never stop or flag locally: the SERVER sweep is the only actor that
-      // resolves an unanswered check (Issue #722). Another device may have
-      // answered already; acting here would race it.
-      clearGrace();
+      // resolves an unanswered check (Issue #722). Keep promptShown set so
+      // the next status tick does not re-arm until the server state changes.
+      endGraceCountdown();
       showUnansweredNotification();
     }, GRACE_MS);
   }
@@ -181,6 +196,12 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
   async function confirmStillWorking() {
     clearGrace();
     await sendHeartbeat();
+    sendToMainWindow('idle:dismissed', {});
+  }
+
+  /** Clear local prompt/grace without heartbeating (used after stop/trim). */
+  function dismissPrompt() {
+    clearGrace();
     sendToMainWindow('idle:dismissed', {});
   }
 
@@ -205,13 +226,19 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
       needsReviewNotifiedFor = null;
       return;
     }
-    // Server already marked this timer idle (#722) — show prompt even if OS idle
-    // time has not crossed the threshold yet (e.g. after reconnect).
+    // Server already marked this timer idle (#722) — show prompt with its token.
     const timer = (data && data.timer) || {};
     const idleNotified = Boolean(data.idle_notified || timer.idle_notified);
     const needsReview = Boolean(data.needs_review || timer.needs_review);
-    if (idleNotified && !promptShown && !needsReview) {
-      beginGrace();
+    const notifiedAt =
+      data.idle_notified_at || timer.idle_notified_at || null;
+    if (needsReview && promptShown) {
+      clearGrace();
+    } else if (!idleNotified && promptShown) {
+      // Resolved elsewhere or by the server sweep.
+      clearGrace();
+    } else if (idleNotified && !promptShown && !needsReview) {
+      beginGrace(notifiedAt);
     }
     // Server flagged the timer for review (grace expired elsewhere) — surface it.
     if (needsReview && needsReviewNotifiedFor !== timer.id) {
@@ -233,8 +260,9 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
       return;
     }
     const thresholdSeconds = idleTimeoutMinutes * 60;
+    // Local OS idle only gates heartbeats — never shows the prompt. The
+    // server sweep arms idle_notified; onTimerStatusUpdate shows the UI.
     if (idleSeconds >= thresholdSeconds) {
-      beginGrace();
       return;
     }
     // User is active — keep server heartbeat fresh (throttled by check interval).
@@ -263,6 +291,7 @@ function createIdleMonitor({ store, sendToMainWindow, focusMainWindow }) {
     stop,
     onTimerStatusUpdate,
     confirmStillWorking,
+    dismissPrompt,
     confirmStop,
     sendHeartbeat,
   };

@@ -217,6 +217,10 @@ app.whenReady().then(() => {
     if (idleMonitor) idleMonitor.confirmStillWorking();
   });
 
+  ipcMain.on('idle:dismiss', () => {
+    if (idleMonitor) idleMonitor.dismissPrompt();
+  });
+
   ipcMain.on('idle:stop', () => {
     if (idleMonitor) idleMonitor.confirmStop();
   });

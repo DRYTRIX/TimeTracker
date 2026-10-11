@@ -73,6 +73,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('idle:needs-review', handler);
   },
   idleStillWorking: () => ipcRenderer.send('idle:still-working'),
+  idleDismiss: () => ipcRenderer.send('idle:dismiss'),
   idleStop: () => ipcRenderer.send('idle:stop'),
   
   // Splash screen
