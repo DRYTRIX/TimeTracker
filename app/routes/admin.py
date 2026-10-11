@@ -285,16 +285,55 @@ body {{
         return "normal"
 
     # Helper function to convert color (supports hex, rgb, named colors)
+    _NAMED_COLORS = frozenset(
+        {"black", "white", "red", "blue", "green", "yellow", "cyan", "magenta", "gray", "grey", "orange", "purple"}
+    )
+    import re as _re_color
+
+    _HEX_COLOR_RE = _re_color.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+
     def format_color(color):
+        """Return an allowlisted CSS color; never echo arbitrary user strings into markup."""
         if not color:
             return "#000000"
-        # If already hex or named color, return as-is
-        if color.startswith("#") or color in ["black", "white", "red", "blue", "green", "yellow", "cyan", "magenta"]:
-            return color
-        # If RGB tuple/list, convert to hex
         if isinstance(color, (list, tuple)) and len(color) >= 3:
-            return f"#{int(color[0]):02x}{int(color[1]):02x}{int(color[2]):02x}"
-        return str(color)
+            try:
+                r, g, b = (max(0, min(255, int(color[i]))) for i in range(3))
+                return f"#{r:02x}{g:02x}{b:02x}"
+            except (TypeError, ValueError):
+                return "#000000"
+        if not isinstance(color, str):
+            return "#000000"
+        candidate = color.strip()
+        if _HEX_COLOR_RE.match(candidate):
+            return candidate.lower()
+        if candidate.lower() in _NAMED_COLORS:
+            return candidate.lower()
+        return "#000000"
+
+    def format_align(align):
+        return align if align in ("left", "right", "center", "justify") else "left"
+
+    def safe_img_src(source: str) -> str:
+        """Allow only data: image URLs or jailed template-image paths."""
+        if not source or not isinstance(source, str):
+            return ""
+        source = source.strip()
+        if source.startswith("data:image/"):
+            # Reject SVG data URLs (scriptable); allow raster only
+            header = source.split(",", 1)[0].lower()
+            if "svg" in header:
+                return ""
+            return source
+        if source.startswith("/uploads/template_images/"):
+            from werkzeug.utils import secure_filename as _secure_filename
+
+            raw_name = source.split("/uploads/template_images/", 1)[-1]
+            filename = _secure_filename(raw_name.replace("\\", "/").split("/")[-1])
+            if not filename:
+                return ""
+            return f"/uploads/template_images/{filename}"
+        return ""
 
     # Helper function to render text with Jinja2-like template variables
     def render_text_template(text, data_obj, settings_obj=None):
@@ -370,17 +409,20 @@ body {{
             width_px_elem = int(width * 96 / 72)
 
             font_name = style.get("font", "Helvetica")
-            font_size = style.get("size", 10)
+            try:
+                font_size = float(style.get("size", 10))
+            except (TypeError, ValueError):
+                font_size = 10.0
             color = format_color(style.get("color", "#000000"))
-            align = style.get("align", "left")
-            valign = style.get("valign", "top")
+            align = format_align(style.get("align", "left"))
+            valign = style.get("valign", "top") if style.get("valign") in ("top", "middle", "bottom") else "top"
 
             # Build complete style string
             style_parts = [style_str_base]
             style_parts.append(f"width: {width_px_elem}px")
             if height:
                 style_parts.append(f"height: {int(height * 96 / 72)}px")
-            style_parts.append(f"font-family: {get_font_family(font_name)}")
+            style_parts.append(f"font-family: {html_escape.escape(get_font_family(font_name), quote=True)}")
             style_parts.append(f"font-size: {font_size}pt")
             style_parts.append(f"font-weight: {get_font_weight(font_name)}")
             style_parts.append(f"font-style: {get_font_style(font_name)}")
@@ -394,10 +436,8 @@ body {{
             data_obj = invoice if invoice else quote
             rendered_text = render_text_template(text, data_obj, settings) if (data_obj or settings) else text
 
-            # Escape HTML but preserve any remaining template syntax
+            # Escape HTML fully — never re-inject {{ }} (avoids SSTI if HTML is later templated)
             text_escaped = html_escape.escape(rendered_text)
-            # Restore template syntax if any remains (shouldn't after rendering, but just in case)
-            text_escaped = text_escaped.replace("&lt;{{", "{{").replace("}}&gt;", "}}")
 
             html_parts.append(f'<div class="element text-element" style="{style_str}">{text_escaped}</div>')
 
@@ -407,50 +447,39 @@ body {{
             width_px_elem = int(width * 96 / 72)
             height_px_elem = int(height * 96 / 72)
             source = element.get("source", "")
-            is_decorative = element.get("decorative", False)
 
-            # Handle base64 data URLs or file paths
-            img_src = ""
-            if source.startswith("data:"):
-                img_src = source
-            elif source.startswith("/uploads/template_images/"):
-                # Template image - convert to base64 for PDF generation
+            img_src = safe_img_src(source)
+            if img_src.startswith("/uploads/template_images/"):
                 try:
                     from app.utils.template_filters import get_image_base64
+                    from werkzeug.utils import secure_filename as _secure_filename
 
-                    # Extract filename from URL
-                    filename = source.split("/uploads/template_images/")[-1]
-                    # Build file path relative to app root (as get_image_base64 expects)
+                    filename = _secure_filename(img_src.rsplit("/", 1)[-1])
                     relative_path = f"app/static/uploads/template_images/{filename}"
-                    # Convert to base64
-                    img_src = get_image_base64(relative_path) or source  # Fallback to URL if conversion fails
+                    img_src = get_image_base64(relative_path) or img_src
                 except Exception as e:
-                    # If conversion fails, use the URL directly
-                    current_app.logger.warning(f"Failed to convert template image to base64: {e}")
-                    img_src = source
-            elif source.startswith("/") or source.startswith("http"):
-                img_src = source
-            else:
-                # Assume it's a relative path or placeholder
-                if source:
-                    img_src = source
-                else:
-                    # Placeholder for decorative images without source
-                    img_src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23ddd' width='100' height='100'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23999'%3EImage%3C/text%3E%3C/svg%3E"
+                    safe_log(current_app.logger, "warning", "Failed to convert template image to base64: %s", e)
 
             style_parts = [style_str_base]
             style_parts.append(f"width: {width_px_elem}px")
             style_parts.append(f"height: {height_px_elem}px")
             style_str = "; ".join(style_parts) + ";"
 
-            if img_src and not img_src.startswith("data:image/svg+xml"):
+            if img_src and img_src.startswith("data:image/") and "svg" not in img_src[:64].lower():
                 html_parts.append(
-                    f'<img class="element image-element" src="{img_src}" style="{style_str}" alt="Decorative image">'
+                    f'<img class="element image-element" src="{html_escape.escape(img_src, quote=True)}" '
+                    f'style="{style_str}" alt="Decorative image">'
+                )
+            elif img_src.startswith("/uploads/template_images/"):
+                html_parts.append(
+                    f'<img class="element image-element" src="{html_escape.escape(img_src, quote=True)}" '
+                    f'style="{style_str}" alt="Decorative image">'
                 )
             else:
-                # Show placeholder for decorative images without source
                 html_parts.append(
-                    f'<div class="element" style="{style_str}background:#f0f0f0;border:2px dashed #999;display:flex;align-items:center;justify-content:center;color:#666;font-size:12px;">Decorative Image</div>'
+                    f'<div class="element" style="{style_str}background:#f0f0f0;border:2px dashed #999;'
+                    f'display:flex;align-items:center;justify-content:center;color:#666;font-size:12px;">'
+                    f"Decorative Image</div>"
                 )
 
         elif elem_type == "rectangle":
@@ -536,10 +565,16 @@ body {{
             # Build header row
             for col in columns:
                 header = col.get("header", "")
-                align = col.get("align", "left")
+                align = format_align(col.get("align", "left"))
                 col_width = col.get("width", None)
-                width_attr = f' width="{int(col_width * 96 / 72)}px"' if col_width else ""
-                table_html += f'<th style="text-align: {align}; background-color: {header_bg}; color: {header_text_color};"{width_attr}>{html_escape.escape(header)}</th>'
+                try:
+                    width_attr = f' width="{int(float(col_width) * 96 / 72)}"' if col_width is not None else ""
+                except (TypeError, ValueError):
+                    width_attr = ""
+                table_html += (
+                    f'<th style="text-align: {align}; background-color: {header_bg}; '
+                    f'color: {header_text_color};"{width_attr}>{html_escape.escape(str(header))}</th>'
+                )
             table_html += "</tr></thead><tbody>"
 
             # Resolve table data from element's data source (e.g. invoice.all_line_items or invoice.items)
@@ -588,29 +623,33 @@ body {{
                     table_html += "<tr>"
                     for col in columns:
                         field = col.get("field", "")
-                        align = col.get("align", "left")
-                        # Try to get value from item
+                        align = format_align(col.get("align", "left"))
+                        # Try to get value from item (field must be a simple identifier)
                         value = ""
-                        try:
-                            if hasattr(item, field):
-                                value = str(getattr(item, field, ""))
-                            elif isinstance(item, dict):
-                                value = str(item.get(field, ""))
-                            else:
+                        if isinstance(field, str) and field.isidentifier():
+                            try:
+                                if hasattr(item, field):
+                                    value = str(getattr(item, field, ""))
+                                elif isinstance(item, dict):
+                                    value = str(item.get(field, ""))
+                            except Exception as e:
+                                safe_log(
+                                    current_app.logger, "debug", "Template value for field %s failed: %s", field, e
+                                )
                                 value = ""
-                        except Exception as e:
-                            safe_log(current_app.logger, "debug", "Template value for field %s failed: %s", field, e)
-                            value = ""
 
                         value_escaped = html_escape.escape(str(value))
-                        table_html += f'<td style="text-align: {align}; color: {row_text_color}; background-color: {row_bg};">{value_escaped}</td>'
+                        table_html += (
+                            f'<td style="text-align: {align}; color: {row_text_color}; '
+                            f'background-color: {row_bg};">{value_escaped}</td>'
+                        )
                     table_html += "</tr>"
             else:
                 # No data available, show template placeholders
                 table_html += "<tr>"
                 for col in columns:
-                    field = col.get("field", "")
-                    align = col.get("align", "left")
+                    field = col.get("field", "") if isinstance(col.get("field", ""), str) else ""
+                    align = format_align(col.get("align", "left"))
                     placeholder = f"{{{{ {field} }}}}"
                     table_html += (
                         f'<td style="text-align: {align}; color: #999;">{html_escape.escape(placeholder)}</td>'
@@ -2803,12 +2842,12 @@ def quote_pdf_layout_import_json():
 
         return redirect(url_for("admin.quote_pdf_layout", size=page_size))
 
-    except json.JSONDecodeError as e:
-        flash(_("Invalid JSON file: %(error)s", error=str(e)), "error")
+    except json.JSONDecodeError:
+        flash(_("Invalid JSON file."), "error")
         return redirect(url_for("admin.quote_pdf_layout", size=page_size))
-    except Exception as e:
-        current_app.logger.error(f"Error importing quote PDF template JSON: {e}", exc_info=True)
-        flash(_("Error importing template: %(error)s", error=str(e)), "error")
+    except Exception:
+        current_app.logger.error("Error importing quote PDF template JSON", exc_info=True)
+        flash(_("Error importing template. Please try again."), "error")
         return redirect(url_for("admin.quote_pdf_layout", size=page_size))
 
 
@@ -2914,12 +2953,12 @@ def pdf_layout_import_json():
 
         return redirect(url_for("admin.pdf_layout", size=page_size))
 
-    except json.JSONDecodeError as e:
-        flash(_("Invalid JSON file: %(error)s", error=str(e)), "error")
+    except json.JSONDecodeError:
+        flash(_("Invalid JSON file."), "error")
         return redirect(url_for("admin.pdf_layout", size=page_size))
-    except Exception as e:
-        current_app.logger.error(f"Error importing invoice PDF template JSON: {e}", exc_info=True)
-        flash(_("Error importing template: %(error)s", error=str(e)), "error")
+    except Exception:
+        current_app.logger.error("Error importing invoice PDF template JSON", exc_info=True)
+        flash(_("Error importing template. Please try again."), "error")
         return redirect(url_for("admin.pdf_layout", size=page_size))
 
 
@@ -3614,16 +3653,18 @@ def pdf_layout_preview():
             f"[PDF_PREVIEW] Template rendered successfully - PageSize: '{page_size}', Rendered HTML length: {len(body_html)}"
         )
     except Exception as e:
-        import traceback
-
-        error_details = traceback.format_exc()
         current_app.logger.error(
-            f"[PDF_PREVIEW] Template render error - PageSize: '{page_size}', Error: {str(e)}, User: {current_user.username}",
+            "[PDF_PREVIEW] Template render error - PageSize: %r, User: %s",
+            page_size,
+            getattr(current_user, "username", "?"),
             exc_info=True,
         )
+        # Do not echo exception text, traceback, or unsanitized template HTML to the client
         body_html = (
-            f"<div style='color:red; padding:20px; border:2px solid red; margin:20px;'><h3>Template error:</h3><pre>{str(e)}</pre><pre>{error_details}</pre></div>"
-            + sanitized
+            "<div style='color:red; padding:20px; border:2px solid red; margin:20px;'>"
+            "<h3>Template error</h3>"
+            "<p>The template could not be rendered. Check server logs for details.</p>"
+            "</div>"
         )
     # Get page dimensions for preview styling
     page_dimensions = InvoicePDFTemplate.PAGE_SIZES.get(page_size, InvoicePDFTemplate.PAGE_SIZES["A4"])
@@ -4250,17 +4291,18 @@ def quote_pdf_layout_preview():
         current_app.logger.info(
             f"[PDF_PREVIEW] Quote template rendered successfully - PageSize: '{page_size}', Rendered HTML length: {len(body_html)}"
         )
-    except Exception as e:
-        import traceback
-
-        error_details = traceback.format_exc()
+    except Exception:
         current_app.logger.error(
-            f"[PDF_PREVIEW] Quote template render error - PageSize: '{page_size}', Error: {str(e)}, User: {current_user.username}",
+            "[PDF_PREVIEW] Quote template render error - PageSize: %r, User: %s",
+            page_size,
+            getattr(current_user, "username", "?"),
             exc_info=True,
         )
         body_html = (
-            f"<div style='color:red; padding:20px; border:2px solid red; margin:20px;'><h3>Template error:</h3><pre>{str(e)}</pre><pre>{error_details}</pre></div>"
-            + sanitized
+            "<div style='color:red; padding:20px; border:2px solid red; margin:20px;'>"
+            "<h3>Template error</h3>"
+            "<p>The template could not be rendered. Check server logs for details.</p>"
+            "</div>"
         )
     # Get page dimensions for preview styling
     from app.models import QuotePDFTemplate
@@ -4391,8 +4433,11 @@ def upload_logo():
         return redirect(url_for("admin.settings"))
 
     if file and allowed_logo_file(file.filename):
-        # Generate unique filename
+        # Generate unique filename (never use raw user filename in the path)
         file_extension = file.filename.rsplit(".", 1)[1].lower()
+        if file_extension not in ("png", "jpg", "jpeg", "gif", "webp", "svg"):
+            flash(_("Invalid image file."), "error")
+            return redirect(url_for("admin.settings"))
         unique_filename = f"company_logo_{uuid.uuid4().hex[:8]}.{file_extension}"
 
         # Basic server-side validation: verify image type
@@ -4407,9 +4452,13 @@ def upload_logo():
             flash(_("Invalid image file."), "error")
             return redirect(url_for("admin.settings"))
 
-        # Save file
-        upload_folder = get_upload_folder()
-        file_path = os.path.join(upload_folder, unique_filename)
+        # Save file inside a realpath jail under the upload folder
+        upload_folder = os.path.realpath(get_upload_folder())
+        os.makedirs(upload_folder, exist_ok=True)
+        file_path = os.path.realpath(os.path.join(upload_folder, unique_filename))
+        if not file_path.startswith(upload_folder + os.sep):
+            flash(_("Invalid image file."), "error")
+            return redirect(url_for("admin.settings"))
         file.save(file_path)
 
         # Log successful save
@@ -4514,16 +4563,19 @@ def upload_template_image():
     if file_size > MAX_FILE_SIZE:
         return jsonify({"error": f"File size exceeds maximum allowed size ({MAX_FILE_SIZE / (1024*1024):.0f} MB)"}), 400
 
-    # Save file
+    # Save file (basename-only; directory jail)
     original_filename = secure_filename(file.filename)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"template_{timestamp}_{original_filename}"
+    if not filename or ".." in filename or "/" in filename or "\\" in filename:
+        return jsonify({"error": "Invalid filename"}), 400
 
-    # Ensure upload directory exists
-    upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
+    upload_dir = os.path.realpath(os.path.join(current_app.root_path, "..", UPLOAD_FOLDER))
     os.makedirs(upload_dir, exist_ok=True)
 
-    file_path = os.path.join(upload_dir, filename)
+    file_path = os.path.realpath(os.path.join(upload_dir, filename))
+    if not file_path.startswith(upload_dir + os.sep):
+        return jsonify({"error": "Invalid filename"}), 400
     file.save(file_path)
 
     # Return URL for the image
@@ -4538,9 +4590,16 @@ def serve_template_image(filename):
     import os
 
     from flask import send_from_directory
+    from werkzeug.utils import secure_filename as _secure_filename
 
-    upload_folder = os.path.join(current_app.root_path, "..", "app/static/uploads/template_images")
-    return send_from_directory(upload_folder, filename)
+    safe_name = _secure_filename(filename.replace("\\", "/").split("/")[-1])
+    if not safe_name or safe_name != filename.replace("\\", "/").split("/")[-1]:
+        return "Not found", 404
+
+    upload_folder = os.path.realpath(
+        os.path.join(current_app.root_path, "..", "app/static/uploads/template_images")
+    )
+    return send_from_directory(upload_folder, safe_name)
 
 
 # Public route to serve uploaded logos from the static uploads directory
@@ -4551,16 +4610,21 @@ def serve_uploaded_logo(filename):
     like the login screen and in favicons.
     """
     try:
-        upload_folder = get_upload_folder()
-        file_path = os.path.join(upload_folder, filename)
+        from werkzeug.utils import secure_filename as _secure_filename
 
-        if not os.path.exists(file_path):
-            current_app.logger.error(f"Logo file not found: {file_path}")
+        safe_name = _secure_filename(filename.replace("\\", "/").split("/")[-1])
+        if not safe_name:
             return "Logo file not found", 404
 
-        return send_from_directory(upload_folder, filename)
-    except Exception as e:
-        current_app.logger.error(f"Error serving logo {filename}: {str(e)}")
+        upload_folder = os.path.realpath(get_upload_folder())
+        file_path = os.path.realpath(os.path.join(upload_folder, safe_name))
+        if not file_path.startswith(upload_folder + os.sep) or not os.path.isfile(file_path):
+            current_app.logger.error("Logo file not found: %s", safe_name)
+            return "Logo file not found", 404
+
+        return send_from_directory(upload_folder, safe_name)
+    except Exception:
+        current_app.logger.error("Error serving logo", exc_info=True)
         return "Error serving logo", 500
 
 

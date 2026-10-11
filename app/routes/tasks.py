@@ -24,6 +24,7 @@ from app import db
 from app.models import Activity, KanbanColumn, Milestone, Project, Task, TaskActivity, TaskChecklistItem, TaskDependency, TimeEntry, User
 from app.utils.db import safe_commit
 from app.utils.pagination import get_pagination_params
+from app.utils.error_handling import sanitize_log_value
 from app.utils.safe_redirect import is_safe_next_url
 from app.utils.timezone import convert_app_datetime_to_user, now_in_app_timezone
 
@@ -618,7 +619,7 @@ def edit_task(task_id):
                         try:
                             task.start_task()
                         except ValueError as e:
-                            flash(str(e), "error")
+                            flash(sanitize_log_value(e, max_len=200), "error")
                             return render_template(
                                 "tasks/edit.html",
                                 task=task,
@@ -686,7 +687,7 @@ def edit_task(task_id):
                             kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id),
                         )
             except ValueError as e:
-                flash(str(e), "error")
+                flash(sanitize_log_value(e, max_len=200), "error")
                 return render_template(
                     "tasks/edit.html",
                     task=task,
@@ -784,7 +785,7 @@ def update_task_status(task_id):
                 try:
                     task.start_task()
                 except ValueError as e:
-                    flash(str(e), "error")
+                    flash(sanitize_log_value(e, max_len=200), "error")
                     return redirect(url_for("tasks.view_task", task_id=task.id))
                 db.session.add(
                     TaskActivity(
@@ -863,7 +864,7 @@ def update_task_status(task_id):
 
         fire_task_status_workflows(task, current_user.id, old_status=previous_status)
     except ValueError as e:
-        flash(str(e), "error")
+        flash(sanitize_log_value(e, max_len=200), "error")
 
     return redirect(url_for("tasks.view_task", task_id=task.id))
 
@@ -884,7 +885,7 @@ def update_task_priority(task_id):
         task.update_priority(new_priority)
         flash(f"Task priority updated to {task.priority_display}", "success")
     except ValueError as e:
-        flash(str(e), "error")
+        flash(sanitize_log_value(e, max_len=200), "error")
 
     return redirect(url_for("tasks.view_task", task_id=task.id))
 
@@ -1697,8 +1698,9 @@ def api_update_status(task_id):
             else:
                 try:
                     task.start_task()
-                except ValueError as e:
-                    return jsonify({"error": str(e)}), 400
+                except ValueError:
+                    current_app.logger.info("Invalid start_task transition for task %s", task.id, exc_info=True)
+                    return jsonify({"error": "Invalid task status transition"}), 400
         elif new_status == "done":
             task.complete_task()
         elif new_status == "cancelled":
@@ -1716,8 +1718,9 @@ def api_update_status(task_id):
         fire_task_status_workflows(task, current_user.id, old_status=previous_status)
 
         return jsonify({"success": True, "task": task.to_dict()})
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+    except ValueError:
+        current_app.logger.info("Invalid task status update for task %s", task.id, exc_info=True)
+        return jsonify({"error": "Invalid task status transition"}), 400
 
 
 # ---------------------------------------------------------------------------
