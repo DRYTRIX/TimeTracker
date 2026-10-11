@@ -1030,7 +1030,13 @@ def bulk_delete_tasks():
 
         except Exception as e:
             skipped_count += 1
-            errors.append(f"ID {task_id_str}: {str(e)}")
+            current_app.logger.warning(
+                "bulk_delete_tasks failed for task_id=%s: %s",
+                sanitize_log_value(task_id_str),
+                e,
+                exc_info=True,
+            )
+            errors.append(_("Could not delete task (ID %(id)s)", id=sanitize_log_value(task_id_str)))
 
     # Commit all deletions
     if deleted_count > 0:

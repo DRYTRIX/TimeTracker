@@ -566,36 +566,27 @@ function confirmBulkDelete() {
             // Ignore stale responses
             if (requestId !== latestRequestId) return;
 
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = html.trim();
-            
-            const newContainer = tempDiv.querySelector('#timeEntriesListContainer');
-            
             let parsed = false;
-            if (newContainer) {
-                container.innerHTML = newContainer.innerHTML;
-                parsed = true;
-            } else {
-                // Fallback: try DOMParser for full HTML documents (Issue #489)
-                try {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const fallbackContainer = doc.getElementById('timeEntriesListContainer');
-                    if (fallbackContainer) {
-                        container.innerHTML = fallbackContainer.innerHTML;
-                        parsed = true;
-                    } else {
-                        if (typeof console !== 'undefined' && console.warn) {
-                            console.warn('[Time Entries] Filter response missing #timeEntriesListContainer');
-                        }
-                        if (inFlightUrl === url) inFlightUrl = null;
-                    }
-                } catch (parseErr) {
+            try {
+                // Parse server HTML without assigning to innerHTML, then swap the node
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newContainer = doc.getElementById('timeEntriesListContainer');
+                if (newContainer) {
+                    const imported = document.importNode(newContainer, true);
+                    container.replaceWith(imported);
+                    parsed = true;
+                } else {
                     if (typeof console !== 'undefined' && console.warn) {
-                        console.warn('[Time Entries] Failed to parse filter response:', parseErr);
+                        console.warn('[Time Entries] Filter response missing #timeEntriesListContainer');
                     }
                     if (inFlightUrl === url) inFlightUrl = null;
                 }
+            } catch (parseErr) {
+                if (typeof console !== 'undefined' && console.warn) {
+                    console.warn('[Time Entries] Failed to parse filter response:', parseErr);
+                }
+                if (inFlightUrl === url) inFlightUrl = null;
             }
             
             // Re-initialize bulk actions after content update
@@ -608,8 +599,11 @@ function confirmBulkDelete() {
                 return; // Expected when rapidly changing filters
             }
             console.error('Filter error:', error);
-            container.style.opacity = '';
-            container.style.pointerEvents = '';
+            const liveContainer = document.getElementById('timeEntriesListContainer');
+            if (liveContainer) {
+                liveContainer.style.opacity = '';
+                liveContainer.style.pointerEvents = '';
+            }
             // Allow retrying the same URL after failures.
             if (inFlightUrl === url) inFlightUrl = null;
             if (window.toastManager) {
@@ -621,8 +615,11 @@ function confirmBulkDelete() {
         .finally(() => {
             // Only clear loading state for the latest request
             if (requestId !== latestRequestId) return;
-            container.style.opacity = '';
-            container.style.pointerEvents = '';
+            const liveContainer = document.getElementById('timeEntriesListContainer');
+            if (liveContainer) {
+                liveContainer.style.opacity = '';
+                liveContainer.style.pointerEvents = '';
+            }
             if (inFlightUrl === url) inFlightUrl = null;
         });
     }

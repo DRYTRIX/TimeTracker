@@ -848,25 +848,18 @@ function toggleFavorite(projectId, button) {
             return response.text();
         })
         .then(html => {
-            // The response should be the projectsListContainer div
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = html.trim();
-            
-            const newContainer = tempDiv.querySelector('#projectsListContainer');
-            
-            if (newContainer) {
-                container.innerHTML = newContainer.innerHTML;
-            } else {
-                // Fallback: try to extract content using regex
-                const match = html.trim().match(/<div[^>]*id=["']projectsListContainer["'][^>]*>([\s\S]*?)<\/div>\s*$/);
-                if (match && match[1]) {
-                    container.innerHTML = match[1];
-                } else {
-                    // Last resort: use the HTML as-is
-                    container.innerHTML = html;
-                }
+            // Parse server HTML without assigning to innerHTML, then swap the node
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newContainer = doc.getElementById('projectsListContainer');
+
+            if (!newContainer) {
+                throw new Error('Filter response missing #projectsListContainer');
             }
-            
+
+            const imported = document.importNode(newContainer, true);
+            container.replaceWith(imported);
+
             // Re-initialize view mode
             if (window.setViewMode) {
                 const savedMode = localStorage.getItem('projectsViewMode') || 'list';
@@ -878,9 +871,11 @@ function toggleFavorite(projectId, button) {
         })
         .catch(error => {
             console.error('Filter error:', error);
-            // Restore container state
-            container.style.opacity = '';
-            container.style.pointerEvents = '';
+            const liveContainer = document.getElementById('projectsListContainer');
+            if (liveContainer) {
+                liveContainer.style.opacity = '';
+                liveContainer.style.pointerEvents = '';
+            }
             
             // Show error message
             if (window.toastManager) {
@@ -890,8 +885,11 @@ function toggleFavorite(projectId, button) {
             }
         })
         .finally(() => {
-            container.style.opacity = '';
-            container.style.pointerEvents = '';
+            const liveContainer = document.getElementById('projectsListContainer');
+            if (liveContainer) {
+                liveContainer.style.opacity = '';
+                liveContainer.style.pointerEvents = '';
+            }
         });
     }
     
