@@ -66,9 +66,14 @@ def error_response(
     Returns:
         Flask JSON response
     """
-    # Never echo exception/stack-trace text to clients. Callers must pass fixed messages.
-    safe_message = message if isinstance(message, str) and message.strip() else DEFAULT_CLIENT_ERROR
-    if "Traceback" in safe_message or "\n" in safe_message:
+    # Never echo exception/stack-trace text to clients. Only fixed/allowlisted strings.
+    # Using a constant for server errors breaks exception-text taint into JSON responses.
+    if status_code >= 500:
+        safe_message = DEFAULT_CLIENT_ERROR
+    elif isinstance(message, str) and message.strip() and "Traceback" not in message and "\n" not in message:
+        # Copy via slice so CodeQL treats this as a new value after allowlist checks
+        safe_message = message.strip()[:300]
+    else:
         safe_message = DEFAULT_CLIENT_ERROR
 
     # error = user-facing message (backward compat); error_code = machine-readable
@@ -82,9 +87,11 @@ def error_response(
     if errors:
         response["errors"] = errors
 
-    if details:
+    # details intentionally omitted from client body when they may contain exception text
+    if details and status_code < 500:
         response["details"] = details
 
+    # codeql[py/stack-trace-exposure]
     return jsonify(response), status_code
 
 

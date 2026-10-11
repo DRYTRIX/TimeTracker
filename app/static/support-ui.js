@@ -102,11 +102,13 @@
         document.querySelectorAll('a.support-tier-btn[data-support-tier]').forEach(function (a) {
             var key = a.getAttribute('data-support-tier');
             var safeHref = key && cfg.urls[key] ? safeHttpsHref(cfg.urls[key]) : null;
-            if (safeHref) {
-                a.setAttribute('href', safeHref);
-            }
-            a.addEventListener('click', function () {
+            // Do not assign cfg URLs to href (DOM XSS); navigate only after host allowlist check
+            a.addEventListener('click', function (ev) {
                 postTrack(cfg, 'donation_clicked', { variant: key, source: 'support_modal' });
+                if (safeHref) {
+                    ev.preventDefault();
+                    window.open(safeHref, '_blank', 'noopener,noreferrer');
+                }
             });
         });
         var lic = document.querySelector('a[data-support-tier="license"]');
