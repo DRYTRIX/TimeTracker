@@ -43,9 +43,9 @@ class EnhancedOCRService:
 
             return data
 
-        except Exception as e:
-            logger.error(f"Error in enhanced receipt scanning: {e}")
-            return {"error": str(e)}
+        except Exception:
+            logger.exception("Error in enhanced receipt scanning")
+            return {"error": "Failed to scan receipt"}
 
     def _extract_merchant(self, text: str) -> Optional[str]:
         """Extract merchant name (usually first line)"""

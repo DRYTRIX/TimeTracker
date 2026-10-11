@@ -15,6 +15,7 @@ from app.services.scheduled_report_service import ScheduledReportService
 from app.services.unpaid_hours_service import UnpaidHoursService
 from app.utils.db import safe_commit
 from app.utils.email import send_email
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 salesman_reports_bp = Blueprint("salesman_reports", __name__)
 
@@ -80,7 +81,7 @@ def create_email_mapping():
             return jsonify({"success": False, "message": "Failed to create mapping"}), 500
 
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, **client_error_payload(key="message")}), 500
 
 
 @salesman_reports_bp.route("/api/salesman-email-mappings/<int:mapping_id>", methods=["PUT"])
@@ -113,7 +114,7 @@ def update_email_mapping(mapping_id):
             return jsonify({"success": False, "message": "Failed to update mapping"}), 500
 
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, **client_error_payload(key="message")}), 500
 
 
 @salesman_reports_bp.route("/api/salesman-email-mappings/<int:mapping_id>", methods=["DELETE"])
@@ -133,7 +134,7 @@ def delete_email_mapping(mapping_id):
             return jsonify({"success": False, "message": "Failed to delete mapping"}), 500
 
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, **client_error_payload(key="message")}), 500
 
 
 @salesman_reports_bp.route("/api/unpaid-hours/by-salesman", methods=["GET"])
@@ -203,7 +204,7 @@ def get_unpaid_hours_by_salesman():
         return jsonify({"success": True, "data": formatted_result})
 
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, **client_error_payload()}), 500
 
 
 @salesman_reports_bp.route("/api/salesman-reports/preview-email", methods=["POST"])
@@ -240,7 +241,7 @@ def preview_salesman_email():
         return jsonify({"success": True, "email": email, "salesman_initial": salesman_initial})
 
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, **client_error_payload()}), 500
 
 
 @salesman_reports_bp.route("/api/salesman-reports/generate", methods=["POST"])
@@ -344,7 +345,7 @@ Please review the attached report for details.
                     emails_sent.append({"salesman": salesman_initial, "email": email, "status": "sent"})
                 except Exception as e:
                     emails_sent.append(
-                        {"salesman": salesman_initial, "email": email, "status": "error", "error": str(e)}
+                        {"salesman": salesman_initial, "email": email, "status": "error", "error": DEFAULT_CLIENT_ERROR}
                     )
 
         return jsonify(
@@ -357,4 +358,4 @@ Please review the attached report for details.
         )
 
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, **client_error_payload()}), 500

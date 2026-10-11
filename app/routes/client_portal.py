@@ -24,7 +24,7 @@ from flask_babel import gettext as _
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db
-from app.utils.safe_redirect import is_safe_next_url
+from app.utils.safe_redirect import safe_redirect_target
 from app.models import (
     DEFAULT_WIDGET_ORDER,
     VALID_WIDGET_IDS,
@@ -442,10 +442,13 @@ def login():
 
     # Redirect to intended page or dashboard
     next_page = request.form.get("next") or request.args.get("next")
-    if not next_page or not is_safe_next_url(next_page, allowed_prefixes=("/client-portal",)):
-        next_page = url_for("client_portal.dashboard")
-
-    return redirect(next_page)
+    return redirect(
+        safe_redirect_target(
+            next_page,
+            allowed_prefixes=("/client-portal",),
+            fallback=url_for("client_portal.dashboard"),
+        )
+    )
 
 
 @client_portal_bp.route("/client-portal/logout")
@@ -1197,8 +1200,8 @@ def sign_quote(quote_id):
                     )
         except Exception as e:
             current_app.logger.error(f"Error sending quote signature email: {e}")
-    except ValueError as e:
-        flash(str(e), "error")
+    except ValueError:
+        flash(_("Could not sign quote. Please try again."), "error")
     return redirect(url_for("client_portal.view_quote", quote_id=quote_id))
 
 
@@ -1702,8 +1705,8 @@ def survey_response(token):
                 flash(_("Could not save your feedback. Please try again."), "error")
             else:
                 flash(_("Thank you for your feedback!"), "success")
-        except (TypeError, ValueError) as exc:
-            flash(str(exc) or _("Invalid score."), "error")
+        except (TypeError, ValueError):
+            flash(_("Invalid score."), "error")
 
     # Minimal render without requiring portal session — use survey template
     # which extends portal base; inject a fake session-free path by setting client.

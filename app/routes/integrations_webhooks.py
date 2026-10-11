@@ -57,6 +57,7 @@ from app.integrations.slack_connector import PROVIDER_KEY as SLACK_PROVIDER
 from app.integrations.slack_connector import SlackConnector
 from app.models import Integration
 from app.utils.db import safe_commit
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 logger = logging.getLogger(__name__)
 
@@ -223,7 +224,7 @@ def google_connect():
         url = connector.get_authorization_url(_google_redirect_uri(), state=state)
     except Exception as exc:
         logger.warning("Google OAuth start failed: %s", exc)
-        flash(str(exc), "error")
+        flash(DEFAULT_CLIENT_ERROR, "error")
         return redirect(url_for("integrations.list_integrations"))
     return redirect(url)
 
@@ -238,7 +239,7 @@ def google_callback():
         return redirect(url_for("integrations.list_integrations"))
     error = request.args.get("error")
     if error:
-        flash(f"Google Calendar authorization failed: {error}", "error")
+        flash("Google Calendar authorization failed", "error")
         return redirect(url_for("integrations.list_integrations"))
     code = request.args.get("code")
     if not code:
@@ -251,7 +252,7 @@ def google_callback():
         tokens = connector.exchange_code_for_tokens(code, _google_redirect_uri())
     except Exception as exc:
         logger.warning("Google OAuth callback failed: %s", exc)
-        flash(f"Google Calendar connection failed: {exc}", "error")
+        flash("Google Calendar connection failed", "error")
         return redirect(url_for("integrations.list_integrations"))
 
     save_result = GoogleCalendarConnector.save_tokens(integration, tokens)

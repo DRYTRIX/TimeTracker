@@ -38,6 +38,88 @@ from pathlib import Path
 from flask import render_template
 
 
+def _iter_at_page_spans(css_text):
+    """
+    Yield (start, end) spans for each ``@page { ... }`` block using brace counting.
+
+    Avoids polynomial ReDoS from patterns like ``@page\\s*\\{[^}]*\\}``.
+    """
+    import re
+
+    if not css_text:
+        return
+    for match in re.finditer(r"@page[ \t\r\n]*\{", css_text, re.IGNORECASE):
+        start_pos = match.start()
+        brace_count = 0
+        end_pos = len(css_text)
+        for i in range(match.end() - 1, len(css_text)):
+            if css_text[i] == "{":
+                brace_count += 1
+            elif css_text[i] == "}":
+                brace_count -= 1
+                if brace_count == 0:
+                    end_pos = i + 1
+                    break
+        yield start_pos, end_pos
+
+
+def find_at_page_rules(css_text):
+    """Return a list of full ``@page { ... }`` rule strings from CSS/HTML text."""
+    if not css_text:
+        return []
+    return [css_text[start:end] for start, end in _iter_at_page_spans(css_text)]
+
+
+def remove_at_page_rules(css_text):
+    """Remove all ``@page { ... }`` rules from CSS text (brace-aware)."""
+    if not css_text:
+        return css_text
+    spans = list(_iter_at_page_spans(css_text))
+    if not spans:
+        return css_text
+    parts = []
+    last = 0
+    for start, end in spans:
+        parts.append(css_text[last:start])
+        last = end
+    parts.append(css_text[last:])
+    return "".join(parts)
+
+
+def _transform_style_tag_contents(html_text, transform_fn):
+    """
+    Find ``<style>...</style>`` blocks via string search (no DOTALL regex) and
+    replace each style body with ``transform_fn(style_content)``.
+    """
+    if not html_text:
+        return html_text
+    lower = html_text.lower()
+    result = []
+    pos = 0
+    while True:
+        start = lower.find("<style", pos)
+        if start == -1:
+            result.append(html_text[pos:])
+            break
+        tag_end = html_text.find(">", start)
+        if tag_end == -1:
+            result.append(html_text[pos:])
+            break
+        close = lower.find("</style>", tag_end + 1)
+        if close == -1:
+            result.append(html_text[pos:])
+            break
+        open_tag = html_text[start : tag_end + 1]
+        style_content = html_text[tag_end + 1 : close]
+        close_tag = html_text[close : close + len("</style>")]
+        result.append(html_text[pos:start])
+        result.append(open_tag)
+        result.append(transform_fn(style_content))
+        result.append(close_tag)
+        pos = close + len("</style>")
+    return "".join(result)
+
+
 def update_page_size_in_css(css_text, page_size):
     """
     Update @page size property to match the specified page size.
@@ -60,31 +142,16 @@ def update_page_size_in_css(css_text, page_size):
     if not css_text or not page_size:
         return css_text
 
-    # Find all @page rules (may have multiple)
-    page_pattern = r"@page\s*\{"
-    matches = list(re.finditer(page_pattern, css_text, re.IGNORECASE | re.MULTILINE))
+    # Find all @page rules (may have multiple) via brace-aware walk
+    spans = list(_iter_at_page_spans(css_text))
 
-    if not matches:
+    if not spans:
         # No @page rule exists - add one at the beginning
         new_page_rule = f"@page {{\n            size: {page_size};\n            margin: 2cm;\n        }}\n\n"
         return new_page_rule + css_text
 
     # Process matches in reverse order to maintain positions
-    for match in reversed(matches):
-        start_pos = match.start()
-        # Find matching closing brace, accounting for nested braces
-        brace_count = 0
-        end_pos = len(css_text)
-
-        for i in range(match.end() - 1, len(css_text)):
-            if css_text[i] == "{":
-                brace_count += 1
-            elif css_text[i] == "}":
-                brace_count -= 1
-                if brace_count == 0:
-                    end_pos = i + 1
-                    break
-
+    for start_pos, end_pos in reversed(spans):
         page_block = css_text[start_pos:end_pos]
 
         # Replace or add size property
@@ -206,8 +273,8 @@ def validate_page_size_in_css(css_text, expected_page_size):
     if not css_text or not expected_page_size:
         return False, []
 
-    # Find all @page rules and check their size
-    page_rules = re.findall(r"@page\s*\{[^}]*\}", css_text, re.IGNORECASE | re.DOTALL)
+    # Find all @page rules via brace-aware walk (avoids polynomial ReDoS)
+    page_rules = find_at_page_rules(css_text)
     found_sizes = []
 
     for rule in page_rules:
@@ -761,60 +828,21 @@ class InvoicePDFGenerator:
 
         def update_page_size_in_html(html_text):
             """Update @page size property in HTML's inline <style> tags"""
-            import re
 
-            # Find and update @page rules in <style> tags
-            def update_style_tag(match):
-                style_content = match.group(2)  # Content inside <style> tag
-                updated_content = update_page_size_in_css(style_content, self.page_size)
-                return f"{match.group(1)}{updated_content}{match.group(3)}"
+            def update_style_content(style_content):
+                return update_page_size_in_css(style_content, self.page_size)
 
-            # Match <style> tags (with or without attributes)
-            style_pattern = r"(<style[^>]*>)(.*?)(</style>)"
-            if re.search(style_pattern, html_text, re.IGNORECASE | re.DOTALL):
-                html_text = re.sub(style_pattern, update_style_tag, html_text, flags=re.IGNORECASE | re.DOTALL)
-
-            return html_text
+            return _transform_style_tag_contents(html_text, update_style_content)
 
         def remove_page_rule_from_html(html_text):
             """Remove @page rules from HTML inline styles to avoid conflicts with separate CSS"""
             import re
 
-            def remove_from_style_tag(match):
-                style_content = match.group(2)
-                # Remove @page rule from style content
-                # Need to handle nested @bottom-center rules properly
-                # Match @page { ... } including any nested rules
-                brace_count = 0
-                page_pattern = r"@page\s*\{"
-                page_match = re.search(page_pattern, style_content, re.IGNORECASE)
+            def remove_from_style_content(style_content):
+                style_content = remove_at_page_rules(style_content)
+                return re.sub(r"\n\s*\n", "\n", style_content)
 
-                if page_match:
-                    start = page_match.start()
-                    # Find matching closing brace
-                    pos = page_match.end() - 1
-                    end = len(style_content)
-                    for i in range(page_match.end() - 1, len(style_content)):
-                        if style_content[i] == "{":
-                            brace_count += 1
-                        elif style_content[i] == "}":
-                            brace_count -= 1
-                            if brace_count == 0:
-                                end = i + 1
-                                break
-                    # Remove the @page rule
-                    style_content = style_content[:start] + style_content[end:]
-                    # Clean up any double newlines or extra whitespace
-                    style_content = re.sub(r"\n\s*\n", "\n", style_content)
-
-                return f"{match.group(1)}{style_content}{match.group(3)}"
-
-            # Match <style> tags and remove @page rules from them
-            style_pattern = r"(<style[^>]*>)(.*?)(</style>)"
-            if re.search(style_pattern, html_text, re.IGNORECASE | re.DOTALL):
-                html_text = re.sub(style_pattern, remove_from_style_tag, html_text, flags=re.IGNORECASE | re.DOTALL)
-
-            return html_text
+            return _transform_style_tag_contents(html_text, remove_from_style_content)
 
         # Handle CSS: When both HTML (with inline styles) and separate CSS exist,
         # extract inline styles, merge with separate CSS, and remove from HTML to avoid conflicts
@@ -823,12 +851,18 @@ class InvoicePDFGenerator:
         css_to_use = ""
         html_inline_styles_extracted = False
 
-        # Extract inline styles from HTML if present
+        # Extract inline styles from HTML if present (string find, no DOTALL regex)
         extracted_inline_css = ""
-        if html_template and "<style>" in html_template:
-            style_match = re.search(r"<style[^>]*>(.*?)</style>", html_template, re.IGNORECASE | re.DOTALL)
-            if style_match:
-                extracted_inline_css = style_match.group(1)
+        if html_template and "<style>" in html_template.lower():
+            collected = []
+
+            def _collect(style_content):
+                collected.append(style_content)
+                return style_content
+
+            _transform_style_tag_contents(html_template, _collect)
+            if collected:
+                extracted_inline_css = collected[0]
                 html_inline_styles_extracted = True
 
         if css_template and css_template.strip():
@@ -840,7 +874,12 @@ class InvoicePDFGenerator:
             # Check @page size before update
             import re
 
-            before_match = re.search(r"@page\s*\{[^}]*?size\s*:\s*([^;}\n]+)", css_template, re.IGNORECASE | re.DOTALL)
+            page_rules = find_at_page_rules(css_template)
+            before_match = None
+            for rule in page_rules:
+                before_match = re.search(r"size\s*:\s*['\"]?([^;}\n'\"]+)['\"]?", rule, re.IGNORECASE)
+                if before_match:
+                    break
             if before_match:
                 before_size = before_match.group(1).strip()
                 debug_print(f"[DEBUG] CSS template @page size BEFORE update: '{before_size}'")
@@ -971,10 +1010,8 @@ class InvoicePDFGenerator:
                 # to ensure the separate CSS @page rule is used (WeasyPrint uses first @page it finds)
                 # Keep all other inline styles (like positioning) to preserve layout
                 if html_inline_styles_extracted and css_template:
-                    # Check if HTML has @page rules
-                    import re
-
-                    html_page_rules = re.findall(r"@page\s*\{[^}]*\}", html_template, re.IGNORECASE | re.DOTALL)
+                    # Check if HTML has @page rules (brace-aware, no ReDoS regex)
+                    html_page_rules = find_at_page_rules(html_template)
                     if html_page_rules:
                         debug_print(
                             f"[DEBUG] Found {len(html_page_rules)} @page rule(s) in HTML inline styles - removing them"
@@ -2105,51 +2142,40 @@ class QuotePDFGenerator:
             """Remove @page rules from HTML inline styles to avoid conflicts with separate CSS"""
             import re
 
-            def remove_from_style_tag(match):
-                style_content = match.group(2)
-                brace_count = 0
-                page_pattern = r"@page\s*\{"
-                page_match = re.search(page_pattern, style_content, re.IGNORECASE)
+            def remove_from_style_content(style_content):
+                style_content = remove_at_page_rules(style_content)
+                return re.sub(r"\n\s*\n", "\n", style_content)
 
-                if page_match:
-                    start = page_match.start()
-                    end = len(style_content)
-                    for i in range(page_match.end() - 1, len(style_content)):
-                        if style_content[i] == "{":
-                            brace_count += 1
-                        elif style_content[i] == "}":
-                            brace_count -= 1
-                            if brace_count == 0:
-                                end = i + 1
-                                break
-                    style_content = style_content[:start] + style_content[end:]
-                    style_content = re.sub(r"\n\s*\n", "\n", style_content)
-
-                return f"{match.group(1)}{style_content}{match.group(3)}"
-
-            style_pattern = r"(<style[^>]*>)(.*?)(</style>)"
-            if re.search(style_pattern, html_text, re.IGNORECASE | re.DOTALL):
-                html_text = re.sub(style_pattern, remove_from_style_tag, html_text, flags=re.IGNORECASE | re.DOTALL)
-
-            return html_text
+            return _transform_style_tag_contents(html_text, remove_from_style_content)
 
         import re
 
         css_to_use = ""
         html_inline_styles_extracted = False
 
-        # Extract inline styles from HTML if present
+        # Extract inline styles from HTML if present (string find, no DOTALL regex)
         extracted_inline_css = ""
-        if html_template and "<style>" in html_template:
-            style_match = re.search(r"<style[^>]*>(.*?)</style>", html_template, re.IGNORECASE | re.DOTALL)
-            if style_match:
-                extracted_inline_css = style_match.group(1)
+        if html_template and "<style>" in html_template.lower():
+            collected = []
+
+            def _collect(style_content):
+                collected.append(style_content)
+                return style_content
+
+            _transform_style_tag_contents(html_template, _collect)
+            if collected:
+                extracted_inline_css = collected[0]
                 html_inline_styles_extracted = True
 
         if css_template and css_template.strip():
             debug_print(f"[DEBUG] Using separate CSS template (length: {len(css_template)})")
 
-            before_match = re.search(r"@page\s*\{[^}]*?size\s*:\s*([^;}\n]+)", css_template, re.IGNORECASE | re.DOTALL)
+            page_rules = find_at_page_rules(css_template)
+            before_match = None
+            for rule in page_rules:
+                before_match = re.search(r"size\s*:\s*['\"]?([^;}\n'\"]+)['\"]?", rule, re.IGNORECASE)
+                if before_match:
+                    break
             if before_match:
                 before_size = before_match.group(1).strip()
                 debug_print(f"[DEBUG] CSS template @page size BEFORE update: '{before_size}'")
@@ -2252,7 +2278,7 @@ class QuotePDFGenerator:
 
                 # When we have separate CSS, remove @page rules from HTML inline styles
                 if html_inline_styles_extracted and css_template:
-                    html_page_rules = re.findall(r"@page\s*\{[^}]*\}", html_template, re.IGNORECASE | re.DOTALL)
+                    html_page_rules = find_at_page_rules(html_template)
                     if html_page_rules:
                         debug_print(
                             f"[DEBUG] Found {len(html_page_rules)} @page rule(s) in HTML inline styles - removing them"

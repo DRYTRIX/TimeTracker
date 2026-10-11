@@ -15,6 +15,7 @@ from app.models import Integration, IntegrationCredential
 from app.services.integration_service import IntegrationService
 from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 # Import registry to ensure connectors are registered
 try:
@@ -29,11 +30,21 @@ integrations_bp = Blueprint("integrations", __name__)
 
 def has_setup_wizard(provider):
     """Check if a setup wizard template exists for the given provider."""
+    import re
+
     from flask import current_app
 
-    template_path = f"integrations/wizard_{provider}.html"
+    from app.utils.paths import PathEscapeError, safe_path_under
+
+    # Allowlist provider before joining into a filesystem path (path injection).
+    if not provider or not re.fullmatch(r"[a-z0-9_]+", str(provider)):
+        return False
+
     template_dir = os.path.join(current_app.root_path, "templates")
-    template_file = os.path.join(template_dir, template_path)
+    try:
+        template_file = safe_path_under(template_dir, "integrations", f"wizard_{provider}.html")
+    except PathEscapeError:
+        return False
     return os.path.exists(template_file)
 
 
@@ -274,10 +285,12 @@ def oauth_callback(provider):
                 logger.warning(f"Error parsing OAuth state timestamp: {e}")
 
     if not expected_state or state != expected_state:
+        # Do not log OAuth state values (CSRF secrets)
         logger.error(
-            f"Invalid state parameter for integration {integration.id}. "
-            f"Expected: {expected_state[:10] if expected_state else 'None'}..., "
-            f"Got: {state[:10] if state else 'None'}..."
+            "Invalid OAuth state for integration %s (expected_present=%s got_present=%s)",
+            integration.id,
+            bool(expected_state),
+            bool(state),
         )
         flash(_("Invalid state parameter. Please try connecting again."), "error")
         return redirect(url_for("integrations.list_integrations"))
@@ -344,7 +357,7 @@ def oauth_callback(provider):
 
     except Exception as e:
         logger.error(f"Error in OAuth callback for {provider}: {e}")
-        flash(_("Error connecting integration: %(error)s", error=str(e)), "error")
+        flash(_("Error connecting integration. Please try again."), "error")
         return redirect(url_for("integrations.list_integrations"))
 
 
@@ -1034,7 +1047,7 @@ def sync_integration(integration_id):
 
         integration.last_sync_at = datetime.utcnow()
         safe_commit("update_integration_sync_status_error", {"integration_id": integration_id})
-        flash(_("Error during sync: %(error)s", error=str(e)), "error")
+        flash(_("Error during sync. Please try again."), "error")
 
     return redirect(url_for("integrations.view_integration", integration_id=integration_id))
 
@@ -1401,7 +1414,7 @@ def integration_webhook(provider):
                 )
         except Exception as e:
             logger.error(f"Error handling webhook for integration {integration.id}: {e}", exc_info=True)
-            results.append({"integration_id": integration.id, "success": False, "message": str(e)})
+            results.append({"integration_id": integration.id, "success": False, "message": DEFAULT_CLIENT_ERROR})
 
     # Return success if at least one integration processed the webhook
     if any(r["success"] for r in results):
@@ -1682,7 +1695,7 @@ def test_connection_wizard(provider):
         return jsonify(result)
     except Exception as e:
         logger.error(f"Connection test error for {provider}: {e}", exc_info=True)
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, **client_error_payload()}), 500
 
 
 @integrations_bp.route("/integrations/sync-errors")
@@ -1746,7 +1759,7 @@ def retry_sync_error(error_id):
         else:
             flash(_("Connector unavailable"), "error")
     except Exception as e:
-        flash(_("Retry failed: %(err)s", err=str(e)), "error")
+        flash(_("Retry failed. Please try again."), "error")
     safe_commit("retry_sync_error", {"error_id": error_id})
     return redirect(url_for("integrations.sync_errors"))
 
@@ -1876,4 +1889,4 @@ def activitywatch_buckets_api():
             return jsonify({"buckets": [], "error": "not configured"}), 400
         return jsonify({"buckets": connector.list_buckets()})
     except Exception as e:
-        return jsonify({"buckets": [], "error": str(e)}), 400
+        return jsonify({"buckets": [], **client_error_payload()}), 400

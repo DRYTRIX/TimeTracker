@@ -1188,29 +1188,21 @@ def create_app(config=None):
             except Exception:
                 is_authed = False
 
+            from app.utils.safe_redirect import is_safe_next_url, safe_redirect_target
+
             if (not is_authed) or request.endpoint == "auth.login" or request.path.rstrip("/").endswith("/login"):
                 next_url = request.args.get("next") or request.form.get("next")
-                if next_url:
+                if next_url and is_safe_next_url(next_url):
                     dest = url_for("auth.login", next=next_url)
                 else:
                     dest = url_for("auth.login")
             else:
-                dest = url_for("main.dashboard")
-                try:
-                    # Prefer returning to the same path that failed when no referrer is present
-                    if request.path:
-                        dest = request.path
-                except Exception:
-                    pass
-                try:
-                    ref = request.referrer
-                    if ref:
-                        ref_host = urlparse(ref).netloc
-                        cur_host = urlparse(request.host_url).netloc
-                        if ref_host and ref_host == cur_host:
-                            dest = ref
-                except Exception:
-                    app.logger.debug("CSRF redirect referrer parse failed", exc_info=True)
+                dest = safe_redirect_target(
+                    request.referrer,
+                    allow_absolute_same_host=True,
+                    fallback=request.path if (request.path or "").startswith("/") else None,
+                    fallback_endpoint="main.dashboard",
+                )
             return redirect(dest)
 
         # JSON/XHR fall-through

@@ -53,11 +53,44 @@ class ApiToken(db.Model):
         return f"tt_{random_part}"
 
     @staticmethod
+    def _token_pepper() -> bytes:
+        from flask import current_app, has_app_context
+
+        pepper = ""
+        if has_app_context():
+            pepper = (
+                current_app.config.get("API_TOKEN_PEPPER")
+                or current_app.config.get("SECRET_KEY")
+                or ""
+            )
+        if isinstance(pepper, bytes):
+            return pepper
+        return str(pepper or "timetracker-api-token").encode("utf-8")
+
+    @staticmethod
     def hash_token(token):
-        """Hash a token for storage"""
+        """
+        Hash a high-entropy API token for indexed lookup storage.
+
+        Uses HMAC-SHA256 with the app secret (or API_TOKEN_PEPPER) as key.
+        This is a lookup hash for secrets.token_urlsafe tokens, not a password KDF.
+        """
+        import hashlib
+        import hmac
+
+        return hmac.new(ApiToken._token_pepper(), token.encode("utf-8"), hashlib.sha256).hexdigest()
+
+    @staticmethod
+    def legacy_hash_token(token):
+        """Pre-HMAC SHA256 lookup hash (for verifying existing stored tokens)."""
         import hashlib
 
-        return hashlib.sha256(token.encode()).hexdigest()
+        return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def lookup_hashes(cls, token):
+        """Return candidate hashes for DB lookup (HMAC first, then legacy)."""
+        return [cls.hash_token(token), cls.legacy_hash_token(token)]
 
     @classmethod
     def create_token(cls, user_id, name, description="", scopes="", expires_days=None, client_id=None):
@@ -96,8 +129,13 @@ class ApiToken(db.Model):
         return api_token, plain_token
 
     def verify_token(self, plain_token):
-        """Verify if the provided token matches this record"""
-        return self.token_hash == self.hash_token(plain_token)
+        """Verify if the provided token matches this record (HMAC or legacy SHA256)."""
+        import hmac as hmac_mod
+
+        for candidate in self.lookup_hashes(plain_token):
+            if hmac_mod.compare_digest(self.token_hash, candidate):
+                return True
+        return False
 
     def is_valid(self):
         """Check if token is valid (active and not expired)"""

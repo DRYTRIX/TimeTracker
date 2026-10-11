@@ -63,15 +63,15 @@ def _parse_and_validate_start_override(raw_value, now_local):
 
 def _redirect_after_start_error():
     """Redirect back to the submitting page when the referrer is same-host; else dashboard."""
-    from urllib.parse import urlparse
+    from app.utils.safe_redirect import safe_redirect_target
 
-    referrer = request.referrer
-    if referrer:
-        ref = urlparse(referrer)
-        host = urlparse(request.host_url)
-        if ref.scheme in ("http", "https") and ref.netloc == host.netloc:
-            return redirect(referrer)
-    return redirect(url_for("main.dashboard"))
+    return redirect(
+        safe_redirect_target(
+            request.referrer,
+            allow_absolute_same_host=True,
+            fallback=url_for("main.dashboard"),
+        )
+    )
 
 
 def _active_users_for_admin():

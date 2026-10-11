@@ -24,7 +24,7 @@ from werkzeug.utils import secure_filename
 from app import db, log_event, track_event
 from app.models import Client, Expense, Project, User
 from app.utils.db import safe_commit
-from app.utils.error_handling import safe_file_remove
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR, safe_file_remove
 from app.utils.module_helpers import module_enabled
 from app.utils.ocr import get_suggested_expense_data, is_ocr_available, scan_receipt
 
@@ -515,8 +515,18 @@ def serve_receipt(filename):
             return "Permission denied", 403
 
         # Serve the file from the actual upload folder
+        from werkzeug.utils import secure_filename
+
+        from app.utils.paths import PathEscapeError, safe_path_under
+
         upload_folder = get_receipt_upload_folder()
-        file_path = os.path.join(upload_folder, filename)
+        safe_name = secure_filename(filename)
+        if not safe_name:
+            return "Receipt not found", 404
+        try:
+            file_path = safe_path_under(upload_folder, safe_name)
+        except PathEscapeError:
+            return "Receipt not found", 404
 
         if not os.path.exists(file_path):
             current_app.logger.error(
@@ -524,7 +534,7 @@ def serve_receipt(filename):
             )
             return "Receipt file not found", 404
 
-        return send_from_directory(upload_folder, filename)
+        return send_from_directory(upload_folder, safe_name)
     except Exception as e:
         current_app.logger.error(f"Error serving receipt {filename}: {str(e)}", exc_info=True)
         return "Error serving receipt", 500
@@ -1355,7 +1365,7 @@ def api_scan_receipt():
 
     except Exception as e:
         current_app.logger.error(f"Error scanning receipt: {e}")
-        return jsonify({"error": "Failed to scan receipt", "message": str(e)}), 500
+        return jsonify({"error": "Failed to scan receipt", "message": DEFAULT_CLIENT_ERROR}), 500
 
 
 @expenses_bp.route("/expenses/scan-receipt", methods=["GET", "POST"])

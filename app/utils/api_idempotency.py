@@ -64,7 +64,7 @@ def store_idempotent_response(api_token_id: int, scope: str, key: str, status_co
     )
     db.session.add(row)
     if not safe_commit("api_idempotency_store", {"scope": scope}):
-        logger.warning("Failed to store idempotency key for token %s", api_token_id)
+        logger.warning("Failed to store idempotency key for api_token_id=%s", api_token_id)
 
 
 def replay_response(status_code: int, body_json: str) -> Response:

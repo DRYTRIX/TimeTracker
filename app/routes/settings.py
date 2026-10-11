@@ -10,6 +10,7 @@ from flask_login import current_user, login_required
 from app import db, track_page_view
 from app.utils.db import safe_commit
 from app.utils.keyboard_shortcuts_defaults import merge_overrides, validate_overrides
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 settings_bp = Blueprint("settings", __name__)
 
@@ -85,7 +86,7 @@ def api_keyboard_shortcuts_save():
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return client_error_response(status=500)
     return jsonify(_keyboard_shortcuts_config())
 
 
@@ -100,5 +101,5 @@ def api_keyboard_shortcuts_reset():
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return client_error_response(status=500)
     return jsonify(_keyboard_shortcuts_config())

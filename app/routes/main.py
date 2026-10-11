@@ -887,12 +887,16 @@ def set_language():
 
     # Redirect back if referer exists, add timestamp to force reload
     referer = request.headers.get("Referer")
-    next_url = safe_redirect_target(referer, allow_absolute_same_host=True)
+    base_url = safe_redirect_target(referer, allow_absolute_same_host=True)
     # Add cache-busting parameter to ensure fresh page load
     import time
 
-    separator = "&" if "?" in next_url else "?"
-    next_url = f"{next_url}{separator}_lang_refresh={int(time.time())}"
+    separator = "&" if "?" in base_url else "?"
+    next_url = safe_redirect_target(
+        f"{base_url}{separator}_lang_refresh={int(time.time())}",
+        allow_absolute_same_host=True,
+        fallback=base_url,
+    )
     response = make_response(redirect(next_url))
     # Ensure no caching
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"

@@ -87,8 +87,8 @@ class ScheduledReportService:
             return {"success": True, "message": "Scheduled report created successfully.", "schedule": schedule}
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error creating scheduled report: {e}")
-            return {"success": False, "message": f"Error creating schedule: {str(e)}"}
+            logger.exception("Error creating scheduled report")
+            return {"success": False, "message": "Error creating schedule"}
 
     def generate_and_send_report(self, schedule_id: int) -> Dict[str, Any]:
         """
@@ -184,8 +184,8 @@ class ScheduledReportService:
             return {"success": True, "message": f"Report sent to {sent_count} recipients.", "sent_count": sent_count}
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error generating and sending report: {e}")
-            return {"success": False, "message": f"Error generating report: {str(e)}"}
+            logger.exception("Error generating and sending report")
+            return {"success": False, "message": "Error generating report"}
 
     def _generate_report_data(
         self, saved_view: SavedReportView, config: Dict[str, Any], user_id: Optional[int] = None
@@ -288,8 +288,8 @@ class ScheduledReportService:
             return {"success": True, "message": "Schedule updated successfully.", "schedule": schedule}
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error updating schedule: {e}")
-            return {"success": False, "message": f"Error updating schedule: {str(e)}"}
+            logger.exception("Error updating schedule")
+            return {"success": False, "message": "Error updating schedule"}
 
     def delete_schedule(self, schedule_id: int, user_id: int) -> Dict[str, Any]:
         """Delete a scheduled report"""
@@ -307,8 +307,8 @@ class ScheduledReportService:
             return {"success": True, "message": "Schedule deleted successfully."}
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error deleting schedule: {e}")
-            return {"success": False, "message": f"Error deleting schedule: {str(e)}"}
+            logger.exception("Error deleting schedule")
+            return {"success": False, "message": "Error deleting schedule"}
 
     def _generate_and_send_custom_field_reports(
         self,
@@ -483,7 +483,7 @@ class ScheduledReportService:
                         sent_count += 1
                         logger.info(f"Sent report to {recipient} for {custom_field_name}={field_value}")
                     except Exception as e:
-                        error_msg = f"Error sending to {recipient} ({custom_field_name}={field_value}): {str(e)}"
+                        error_msg = f"Error sending to {recipient} ({custom_field_name}={field_value})"
                         logger.error(error_msg)
                         errors.append(error_msg)
 
@@ -505,7 +505,7 @@ class ScheduledReportService:
         except Exception as e:
             db.session.rollback()
             logger.error(f"Error generating and sending custom field reports: {e}", exc_info=True)
-            return {"success": False, "message": f"Error generating reports: {str(e)}"}
+            return {"success": False, "message": "Error generating reports"}
 
     def _get_recipients_for_field_value(
         self, schedule: ReportEmailSchedule, field_value: str, default_recipients: List[str]

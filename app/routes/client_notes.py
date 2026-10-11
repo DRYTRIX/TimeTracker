@@ -6,6 +6,7 @@ from app import db, log_event, track_event
 from app.models import Client, ClientNote, Settings
 from app.utils.db import safe_commit
 from app.utils.module_registry import ModuleRegistry
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 client_notes_bp = Blueprint("client_notes", __name__)
 
@@ -53,9 +54,9 @@ def create_note(client_id):
             flash(_("Error adding note"), "error")
 
     except ValueError as e:
-        flash(_("Error adding note: %(error)s", error=str(e)), "error")
+        flash(_("Error adding note. Please try again."), "error")
     except Exception as e:
-        flash(_("Error adding note: %(error)s", error=str(e)), "error")
+        flash(_("Error adding note. Please try again."), "error")
 
     # Redirect back to the client page
     return redirect(url_for("clients.view_client", client_id=client_id))
@@ -100,9 +101,9 @@ def edit_note(client_id, note_id):
             return redirect(url_for("clients.view_client", client_id=client_id))
 
         except ValueError as e:
-            flash(_("Error updating note: %(error)s", error=str(e)), "error")
+            flash(_("Error updating note. Please try again."), "error")
         except Exception as e:
-            flash(_("Error updating note: %(error)s", error=str(e)), "error")
+            flash(_("Error updating note. Please try again."), "error")
 
     return render_template("client_notes/edit.html", note=note, client_id=client_id)
 
@@ -139,7 +140,7 @@ def delete_note(client_id, note_id):
         flash(_("Note deleted successfully"), "success")
 
     except Exception as e:
-        flash(_("Error deleting note: %(error)s", error=str(e)), "error")
+        flash(_("Error deleting note. Please try again."), "error")
 
     return redirect(url_for("clients.view_client", client_id=client_id))
 
@@ -180,7 +181,7 @@ def toggle_important(client_id, note_id):
         return jsonify({"success": True, "is_important": note.is_important})
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return client_error_response(status=500)
 
 
 @client_notes_bp.route("/api/clients/<int:client_id>/notes")
@@ -199,7 +200,7 @@ def list_notes(client_id):
         return jsonify({"success": True, "notes": [note.to_dict() for note in notes]})
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return client_error_response(status=500)
 
 
 @client_notes_bp.route("/api/client-notes/<int:note_id>")
@@ -227,7 +228,7 @@ def get_important_notes():
         return jsonify({"success": True, "notes": [note.to_dict() for note in notes]})
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return client_error_response(status=500)
 
 
 @client_notes_bp.route("/api/client-notes/recent")
@@ -243,7 +244,7 @@ def get_recent_notes():
         return jsonify({"success": True, "notes": [note.to_dict() for note in notes]})
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return client_error_response(status=500)
 
 
 @client_notes_bp.route("/api/client-notes/user/<int:user_id>")
@@ -263,4 +264,4 @@ def get_user_notes(user_id):
         return jsonify({"success": True, "notes": [note.to_dict() for note in notes]})
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return client_error_response(status=500)

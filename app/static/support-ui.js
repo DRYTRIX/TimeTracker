@@ -55,11 +55,24 @@
         }
     }
 
+    function isSafeExternalUrl(url) {
+        try {
+            var u = new URL(String(url), window.location.origin);
+            if (u.protocol === 'https:') return true;
+            if (u.protocol === 'http:' && (u.hostname === 'localhost' || u.hostname === '127.0.0.1')) {
+                return true;
+            }
+            return false;
+        } catch (e) {
+            return false;
+        }
+    }
+
     function wireTierLinks(cfg) {
         if (!cfg || !cfg.urls) return;
         document.querySelectorAll('a.support-tier-btn[data-support-tier]').forEach(function (a) {
             var key = a.getAttribute('data-support-tier');
-            if (key && cfg.urls[key]) {
+            if (key && cfg.urls[key] && isSafeExternalUrl(cfg.urls[key])) {
                 a.href = cfg.urls[key];
             }
             a.addEventListener('click', function () {

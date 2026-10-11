@@ -14,6 +14,7 @@ from app.services.time_tracking_service import TimeTrackingService
 from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
 from app.utils.permissions import admin_or_permission_required
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 kiosk_bp = Blueprint("kiosk", __name__)
 
@@ -264,7 +265,7 @@ def adjust_stock():
         reason = data.get("reason", "Kiosk adjustment").strip() or "Kiosk adjustment"
         notes = data.get("notes", "").strip() or None
     except (ValueError, InvalidOperation, TypeError) as e:
-        return jsonify({"error": f"Invalid input: {str(e)}"}), 400
+        return client_error_response(status=400)
 
     if not stock_item_id or not warehouse_id:
         return jsonify({"error": "Item and warehouse required"}), 400
@@ -329,7 +330,7 @@ def adjust_stock():
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("Error recording stock adjustment: %s", e)
-        return jsonify({"error": f"Error recording adjustment: {str(e)}"}), 500
+        return client_error_response(status=500)
 
 
 @kiosk_bp.route("/api/kiosk/transfer-stock", methods=["POST"])
@@ -346,7 +347,7 @@ def transfer_stock():
         quantity = Decimal(str(data.get("quantity", 0)))
         notes = data.get("notes", "").strip() or None
     except (ValueError, InvalidOperation, TypeError) as e:
-        return jsonify({"error": f"Invalid input: {str(e)}"}), 400
+        return client_error_response(status=400)
 
     if not all([stock_item_id, from_warehouse_id, to_warehouse_id]):
         return jsonify({"error": "Item, source warehouse, and destination warehouse required"}), 400
@@ -440,7 +441,7 @@ def transfer_stock():
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("Error recording stock transfer: %s", e)
-        return jsonify({"error": f"Error recording transfer: {str(e)}"}), 500
+        return client_error_response(status=500)
 
 
 @kiosk_bp.route("/api/kiosk/start-timer", methods=["POST"])
@@ -455,7 +456,7 @@ def kiosk_start_timer():
         task_id = int(data.get("task_id")) if data.get("task_id") else None
         notes = data.get("notes", "").strip() or None
     except (ValueError, TypeError) as e:
-        return jsonify({"error": f"Invalid input: {str(e)}"}), 400
+        return client_error_response(status=400)
 
     if not project_id:
         return jsonify({"error": "Project is required"}), 400
@@ -504,7 +505,7 @@ def kiosk_start_timer():
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("Error starting timer: %s", e)
-        return jsonify({"error": f"Error starting timer: {str(e)}"}), 500
+        return client_error_response(status=500)
 
 
 @kiosk_bp.route("/api/kiosk/stop-timer", methods=["POST"])
@@ -531,7 +532,7 @@ def kiosk_stop_timer():
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("Error stopping timer: %s", e)
-        return jsonify({"error": f"Error stopping timer: {str(e)}"}), 500
+        return client_error_response(status=500)
 
 
 @kiosk_bp.route("/api/kiosk/start-workday", methods=["POST"])

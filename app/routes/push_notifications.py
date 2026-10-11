@@ -10,6 +10,7 @@ from app.models import PushSubscription
 from app.utils.api_auth import require_api_token
 from app.utils.db import safe_commit
 from app.utils.timezone import now_in_app_timezone
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 push_bp = Blueprint("push", __name__)
 
@@ -60,7 +61,7 @@ def subscribe_push():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, **client_error_payload(key="message")}), 500
 
 
 @push_bp.route("/api/push/unsubscribe", methods=["POST"])
@@ -91,7 +92,7 @@ def unsubscribe_push():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, **client_error_payload(key="message")}), 500
 
 
 @push_bp.route("/api/push/subscriptions", methods=["GET"])
@@ -102,7 +103,7 @@ def list_subscriptions():
         subscriptions = PushSubscription.get_user_subscriptions(current_user.id)
         return jsonify({"success": True, "subscriptions": [sub.to_dict() for sub in subscriptions]})
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, **client_error_payload(key="message")}), 500
 
 
 def _register_device_token_for_user(user_id: int):
@@ -135,7 +136,7 @@ def _register_device_token_for_user(user_id: int):
     except Exception as e:
         db.session.rollback()
         current_app.logger.warning("register device push failed: %s", e)
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, **client_error_payload()}), 500
 
 
 @push_bp.route("/api/push/register-device", methods=["POST"])

@@ -72,7 +72,7 @@
             var a = e.target.closest && e.target.closest('a[href]');
             if (!a || a.target === '_blank' || a.hasAttribute('download')) return;
             var href = a.getAttribute('href') || '';
-            if (!href || href.charAt(0) === '#' || href.indexOf('javascript:') === 0) return;
+            if (!href || href.charAt(0) === '#' || /^(javascript|data|vbscript):/i.test(href)) return;
             if (a.dataset.unsavedGuardBypass === 'true') return;
             // eslint-disable-next-line no-alert
             if (!window.confirm(message())) {

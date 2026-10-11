@@ -1,6 +1,13 @@
 const memory = new Map();
 
+/** Keys that must never be persisted to localStorage (secrets / auth). */
+const SENSITIVE_KEYS = new Set([
+  'api_token',
+  'api_token_server_url',
+]);
+
 function readLocal(key) {
+  if (SENSITIVE_KEYS.has(key)) return null;
   const value = localStorage.getItem(key);
   if (!value) return null;
   try {
@@ -20,7 +27,10 @@ export async function storeGet(key) {
 export async function storeSet(key, value) {
   if (window.electronAPI?.storeSet) return window.electronAPI.storeSet(key, value);
   memory.set(key, value);
-  localStorage.setItem(key, JSON.stringify(value));
+  // Never write secrets to localStorage (browser/dev fallback only)
+  if (!SENSITIVE_KEYS.has(key)) {
+    localStorage.setItem(key, JSON.stringify(value));
+  }
   return undefined;
 }
 

@@ -506,10 +506,10 @@ document.addEventListener('DOMContentLoaded', function() {
       // Remove any processing classes
       btn.classList.remove('processing', 'loading', 'disabled');
       
-      // Restore original text if it was saved
+      // Restore original text if it was saved (textContent avoids XSS via attribute)
       const originalText = btn.getAttribute('data-original-text');
       if (originalText) {
-        btn.innerHTML = originalText;
+        btn.textContent = originalText;
         btn.removeAttribute('data-original-text');
       }
       

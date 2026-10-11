@@ -100,9 +100,9 @@ class WorkflowEngine:
                 try:
                     result = WorkflowEngine._perform_action(action, context, rule)
                     results.append({"action": action, "success": True, "result": result})
-                except Exception as e:
-                    logger.error(f"Error executing action {action}: {e}")
-                    results.append({"action": action, "success": False, "error": str(e)})
+                except Exception:
+                    logger.exception("Error executing action %s", action)
+                    results.append({"action": action, "success": False, "error": "Action execution failed"})
 
             # Log execution
             execution_time_ms = int((time.time() - start_time) * 1000)
@@ -141,29 +141,29 @@ class WorkflowEngine:
                 "execution_time_ms": execution_time_ms,
             }
 
-        except Exception as e:
-            logger.error(f"Error executing workflow rule {rule.id}: {e}")
+        except Exception:
+            logger.exception("Error executing workflow rule %s", rule.id)
 
             execution_time_ms = int((time.time() - start_time) * 1000)
             execution = WorkflowExecution(
                 rule_id=rule.id,
                 executed_at=datetime.utcnow(),
                 success=False,
-                error_message=str(e),
+                error_message="Workflow execution failed",
                 result=None,
                 trigger_event=event,
                 execution_time_ms=execution_time_ms,
             )
             db.session.add(execution)
             # Use safe_commit for proper error handling
-            if not safe_commit("execute_workflow_rule_error", {"rule_id": rule.id, "error": str(e)}):
+            if not safe_commit("execute_workflow_rule_error", {"rule_id": rule.id}):
                 logger.error(f"Failed to commit workflow execution error for rule {rule.id}")
                 db.session.rollback()
 
             return {
                 "success": False,
-                "message": f"Workflow execution failed: {str(e)}",
-                "error": str(e),
+                "message": "Workflow execution failed",
+                "error": "Workflow execution failed",
             }
 
     @staticmethod
@@ -418,8 +418,8 @@ class WorkflowEngine:
             try:
                 result = WorkflowEngine.execute_rule(rule, event)
                 results.append({"rule_id": rule.id, "rule_name": rule.name, **result})
-            except Exception as e:
-                logger.error(f"Error executing rule {rule.id}: {e}")
-                results.append({"rule_id": rule.id, "rule_name": rule.name, "success": False, "error": str(e)})
+            except Exception:
+                logger.exception("Error executing rule %s", rule.id)
+                results.append({"rule_id": rule.id, "rule_name": rule.name, "success": False, "error": "Workflow execution failed"})
 
         return results

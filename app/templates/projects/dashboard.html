@@ -33,7 +33,7 @@
                 {{ _('Budget Analysis') }}
             </a>
             {% endif %}
-            <select id="periodFilter" class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg px-4 py-2" onchange="window.location.href='?period='+this.value">
+            <select id="periodFilter" class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg px-4 py-2" onchange="var p=this.value;if(['all','week','month','3months','year'].indexOf(p)!==-1){window.location.href='?period='+encodeURIComponent(p);}">
                 <option value="all" {% if period == 'all' %}selected{% endif %}>{{ _('All Time') }}</option>
                 <option value="week" {% if period == 'week' %}selected{% endif %}>{{ _('Last 7 Days') }}</option>
                 <option value="month" {% if period == 'month' %}selected{% endif %}>{{ _('Last 30 Days') }}</option>

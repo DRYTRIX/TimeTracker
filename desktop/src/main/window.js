@@ -1,6 +1,7 @@
-const { app, BrowserWindow, screen } = require('electron');
+const { app, BrowserWindow, screen, protocol, net } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { pathToFileURL } = require('url');
 
 let windowState = {
   width: 1200,
@@ -11,6 +12,41 @@ let windowState = {
 };
 
 let windowStateLoaded = false;
+let appProtocolRegistered = false;
+
+function rendererRoot() {
+  return path.join(__dirname, '../../dist-renderer');
+}
+
+/**
+ * Serve packaged renderer assets via app:// so webSecurity can stay enabled.
+ * Call once after app.whenReady().
+ */
+function registerAppProtocol() {
+  if (appProtocolRegistered) return;
+  appProtocolRegistered = true;
+  const root = path.resolve(rendererRoot());
+  protocol.handle('app', (request) => {
+    try {
+      const url = new URL(request.url);
+      let pathname = decodeURIComponent(url.pathname || '/');
+      if (pathname === '/' || pathname === '') {
+        pathname = '/index.html';
+      }
+      // Prevent path traversal outside dist-renderer
+      const candidate = path.resolve(root, '.' + pathname.replace(/^\/+/, '/'));
+      if (candidate !== root && !candidate.startsWith(root + path.sep)) {
+        return new Response('Forbidden', { status: 403 });
+      }
+      if (!fs.existsSync(candidate) || !fs.statSync(candidate).isFile()) {
+        return new Response('Not Found', { status: 404 });
+      }
+      return net.fetch(pathToFileURL(candidate).toString());
+    } catch (e) {
+      return new Response('Bad Request', { status: 400 });
+    }
+  });
+}
 
 function loadWindowState() {
   if (windowStateLoaded) return;
@@ -57,6 +93,7 @@ function createWindow(options = {}) {
         nodeIntegration: false,
         contextIsolation: true,
         sandbox: false,
+        webSecurity: true,
       },
     });
 
@@ -85,7 +122,7 @@ function createWindow(options = {}) {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
-      webSecurity: false,
+      webSecurity: true,
     },
     // Icon path - use .ico on Windows, .icns on macOS, .png on Linux
     icon: (() => {
@@ -149,11 +186,12 @@ function createWindow(options = {}) {
   });
 
   const isDev = process.argv.includes('--dev');
-  const rendererIndex = path.join(__dirname, '../../dist-renderer/index.html');
+  const rendererIndex = path.join(rendererRoot(), 'index.html');
   if (!fs.existsSync(rendererIndex)) {
     throw new Error('dist-renderer/index.html is missing. Run npm run build:renderer.');
   }
-  mainWindow.loadFile(rendererIndex);
+  // Load via privileged app:// scheme so webSecurity can remain enabled
+  mainWindow.loadURL('app://timetracker/index.html');
   if (isDev) {
     mainWindow.webContents.openDevTools();
   }
@@ -161,4 +199,4 @@ function createWindow(options = {}) {
   return mainWindow;
 }
 
-module.exports = { createWindow, getSplashWindow: () => splashWindow };
+module.exports = { createWindow, getSplashWindow: () => splashWindow, registerAppProtocol };

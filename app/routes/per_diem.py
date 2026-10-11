@@ -13,6 +13,7 @@ from app.models import Client, PerDiem, PerDiemRate, Project, Settings
 from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
 from app.utils.permissions import admin_or_permission_required
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 per_diem_bp = Blueprint("per_diem", __name__)
 
@@ -254,7 +255,7 @@ def export_per_diem_pdf():
         )
     except Exception as e:
         current_app.logger.warning("Per diem PDF export failed: %s", e, exc_info=True)
-        flash(_("PDF export failed: %(error)s", error=str(e)), "error")
+        flash(_("PDF export failed. Please try again."), "error")
         return redirect(url_for("per_diem.list_per_diem"))
 
     start_part = start_date or "all"
@@ -963,4 +964,4 @@ def api_calculate_days():
         return jsonify(result)
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return client_error_response(status=400)

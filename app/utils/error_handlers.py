@@ -156,11 +156,16 @@ def register_error_handlers(app):
 
         flash(error_msg, "error")
         # Prefer returning to the referrer when safe; otherwise home/dashboard.
-        referrer = request.referrer
-        if referrer and referrer.startswith(request.host_url):
-            return redirect(referrer)
         try:
-            return redirect(url_for("main.dashboard"))
+            from app.utils.safe_redirect import safe_redirect_target
+
+            return redirect(
+                safe_redirect_target(
+                    request.referrer,
+                    allow_absolute_same_host=True,
+                    fallback=url_for("main.dashboard"),
+                )
+            )
         except Exception:
             return (
                 render_template(

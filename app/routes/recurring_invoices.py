@@ -10,6 +10,7 @@ from app import db, log_event
 from app.models import Client, Invoice, Project, RecurringInvoice, Settings
 from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 recurring_invoices_bp = Blueprint("recurring_invoices", __name__)
 logger = logging.getLogger(__name__)
@@ -288,4 +289,4 @@ def generate_invoice_now(recurring_id):
 
     except Exception as e:
         logger.error(f"Error generating invoice from recurring template: {e}")
-        return jsonify({"error": str(e)}), 500
+        return client_error_response(status=500)

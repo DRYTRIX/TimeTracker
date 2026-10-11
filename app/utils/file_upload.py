@@ -10,6 +10,7 @@ from flask import current_app
 from werkzeug.utils import secure_filename
 
 from app.constants import ALLOWED_DOCUMENT_EXTENSIONS, ALLOWED_IMAGE_EXTENSIONS, MAX_FILE_SIZE
+from app.utils.paths import PathEscapeError, safe_path_under
 
 
 def validate_file_upload(
@@ -97,20 +98,22 @@ def save_uploaded_file(
             name, ext = os.path.splitext(filename)
             filename = f"{prefix}_{name}{ext}"
 
-        # Create directory structure
+        # Create directory structure inside a realpath jail
+        base = os.path.realpath(upload_folder)
         if subfolder:
-            upload_path = os.path.join(upload_folder, subfolder)
+            safe_sub = secure_filename(subfolder.replace("\\", "/").split("/")[-1]) or "uploads"
+            upload_path = safe_path_under(base, safe_sub)
         else:
-            upload_path = upload_folder
+            upload_path = base
 
         os.makedirs(upload_path, exist_ok=True)
 
         # Ensure unique filename
-        filepath = os.path.join(upload_path, filename)
+        filepath = safe_path_under(upload_path, filename)
         counter = 1
         while os.path.exists(filepath):
             name, ext = os.path.splitext(filename)
-            filepath = os.path.join(upload_path, f"{name}_{counter}{ext}")
+            filepath = safe_path_under(upload_path, f"{name}_{counter}{ext}")
             counter += 1
 
         # Save file
@@ -118,9 +121,12 @@ def save_uploaded_file(
 
         # Return relative path
         if subfolder:
-            return os.path.join(subfolder, os.path.basename(filepath))
+            return os.path.join(os.path.basename(upload_path), os.path.basename(filepath))
         return os.path.basename(filepath)
 
+    except PathEscapeError as e:
+        current_app.logger.error("Path escape blocked while saving upload: %s", e)
+        return None
     except Exception as e:
         current_app.logger.error(f"Error saving uploaded file: {e}")
         return None
@@ -138,10 +144,25 @@ def delete_uploaded_file(filepath: str, upload_folder: str) -> bool:
         True if deleted, False otherwise
     """
     try:
-        full_path = os.path.join(upload_folder, filepath)
+        # Only allow a single basename under the upload root (no nested traversal)
+        safe_name = secure_filename(filepath.replace("\\", "/").split("/")[-1])
+        if not safe_name:
+            return False
+        # Preserve one-level subfolder if present and safe
+        parts = [p for p in filepath.replace("\\", "/").split("/") if p and p not in (".", "..")]
+        if len(parts) >= 2:
+            sub = secure_filename(parts[0])
+            name = secure_filename(parts[-1])
+            if not sub or not name:
+                return False
+            full_path = safe_path_under(upload_folder, sub, name)
+        else:
+            full_path = safe_path_under(upload_folder, safe_name)
         if os.path.exists(full_path):
             os.remove(full_path)
             return True
+        return False
+    except PathEscapeError:
         return False
     except Exception as e:
         current_app.logger.error(f"Error deleting file {filepath}: {e}")
@@ -160,7 +181,18 @@ def get_file_info(filepath: str, upload_folder: str) -> Optional[dict]:
         dict with file info or None
     """
     try:
-        full_path = os.path.join(upload_folder, filepath)
+        parts = [p for p in filepath.replace("\\", "/").split("/") if p and p not in (".", "..")]
+        if len(parts) >= 2:
+            sub = secure_filename(parts[0])
+            name = secure_filename(parts[-1])
+            if not sub or not name:
+                return None
+            full_path = safe_path_under(upload_folder, sub, name)
+        else:
+            safe_name = secure_filename(filepath.replace("\\", "/").split("/")[-1])
+            if not safe_name:
+                return None
+            full_path = safe_path_under(upload_folder, safe_name)
         if not os.path.exists(full_path):
             return None
 
@@ -171,6 +203,8 @@ def get_file_info(filepath: str, upload_folder: str) -> Optional[dict]:
             "modified": stat.st_mtime,
             "extension": Path(filepath).suffix.lower(),
         }
+    except PathEscapeError:
+        return None
     except Exception as e:
         current_app.logger.error(f"Error getting file info: {e}")
         return None

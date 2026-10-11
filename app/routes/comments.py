@@ -317,16 +317,25 @@ def upload_comment_attachment(comment_id):
         return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
 
     # Save file
+    from app.utils.paths import PathEscapeError, safe_path_under
+
     original_filename = secure_filename(file.filename)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{comment_id}_{timestamp}_{original_filename}"
+    filename = secure_filename(f"{comment_id}_{timestamp}_{original_filename}")
+    if not filename:
+        flash(_("Invalid filename"), "error")
+        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
 
     # Ensure upload directory exists
     upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
     os.makedirs(upload_dir, exist_ok=True)
 
-    file_path = os.path.join(upload_dir, filename)
-    file.save(file_path)
+    try:
+        file_path = safe_path_under(upload_dir, filename)
+        file.save(file_path)
+    except PathEscapeError:
+        flash(_("Invalid upload path"), "error")
+        return redirect(safe_redirect_target(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")))
 
     # Get file info
     mime_type = file.content_type or "application/octet-stream"

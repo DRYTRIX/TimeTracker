@@ -50,11 +50,9 @@ def authenticate_token(token_string, record_usage: bool = True):
     if not token_string or not token_string.startswith("tt_"):
         return None, None, "Invalid token format"
 
-    # Get token hash
-    token_hash = ApiToken.hash_token(token_string)
-
-    # Find token in database
-    api_token = ApiToken.query.filter_by(token_hash=token_hash).first()
+    # Lookup by HMAC hash (current) or legacy SHA256 hash
+    hashes = ApiToken.lookup_hashes(token_string)
+    api_token = ApiToken.query.filter(ApiToken.token_hash.in_(hashes)).first()
 
     if not api_token:
         return None, None, "Token not found"

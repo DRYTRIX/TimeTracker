@@ -30,7 +30,7 @@ from app.utils.config_manager import ConfigManager
 from app.utils.db import safe_commit
 from app.utils.deleted_usernames import is_username_reserved
 from app.utils.posthog_funnels import track_onboarding_started
-from app.utils.safe_redirect import is_safe_next_url
+from app.utils.safe_redirect import is_safe_next_url, safe_redirect_target
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -111,12 +111,12 @@ def _verify_password_reset_token(token: str, *, max_age_seconds: int) -> User | 
 def _resolve_post_login_url(user: User, next_page: str | None) -> str:
     """Resolve redirect target after successful login."""
     if getattr(user, "portal_only", False) and user.is_client_portal_user:
-        if next_page and is_safe_next_url(next_page, allowed_prefixes=("/client-portal",)):
-            return next_page
-        return url_for("client_portal.dashboard")
-    if not next_page or not is_safe_next_url(next_page):
-        return url_for("main.dashboard")
-    return next_page
+        return safe_redirect_target(
+            next_page,
+            allowed_prefixes=("/client-portal",),
+            fallback=url_for("client_portal.dashboard"),
+        )
+    return safe_redirect_target(next_page, fallback=url_for("main.dashboard"))
 
 
 def _try_client_portal_login(username: str, password: str):
@@ -161,9 +161,13 @@ def _try_client_portal_login(username: str, password: str):
     flash(_("Welcome, %(client_name)s!", client_name=client.name), "success")
 
     next_page = request.form.get("next") or request.args.get("next")
-    if not next_page or not is_safe_next_url(next_page, allowed_prefixes=("/client-portal",)):
-        next_page = url_for("client_portal.dashboard")
-    return redirect(next_page)
+    return redirect(
+        safe_redirect_target(
+            next_page,
+            allowed_prefixes=("/client-portal",),
+            fallback=url_for("client_portal.dashboard"),
+        )
+    )
 
 
 def _finalize_login_after_verification(user: User, *, log_auth_method: str):
@@ -220,8 +224,7 @@ def _finalize_login_after_verification(user: User, *, log_auth_method: str):
         flash(_("Administrator accounts must enable two-factor authentication."), "warning")
         return redirect(url_for("auth.two_factor_setup"))
 
-    next_page = request.args.get("next")
-    next_page = _resolve_post_login_url(user, next_page)
+    next_page = _resolve_post_login_url(user, request.args.get("next"))
     current_app.logger.info("Redirecting '%s' to %s", user.username, next_page)
     flash(_("Welcome back, %(username)s!", username=user.username), "success")
     return redirect(next_page)
@@ -946,12 +949,23 @@ def edit_profile():
             import os
             import uuid
 
+            from werkzeug.utils import secure_filename
+
+            from app.utils.paths import PathEscapeError, safe_path_under
+
             ext = filename.rsplit(".", 1)[1].lower()
-            unique_name = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
+            unique_name = secure_filename(f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}")
+            if not unique_name:
+                flash(_("Invalid avatar filename."), "error")
+                return redirect(url_for("auth.edit_profile"))
             folder = get_avatar_upload_folder()
-            file_path = os.path.join(folder, unique_name)
             try:
+                file_path = safe_path_under(folder, unique_name)
                 file.save(file_path)
+            except PathEscapeError:
+                current_app.logger.warning("Avatar path escaped upload folder")
+                flash(_("Failed to save avatar on server."), "error")
+                return redirect(url_for("auth.edit_profile"))
             except Exception:
                 current_app.logger.warning("Failed to save avatar file", exc_info=True)
                 flash(_("Failed to save avatar on server."), "error")
@@ -961,12 +975,17 @@ def edit_profile():
             try:
                 old_filename = getattr(current_user, "avatar_filename", None)
                 if old_filename:
-                    old_path = os.path.join(folder, old_filename)
-                    if os.path.exists(old_path):
+                    old_safe = secure_filename(old_filename.replace("\\", "/").split("/")[-1])
+                    if old_safe:
                         try:
-                            os.remove(old_path)
-                        except OSError:
-                            current_app.logger.debug("Could not remove old avatar file", exc_info=True)
+                            old_path = safe_path_under(folder, old_safe)
+                            if os.path.exists(old_path):
+                                try:
+                                    os.remove(old_path)
+                                except OSError:
+                                    current_app.logger.debug("Could not remove old avatar file", exc_info=True)
+                        except PathEscapeError:
+                            current_app.logger.debug("Old avatar path escaped upload folder", exc_info=True)
             except Exception:
                 current_app.logger.debug("Old avatar cleanup failed", exc_info=True)
 
@@ -1044,14 +1063,23 @@ def remove_avatar():
     try:
         import os
 
+        from werkzeug.utils import secure_filename
+
+        from app.utils.paths import PathEscapeError, safe_path_under
+
         folder = get_avatar_upload_folder()
         if current_user.avatar_filename:
-            path = os.path.join(folder, current_user.avatar_filename)
-            if os.path.exists(path):
+            safe_name = secure_filename(current_user.avatar_filename.replace("\\", "/").split("/")[-1])
+            if safe_name:
                 try:
-                    os.remove(path)
-                except OSError:
-                    current_app.logger.debug("Could not remove avatar file", exc_info=True)
+                    path = safe_path_under(folder, safe_name)
+                    if os.path.exists(path):
+                        try:
+                            os.remove(path)
+                        except OSError:
+                            current_app.logger.debug("Could not remove avatar file", exc_info=True)
+                except PathEscapeError:
+                    current_app.logger.debug("Avatar path escaped upload folder", exc_info=True)
         current_user.avatar_filename = None
         db.session.commit()
         flash(_("Avatar removed"), "success")
@@ -1688,8 +1716,9 @@ def oidc_callback():
         # which has caching logic and will handle this efficiently.
 
         # Redirect to intended page or dashboard
-        next_page = session.pop("oidc_next", None) or request.args.get("next")
-        next_page = _resolve_post_login_url(user, next_page)
+        next_page = _resolve_post_login_url(
+            user, session.pop("oidc_next", None) or request.args.get("next")
+        )
         flash(_("Welcome back, %(username)s!", username=user.username), "success")
         return redirect(next_page)
 

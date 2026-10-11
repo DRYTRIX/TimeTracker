@@ -440,7 +440,7 @@ def send_invoice_peppol_api(invoice_id):
         )
     except Exception as e:
         current_app.logger.error(f"API Peppol send failed: {type(e).__name__}: {e}")
-        return error_response(f"Failed to send via Peppol: {e}", status_code=502)
+        return error_response("Failed to send via Peppol", status_code=502)
     payload = {
         "success": success,
         "message": message,

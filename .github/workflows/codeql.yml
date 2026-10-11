@@ -37,8 +37,12 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
+          config-file: ./.github/codeql/codeql-config.yml
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
+        env:
+          # Load local models-as-data pack for Python only (safe_redirect, safe_path_under, …)
+          CODEQL_ACTION_EXTRA_OPTIONS: ${{ matrix.language == 'python' && format('{{"database":{{"run-queries":["--additional-packs={0}/.github/codeql","--extension-packs=drytrix/timetracker-python-models"]}}}}', github.workspace) || '' }}

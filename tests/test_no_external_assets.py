@@ -126,7 +126,11 @@ def test_inline_scripts_carry_a_nonce():
     """
     offenders = []
     for path in _template_files():
-        for match in re.finditer(r"<script(?![^>]*\bsrc=)[^>]*>", path.read_text(encoding="utf-8")):
+        for match in re.finditer(
+            r"<script(?![^>]*\bsrc=)[^>]*>",
+            path.read_text(encoding="utf-8"),
+            flags=re.IGNORECASE,
+        ):
             if "nonce=" not in match.group(0):
                 offenders.append(f"{path}: {match.group(0)[:80]}")
 

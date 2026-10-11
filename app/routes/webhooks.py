@@ -11,6 +11,7 @@ from app.utils.db import safe_commit
 from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
 from app.utils.permissions import admin_or_permission_required
 from app.utils.webhook_service import WebhookService
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 webhooks_bp = Blueprint("webhooks", __name__)
 
@@ -53,7 +54,7 @@ def create_webhook():
         try:
             validated_url = validate_outbound_url(data["url"])
         except UnsafeOutboundURL as exc:
-            flash(_("Invalid webhook URL: %(error)s", error=str(exc)), "error")
+            flash(_("Invalid webhook URL."), "error")
             return render_template(
                 "admin/webhooks/form.html", webhook=None, available_events=WebhookService.get_available_events()
             )
@@ -94,7 +95,7 @@ def create_webhook():
             flash(_("Error creating webhook"), "error")
         except Exception as e:
             db.session.rollback()
-            flash(_("Error creating webhook: %(error)s", error=str(e)), "error")
+            flash(_("Error creating webhook. Please try again."), "error")
 
     available_events = WebhookService.get_available_events()
     return render_template("admin/webhooks/form.html", webhook=None, available_events=available_events)
@@ -145,7 +146,7 @@ def edit_webhook(webhook_id):
             try:
                 webhook.url = validate_outbound_url(data["url"])
             except UnsafeOutboundURL as exc:
-                flash(_("Invalid webhook URL: %(error)s", error=str(exc)), "error")
+                flash(_("Invalid webhook URL."), "error")
                 return render_template(
                     "admin/webhooks/form.html", webhook=webhook, available_events=WebhookService.get_available_events()
                 )
@@ -167,7 +168,7 @@ def edit_webhook(webhook_id):
             return redirect(url_for("webhooks.view_webhook", webhook_id=webhook.id))
         except Exception as e:
             db.session.rollback()
-            flash(_("Error updating webhook: %(error)s", error=str(e)), "error")
+            flash(_("Error updating webhook. Please try again."), "error")
 
     available_events = WebhookService.get_available_events()
     return render_template("admin/webhooks/form.html", webhook=webhook, available_events=available_events)
@@ -191,7 +192,7 @@ def delete_webhook(webhook_id):
         flash(_("Webhook deleted successfully"), "success")
     except Exception as e:
         db.session.rollback()
-        flash(_("Error deleting webhook: %(error)s", error=str(e)), "error")
+        flash(_("Error deleting webhook. Please try again."), "error")
 
     return redirect(url_for("webhooks.list_webhooks"))
 
@@ -231,4 +232,4 @@ def test_webhook(webhook_id):
 
         return jsonify({"success": True, "delivery": delivery.to_dict(), "message": "Test webhook sent successfully"})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return client_error_response(status=500)
