@@ -1181,6 +1181,15 @@
 
 {% block scripts_extra %}
 <script nonce="{{ csp_nonce() }}">
+    function ttResetSelectOptions(select, placeholderText) {
+        if (!select) return;
+        select.replaceChildren();
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = placeholderText == null ? '' : String(placeholderText);
+        select.appendChild(opt);
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         // Single adjust-time form: buttons set delta and submit
         (function initAdjustTimerForm() {
@@ -1250,7 +1259,13 @@
 
             async function loadTasks(projectId) {
                 if (!taskSelect) return;
-                taskSelect.innerHTML = '<option value="">{{ _("No task")|e }}</option>';
+                taskSelect.replaceChildren();
+                {
+                    var o0 = document.createElement('option');
+                    o0.value = '';
+                    o0.textContent = {{ _("No task")|tojson }};
+                    taskSelect.appendChild(o0);
+                }
                 if (!projectId) return;
                 try {
                     var url = tasksApiTemplate.replace('/0/', '/' + projectId + '/');
@@ -1509,13 +1524,13 @@
                 if (!taskSelect) return;
 
                 if (!pid) {
-                    taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+                    ttResetSelectOptions(taskSelect, noTaskText);
                     taskSelect.disabled = false;
                     if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                     return;
                 }
 
-                taskSelect.innerHTML = '<option value="">' + loadingTasksText + '</option>';
+                ttResetSelectOptions(taskSelect, loadingTasksText);
                 taskSelect.disabled = true;
                 try {
                     const res = await fetch(buildTasksUrl(pid), { credentials: 'same-origin' });
@@ -1534,7 +1549,7 @@
                             frag.appendChild(o);
                         });
                     }
-                    taskSelect.innerHTML = '';
+                    taskSelect.replaceChildren();
                     taskSelect.appendChild(frag);
                     if (preserveTaskId) {
                         var found = Array.from(taskSelect.options).some(function(o) { return o.value === String(preserveTaskId); });
@@ -1544,7 +1559,7 @@
                     if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                 } catch (err) {
                     console.error('Failed to load tasks', err);
-                    taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+                    ttResetSelectOptions(taskSelect, noTaskText);
                     taskSelect.disabled = false;
                     if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                 }
@@ -1587,7 +1602,7 @@
                     if (ctx.project_id && typeof loadTasksForProject === 'function') {
                         await loadTasksForProject(ctx.project_id, ctx.task_id || null);
                     } else if (taskSelect) {
-                        taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+                        ttResetSelectOptions(taskSelect, noTaskText);
                         taskSelect.disabled = false;
                         if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                     }
@@ -1621,7 +1636,7 @@
                             projectSelect.value = '';
                             try { projectSelect.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
                             if (taskSelect) {
-                                taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+                                ttResetSelectOptions(taskSelect, noTaskText);
                                 taskSelect.disabled = true;
                                 if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                             }

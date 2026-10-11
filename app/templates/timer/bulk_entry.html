@@ -379,6 +379,15 @@
 }
 </script>
 <script nonce="{{ csp_nonce() }}">
+    function ttResetSelectOptions(select, placeholderText) {
+        if (!select) return;
+        select.replaceChildren();
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = placeholderText == null ? '' : String(placeholderText);
+        select.appendChild(opt);
+    }
+
 var i18nTimerBulk = (function(){ try{ var el=document.getElementById('i18n-json-timer-bulk'); return el?JSON.parse(el.textContent):{}; }catch(e){ return {}; } })();
 document.addEventListener('DOMContentLoaded', function() {
     // Set default dates to today
@@ -453,7 +462,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loadTasksForProject(projectId) {
         if (!taskSelect) return;
         if (!projectId) {
-            taskSelect.innerHTML = '<option value="">' + L.noTask + '</option>';
+            ttResetSelectOptions(taskSelect, L.noTask);
             taskSelect.disabled = true;
             enhanceSearchable();
             return;
@@ -463,7 +472,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!resp.ok) throw new Error(L.failedLoad);
             const data = await resp.json();
             const tasks = Array.isArray(data.tasks) ? data.tasks : [];
-            taskSelect.innerHTML = '<option value="">' + L.noTask + '</option>';
+            ttResetSelectOptions(taskSelect, L.noTask);
             tasks.forEach(t => {
                 const opt = document.createElement('option');
                 opt.value = String(t.id);
@@ -483,7 +492,7 @@ document.addEventListener('DOMContentLoaded', function() {
             enhanceSearchable();
         } catch (e) {
             // On error, keep disabled
-            taskSelect.innerHTML = '<option value="">' + L.noTask + '</option>';
+            ttResetSelectOptions(taskSelect, L.noTask);
             taskSelect.disabled = true;
             enhanceSearchable();
         }

@@ -50,7 +50,13 @@ document.addEventListener('DOMContentLoaded', function() {
             syncClientFromProject();
 
             // Clear current tasks
-            taskSelect.innerHTML = '<option value="">{{ _("No Task") }}</option>';
+            taskSelect.replaceChildren();
+            {
+                const o = document.createElement('option');
+                o.value = '';
+                o.textContent = {{ _("No Task")|tojson }};
+                taskSelect.appendChild(o);
+            }
             taskSelect.disabled = !projectId;
 
             if (projectId) {
@@ -88,7 +94,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (cid && projectClientId && projectClientId !== cid) {
                     projectSelect.value = '';
                     if (taskSelect) {
-                        taskSelect.innerHTML = '<option value="">{{ _("No Task") }}</option>';
+                        taskSelect.replaceChildren();
+                        const o = document.createElement('option');
+                        o.value = '';
+                        o.textContent = {{ _("No Task")|tojson }};
+                        taskSelect.appendChild(o);
                         taskSelect.disabled = true;
                         if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                     }
@@ -163,25 +173,37 @@ document.addEventListener('DOMContentLoaded', function() {
             if (changes.length > 0) {
                 e.preventDefault();
 
-                function escapeHtml(value) {
-                    const div = document.createElement('div');
-                    div.textContent = value == null ? '' : String(value);
-                    return div.innerHTML;
-                }
-
-                let summaryHtml = changes.map(ch => `
-                    <div class="mb-2 pb-2 border-b border-border-light dark:border-border-dark">
-                        <div class="text-sm text-text-muted-light dark:text-text-muted-dark mb-1">${escapeHtml(ch.label)}</div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-red-600 dark:text-red-400">${escapeHtml(ch.from)}</span>
-                            <i class="fas fa-arrow-right text-text-muted-light dark:text-text-muted-dark"></i>
-                            <span class="text-green-600 dark:text-green-400">${escapeHtml(ch.to)}</span>
-                        </div>
-                    </div>
-                `).join('');
+                const summaryRoot = document.createElement('div');
+                changes.forEach(ch => {
+                    const row = document.createElement('div');
+                    row.className = 'mb-2 pb-2 border-b border-border-light dark:border-border-dark';
+                    const label = document.createElement('div');
+                    label.className = 'text-sm text-text-muted-light dark:text-text-muted-dark mb-1';
+                    label.textContent = ch.label;
+                    const values = document.createElement('div');
+                    values.className = 'flex items-center gap-2';
+                    const fromEl = document.createElement('span');
+                    fromEl.className = 'text-red-600 dark:text-red-400';
+                    fromEl.textContent = ch.from;
+                    const arrow = document.createElement('i');
+                    arrow.className = 'fas fa-arrow-right text-text-muted-light dark:text-text-muted-dark';
+                    const toEl = document.createElement('span');
+                    toEl.className = 'text-green-600 dark:text-green-400';
+                    toEl.textContent = ch.to;
+                    values.appendChild(fromEl);
+                    values.appendChild(arrow);
+                    values.appendChild(toEl);
+                    row.appendChild(label);
+                    row.appendChild(values);
+                    summaryRoot.appendChild(row);
+                });
+                const notice = document.createElement('div');
+                notice.className = 'mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded';
+                notice.textContent = {{ _("These updates will modify this time entry permanently.")|tojson }};
+                summaryRoot.appendChild(notice);
 
                 window.showConfirm(
-                    summaryHtml + '<div class="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded"><i class="fas fa-info-circle text-amber-600 dark:text-amber-400 me-2"></i>' + {{ _("These updates will modify this time entry permanently.")|tojson }} + '</div>',
+                    summaryRoot,
                     {
                         title: {{ _("Confirm Changes")|tojson }},
                         confirmText: {{ _("Confirm & Save")|tojson }},

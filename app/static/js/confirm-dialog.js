@@ -148,7 +148,12 @@
         'text-sm text-text-muted-light dark:text-text-muted-dark' +
         (options.html ? '' : ' whitespace-pre-wrap');
       if (options.html) {
-        msgEl.innerHTML = message != null ? String(message) : '';
+        if (message && typeof Node !== 'undefined' && message instanceof Node) {
+          msgEl.replaceChildren();
+          msgEl.appendChild(message);
+        } else {
+          msgEl.innerHTML = message != null ? String(message) : '';
+        }
       } else {
         msgEl.textContent = message != null ? String(message) : '';
       }

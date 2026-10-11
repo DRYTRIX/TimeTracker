@@ -386,6 +386,15 @@
 {% block scripts_extra %}
 <script src="{{ url_for('static', filename='notes-autocomplete.js') }}" defer></script>
 <script nonce="{{ csp_nonce() }}">
+    function ttResetSelectOptions(select, placeholderText) {
+        if (!select) return;
+        select.replaceChildren();
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = placeholderText == null ? '' : String(placeholderText);
+        select.appendChild(opt);
+    }
+
 document.addEventListener('DOMContentLoaded', function() {
 // Load tasks when project is selected; keep client→project→task cascade (Issue #728)
 const projectSelectEl = document.getElementById('project_id');
@@ -409,14 +418,14 @@ function enhanceSearchable() {
 async function loadTasksForProject(projectId, preserveTaskId) {
     if (!taskSelectEl) return;
     if (!projectId) {
-        taskSelectEl.innerHTML = `<option value="">${noTaskText}</option>`;
+        ttResetSelectOptions(taskSelectEl, noTaskText);
         taskSelectEl.disabled = false;
         enhanceSearchable();
         return;
     }
 
     try {
-        taskSelectEl.innerHTML = `<option value="">${loadingTasksText}</option>`;
+        ttResetSelectOptions(taskSelectEl, loadingTasksText);
         taskSelectEl.disabled = true;
         const response = await fetch(buildTasksUrl(projectId), { credentials: 'same-origin' });
         if (!response.ok) throw new Error(failedToLoadTasksText);
@@ -435,7 +444,7 @@ async function loadTasksForProject(projectId, preserveTaskId) {
             option.setAttribute('data-parent-id', String(projectId));
             frag.appendChild(option);
         });
-        taskSelectEl.innerHTML = '';
+        taskSelectEl.replaceChildren();
         taskSelectEl.appendChild(frag);
         if (preserveTaskId) {
             const found = Array.from(taskSelectEl.options).some(o => o.value === String(preserveTaskId));
@@ -445,7 +454,7 @@ async function loadTasksForProject(projectId, preserveTaskId) {
         enhanceSearchable();
     } catch (error) {
         console.error('Error loading tasks:', error);
-        taskSelectEl.innerHTML = `<option value="">${noTaskText}</option>`;
+        ttResetSelectOptions(taskSelectEl, noTaskText);
         taskSelectEl.disabled = false;
         enhanceSearchable();
     }
