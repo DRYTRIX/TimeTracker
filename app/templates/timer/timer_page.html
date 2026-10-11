@@ -755,7 +755,7 @@ window.applyTemplate = async function(templateId) {
     }
 };
 </script>
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function initFocusPanel() {
     const panel = document.getElementById('focus-panel');
     if (!panel) return;
