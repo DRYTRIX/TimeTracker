@@ -371,6 +371,17 @@ document.addEventListener('DOMContentLoaded', function() {
   };
   let currentEventForDuplication = null;
 
+  function escapeHtml(text) {
+    if (text == null || text === '') return '';
+    return String(text).replace(/[&<>"']/g, function(m) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m];
+    });
+  }
+
+  function safeCssColor(color) {
+    return (typeof color === 'string' && /^#[0-9A-Fa-f]{3,8}$/.test(color)) ? color : '#6b7280';
+  }
+
   // Initialize FullCalendar
   const calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: 'timeGridWeek',
@@ -495,10 +506,10 @@ document.addEventListener('DOMContentLoaded', function() {
       // Remove any processing classes
       btn.classList.remove('processing', 'loading', 'disabled');
       
-      // Restore original text if it was saved
+      // Restore original text if it was saved (textContent avoids XSS via attribute)
       const originalText = btn.getAttribute('data-original-text');
       if (originalText) {
-        btn.innerHTML = originalText;
+        btn.textContent = originalText;
         btn.removeAttribute('data-original-text');
       }
       
@@ -859,36 +870,36 @@ document.addEventListener('DOMContentLoaded', function() {
       content.innerHTML = `
         <div class="event-detail-row">
           <div class="event-detail-label">{{ _("Title") }}</div>
-          <div class="event-detail-value">${event.title || props.title || '{{ _("N/A") }}'}</div>
+          <div class="event-detail-value">${escapeHtml(event.title || props.title || '{{ _("N/A") }}')}</div>
         </div>
         <div class="event-detail-row">
           <div class="event-detail-label">{{ _("Due") }}</div>
-          <div class="event-detail-value">${dueStr}</div>
+          <div class="event-detail-value">${escapeHtml(dueStr)}</div>
         </div>
-        ${props.status ? `<div class="event-detail-row"><div class="event-detail-label">{{ _("Status") }}</div><div class="event-detail-value">${props.status}</div></div>` : ''}
-        ${props.project_name ? `<div class="event-detail-row"><div class="event-detail-label">{{ _("Project") }}</div><div class="event-detail-value">${props.project_name}</div></div>` : ''}
+        ${props.status ? `<div class="event-detail-row"><div class="event-detail-label">{{ _("Status") }}</div><div class="event-detail-value">${escapeHtml(props.status)}</div></div>` : ''}
+        ${props.project_name ? `<div class="event-detail-row"><div class="event-detail-label">{{ _("Project") }}</div><div class="event-detail-value">${escapeHtml(props.project_name)}</div></div>` : ''}
       `;
     } else {
       content.innerHTML = `
         <div class="event-detail-row">
           <div class="event-detail-label">{{ _("Project") }}</div>
-          <div class="event-detail-value">${props.project_name || '{{ _("N/A") }}'}</div>
+          <div class="event-detail-value">${escapeHtml(props.project_name || '{{ _("N/A") }}')}</div>
         </div>
-        ${props.task_name ? `<div class="event-detail-row"><div class="event-detail-label">{{ _("Task") }}</div><div class="event-detail-value">${props.task_name}</div></div>` : ''}
+        ${props.task_name ? `<div class="event-detail-row"><div class="event-detail-label">{{ _("Task") }}</div><div class="event-detail-value">${escapeHtml(props.task_name)}</div></div>` : ''}
         <div class="event-detail-row">
           <div class="event-detail-label">{{ _("Start") }}</div>
-          <div class="event-detail-value">${formatDate(event.start)}</div>
+          <div class="event-detail-value">${escapeHtml(formatDate(event.start))}</div>
         </div>
         <div class="event-detail-row">
           <div class="event-detail-label">{{ _("End") }}</div>
-          <div class="event-detail-value">${formatDate(event.end)}</div>
+          <div class="event-detail-value">${escapeHtml(formatDate(event.end))}</div>
         </div>
         <div class="event-detail-row">
           <div class="event-detail-label">{{ _("Duration") }}</div>
-          <div class="event-detail-value">${(props.duration_hours != null ? props.duration_hours : 0).toFixed(2)} {{ _("hours") }}</div>
+          <div class="event-detail-value">${(props.duration_hours != null ? Number(props.duration_hours) : 0).toFixed(2)} {{ _("hours") }}</div>
         </div>
-        ${props.notes ? `<div class="event-detail-row"><div class="event-detail-label">{{ _("Notes") }}</div><div class="event-detail-value">${props.notes}</div></div>` : ''}
-        ${props.tags ? `<div class="event-detail-row"><div class="event-detail-label">{{ _("Tags") }}</div><div class="event-detail-value">${props.tags}</div></div>` : ''}
+        ${props.notes ? `<div class="event-detail-row"><div class="event-detail-label">{{ _("Notes") }}</div><div class="event-detail-value">${escapeHtml(props.notes)}</div></div>` : ''}
+        ${props.tags ? `<div class="event-detail-row"><div class="event-detail-label">{{ _("Tags") }}</div><div class="event-detail-value">${escapeHtml(props.tags)}</div></div>` : ''}
         ${itemType === 'time_entry' ? `
         <div class="event-detail-row">
           <div class="event-detail-label">{{ _("Billable") }}</div>
@@ -978,32 +989,36 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       
-      listEl.innerHTML = json.blocks.map(block => `
+      listEl.innerHTML = json.blocks.map(block => {
+        const blockId = Number(block.id);
+        if (!Number.isFinite(blockId)) return '';
+        return `
         <div class="recurring-item">
           <div class="recurring-item-header">
-            <div class="recurring-item-title">${block.name}</div>
+            <div class="recurring-item-title">${escapeHtml(block.name)}</div>
             <span class="recurring-item-status ${block.is_active ? 'active' : 'inactive'}">
               ${block.is_active ? '{{ _("Active") }}' : '{{ _("Inactive") }}'}
             </span>
           </div>
           <div class="recurring-item-details">
-            <i class="fas fa-project-diagram me-1"></i>${block.project_name || '{{ _("Unknown Project") }}'}
+            <i class="fas fa-project-diagram me-1"></i>${escapeHtml(block.project_name || '{{ _("Unknown Project") }}')}
             <span class="mx-2">•</span>
-            <i class="fas fa-redo me-1"></i>${block.recurrence}
-            ${block.weekdays ? ` (${block.weekdays})` : ''}
+            <i class="fas fa-redo me-1"></i>${escapeHtml(block.recurrence)}
+            ${block.weekdays ? ` (${escapeHtml(block.weekdays)})` : ''}
             <span class="mx-2">•</span>
-            <i class="fas fa-clock me-1"></i>${block.start_time_local} - ${block.end_time_local}
+            <i class="fas fa-clock me-1"></i>${escapeHtml(block.start_time_local)} - ${escapeHtml(block.end_time_local)}
           </div>
           <div class="recurring-item-actions">
-            <button class="btn btn-sm btn-outline-primary" onclick="editRecurring(${block.id})">
+            <button class="btn btn-sm btn-outline-primary" onclick="editRecurring(${blockId})">
               <i class="fas fa-edit"></i> {{ _("Edit") }}
             </button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteRecurring(${block.id})">
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteRecurring(${blockId})">
               <i class="fas fa-trash"></i> {{ _("Delete") }}
             </button>
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     } catch(e) {
       showToast('{{ _("Failed to load recurring blocks") }}', 'danger');
     }
@@ -1053,23 +1068,28 @@ document.addEventListener('DOMContentLoaded', function() {
       
       content.innerHTML = Object.entries(grouped).map(([date, dateEvents]) => `
         <div class="agenda-date-group">
-          <div class="agenda-date-header">${date}</div>
+          <div class="agenda-date-header">${escapeHtml(date)}</div>
           ${dateEvents.map(event => {
+            const eventId = Number(event.id);
+            if (!Number.isFinite(eventId)) return '';
             const start = window.formatUserTime
               ? window.formatUserTime(new Date(event.start))
               : new Date(event.start).toLocaleTimeString('{{ current_user.preferred_language or "en" }}', window.getUserTimeLocaleOptions ? window.getUserTimeLocaleOptions() : { hour: '2-digit', minute: '2-digit' });
             const end = window.formatUserTime
               ? window.formatUserTime(new Date(event.end))
               : new Date(event.end).toLocaleTimeString('{{ current_user.preferred_language or "en" }}', window.getUserTimeLocaleOptions ? window.getUserTimeLocaleOptions() : { hour: '2-digit', minute: '2-digit' });
+            const durationHours = event.extendedProps && event.extendedProps.duration_hours != null
+              ? Number(event.extendedProps.duration_hours).toFixed(2)
+              : '';
             
             return `
-              <div class="agenda-event" style="border-left-color: ${event.backgroundColor};" onclick="showAgendaEvent(${event.id})">
-                <div class="agenda-event-time">${start} - ${end}</div>
+              <div class="agenda-event" style="border-left-color: ${safeCssColor(event.backgroundColor)};" onclick="showAgendaEvent(${eventId})">
+                <div class="agenda-event-time">${escapeHtml(start)} - ${escapeHtml(end)}</div>
                 <div class="agenda-event-details">
-                  <div class="agenda-event-title">${event.title}</div>
+                  <div class="agenda-event-title">${escapeHtml(event.title)}</div>
                   <div class="agenda-event-meta">
-                    ${event.extendedProps.duration_hours ? `${event.extendedProps.duration_hours.toFixed(2)} hours` : ''}
-                    ${event.extendedProps.billable ? '<span class="badge bg-success ms-2">Billable</span>' : '<span class="badge bg-secondary ms-2">Non-billable</span>'}
+                    ${durationHours ? `${durationHours} hours` : ''}
+                    ${event.extendedProps && event.extendedProps.billable ? '<span class="badge bg-success ms-2">Billable</span>' : '<span class="badge bg-secondary ms-2">Non-billable</span>'}
                   </div>
                 </div>
               </div>
@@ -1236,8 +1256,8 @@ document.addEventListener('DOMContentLoaded', function() {
       .slice(0, 8) // Limit to 8 projects to avoid clutter
       .map(project => `
         <div class="legend-item">
-          <div class="legend-color" style="background: ${project.color};"></div>
-          <span>${project.name}</span>
+          <div class="legend-color" style="background: ${safeCssColor(project.color)};"></div>
+          <span>${escapeHtml(project.name)}</span>
         </div>
       `).join('');
     

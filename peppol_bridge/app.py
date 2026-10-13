@@ -12,6 +12,7 @@ from peppol_bridge.providers.base import ProviderBase, ProviderError
 from peppol_bridge.providers.einvoice import EInvoiceProvider
 from peppol_bridge.providers.generic_custom import GenericCustomProvider
 from peppol_bridge.providers.peppyrus import PeppyrusProvider
+_CLIENT_ERROR = "An unexpected error occurred"
 
 
 def _json_error(message: str, status_code: int = 400, *, details: Optional[Dict[str, Any]] = None) -> Response:
@@ -115,10 +116,10 @@ def create_app() -> Flask:
             provider = _build_provider(cfg)
             data = provider.test_credentials()
             return jsonify({"ok": True, "provider": provider.name, "data": data})
-        except ProviderError as e:
-            return _json_error(str(e), 400)
-        except Exception as e:
-            return _json_error(f"Test failed: {e}", 500)
+        except ProviderError:
+            return _json_error(_CLIENT_ERROR, 400)
+        except Exception:
+            return _json_error(_CLIENT_ERROR, 500)
 
     @app.post("/send")
     def send() -> Response:
@@ -129,8 +130,8 @@ def create_app() -> Flask:
 
         try:
             payload = request.get_json(force=True, silent=False)
-        except Exception as e:
-            return _json_error(f"Invalid JSON: {e}", 400)
+        except Exception:
+            return _json_error(_CLIENT_ERROR, 400)
 
         data, err = _validate_timetracker_contract(payload)
         if err:
@@ -149,10 +150,10 @@ def create_app() -> Flask:
                 process_id=data["process_id"],
             )
             return jsonify({"ok": True, "message_id": result.message_id, "provider": provider.name, "raw": result.raw})
-        except ProviderError as e:
-            return _json_error(str(e), 502)
-        except Exception as e:
-            return _json_error(f"Send failed: {e}", 500)
+        except ProviderError:
+            return _json_error(_CLIENT_ERROR, 502)
+        except Exception:
+            return _json_error(_CLIENT_ERROR, 500)
 
     @app.get("/message/<message_id>/status")
     def message_status(message_id: str) -> Response:
@@ -166,10 +167,10 @@ def create_app() -> Flask:
             provider = _build_provider(cfg)
             data = provider.get_status(message_id)
             return jsonify({"ok": True, "provider": provider.name, **data})
-        except ProviderError as e:
-            return _json_error(str(e), 502)
-        except Exception as e:
-            return _json_error(f"Status lookup failed: {e}", 500)
+        except ProviderError:
+            return _json_error(_CLIENT_ERROR, 502)
+        except Exception:
+            return _json_error(_CLIENT_ERROR, 500)
 
     @app.get("/")
     def index() -> Response:

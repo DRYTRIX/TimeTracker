@@ -243,8 +243,9 @@ class PeppolService:
         try:
             sender = self._get_sender_party()
             recipient_party, recipient_endpoint_id, recipient_scheme_id = self._get_recipient_party(invoice)
-        except Exception as e:
-            return False, None, str(e)
+        except Exception:
+            current_app.logger.exception("Failed to resolve Peppol parties")
+            return False, None, "Failed to resolve Peppol sender or recipient"
 
         try:
             pdf_attachment = self._build_pdf_attachment(invoice)
@@ -254,9 +255,9 @@ class PeppolService:
                 customer=recipient_party,
                 attachments=[pdf_attachment] if pdf_attachment else None,
             )
-        except Exception as e:
+        except Exception:
             current_app.logger.exception("Failed to build Peppol UBL XML")
-            return False, None, f"Failed to build UBL XML: {e}"
+            return False, None, "Failed to build UBL XML"
 
         tx = InvoicePeppolTransmission(
             invoice_id=invoice.id,
@@ -358,12 +359,12 @@ class PeppolService:
 
             return True, tx, "Invoice sent via Peppol"
         except PeppolTransportError as e:
-            tx.mark_failed(str(e))
+            tx.mark_failed(type(e).__name__)
             safe_commit("peppol_mark_failed", {"invoice_id": invoice.id, "tx_id": tx.id})
             current_app.logger.exception("Peppol send failed")
-            return False, tx, f"Peppol send failed: {e}"
+            return False, tx, "Peppol send failed"
         except Exception as e:
-            tx.mark_failed(str(e))
+            tx.mark_failed(type(e).__name__)
             safe_commit("peppol_mark_failed", {"invoice_id": invoice.id, "tx_id": tx.id})
             current_app.logger.exception("Peppol send failed")
-            return False, tx, f"Peppol send failed: {e}"
+            return False, tx, "Peppol send failed"

@@ -37,6 +37,7 @@ from app.models import (
     User,
 )
 from app.utils.db import safe_commit
+from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 from app.utils.excel_export import create_invoices_list_excel
 from app.utils.module_helpers import module_enabled
 from app.utils.posthog_funnels import (
@@ -46,6 +47,7 @@ from app.utils.posthog_funnels import (
     track_invoice_project_selected,
 )
 from app.utils.prepaid_hours import PrepaidHoursAllocator
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 invoices_bp = Blueprint("invoices", __name__)
 logger = logging.getLogger(__name__)
@@ -1226,7 +1228,7 @@ def export_invoice_ubl(invoice_id):
     invoice = Invoice.query.get_or_404(invoice_id)
     if not current_user.is_admin and invoice.created_by != current_user.id:
         flash(_("You do not have permission to export this invoice"), "error")
-        return redirect(request.referrer or url_for("invoices.list_invoices"))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.list_invoices"))
     try:
         from app.integrations.peppol import build_peppol_ubl_invoice_xml
         from app.services.peppol_service import PeppolService
@@ -1240,7 +1242,7 @@ def export_invoice_ubl(invoice_id):
             ubl_xml, mimetype="application/xml", headers={"Content-Disposition": f"attachment; filename={fn}"}
         )
     except ValueError as e:
-        flash(_("Cannot generate UBL: %(msg)s", msg=str(e)), "error")
+        flash(_("Cannot generate UBL. Please try again."), "error")
         return redirect(url_for("invoices.view_invoice", invoice_id=invoice_id))
     except Exception as e:
         from app.utils.error_reporting import log_and_capture
@@ -1252,7 +1254,7 @@ def export_invoice_ubl(invoice_id):
             exc=e,
             level="exception",
         )
-        flash(_("UBL export failed: %(msg)s", msg=str(e)), "error")
+        flash(_("UBL export failed. Please try again."), "error")
         return redirect(url_for("invoices.view_invoice", invoice_id=invoice_id))
 
 
@@ -1286,7 +1288,7 @@ def export_invoice_pdf(invoice_id):
             f"[PDF_EXPORT] Permission denied - InvoiceID: {invoice_id}, User: {current_user.username}"
         )
         flash(_("You do not have permission to export this invoice"), "error")
-        return redirect(request.referrer or url_for("invoices.list_invoices"))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.list_invoices"))
 
     # Get page size from query parameter, default to A4
     page_size_raw = request.args.get("size", "A4")
@@ -1317,7 +1319,7 @@ def export_invoice_pdf(invoice_id):
             if not ok:
                 for msg in fx_issues[:5]:
                     flash(msg, "error")
-                return redirect(request.referrer or url_for("invoices.view_invoice", invoice_id=invoice.id))
+                return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
 
         current_app.logger.info(
             f"[PDF_EXPORT] Creating InvoicePDFGenerator - PageSize: '{page_size}', InvoiceID: {invoice_id}"
@@ -1349,7 +1351,7 @@ def export_invoice_pdf(invoice_id):
                 ),
                 "error",
             )
-            return redirect(request.referrer or url_for("invoices.view_invoice", invoice_id=invoice.id))
+            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
         if pdfa_err:
             current_app.logger.warning(
                 f"[PDF_EXPORT] PDF/A-3 conversion failed - InvoiceID: {invoice_id}, Error: {pdfa_err}"
@@ -1358,7 +1360,7 @@ def export_invoice_pdf(invoice_id):
                 _("PDF/A-3 normalization failed: %(err)s. Export aborted.", err=pdfa_err),
                 "error",
             )
-            return redirect(request.referrer or url_for("invoices.view_invoice", invoice_id=invoice.id))
+            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
         pdf_size_bytes = len(pdf_bytes)
         # Optional: run veraPDF and surface summary (does not block)
         if getattr(settings, "invoices_validate_export", False):
@@ -1417,10 +1419,10 @@ def export_invoice_pdf(invoice_id):
                     _("Factur-X embedding is enabled but failed: %(err)s. Export aborted.", err=embed_err),
                     "error",
                 )
-                return redirect(request.referrer or url_for("invoices.view_invoice", invoice_id=invoice.id))
+                return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
             if pdfa_err:
                 flash(_("PDF/A-3 normalization failed: %(err)s. Export aborted.", err=pdfa_err), "error")
-                return redirect(request.referrer or url_for("invoices.view_invoice", invoice_id=invoice.id))
+                return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
             pdf_size_bytes = len(pdf_bytes)
             current_app.logger.info(
                 f"[PDF_EXPORT] Fallback PDF generated successfully - PageSize: '{page_size}', InvoiceID: {invoice_id}, PDFSize: {pdf_size_bytes} bytes"
@@ -1435,11 +1437,8 @@ def export_invoice_pdf(invoice_id):
                 f"[PDF_EXPORT] Fallback PDF generation also failed - PageSize: '{page_size}', InvoiceID: {invoice_id}, Error: {str(fallback_error)}",
                 exc_info=True,
             )
-            flash(
-                _("PDF generation failed: %(err)s. Fallback also failed: %(fb)s", err=str(e), fb=str(fallback_error)),
-                "error",
-            )
-            return redirect(request.referrer or url_for("invoices.view_invoice", invoice_id=invoice.id))
+            flash(_("PDF generation failed. Please try again."), "error")
+            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
 
 
 @invoices_bp.route("/invoices/<int:invoice_id>/duplicate")
@@ -1579,15 +1578,19 @@ def send_invoice_email_route(invoice_id):
         if success:
             flash(f"Invoice email sent successfully to {recipient_email}", "success")
             return jsonify(
-                {"success": True, "message": message, "invoice_email_id": invoice_email.id if invoice_email else None}
+                {
+                    "success": True,
+                    "message": "Invoice email sent successfully",
+                    "invoice_email_id": invoice_email.id if invoice_email else None,
+                }
             )
         else:
-            return jsonify({"error": message}), 500
+            return client_error_response("Failed to send invoice email", 500)
 
     except Exception as e:
         logger.error(f"Error sending invoice email: {type(e).__name__}: {str(e)}")
         logger.exception("Full error traceback:")
-        return jsonify({"error": f"Failed to send email: {str(e)}"}), 500
+        return client_error_response(status=500)
 
 
 @invoices_bp.route("/invoices/<int:invoice_id>/send-peppol", methods=["POST"])
@@ -1606,13 +1609,17 @@ def send_invoice_peppol_route(invoice_id):
         service = PeppolService()
         success, tx, message = service.send_invoice(invoice=invoice, triggered_by_user_id=current_user.id)
         if success:
-            flash(message, "success")
-            return jsonify({"success": True, "message": message, "peppol_tx_id": tx.id if tx else None})
-        return jsonify({"error": message, "peppol_tx_id": tx.id if tx else None}), 400
+            flash("Invoice sent via Peppol", "success")
+            return jsonify(
+                {"success": True, "message": "Invoice sent via Peppol", "peppol_tx_id": tx.id if tx else None}
+            )
+        return jsonify(
+            {"error": "Failed to send invoice via Peppol", "peppol_tx_id": tx.id if tx else None}
+        ), 400
     except Exception as e:
         logger.error(f"Error sending invoice via Peppol: {type(e).__name__}: {str(e)}")
         logger.exception("Full error traceback:")
-        return jsonify({"error": f"Failed to send via Peppol: {str(e)}"}), 500
+        return client_error_response(status=500)
 
 
 @invoices_bp.route("/invoices/<int:invoice_id>/email-history", methods=["GET"])
@@ -1687,15 +1694,19 @@ def resend_invoice_email(invoice_id, email_id):
         if success:
             flash(f"Invoice email resent successfully to {recipient_email}", "success")
             return jsonify(
-                {"success": True, "message": message, "invoice_email_id": invoice_email.id if invoice_email else None}
+                {
+                    "success": True,
+                    "message": "Invoice email resent successfully",
+                    "invoice_email_id": invoice_email.id if invoice_email else None,
+                }
             )
         else:
-            return jsonify({"error": message}), 500
+            return client_error_response("Failed to resend invoice email", 500)
 
     except Exception as e:
         logger.error(f"Error resending invoice email: {type(e).__name__}: {str(e)}")
         logger.exception("Full error traceback:")
-        return jsonify({"error": f"Failed to resend email: {str(e)}"}), 500
+        return client_error_response(status=500)
 
 
 @invoices_bp.route("/invoices/<int:invoice_id>/images/upload", methods=["POST"])
@@ -1759,16 +1770,29 @@ def upload_invoice_image(invoice_id):
         return redirect(url_for("invoices.edit_invoice", invoice_id=invoice_id))
 
     # Save file
+    from app.utils.paths import PathEscapeError, safe_path_under
+
     original_filename = secure_filename(file.filename)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{invoice_id}_{timestamp}_{original_filename}"
+    filename = secure_filename(f"{invoice_id}_{timestamp}_{original_filename}")
+    if not filename:
+        if request.is_json:
+            return jsonify({"error": "Invalid filename"}), 400
+        flash(_("Invalid filename"), "error")
+        return redirect(url_for("invoices.edit_invoice", invoice_id=invoice_id))
 
     # Ensure upload directory exists
     upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
     os.makedirs(upload_dir, exist_ok=True)
 
-    file_path = os.path.join(upload_dir, filename)
-    file.save(file_path)
+    try:
+        file_path = safe_path_under(upload_dir, filename)
+        file.save(file_path)
+    except PathEscapeError:
+        if request.is_json:
+            return jsonify({"error": "Invalid upload path"}), 400
+        flash(_("Invalid upload path"), "error")
+        return redirect(url_for("invoices.edit_invoice", invoice_id=invoice_id))
 
     # Get file info
     mime_type = file.content_type or "image/png"

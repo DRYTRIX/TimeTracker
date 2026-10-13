@@ -6,6 +6,7 @@ from datetime import datetime
 import requests
 from flask import (
     Blueprint,
+    Response,
     current_app,
     flash,
     jsonify,
@@ -40,7 +41,7 @@ from app.models import (
 )
 from app.utils.auth_method import auth_includes_ldap, auth_includes_oidc, normalize_auth_method
 from app.utils.db import safe_commit
-from app.utils.error_handling import safe_log
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR, safe_log
 from app.utils.installation import get_installation_config
 from app.utils.invoice_numbering import sanitize_invoice_pattern, sanitize_invoice_prefix, validate_invoice_pattern
 from app.utils.permissions import admin_or_permission_required
@@ -53,6 +54,163 @@ admin_bp = Blueprint("admin", __name__)
 _VALID_ROUNDING_MINUTES = {1, 5, 10, 15, 30, 60}
 _VALID_ROUNDING_METHODS = {"nearest", "up", "down", "boundary"}
 _VALID_ROUNDING_MINIMUMS = {0, 5, 10, 15, 30, 60}
+
+_PDF_PREVIEW_ALLOWED_TAGS = frozenset(
+    {
+        "html",
+        "head",
+        "body",
+        "meta",
+        "title",
+        "style",
+        "div",
+        "span",
+        "p",
+        "br",
+        "hr",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "table",
+        "thead",
+        "tbody",
+        "tfoot",
+        "tr",
+        "th",
+        "td",
+        "ul",
+        "ol",
+        "li",
+        "strong",
+        "em",
+        "b",
+        "i",
+        "u",
+        "s",
+        "small",
+        "sup",
+        "sub",
+        "img",
+        "a",
+        "section",
+        "header",
+        "footer",
+        "main",
+        "article",
+        "pre",
+        "code",
+        "blockquote",
+    }
+)
+_PDF_PREVIEW_ALLOWED_ATTRS = {
+    "*": ["class", "id", "style"],
+    "img": ["src", "alt", "width", "height", "style", "class", "id"],
+    "a": ["href", "title", "style", "class", "id"],
+    "td": ["colspan", "rowspan", "style", "class", "id"],
+    "th": ["colspan", "rowspan", "style", "class", "id"],
+    "meta": ["charset", "name", "content"],
+    "style": ["type", "media"],
+}
+
+
+def _pdf_preview_html_response(page_html: str) -> Response:
+    """Return PDF preview HTML with bleach sanitization and a restrictive CSP."""
+    import bleach
+    from bleach.css_sanitizer import CSSSanitizer
+
+    # Broad but non-executable CSS allowlist for invoice/quote layout preview.
+    css_sanitizer = CSSSanitizer(
+        allowed_css_properties=[
+            "color",
+            "background",
+            "background-color",
+            "background-image",
+            "background-size",
+            "background-position",
+            "background-repeat",
+            "border",
+            "border-top",
+            "border-right",
+            "border-bottom",
+            "border-left",
+            "border-color",
+            "border-style",
+            "border-width",
+            "border-radius",
+            "border-collapse",
+            "border-spacing",
+            "box-sizing",
+            "box-shadow",
+            "display",
+            "position",
+            "top",
+            "right",
+            "bottom",
+            "left",
+            "float",
+            "clear",
+            "width",
+            "height",
+            "max-width",
+            "max-height",
+            "min-width",
+            "min-height",
+            "margin",
+            "margin-top",
+            "margin-right",
+            "margin-bottom",
+            "margin-left",
+            "padding",
+            "padding-top",
+            "padding-right",
+            "padding-bottom",
+            "padding-left",
+            "font",
+            "font-family",
+            "font-size",
+            "font-weight",
+            "font-style",
+            "line-height",
+            "letter-spacing",
+            "text-align",
+            "text-decoration",
+            "text-transform",
+            "vertical-align",
+            "white-space",
+            "overflow",
+            "opacity",
+            "z-index",
+            "table-layout",
+            "flex",
+            "flex-direction",
+            "flex-wrap",
+            "justify-content",
+            "align-items",
+            "align-self",
+            "gap",
+            "grid-template-columns",
+            "grid-template-rows",
+            "transform",
+            "page-break-after",
+            "page-break-before",
+            "page-break-inside",
+            "size",
+        ]
+    )
+    cleaned = bleach.clean(
+        page_html,
+        tags=_PDF_PREVIEW_ALLOWED_TAGS,
+        attributes=_PDF_PREVIEW_ALLOWED_ATTRS,
+        css_sanitizer=css_sanitizer,
+        strip=True,
+    )
+    resp = Response(cleaned, mimetype="text/html")
+    resp.headers["Content-Security-Policy"] = "script-src 'none'; object-src 'none'; base-uri 'none'"
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    return resp
 
 
 def _admin_settings_template_kwargs(
@@ -285,16 +443,55 @@ body {{
         return "normal"
 
     # Helper function to convert color (supports hex, rgb, named colors)
+    _NAMED_COLORS = frozenset(
+        {"black", "white", "red", "blue", "green", "yellow", "cyan", "magenta", "gray", "grey", "orange", "purple"}
+    )
+    import re as _re_color
+
+    _HEX_COLOR_RE = _re_color.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+
     def format_color(color):
+        """Return an allowlisted CSS color; never echo arbitrary user strings into markup."""
         if not color:
             return "#000000"
-        # If already hex or named color, return as-is
-        if color.startswith("#") or color in ["black", "white", "red", "blue", "green", "yellow", "cyan", "magenta"]:
-            return color
-        # If RGB tuple/list, convert to hex
         if isinstance(color, (list, tuple)) and len(color) >= 3:
-            return f"#{int(color[0]):02x}{int(color[1]):02x}{int(color[2]):02x}"
-        return str(color)
+            try:
+                r, g, b = (max(0, min(255, int(color[i]))) for i in range(3))
+                return f"#{r:02x}{g:02x}{b:02x}"
+            except (TypeError, ValueError):
+                return "#000000"
+        if not isinstance(color, str):
+            return "#000000"
+        candidate = color.strip()
+        if _HEX_COLOR_RE.match(candidate):
+            return candidate.lower()
+        if candidate.lower() in _NAMED_COLORS:
+            return candidate.lower()
+        return "#000000"
+
+    def format_align(align):
+        return align if align in ("left", "right", "center", "justify") else "left"
+
+    def safe_img_src(source: str) -> str:
+        """Allow only data: image URLs or jailed template-image paths."""
+        if not source or not isinstance(source, str):
+            return ""
+        source = source.strip()
+        if source.startswith("data:image/"):
+            # Reject SVG data URLs (scriptable); allow raster only
+            header = source.split(",", 1)[0].lower()
+            if "svg" in header:
+                return ""
+            return source
+        if source.startswith("/uploads/template_images/"):
+            from werkzeug.utils import secure_filename as _secure_filename
+
+            raw_name = source.split("/uploads/template_images/", 1)[-1]
+            filename = _secure_filename(raw_name.replace("\\", "/").split("/")[-1])
+            if not filename:
+                return ""
+            return f"/uploads/template_images/{filename}"
+        return ""
 
     # Helper function to render text with Jinja2-like template variables
     def render_text_template(text, data_obj, settings_obj=None):
@@ -332,7 +529,8 @@ body {{
             except Exception:
                 return match.group(0)  # Return original on error
 
-        return re.sub(r"\{\{\s*([^}]+)\s*\}\}", replace_var, text)
+        # Avoid polynomial ReDoS from \s* adjacent to [^}]+; whitespace is stripped in replace_var.
+        return re.sub(r"\{\{([^{}]+)\}\}", replace_var, text)
 
     # Build HTML from elements
     html_parts = ['<div class="invoice-wrapper">'] if invoice else ['<div class="quote-wrapper">']
@@ -370,17 +568,20 @@ body {{
             width_px_elem = int(width * 96 / 72)
 
             font_name = style.get("font", "Helvetica")
-            font_size = style.get("size", 10)
+            try:
+                font_size = float(style.get("size", 10))
+            except (TypeError, ValueError):
+                font_size = 10.0
             color = format_color(style.get("color", "#000000"))
-            align = style.get("align", "left")
-            valign = style.get("valign", "top")
+            align = format_align(style.get("align", "left"))
+            valign = style.get("valign", "top") if style.get("valign") in ("top", "middle", "bottom") else "top"
 
             # Build complete style string
             style_parts = [style_str_base]
             style_parts.append(f"width: {width_px_elem}px")
             if height:
                 style_parts.append(f"height: {int(height * 96 / 72)}px")
-            style_parts.append(f"font-family: {get_font_family(font_name)}")
+            style_parts.append(f"font-family: {html_escape.escape(get_font_family(font_name), quote=True)}")
             style_parts.append(f"font-size: {font_size}pt")
             style_parts.append(f"font-weight: {get_font_weight(font_name)}")
             style_parts.append(f"font-style: {get_font_style(font_name)}")
@@ -394,10 +595,8 @@ body {{
             data_obj = invoice if invoice else quote
             rendered_text = render_text_template(text, data_obj, settings) if (data_obj or settings) else text
 
-            # Escape HTML but preserve any remaining template syntax
+            # Escape HTML fully — never re-inject {{ }} (avoids SSTI if HTML is later templated)
             text_escaped = html_escape.escape(rendered_text)
-            # Restore template syntax if any remains (shouldn't after rendering, but just in case)
-            text_escaped = text_escaped.replace("&lt;{{", "{{").replace("}}&gt;", "}}")
 
             html_parts.append(f'<div class="element text-element" style="{style_str}">{text_escaped}</div>')
 
@@ -407,50 +606,39 @@ body {{
             width_px_elem = int(width * 96 / 72)
             height_px_elem = int(height * 96 / 72)
             source = element.get("source", "")
-            is_decorative = element.get("decorative", False)
 
-            # Handle base64 data URLs or file paths
-            img_src = ""
-            if source.startswith("data:"):
-                img_src = source
-            elif source.startswith("/uploads/template_images/"):
-                # Template image - convert to base64 for PDF generation
+            img_src = safe_img_src(source)
+            if img_src.startswith("/uploads/template_images/"):
                 try:
                     from app.utils.template_filters import get_image_base64
+                    from werkzeug.utils import secure_filename as _secure_filename
 
-                    # Extract filename from URL
-                    filename = source.split("/uploads/template_images/")[-1]
-                    # Build file path relative to app root (as get_image_base64 expects)
+                    filename = _secure_filename(img_src.rsplit("/", 1)[-1])
                     relative_path = f"app/static/uploads/template_images/{filename}"
-                    # Convert to base64
-                    img_src = get_image_base64(relative_path) or source  # Fallback to URL if conversion fails
+                    img_src = get_image_base64(relative_path) or img_src
                 except Exception as e:
-                    # If conversion fails, use the URL directly
-                    current_app.logger.warning(f"Failed to convert template image to base64: {e}")
-                    img_src = source
-            elif source.startswith("/") or source.startswith("http"):
-                img_src = source
-            else:
-                # Assume it's a relative path or placeholder
-                if source:
-                    img_src = source
-                else:
-                    # Placeholder for decorative images without source
-                    img_src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23ddd' width='100' height='100'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23999'%3EImage%3C/text%3E%3C/svg%3E"
+                    safe_log(current_app.logger, "warning", "Failed to convert template image to base64: %s", e)
 
             style_parts = [style_str_base]
             style_parts.append(f"width: {width_px_elem}px")
             style_parts.append(f"height: {height_px_elem}px")
             style_str = "; ".join(style_parts) + ";"
 
-            if img_src and not img_src.startswith("data:image/svg+xml"):
+            if img_src and img_src.startswith("data:image/") and "svg" not in img_src[:64].lower():
                 html_parts.append(
-                    f'<img class="element image-element" src="{img_src}" style="{style_str}" alt="Decorative image">'
+                    f'<img class="element image-element" src="{html_escape.escape(img_src, quote=True)}" '
+                    f'style="{style_str}" alt="Decorative image">'
+                )
+            elif img_src.startswith("/uploads/template_images/"):
+                html_parts.append(
+                    f'<img class="element image-element" src="{html_escape.escape(img_src, quote=True)}" '
+                    f'style="{style_str}" alt="Decorative image">'
                 )
             else:
-                # Show placeholder for decorative images without source
                 html_parts.append(
-                    f'<div class="element" style="{style_str}background:#f0f0f0;border:2px dashed #999;display:flex;align-items:center;justify-content:center;color:#666;font-size:12px;">Decorative Image</div>'
+                    f'<div class="element" style="{style_str}background:#f0f0f0;border:2px dashed #999;'
+                    f'display:flex;align-items:center;justify-content:center;color:#666;font-size:12px;">'
+                    f"Decorative Image</div>"
                 )
 
         elif elem_type == "rectangle":
@@ -536,10 +724,16 @@ body {{
             # Build header row
             for col in columns:
                 header = col.get("header", "")
-                align = col.get("align", "left")
+                align = format_align(col.get("align", "left"))
                 col_width = col.get("width", None)
-                width_attr = f' width="{int(col_width * 96 / 72)}px"' if col_width else ""
-                table_html += f'<th style="text-align: {align}; background-color: {header_bg}; color: {header_text_color};"{width_attr}>{html_escape.escape(header)}</th>'
+                try:
+                    width_attr = f' width="{int(float(col_width) * 96 / 72)}"' if col_width is not None else ""
+                except (TypeError, ValueError):
+                    width_attr = ""
+                table_html += (
+                    f'<th style="text-align: {align}; background-color: {header_bg}; '
+                    f'color: {header_text_color};"{width_attr}>{html_escape.escape(str(header))}</th>'
+                )
             table_html += "</tr></thead><tbody>"
 
             # Resolve table data from element's data source (e.g. invoice.all_line_items or invoice.items)
@@ -588,29 +782,33 @@ body {{
                     table_html += "<tr>"
                     for col in columns:
                         field = col.get("field", "")
-                        align = col.get("align", "left")
-                        # Try to get value from item
+                        align = format_align(col.get("align", "left"))
+                        # Try to get value from item (field must be a simple identifier)
                         value = ""
-                        try:
-                            if hasattr(item, field):
-                                value = str(getattr(item, field, ""))
-                            elif isinstance(item, dict):
-                                value = str(item.get(field, ""))
-                            else:
+                        if isinstance(field, str) and field.isidentifier():
+                            try:
+                                if hasattr(item, field):
+                                    value = str(getattr(item, field, ""))
+                                elif isinstance(item, dict):
+                                    value = str(item.get(field, ""))
+                            except Exception as e:
+                                safe_log(
+                                    current_app.logger, "debug", "Template value for field %s failed: %s", field, e
+                                )
                                 value = ""
-                        except Exception as e:
-                            safe_log(current_app.logger, "debug", "Template value for field %s failed: %s", field, e)
-                            value = ""
 
                         value_escaped = html_escape.escape(str(value))
-                        table_html += f'<td style="text-align: {align}; color: {row_text_color}; background-color: {row_bg};">{value_escaped}</td>'
+                        table_html += (
+                            f'<td style="text-align: {align}; color: {row_text_color}; '
+                            f'background-color: {row_bg};">{value_escaped}</td>'
+                        )
                     table_html += "</tr>"
             else:
                 # No data available, show template placeholders
                 table_html += "<tr>"
                 for col in columns:
-                    field = col.get("field", "")
-                    align = col.get("align", "left")
+                    field = col.get("field", "") if isinstance(col.get("field", ""), str) else ""
+                    align = format_align(col.get("align", "left"))
                     placeholder = f"{{{{ {field} }}}}"
                     table_html += (
                         f'<td style="text-align: {align}; color: #999;">{html_escape.escape(placeholder)}</td>'
@@ -1852,7 +2050,15 @@ def admin_ldap_test():
     """Test LDAP connectivity (service bind + user subtree count). Returns JSON only."""
     from app.services.ldap_service import LDAPService
 
-    return jsonify(LDAPService.test_connection())
+    result = LDAPService.test_connection()
+    # Only return fixed/safe fields (never raw exception text)
+    return jsonify(
+        {
+            "success": bool(result.get("success")),
+            "message": result.get("message") if result.get("success") else (result.get("message") or "LDAP connection failed"),
+            "user_count": result.get("user_count"),
+        }
+    )
 
 
 @admin_bp.route("/admin/peppol/setup-wizard", methods=["GET"])
@@ -1891,40 +2097,44 @@ def admin_peppol_setup_wizard_check_bridge():
     try:
         bridge_base_url = validate_outbound_url(bridge_base_url).rstrip("/")
     except UnsafeOutboundURL as exc:
-        return jsonify({"ok": False, "error": f"Invalid bridge URL: {exc}"}), 400
+        return client_error_response("Invalid bridge URL", 400)
 
     headers = {"Accept": "application/json"}
     if bridge_token:
         headers["Authorization"] = f"Bearer {bridge_token}"
 
     timeout_s = 5
+    from urllib.parse import urljoin
+
+    health_url = urljoin(bridge_base_url + "/", "health")
+    test_url = urljoin(bridge_base_url + "/", "test")
     try:
-        health = requests.get(f"{bridge_base_url}/health", headers=headers, timeout=timeout_s)
+        health = requests.get(health_url, headers=headers, timeout=timeout_s)
         if health.status_code >= 400:
             return (
-                jsonify({"ok": False, "error": f"Bridge /health returned HTTP {health.status_code}: {health.text}"}),
+                jsonify({"ok": False, "error": f"Bridge /health returned HTTP {health.status_code}"}),
                 400,
             )
         health_json = health.json()
-    except Exception as e:
-        return jsonify({"ok": False, "error": f"Failed to reach bridge /health: {e}"}), 400
+    except Exception:
+        return client_error_response("Failed to reach bridge /health", 400)
 
     try:
-        test = requests.post(f"{bridge_base_url}/test", headers=headers, timeout=timeout_s)
+        test = requests.post(test_url, headers=headers, timeout=timeout_s)
         if test.status_code >= 400:
             return (
                 jsonify(
                     {
                         "ok": False,
-                        "error": f"Bridge /test returned HTTP {test.status_code}: {test.text}",
+                        "error": f"Bridge /test returned HTTP {test.status_code}",
                         "health": health_json,
                     }
                 ),
                 400,
             )
         test_json = test.json()
-    except Exception as e:
-        return jsonify({"ok": False, "error": f"Failed to call bridge /test: {e}", "health": health_json}), 400
+    except Exception:
+        return jsonify({"ok": False, **client_error_payload("Failed to call bridge /test"), "health": health_json}), 400
 
     return jsonify({"ok": True, "health": health_json, "test": test_json})
 
@@ -1996,11 +2206,16 @@ def admin_peppol_setup_wizard_send_test():
         svc = PeppolService()
         success, tx, message = svc.send_invoice(invoice=invoice, triggered_by_user_id=current_user.id)
         if success:
-            return jsonify({"ok": True, "message": message, "peppol_tx_id": tx.id if tx else None})
-        return jsonify({"ok": False, "error": message, "peppol_tx_id": tx.id if tx else None}), 400
-    except Exception as e:
+            return jsonify(
+                {"ok": True, "message": "Invoice sent via Peppol", "peppol_tx_id": tx.id if tx else None}
+            )
+        current_app.logger.warning("Peppol wizard test send failed: %s", message)
+        return jsonify(
+            {"ok": False, "error": "Failed to send invoice via Peppol", "peppol_tx_id": tx.id if tx else None}
+        ), 400
+    except Exception:
         current_app.logger.exception("Peppol wizard test send failed")
-        return jsonify({"ok": False, "error": f"Failed to send invoice via Peppol: {e}"}), 500
+        return client_error_response("Failed to send invoice via Peppol", 500)
 
 
 @admin_bp.route("/admin/settings/verify-donate-hide-code", methods=["POST"])
@@ -2803,12 +3018,12 @@ def quote_pdf_layout_import_json():
 
         return redirect(url_for("admin.quote_pdf_layout", size=page_size))
 
-    except json.JSONDecodeError as e:
-        flash(_("Invalid JSON file: %(error)s", error=str(e)), "error")
+    except json.JSONDecodeError:
+        flash(_("Invalid JSON file."), "error")
         return redirect(url_for("admin.quote_pdf_layout", size=page_size))
-    except Exception as e:
-        current_app.logger.error(f"Error importing quote PDF template JSON: {e}", exc_info=True)
-        flash(_("Error importing template: %(error)s", error=str(e)), "error")
+    except Exception:
+        current_app.logger.error("Error importing quote PDF template JSON", exc_info=True)
+        flash(_("Error importing template. Please try again."), "error")
         return redirect(url_for("admin.quote_pdf_layout", size=page_size))
 
 
@@ -2914,12 +3129,12 @@ def pdf_layout_import_json():
 
         return redirect(url_for("admin.pdf_layout", size=page_size))
 
-    except json.JSONDecodeError as e:
-        flash(_("Invalid JSON file: %(error)s", error=str(e)), "error")
+    except json.JSONDecodeError:
+        flash(_("Invalid JSON file."), "error")
         return redirect(url_for("admin.pdf_layout", size=page_size))
-    except Exception as e:
-        current_app.logger.error(f"Error importing invoice PDF template JSON: {e}", exc_info=True)
-        flash(_("Error importing template: %(error)s", error=str(e)), "error")
+    except Exception:
+        current_app.logger.error("Error importing invoice PDF template JSON", exc_info=True)
+        flash(_("Error importing template. Please try again."), "error")
         return redirect(url_for("admin.pdf_layout", size=page_size))
 
 
@@ -3380,20 +3595,18 @@ def pdf_layout_preview():
 
         # If editor provided CSS, merge it (editor CSS takes precedence for @page rules)
         if css and css.strip():
-            # Extract @page rule from editor CSS if present
-            editor_page_match = re.search(r"@page\s*\{[^}]*\}", css, re.IGNORECASE | re.DOTALL)
-            if editor_page_match:
+            # Extract @page rule from editor CSS if present (brace-aware, no ReDoS regex)
+            from app.utils.pdf_generator import find_at_page_rules, remove_at_page_rules
+
+            editor_page_rules = find_at_page_rules(css)
+            if editor_page_rules:
                 # Editor has @page rule - normalize it and use it, merge with saved CSS
-                editor_page_rule = editor_page_match.group(0)
-                # Normalize editor's @page rule to correct size FIRST
-                editor_page_rule = update_page_size_in_css(editor_page_rule, page_size)
+                original_editor_page_rule = editor_page_rules[0]
+                editor_page_rule = update_page_size_in_css(original_editor_page_rule, page_size)
                 # Remove @page from saved CSS and add normalized editor's @page rule
-                if saved_css:
-                    saved_css_no_page = re.sub(r"@page\s*\{[^}]*\}", "", saved_css, flags=re.IGNORECASE | re.DOTALL)
-                else:
-                    saved_css_no_page = ""
+                saved_css_no_page = remove_at_page_rules(saved_css) if saved_css else ""
                 # Remove @page rule from editor CSS and merge
-                editor_css_no_page = css.replace(editor_page_rule, "").strip()
+                editor_css_no_page = css.replace(original_editor_page_rule, "", 1).strip()
                 css = editor_page_rule + "\n" + saved_css_no_page
                 if editor_css_no_page:
                     css = css + "\n" + editor_css_no_page
@@ -3420,7 +3633,6 @@ def pdf_layout_preview():
         # Log if normalization changed anything
         if css != css_before:
             current_app.logger.debug(f"PDF Preview - CSS @page size normalized from template/editor to {page_size}")
-
         # Validate after normalization
         is_valid, found_sizes = validate_page_size_in_css(css, page_size)
         if not is_valid:
@@ -3458,49 +3670,22 @@ def pdf_layout_preview():
         """Remove @page rules from HTML inline styles to avoid conflicts with separate CSS"""
         import re
 
-        def remove_from_style_tag(match):
-            style_content = match.group(2)
-            # Remove @page rule from style content
-            # Need to handle nested @bottom-center rules properly
-            # Match @page { ... } including any nested rules
-            brace_count = 0
-            page_pattern = r"@page\s*\{"
-            page_match = re.search(page_pattern, style_content, re.IGNORECASE)
+        from app.utils.pdf_generator import _transform_style_tag_contents, remove_at_page_rules
 
-            if page_match:
-                start = page_match.start()
-                # Find matching closing brace
-                end = len(style_content)
-                for i in range(page_match.end() - 1, len(style_content)):
-                    if style_content[i] == "{":
-                        brace_count += 1
-                    elif style_content[i] == "}":
-                        brace_count -= 1
-                        if brace_count == 0:
-                            end = i + 1
-                            break
-                # Remove the @page rule
-                style_content = style_content[:start] + style_content[end:]
-                # Clean up any double newlines or extra whitespace
-                style_content = re.sub(r"\n\s*\n", "\n", style_content)
+        def remove_from_style_content(style_content):
+            style_content = remove_at_page_rules(style_content)
+            return re.sub(r"\n\s*\n", "\n", style_content)
 
-            return f"{match.group(1)}{style_content}{match.group(3)}"
-
-        # Match <style> tags and remove @page rules from them
-        style_pattern = r"(<style[^>]*>)(.*?)(</style>)"
-        if re.search(style_pattern, html_text, re.IGNORECASE | re.DOTALL):
-            html_text = re.sub(style_pattern, remove_from_style_tag, html_text, flags=re.IGNORECASE | re.DOTALL)
-
-        return html_text
+        return _transform_style_tag_contents(html_text, remove_from_style_content)
 
     # Apply @page rule removal fix: if we have separate CSS and HTML with inline styles,
     # remove @page rules from HTML to ensure the separate CSS @page rule is used
     html_has_inline_styles = html and "<style>" in html
     if html_has_inline_styles and css and css.strip():
-        # Check if HTML has @page rules
-        import re
+        # Check if HTML has @page rules (brace-aware, no ReDoS regex)
+        from app.utils.pdf_generator import find_at_page_rules
 
-        html_page_rules = re.findall(r"@page\s*\{[^}]*\}", html, re.IGNORECASE | re.DOTALL)
+        html_page_rules = find_at_page_rules(html)
         if html_page_rules:
             current_app.logger.debug(
                 f"PDF preview: Found {len(html_page_rules)} @page rule(s) in HTML inline styles - removing them"
@@ -3614,16 +3799,18 @@ def pdf_layout_preview():
             f"[PDF_PREVIEW] Template rendered successfully - PageSize: '{page_size}', Rendered HTML length: {len(body_html)}"
         )
     except Exception as e:
-        import traceback
-
-        error_details = traceback.format_exc()
         current_app.logger.error(
-            f"[PDF_PREVIEW] Template render error - PageSize: '{page_size}', Error: {str(e)}, User: {current_user.username}",
+            "[PDF_PREVIEW] Template render error - PageSize: %r, User: %s",
+            page_size,
+            getattr(current_user, "username", "?"),
             exc_info=True,
         )
+        # Do not echo exception text, traceback, or unsanitized template HTML to the client
         body_html = (
-            f"<div style='color:red; padding:20px; border:2px solid red; margin:20px;'><h3>Template error:</h3><pre>{str(e)}</pre><pre>{error_details}</pre></div>"
-            + sanitized
+            "<div style='color:red; padding:20px; border:2px solid red; margin:20px;'>"
+            "<h3>Template error</h3>"
+            "<p>The template could not be rendered. Check server logs for details.</p>"
+            "</div>"
         )
     # Get page dimensions for preview styling
     page_dimensions = InvoicePDFTemplate.PAGE_SIZES.get(page_size, InvoicePDFTemplate.PAGE_SIZES["A4"])
@@ -3735,7 +3922,7 @@ body {{
     current_app.logger.info(
         f"[PDF_PREVIEW] Returning invoice preview HTML - PageSize: '{page_size}', Total HTML length: {len(page_html)}, PageWidth: {page_width_px}px, PageHeight: {page_height_px}px, User: {current_user.username}"
     )
-    return page_html
+    return _pdf_preview_html_response(page_html)
 
 
 @admin_bp.route("/admin/quote-pdf-layout/preview", methods=["POST"])
@@ -4016,20 +4203,18 @@ def quote_pdf_layout_preview():
 
         # If editor provided CSS, merge it (editor CSS takes precedence for @page rules)
         if css and css.strip():
-            # Extract @page rule from editor CSS if present
-            editor_page_match = re.search(r"@page\s*\{[^}]*\}", css, re.IGNORECASE | re.DOTALL)
-            if editor_page_match:
+            # Extract @page rule from editor CSS if present (brace-aware, no ReDoS regex)
+            from app.utils.pdf_generator import find_at_page_rules, remove_at_page_rules
+
+            editor_page_rules = find_at_page_rules(css)
+            if editor_page_rules:
                 # Editor has @page rule - normalize it and use it, merge with saved CSS
-                editor_page_rule = editor_page_match.group(0)
-                # Normalize editor's @page rule to correct size FIRST
-                editor_page_rule = update_page_size_in_css(editor_page_rule, page_size)
+                original_editor_page_rule = editor_page_rules[0]
+                editor_page_rule = update_page_size_in_css(original_editor_page_rule, page_size)
                 # Remove @page from saved CSS and add normalized editor's @page rule
-                if saved_css:
-                    saved_css_no_page = re.sub(r"@page\s*\{[^}]*\}", "", saved_css, flags=re.IGNORECASE | re.DOTALL)
-                else:
-                    saved_css_no_page = ""
+                saved_css_no_page = remove_at_page_rules(saved_css) if saved_css else ""
                 # Remove @page rule from editor CSS and merge
-                editor_css_no_page = css.replace(editor_page_rule, "").strip()
+                editor_css_no_page = css.replace(original_editor_page_rule, "", 1).strip()
                 css = editor_page_rule + "\n" + saved_css_no_page
                 if editor_css_no_page:
                     css = css + "\n" + editor_css_no_page
@@ -4095,49 +4280,22 @@ def quote_pdf_layout_preview():
         """Remove @page rules from HTML inline styles to avoid conflicts with separate CSS"""
         import re
 
-        def remove_from_style_tag(match):
-            style_content = match.group(2)
-            # Remove @page rule from style content
-            # Need to handle nested @bottom-center rules properly
-            # Match @page { ... } including any nested rules
-            brace_count = 0
-            page_pattern = r"@page\s*\{"
-            page_match = re.search(page_pattern, style_content, re.IGNORECASE)
+        from app.utils.pdf_generator import _transform_style_tag_contents, remove_at_page_rules
 
-            if page_match:
-                start = page_match.start()
-                # Find matching closing brace
-                end = len(style_content)
-                for i in range(page_match.end() - 1, len(style_content)):
-                    if style_content[i] == "{":
-                        brace_count += 1
-                    elif style_content[i] == "}":
-                        brace_count -= 1
-                        if brace_count == 0:
-                            end = i + 1
-                            break
-                # Remove the @page rule
-                style_content = style_content[:start] + style_content[end:]
-                # Clean up any double newlines or extra whitespace
-                style_content = re.sub(r"\n\s*\n", "\n", style_content)
+        def remove_from_style_content(style_content):
+            style_content = remove_at_page_rules(style_content)
+            return re.sub(r"\n\s*\n", "\n", style_content)
 
-            return f"{match.group(1)}{style_content}{match.group(3)}"
-
-        # Match <style> tags and remove @page rules from them
-        style_pattern = r"(<style[^>]*>)(.*?)(</style>)"
-        if re.search(style_pattern, html_text, re.IGNORECASE | re.DOTALL):
-            html_text = re.sub(style_pattern, remove_from_style_tag, html_text, flags=re.IGNORECASE | re.DOTALL)
-
-        return html_text
+        return _transform_style_tag_contents(html_text, remove_from_style_content)
 
     # Apply @page rule removal fix: if we have separate CSS and HTML with inline styles,
     # remove @page rules from HTML to ensure the separate CSS @page rule is used
     html_has_inline_styles = html and "<style>" in html
     if html_has_inline_styles and css and css.strip():
-        # Check if HTML has @page rules
-        import re
+        # Check if HTML has @page rules (brace-aware, no ReDoS regex)
+        from app.utils.pdf_generator import find_at_page_rules
 
-        html_page_rules = re.findall(r"@page\s*\{[^}]*\}", html, re.IGNORECASE | re.DOTALL)
+        html_page_rules = find_at_page_rules(html)
         if html_page_rules:
             current_app.logger.debug(
                 f"PDF preview: Found {len(html_page_rules)} @page rule(s) in HTML inline styles - removing them"
@@ -4250,17 +4408,18 @@ def quote_pdf_layout_preview():
         current_app.logger.info(
             f"[PDF_PREVIEW] Quote template rendered successfully - PageSize: '{page_size}', Rendered HTML length: {len(body_html)}"
         )
-    except Exception as e:
-        import traceback
-
-        error_details = traceback.format_exc()
+    except Exception:
         current_app.logger.error(
-            f"[PDF_PREVIEW] Quote template render error - PageSize: '{page_size}', Error: {str(e)}, User: {current_user.username}",
+            "[PDF_PREVIEW] Quote template render error - PageSize: %r, User: %s",
+            page_size,
+            getattr(current_user, "username", "?"),
             exc_info=True,
         )
         body_html = (
-            f"<div style='color:red; padding:20px; border:2px solid red; margin:20px;'><h3>Template error:</h3><pre>{str(e)}</pre><pre>{error_details}</pre></div>"
-            + sanitized
+            "<div style='color:red; padding:20px; border:2px solid red; margin:20px;'>"
+            "<h3>Template error</h3>"
+            "<p>The template could not be rendered. Check server logs for details.</p>"
+            "</div>"
         )
     # Get page dimensions for preview styling
     from app.models import QuotePDFTemplate
@@ -4372,7 +4531,7 @@ body {{
     current_app.logger.info(
         f"[PDF_PREVIEW] Returning quote preview HTML - PageSize: '{page_size}', Total HTML length: {len(page_html)}, PageWidth: {page_width_px}px, PageHeight: {page_height_px}px, User: {current_user.username}"
     )
-    return page_html
+    return _pdf_preview_html_response(page_html)
 
 
 @admin_bp.route("/admin/upload-logo", methods=["POST"])
@@ -4391,8 +4550,11 @@ def upload_logo():
         return redirect(url_for("admin.settings"))
 
     if file and allowed_logo_file(file.filename):
-        # Generate unique filename
+        # Generate unique filename (never use raw user filename in the path)
         file_extension = file.filename.rsplit(".", 1)[1].lower()
+        if file_extension not in ("png", "jpg", "jpeg", "gif", "webp", "svg"):
+            flash(_("Invalid image file."), "error")
+            return redirect(url_for("admin.settings"))
         unique_filename = f"company_logo_{uuid.uuid4().hex[:8]}.{file_extension}"
 
         # Basic server-side validation: verify image type
@@ -4407,9 +4569,13 @@ def upload_logo():
             flash(_("Invalid image file."), "error")
             return redirect(url_for("admin.settings"))
 
-        # Save file
-        upload_folder = get_upload_folder()
-        file_path = os.path.join(upload_folder, unique_filename)
+        # Save file inside a realpath jail under the upload folder
+        upload_folder = os.path.realpath(get_upload_folder())
+        os.makedirs(upload_folder, exist_ok=True)
+        file_path = os.path.realpath(os.path.join(upload_folder, unique_filename))
+        if not file_path.startswith(upload_folder + os.sep):
+            flash(_("Invalid image file."), "error")
+            return redirect(url_for("admin.settings"))
         file.save(file_path)
 
         # Log successful save
@@ -4514,16 +4680,19 @@ def upload_template_image():
     if file_size > MAX_FILE_SIZE:
         return jsonify({"error": f"File size exceeds maximum allowed size ({MAX_FILE_SIZE / (1024*1024):.0f} MB)"}), 400
 
-    # Save file
+    # Save file (basename-only; directory jail)
     original_filename = secure_filename(file.filename)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"template_{timestamp}_{original_filename}"
+    if not filename or ".." in filename or "/" in filename or "\\" in filename:
+        return jsonify({"error": "Invalid filename"}), 400
 
-    # Ensure upload directory exists
-    upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
+    upload_dir = os.path.realpath(os.path.join(current_app.root_path, "..", UPLOAD_FOLDER))
     os.makedirs(upload_dir, exist_ok=True)
 
-    file_path = os.path.join(upload_dir, filename)
+    file_path = os.path.realpath(os.path.join(upload_dir, filename))
+    if not file_path.startswith(upload_dir + os.sep):
+        return jsonify({"error": "Invalid filename"}), 400
     file.save(file_path)
 
     # Return URL for the image
@@ -4538,9 +4707,16 @@ def serve_template_image(filename):
     import os
 
     from flask import send_from_directory
+    from werkzeug.utils import secure_filename as _secure_filename
 
-    upload_folder = os.path.join(current_app.root_path, "..", "app/static/uploads/template_images")
-    return send_from_directory(upload_folder, filename)
+    safe_name = _secure_filename(filename.replace("\\", "/").split("/")[-1])
+    if not safe_name or safe_name != filename.replace("\\", "/").split("/")[-1]:
+        return "Not found", 404
+
+    upload_folder = os.path.realpath(
+        os.path.join(current_app.root_path, "..", "app/static/uploads/template_images")
+    )
+    return send_from_directory(upload_folder, safe_name)
 
 
 # Public route to serve uploaded logos from the static uploads directory
@@ -4551,16 +4727,21 @@ def serve_uploaded_logo(filename):
     like the login screen and in favicons.
     """
     try:
-        upload_folder = get_upload_folder()
-        file_path = os.path.join(upload_folder, filename)
+        from werkzeug.utils import secure_filename as _secure_filename
 
-        if not os.path.exists(file_path):
-            current_app.logger.error(f"Logo file not found: {file_path}")
+        safe_name = _secure_filename(filename.replace("\\", "/").split("/")[-1])
+        if not safe_name:
             return "Logo file not found", 404
 
-        return send_from_directory(upload_folder, filename)
-    except Exception as e:
-        current_app.logger.error(f"Error serving logo {filename}: {str(e)}")
+        upload_folder = os.path.realpath(get_upload_folder())
+        file_path = os.path.realpath(os.path.join(upload_folder, safe_name))
+        if not file_path.startswith(upload_folder + os.sep) or not os.path.isfile(file_path):
+            current_app.logger.error("Logo file not found: %s", safe_name)
+            return "Logo file not found", 404
+
+        return send_from_directory(upload_folder, safe_name)
+    except Exception:
+        current_app.logger.error("Error serving logo", exc_info=True)
         return "Error serving logo", 500
 
 
@@ -4707,7 +4888,7 @@ def oidc_test():
         parsed = urlparse(issuer)
         hostname = parsed.netloc.split(":")[0]
     except Exception as e:
-        flash(_("✗ Failed to parse issuer URL: %(error)s", error=str(e)), "error")
+        flash(_("Failed to parse issuer URL."), "error")
         return redirect(url_for("admin.oidc_debug"))
 
     # Test 1: Test DNS resolution with multiple strategies
@@ -4789,7 +4970,7 @@ def oidc_test():
             current_app.logger.error("OIDC Test: Failed to fetch discovery document: %s", metadata_error)
             return redirect(url_for("admin.oidc_debug"))
     except Exception as e:
-        flash(_("✗ Unexpected error: %(error)s", error=str(e)), "error")
+        flash(_("An unexpected error occurred."), "error")
         current_app.logger.error("OIDC Test: Unexpected error: %s", str(e))
         return redirect(url_for("admin.oidc_debug"))
 
@@ -4808,7 +4989,7 @@ def oidc_test():
             flash(_("✗ OAuth client is not registered"), "error")
             current_app.logger.error("OIDC Test: OAuth client not registered")
     except Exception as e:
-        flash(_("✗ Failed to create OAuth client: %(error)s", error=str(e)), "error")
+        flash(_("Failed to create OAuth client."), "error")
         current_app.logger.error("OIDC Test: Failed to create OAuth client: %s", str(e))
 
     # Test 3: Verify required endpoints are present
@@ -4952,7 +5133,7 @@ def oidc_wizard_test_connection():
             return jsonify({"success": False, "error": "Invalid URL format"}), 400
         hostname = parsed.netloc.split(":")[0]
     except Exception as e:
-        return jsonify({"success": False, "error": f"Invalid URL: {str(e)}"}), 400
+        return client_error_response("Invalid URL", 400)
 
     result = {
         "success": False,
@@ -4969,7 +5150,8 @@ def oidc_wizard_test_connection():
     result["dns_strategy"] = dns_strategy_used
     result["dns_ip"] = dns_ip  # Will be masked in response
     if not dns_success:
-        result["error"] = dns_error
+        current_app.logger.warning("OIDC wizard DNS failed for %s: %s", hostname, dns_error)
+        result["error"] = "DNS resolution failed"
         return jsonify(result), 200  # Return 200 but with success=False
 
     # Fetch metadata
@@ -4987,13 +5169,22 @@ def oidc_wizard_test_connection():
     )
 
     if diagnostics:
-        result["diagnostics"] = diagnostics
+        # Strip potentially sensitive/error-detail fields before returning to client
+        safe_diag = {
+            "dns_resolution": {
+                "success": (diagnostics.get("dns_resolution") or {}).get("success"),
+                "strategy": (diagnostics.get("dns_resolution") or {}).get("strategy"),
+            },
+            "strategies_tried_count": len(diagnostics.get("strategies_tried") or []),
+        }
+        result["diagnostics"] = safe_diag
 
     if metadata:
         result["success"] = True
         result["metadata"] = metadata
     else:
-        result["error"] = metadata_error
+        current_app.logger.warning("OIDC wizard metadata fetch failed: %s", metadata_error)
+        result["error"] = "Failed to fetch OIDC metadata"
 
     return jsonify(result), 200
 
@@ -5021,7 +5212,7 @@ def oidc_wizard_validate_config():
             elif parsed.scheme not in ("http", "https"):
                 errors.append({"field": "issuer", "message": "URL must use http or https"})
         except Exception as e:
-            errors.append({"field": "issuer", "message": f"Invalid URL: {str(e)}"})
+            errors.append({"field": "issuer", "message": "Invalid URL"})
 
     # Validate client ID
     if not data.get("client_id", "").strip():
@@ -5044,7 +5235,7 @@ def oidc_wizard_validate_config():
             if not parsed.scheme or not parsed.netloc:
                 errors.append({"field": "redirect_uri", "message": "Invalid redirect URI format"})
         except Exception as e:
-            errors.append({"field": "redirect_uri", "message": f"Invalid redirect URI: {str(e)}"})
+            errors.append({"field": "redirect_uri", "message": "Invalid redirect URI"})
 
     if errors:
         return jsonify({"valid": False, "errors": errors}), 200
@@ -5236,7 +5427,16 @@ def ldap_wizard_test_connection():
     data = request.get_json() or {}
     cfg = _ldap_wizard_cfg_from_json(data)
     result = LDAPService.test_connection(cfg)
-    return jsonify(result), 200
+    return (
+        jsonify(
+            {
+                "success": bool(result.get("success")),
+                "message": result.get("message") if result.get("success") else (result.get("message") or "LDAP connection failed"),
+                "user_count": result.get("user_count"),
+            }
+        ),
+        200,
+    )
 
 
 @admin_bp.route("/admin/ldap/setup-wizard/validate-config", methods=["POST"])
@@ -5423,9 +5623,9 @@ def test_email():
     app_module.track_event(current_user.id, "admin.email_test_sent", {"success": success, "configured": success})
 
     if success:
-        return jsonify({"success": True, "message": message}), 200
-    else:
-        return jsonify({"success": False, "message": message}), 500
+        return jsonify({"success": True, "message": "Test email sent successfully"}), 200
+    current_app.logger.warning("Email test failed: %s", message)
+    return jsonify({"success": False, "message": "Failed to send test email"}), 500
 
 
 @admin_bp.route("/admin/email/config-status", methods=["GET"])
@@ -5649,8 +5849,9 @@ def send_email_template_test(template_id):
     )
 
     if success:
-        return jsonify({"success": True, "message": message}), 200
-    return jsonify({"success": False, "message": message}), 500
+        return jsonify({"success": True, "message": "Test email sent successfully"}), 200
+    current_app.logger.warning("Invoice template test email failed: %s", message)
+    return jsonify({"success": False, "message": "Failed to send test email"}), 500
 
 
 @admin_bp.route("/admin/email-templates/<int:template_id>")

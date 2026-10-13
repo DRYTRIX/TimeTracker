@@ -1,6 +1,6 @@
 {
   "name": "timetracker-desktop",
-  "version": "5.18.1",
+  "version": "5.18.2",
   "description": "TimeTracker desktop app for Windows, Linux, and macOS",
   "main": "src/main/main.js",
   "scripts": {
@@ -37,6 +37,7 @@
     "electron": "^41.10.6",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.1",
+    "sprintf-js": "file:vendor/sprintf-js",
     "vite": "^8.0.16"
   },
   "dependencies": {
@@ -45,6 +46,9 @@
     "electron-store": "^8.1.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
+  },
+  "overrides": {
+    "sprintf-js": "$sprintf-js"
   },
   "build": {
     "appId": "com.timetracker.desktop",

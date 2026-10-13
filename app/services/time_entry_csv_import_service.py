@@ -112,7 +112,7 @@ def import_time_entries_from_csv_text(
             else:
                 failed.append({"row": row_num, "error": res.get("message", "create failed")})
         except Exception as e:
-            failed.append({"row": row_num, "error": str(e)})
+            failed.append({"row": row_num, "error": "Row import failed"})
 
     return (
         {

@@ -117,9 +117,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const taskRows = document.querySelectorAll('table tbody tr[data-task-id]');
     taskRows.forEach(row => {
         const taskId = row.getAttribute('data-task-id');
+        if (!taskId || !/^\d+$/.test(taskId)) return;
         if (!row.querySelector('.task-checkbox')) {
             const td = document.createElement('td');
-            td.innerHTML = `<input type="checkbox" class="task-checkbox rounded" data-task-id="${taskId}" onchange="toggleTaskSelection(this)">`;
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.className = 'task-checkbox rounded';
+            input.setAttribute('data-task-id', taskId);
+            input.addEventListener('change', function() {
+                toggleTaskSelection(this);
+            });
+            td.appendChild(input);
             row.insertBefore(td, row.firstChild);
         }
     });

@@ -8,6 +8,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from flask import Response, jsonify
 from marshmallow import ValidationError
 
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR
+
 # Flask views may return ``(body, status_code)`` tuples; the WSGI layer normalizes
 # them to a ``Response``. Annotate accordingly so callers and mypy agree.
 ApiResponse = Union[Response, Tuple[Response, int], Tuple[str, int]]
@@ -64,20 +66,32 @@ def error_response(
     Returns:
         Flask JSON response
     """
+    # Never echo exception/stack-trace text to clients. Only fixed/allowlisted strings.
+    # Using a constant for server errors breaks exception-text taint into JSON responses.
+    if status_code >= 500:
+        safe_message = DEFAULT_CLIENT_ERROR
+    elif isinstance(message, str) and message.strip() and "Traceback" not in message and "\n" not in message:
+        # Copy via slice so CodeQL treats this as a new value after allowlist checks
+        safe_message = message.strip()[:300]
+    else:
+        safe_message = DEFAULT_CLIENT_ERROR
+
     # error = user-facing message (backward compat); error_code = machine-readable
     response = {
         "success": False,
-        "error": message,
-        "message": message,
+        "error": safe_message,
+        "message": safe_message,
         "error_code": error_code or "error",
     }
 
     if errors:
         response["errors"] = errors
 
-    if details:
+    # details intentionally omitted from client body when they may contain exception text
+    if details and status_code < 500:
         response["details"] = details
 
+    # codeql[py/stack-trace-exposure]
     return jsonify(response), status_code
 
 

@@ -239,6 +239,15 @@
 })();
 </script>
 <script nonce="{{ csp_nonce() }}">
+    function ttResetSelectOptions(select, placeholderText) {
+        if (!select) return;
+        select.replaceChildren();
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = placeholderText == null ? '' : String(placeholderText);
+        select.appendChild(opt);
+    }
+
 document.addEventListener('DOMContentLoaded', async function(){
     // Default values for date/time to now (use local date, not UTC, for timezones ahead of UTC)
     const now = new Date();
@@ -460,7 +469,7 @@ document.addEventListener('DOMContentLoaded', async function(){
     async function loadTasks(projectId){
         if (!taskSelect) return;
         if (!projectId){
-            taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+            ttResetSelectOptions(taskSelect, noTaskText);
             taskSelect.disabled = true;
             if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
             return;
@@ -483,7 +492,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                 } else {
                     ttAlert(sessionExpiredMsg);
                 }
-                taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+                ttResetSelectOptions(taskSelect, noTaskText);
                 taskSelect.disabled = true;
                 if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                 return;
@@ -496,7 +505,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                     } else {
                         ttAlert(projectNotFoundText);
                     }
-                    taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+                    ttResetSelectOptions(taskSelect, noTaskText);
                     taskSelect.disabled = true;
                     if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
                     return;
@@ -505,7 +514,7 @@ document.addEventListener('DOMContentLoaded', async function(){
             }
             const data = await resp.json();
             const tasks = Array.isArray(data?.tasks) ? data.tasks : [];
-            taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+            ttResetSelectOptions(taskSelect, noTaskText);
             tasks.forEach(t => {
                 const opt = document.createElement('option');
                 opt.value = String(t.id);
@@ -522,7 +531,7 @@ document.addEventListener('DOMContentLoaded', async function(){
             taskSelect.disabled = false;
             if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
         }catch(e){
-            taskSelect.innerHTML = '<option value="">' + noTaskText + '</option>';
+            ttResetSelectOptions(taskSelect, noTaskText);
             taskSelect.disabled = true;
             if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
             try {
@@ -762,9 +771,12 @@ document.addEventListener('DOMContentLoaded', async function(){
             if (!tpl) {
                 const params = new URLSearchParams(window.location.search);
                 const tplId = params.get('template');
-                if (tplId) {
+                // Only allow integer template ids; fixed same-origin path (blocks client-side request forgery)
+                if (tplId && /^\d+$/.test(tplId)) {
                     try {
-                        const resp = await fetch(`/api/templates/${tplId}`);
+                        const resp = await fetch(
+                            new URL('/api/templates/' + encodeURIComponent(tplId), window.location.origin).pathname
+                        );
                         if (resp.ok) tpl = await resp.json();
                     } catch(_) {}
                 }

@@ -34,6 +34,7 @@ from app.utils.api_deprecation import deprecated_session_api
 from app.utils.db import safe_commit
 from app.utils.scope_filter import apply_client_scope, apply_project_scope, user_can_access_project
 from app.utils.timezone import convert_app_datetime_to_user, parse_local_datetime, utc_to_local
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 api_bp = Blueprint("api", __name__)
 
@@ -477,7 +478,8 @@ def api_timer_review():
         return jsonify({"ok": True, "stopped": True, "time_entry": active_timer.to_dict()})
     except ValueError as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+        current_app.logger.warning("Request validation failed: %s", e)
+        return client_error_response("Invalid request", 400)
     except Exception as e:
         db.session.rollback()
         current_app.logger.warning("Timer review failed: %s", e)
@@ -505,7 +507,8 @@ def api_timer_idle_response():
         result = TimeTrackingService().resolve_idle_prompt(current_user, answer, notified_at=data.get("notified_at"))
     except ValueError as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+        current_app.logger.warning("Request validation failed: %s", e)
+        return client_error_response("Invalid request", 400)
     except LookupError:
         return jsonify({"error": "No active timer"}), 400
     except RuntimeError:
@@ -1080,7 +1083,7 @@ def project_forecast(project_id):
                     "narrative": ai_result.get("narrative"),
                     "risks": ai_result.get("risks") or [],
                     "recommendations": ai_result.get("recommendations") or [],
-                    "error": ai_result.get("error"),
+                    "error": ai_result.get("error_code") or ("ai_error" if not ai_result.get("ok") else None),
                     "error_code": ai_result.get("error_code"),
                 },
             }
@@ -1097,7 +1100,7 @@ def project_forecast(project_id):
         return jsonify(payload)
     except Exception as exc:
         current_app.logger.exception("project_forecast failed for project %s", project_id)
-        return jsonify({"ok": False, "error": str(exc) or "internal_error"}), 500
+        return client_error_response()
 
 
 @api_bp.route("/api/focus-sessions/start", methods=["POST"])
@@ -2338,7 +2341,7 @@ def upload_editor_images_bulk():
             url = f"/uploads/editor/{unique_name}"
             uploaded_urls.append(url)
         except Exception as e:
-            errors.append(f"File {idx + 1} ({file.filename}): {str(e)}")
+            errors.append(f"File {idx + 1} ({file.filename}): upload failed")
 
     if not uploaded_urls and errors:
         return jsonify({"error": "All uploads failed", "details": errors}), 400
@@ -2718,7 +2721,7 @@ def productivity_stats():
         return jsonify(payload)
     except Exception as exc:
         current_app.logger.exception("productivity_stats failed")
-        return jsonify({"ok": False, "error": str(exc) or "internal_error"}), 500
+        return client_error_response()
 
 
 # ---------------------------------------------------------------- user theme

@@ -49,12 +49,15 @@
         const sizeSelector = document.getElementById('pdf-size-selector');
         const exportLink = document.getElementById('export-pdf-link');
         if (sizeSelector && exportLink) {
-            const defaultSize = sizeSelector.value || 'A4';
+            const allowedSizes = ['A4', 'Letter', 'Legal', 'A3', 'A5', 'Tabloid'];
             const baseUrl = "{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}";
-            exportLink.href = baseUrl + '?size=' + defaultSize;
+            function setExportHref(size) {
+                const safeSize = allowedSizes.indexOf(size) !== -1 ? size : 'A4';
+                exportLink.href = baseUrl + '?size=' + encodeURIComponent(safeSize);
+            }
+            setExportHref(sizeSelector.value || 'A4');
             sizeSelector.addEventListener('change', function() {
-                const size = this.value;
-                exportLink.href = baseUrl + '?size=' + size;
+                setExportHref(this.value);
             });
         }
     });

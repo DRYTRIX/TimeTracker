@@ -302,9 +302,9 @@ def scan_receipt(image_path, lang="eng"):
 
         return data
 
-    except Exception as e:
-        logger.error(f"Error scanning receipt {image_path}: {e}")
-        return {"error": str(e), "message": "Failed to scan receipt"}
+    except Exception:
+        logger.exception("Error scanning receipt %s", image_path)
+        return {"error": "Failed to scan receipt", "message": "Failed to scan receipt"}
 
 
 def get_suggested_expense_data(receipt_data):

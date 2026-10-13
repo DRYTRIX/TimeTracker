@@ -226,6 +226,7 @@ class TaskService:
 
         from sqlalchemy.orm import joinedload
 
+        from app.utils.error_handling import sanitize_log_value
         from app.utils.timezone import now_in_app_timezone
 
         logger = logging.getLogger(__name__)
@@ -367,7 +368,7 @@ class TaskService:
         pagination.has_prev = page > 1
 
         logger.debug(
-            f"[TaskService.list_tasks] Step 5: Pagination query execution took {(time.time() - step_start) * 1000:.2f}ms (total: {pagination.total} tasks, page: {page}, per_page: {per_page})"
+            "[TaskService.list_tasks] Step 5: Pagination query execution took %.2fms (total: %s tasks, page: %s, per_page: %s)" % ((time.time() - step_start) * 1000, sanitize_log_value(pagination.total), sanitize_log_value(page), sanitize_log_value(per_page))
         )
 
         step_start = time.time()
@@ -436,7 +437,7 @@ class TaskService:
 
         total_time = (time.time() - start_time) * 1000
         logger.info(
-            f"[TaskService.list_tasks] Total time: {total_time:.2f}ms (tasks: {len(tasks) if tasks else 0}, page: {page}, per_page: {per_page})"
+            "[TaskService.list_tasks] Total time: %.2fms (tasks: %s, page: %s, per_page: %s)" % (total_time, sanitize_log_value(len(tasks) if tasks else 0), sanitize_log_value(page), sanitize_log_value(per_page))
         )
 
         return {"tasks": tasks, "pagination": pagination, "total": pagination.total}

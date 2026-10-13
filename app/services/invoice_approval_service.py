@@ -2,14 +2,18 @@
 Service for invoice approval workflow business logic.
 """
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from app import db
 from app.constants import WebhookEvent
 from app.models import Invoice, InvoiceApproval, User
 from app.utils.db import safe_commit
+from app.utils.error_handling import sanitize_log_value
 from app.utils.event_bus import emit_event
 from app.utils.timezone import now_in_app_timezone
+
+logger = logging.getLogger(__name__)
 
 
 class InvoiceApprovalService:
@@ -83,9 +87,10 @@ class InvoiceApprovalService:
             )
 
             return {"success": True, "message": "Approval request created successfully.", "approval": approval}
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return {"success": False, "message": f"Error creating approval request: {str(e)}"}
+            logger.exception("Error creating approval request for invoice %s", sanitize_log_value(invoice_id))
+            return {"success": False, "message": "Error creating approval request"}
 
     def approve(self, approval_id: int, approver_id: int, comments: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -143,9 +148,10 @@ class InvoiceApprovalService:
                 )
 
             return {"success": True, "message": "Invoice approved successfully.", "approval": approval}
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return {"success": False, "message": f"Error approving invoice: {str(e)}"}
+            logger.exception("Error approving invoice approval %s", sanitize_log_value(approval_id))
+            return {"success": False, "message": "Error approving invoice"}
 
     def reject(self, approval_id: int, rejector_id: int, reason: str) -> Dict[str, Any]:
         """
@@ -190,9 +196,10 @@ class InvoiceApprovalService:
             )
 
             return {"success": True, "message": "Invoice approval rejected.", "approval": approval}
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            return {"success": False, "message": f"Error rejecting invoice: {str(e)}"}
+            logger.exception("Error rejecting invoice approval %s", sanitize_log_value(approval_id))
+            return {"success": False, "message": "Error rejecting invoice"}
 
     def get_approval(self, approval_id: int) -> Optional[InvoiceApproval]:
         """Get an approval by ID"""

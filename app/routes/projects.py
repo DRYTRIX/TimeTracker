@@ -35,7 +35,8 @@ from app.models import (
 )
 from app.services import ProjectService
 from app.utils.db import safe_commit
-from app.utils.error_handling import safe_log
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR, safe_log
+from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 from app.utils.permissions import admin_or_permission_required, permission_required
 from app.utils.posthog_funnels import (
     track_onboarding_first_project,
@@ -1561,7 +1562,7 @@ def favorite_project(project_id):
         flash(_("Failed to add project to favorites"), "error")
 
     # Redirect back to referrer or project list
-    return redirect(request.referrer or url_for("projects.list_projects"))
+    return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("projects.list_projects"))
 
 
 @projects_bp.route("/projects/<int:project_id>/unfavorite", methods=["POST"])
@@ -1606,7 +1607,7 @@ def unfavorite_project(project_id):
         flash(_("Failed to remove project from favorites"), "error")
 
     # Redirect back to referrer or project list
-    return redirect(request.referrer or url_for("projects.list_projects"))
+    return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("projects.list_projects"))
 
 
 # ===== PROJECT COSTS ROUTES =====
@@ -2059,7 +2060,7 @@ def generate_recurring_cost_now(project_id, rid):
         return jsonify({"error": "Failed to generate cost"}), 400
     except Exception as e:
         current_app.logger.error(f"Error generating cost from recurring template: {e}")
-        return jsonify({"error": str(e)}), 500
+        return client_error_response(status=500)
 
 
 # ===== PROJECT EXTRA GOODS ROUTES =====
@@ -2339,16 +2340,25 @@ def upload_project_attachment(project_id):
         return redirect(url_for("projects.view_project", project_id=project_id))
 
     # Save file
+    from app.utils.paths import PathEscapeError, safe_path_under
+
     original_filename = secure_filename(file.filename)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{project_id}_{timestamp}_{original_filename}"
+    filename = secure_filename(f"{project_id}_{timestamp}_{original_filename}")
+    if not filename:
+        flash(_("Invalid filename"), "error")
+        return redirect(url_for("projects.view_project", project_id=project_id))
 
     # Ensure upload directory exists
     upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
     os.makedirs(upload_dir, exist_ok=True)
 
-    file_path = os.path.join(upload_dir, filename)
-    file.save(file_path)
+    try:
+        file_path = safe_path_under(upload_dir, filename)
+        file.save(file_path)
+    except PathEscapeError:
+        flash(_("Invalid upload path"), "error")
+        return redirect(url_for("projects.view_project", project_id=project_id))
 
     # Get file info
     mime_type = file.content_type or "application/octet-stream"
@@ -2396,7 +2406,6 @@ def upload_project_attachment(project_id):
         except OSError as cleanup_error:
             current_app.logger.warning(f"Failed to remove uploaded file {file_path}: {cleanup_error}")
         return redirect(url_for("projects.view_project", project_id=project_id))
-
     log_event(
         "project.attachment.uploaded",
         user_id=current_user.id,

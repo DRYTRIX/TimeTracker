@@ -1,0 +1,15 @@
+name: TimeTracker CodeQL config
+
+paths-ignore:
+  - tests/**
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/coverage/**"
+  - desktop/**/node_modules/**
+  - mobile/**/node_modules/**
+  - .github/workflows-archive/**
+
+# Security findings only (not maintainability/quality noise from security-and-quality)
+queries:
+  - uses: security-extended

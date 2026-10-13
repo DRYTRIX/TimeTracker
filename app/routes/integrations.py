@@ -15,6 +15,12 @@ from app.models import Integration, IntegrationCredential
 from app.services.integration_service import IntegrationService
 from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
+from app.utils.error_handling import (
+    client_error_response,
+    client_error_payload,
+    DEFAULT_CLIENT_ERROR,
+    sanitize_log_value,
+)
 
 # Import registry to ensure connectors are registered
 try:
@@ -29,11 +35,21 @@ integrations_bp = Blueprint("integrations", __name__)
 
 def has_setup_wizard(provider):
     """Check if a setup wizard template exists for the given provider."""
+    import re
+
     from flask import current_app
 
-    template_path = f"integrations/wizard_{provider}.html"
+    from app.utils.paths import PathEscapeError, safe_path_under
+
+    # Allowlist provider before joining into a filesystem path (path injection).
+    if not provider or not re.fullmatch(r"[a-z0-9_]+", str(provider)):
+        return False
+
     template_dir = os.path.join(current_app.root_path, "templates")
-    template_file = os.path.join(template_dir, template_path)
+    try:
+        template_file = safe_path_under(template_dir, "integrations", f"wizard_{provider}.html")
+    except PathEscapeError:
+        return False
     return os.path.exists(template_file)
 
 
@@ -274,10 +290,12 @@ def oauth_callback(provider):
                 logger.warning(f"Error parsing OAuth state timestamp: {e}")
 
     if not expected_state or state != expected_state:
+        # Do not log OAuth state values (CSRF secrets)
         logger.error(
-            f"Invalid state parameter for integration {integration.id}. "
-            f"Expected: {expected_state[:10] if expected_state else 'None'}..., "
-            f"Got: {state[:10] if state else 'None'}..."
+            "Invalid OAuth state for integration %s (expected_present=%s got_present=%s)",
+            integration.id,
+            bool(expected_state),
+            bool(state),
         )
         flash(_("Invalid state parameter. Please try connecting again."), "error")
         return redirect(url_for("integrations.list_integrations"))
@@ -343,8 +361,8 @@ def oauth_callback(provider):
         return redirect(url_for("integrations.manage_integration", provider=provider))
 
     except Exception as e:
-        logger.error(f"Error in OAuth callback for {provider}: {e}")
-        flash(_("Error connecting integration: %(error)s", error=str(e)), "error")
+        logger.error("Error in OAuth callback for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
+        flash(_("Error connecting integration. Please try again."), "error")
         return redirect(url_for("integrations.list_integrations"))
 
 
@@ -375,7 +393,7 @@ def manage_integration(provider):
         connector_class = MinimalConnector
 
         # Log warning but continue
-        logger.warning(f"Provider {provider} not found in registry, using defaults")
+        logger.warning("Provider %s not found in registry, using defaults", sanitize_log_value(provider))
 
     settings = Settings.get_settings()
 
@@ -479,7 +497,7 @@ def manage_integration(provider):
                         except AttributeError:
                             logger.warning(f"Settings attribute {secret_attr} does not exist, skipping")
                 else:
-                    logger.warning(f"Provider {provider} not in attr_map, cannot save OAuth credentials")
+                    logger.warning("Provider %s not in attr_map, cannot save OAuth credentials", sanitize_log_value(provider))
 
                 # Handle special fields (save even if empty to allow clearing)
                 if provider == "outlook_calendar":
@@ -637,7 +655,7 @@ def manage_integration(provider):
                     temp_connector = connector_class(integration_to_update, None)
                     config_schema = temp_connector.get_config_schema()
                 except Exception as e:
-                    logger.warning(f"Could not get config schema for {provider}: {e}")
+                    logger.warning("Could not get config schema for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
 
             # Update config from form
             if not integration_to_update.config:
@@ -798,13 +816,13 @@ def manage_integration(provider):
             try:
                 config_schema = connector.get_config_schema()
             except Exception as e:
-                logger.warning(f"Could not get config schema for {provider}: {e}")
+                logger.warning("Could not get config schema for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
         elif connector_class and hasattr(connector_class, "get_config_schema"):
             try:
                 temp_connector = connector_class(active_integration, None)
                 config_schema = temp_connector.get_config_schema()
             except Exception as e:
-                logger.warning(f"Could not get config schema for {provider}: {e}")
+                logger.warning("Could not get config schema for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
 
     return render_template(
         "integrations/manage.html",
@@ -1034,7 +1052,7 @@ def sync_integration(integration_id):
 
         integration.last_sync_at = datetime.utcnow()
         safe_commit("update_integration_sync_status_error", {"integration_id": integration_id})
-        flash(_("Error during sync: %(error)s", error=str(e)), "error")
+        flash(_("Error during sync. Please try again."), "error")
 
     return redirect(url_for("integrations.view_integration", integration_id=integration_id))
 
@@ -1357,7 +1375,7 @@ def integration_webhook(provider):
 
     # Check if provider is available
     if provider not in service._connector_registry:
-        logger.warning(f"Webhook received for unknown provider: {provider}")
+        logger.warning("Webhook received for unknown provider: %s", sanitize_log_value(provider))
         return jsonify({"error": "Unknown provider"}), 404
 
     # Get webhook payload - preserve raw body for signature verification (GitHub, etc.)
@@ -1370,7 +1388,7 @@ def integration_webhook(provider):
     integrations = Integration.query.filter_by(provider=provider, is_active=True).all()
 
     if not integrations:
-        logger.warning(f"No active integrations found for provider: {provider}")
+        logger.warning("No active integrations found for provider: %s", sanitize_log_value(provider))
         return jsonify({"error": "No active integration found"}), 404
 
     results = []
@@ -1401,7 +1419,7 @@ def integration_webhook(provider):
                 )
         except Exception as e:
             logger.error(f"Error handling webhook for integration {integration.id}: {e}", exc_info=True)
-            results.append({"integration_id": integration.id, "success": False, "message": str(e)})
+            results.append({"integration_id": integration.id, "success": False, "message": DEFAULT_CLIENT_ERROR})
 
     # Return success if at least one integration processed the webhook
     if any(r["success"] for r in results):
@@ -1475,7 +1493,7 @@ def setup_wizard(provider):
                 temp_connector = connector_class(temp_integration, None)
                 config_schema = temp_connector.get_config_schema()
             except Exception as e:
-                logger.warning(f"Could not get config schema for {provider}: {e}")
+                logger.warning("Could not get config schema for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
 
         # Process form fields based on config schema
         if config_schema and "fields" in config_schema:
@@ -1606,7 +1624,7 @@ def setup_wizard(provider):
             temp_connector = connector_class(temp_integration, None)
             config_schema = temp_connector.get_config_schema()
         except Exception as e:
-            logger.warning(f"Could not get config schema for {provider}: {e}")
+            logger.warning("Could not get config schema for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
 
     # Determine step labels based on provider
     step_labels_map = {
@@ -1681,8 +1699,8 @@ def test_connection_wizard(provider):
         result = connector.test_connection()
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Connection test error for {provider}: {e}", exc_info=True)
-        return jsonify({"success": False, "error": str(e)}), 500
+        logger.error("Connection test error for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__), exc_info=True)
+        return jsonify({"success": False, **client_error_payload()}), 500
 
 
 @integrations_bp.route("/integrations/sync-errors")
@@ -1746,7 +1764,7 @@ def retry_sync_error(error_id):
         else:
             flash(_("Connector unavailable"), "error")
     except Exception as e:
-        flash(_("Retry failed: %(err)s", err=str(e)), "error")
+        flash(_("Retry failed. Please try again."), "error")
     safe_commit("retry_sync_error", {"error_id": error_id})
     return redirect(url_for("integrations.sync_errors"))
 
@@ -1876,4 +1894,4 @@ def activitywatch_buckets_api():
             return jsonify({"buckets": [], "error": "not configured"}), 400
         return jsonify({"buckets": connector.list_buckets()})
     except Exception as e:
-        return jsonify({"buckets": [], "error": str(e)}), 400
+        return jsonify({"buckets": [], **client_error_payload()}), 400

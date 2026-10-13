@@ -1,11 +1,26 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, powerMonitor } = require('electron');
-const { createWindow } = require('./window');
+const { app, BrowserWindow, ipcMain, globalShortcut, powerMonitor, protocol } = require('electron');
+const { createWindow, registerAppProtocol } = require('./window');
 const { createTray, destroyTray } = require('./tray');
 const { createIdleMonitor } = require('./idle');
-const Store = require('electron-store');
+const { createSecureStore } = require('./secure-store');
 
 let store = null;
 let idleMonitor = null;
+
+// Must be registered before app is ready for privileged custom scheme
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'app',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      stream: true,
+    },
+  },
+]);
+
 
 // Parse command line arguments for server URL
 function parseCommandLineArgs(args = process.argv.slice(1)) {
@@ -170,7 +185,8 @@ function unregisterGlobalShortcuts() {
 // This method will be called when Electron has finished initialization
 if (singleInstanceLock) {
 app.whenReady().then(() => {
-  store = new Store();
+  registerAppProtocol();
+  store = createSecureStore();
   parseCommandLineArgs();
   createMainWindow({ showSplash: true });
   registerGlobalShortcuts();
@@ -348,6 +364,7 @@ const ALLOWED_STORE_KEYS = new Set([
   'sync_interval',
   'minimize_to_tray',
   'global_shortcuts',
+  '__migrated_from_plaintext',
 ]);
 
 function isAllowedStoreKey(key) {
@@ -399,15 +416,16 @@ app.on('web-contents-created', (event, contents) => {
       event.preventDefault();
       return;
     }
-    const protocol = parsedUrl.protocol;
+    const navProtocol = parsedUrl.protocol;
     if (
-      protocol === 'file:' ||
-      protocol === 'about:' ||
-      protocol === 'devtools:'
+      navProtocol === 'file:' ||
+      navProtocol === 'app:' ||
+      navProtocol === 'about:' ||
+      navProtocol === 'devtools:'
     ) {
       return;
     }
-    if (protocol === 'http:' || protocol === 'https:') {
+    if (navProtocol === 'http:' || navProtocol === 'https:') {
       event.preventDefault();
       return;
     }

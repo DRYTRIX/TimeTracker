@@ -135,8 +135,12 @@ class ProjectTemplateService:
                 import logging
 
                 logger = logging.getLogger(__name__)
+                from app.utils.error_handling import sanitize_log_value
                 logger.info(
-                    f"Creating {len(tasks_to_create)} tasks from template {template_id} for project {project.id}"
+                    "Creating %s tasks from template %s for project %s",
+                    sanitize_log_value(len(tasks_to_create)),
+                    sanitize_log_value(template_id),
+                    sanitize_log_value(project.id),
                 )
 
                 from app.services.task_service import TaskService
@@ -148,14 +152,14 @@ class ProjectTemplateService:
                 for task_config in tasks_to_create:
                     # Ensure task_config is a dictionary
                     if not isinstance(task_config, dict):
-                        logger.warning(f"Invalid task config (not a dict): {task_config}")
+                        logger.warning("Invalid task config (not a dict)")
                         failed_count += 1
                         continue
 
                     # Get task name - required field
                     task_name = task_config.get("name", "").strip()
                     if not task_name:
-                        logger.warning(f"Skipping task with empty name: {task_config}")
+                        logger.warning("Skipping task with empty name")
                         failed_count += 1
                         continue
 
@@ -181,13 +185,17 @@ class ProjectTemplateService:
                     # Log if task creation failed but don't stop the process
                     if not result.get("success"):
                         logger.warning(
-                            f"Failed to create task '{task_name}' from template: {result.get('message', 'Unknown error')}"
+                            "Failed to create task %s from template",
+                            sanitize_log_value(task_name),
                         )
                         failed_count += 1
                     else:
                         created_count += 1
+                        task_obj = result.get("task")
                         logger.info(
-                            f"Successfully created task '{task_name}' (ID: {result.get('task', {}).id if result.get('task') else 'unknown'})"
+                            "Successfully created task %s (ID: %s)",
+                            sanitize_log_value(task_name),
+                            sanitize_log_value(getattr(task_obj, "id", "unknown")),
                         )
 
                 logger.info(
@@ -197,7 +205,8 @@ class ProjectTemplateService:
                 import logging
 
                 logger = logging.getLogger(__name__)
-                logger.info(f"No tasks to create from template {template_id} (tasks: {template.tasks})")
+                from app.utils.error_handling import sanitize_log_value
+                logger.info("No tasks to create from template %s", sanitize_log_value(template_id))
 
             # Update template usage
             template.usage_count += 1
@@ -209,7 +218,7 @@ class ProjectTemplateService:
             return {"success": True, "message": "Project created from template successfully.", "project": project}
         except Exception as e:
             db.session.rollback()
-            return {"success": False, "message": f"Error creating project from template: {str(e)}"}
+            return {"success": False, "message": "Error creating project from template"}
 
     def get_template(self, template_id: int) -> Optional[ProjectTemplate]:
         """Get a template by ID"""
@@ -277,7 +286,8 @@ class ProjectTemplateService:
                 elif not isinstance(tasks, list):
                     import logging
 
-                    logging.getLogger(__name__).warning(f"Tasks is not a list: {type(tasks)}, value: {tasks}")
+                    from app.utils.error_handling import sanitize_log_value
+                    logging.getLogger(__name__).warning("Tasks is not a list: %s", sanitize_log_value(type(tasks).__name__))
                     tasks = []
                 template.tasks = tasks
             if "category" in kwargs:

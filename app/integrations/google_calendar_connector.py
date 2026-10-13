@@ -168,16 +168,16 @@ class GoogleCalendarConnector(BaseConnector):
             return {"success": False, "message": "Integration not configured"}
         try:
             token = self._refresh_token_if_needed()
-        except Exception as exc:
-            return {"success": False, "message": str(exc)}
+        except Exception:
+            return {"success": False, "message": "Token refresh failed"}
         try:
             resp = requests.get(
                 f"{GOOGLE_CALENDAR_API}/users/me/calendarList",
                 headers={"Authorization": f"Bearer {token}"},
                 timeout=HTTP_TIMEOUT,
             )
-        except requests.RequestException as exc:
-            return {"success": False, "message": f"Connection error: {exc}"}
+        except requests.RequestException:
+            return {"success": False, "message": "Connection error"}
         if resp.status_code != 200:
             return {"success": False, "message": f"Google returned HTTP {resp.status_code}"}
         return {"success": True, "message": f"Connected ({len(resp.json().get('items') or [])} calendars)"}
@@ -363,8 +363,8 @@ class GoogleCalendarConnector(BaseConnector):
         result = {"ok": True, "imported": 0, "skipped": 0, "exported": 0, "errors": []}
         try:
             token = self._refresh_token_if_needed()
-        except Exception as exc:
-            return {"ok": False, "error": str(exc)}
+        except Exception:
+            return {"ok": False, "error": "Token refresh failed"}
 
         try:
             if direction in ("import", "both"):
@@ -377,9 +377,9 @@ class GoogleCalendarConnector(BaseConnector):
                 result["exported"] += exp.get("exported", 0)
                 result["errors"].extend(exp.get("errors", []))
         except Exception as exc:
-            logger.warning("Google sync failed: %s", exc)
+            logger.warning("Google sync failed: %s", type(exc).__name__)
             result["ok"] = False
-            result["error"] = str(exc)
+            result["error"] = "Sync failed"
 
         try:
             cfg["last_sync_at"] = datetime.now(timezone.utc).isoformat()
@@ -425,7 +425,7 @@ class GoogleCalendarConnector(BaseConnector):
                 timeout=HTTP_TIMEOUT,
             )
         except requests.RequestException as exc:
-            return {"imported": 0, "skipped": 0, "errors": [f"Calendar fetch failed: {exc}"]}
+            return {"imported": 0, "skipped": 0, "errors": ["Calendar fetch failed"]}
 
         if resp.status_code != 200:
             return {"imported": 0, "skipped": 0, "errors": [f"Google returned HTTP {resp.status_code}"]}
@@ -489,7 +489,7 @@ class GoogleCalendarConnector(BaseConnector):
                 db.session.add(entry)
                 imported += 1
             except Exception as exc:
-                errors.append(f"{event_id}: {exc}")
+                errors.append(f"{event_id}: import failed")
 
         if imported:
             if not safe_commit("google_connector_import", {"integration_id": self.integration.id}):
@@ -553,7 +553,7 @@ class GoogleCalendarConnector(BaseConnector):
                     timeout=HTTP_TIMEOUT,
                 )
             except requests.RequestException as exc:
-                errors.append(f"entry {entry.id}: {exc}")
+                errors.append(f"entry {entry.id}: export failed")
                 continue
             if resp.status_code in (200, 201):
                 exported += 1

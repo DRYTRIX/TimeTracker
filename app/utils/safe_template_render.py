@@ -14,11 +14,18 @@ def render_sandboxed_string(source: str, *, autoescape: bool = True, **context: 
     text so markup is not HTML-entity-encoded.
 
     Raises ``jinja2.sandbox.SecurityError`` on blocked attribute access typical of SSTI.
+
+    Admin-authored PDF/email templates are intentionally rendered via Jinja2's
+    SandboxedEnvironment (not Flask ``render_template_string``) so attribute
+    access typical of SSTI is blocked. Callers must not pass untrusted end-user
+    input as ``source``.
     """
     if not source:
         return ""
+    # codeql[py/template-injection]: SandboxedEnvironment for admin-only stored templates
     env = SandboxedEnvironment(autoescape=autoescape)
-    return env.from_string(source).render(**context)
+    template = env.from_string(source)
+    return template.render(**context)
 
 
 __all__ = ["SecurityError", "render_sandboxed_string"]

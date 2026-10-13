@@ -16,6 +16,7 @@ from app.services.unpaid_hours_service import UnpaidHoursService
 from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
 from app.utils.support_report_generation import record_report_generation_for_current_user
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 custom_reports_bp = Blueprint("custom_reports", __name__)
 
@@ -172,13 +173,13 @@ def save_report_view():
             return jsonify({"success": False, "message": "Failed to save report due to a database error"}), 500
 
     except json.JSONDecodeError as e:
-        return jsonify({"success": False, "message": f"Invalid JSON: {str(e)}"}), 400
+        return jsonify({"success": False, **client_error_payload(key="message")}), 400
     except Exception as e:
         db.session.rollback()
         from flask import current_app
 
         current_app.logger.error(f"Error saving report view: {str(e)}", exc_info=True)
-        return jsonify({"success": False, "message": f"Error saving report: {str(e)}"}), 500
+        return jsonify({"success": False, **client_error_payload(key="message")}), 500
 
 
 @custom_reports_bp.route("/reports/builder/<int:view_id>")
@@ -244,7 +245,7 @@ def preview_report():
         from flask import current_app
 
         current_app.logger.error(f"Error in preview_report: {str(e)}", exc_info=True)
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, **client_error_payload(key="message")}), 500
 
 
 @custom_reports_bp.route("/reports/builder/<int:view_id>/data", methods=["GET"])
@@ -846,7 +847,7 @@ def shared_report_data(token):
         return jsonify(report_data)
     except Exception as exc:
         current_app.logger.error("Error executing shared report %s: %s", token, exc, exc_info=True)
-        return jsonify({"error": str(exc)}), 500
+        return client_error_response(status=500)
 
 
 def _generate_iterative_reports(saved_view: SavedReportView, config: dict, user_id: int):

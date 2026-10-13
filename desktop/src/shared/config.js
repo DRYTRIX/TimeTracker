@@ -1,23 +1,10 @@
-// Shared configuration between main and renderer processes
-// This is a simple wrapper around electron-store for the renderer process
+// Shared configuration between main and renderer processes.
+// Prefer Electron IPC + encrypted electron-store; memory-only fallback (no localStorage).
 
-let store = null;
+const memory = new Map();
 
-function readLocalStorageJson(key) {
-  const value = localStorage.getItem(key);
-  if (!value) return null;
-  try {
-    return JSON.parse(value);
-  } catch (e) {
-    console.warn(`Ignoring corrupt local setting "${key}":`, e);
-    localStorage.removeItem(key);
-    return null;
-  }
-}
-
-// Initialize store (called from renderer process)
 function initStore() {
-  if (window.electronAPI) {
+  if (typeof window !== 'undefined' && window.electronAPI) {
     return {
       get: (key) => window.electronAPI.storeGet(key),
       set: (key, value) => window.electronAPI.storeSet(key, value),
@@ -25,57 +12,52 @@ function initStore() {
       clear: () => window.electronAPI.storeClear(),
     };
   }
-  // Fallback to localStorage if electron API not available
   return {
-    get: (key) => {
-      return readLocalStorageJson(key);
-    },
+    get: (key) => (memory.has(key) ? memory.get(key) : null),
     set: (key, value) => {
-      localStorage.setItem(key, JSON.stringify(value));
+      memory.set(key, value);
     },
     delete: (key) => {
-      localStorage.removeItem(key);
+      memory.delete(key);
     },
     clear: () => {
-      localStorage.clear();
+      memory.clear();
     },
   };
 }
 
 const storeGet = async (key) => {
-  if (window.electronAPI) {
+  if (typeof window !== 'undefined' && window.electronAPI) {
     return await window.electronAPI.storeGet(key);
   }
-  return readLocalStorageJson(key);
+  return memory.has(key) ? memory.get(key) : null;
 };
 
 const storeSet = async (key, value) => {
-  if (window.electronAPI) {
+  if (typeof window !== 'undefined' && window.electronAPI) {
     return await window.electronAPI.storeSet(key, value);
   }
-  localStorage.setItem(key, JSON.stringify(value));
+  memory.set(key, value);
 };
 
 const storeDelete = async (key) => {
-  if (window.electronAPI) {
+  if (typeof window !== 'undefined' && window.electronAPI) {
     return await window.electronAPI.storeDelete(key);
   }
-  localStorage.removeItem(key);
+  memory.delete(key);
 };
 
 const storeClear = async () => {
-  if (window.electronAPI) {
+  if (typeof window !== 'undefined' && window.electronAPI) {
     return await window.electronAPI.storeClear();
   }
-  localStorage.clear();
+  memory.clear();
 };
 
-// Export for CommonJS
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { storeGet, storeSet, storeDelete, storeClear };
+  module.exports = { storeGet, storeSet, storeDelete, storeClear, initStore };
 }
 
-// Export for browser/ES modules
 if (typeof window !== 'undefined') {
   window.config = { storeGet, storeSet, storeDelete, storeClear };
 }

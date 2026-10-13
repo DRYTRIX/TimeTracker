@@ -5,9 +5,54 @@ Use these where failures must not break the main flow (e.g. cache, cleanup, tele
 
 import logging
 import os
-from typing import Any, Optional
+import re
+from typing import Any, Optional, Tuple
 
 _valid_log_levels = ("debug", "info", "warning", "error", "critical")
+_LOG_CRLF_RE = re.compile(r"[\r\n]+")
+
+# Generic client-facing message — never embed exception text in HTTP responses.
+DEFAULT_CLIENT_ERROR = "An unexpected error occurred"
+
+
+def sanitize_log_value(value: Any, *, max_len: int = 500) -> str:
+    """Neutralize CR/LF (log injection) and truncate untrusted values for logging."""
+    if value is None:
+        return ""
+    text = str(value)
+    text = _LOG_CRLF_RE.sub(" ", text)
+    if len(text) > max_len:
+        text = text[: max_len - 3] + "..."
+    return text
+
+
+def client_error_payload(
+    message: str = DEFAULT_CLIENT_ERROR,
+    *,
+    key: str = "error",
+) -> dict:
+    """Return a JSON-serializable error dict safe to send to clients."""
+    return {key: message}
+
+
+def client_error_response(
+    message: str = DEFAULT_CLIENT_ERROR,
+    status: int = 500,
+    *,
+    key: str = "error",
+) -> Tuple[Any, int]:
+    """
+    Build a (jsonify_body, status) pair without leaking exception details.
+
+    Usage::
+
+        except Exception:
+            current_app.logger.exception("…")
+            return client_error_response()
+    """
+    from flask import jsonify
+
+    return jsonify(client_error_payload(message, key=key)), status
 
 
 def safe_log(

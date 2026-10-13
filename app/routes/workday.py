@@ -11,6 +11,7 @@ from app.services.attendance_compliance_service import AttendanceComplianceServi
 from app.services.workday_session_service import WorkdaySessionService
 from app.services.working_time_limit_service import WorkingTimeLimitService
 from app.utils.timezone import parse_user_local_datetime_from_string
+from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 
 workday_bp = Blueprint("workday", __name__)
 
@@ -24,7 +25,7 @@ def start_workday():
         flash(_("Workday started"), "success")
     else:
         flash(result.get("message", _("Could not start workday")), "error")
-    return redirect(request.referrer or url_for("main.dashboard"))
+    return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
 
 @workday_bp.route("/workday/end", methods=["POST"])
@@ -44,14 +45,14 @@ def end_workday():
         at_time = parse_workday_end_time(end_raw)
         if at_time is None:
             flash(_("Invalid leave time"), "error")
-            return redirect(request.referrer or url_for("main.dashboard"))
+            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
     result = WorkdaySessionService().end_workday(current_user.id, notes=notes, at_time=at_time)
     if result["success"]:
         flash(_("Workday ended"), "success")
     else:
         flash(result.get("message", _("Could not end workday")), "error")
-    return redirect(request.referrer or url_for("main.dashboard"))
+    return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
 
 def _invalidate_dashboard_stats_cache(user_id: int) -> None:
@@ -87,7 +88,7 @@ def resolve_auto_closed_workday(session_id):
         at_time = parse_workday_end_time(end_raw)
         if at_time is None:
             flash(_("Invalid leave time"), "error")
-            return redirect(request.referrer or url_for("main.dashboard"))
+            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
     result = WorkdaySessionService().resolve_auto_closed_session(
         current_user.id,
@@ -108,7 +109,7 @@ def resolve_auto_closed_workday(session_id):
             flash(_("Leave time corrected"), "success")
     else:
         flash(result.get("message", _("Could not resolve auto-closed workday")), "error")
-    return redirect(request.referrer or url_for("main.dashboard"))
+    return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
 
 @workday_bp.route("/workday/break/start", methods=["POST"])
@@ -120,7 +121,7 @@ def start_break():
         flash(_("Break started"), "success")
     else:
         flash(result.get("message", _("Could not start break")), "error")
-    return redirect(request.referrer or url_for("main.dashboard"))
+    return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
 
 @workday_bp.route("/workday/break/end", methods=["POST"])
@@ -131,7 +132,7 @@ def end_break():
         flash(_("Break ended"), "success")
     else:
         flash(result.get("message", _("Could not end break")), "error")
-    return redirect(request.referrer or url_for("main.dashboard"))
+    return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
 
 @workday_bp.route("/workday/status")
@@ -201,15 +202,15 @@ def request_correction():
             work_date = datetime.strptime(work_date_str, "%Y-%m-%d").date()
         except (ValueError, TypeError):
             flash(_("Invalid date or time"), "error")
-            return redirect(request.referrer or url_for("workday.workday_history"))
+            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("workday.workday_history"))
         start_time = parse_user_local_datetime_from_string(start_str, user=current_user)
         end_time = parse_user_local_datetime_from_string(end_str, user=current_user) if end_str else None
         if not start_time:
             flash(_("Start time is required"), "error")
-            return redirect(request.referrer or url_for("workday.workday_history"))
+            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("workday.workday_history"))
         if end_str and end_time is None:
             flash(_("Invalid date or time"), "error")
-            return redirect(request.referrer or url_for("workday.workday_history"))
+            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("workday.workday_history"))
         result = service.request_missing_work_period(
             user_id=current_user.id,
             work_date=work_date,
@@ -225,10 +226,10 @@ def request_correction():
         end_parsed = parse_user_local_datetime_from_string(end_raw, user=current_user) if end_raw else None
         if start_raw and start_parsed is None:
             flash(_("Invalid date or time"), "error")
-            return redirect(request.referrer or url_for("workday.workday_history"))
+            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("workday.workday_history"))
         if end_raw and end_parsed is None:
             flash(_("Invalid date or time"), "error")
-            return redirect(request.referrer or url_for("workday.workday_history"))
+            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("workday.workday_history"))
         result = service.request_correction(
             attendance_day_id=request.form.get("attendance_day_id", type=int),
             entity_type=entity_type,
@@ -246,7 +247,7 @@ def request_correction():
         flash(_("Correction request submitted for review"), "success")
     else:
         flash(result.get("message", _("Could not submit correction")), "error")
-    return redirect(request.referrer or url_for("workday.workday_history"))
+    return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("workday.workday_history"))
 
 
 @workday_bp.route("/admin/attendance/corrections")
@@ -293,7 +294,7 @@ def admin_review_correction(correction_id):
     approve = _parse_correction_review_decision()
     if approve is None:
         flash(_("Please choose Approve or Reject"), "error")
-        return redirect(request.referrer or url_for("workday.admin_corrections_list"))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("workday.admin_corrections_list"))
 
     result = AttendanceComplianceService().review_correction(
         correction_id,
@@ -306,7 +307,7 @@ def admin_review_correction(correction_id):
     else:
         flash(result.get("message", _("Could not review correction")), "error")
     # Prefer returning to the page the admin came from (approvals list vs admin corrections)
-    return redirect(request.referrer or url_for("workday.admin_corrections_list"))
+    return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("workday.admin_corrections_list"))
 
 
 @workday_bp.route("/working-time/violations")

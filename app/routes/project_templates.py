@@ -129,15 +129,22 @@ def create_template():
             else:
                 import logging
 
-                logging.getLogger(__name__).warning(f"Tasks JSON is not a list: {type(parsed_tasks)}")
+                from app.utils.error_handling import sanitize_log_value
+                logging.getLogger(__name__).warning("Tasks JSON is not a list: %s", sanitize_log_value(type(parsed_tasks).__name__))
         except json.JSONDecodeError as e:
             import logging
+            from app.utils.error_handling import sanitize_log_value
 
-            logging.getLogger(__name__).warning(f"Failed to parse tasks JSON: {e}, raw: {tasks_json}")
+            logging.getLogger(__name__).warning(
+                "Failed to parse tasks JSON: %s", sanitize_log_value(type(e).__name__)
+            )
         except Exception as e:
             import logging
+            from app.utils.error_handling import sanitize_log_value
 
-            logging.getLogger(__name__).warning(f"Unexpected error parsing tasks: {e}")
+            logging.getLogger(__name__).warning(
+                "Unexpected error parsing tasks: %s", sanitize_log_value(type(e).__name__)
+            )
 
         # Fallback: parse from form arrays if JS didn't serialize tasks
         if not tasks:
@@ -236,15 +243,22 @@ def edit_template(template_id):
             else:
                 import logging
 
-                logging.getLogger(__name__).warning(f"Tasks JSON is not a list: {type(parsed_tasks)}")
+                from app.utils.error_handling import sanitize_log_value
+                logging.getLogger(__name__).warning("Tasks JSON is not a list: %s", sanitize_log_value(type(parsed_tasks).__name__))
         except json.JSONDecodeError as e:
             import logging
+            from app.utils.error_handling import sanitize_log_value
 
-            logging.getLogger(__name__).warning(f"Failed to parse tasks JSON: {e}, raw: {tasks_json}")
+            logging.getLogger(__name__).warning(
+                "Failed to parse tasks JSON: %s", sanitize_log_value(type(e).__name__)
+            )
         except Exception as e:
             import logging
+            from app.utils.error_handling import sanitize_log_value
 
-            logging.getLogger(__name__).warning(f"Unexpected error parsing tasks: {e}")
+            logging.getLogger(__name__).warning(
+                "Unexpected error parsing tasks: %s", sanitize_log_value(type(e).__name__)
+            )
 
         # Fallback: parse from form arrays if JS didn't serialize tasks
         if not tasks:

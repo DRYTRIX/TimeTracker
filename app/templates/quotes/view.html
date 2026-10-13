@@ -489,15 +489,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const sizeSelector = document.getElementById('pdf-size-selector');
     const exportLink = document.getElementById('export-pdf-link');
     if (sizeSelector && exportLink) {
-        // Initialize export link with default size (A4)
-        const defaultSize = sizeSelector.value || 'A4';
+        const allowedSizes = ['A4', 'Letter', 'Legal', 'A3', 'A5', 'Tabloid'];
         const baseUrl = "{{ url_for('quotes.export_quote_pdf', quote_id=quote.id) }}";
-        exportLink.href = baseUrl + '?size=' + defaultSize;
-        
-        // Update export link when size changes
+        function setExportHref(size) {
+            const safeSize = allowedSizes.indexOf(size) !== -1 ? size : 'A4';
+            exportLink.href = baseUrl + '?size=' + encodeURIComponent(safeSize);
+        }
+        setExportHref(sizeSelector.value || 'A4');
         sizeSelector.addEventListener('change', function() {
-            const size = this.value;
-            exportLink.href = baseUrl + '?size=' + size;
+            setExportHref(this.value);
         });
     }
 });

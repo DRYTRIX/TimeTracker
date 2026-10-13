@@ -12,6 +12,7 @@ from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
 from app.utils.permissions import check_permission
 from app.utils.timezone import now_in_app_timezone
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 calendar_bp = Blueprint("calendar", __name__)
 
@@ -207,10 +208,10 @@ def create_event():
         return jsonify({"success": True, "event": event.to_dict(), "message": _("Event created successfully")}), 201
 
     except (ValueError, AttributeError) as e:
-        return jsonify({"error": f"Invalid data: {str(e)}"}), 400
+        return client_error_response(status=400)
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Error creating event: {str(e)}"}), 500
+        return client_error_response(status=500)
 
 
 @calendar_bp.route("/api/calendar/events/<int:event_id>", methods=["GET"])
@@ -288,10 +289,10 @@ def update_event(event_id):
         return jsonify({"success": True, "event": event.to_dict(), "message": _("Event updated successfully")})
 
     except (ValueError, AttributeError) as e:
-        return jsonify({"error": f"Invalid data: {str(e)}"}), 400
+        return client_error_response(status=400)
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Error updating event: {str(e)}"}), 500
+        return client_error_response(status=500)
 
 
 @calendar_bp.route("/api/calendar/events/<int:event_id>", methods=["DELETE", "POST"])
@@ -324,9 +325,9 @@ def delete_event(event_id):
     except Exception as e:
         db.session.rollback()
         if request.method == "POST":
-            flash(_("Error deleting event: %(error)s", error=str(e)), "error")
+            flash(_("Error deleting event. Please try again."), "error")
             return redirect(url_for("calendar.view_calendar"))
-        return jsonify({"error": f"Error deleting event: {str(e)}"}), 500
+        return client_error_response(status=500)
 
 
 @calendar_bp.route("/api/calendar/events/<int:event_id>/move", methods=["POST"])
@@ -354,10 +355,10 @@ def move_event(event_id):
         return jsonify({"success": True, "event": event.to_dict(), "message": _("Event moved successfully")})
 
     except (ValueError, AttributeError) as e:
-        return jsonify({"error": f"Invalid data: {str(e)}"}), 400
+        return client_error_response(status=400)
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Error moving event: {str(e)}"}), 500
+        return client_error_response(status=500)
 
 
 @calendar_bp.route("/api/calendar/events/<int:event_id>/resize", methods=["POST"])
@@ -388,10 +389,10 @@ def resize_event(event_id):
         return jsonify({"success": True, "event": event.to_dict(), "message": _("Event resized successfully")})
 
     except (ValueError, AttributeError) as e:
-        return jsonify({"error": f"Invalid data: {str(e)}"}), 400
+        return client_error_response(status=400)
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Error resizing event: {str(e)}"}), 500
+        return client_error_response(status=500)
 
 
 @calendar_bp.route("/calendar/event/<int:event_id>")

@@ -71,7 +71,7 @@ from app.utils.api_responses import (
     success_response,
     validation_error_response,
 )
-from app.utils.error_handling import safe_log
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR, safe_log
 from app.utils.quote_access import quote_list_scope_user_id
 from app.utils.scope_filter import apply_client_scope, apply_project_scope
 from app.utils.timezone import get_app_timezone, parse_local_datetime, utc_to_local
@@ -3239,8 +3239,8 @@ def create_webhook():
         from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
 
         data["url"] = validate_outbound_url(data["url"])
-    except UnsafeOutboundURL as exc:
-        return validation_error_response({"url": [str(exc)]}, message="Invalid URL")
+    except UnsafeOutboundURL:
+        return validation_error_response({"url": ["Invalid URL"]}, message="Invalid URL")
     except (KeyError, ValueError, AttributeError, TypeError):
         return validation_error_response({"url": ["Invalid URL format."]}, message="Invalid URL format")
 
@@ -3350,8 +3350,8 @@ def update_webhook(webhook_id):
             from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
 
             data["url"] = validate_outbound_url(data["url"])
-        except UnsafeOutboundURL as exc:
-            return validation_error_response({"url": [str(exc)]}, message="Invalid URL")
+        except UnsafeOutboundURL:
+            return validation_error_response({"url": ["Invalid URL"]}, message="Invalid URL")
         except (ValueError, AttributeError, TypeError):
             return validation_error_response({"url": ["Invalid URL format."]}, message="Invalid URL format")
         webhook.url = data["url"]
@@ -3565,7 +3565,7 @@ def create_stock_item_api():
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error creating stock item: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 400
+        return client_error_response(status=400)
 
 
 @api_v1_bp.route("/inventory/items/<int:item_id>", methods=["PUT", "PATCH"])
@@ -3605,7 +3605,7 @@ def update_stock_item_api(item_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error updating stock item: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 400
+        return client_error_response(status=400)
 
 
 @api_v1_bp.route("/inventory/items/<int:item_id>", methods=["DELETE"])
@@ -3622,7 +3622,7 @@ def delete_stock_item_api(item_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error deactivating stock item: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 400
+        return client_error_response(status=400)
 
 
 @api_v1_bp.route("/inventory/items/<int:item_id>/availability", methods=["GET"])
@@ -3935,7 +3935,7 @@ def create_stock_movement_api():
                         consume_from_lot_id = deval_lot.id
                     except Exception as e:
                         db.session.rollback()
-                        return jsonify({"error": f"Failed to devalue stock before waste: {str(e)}"}), 400
+                        return client_error_response(status=400)
 
         # Record the movement
         try:
@@ -3960,7 +3960,7 @@ def create_stock_movement_api():
             )
         except Exception as e:
             db.session.rollback()
-            return jsonify({"error": f"Failed to record movement: {str(e)}"}), 400
+            return client_error_response(status=400)
 
         db.session.commit()
 
@@ -3982,11 +3982,11 @@ def create_stock_movement_api():
         )
     except ValueError as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+        return client_error_response(status=400)
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error recording stock movement via API: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 400
+        return client_error_response(status=400)
 
 
 # ==================== Inventory Transfers API ====================
@@ -4164,7 +4164,7 @@ def create_transfer_api():
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error creating transfer via API: {e}", exc_info=True)
-        return error_response(str(e), status_code=400)
+        return error_response(DEFAULT_CLIENT_ERROR, status_code=400)
 
     return (
         jsonify(
@@ -4396,7 +4396,7 @@ def create_supplier_api():
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error creating supplier: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 400
+        return client_error_response(status=400)
 
 
 @api_v1_bp.route("/inventory/suppliers/<int:supplier_id>", methods=["PUT", "PATCH"])
@@ -4438,7 +4438,7 @@ def update_supplier_api(supplier_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error updating supplier: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 400
+        return client_error_response(status=400)
 
 
 @api_v1_bp.route("/inventory/suppliers/<int:supplier_id>", methods=["DELETE"])
@@ -4457,7 +4457,7 @@ def delete_supplier_api(supplier_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error deactivating supplier: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 400
+        return client_error_response(status=400)
 
 
 @api_v1_bp.route("/inventory/suppliers/<int:supplier_id>/stock-items", methods=["GET"])
@@ -4741,7 +4741,7 @@ def delete_purchase_order_api(po_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error deleting purchase order: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 400
+        return client_error_response(status=400)
 
 
 @api_v1_bp.route("/inventory/purchase-orders/<int:po_id>/receive", methods=["POST"])
@@ -4784,7 +4784,7 @@ def receive_purchase_order_api(po_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error receiving purchase order: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 400
+        return client_error_response(status=400)
 
 
 # ==================== Search ====================
@@ -5234,7 +5234,7 @@ def export_time_off_pdf_api(request_id):
     try:
         pdf_bytes = build_time_off_pdf(req)
     except Exception as e:
-        return jsonify({"error": f"PDF export failed: {e}"}), 500
+        return client_error_response(status=500)
 
     return send_file(
         io.BytesIO(pdf_bytes),

@@ -10,6 +10,7 @@ from app.models import User
 from app.models.audit_log import AuditLog
 from app.utils.audit import check_audit_table_exists, reset_audit_table_cache
 from app.utils.permissions import admin_or_permission_required
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 audit_logs_bp = Blueprint("audit_logs", __name__)
 
@@ -248,7 +249,7 @@ def audit_logs_status():
                 recent = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(5).all()
                 status["recent_logs"] = [log.to_dict() for log in recent]
             except Exception as e:
-                status["error"] = str(e)
+                status["error"] = DEFAULT_CLIENT_ERROR
         else:
             # Check what tables do exist
             try:
@@ -257,8 +258,8 @@ def audit_logs_status():
                 status["available_tables"] = sorted(tables)
                 status["message"] = "audit_logs table does not exist. Run: flask db upgrade"
             except Exception as e:
-                status["error"] = f"Could not check tables: {e}"
+                status["error"] = "Could not check tables"
 
         return jsonify(status)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return client_error_response(status=500)

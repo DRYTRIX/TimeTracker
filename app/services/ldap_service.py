@@ -5,6 +5,7 @@ LDAP authentication: service-account search, optional group checks, user bind, D
 from __future__ import annotations
 
 import logging
+import re
 import secrets
 from typing import Any, Mapping, MutableMapping, Optional
 
@@ -17,6 +18,14 @@ from app.utils.deleted_usernames import is_username_reserved
 
 logger = logging.getLogger(__name__)
 
+# LDAP attribute / objectClass names: letters, digits, hyphen, semicolon (OID option)
+_LDAP_ATTR_RE = re.compile(r"^[A-Za-z][A-Za-z0-9;-]*$")
+# Conservative DN shape: one or more RDN components attr=value
+_LDAP_DN_RE = re.compile(
+    r"^(?:[A-Za-z][A-Za-z0-9;-]*=(?:\\.|[^,\\+<>;#\"=])+)"
+    r"(?:,(?:[A-Za-z][A-Za-z0-9;-]*=(?:\\.|[^,\\+<>;#\"=])+))*$"
+)
+
 try:
     from ldap3 import SIMPLE, SUBTREE, Connection, Server, Tls
     from ldap3.core.exceptions import LDAPException
@@ -25,15 +34,42 @@ except ImportError:  # pragma: no cover - exercised when ldap3 missing
     Connection = None  # type: ignore[misc, assignment]
     Server = None  # type: ignore[misc, assignment]
     LDAPException = Exception  # type: ignore[misc, assignment]
+    escape_filter_chars = None  # type: ignore[misc, assignment]
 
 
 def _config() -> MutableMapping[str, Any]:
     return current_app.config
 
 
+def _safe_ldap_attr(name: str, default: str) -> str:
+    """Return attr/objectClass name if charset-safe, else default."""
+    candidate = (name or "").strip() or default
+    if _LDAP_ATTR_RE.match(candidate):
+        return candidate
+    return default
+
+
+def _validate_dn(dn: str) -> str:
+    """
+    Validate a DN string used as search_base.
+
+    Rejects empty/malformed values so admin wizard input cannot inject filter
+    metacharacters via the base DN. Values are not filter-escaped (DNs are not
+    filter strings); they must match a conservative DN pattern.
+    """
+    cleaned = (dn or "").strip().strip(",")
+    if not cleaned:
+        return ""
+    if len(cleaned) > 1024:
+        raise ValueError("LDAP DN too long")
+    if not _LDAP_DN_RE.match(cleaned):
+        raise ValueError("Invalid LDAP DN")
+    return cleaned
+
+
 def _group_search_base(cfg: Mapping[str, Any]) -> str:
-    gdn = (cfg.get("LDAP_GROUP_DN") or "").strip().strip(",")
-    bdn = (cfg.get("LDAP_BASE_DN") or "").strip().strip(",")
+    gdn = _validate_dn(cfg.get("LDAP_GROUP_DN") or "")
+    bdn = _validate_dn(cfg.get("LDAP_BASE_DN") or "")
     if not gdn:
         return bdn
     if not bdn:
@@ -42,8 +78,8 @@ def _group_search_base(cfg: Mapping[str, Any]) -> str:
 
 
 def _user_search_base(cfg: Mapping[str, Any]) -> str:
-    udn = (cfg.get("LDAP_USER_DN") or "").strip().strip(",")
-    bdn = (cfg.get("LDAP_BASE_DN") or "").strip().strip(",")
+    udn = _validate_dn(cfg.get("LDAP_USER_DN") or "")
+    bdn = _validate_dn(cfg.get("LDAP_BASE_DN") or "")
     if not udn:
         return bdn
     if not bdn:
@@ -101,8 +137,13 @@ def _user_dn_member_of_group(
     group_cn = (group_cn or "").strip()
     if not group_cn or not user_dn:
         return False
-    base = _group_search_base(cfg)
-    oc = escape_filter_chars((cfg.get("LDAP_GROUP_OBJECT_CLASS") or "groupOfNames").strip())
+    try:
+        base = _group_search_base(cfg)
+    except ValueError:
+        return False
+    if not base:
+        return False
+    oc = escape_filter_chars(_safe_ldap_attr(cfg.get("LDAP_GROUP_OBJECT_CLASS") or "groupOfNames", "groupOfNames"))
     cn_esc = escape_filter_chars(group_cn)
     ud_esc = escape_filter_chars(user_dn)
     filt = f"(&(objectClass={oc})(cn={cn_esc})(member={ud_esc}))"
@@ -144,18 +185,25 @@ class LDAPService:
             if not svc_conn:
                 return None
 
-            user_base = _user_search_base(cfg)
-            login_attr = (cfg.get("LDAP_USER_LOGIN_ATTR") or "uid").strip()
-            user_oc = (cfg.get("LDAP_USER_OBJECT_CLASS") or "inetOrgPerson").strip()
+            try:
+                user_base = _user_search_base(cfg)
+            except ValueError:
+                logger.warning("LDAP user search base invalid")
+                return None
+            if not user_base:
+                logger.warning("LDAP user search base empty")
+                return None
+            login_attr = _safe_ldap_attr(cfg.get("LDAP_USER_LOGIN_ATTR") or "uid", "uid")
+            user_oc = _safe_ldap_attr(cfg.get("LDAP_USER_OBJECT_CLASS") or "inetOrgPerson", "inetOrgPerson")
             u_esc = escape_filter_chars(username.lower())
             la_esc = escape_filter_chars(login_attr)
             oc_esc = escape_filter_chars(user_oc)
             filt = f"(&(objectClass={oc_esc})({la_esc}={u_esc}))"
             fetch_attrs = {
-                (cfg.get("LDAP_USER_LOGIN_ATTR") or "uid").strip(),
-                (cfg.get("LDAP_USER_EMAIL_ATTR") or "mail").strip(),
-                (cfg.get("LDAP_USER_FNAME_ATTR") or "givenName").strip(),
-                (cfg.get("LDAP_USER_LNAME_ATTR") or "sn").strip(),
+                _safe_ldap_attr(cfg.get("LDAP_USER_LOGIN_ATTR") or "uid", "uid"),
+                _safe_ldap_attr(cfg.get("LDAP_USER_EMAIL_ATTR") or "mail", "mail"),
+                _safe_ldap_attr(cfg.get("LDAP_USER_FNAME_ATTR") or "givenName", "givenName"),
+                _safe_ldap_attr(cfg.get("LDAP_USER_LNAME_ATTR") or "sn", "sn"),
             }
             svc_conn.search(
                 search_base=user_base,
@@ -367,9 +415,20 @@ class LDAPService:
             return {"success": False, "message": f"Error: {type(e).__name__}", "user_count": None}
 
         try:
-            user_base = _user_search_base(effective_cfg)
-            user_oc = escape_filter_chars((effective_cfg.get("LDAP_USER_OBJECT_CLASS") or "inetOrgPerson").strip())
+            try:
+                user_base = _user_search_base(effective_cfg)
+            except ValueError:
+                return {"success": False, "message": "Invalid LDAP base DN", "user_count": None}
+            if not user_base:
+                return {"success": False, "message": "LDAP base DN is required", "user_count": None}
+            user_oc_raw = _safe_ldap_attr(
+                effective_cfg.get("LDAP_USER_OBJECT_CLASS") or "inetOrgPerson",
+                "inetOrgPerson",
+            )
+            user_oc = escape_filter_chars(user_oc_raw)
             filt = f"(objectClass={user_oc})"
+            # search_base validated by _validate_dn (charset + DN shape); filter values escaped
+            # codeql[py/ldap-injection]: DN validated via _validate_dn; filter uses escape_filter_chars
             conn.search(
                 search_base=user_base,
                 search_filter=filt,

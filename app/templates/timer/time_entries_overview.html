@@ -441,12 +441,29 @@ function confirmBulkDelete() {
         const btn = document.getElementById('exportCsvBtn');
         const pdfBtn = document.getElementById('exportPdfBtn');
         if (!btn && !pdfBtn) return;
-        const base = btn ? (btn.getAttribute('data-export-base') || '/time-entries/export/csv') : '/time-entries/export/csv';
-        const pdfBase = pdfBtn ? (pdfBtn.getAttribute('data-export-base') || '/time-entries/export/pdf') : '/time-entries/export/pdf';
-        const qsIndex = String(filterUrl || '').indexOf('?');
-        const qs = qsIndex >= 0 ? String(filterUrl).slice(qsIndex + 1) : '';
-        if (btn) btn.href = qs ? `${base}?${qs}` : base;
-        if (pdfBtn) pdfBtn.href = qs ? `${pdfBase}?${qs}` : pdfBase;
+        const csvBase = '/time-entries/export/csv';
+        const pdfBase = '/time-entries/export/pdf';
+        let params = new URLSearchParams();
+        const filterStr = String(filterUrl || '');
+        const qsIndex = filterStr.indexOf('?');
+        if (qsIndex >= 0) {
+            try {
+                const parsed = new URL(filterStr, window.location.origin);
+                params = new URLSearchParams(parsed.search);
+            } catch (_) {
+                params = new URLSearchParams(filterStr.slice(qsIndex + 1));
+            }
+        }
+        if (btn) {
+            const u = new URL(csvBase, window.location.origin);
+            params.forEach(function(v, k) { u.searchParams.append(k, v); });
+            btn.href = u.pathname + u.search;
+        }
+        if (pdfBtn) {
+            const u = new URL(pdfBase, window.location.origin);
+            params.forEach(function(v, k) { u.searchParams.append(k, v); });
+            pdfBtn.href = u.pathname + u.search;
+        }
     }
     
     function getFilterParams() {
@@ -566,36 +583,27 @@ function confirmBulkDelete() {
             // Ignore stale responses
             if (requestId !== latestRequestId) return;
 
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = html.trim();
-            
-            const newContainer = tempDiv.querySelector('#timeEntriesListContainer');
-            
             let parsed = false;
-            if (newContainer) {
-                container.innerHTML = newContainer.innerHTML;
-                parsed = true;
-            } else {
-                // Fallback: try DOMParser for full HTML documents (Issue #489)
-                try {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const fallbackContainer = doc.getElementById('timeEntriesListContainer');
-                    if (fallbackContainer) {
-                        container.innerHTML = fallbackContainer.innerHTML;
-                        parsed = true;
-                    } else {
-                        if (typeof console !== 'undefined' && console.warn) {
-                            console.warn('[Time Entries] Filter response missing #timeEntriesListContainer');
-                        }
-                        if (inFlightUrl === url) inFlightUrl = null;
-                    }
-                } catch (parseErr) {
+            try {
+                // Parse server HTML without assigning to innerHTML, then swap the node
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newContainer = doc.getElementById('timeEntriesListContainer');
+                if (newContainer) {
+                    const imported = document.importNode(newContainer, true);
+                    container.replaceWith(imported);
+                    parsed = true;
+                } else {
                     if (typeof console !== 'undefined' && console.warn) {
-                        console.warn('[Time Entries] Failed to parse filter response:', parseErr);
+                        console.warn('[Time Entries] Filter response missing #timeEntriesListContainer');
                     }
                     if (inFlightUrl === url) inFlightUrl = null;
                 }
+            } catch (parseErr) {
+                if (typeof console !== 'undefined' && console.warn) {
+                    console.warn('[Time Entries] Failed to parse filter response:', parseErr);
+                }
+                if (inFlightUrl === url) inFlightUrl = null;
             }
             
             // Re-initialize bulk actions after content update
@@ -608,8 +616,11 @@ function confirmBulkDelete() {
                 return; // Expected when rapidly changing filters
             }
             console.error('Filter error:', error);
-            container.style.opacity = '';
-            container.style.pointerEvents = '';
+            const liveContainer = document.getElementById('timeEntriesListContainer');
+            if (liveContainer) {
+                liveContainer.style.opacity = '';
+                liveContainer.style.pointerEvents = '';
+            }
             // Allow retrying the same URL after failures.
             if (inFlightUrl === url) inFlightUrl = null;
             if (window.toastManager) {
@@ -621,8 +632,11 @@ function confirmBulkDelete() {
         .finally(() => {
             // Only clear loading state for the latest request
             if (requestId !== latestRequestId) return;
-            container.style.opacity = '';
-            container.style.pointerEvents = '';
+            const liveContainer = document.getElementById('timeEntriesListContainer');
+            if (liveContainer) {
+                liveContainer.style.opacity = '';
+                liveContainer.style.pointerEvents = '';
+            }
             if (inFlightUrl === url) inFlightUrl = null;
         });
     }
@@ -655,11 +669,17 @@ function confirmBulkDelete() {
             if (window.location.search) {
                 const csvBtn = document.getElementById('exportCsvBtn');
                 const pdfBtn = document.getElementById('exportPdfBtn');
-                const base = csvBtn ? (csvBtn.getAttribute('data-export-base') || '/time-entries/export/csv') : '/time-entries/export/csv';
-                const pdfBase = pdfBtn ? (pdfBtn.getAttribute('data-export-base') || '/time-entries/export/pdf') : '/time-entries/export/pdf';
-                const qs = window.location.search.slice(1);
-                if (csvBtn) csvBtn.href = base + (qs ? '?' + qs : '');
-                if (pdfBtn) pdfBtn.href = pdfBase + (qs ? '?' + qs : '');
+                const params = new URLSearchParams(window.location.search);
+                if (csvBtn) {
+                    const u = new URL('/time-entries/export/csv', window.location.origin);
+                    params.forEach(function(v, k) { u.searchParams.append(k, v); });
+                    csvBtn.href = u.pathname + u.search;
+                }
+                if (pdfBtn) {
+                    const u = new URL('/time-entries/export/pdf', window.location.origin);
+                    params.forEach(function(v, k) { u.searchParams.append(k, v); });
+                    pdfBtn.href = u.pathname + u.search;
+                }
             }
         } catch (_) {}
 
@@ -685,23 +705,24 @@ function confirmBulkDelete() {
         // Export CSV/PDF: always use current form params on click (Issue #555: export respects date/filters)
         const exportCsvBtn = document.getElementById('exportCsvBtn');
         const exportPdfBtn = document.getElementById('exportPdfBtn');
-        function buildExportUrl(base) {
+        function buildExportUrl(fixedBase) {
             const params = getFilterParams();
-            const qs = new URLSearchParams(params).toString();
-            return qs ? base + '?' + qs : base;
+            const u = new URL(fixedBase, window.location.origin);
+            Object.keys(params).forEach(function(k) {
+                u.searchParams.set(k, params[k]);
+            });
+            return u.pathname + u.search;
         }
         if (exportCsvBtn) {
             exportCsvBtn.addEventListener('click', function(e) {
                 e.preventDefault();
-                const base = this.getAttribute('data-export-base') || '/time-entries/export/csv';
-                window.location.href = buildExportUrl(base);
+                window.location.href = buildExportUrl('/time-entries/export/csv');
             });
         }
         if (exportPdfBtn) {
             exportPdfBtn.addEventListener('click', function(e) {
                 e.preventDefault();
-                const base = this.getAttribute('data-export-base') || '/time-entries/export/pdf';
-                window.location.href = buildExportUrl(base);
+                window.location.href = buildExportUrl('/time-entries/export/pdf');
             });
         }
 

@@ -522,12 +522,16 @@ def upload_attachment(channel_id):
         return jsonify({"error": _(error_msg)}), 400
 
     # Save file - secure_filename after validation
+    from app.utils.paths import PathEscapeError, safe_path_under
+
     original_filename = secure_filename(file.filename)
     if not original_filename:
         return jsonify({"error": _("Invalid filename")}), 400
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{channel_id}_{timestamp}_{original_filename}"
+    filename = secure_filename(f"{channel_id}_{timestamp}_{original_filename}")
+    if not filename:
+        return jsonify({"error": _("Invalid filename")}), 400
 
     # Ensure upload directory exists
     upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
@@ -537,10 +541,12 @@ def upload_attachment(channel_id):
         current_app.logger.error(f"Failed to create upload directory {upload_dir}: {e}")
         return jsonify({"error": _("Server error: Could not create upload directory")}), 500
 
-    file_path = os.path.join(upload_dir, filename)
     try:
+        file_path = safe_path_under(upload_dir, filename)
         file.save(file_path)
         file_size = os.path.getsize(file_path)
+    except PathEscapeError:
+        return jsonify({"error": _("Invalid upload path")}), 400
     except (OSError, IOError) as e:
         current_app.logger.error(f"Failed to save file {filename}: {e}")
         return jsonify({"error": _("Server error: Could not save file")}), 500

@@ -58,3 +58,33 @@ def test_is_safe_referrer_same_host_vs_other_host(app):
         assert is_safe_referrer("") is False
         # When same-host is not required, absolute third-party URLs pass
         assert is_safe_referrer("http://evil.com/phish", require_same_host=False) is True
+
+
+def test_safe_redirect_target_fallback_url(app):
+    from app.utils.safe_redirect import safe_redirect_target
+
+    with app.test_request_context("/", base_url="http://localhost:5000/"):
+        assert (
+            safe_redirect_target(
+                "http://evil.com/phish",
+                allow_absolute_same_host=True,
+                fallback="/invoices/1",
+            )
+            == "/invoices/1"
+        )
+        assert (
+            safe_redirect_target(
+                "http://localhost:5000/projects/1",
+                allow_absolute_same_host=True,
+                fallback="/invoices/1",
+            )
+            == "http://localhost:5000/projects/1"
+        )
+
+
+def test_sanitize_log_value_strips_crlf():
+    from app.utils.error_handling import sanitize_log_value
+
+    assert "\n" not in sanitize_log_value("a\nb\rc")
+    assert sanitize_log_value("a\nb\rc") == "a b c"
+    assert len(sanitize_log_value("x" * 1000, max_len=20)) <= 20

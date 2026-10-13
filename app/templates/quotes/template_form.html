@@ -118,7 +118,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function () {
     const container = document.getElementById('template-items');
     const addBtn = document.getElementById('add-template-item');

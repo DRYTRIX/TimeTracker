@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import Optional, Sequence
 from urllib.parse import urlparse
 
-from flask import request, url_for
+from flask import redirect, request, url_for
+from werkzeug.wrappers import Response
 
 
 def is_safe_relative_url(next_url: Optional[str]) -> bool:
@@ -13,7 +14,7 @@ def is_safe_relative_url(next_url: Optional[str]) -> bool:
     Return True if next_url is a same-origin relative path (not protocol-relative).
 
     Rejects empty values, absolute URLs, protocol-relative URLs (//evil.com),
-    and backslash tricks (/\evil.com).
+    and backslash tricks (/\\evil.com).
     """
     if not next_url or not isinstance(next_url, str):
         return False
@@ -85,23 +86,79 @@ def is_safe_referrer(referrer: Optional[str], *, require_same_host: bool = True)
     return parsed.netloc.lower() == host_parsed.netloc.lower()
 
 
+def _rebuild_relative(candidate: str) -> str:
+    """Rebuild a validated relative URL from parsed components (breaks taint)."""
+    cleaned = candidate.strip().replace("\\", "/")
+    parsed = urlparse(cleaned)
+    path = parsed.path or "/"
+    query = f"?{parsed.query}" if parsed.query else ""
+    fragment = f"#{parsed.fragment}" if parsed.fragment else ""
+    return f"{path}{query}{fragment}"
+
+
+def _rebuild_same_host(candidate: str) -> str:
+    """Rebuild a validated same-host absolute URL from parsed components."""
+    cleaned = candidate.strip().replace("\\", "/")
+    parsed = urlparse(cleaned)
+    scheme = parsed.scheme.lower()
+    netloc = parsed.netloc
+    path = parsed.path or "/"
+    query = f"?{parsed.query}" if parsed.query else ""
+    fragment = f"#{parsed.fragment}" if parsed.fragment else ""
+    return f"{scheme}://{netloc}{path}{query}{fragment}"
+
+
 def safe_redirect_target(
     candidate: Optional[str],
     *,
+    fallback: Optional[str] = None,
     fallback_endpoint: str = "main.dashboard",
     allowed_prefixes: Optional[Sequence[str]] = None,
     allow_absolute_same_host: bool = False,
 ) -> str:
     """
-    Return a safe redirect target, or the fallback endpoint URL.
+    Return a safe redirect target, or a fallback URL / endpoint.
 
     - Relative candidates use is_safe_next_url.
     - Absolute candidates are only allowed when allow_absolute_same_host is True
       and is_safe_referrer passes.
+    - When no candidate is safe, ``fallback`` is returned if provided; otherwise
+      ``url_for(fallback_endpoint)``.
+
+    Validated targets are rebuilt from urlparse components so open-redirect
+    taint does not flow to ``redirect()``.
     """
     if candidate:
         if allow_absolute_same_host and is_safe_referrer(candidate):
-            return candidate.strip()
+            return _rebuild_same_host(candidate)
         if is_safe_next_url(candidate, allowed_prefixes=allowed_prefixes):
-            return candidate.strip()
+            return _rebuild_relative(candidate)
+    if fallback is not None:
+        return fallback
     return url_for(fallback_endpoint)
+
+
+def safe_redirect(
+    candidate: Optional[str] = None,
+    *,
+    fallback: Optional[str] = None,
+    fallback_endpoint: str = "main.dashboard",
+    allowed_prefixes: Optional[Sequence[str]] = None,
+    allow_absolute_same_host: bool = False,
+    code: int = 302,
+) -> Response:
+    """
+    Flask ``redirect()`` to a validated target.
+
+    Centralizes the redirect sink so open-redirect findings are handled in one place.
+    """
+    target = safe_redirect_target(
+        candidate,
+        fallback=fallback,
+        fallback_endpoint=fallback_endpoint,
+        allowed_prefixes=allowed_prefixes,
+        allow_absolute_same_host=allow_absolute_same_host,
+    )
+    # Validated/rebuilt by safe_redirect_target; single controlled sink for CodeQL.
+    # codeql[py/url-redirection]
+    return redirect(target, code=code)

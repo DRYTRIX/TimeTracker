@@ -498,18 +498,21 @@ function updatePreviewContent(htmlContent) {
     fullHtml += htmlContent;
     fullHtml += '</body></html>';
     
-    // Create iframe for safe preview
-    previewDiv.innerHTML = '<iframe id="preview_iframe" style="width: 100%; height: 100%; border: none;"></iframe>';
-    const iframe = document.getElementById('preview_iframe');
-    if (iframe) {
-        try {
-            iframe.contentDocument.open();
-            iframe.contentDocument.write(fullHtml);
-            iframe.contentDocument.close();
-        } catch (e) {
-            console.error('Error writing to iframe:', e);
-            previewDiv.innerHTML = '<div class="text-red-500 p-4">Preview unavailable. Please check browser console.</div>';
-        }
+    // Sandboxed iframe preview (srcdoc; no scripts)
+    previewDiv.replaceChildren();
+    try {
+        const iframe = document.createElement('iframe');
+        iframe.id = 'preview_iframe';
+        iframe.style.cssText = 'width: 100%; height: 100%; border: none;';
+        iframe.setAttribute('sandbox', 'allow-same-origin');
+        iframe.srcdoc = fullHtml;
+        previewDiv.appendChild(iframe);
+    } catch (e) {
+        console.error('Error writing to iframe:', e);
+        const err = document.createElement('div');
+        err.className = 'text-red-500 p-4';
+        err.textContent = 'Preview unavailable. Please check browser console.';
+        previewDiv.appendChild(err);
     }
 }
 

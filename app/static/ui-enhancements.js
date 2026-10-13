@@ -62,6 +62,17 @@
         });
     }
 
+    /** Allowlisted Font Awesome class strings only (e.g. "fas fa-edit"). */
+    function sanitizeContextMenuIcon(icon) {
+        const fallback = 'fas fa-circle';
+        if (typeof icon !== 'string') return fallback;
+        const trimmed = icon.trim();
+        if (/^(fa[srlbd]|fas|far|fal|fab|fad)(\s+fa-[\w-]+)+$/.test(trimmed)) {
+            return trimmed;
+        }
+        return fallback;
+    }
+
     /**
      * Show context menu at position
      */
@@ -81,10 +92,15 @@
                 } else {
                     const menuItem = document.createElement('div');
                     menuItem.className = 'context-menu-item' + (item.danger ? ' danger' : '');
-                    menuItem.innerHTML = `
-                        <i class="${item.icon || 'fas fa-circle'}"></i>
-                        <span>${item.label}</span>
-                    `;
+
+                    const iconEl = document.createElement('i');
+                    iconEl.className = sanitizeContextMenuIcon(item.icon);
+
+                    const labelEl = document.createElement('span');
+                    labelEl.textContent = item.label != null ? String(item.label) : '';
+
+                    menuItem.appendChild(iconEl);
+                    menuItem.appendChild(labelEl);
                     
                     if (item.action) {
                         menuItem.addEventListener('click', function() {

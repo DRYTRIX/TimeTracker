@@ -649,7 +649,7 @@
                     if (link && link.href && !link.target && !link.hasAttribute('download')) {
                         const href = link.getAttribute('href');
                         // Only handle internal links
-                        if (href && !href.startsWith('#') && !href.startsWith('javascript:') && !href.startsWith('mailto:') && !href.startsWith('tel:')) {
+                        if (href && !href.startsWith('#') && !/^(javascript|data|vbscript):/i.test(href) && !href.startsWith('mailto:') && !href.startsWith('tel:')) {
                             try {
                                 const url = new URL(href, window.location.origin);
                                 // Only save if it's a same-origin navigation

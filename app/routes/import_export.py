@@ -23,6 +23,7 @@ from app.utils.data_import import (
     restore_from_backup,
 )
 from app.utils.module_helpers import module_enabled
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 import_export_bp = Blueprint("import_export", __name__)
 
@@ -77,7 +78,8 @@ def import_csv():
         return jsonify({"success": True, "import_id": import_record.id, "summary": summary}), 200
 
     except DataImportError as e:
-        return jsonify({"error": str(e)}), 400
+        current_app.logger.warning("Import validation failed: %s", e)
+        return client_error_response("Import failed", 400)
     except Exception as e:
         current_app.logger.error(f"CSV import error: {str(e)}")
         return jsonify({"error": "Import failed. Please check the file format."}), 500
@@ -136,7 +138,8 @@ def import_toggl():
         return jsonify({"success": True, "import_id": import_record.id, "summary": summary}), 200
 
     except DataImportError as e:
-        return jsonify({"error": str(e)}), 400
+        current_app.logger.warning("Import validation failed: %s", e)
+        return client_error_response("Import failed", 400)
     except Exception as e:
         current_app.logger.error(f"Toggl import error: {str(e)}")
         return jsonify({"error": "Import failed. Please check your credentials and try again."}), 500
@@ -195,7 +198,8 @@ def import_harvest():
         return jsonify({"success": True, "import_id": import_record.id, "summary": summary}), 200
 
     except DataImportError as e:
-        return jsonify({"error": str(e)}), 400
+        current_app.logger.warning("Import validation failed: %s", e)
+        return client_error_response("Import failed", 400)
     except Exception as e:
         current_app.logger.error(f"Harvest import error: {str(e)}")
         return jsonify({"error": "Import failed. Please check your credentials and try again."}), 500
@@ -532,13 +536,14 @@ def restore_backup():
             app_obj = current_app._get_current_object()
             success, message = restore_backup_archive(app_obj, filepath)
             if not success:
-                return jsonify({"error": message}), 400
+                current_app.logger.warning("Backup restore failed: %s", message)
+                return client_error_response("Backup restore failed", 400)
             return (
                 jsonify(
                     {
                         "success": True,
                         "import_id": None,
-                        "statistics": {"message": message},
+                        "statistics": {"message": "Backup restored successfully"},
                         "message": "Backup restored successfully",
                     }
                 ),
@@ -565,7 +570,8 @@ def restore_backup():
             )
 
     except DataImportError as e:
-        return jsonify({"error": str(e)}), 400
+        current_app.logger.warning("Import validation failed: %s", e)
+        return client_error_response("Import failed", 400)
     except Exception as e:
         current_app.logger.error(f"Backup restore error: {str(e)}")
         return jsonify({"error": "Restore failed. Please check the backup file."}), 500
@@ -722,7 +728,7 @@ def import_csv_clients_route():
         except Exception as e:
             current_app.logger.error(f"Failed to create import record: {str(e)}")
             db.session.rollback()
-            return jsonify({"error": f"Failed to initialize import: {str(e)}"}), 500
+            return client_error_response("Failed to initialize import", 500)
 
         # Perform import
         try:
@@ -745,7 +751,7 @@ def import_csv_clients_route():
                 except Exception as db_error:
                     db.session.rollback()
                     current_app.logger.error(f"Failed to update import record status: {db_error}")
-            return jsonify({"error": str(e)}), 400
+            return client_error_response("Import failed", 400)
         except Exception as e:
             current_app.logger.exception(f"Unexpected error in client import: {str(e)}")
             if import_record:
@@ -757,16 +763,14 @@ def import_csv_clients_route():
                     current_app.logger.error(f"Failed to update import record status: {db_error}")
             # Return detailed error in debug mode, generic in production
             error_msg = (
-                str(e)
-                if current_app.config.get("FLASK_DEBUG")
-                else "Import failed. Please check the file format and try again."
+                "Import failed. Please check the file format and try again."
             )
             return jsonify({"error": error_msg}), 500
 
     except Exception as e:
         current_app.logger.exception(f"Top-level error in client import route: {str(e)}")
         error_msg = (
-            str(e) if current_app.config.get("FLASK_DEBUG") else "An unexpected error occurred. Please try again."
+            "An unexpected error occurred. Please try again."
         )
         return jsonify({"error": error_msg}), 500
 

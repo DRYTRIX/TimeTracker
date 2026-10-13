@@ -240,16 +240,38 @@ class Calendar {
     async postMoveOrResize(kind, eventId, body) {
         const base = kind === 'move' ? this.moveEventUrl : this.resizeEventUrl;
         if (!base) return;
+        const idNum = typeof eventId === 'number' ? eventId : parseInt(String(eventId), 10);
+        if (!Number.isInteger(idNum) || idNum <= 0) {
+            console.error('Calendar move/resize rejected: invalid event id');
+            return;
+        }
         // Template strips /0 from .../events/0/move → .../events/move; restore id before action
         const action = kind === 'move' ? 'move' : 'resize';
-        let finalUrl = base;
-        if (base.endsWith(`/${action}`)) {
-            finalUrl = base.replace(new RegExp(`/${action}$`), `/${eventId}/${action}`);
-        } else {
-            finalUrl = `${base.replace(/\/$/, '')}/${eventId}/${action}`;
+        let path;
+        try {
+            const baseUrl = new URL(base, window.location.origin);
+            if (baseUrl.origin !== window.location.origin) {
+                console.error('Calendar move/resize rejected: cross-origin base URL');
+                return;
+            }
+            let pathname = baseUrl.pathname.replace(/\/$/, '');
+            if (pathname.endsWith(`/${action}`)) {
+                pathname = pathname.replace(new RegExp(`/${action}$`), `/${idNum}/${action}`);
+            } else {
+                pathname = `${pathname}/${idNum}/${action}`;
+            }
+            baseUrl.pathname = pathname;
+            path = baseUrl.href;
+            if (new URL(path).origin !== window.location.origin) {
+                console.error('Calendar move/resize rejected: non-same-origin final URL');
+                return;
+            }
+        } catch (e) {
+            console.error('Calendar move/resize URL build failed', e);
+            return;
         }
         try {
-            const resp = await fetch(finalUrl, {
+            const resp = await fetch(path, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

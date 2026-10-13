@@ -15,6 +15,7 @@ from app.utils.api_responses import (
     handle_validation_error,
     validation_error_response,
 )
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 api_v1_time_entries_bp = Blueprint("api_v1_time_entries", __name__, url_prefix="/api/v1")
 
@@ -421,7 +422,7 @@ def timer_heartbeat():
     try:
         active_timer.record_heartbeat()
     except ValueError as e:
-        return error_response(str(e), error_code="heartbeat_failed", status_code=400)
+        return error_response(DEFAULT_CLIENT_ERROR, error_code="heartbeat_failed", status_code=400)
 
     if not safe_commit("timer_heartbeat", {"user_id": g.api_user.id, "entry_id": active_timer.id}):
         db.session.rollback()
@@ -446,6 +447,7 @@ def timer_review():
     """
     from datetime import datetime
 
+    from app import db
     from app.models import Settings
     from app.models.time_entry import local_now
     from app.utils.db import safe_commit
@@ -489,7 +491,7 @@ def timer_review():
         return jsonify({"ok": True, "stopped": True, "time_entry": active_timer.to_dict()})
     except ValueError as e:
         db.session.rollback()
-        return error_response(str(e), error_code="review_failed", status_code=400)
+        return error_response(DEFAULT_CLIENT_ERROR, error_code="review_failed", status_code=400)
     except Exception as e:
         db.session.rollback()
         current_app.logger.warning("Timer review failed for user %s: %s", g.api_user.id, e)
@@ -510,6 +512,7 @@ def timer_idle_response():
     token the client was shown, and stale answers return
     ``{"already_resolved": true}`` so callers dismiss instead of acting.
     """
+    from app import db
     from app.services.time_tracking_service import TimeTrackingService
 
     data = request.get_json(silent=True) or {}
@@ -521,7 +524,7 @@ def timer_idle_response():
         result = TimeTrackingService().resolve_idle_prompt(g.api_user, answer, notified_at=data.get("notified_at"))
     except ValueError as e:
         db.session.rollback()
-        return error_response(str(e), error_code="invalid_action", status_code=400)
+        return error_response(DEFAULT_CLIENT_ERROR, error_code="invalid_action", status_code=400)
     except LookupError:
         return error_response("No active timer", error_code="no_active_timer", status_code=400)
     except RuntimeError:

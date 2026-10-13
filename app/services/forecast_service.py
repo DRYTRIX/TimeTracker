@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional
 from app import db
 from app.models import Project, Task, TimeEntry
 from app.services.llm_service import AIServiceError, LLMService
+from app.utils.error_handling import sanitize_log_value
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +102,7 @@ class ForecastService:
         try:
             project = Project.query.get(int(project_id))
         except Exception:
-            logger.exception("ForecastService: failed to load project %s", project_id)
+            logger.exception("ForecastService: failed to load project %s", sanitize_log_value(project_id))
             return cls._empty_forecast(None)
 
         if project is None:
@@ -121,7 +122,7 @@ class ForecastService:
                 .all()
             )
         except Exception:
-            logger.exception("ForecastService: time entry query failed for project %s", project_id)
+            logger.exception("ForecastService: time entry query failed for project %s", sanitize_log_value(project_id))
             rows = []
 
         total_seconds = 0
@@ -252,7 +253,7 @@ class ForecastService:
         try:
             task_rows = db.session.query(Task.status, Task.due_date).filter(Task.project_id == project.id).all()
         except Exception:
-            logger.exception("ForecastService: task query failed for project %s", project_id)
+            logger.exception("ForecastService: task query failed for project %s", sanitize_log_value(project_id))
             task_rows = []
 
         total_tasks = len(task_rows)
@@ -360,8 +361,8 @@ class ForecastService:
         except AIServiceError as exc:
             return {
                 "ok": False,
-                "error": exc.message,
-                "error_code": exc.code,
+                "error": "AI service unavailable",
+                "error_code": getattr(exc, "code", None) or "ai_error",
                 "narrative": None,
                 "risks": [],
                 "recommendations": [],
@@ -413,18 +414,18 @@ class ForecastService:
         except AIServiceError as exc:
             return {
                 "ok": False,
-                "error": exc.message,
-                "error_code": exc.code,
+                "error": "AI service unavailable",
+                "error_code": getattr(exc, "code", None) or "ai_error",
                 "narrative": None,
                 "risks": [],
                 "recommendations": [],
                 "deterministic": deterministic,
             }
         except Exception as exc:
-            logger.exception("ForecastService: AI completion failed for project %s", project_id)
+            logger.exception("ForecastService: AI completion failed for project %s", sanitize_log_value(project_id))
             return {
                 "ok": False,
-                "error": str(exc) or "ai_error",
+                "error": "ai_error",
                 "error_code": "ai_error",
                 "narrative": None,
                 "risks": [],

@@ -8,6 +8,7 @@ from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
 from app.utils.permissions import admin_or_permission_required
 from app.utils.scope_filter import get_active_projects_for_user
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 kanban_bp = Blueprint("kanban", __name__)
 
@@ -194,7 +195,7 @@ def create_column():
             db.session.flush()
         except Exception as e:
             db.session.rollback()
-            flash(f"Could not create column: {str(e)}", "error")
+            flash(DEFAULT_CLIENT_ERROR, "error")
             print(f"[KANBAN] Flush failed: {e}")
             from app.models import Project
 
@@ -273,7 +274,7 @@ def edit_column(column_id):
             db.session.flush()
         except Exception as e:
             db.session.rollback()
-            flash(f"Could not update column: {str(e)}", "error")
+            flash(DEFAULT_CLIENT_ERROR, "error")
             print(f"[KANBAN] Flush failed: {e}")
             return render_template("kanban/edit_column.html", column=column)
 
@@ -344,7 +345,7 @@ def delete_column(column_id):
         db.session.flush()
     except Exception as e:
         db.session.rollback()
-        flash(f"Could not delete column: {str(e)}", "error")
+        flash(DEFAULT_CLIENT_ERROR, "error")
         print(f"[KANBAN] Flush failed: {e}")
         redirect_url = url_for("kanban.list_columns")
         if project_id:
@@ -397,7 +398,7 @@ def toggle_column(column_id):
         db.session.flush()
     except Exception as e:
         db.session.rollback()
-        flash(f"Could not toggle column: {str(e)}", "error")
+        flash(DEFAULT_CLIENT_ERROR, "error")
         print(f"[KANBAN] Flush failed: {e}")
         return redirect(url_for("kanban.list_columns"))
 
@@ -469,7 +470,7 @@ def reorder_columns():
         return jsonify({"success": True, "message": "Columns reordered successfully"})
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return client_error_response(status=500)
 
 
 @kanban_bp.route("/api/kanban/columns")

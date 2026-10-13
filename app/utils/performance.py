@@ -46,10 +46,12 @@ def init_performance_logging(app):
             if duration_ms < slow_ms:
                 return response
             query_count = getattr(g, "_perf_query_count", getattr(g, "query_count", None))
+            from app.utils.error_handling import sanitize_log_value
+
             if query_count is not None:
                 logger.warning(
                     "slow_request path=%s duration_ms=%.0f status=%s query_count=%s",
-                    request.path,
+                    sanitize_log_value(request.path),
                     duration_ms,
                     response.status_code,
                     query_count,
@@ -57,7 +59,7 @@ def init_performance_logging(app):
             else:
                 logger.warning(
                     "slow_request path=%s duration_ms=%.0f status=%s",
-                    request.path,
+                    sanitize_log_value(request.path),
                     duration_ms,
                     response.status_code,
                 )

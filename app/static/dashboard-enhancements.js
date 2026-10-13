@@ -171,40 +171,52 @@
         if (!activityTimeline) return;
 
         if (activities.length === 0) {
-            activityTimeline.innerHTML = `
-                <div class="text-center py-8 text-text-muted-light dark:text-text-muted-dark">
-                    <i class="fas fa-inbox text-4xl mb-4 opacity-50"></i>
-                    <p>No recent activity</p>
-                </div>
-            `;
+            activityTimeline.replaceChildren();
+            const empty = document.createElement('div');
+            empty.className = 'text-center py-8 text-text-muted-light dark:text-text-muted-dark';
+            empty.innerHTML = '<i class="fas fa-inbox text-4xl mb-4 opacity-50"></i>';
+            const p = document.createElement('p');
+            p.textContent = 'No recent activity';
+            empty.appendChild(p);
+            activityTimeline.appendChild(empty);
             return;
         }
 
-        const timelineHTML = activities.map(activity => {
+        const root = document.createElement('div');
+        root.className = 'activity-timeline';
+        activities.forEach(activity => {
             const icon = getActivityIcon(activity.type);
             const color = getActivityColor(activity.type);
             const timeAgo = formatTimeAgo(activity.created_at);
 
-            return `
-                <div class="activity-timeline-item">
-                    <div class="flex items-start gap-3">
-                        <div class="flex-shrink-0 w-8 h-8 rounded-full ${color} flex items-center justify-center">
-                            <i class="${icon} text-sm"></i>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm text-text-light dark:text-text-dark">${activity.description || 'Activity'}</p>
-                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark">${timeAgo}</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
+            const item = document.createElement('div');
+            item.className = 'activity-timeline-item';
+            const row = document.createElement('div');
+            row.className = 'flex items-start gap-3';
 
-        activityTimeline.innerHTML = `
-            <div class="activity-timeline">
-                ${timelineHTML}
-            </div>
-        `;
+            const iconWrap = document.createElement('div');
+            iconWrap.className = 'flex-shrink-0 w-8 h-8 rounded-full ' + color + ' flex items-center justify-center';
+            const iconEl = document.createElement('i');
+            iconEl.className = icon + ' text-sm';
+            iconWrap.appendChild(iconEl);
+
+            const textCol = document.createElement('div');
+            textCol.className = 'flex-1';
+            const desc = document.createElement('p');
+            desc.className = 'text-sm text-text-light dark:text-text-dark';
+            desc.textContent = activity.description || 'Activity';
+            const when = document.createElement('p');
+            when.className = 'text-xs text-text-muted-light dark:text-text-muted-dark';
+            when.textContent = timeAgo;
+            textCol.appendChild(desc);
+            textCol.appendChild(when);
+
+            row.appendChild(iconWrap);
+            row.appendChild(textCol);
+            item.appendChild(row);
+            root.appendChild(item);
+        });
+        activityTimeline.replaceChildren(root);
     }
 
     /**

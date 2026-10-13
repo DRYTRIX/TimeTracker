@@ -575,21 +575,22 @@
 
         renderColumnsDropdown(dropdown) {
             const headers = Array.from(this.table.querySelectorAll('thead th'));
-            dropdown.innerHTML = headers.map((header, index) => {
-                if (header.classList.contains('table-checkbox-cell')) return '';
-                
-                const label = header.textContent.trim();
-                return `
-                    <label class="table-column-toggle">
-                        <input type="checkbox" checked data-column="${index}">
-                        ${label}
-                    </label>
-                `;
-            }).join('');
-            
-            dropdown.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            dropdown.replaceChildren();
+            headers.forEach((header, index) => {
+                if (header.classList.contains('table-checkbox-cell')) return;
+
+                const labelEl = document.createElement('label');
+                labelEl.className = 'table-column-toggle';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = true;
+                checkbox.setAttribute('data-column', String(index));
+                labelEl.appendChild(checkbox);
+                labelEl.appendChild(document.createTextNode(' ' + (header.textContent || '').trim()));
+                dropdown.appendChild(labelEl);
+
                 checkbox.addEventListener('change', (e) => {
-                    this.toggleColumn(parseInt(e.target.getAttribute('data-column')), e.target.checked);
+                    this.toggleColumn(parseInt(e.target.getAttribute('data-column'), 10), e.target.checked);
                 });
             });
         }

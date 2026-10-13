@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.18.2] - 2026-10-13
+
+### Security
+
+- **CodeQL / XSS / redirects** — Clear CodeQL findings; harden DOM sinks and PDF templates; block open redirects via referrer/`next`; centralize `safe_redirect`; keep 5xx API errors generic; rebuild OIDC discovery URLs from validated issuer components.
+- **Desktop (Dependabot #222)** — Override transitive `sprintf-js` with a vendored build that caps numeric precision (GHSA-hp3w-g68c-fv3c / CVE-2026-97058) until upstream publishes a fixed release.
+- **CSP** — Add nonces to remaining inline scripts.
+
+### Fixed
+
+- **Timer review / idle response** — Import `db` in timer review and idle-response handlers.
+- **Docker** — Refresh base packages and upgrade pip/setuptools.
+- **Models** — Strip UTF-8 BOMs from timesheet/time-off model modules.
+
+### Changed
+
+- **CI** — Add CodeQL workflow to resume code scanning.
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.18.2**; `VERSION` and desktop/browser-extension/mobile client versions aligned.
+
 ## [5.18.1] - 2026-10-11
 
 ### Fixed

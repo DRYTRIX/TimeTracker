@@ -11,6 +11,8 @@ from app.utils.config_manager import ConfigManager
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required, permission_required
 from app.utils.quote_access import quote_list_scope_user_id
+from app.utils.safe_redirect import safe_redirect, safe_redirect_target
+from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 quotes_bp = Blueprint("quotes", __name__)
 
@@ -933,7 +935,7 @@ def send_quote(quote_id):
     try:
         quote.send()
     except ValueError as e:
-        flash(_("Cannot send quote: %(error)s", error=str(e)), "error")
+        flash(_("Cannot send quote. Please try again."), "error")
         return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
     # Reserve stock for quote items if enabled
@@ -1031,7 +1033,7 @@ def accept_quote(quote_id):
             db.session.flush()  # Get project ID
             quote.accept(current_user.id, project.id)
         except ValueError as e:
-            flash(_("Could not accept quote: %(error)s", error=str(e)), "error")
+            flash(_("Could not accept quote. Please try again."), "error")
             db.session.rollback()
             return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
@@ -1120,7 +1122,7 @@ def reject_quote(quote_id):
     try:
         quote.reject()
     except ValueError as e:
-        flash(_("Could not reject quote: %(error)s", error=str(e)), "error")
+        flash(_("Could not reject quote. Please try again."), "error")
         return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
     if not safe_commit("reject_quote", {"quote_id": quote_id}):
@@ -1209,16 +1211,25 @@ def upload_attachment(quote_id):
         return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
     # Save file
+    from app.utils.paths import PathEscapeError, safe_path_under
+
     original_filename = secure_filename(file.filename)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{quote_id}_{timestamp}_{original_filename}"
+    filename = secure_filename(f"{quote_id}_{timestamp}_{original_filename}")
+    if not filename:
+        flash(_("Invalid filename"), "error")
+        return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
     # Ensure upload directory exists
     upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
     os.makedirs(upload_dir, exist_ok=True)
 
-    file_path = os.path.join(upload_dir, filename)
-    file.save(file_path)
+    try:
+        file_path = safe_path_under(upload_dir, filename)
+        file.save(file_path)
+    except PathEscapeError:
+        flash(_("Invalid upload path"), "error")
+        return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
     # Get file info
     mime_type = file.content_type or "application/octet-stream"
@@ -1368,7 +1379,7 @@ def request_approval(quote_id):
     try:
         quote.request_approval()
     except ValueError as e:
-        flash(_("Cannot request approval: %(error)s", error=str(e)), "error")
+        flash(_("Cannot request approval. Please try again."), "error")
         return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
     if not safe_commit("request_quote_approval", {"quote_id": quote_id}):
@@ -1420,7 +1431,7 @@ def approve_quote(quote_id):
     try:
         quote.approve(current_user.id, notes)
     except ValueError as e:
-        flash(_("Cannot approve quote: %(error)s", error=str(e)), "error")
+        flash(_("Cannot approve quote. Please try again."), "error")
         return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
     if not safe_commit("approve_quote", {"quote_id": quote_id}):
@@ -1469,7 +1480,7 @@ def reject_approval(quote_id):
     try:
         quote.reject_approval(current_user.id, reason)
     except ValueError as e:
-        flash(_("Cannot reject quote: %(error)s", error=str(e)), "error")
+        flash(_("Cannot reject quote. Please try again."), "error")
         return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
     if not safe_commit("reject_quote_approval", {"quote_id": quote_id}):
@@ -1659,7 +1670,7 @@ def export_quote_pdf(quote_id):
             f"[PDF_EXPORT] Permission denied - QuoteID: {quote_id}, User: {current_user.username}"
         )
         flash(_("You do not have permission to export this quote"), "error")
-        return redirect(request.referrer or url_for("quotes.list_quotes"))
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("quotes.list_quotes"))
 
     # Get page size from query parameter, default to A4
     page_size_raw = request.args.get("size", "A4")
@@ -1729,7 +1740,7 @@ def export_quote_pdf(quote_id):
             f"[PDF_EXPORT] Exception in PDF generation - PageSize: '{page_size}', QuoteID: {quote_id}, Error: {str(e)}",
             exc_info=True,
         )
-        flash(_("Error generating PDF: %(error)s", error=str(e)), "error")
+        flash(_("Error generating PDF. Please try again."), "error")
         return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
 
@@ -1781,18 +1792,18 @@ def send_quote_email(quote_id):
                 {"quote_id": quote.id, "quote_title": quote.title, "recipient_email": recipient_email},
             )
             if request.is_json:
-                return jsonify({"success": True, "message": message})
+                return jsonify({"success": True, "message": "Quote email sent successfully"})
             return redirect(url_for("quotes.view_quote", quote_id=quote_id))
         else:
-            flash(_("Failed to send quote: %(error)s", error=message), "error")
+            flash(_("Failed to send quote. Please try again."), "error")
             if request.is_json:
-                return jsonify({"error": message}), 400
+                return client_error_response("Failed to send quote email", 400)
             return redirect(url_for("quotes.view_quote", quote_id=quote_id))
     except Exception as e:
         current_app.logger.error(f"Error sending quote email: {e}", exc_info=True)
-        flash(_("Error sending email: %(error)s", error=str(e)), "error")
+        flash(_("Error sending email. Please try again."), "error")
         if request.is_json:
-            return jsonify({"error": str(e)}), 500
+            return client_error_response(status=500)
         return redirect(url_for("quotes.view_quote", quote_id=quote_id))
 
 
@@ -2094,16 +2105,29 @@ def upload_quote_image(quote_id):
         return redirect(url_for("quotes.edit_quote", quote_id=quote_id))
 
     # Save file
+    from app.utils.paths import PathEscapeError, safe_path_under
+
     original_filename = secure_filename(file.filename)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{quote_id}_{timestamp}_{original_filename}"
+    filename = secure_filename(f"{quote_id}_{timestamp}_{original_filename}")
+    if not filename:
+        if request.is_json:
+            return jsonify({"error": "Invalid filename"}), 400
+        flash(_("Invalid filename"), "error")
+        return redirect(url_for("quotes.edit_quote", quote_id=quote_id))
 
     # Ensure upload directory exists
     upload_dir = os.path.join(current_app.root_path, "..", UPLOAD_FOLDER)
     os.makedirs(upload_dir, exist_ok=True)
 
-    file_path = os.path.join(upload_dir, filename)
-    file.save(file_path)
+    try:
+        file_path = safe_path_under(upload_dir, filename)
+        file.save(file_path)
+    except PathEscapeError:
+        if request.is_json:
+            return jsonify({"error": "Invalid upload path"}), 400
+        flash(_("Invalid upload path"), "error")
+        return redirect(url_for("quotes.edit_quote", quote_id=quote_id))
 
     # Get file info
     mime_type = file.content_type or "image/png"

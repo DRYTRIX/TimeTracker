@@ -24,17 +24,13 @@ from app import db
 from app.models import Activity, KanbanColumn, Milestone, Project, Task, TaskActivity, TaskChecklistItem, TaskDependency, TimeEntry, User
 from app.utils.db import safe_commit
 from app.utils.pagination import get_pagination_params
-from app.utils.safe_redirect import is_safe_next_url
+from app.utils.error_handling import sanitize_log_value
+from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 from app.utils.timezone import convert_app_datetime_to_user, now_in_app_timezone
 
 tasks_bp = Blueprint("tasks", __name__)
 
 ALLOWED_NEXT_PREFIXES = ("/kanban", "/gantt", "/tasks", "/projects")
-
-
-def _is_safe_next_url(next_url):
-    """Validate next URL to avoid open redirects. Allow relative paths with allowed prefixes."""
-    return is_safe_next_url(next_url, allowed_prefixes=ALLOWED_NEXT_PREFIXES)
 
 
 @tasks_bp.route("/tasks")
@@ -208,7 +204,7 @@ def create_task():
         try:
             name = validate_string(sanitize_input(name), min_length=1, max_length=200)
         except Exception as e:
-            flash(_("Invalid task name: %(error)s", error=str(e)), "error")
+            flash(_("Invalid task name."), "error")
             projects = Project.query.filter_by(status="active").order_by(Project.name).all()
             users = User.query.order_by(User.username).all()
             return render_template(
@@ -332,9 +328,11 @@ def create_task():
 
         flash(f'Task "{name}" created successfully', "success")
         next_url = request.form.get("next") or request.args.get("next")
-        if next_url and _is_safe_next_url(next_url):
-            return redirect(next_url)
-        return redirect(url_for("tasks.view_task", task_id=task.id))
+        return safe_redirect(
+                next_url,
+                allowed_prefixes=ALLOWED_NEXT_PREFIXES,
+                fallback=url_for("tasks.view_task", task_id=task.id),
+            )
 
     # Get available projects and users for form
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()
@@ -472,7 +470,7 @@ def edit_task(task_id):
         try:
             name = validate_string(sanitize_input(name), min_length=1, max_length=200)
         except Exception as e:
-            flash(_("Invalid task name: %(error)s", error=str(e)), "error")
+            flash(_("Invalid task name."), "error")
             return render_template(
                 "tasks/edit.html",
                 task=task,
@@ -618,7 +616,7 @@ def edit_task(task_id):
                         try:
                             task.start_task()
                         except ValueError as e:
-                            flash(str(e), "error")
+                            flash(sanitize_log_value(e, max_len=200), "error")
                             return render_template(
                                 "tasks/edit.html",
                                 task=task,
@@ -686,7 +684,7 @@ def edit_task(task_id):
                             kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id),
                         )
             except ValueError as e:
-                flash(str(e), "error")
+                flash(sanitize_log_value(e, max_len=200), "error")
                 return render_template(
                     "tasks/edit.html",
                     task=task,
@@ -784,7 +782,7 @@ def update_task_status(task_id):
                 try:
                     task.start_task()
                 except ValueError as e:
-                    flash(str(e), "error")
+                    flash(sanitize_log_value(e, max_len=200), "error")
                     return redirect(url_for("tasks.view_task", task_id=task.id))
                 db.session.add(
                     TaskActivity(
@@ -863,7 +861,7 @@ def update_task_status(task_id):
 
         fire_task_status_workflows(task, current_user.id, old_status=previous_status)
     except ValueError as e:
-        flash(str(e), "error")
+        flash(sanitize_log_value(e, max_len=200), "error")
 
     return redirect(url_for("tasks.view_task", task_id=task.id))
 
@@ -884,7 +882,7 @@ def update_task_priority(task_id):
         task.update_priority(new_priority)
         flash(f"Task priority updated to {task.priority_display}", "success")
     except ValueError as e:
-        flash(str(e), "error")
+        flash(sanitize_log_value(e, max_len=200), "error")
 
     return redirect(url_for("tasks.view_task", task_id=task.id))
 
@@ -1029,7 +1027,13 @@ def bulk_delete_tasks():
 
         except Exception as e:
             skipped_count += 1
-            errors.append(f"ID {task_id_str}: {str(e)}")
+            current_app.logger.warning(
+                "bulk_delete_tasks failed for task_id=%s: %s",
+                sanitize_log_value(task_id_str),
+                e,
+                exc_info=True,
+            )
+            errors.append(_("Could not delete task (ID %(id)s)", id=sanitize_log_value(task_id_str)))
 
     # Commit all deletions
     if deleted_count > 0:
@@ -1697,8 +1701,9 @@ def api_update_status(task_id):
             else:
                 try:
                     task.start_task()
-                except ValueError as e:
-                    return jsonify({"error": str(e)}), 400
+                except ValueError:
+                    current_app.logger.info("Invalid start_task transition for task %s", task.id, exc_info=True)
+                    return jsonify({"error": "Invalid task status transition"}), 400
         elif new_status == "done":
             task.complete_task()
         elif new_status == "cancelled":
@@ -1716,8 +1721,9 @@ def api_update_status(task_id):
         fire_task_status_workflows(task, current_user.id, old_status=previous_status)
 
         return jsonify({"success": True, "task": task.to_dict()})
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+    except ValueError:
+        current_app.logger.info("Invalid task status update for task %s", task.id, exc_info=True)
+        return jsonify({"error": "Invalid task status transition"}), 400
 
 
 # ---------------------------------------------------------------------------
