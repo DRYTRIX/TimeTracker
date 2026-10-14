@@ -56,14 +56,10 @@ class EnhancedErrorHandler {
         // Re-probe when the tab becomes active again (background timers may have gone stale)
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
+                this.beginResumeGrace();
                 this.startHealthProbeInterval();
-                this.checkOnlineStatus({ quiet: true, onResume: true });
-                // Second probe to sweep up errors from resuming background requests
-                setTimeout(() => {
-                    if (document.visibilityState === 'visible') {
-                        this.checkOnlineStatus({ quiet: true, onResume: true });
-                    }
-                }, 1500);
+                this.probeAfterResume();
+                this.dispatchTabResumed();
             } else {
                 this.stopHealthProbeInterval();
             }
@@ -79,6 +75,56 @@ class EnhancedErrorHandler {
         if (!document.hidden) {
             this.startHealthProbeInterval();
         }
+    }
+
+    // When the tab wakes up, requests race a burst of reconnects and stale
+    // keep-alive sockets. Treat failures inside this window as transient:
+    // no error toasts, and a later probe clears the state automatically.
+    static RESUME_GRACE_MS = 8000;
+    static TAB_RESUMED_DEBOUNCE_MS = 1500;
+
+    beginResumeGrace() {
+        this._resumeGraceUntil = Date.now() + EnhancedErrorHandler.RESUME_GRACE_MS;
+    }
+
+    inResumeGraceWindow() {
+        return Boolean(this._resumeGraceUntil) && Date.now() < this._resumeGraceUntil;
+    }
+
+    // Probe /api/health several times with short backoff before declaring the
+    // server offline — the first probe right after resume often fails on a
+    // dead keep-alive connection even when the server is healthy.
+    probeAfterResume(attempts = [0, 2000, 5000]) {
+        if (this._resumeProbeToken === undefined) this._resumeProbeToken = 0;
+        const token = ++this._resumeProbeToken;
+
+        const attemptAt = (delays) => {
+            if (token !== this._resumeProbeToken) return;
+            const [delay, ...rest] = delays;
+            setTimeout(() => {
+                if (token !== this._resumeProbeToken || document.visibilityState !== 'visible') return;
+                this.checkOnlineStatus({ quiet: true, onResume: true }).then((healthy) => {
+                    if (token !== this._resumeProbeToken) return;
+                    if (healthy || rest.length === 0) return;
+                    attemptAt(rest);
+                });
+            }, delay);
+        };
+        attemptAt(attempts);
+    }
+
+    // Single debounced signal so widgets (timer bar, notifications) can
+    // refetch authoritative data once the reconnect burst has settled.
+    dispatchTabResumed() {
+        if (this._tabResumedTimer) {
+            clearTimeout(this._tabResumedTimer);
+        }
+        this._tabResumedTimer = setTimeout(() => {
+            this._tabResumedTimer = null;
+            if (document.visibilityState === 'visible') {
+                document.dispatchEvent(new CustomEvent('tt:tab-resumed'));
+            }
+        }, EnhancedErrorHandler.TAB_RESUMED_DEBOUNCE_MS);
     }
 
     startHealthProbeInterval() {
@@ -371,6 +417,12 @@ class EnhancedErrorHandler {
     }
 
     async handleFetchError(response, url, options) {
+        // Transient proxy errors right after tab resume: the server is usually
+        // fine again within seconds, so don't alarm the user.
+        if (this.inResumeGraceWindow() && [502, 503, 504].includes(response.status)) {
+            console.debug('Suppressed transient error during tab-resume grace window:', response.status, url);
+            return response;
+        }
         // Clone the response before reading it, so the caller can still read it
         const clonedResponse = response.clone();
         const errorData = await clonedResponse.json().catch(() => ({ error: 'Unknown error' }));
@@ -400,6 +452,17 @@ class EnhancedErrorHandler {
             return new Response(JSON.stringify({ error: 'Offline' }), {
                 status: 503,
                 statusText: 'Offline'
+            });
+        }
+
+        // Network error on a stale keep-alive connection during the resume
+        // window: callers still get a non-ok response, but no toast — the
+        // resume probes will declare offline if the server is really gone.
+        if (this.inResumeGraceWindow()) {
+            console.debug('Suppressed network error during tab-resume grace window:', url);
+            return new Response(JSON.stringify({ error: 'Reconnecting' }), {
+                status: 503,
+                statusText: 'Reconnecting'
             });
         }
 
