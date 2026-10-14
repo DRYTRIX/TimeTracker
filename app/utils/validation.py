@@ -199,7 +199,11 @@ def validate_json_request() -> Dict[str, Any]:
 
 def sanitize_input(value: str, max_length: Optional[int] = None) -> str:
     """
-    Sanitize user input by removing dangerous characters.
+    Sanitize user input by removing HTML tags while preserving plain text.
+
+    bleach.clean entity-escapes surviving text (e.g. "&" -> "&amp;"), which
+    double-escapes on output since Jinja auto-escapes again. Strip tags,
+    then decode entities once so plain text is stored as typed.
 
     Args:
         value: Input string
@@ -209,9 +213,12 @@ def sanitize_input(value: str, max_length: Optional[int] = None) -> str:
         Sanitized string
     """
     import bleach
+    import html as html_lib
 
-    # Remove HTML tags and dangerous characters
-    sanitized = bleach.clean(value, tags=[], strip=True)
+    # Remove HTML tags and dangerous characters, then undo the entity
+    # encoding bleach applies to surviving text (XSS safety comes from
+    # output encoding, not from mangling stored data).
+    sanitized = html_lib.unescape(bleach.clean(value, tags=[], strip=True))
 
     # Truncate if needed
     if max_length and len(sanitized) > max_length:
